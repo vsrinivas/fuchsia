@@ -5,9 +5,9 @@
 use {
     failure::{format_err, Error, ResultExt},
     fidl_fidl_test_compatibility::{
-        EchoEchoArraysWithErrorResult, EchoEchoStructWithErrorResult,
-        EchoEchoVectorsWithErrorResult, EchoEvent, EchoMarker, EchoProxy, EchoRequest,
-        EchoRequestStream, RespondWith,
+        EchoEchoArraysWithErrorResult, EchoEchoStructWithErrorResult, EchoEchoTableWithErrorResult,
+        EchoEchoVectorsWithErrorResult, EchoEchoXunionsWithErrorResult, EchoEvent, EchoMarker,
+        EchoProxy, EchoRequest, EchoRequestStream, RespondWith,
     },
     fidl_fuchsia_sys::LauncherProxy,
     fuchsia_async as fasync,
@@ -179,7 +179,31 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     }
                     responder.send(value).context("Error responding")?;
                 }
-                EchoRequest::EchoTableWithError { .. } => unimplemented!(),
+                EchoRequest::EchoTableWithError {
+                    value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_table_with_error(value, result_err, "", result_variant)
+                            .await
+                            .context("Error calling echo_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoTableWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoTableWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
                 EchoRequest::EchoXunions { mut value, forward_to_server, responder } => {
                     if !forward_to_server.is_empty() {
                         let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
@@ -192,7 +216,36 @@ async fn echo_server(stream: EchoRequestStream, launcher: &LauncherProxy) -> Res
                     }
                     responder.send(&mut value.iter_mut()).context("Error responding")?;
                 }
-                EchoRequest::EchoXunionsWithError { .. } => unimplemented!(),
+                EchoRequest::EchoXunionsWithError {
+                    mut value,
+                    result_err,
+                    forward_to_server,
+                    result_variant,
+                    responder,
+                } => {
+                    if !forward_to_server.is_empty() {
+                        let (echo, app) = launch_and_connect_to_echo(launcher, forward_to_server)
+                            .context("Error connecting to proxy")?;
+                        let mut result = echo
+                            .echo_xunions_with_error(
+                                &mut value.iter_mut(),
+                                result_err,
+                                "",
+                                result_variant,
+                            )
+                            .await
+                            .context("Error calling echo_struct_with_error on proxy")?;
+                        drop(app);
+                        responder.send(&mut result).context("Error responding")?;
+                    } else {
+                        let mut result = if let RespondWith::Err = result_variant {
+                            EchoEchoXunionsWithErrorResult::Err(result_err)
+                        } else {
+                            EchoEchoXunionsWithErrorResult::Ok(value)
+                        };
+                        responder.send(&mut result).context("Error responding")?;
+                    }
+                }
             }
             Ok(())
         })

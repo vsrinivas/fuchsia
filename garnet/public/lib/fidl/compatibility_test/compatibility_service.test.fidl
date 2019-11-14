@@ -550,7 +550,6 @@ protocol Echo {
     // For the error variants: if should_error is true, the provided err result
     // error is sent, otherwise the response variant is sent.
     EchoStruct(Struct value, string forward_to_server) -> (Struct value);
-    [Transitional]
     EchoStructWithError(
         Struct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
         -> (Struct value) error default_enum;
@@ -560,25 +559,21 @@ protocol Echo {
     EchoStructNoRetVal(Struct value, string forward_to_server);
     -> EchoEvent(Struct value);
     EchoArrays(ArraysStruct value, string forward_to_server) -> (ArraysStruct value);
-    [Transitional]
     EchoArraysWithError(
         ArraysStruct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
         -> (ArraysStruct value) error default_enum;
 
     EchoVectors(VectorsStruct value, string forward_to_server) -> (VectorsStruct value);
-    [Transitional]
     EchoVectorsWithError(
         VectorsStruct value, default_enum result_err, string forward_to_server, RespondWith result_variant)
         -> (VectorsStruct value) error default_enum;
 
     EchoTable(AllTypesTable value, string forward_to_server) -> (AllTypesTable value);
-    [Transitional]
     EchoTableWithError(
         AllTypesTable value, default_enum result_err, string forward_to_server, RespondWith result_variant)
         -> (AllTypesTable value) error default_enum;
 
     EchoXunions(vector<AllTypesXunion> value, string forward_to_server) -> (vector<AllTypesXunion> value);
-    [Transitional]
     EchoXunionsWithError(
         vector<AllTypesXunion> value, default_enum result_err, string forward_to_server, RespondWith result_variant)
         -> (vector<AllTypesXunion> value) error default_enum;

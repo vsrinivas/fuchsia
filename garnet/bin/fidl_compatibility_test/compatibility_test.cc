@@ -12,10 +12,10 @@
 
 #include <algorithm>
 #include <cstdlib>
-#include <random>
-#include <vector>
-#include <regex>
 #include <map>
+#include <random>
+#include <regex>
+#include <vector>
 
 #include <fidl/test/compatibility/cpp/fidl.h>
 
@@ -31,6 +31,17 @@ using fidl::VectorPtr;
 using fidl::test::compatibility::AllTypesTable;
 using fidl::test::compatibility::AllTypesXunion;
 using fidl::test::compatibility::ArraysStruct;
+using fidl::test::compatibility::Echo_EchoArraysWithError_Response;
+using fidl::test::compatibility::Echo_EchoArraysWithError_Result;
+using fidl::test::compatibility::Echo_EchoStructWithError_Response;
+using fidl::test::compatibility::Echo_EchoStructWithError_Result;
+using fidl::test::compatibility::Echo_EchoTableWithError_Response;
+using fidl::test::compatibility::Echo_EchoTableWithError_Result;
+using fidl::test::compatibility::Echo_EchoVectorsWithError_Response;
+using fidl::test::compatibility::Echo_EchoVectorsWithError_Result;
+using fidl::test::compatibility::Echo_EchoXunionsWithError_Response;
+using fidl::test::compatibility::Echo_EchoXunionsWithError_Result;
+using fidl::test::compatibility::RespondWith;
 using fidl::test::compatibility::Struct;
 using fidl::test::compatibility::this_is_a_struct;
 using fidl::test::compatibility::this_is_a_table;
@@ -1324,31 +1335,86 @@ TEST(Compatibility, EchoStruct) {
   });
 }
 
-TEST(Compatibility, EchoStructNoRetval) {
-  ForAllServers(
-      [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
-         const std::string& server_url, const std::string proxy_url) {
-        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
-                " (struct_no_ret)"] = false;
-        Struct sent;
-        InitializeStruct(&sent);
+TEST(Compatibility, EchoStructWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result success)"] = false;
+    Struct sent;
+    InitializeStruct(&sent);
+    auto err = fidl::test::compatibility::default_enum::kOne;
 
-        Struct sent_clone;
-        sent.Clone(&sent_clone);
-        fidl::test::compatibility::Struct resp_clone;
-        bool event_received = false;
-        proxy.events().EchoEvent = [&loop, &resp_clone, &event_received](Struct resp) {
-          resp.Clone(&resp_clone);
-          event_received = true;
+    Struct sent_clone;
+    sent.Clone(&sent_clone);
+
+    Struct resp_clone;
+    bool called_back = false;
+    proxy->EchoStructWithError(
+        std::move(sent), err, server_url, RespondWith::SUCCESS,
+        [&loop, &resp_clone, &called_back](Echo_EchoStructWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().value.Clone(&resp_clone));
+          called_back = true;
           loop.Quit();
-        };
-        proxy->EchoStructNoRetVal(std::move(sent), server_url);
-        loop.Run();
-        ASSERT_TRUE(event_received);
-        ExpectEq(sent_clone, resp_clone);
-        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
-                " (struct_no_ret)"] = true;
-      });
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result success)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoStructWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result error)"] = false;
+    Struct sent;
+    InitializeStruct(&sent);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    bool called_back = false;
+    proxy->EchoStructWithError(std::move(sent), err, server_url, RespondWith::ERR,
+                               [&loop, &err, &called_back](Echo_EchoStructWithError_Result resp) {
+                                 ASSERT_TRUE(resp.is_err());
+                                 ASSERT_EQ(err, resp.err());
+                                 called_back = true;
+                                 loop.Quit();
+                               });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct result error)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoStructNoRetval) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct_no_ret)"] = false;
+    Struct sent;
+    InitializeStruct(&sent);
+
+    Struct sent_clone;
+    sent.Clone(&sent_clone);
+    fidl::test::compatibility::Struct resp_clone;
+    bool event_received = false;
+    proxy.events().EchoEvent = [&loop, &resp_clone, &event_received](Struct resp) {
+      resp.Clone(&resp_clone);
+      event_received = true;
+      loop.Quit();
+    };
+    proxy->EchoStructNoRetVal(std::move(sent), server_url);
+    loop.Run();
+    ASSERT_TRUE(event_received);
+    ExpectEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (struct_no_ret)"] = true;
+  });
 }
 
 TEST(Compatibility, EchoArrays) {
@@ -1380,6 +1446,71 @@ TEST(Compatibility, EchoArrays) {
     ExpectArraysStructEq(sent_clone, resp_clone);
     summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (array)"] =
         true;
+  });
+}
+
+TEST(Compatibility, EchoArraysWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (array result success)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0xF1D7);
+
+    ArraysStruct sent;
+    InitializeArraysStruct(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    ArraysStruct sent_clone;
+    sent.Clone(&sent_clone);
+    ArraysStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoArraysWithError(
+        std::move(sent), err, server_url, RespondWith::SUCCESS,
+        [&loop, &resp_clone, &called_back](Echo_EchoArraysWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().value.Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectArraysStructEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (array result success)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoArraysWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (array result error)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0xF1D7);
+
+    ArraysStruct sent;
+    InitializeArraysStruct(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    bool called_back = false;
+    proxy->EchoArraysWithError(std::move(sent), err, server_url, RespondWith::ERR,
+                               [&loop, &err, &called_back](Echo_EchoArraysWithError_Result resp) {
+                                 ASSERT_TRUE(resp.is_err());
+                                 ASSERT_EQ(err, resp.err());
+                                 called_back = true;
+                                 loop.Quit();
+                               });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (array result error)"] = true;
   });
 }
 
@@ -1415,36 +1546,167 @@ TEST(Compatibility, EchoVectors) {
   });
 }
 
+TEST(Compatibility, EchoVectorsWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (vector result success)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
+
+    VectorsStruct sent;
+    InitializeVectorsStruct(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    VectorsStruct sent_clone;
+    sent.Clone(&sent_clone);
+    VectorsStruct resp_clone;
+    bool called_back = false;
+    proxy->EchoVectorsWithError(
+        std::move(sent), err, server_url, RespondWith::SUCCESS,
+        [&loop, &resp_clone, &called_back](Echo_EchoVectorsWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().value.Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectVectorsStructEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (vector result success)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoVectorsWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (vector result error)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0xF1D7);
+
+    VectorsStruct sent;
+    InitializeVectorsStruct(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    bool called_back = false;
+    proxy->EchoVectorsWithError(std::move(sent), err, server_url, RespondWith::ERR,
+                                [&loop, &err, &called_back](Echo_EchoVectorsWithError_Result resp) {
+                                  ASSERT_TRUE(resp.is_err());
+                                  ASSERT_EQ(err, resp.err());
+                                  called_back = true;
+                                  loop.Quit();
+                                });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (vector result error)"] = true;
+  });
+}
+
 TEST(Compatibility, EchoTable) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
+
+    AllTypesTable sent;
+    InitializeAllTypesTable(&sent, generator);
+
+    AllTypesTable sent_clone;
+    sent.Clone(&sent_clone);
+    AllTypesTable resp_clone;
+    bool called_back = false;
+    proxy->EchoTable(std::move(sent), server_url,
+                     [&loop, &resp_clone, &called_back](AllTypesTable resp) {
+                       ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
+                       called_back = true;
+                       loop.Quit();
+                     });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectAllTypesTableEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
+        true;
+  });
+}
+
+TEST(Compatibility, EchoTableWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
+
+    AllTypesTable sent;
+    InitializeAllTypesTable(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    AllTypesTable sent_clone;
+    sent.Clone(&sent_clone);
+    AllTypesTable resp_clone;
+    bool called_back = false;
+    proxy->EchoTableWithError(
+        std::move(sent), err, server_url, RespondWith::SUCCESS,
+        [&loop, &resp_clone, &called_back](Echo_EchoTableWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, resp.response().value.Clone(&resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectAllTypesTableEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (table result success)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoTableWithErrorErrorCase) {
   ForAllServers(
+      // See: FIDL-644
       [](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
          const std::string& server_url, const std::string& proxy_url) {
-        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
-            false;
+        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+                " (table result error)"] = false;
         // Using randomness to avoid having to come up with varied values by
         // hand. Seed deterministically so that this function's outputs are
         // predictable.
-        DataGenerator generator(0x1234);
+        DataGenerator generator(0xF1D7);
 
         AllTypesTable sent;
         InitializeAllTypesTable(&sent, generator);
+        auto err = fidl::test::compatibility::default_enum::kOne;
 
-        AllTypesTable sent_clone;
-        sent.Clone(&sent_clone);
-        AllTypesTable resp_clone;
         bool called_back = false;
-        proxy->EchoTable(std::move(sent), server_url,
-                         [&loop, &resp_clone, &called_back](AllTypesTable resp) {
-                           ASSERT_EQ(ZX_OK, resp.Clone(&resp_clone));
-                           called_back = true;
-                           loop.Quit();
-                         });
+        proxy->EchoTableWithError(std::move(sent), err, server_url, RespondWith::ERR,
+                                  [&loop, &err, &called_back](Echo_EchoTableWithError_Result resp) {
+                                    ASSERT_TRUE(resp.is_err());
+                                    ASSERT_EQ(err, resp.err());
+                                    called_back = true;
+                                    loop.Quit();
+                                  });
 
         loop.Run();
         ASSERT_TRUE(called_back);
-        ExpectAllTypesTableEq(sent_clone, resp_clone);
-        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) + " (table)"] =
-            true;
+        summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+                " (table result error)"] = true;
       });
 }
 
@@ -1480,6 +1742,71 @@ TEST(Compatibility, EchoXunions) {
   });
 }
 
+TEST(Compatibility, EchoXunionsWithErrorSuccessCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (xunion result success)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0x1234);
+
+    std::vector<AllTypesXunion> sent;
+    InitializeAllTypesXunions(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    std::vector<AllTypesXunion> sent_clone;
+    fidl::Clone(sent, &sent_clone);
+    std::vector<AllTypesXunion> resp_clone;
+    bool called_back = false;
+    proxy->EchoXunionsWithError(
+        std::move(sent), err, server_url, RespondWith::SUCCESS,
+        [&loop, &resp_clone, &called_back](Echo_EchoXunionsWithError_Result resp) {
+          ASSERT_TRUE(resp.is_response());
+          ASSERT_EQ(ZX_OK, fidl::Clone(resp.response().value, &resp_clone));
+          called_back = true;
+          loop.Quit();
+        });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    ExpectAllTypesXunionsEq(sent_clone, resp_clone);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (xunion result success)"] = true;
+  });
+}
+
+TEST(Compatibility, EchoXunionsWithErrorErrorCase) {
+  ForAllServers([](async::Loop& loop, fidl::test::compatibility::EchoPtr& proxy,
+                   const std::string& server_url, const std::string& proxy_url) {
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (xunion result error)"] = false;
+    // Using randomness to avoid having to come up with varied values by
+    // hand. Seed deterministically so that this function's outputs are
+    // predictable.
+    DataGenerator generator(0xF1D7);
+
+    std::vector<AllTypesXunion> sent;
+    InitializeAllTypesXunions(&sent, generator);
+    auto err = fidl::test::compatibility::default_enum::kOne;
+
+    bool called_back = false;
+    proxy->EchoXunionsWithError(std::move(sent), err, server_url, RespondWith::ERR,
+                                [&loop, &err, &called_back](Echo_EchoXunionsWithError_Result resp) {
+                                  ASSERT_TRUE(resp.is_err());
+                                  ASSERT_EQ(err, resp.err());
+                                  called_back = true;
+                                  loop.Quit();
+                                });
+
+    loop.Run();
+    ASSERT_TRUE(called_back);
+    summary[ExtractShortName(proxy_url) + " <-> " + ExtractShortName(server_url) +
+            " (xunion result error)"] = true;
+  });
+}
+
 }  // namespace
 
 int main(int argc, char** argv) {
@@ -1496,8 +1823,8 @@ int main(int argc, char** argv) {
       package_url = server;
     } else {
       package_url = "fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_" +
-                      std::string(argv[i]) + "#meta/fidl_compatibility_test_server_" +
-                      std::string(argv[i]) + ".cmx";
+                    std::string(argv[i]) + "#meta/fidl_compatibility_test_server_" +
+                    std::string(argv[i]) + ".cmx";
     }
     servers.push_back(package_url);
   }
