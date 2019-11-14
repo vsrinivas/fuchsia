@@ -653,8 +653,6 @@ impl<T: std::borrow::Borrow<InfraBss>> BssOptionExt<T> for Option<T> {
     }
 }
 
-// TODO(37891): Use this code.
-#[allow(dead_code)]
 impl Ap {
     pub fn new(
         device: Device,
@@ -763,7 +761,7 @@ impl Ap {
     }
 
     #[allow(deprecated)] // Allow until main message loop is in Rust.
-    pub fn on_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
+    pub fn handle_mlme_msg(&mut self, msg: fidl_mlme::MlmeRequestMessage) -> Result<(), Error> {
         match msg {
             fidl_mlme::MlmeRequestMessage::StartReq { req } => self.handle_mlme_start_req(req),
             fidl_mlme::MlmeRequestMessage::StopReq { req } => self.handle_mlme_stop_req(req),
@@ -796,7 +794,13 @@ impl Ap {
         })
     }
 
-    fn on_eth_frame(&mut self, dst_addr: MacAddr, src_addr: MacAddr, ether_type: u16, body: &[u8]) {
+    pub fn handle_eth_frame(
+        &mut self,
+        dst_addr: MacAddr,
+        src_addr: MacAddr,
+        ether_type: u16,
+        body: &[u8],
+    ) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
@@ -810,7 +814,7 @@ impl Ap {
         }
     }
 
-    fn on_mac_frame<B: ByteSlice>(&mut self, bytes: B, body_aligned: bool) {
+    pub fn handle_mac_frame<B: ByteSlice>(&mut self, bytes: B, body_aligned: bool) {
         let bss = match self.bss.as_mut() {
             Some(bss) => bss,
             None => {
@@ -1936,7 +1940,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_eth_frame() {
+    fn ap_handle_eth_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -1964,7 +1968,7 @@ mod tests {
             .expect("expected OK");
         fake_device.wlan_queue.clear();
 
-        ap.on_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]);
+        ap.handle_eth_frame(CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..]);
 
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
@@ -1987,7 +1991,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_eth_frame_no_such_client() {
+    fn ap_handle_eth_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -1997,11 +2001,11 @@ mod tests {
             BSSID,
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
-        ap.on_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..]);
+        ap.handle_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..]);
     }
 
     #[test]
-    fn ap_on_mac_frame() {
+    fn ap_handle_mac_frame() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2011,7 +2015,7 @@ mod tests {
             BSSID,
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
-        ap.on_mac_frame(
+        ap.handle_mac_frame(
             &[
                 // Mgmt header
                 0b10110000, 0b00000001, // Frame Control
@@ -2043,7 +2047,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mac_frame_no_such_client() {
+    fn ap_handle_mac_frame_no_such_client() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2053,7 +2057,7 @@ mod tests {
             BSSID,
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
-        ap.on_mac_frame(
+        ap.handle_mac_frame(
             &[
                 // Mgmt header
                 0b10100000, 0b00000001, // Frame Control
@@ -2072,7 +2076,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mac_frame_bogus() {
+    fn ap_handle_mac_frame_bogus() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2082,7 +2086,7 @@ mod tests {
             BSSID,
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
-        ap.on_mac_frame(&[0][..], false);
+        ap.handle_mac_frame(&[0][..], false);
     }
 
     #[test]
@@ -2237,7 +2241,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_auth_resp() {
+    fn ap_handle_mlme_msg_handle_mlme_auth_resp() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2250,13 +2254,13 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
             resp: fidl_mlme::AuthenticateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -2277,7 +2281,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_auth_resp_no_bss() {
+    fn ap_handle_mlme_msg_handle_mlme_auth_resp_no_bss() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2290,20 +2294,20 @@ mod tests {
         assert_eq!(
             zx::Status::from(
                 #[allow(deprecated)]
-                ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+                ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
                         result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
                     },
                 })
-                .expect_err("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
+                .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
             ),
             zx::Status::BAD_STATE
         );
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_auth_resp_no_such_client() {
+    fn ap_handle_mlme_msg_handle_mlme_auth_resp_no_such_client() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2317,20 +2321,20 @@ mod tests {
         assert_eq!(
             zx::Status::from(
                 #[allow(deprecated)]
-                ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
+                ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp {
                     resp: fidl_mlme::AuthenticateResponse {
                         peer_sta_address: CLIENT_ADDR,
                         result_code: fidl_mlme::AuthenticateResultCodes::AntiCloggingTokenRequired,
                     },
                 })
-                .expect_err("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
+                .expect_err("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AuthenticateResp) error")
             ),
             zx::Status::NOT_FOUND
         );
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_deauth_req() {
+    fn ap_handle_mlme_msg_handle_mlme_deauth_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2343,13 +2347,15 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq {
             req: fidl_mlme::DeauthenticateRequest {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDeauth,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq) ok");
+        .expect(
+            "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DeauthenticateReq) ok",
+        );
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -2368,7 +2374,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_assoc_resp() {
+    fn ap_handle_mlme_msg_handle_mlme_assoc_resp() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2381,14 +2387,14 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -2409,7 +2415,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_disassoc_req() {
+    fn ap_handle_mlme_msg_handle_mlme_disassoc_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2422,13 +2428,13 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq {
             req: fidl_mlme::DisassociateRequest {
                 peer_sta_address: CLIENT_ADDR,
                 reason_code: fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::DisassociateReq) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
@@ -2447,7 +2453,7 @@ mod tests {
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_set_controlled_port_req() {
+    fn ap_handle_mlme_msg_handle_mlme_set_controlled_port_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2460,27 +2466,29 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp {
             resp: fidl_mlme::AssociateResponse {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort {
             req: fidl_mlme::SetControlledPortRequest {
                 peer_sta_address: CLIENT_ADDR,
                 state: fidl_mlme::ControlledPortState::Open,
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort) ok");
+        .expect(
+            "expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::SetControlledPort) ok",
+        );
     }
 
     #[test]
-    fn ap_on_mlme_msg_handle_mlme_eapol_req() {
+    fn ap_handle_mlme_msg_handle_mlme_eapol_req() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ap = Ap::new(
@@ -2493,14 +2501,14 @@ mod tests {
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
-        ap.on_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq {
+        ap.handle_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq {
             req: fidl_mlme::EapolRequest {
                 dst_addr: CLIENT_ADDR,
                 src_addr: BSSID.0,
                 data: vec![1, 2, 3],
             },
         })
-        .expect("expected Ap::on_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq) ok");
+        .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::EapolReq) ok");
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             &fake_device.wlan_queue[0].0[..],
