@@ -54,7 +54,7 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
 }
 
 zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
-                                          zx::channel* logger_svc, const fbl::String& project_name,
+                                          zx::channel* logger_svc, const std::string& project_name,
                                           ReleaseStage release_stage) {
   uint32_t msg_size = static_cast<uint32_t>(sizeof(
                           fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectNameRequest)) +

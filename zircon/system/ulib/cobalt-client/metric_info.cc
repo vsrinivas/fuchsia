@@ -4,7 +4,6 @@
 
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/string_printf.h>
 
 namespace cobalt_client {
 namespace internal {

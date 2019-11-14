@@ -5,21 +5,18 @@
 #ifndef COBALT_CLIENT_CPP_COLLECTOR_H_
 #define COBALT_CLIENT_CPP_COLLECTOR_H_
 
-#include <stdint.h>
-#include <unistd.h>
-
-#include <cobalt-client/cpp/metric-options.h>
-#include <cobalt-client/cpp/types-internal.h>
-#include <fbl/function.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
-#ifdef __Fuchsia__
+#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
-#endif
+#include <unistd.h>
 
 #include <atomic>
+#include <cstdint>
 #include <memory>
+#include <set>
+#include <string>
+
+#include <cobalt-client/cpp/types-internal.h>
 
 namespace cobalt_client {
 
@@ -40,7 +37,7 @@ struct CollectorOptions {
   // Callback used when reading the config to create a cobalt logger.
   // Returns true when the write was successful. The VMO will be transferred
   // to the cobalt service.
-  fbl::Function<bool(zx::vmo*, size_t*)> load_config = nullptr;
+  fit::function<bool(zx::vmo*, size_t*)> load_config = nullptr;
 
   // Configuration for RPC behavior for remote metrics.
   // Only set if you plan to interact with cobalt service.
@@ -55,7 +52,7 @@ struct CollectorOptions {
 
   // The name used to register the project with cobalt. This will be used to route the metrics
   // to the right project.
-  fbl::String project_name;
+  std::string project_name;
 
   // This is set internally by factory functions.
   uint32_t release_stage = 0;
@@ -73,7 +70,7 @@ struct CollectorOptions {
 // This class is thread-compatible.
 class Collector {
  public:
-  Collector(CollectorOptions options);
+  explicit Collector(CollectorOptions options);
   Collector(std::unique_ptr<internal::Logger> logger);
   Collector(const Collector&) = delete;
   Collector(Collector&&) = delete;
@@ -93,8 +90,7 @@ class Collector {
   bool Flush();
 
  private:
-  // Convert this into a HashTable.
-  fbl::Vector<internal::FlushInterface*> flushables_;
+  std::set<internal::FlushInterface*> flushables_;
 
   std::unique_ptr<internal::Logger> logger_ = nullptr;
   std::atomic<bool> flushing_ = false;

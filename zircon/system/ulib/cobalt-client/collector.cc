@@ -6,7 +6,9 @@
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
+#include <zircon/assert.h>
 
+#include <cstring>
 #include <utility>
 
 #include <cobalt-client/cpp/collector-internal.h>
@@ -31,7 +33,8 @@ internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
                                       zx::channel service) -> zx_status_t {
     return fdio_service_connect(service_path, service.release());
   };
-  cobalt_options.service_path.AppendPrintf("/svc/%s", fuchsia_cobalt_LoggerFactory_Name);
+  cobalt_options.service_path = "/svc/";
+  cobalt_options.service_path.append(fuchsia_cobalt_LoggerFactory_Name);
   cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
   return cobalt_options;
 }
@@ -76,16 +79,16 @@ bool Collector::Flush() {
 }
 
 void Collector::UnSubscribe(internal::FlushInterface* flushable) {
-  // TODO(gevalentino): Replace the vector for an unordered_map/hash_map.
-  for (size_t i = 0; i < flushables_.size(); ++i) {
-    if (flushable == flushables_[i]) {
-      flushables_.erase(i);
-      break;
-    }
-  }
+  ZX_ASSERT_MSG(flushables_.find(flushable) != flushables_.end(),
+                "Unsubscribing a flushable that was not subscribed.");
+  flushables_.erase(flushable);
 }
 
-void Collector::Subscribe(internal::FlushInterface* flushable) { flushables_.push_back(flushable); }
+void Collector::Subscribe(internal::FlushInterface* flushable) {
+  ZX_ASSERT_MSG(flushables_.find(flushable) == flushables_.end(),
+                "Subscribing same flushable multiple times.");
+  flushables_.insert(flushable);
+}
 
 CollectorOptions CollectorOptions::GeneralAvailability() {
   CollectorOptions options;

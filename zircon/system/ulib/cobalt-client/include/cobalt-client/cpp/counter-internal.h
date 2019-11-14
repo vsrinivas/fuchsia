@@ -4,16 +4,14 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <unistd.h>
 
 #include <atomic>
+#include <cstdint>
+#include <type_traits>
 
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/function.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
 
 namespace cobalt_client {
 namespace internal {
@@ -71,7 +69,7 @@ class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
   RemoteCounter(RemoteCounter&&);
   RemoteCounter& operator=(const RemoteCounter&) = delete;
   RemoteCounter& operator=(RemoteCounter&&) = delete;
-  virtual ~RemoteCounter() = default;
+  ~RemoteCounter() override = default;
 
   bool Flush(Logger* logger) override;
 

@@ -5,23 +5,24 @@
 #ifndef COBALT_CLIENT_CPP_COLLECTOR_INTERNAL_H_
 #define COBALT_CLIENT_CPP_COLLECTOR_INTERNAL_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
 #include <limits.h>
-#include <stdint.h>
 #include <zircon/types.h>
 
+#include <cstdint>
+#include <string>
+
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/function.h>
-#include <fbl/string_buffer.h>
 
 namespace cobalt_client {
 namespace internal {
 
 struct CobaltOptions {
   // Service path to LoggerFactory interface.
-  fbl::StringBuffer<PATH_MAX> service_path;
+  std::string service_path;
 
   // Maximum time to wait for Cobalt Service to respond for the CreateLogger request.
   // Unless the channel is closed, we will keep checking if the channel is readable.
@@ -33,13 +34,14 @@ struct CobaltOptions {
 
   // Sets the input VMO to point to the serialized config for this logger and the size
   // of the serialized data.
-  fbl::Function<bool(zx::vmo*, size_t*)> config_reader;
+  fit::function<bool(zx::vmo*, size_t*)> config_reader = nullptr;
 
   // Performs a connection to a service at a given path.
-  fbl::Function<zx_status_t(const char* service_path, zx::channel service)> service_connect;
+  fit::function<zx_status_t(const char* service_path, zx::channel service)> service_connect =
+      nullptr;
 
   // Used to acquire a logger instance.
-  fbl::String project_name;
+  std::string project_name;
 
   // Which release stage to use for persisting metrics.
   ReleaseStage release_stage;

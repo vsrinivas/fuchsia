@@ -8,7 +8,6 @@ source_set("types-internal") {
   ]
   public_deps = [
     "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/ulib/fbl",
   ]
   visibility = [ "./*" ]
 }
@@ -19,12 +18,13 @@ source_set("collector") {
     "collector.cc",
   ]
   public_deps = [
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/zx",
   ]
   include_dirs = [ "./include/" ]
   deps = [
     ":types-internal",
-    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
     "$zx/system/public",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",

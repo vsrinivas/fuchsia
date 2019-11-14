@@ -4,14 +4,13 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <unistd.h>
+#include <zircon/assert.h>
+
+#include <cstdint>
 
 #include <cobalt-client/cpp/counter-internal.h>
 #include <cobalt-client/cpp/types-internal.h>
-#include <fbl/function.h>
-#include <fbl/string.h>
-#include <fbl/vector.h>
 
 namespace cobalt_client {
 namespace internal {
