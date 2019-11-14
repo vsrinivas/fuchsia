@@ -282,14 +282,13 @@ if (toolchain_variant.with_shared) {
           }
         }
 
-        output_file = "$output_dir/lib$output_name"
+        output_file_name = "lib$output_name"
         if (output_extension != "") {
-          output_file += ".$output_extension"
+          output_file_name += ".$output_extension"
         }
-        link_output_file = "$output_dir/lib.unstripped/lib$output_name"
-        if (output_extension != "") {
-          link_output_file += ".$output_extension"
-        }
+        output_file = "$output_dir/$output_file_name"
+        rebased_output_file = rebase_path(output_file, root_build_dir)
+        link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
         metadata = {
           binaries = []
@@ -314,6 +313,10 @@ if (toolchain_variant.with_shared) {
                 breakpad = rebase_path("$output_file.sym", root_build_dir)
               }
             },
+          ]
+
+          migrated_manifest_lines = [
+            "lib/$output_file_name=$rebased_output_file",
           ]
         }
       }
@@ -1005,6 +1008,7 @@ template("executable") {
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
+    rebased_output_file = rebase_path(output_file, root_build_dir)
     link_output_file = "$output_dir/exe.unstripped/$output_name"
 
     deps += default_executable_deps
@@ -1041,6 +1045,8 @@ template("executable") {
           }
         },
       ]
+
+      migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
     }
   }
 }
@@ -1079,14 +1085,13 @@ template("loadable_module") {
       }
     }
 
-    output_file = "$output_dir/$output_name"
+    output_file_name = output_name
     if (output_extension != "") {
-      output_file += ".$output_extension"
+      output_file_name += ".$output_extension"
     }
-    link_output_file = "$output_dir/lib.unstripped/$output_name"
-    if (output_extension != "") {
-      link_output_file += ".$output_extension"
-    }
+    output_file = "$output_dir/$output_file_name"
+    rebased_output_file = rebase_path(output_file, root_build_dir)
+    link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
     metadata = {
       binaries = []
@@ -1111,6 +1116,10 @@ template("loadable_module") {
             breakpad = rebase_path("$output_file.sym", root_build_dir)
           }
         },
+      ]
+
+      migrated_manifest_lines = [
+        "driver/$output_file_name=$rebased_output_file",
       ]
     }
   }

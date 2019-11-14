@@ -43,6 +43,9 @@ zx_library("c") {
         libc = rebase_path("$target_out_dir/libc.so.debug", root_build_dir)
       },
       {
+        libc_dist = rebase_path("$target_out_dir/libc.so", root_build_dir)
+      },
+      {
         include_dirs = [
           "//zircon/system/public",
           "//zircon/system/ulib/zircon/include",

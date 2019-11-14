@@ -138,6 +138,20 @@ config("compiler_sysroot") {
   write_file("$target_gen_dir/lib/libzircon.so", [ "INPUT(${vdso})" ])
 }
 
+# This target is used to expose sysroot-supplied binaries for system assembly.
+group("sysroot_metadata") {
+  metadata = {
+      migrated_manifest_lines = []
+  }
+  foreach(entry, zircon_legacy_sysroot) {
+    if (defined(entry.libc_dist)) {
+      assert(metadata.migrated_manifest_lines == [], "Multiple libc's in sysroot")
+      location = rebase_path(entry.libc_dist, root_build_dir, zircon_root_build_dir)
+      metadata.migrated_manifest_lines += [ "lib/ld.so.1=$location" ]
+    }
+  }
+}
+
 config("compiler_target") {
   cflags = [ "--target=$clang_target" ]
   asmflags = cflags

@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generates a manifest for a given target recently migrated from the ZN build.
+#
+# The output of this action is a manifest file that replaces the one supplied
+# by the ZN build for the given target. This makes it so that the target can be
+# moved from one build to the other without having to worry about the impact on
+# system assembly.
+#
+# Parameters
+#
+#   target (required)
+#     [label] The target to generate a manifest for.
+#
+#   testonly (optional)
+#     Same as for any GN target.
+template("migrated_manifest") {
+  assert(is_fuchsia, "Migrated manifests only target Fuchsia")
+  assert(defined(invoker.target), "Need a target to generated a manifest for")
+
+  generated_file(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    deps = [
+      invoker.target,
+      # Add sysroot-provided elements by default.
+      "//build/config/fuchsia:sysroot_metadata",
+    ]
+
+    data_keys = [ "migrated_manifest_lines" ]
+    walk_keys = [ "migrated_manifest_barrier" ]
+
+    # Use the same naming scheme as for other unification manifest templates,
+    # this makes them interoperable.
+    outputs = [ "$target_out_dir/$target_name.unification.manifest" ]
+  }
+}

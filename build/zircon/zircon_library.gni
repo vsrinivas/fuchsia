@@ -185,6 +185,19 @@ template("zircon_library") {
     }
   }
 
+  migrated_manifest_lines = []
+  if (is_prebuilt) {
+    foreach(file, invoker.install) {
+      if (get_path_info(file.dest, "dir") == "dist") {
+        file_name = get_path_info(file.dest, "file")
+        location = rebase_path(file.source, root_build_dir, zircon_root_build_dir)
+        migrated_manifest_lines += [
+          "lib/$file_name=$location"
+        ]
+      }
+    }
+  }
+
   target(type, library) {
     forward_variables_from(invoker,
                            "*",
@@ -211,10 +224,12 @@ template("zircon_library") {
     if (!is_fuchsia) {
       public_deps += [ "//zircon/system/public" ]
     }
+    metadata = {}
     if (zx_lib_dirs != []) {
-      metadata = {
-        zircon_lib_dirs = zx_lib_dirs
-      }
+      metadata.zircon_lib_dirs = zx_lib_dirs
+    }
+    if (migrated_manifest_lines != []) {
+      metadata.migrated_manifest_lines = migrated_manifest_lines
     }
 
     # TODO(fxb/41298): This is a temporary change to activate writing the
