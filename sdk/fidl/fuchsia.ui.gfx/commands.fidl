@@ -8,21 +8,21 @@ using fuchsia.mem;
 
 /// Commands that are used to modify the state of a `Session`.
 union Command {
-     1: CreateResourceCmd create_resource;
-     2: ReleaseResourceCmd release_resource;
-     3: ExportResourceCmd export_resource;
-     4: ImportResourceCmd import_resource;
+    1: CreateResourceCmd create_resource;
+    2: ReleaseResourceCmd release_resource;
+    3: ExportResourceCmdDeprecated export_resource;
+    4: ImportResourceCmdDeprecated import_resource;
 
     /// Tagging commands.
-     5: SetTagCmd set_tag;
+    5: SetTagCmd set_tag;
 
     /// Grouping commands.
-     6: DetachCmd detach;
+    6: DetachCmd detach;
 
     /// Spatial commands.
-     7: SetTranslationCmd set_translation;
-     8: SetScaleCmd set_scale;
-     9: SetRotationCmd set_rotation;
+    7: SetTranslationCmd set_translation;
+    8: SetScaleCmd set_scale;
+    9: SetRotationCmd set_rotation;
     10: SetAnchorCmd set_anchor;
     11: SetSizeCmd set_size;
     12: SetOpacityCmd set_opacity;
@@ -126,7 +126,7 @@ struct ReleaseResourceCmd {
 /// No specific mechanism is provided for transferring a token from an exporter
 /// to an importer; collaborators may choose any out-of-band API they wish to do
 /// so.
-struct ExportResourceCmd {
+struct ExportResourceCmdDeprecated {
     uint32 id;
     handle<eventpair> token;
 };
@@ -153,7 +153,7 @@ struct ExportResourceCmd {
 // TODO: describe how the imported resource behaves if the exported resource
 // isn't yet available, or becomes unavailable (e.g. an imported Material might
 // act as a plain white texture).
-struct ImportResourceCmd {
+struct ImportResourceCmdDeprecated {
     uint32 id;
     handle<eventpair> token;
     ImportSpec spec;

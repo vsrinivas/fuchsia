@@ -6,6 +6,7 @@
 
 #include "lib/ui/scenic/cpp/commands.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
+#include "sdk/lib/ui/scenic/cpp/view_token_pair.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -17,21 +18,21 @@ class SizeChangeHintTest : public SessionTest {
 
   void TearDown() override {
     SessionTest::TearDown();
-    resource_linker_.reset();
+    view_linker_.reset();
   }
 
   SessionContext CreateSessionContext() override {
     SessionContext session_context = SessionTest::CreateSessionContext();
 
-    FXL_DCHECK(!resource_linker_);
+    FXL_DCHECK(!view_linker_);
 
-    resource_linker_ = std::make_unique<ResourceLinker>();
-    session_context.resource_linker = resource_linker_.get();
+    view_linker_ = std::make_unique<ViewLinker>();
+    session_context.view_linker = view_linker_.get();
 
     return session_context;
   }
 
-  std::unique_ptr<ResourceLinker> resource_linker_;
+  std::unique_ptr<ViewLinker> view_linker_;
 };
 
 TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
@@ -40,21 +41,32 @@ TEST_F(SizeChangeHintTest, SendingSizeChangeEventWorks) {
   ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &source, &destination));
 
   // Export an entity node.
-  ResourceId node_id = 1;
-  ResourceId import_node_id = 2;
+  const ResourceId node_id = 1;
+  const ResourceId view_holder_id = 2;
+  const ResourceId view_id = 3;
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(node_id)));
-  EXPECT_TRUE(Apply(scenic::NewExportResourceCmd(node_id, std::move(source))));
-  EXPECT_TRUE(Apply(scenic::NewImportResourceCmd(
-      import_node_id, ::fuchsia::ui::gfx::ImportSpec::NODE, std::move(destination))));
 
-  ResourceId root_node_id = 3;
-  ResourceId child_1_id = 4;
-  ResourceId child_2_id = 5;
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
+  EXPECT_TRUE(Apply(scenic::NewCreateViewHolderCmd(
+      view_holder_id, std::move(view_holder_token), "MyViewHolder")));
+  EXPECT_TRUE(Apply(
+      scenic::NewCreateViewCmd(view_id, std::move(view_token), "MyView")));
+
+  // Run the message loop to flush out View-related events that we don't
+  // care about.
+  RunLoopUntilIdle();
+  ClearEvents();
+
+  Apply(scenic::NewAddChildCmd(node_id, view_holder_id));
+
+  const ResourceId root_node_id = 4;
+  const ResourceId child_1_id = 5;
+  const ResourceId child_2_id = 6;
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(root_node_id)));
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(child_1_id)));
   ASSERT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(child_2_id)));
 
-  Apply(scenic::NewAddChildCmd(import_node_id, root_node_id));
+  Apply(scenic::NewAddChildCmd(view_id, root_node_id));
   Apply(scenic::NewAddChildCmd(root_node_id, child_1_id));
   Apply(scenic::NewAddChildCmd(root_node_id, child_2_id));
 

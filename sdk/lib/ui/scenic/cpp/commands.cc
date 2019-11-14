@@ -508,7 +508,7 @@ fuchsia::ui::gfx::Command NewReleaseResourceCmd(uint32_t id) {
 fuchsia::ui::gfx::Command NewExportResourceCmd(uint32_t resource_id, zx::eventpair export_token) {
   ZX_DEBUG_ASSERT(export_token);
 
-  fuchsia::ui::gfx::ExportResourceCmd export_resource;
+  fuchsia::ui::gfx::ExportResourceCmdDeprecated export_resource;
   export_resource.id = resource_id;
   export_resource.token = std::move(export_token);
 
@@ -523,7 +523,7 @@ fuchsia::ui::gfx::Command NewImportResourceCmd(uint32_t resource_id,
                                                zx::eventpair import_token) {
   ZX_DEBUG_ASSERT(import_token);
 
-  fuchsia::ui::gfx::ImportResourceCmd import_resource;
+  fuchsia::ui::gfx::ImportResourceCmdDeprecated import_resource;
   import_resource.id = resource_id;
   import_resource.token = std::move(import_token);
   import_resource.spec = spec;

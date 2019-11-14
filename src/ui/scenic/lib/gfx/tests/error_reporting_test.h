@@ -39,6 +39,9 @@ class TestEventReporter : public EventReporter {
 
   const std::vector<fuchsia::ui::scenic::Event>& events() const { return events_; }
 
+  // Clear the accumulated events.  Afterward, the result of |events()| will be empty.
+  void ClearEvents() { events_.clear(); }
+
   // |EventReporter|
   EventReporterWeakPtr GetWeakPtr() override { return weak_factory_.GetWeakPtr(); }
 
@@ -65,6 +68,9 @@ class ErrorReportingTest : public ::gtest::TestLoopFixture {
 
   // Return the events that were enqueued on the EventReporter returned by |event_reporter()|.
   const std::vector<fuchsia::ui::scenic::Event>& events() const;
+
+  // Clear the accumulated events.  Afterward, the result of |events()| will be empty.
+  void ClearEvents() { event_reporter_->ClearEvents(); }
 
   // Verify that the expected number of errors were reported.
   void ExpectErrorCount(size_t errors_expected) {

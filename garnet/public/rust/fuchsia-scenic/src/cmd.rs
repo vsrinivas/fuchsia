@@ -5,9 +5,8 @@
 use fidl_fuchsia_ui_gfx::Command as GfxCommand;
 use fidl_fuchsia_ui_gfx::{
     AddChildCmd, AddLayerCmd, AddPartCmd, ColorRgb, ColorRgbValue, ColorRgba, ColorRgbaValue,
-    CreateResourceCmd, DetachCmd, DetachLightCmd, DetachLightsCmd, ExportResourceCmd,
-    ImportResourceCmd, ImportSpec, Quaternion, QuaternionValue, ReleaseResourceCmd,
-    RemoveAllLayersCmd, RemoveLayerCmd, ResourceArgs, SceneAddAmbientLightCmd,
+    CreateResourceCmd, DetachCmd, DetachLightCmd, DetachLightsCmd, Quaternion, QuaternionValue,
+    ReleaseResourceCmd, RemoveAllLayersCmd, RemoveLayerCmd, ResourceArgs, SceneAddAmbientLightCmd,
     SceneAddDirectionalLightCmd, SceneAddPointLightCmd, SetAnchorCmd, SetCameraCmd, SetClipCmd,
     SetColorCmd, SetEventMaskCmd, SetLayerStackCmd, SetLightColorCmd, SetLightDirectionCmd,
     SetMaterialCmd, SetRendererCmd, SetRotationCmd, SetScaleCmd, SetShapeCmd, SetSizeCmd,
@@ -15,21 +14,10 @@ use fidl_fuchsia_ui_gfx::{
     ViewProperties,
 };
 use fidl_fuchsia_ui_scenic::Command;
-use fuchsia_zircon::EventPair;
 
 pub fn create_resource(id: u32, resource: ResourceArgs) -> Command {
     let cmd = CreateResourceCmd { id, resource };
     Command::Gfx(GfxCommand::CreateResource(cmd))
-}
-
-pub fn import_resource(id: u32, token: EventPair, spec: ImportSpec) -> Command {
-    let cmd = ImportResourceCmd { id, token, spec };
-    Command::Gfx(GfxCommand::ImportResource(cmd))
-}
-
-pub fn export_resource(id: u32, token: EventPair) -> Command {
-    let cmd = ExportResourceCmd { id, token };
-    Command::Gfx(GfxCommand::ExportResource(cmd))
 }
 
 pub fn release_resource(id: u32) -> Command {
