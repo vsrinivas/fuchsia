@@ -5,16 +5,12 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_LINK_PACKET_SOURCE_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_AUDIO_LINK_PACKET_SOURCE_H_
 
-#include <deque>
-#include <memory>
-#include <mutex>
-
 #include <fbl/ref_ptr.h>
 
-#include "src/lib/fxl/synchronization/thread_annotations.h"
 #include "src/media/audio/audio_core/audio_link.h"
 #include "src/media/audio/audio_core/format.h"
 #include "src/media/audio/audio_core/packet.h"
+#include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 
 namespace media::audio {
@@ -24,7 +20,6 @@ class AudioLinkPacketSource : public AudioLink {
   static fbl::RefPtr<AudioLinkPacketSource> Create(fbl::RefPtr<AudioObject> source,
                                                    fbl::RefPtr<AudioObject> dest,
                                                    fbl::RefPtr<Format> format);
-  ~AudioLinkPacketSource() override;
 
   // Accessor for the format info assigned to this link.
   //
@@ -34,17 +29,16 @@ class AudioLinkPacketSource : public AudioLink {
   // needing to obtain any locks. A lock-less single writer, single reader, triple-buffer object
   // would be perfect for this (I have one of these lying around from a previous project, I just
   // need to see if I am allowed to use it or not).
-  const Format& format() const { return *format_; }
+  const Format& format() const { return packet_queue_.format(); }
 
   // Common pending queue ops.
-  bool pending_queue_empty() const {
-    std::lock_guard<std::mutex> locker(pending_mutex_);
-    return pending_packet_queue_.empty();
-  }
+  bool pending_queue_empty() const { return packet_queue_.empty(); }
 
   // PendingQueue operations used by the packet source. Never call these from the destination.
-  void PushToPendingQueue(const fbl::RefPtr<Packet>& packet);
-  void FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr);
+  void PushToPendingQueue(const fbl::RefPtr<Packet>& packet) { packet_queue_.PushPacket(packet); }
+  void FlushPendingQueue(const fbl::RefPtr<PendingFlushToken>& flush_token = nullptr) {
+    packet_queue_.Flush(flush_token);
+  }
 
   // PendingQueue operations used by the destination. Never call these from the source.
   //
@@ -56,24 +50,16 @@ class AudioLinkPacketSource : public AudioLink {
   // wait if the front of the queue is involved in a mixing operation. This, in turn, guarantees
   // that audio packets are always returned to the user in the order which they were queued in
   // without forcing AudioRenderers to wait to queue new data if a mix operation is in progress.
-  fbl::RefPtr<Packet> LockPendingQueueFront(bool* was_flushed);
-  void UnlockPendingQueueFront(bool release_packet);
+  fbl::RefPtr<Packet> LockPendingQueueFront(bool* was_flushed) {
+    return packet_queue_.LockPacket(was_flushed);
+  }
+  void UnlockPendingQueueFront(bool release_packet) { packet_queue_.UnlockPacket(release_packet); }
 
  private:
   AudioLinkPacketSource(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
                         fbl::RefPtr<Format> format);
 
-  fbl::RefPtr<Format> format_;
-
-  std::mutex flush_mutex_;
-  mutable std::mutex pending_mutex_;
-
-  std::deque<fbl::RefPtr<Packet>> pending_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
-  std::deque<fbl::RefPtr<Packet>> pending_flush_packet_queue_ FXL_GUARDED_BY(pending_mutex_);
-  std::deque<fbl::RefPtr<PendingFlushToken>> pending_flush_token_queue_
-      FXL_GUARDED_BY(pending_mutex_);
-  bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
-  bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
+  PacketQueue packet_queue_;
 };
 
 //
