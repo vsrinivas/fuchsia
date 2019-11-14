@@ -7,7 +7,7 @@ source_set("types-internal") {
     "cpp/types-internal.h",
   ]
   public_deps = [
-    "$zx/system/fidl/fuchsia-cobalt:c",
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
   ]
   visibility = [ "./*" ]
 }
@@ -23,11 +23,11 @@ source_set("collector") {
   ]
   include_dirs = [ "./include/" ]
   deps = [
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
     ":types-internal",
     "$zx/system/fidl/fuchsia-cobalt:llcpp",
     "$zx/system/public",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fidl",
   ]
   visibility = [ "./*" ]
 }

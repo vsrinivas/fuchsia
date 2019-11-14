@@ -14,6 +14,7 @@
 
 #include <cstdint>
 #include <string>
+#include <string_view>
 
 #include <cobalt-client/cpp/types-internal.h>
 
@@ -47,55 +48,38 @@ struct CobaltOptions {
   ReleaseStage release_stage;
 };
 
-class CobaltLogger : public Logger {
+// Logger implementation that pushes data to cobalt.
+class CobaltLogger final : public Logger {
  public:
+  static std::string_view GetServiceName();
+
   CobaltLogger() = delete;
   // instance from cobalt service;
-  explicit CobaltLogger(CobaltOptions options);
+  explicit CobaltLogger(CobaltOptions options) : options_(std::move(options)) { logger_.reset(); }
   CobaltLogger(const CobaltLogger&) = delete;
   CobaltLogger(CobaltLogger&&) = delete;
   CobaltLogger& operator=(const CobaltLogger&) = delete;
   CobaltLogger& operator=(CobaltLogger&&) = delete;
-  ~CobaltLogger() override {}
+  ~CobaltLogger() final = default;
 
   // Returns true if the histogram was persisted.
   bool Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
-           size_t bucket_count) override;
+           size_t bucket_count) final;
 
   // Returns true if the counter was persisted.
-  bool Log(const MetricInfo& metric_info, int64_t count) override;
-
-  bool IsListeningForReply() const { return logger_factory_.is_valid(); }
-
-  // Blocks until the reply from LoggerFactory arrives into |logger_factory_|
-  // channel or the peer is closed. |observed| will be set to the observed signals
-  // if provided. Useful for testing to enforce a deterministic order of operations.
-  zx_status_t WaitForReply(zx_signals_t* observed = nullptr) const {
-    return zx_object_wait_one(logger_factory_.get(), ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
-                              zx::time::infinite().get(), observed);
-  }
+  bool Log(const MetricInfo& metric_info, int64_t count) final;
 
  protected:
-  // If returns true, a channel has been established with the endpoint,
-  // and the handshake to set up a logger started.
-  bool TrySendLoggerRequest();
+  // Returns true if |logger_| is able to  provide a logging service instance for |options_|.
+  bool TryObtainLogger();
 
-  // The service replied and the status is ok.
-  bool HasCobaltReplied(zx::duration deadline);
-
-  // Returns true if the logger request has been sent, and Cobalt Service
-  // replied successfully already. If any error happens that prevents
-  // writing to the current channel(ZX_ERR_PEER_CLOSED), we guarantee
-  // the next time this method is called will return false.
-  bool IsLoggerReady();
+  // Cleans up the state of the logger.
+  void Reset() { logger_.reset(); }
 
   // Set of options for this logger.
   CobaltOptions options_;
 
   zx::channel logger_;
-  zx::channel logger_factory_;
-
-  bool is_first_attempt_;
 };
 
 }  // namespace internal

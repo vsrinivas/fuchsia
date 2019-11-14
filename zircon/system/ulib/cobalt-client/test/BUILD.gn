@@ -9,18 +9,39 @@ group("test") {
   ]
 }
 
-zx_test("cobalt-client-unit") {
+source_set("cobalt-logger-test") {
+  testonly = true
   sources = [
-    "collector_test.cc",
-    "counter_test.cc",
-    "histogram_test.cc",
-    "in-memory-logger-test.cc",
-    "main.cc",
-    "metric_options_test.cc",
-    "metric_info_test.cc",
-    "types_internal_test.cc",
+    "cobalt_logger_test.cc"
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
+    "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/cobalt-client:collector",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("cobalt-client-unit") {
+  sources = [
+   "collector_test.cc",
+   "counter_test.cc",
+   "histogram_test.cc",
+   "in-memory-logger-test.cc",
+   "main.cc",
+   "metric_info_test.cc",
+   "metric_options_test.cc",
+   "types_internal_test.cc",
+  ]
+  deps = [
+    ":cobalt-logger-test",
     "$zx/system/fidl/fuchsia-cobalt:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/fidl/fuchsia-mem:c",

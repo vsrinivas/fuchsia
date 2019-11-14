@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
@@ -34,7 +33,7 @@ internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
     return fdio_service_connect(service_path, service.release());
   };
   cobalt_options.service_path = "/svc/";
-  cobalt_options.service_path.append(fuchsia_cobalt_LoggerFactory_Name);
+  cobalt_options.service_path.append(CobaltLogger::GetServiceName());
   cobalt_options.release_stage = static_cast<internal::ReleaseStage>(options.release_stage);
   return cobalt_options;
 }

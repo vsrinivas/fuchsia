@@ -5,11 +5,12 @@
 #ifndef COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
 #define COBALT_CLIENT_CPP_TYPES_INTERNAL_H_
 
-#include <fuchsia/cobalt/c/fidl.h>
+#include <fuchsia/cobalt/llcpp/fidl.h>
 #include <string.h>
 #include <unistd.h>
 
 #include <cstdint>
+#include <type_traits>
 
 #include <cobalt-client/cpp/metric-options.h>
 
@@ -18,17 +19,18 @@ namespace internal {
 // Note: Everything on this namespace is internal, no external users should rely
 // on the behaviour of any of these classes.
 // A value pair which represents a bucket index and the count for such index.
-using HistogramBucket = fuchsia_cobalt_HistogramBucket;
+using HistogramBucket = ::llcpp::fuchsia::cobalt::HistogramBucket;
+using ReleaseStageType = std::underlying_type<::llcpp::fuchsia::cobalt::ReleaseStage>::type;
 
-enum class ReleaseStage : fuchsia_cobalt_ReleaseStage {
-  kGa = fuchsia_cobalt_ReleaseStage_GA,
-  kDogfood = fuchsia_cobalt_ReleaseStage_DOGFOOD,
-  kFishfood = fuchsia_cobalt_ReleaseStage_FISHFOOD,
-  kDebug = fuchsia_cobalt_ReleaseStage_DEBUG,
+enum class ReleaseStage : ReleaseStageType {
+  kGa = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::GA),
+  kDogfood = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::DOGFOOD),
+  kFishfood = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::FISHFOOD),
+  kDebug = static_cast<ReleaseStageType>(::llcpp::fuchsia::cobalt::ReleaseStage::DEBUG),
 };
 
 struct MetricInfo {
-  static constexpr uint64_t kMaxEventCodes = fuchsia_cobalt_MAX_EVENT_CODE_COUNT;
+  static constexpr uint64_t kMaxEventCodes = ::llcpp::fuchsia::cobalt::MAX_EVENT_CODE_COUNT;
 
   // Allows using a |MetricInfo| as key in ordered containers.
   struct LessThan {
