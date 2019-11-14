@@ -6,7 +6,7 @@ use {
     crate::location::{InspectLocation, InspectType},
     failure::{format_err, Error},
     fidl_fuchsia_io::NodeInfo,
-    fuchsia_inspect::reader::NodeHierarchy,
+    fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
     inspect_fidl_load as inspect_fidl, io_util,
     std::convert::TryFrom,
 };
@@ -54,14 +54,15 @@ impl IqueryResult {
 
         // Obtain the vmo backing any VmoFiles.
         let node_info = proxy.describe().await?;
+        // TODO: read lazy nodes as well.
         match node_info {
             NodeInfo::Vmofile(vmofile) => {
-                self.hierarchy = Some(NodeHierarchy::try_from(&vmofile.vmo)?);
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.hierarchy);
                 Ok(())
             }
             NodeInfo::File(_) => {
                 let bytes = io_util::read_file_bytes(&proxy).await?;
-                self.hierarchy = Some(NodeHierarchy::try_from(bytes)?);
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.hierarchy);
                 Ok(())
             }
             _ => Err(format_err!("Unknown inspect file at {}", self.location.path.display())),

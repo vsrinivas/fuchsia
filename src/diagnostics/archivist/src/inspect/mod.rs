@@ -10,7 +10,7 @@ use {
     },
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
-    fuchsia_inspect::reader::{snapshot::Snapshot, NodeHierarchy},
+    fuchsia_inspect::reader::{snapshot::Snapshot, NodeHierarchy, PartialNodeHierarchy},
     fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
@@ -330,7 +330,8 @@ impl ReaderServer {
         path_selectors: &RegexSet,
         property_selectors: &Vec<Regex>,
     ) -> Result<NodeHierarchy, Error> {
-        let root_node = NodeHierarchy::try_from(inspect_snapshot)?;
+        // TODO: read lazy nodes as well.
+        let root_node = PartialNodeHierarchy::try_from(inspect_snapshot)?.hierarchy;
         let mut new_root = NodeHierarchy::new_root();
         for (node_path, property) in root_node.property_iter() {
             let mut formatted_node_path =

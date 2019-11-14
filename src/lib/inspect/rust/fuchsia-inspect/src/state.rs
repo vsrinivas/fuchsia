@@ -478,7 +478,7 @@ mod tests {
         super::*,
         crate::{
             assert_inspect_tree,
-            reader::{snapshot::Snapshot, NodeHierarchy},
+            reader::{snapshot::Snapshot, PartialNodeHierarchy},
             Inspector,
         },
         failure::bail,
@@ -526,7 +526,6 @@ mod tests {
         assert_eq!(blocks[2].block_type(), BlockType::Name);
         assert!(blocks[3..].iter().all(|b| b.block_type() == BlockType::Free));
 
-        // Create a child of the node and verify child counts.
         let child_block = state.create_node("child1", 1).unwrap();
         assert_eq!(block.child_count().unwrap(), 1);
 
@@ -966,8 +965,9 @@ mod tests {
         let callback = state.callbacks.get("link-name-0").unwrap();
         match callback().await {
             Ok(inspector) => {
-                let hierarchy = NodeHierarchy::try_from(inspector.vmo.as_ref().unwrap()).unwrap();
-                assert_inspect_tree!(hierarchy, root: {
+                let partial =
+                    PartialNodeHierarchy::try_from(inspector.vmo.as_ref().unwrap()).unwrap();
+                assert_inspect_tree!(partial.hierarchy, root: {
                     a: 1u64,
                 });
             }

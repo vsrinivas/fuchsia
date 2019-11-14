@@ -44,9 +44,6 @@ pub struct NodeHierarchy {
     /// The children of this node.
     pub children: Vec<NodeHierarchy>,
 
-    /// Links of this node.
-    pub(in crate) links: Vec<LinkValue>,
-
     /// Values that were impossible to load.
     pub missing: Vec<MissingValue>,
 }
@@ -84,15 +81,11 @@ impl NodeHierarchy {
         properties: Vec<Property>,
         children: Vec<NodeHierarchy>,
     ) -> Self {
-        Self { name: name.into(), properties, children, links: vec![], missing: vec![] }
+        Self { name: name.into(), properties, children, missing: vec![] }
     }
 
     pub async fn try_from_inspector(inspector: &Inspector) -> Result<Self, Error> {
         NodeHierarchyLoader::load(inspector).await
-    }
-
-    fn empty() -> Self {
-        NodeHierarchy::new("", vec![], vec![])
     }
 
     /// Sorts the properties and children of the node hierarchy by name.
@@ -284,7 +277,7 @@ impl<'a> TrieIterable<'a, String, Property> for NodeHierarchyIterator<'a> {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-pub(in crate) struct LinkValue {
+pub struct LinkValue {
     /// The name of the link.
     pub name: String,
 
@@ -344,6 +337,37 @@ impl<T> ArrayBucket<T> {
     }
 }
 
+/// A partial node hierarchy representes a node in an inspect tree without
+/// the linked (lazy) nodes expanded.
+/// Usually a client would prefer to use a `NodeHierarchy` to get the full
+/// inspect tree.
+#[derive(Clone, Debug, PartialEq)]
+pub struct PartialNodeHierarchy {
+    pub hierarchy: NodeHierarchy,
+
+    pub links: Vec<LinkValue>,
+}
+
+impl PartialNodeHierarchy {
+    pub fn new(
+        name: impl Into<String>,
+        properties: Vec<Property>,
+        children: Vec<NodeHierarchy>,
+    ) -> Self {
+        Self { hierarchy: NodeHierarchy::new(name, properties, children), links: vec![] }
+    }
+
+    pub fn empty() -> Self {
+        PartialNodeHierarchy::new("", vec![], vec![])
+    }
+
+    /// Whether the partial hierarchy is complete or not. A complete node hierarchy
+    /// has all the links loaded into it.
+    pub fn is_complete(&self) -> bool {
+        self.links.is_empty()
+    }
+}
+
 struct NodeHierarchyLoader<'a> {
     work_stack: Vec<LoaderStep<'a>>,
 }
@@ -366,38 +390,39 @@ impl Deref for InspectorHold<'_> {
 
 struct LoaderStep<'a> {
     inspector: InspectorHold<'a>,
-    hierarchy: NodeHierarchy,
+    partial_hierarchy: PartialNodeHierarchy,
     link_value: Option<LinkValue>,
 }
 
 impl<'a> NodeHierarchyLoader<'a> {
     /// Loads an inspector tree by following all the lazy links in the hierarchy.
     pub async fn load(inspector: &'a Inspector) -> Result<NodeHierarchy, Error> {
-        let hierarchy = inspector
+        let partial_hierarchy = inspector
             .vmo
             .as_ref()
             .ok_or(format_err!("failed to read root"))
-            .and_then(|vmo| NodeHierarchy::try_from(vmo))?;
+            .and_then(|vmo| PartialNodeHierarchy::try_from(vmo))?;
         let work_stack = vec![LoaderStep {
             inspector: InspectorHold::Ref(inspector),
             link_value: None,
-            hierarchy,
+            partial_hierarchy,
         }];
+
         Ok(Self { work_stack }.reduce().await)
     }
 
     async fn reduce(mut self) -> NodeHierarchy {
         while !self.work_stack.is_empty() {
             let current_step = self.work_stack.pop().unwrap();
-            if current_step.link_value.is_none() && current_step.hierarchy.links.is_empty() {
+            if current_step.link_value.is_none() && current_step.partial_hierarchy.is_complete() {
                 // The node is complete and given that there's no link value,
                 // it's the root.
-                return current_step.hierarchy;
-            } else if current_step.hierarchy.links.is_empty() {
+                return current_step.partial_hierarchy.hierarchy;
+            } else if current_step.partial_hierarchy.is_complete() {
                 // This hierarchy is complete, add it to the parent
                 // based on the disposition.
                 self.add_hierarchy_to_parent(
-                    current_step.hierarchy,
+                    current_step.partial_hierarchy.hierarchy,
                     current_step.link_value.unwrap(),
                 );
             } else {
@@ -416,14 +441,14 @@ impl<'a> NodeHierarchyLoader<'a> {
         match link_value.disposition {
             LinkNodeDisposition::Child => {
                 hierarchy.name = link_value.name;
-                parent_step.hierarchy.children.push(hierarchy);
+                parent_step.partial_hierarchy.hierarchy.children.push(hierarchy);
             }
             LinkNodeDisposition::Inline => {
                 for property in hierarchy.properties {
-                    parent_step.hierarchy.properties.push(property);
+                    parent_step.partial_hierarchy.hierarchy.properties.push(property);
                 }
                 for child in hierarchy.children {
-                    parent_step.hierarchy.children.push(child);
+                    parent_step.partial_hierarchy.hierarchy.children.push(child);
                 }
             }
         }
@@ -447,10 +472,11 @@ impl<'a> NodeHierarchyLoader<'a> {
 
     async fn explore_next(&mut self, mut current_step: LoaderStep<'a>) {
         // Safe to unwrap. Assuming this fn is *only* called as part of `expand`.
-        let child_link_value = current_step.hierarchy.links.pop().unwrap();
+        let child_link_value = current_step.partial_hierarchy.links.pop().unwrap();
         match self.load_tree(&current_step.inspector, &child_link_value.content).await {
             Err(_) => {
                 current_step
+                    .partial_hierarchy
                     .hierarchy
                     .add_missing(MissingValueReason::LinkNotFound, child_link_value.name);
                 self.work_stack.push(current_step);
@@ -459,22 +485,23 @@ impl<'a> NodeHierarchyLoader<'a> {
                 let vmo_result = child_inspector.vmo.as_ref();
                 if vmo_result.is_none() {
                     current_step
+                        .partial_hierarchy
                         .hierarchy
                         .add_missing(MissingValueReason::LinkInvalid, child_link_value.name);
                     self.work_stack.push(current_step);
                     return;
                 }
-                match NodeHierarchy::try_from(vmo_result.unwrap()) {
+                match PartialNodeHierarchy::try_from(vmo_result.unwrap()) {
                     Ok(child_hierarchy) => {
                         self.work_stack.push(current_step);
                         self.work_stack.push(LoaderStep {
                             inspector: InspectorHold::Owned(child_inspector),
                             link_value: Some(child_link_value),
-                            hierarchy: child_hierarchy,
+                            partial_hierarchy: child_hierarchy,
                         });
                     }
                     Err(_) => {
-                        current_step.hierarchy.add_missing(
+                        current_step.partial_hierarchy.hierarchy.add_missing(
                             MissingValueReason::LinkParseFailure,
                             child_link_value.name,
                         );
@@ -566,7 +593,7 @@ impl Property {
     }
 }
 
-impl TryFrom<Snapshot> for NodeHierarchy {
+impl TryFrom<Snapshot> for PartialNodeHierarchy {
     type Error = failure::Error;
 
     fn try_from(snapshot: Snapshot) -> Result<Self, Self::Error> {
@@ -574,7 +601,7 @@ impl TryFrom<Snapshot> for NodeHierarchy {
     }
 }
 
-impl TryFrom<&Vmo> for NodeHierarchy {
+impl TryFrom<&Vmo> for PartialNodeHierarchy {
     type Error = failure::Error;
 
     fn try_from(vmo: &Vmo) -> Result<Self, Self::Error> {
@@ -583,7 +610,7 @@ impl TryFrom<&Vmo> for NodeHierarchy {
     }
 }
 
-impl TryFrom<Vec<u8>> for NodeHierarchy {
+impl TryFrom<Vec<u8>> for PartialNodeHierarchy {
     type Error = failure::Error;
 
     fn try_from(bytes: Vec<u8>) -> Result<Self, Self::Error> {
@@ -592,17 +619,8 @@ impl TryFrom<Vec<u8>> for NodeHierarchy {
     }
 }
 
-impl TryFrom<&Inspector> for NodeHierarchy {
-    type Error = failure::Error;
-
-    fn try_from(inspector: &Inspector) -> Result<Self, Self::Error> {
-        let snapshot = Snapshot::try_from(inspector)?;
-        read(&snapshot)
-    }
-}
-
 /// Read the blocks in the snapshot as a node hierarchy.
-fn read(snapshot: &Snapshot) -> Result<NodeHierarchy, Error> {
+fn read(snapshot: &Snapshot) -> Result<PartialNodeHierarchy, Error> {
     let result = scan_blocks(snapshot)?;
     result.reduce()
 }
@@ -648,7 +666,7 @@ struct ScanResult<'a> {
 /// A scanned node in the Inspect VMO tree.
 struct ScannedNode {
     /// The node hierarchy with properties and children nodes filled.
-    hierarchy: NodeHierarchy,
+    partial_hierarchy: PartialNodeHierarchy,
 
     /// The number of children nodes this node has.
     child_nodes_count: usize,
@@ -659,19 +677,23 @@ struct ScannedNode {
 
 impl ScannedNode {
     fn new() -> Self {
-        ScannedNode { hierarchy: NodeHierarchy::empty(), child_nodes_count: 0, parent_index: 0 }
+        ScannedNode {
+            partial_hierarchy: PartialNodeHierarchy::empty(),
+            child_nodes_count: 0,
+            parent_index: 0,
+        }
     }
 
     /// Sets the name and parent index of the node.
     fn initialize(&mut self, name: String, parent_index: u32) {
-        self.hierarchy.name = name;
+        self.partial_hierarchy.hierarchy.name = name;
         self.parent_index = parent_index;
     }
 
     /// A scanned node is considered complete if the number of children in the
     /// hierarchy is the same as the number of children counted while scanning.
     fn is_complete(&self) -> bool {
-        self.hierarchy.children.len() == self.child_nodes_count
+        self.partial_hierarchy.hierarchy.children.len() == self.child_nodes_count
     }
 }
 
@@ -684,14 +706,14 @@ macro_rules! get_or_create_scanned_node {
 impl<'a> ScanResult<'a> {
     fn new(snapshot: &'a Snapshot) -> Self {
         let mut root_node = ScannedNode::new();
-        root_node.hierarchy.name = "root".to_string();
+        root_node.partial_hierarchy.hierarchy.name = "root".to_string();
         let parsed_nodes = btreemap!(
             0 => root_node,
         );
         ScanResult { snapshot, parsed_nodes }
     }
 
-    fn reduce(self) -> Result<NodeHierarchy, Error> {
+    fn reduce(self) -> Result<PartialNodeHierarchy, Error> {
         // Stack of nodes that have been found that are complete.
         let mut complete_nodes = Vec::<ScannedNode>::new();
 
@@ -703,7 +725,7 @@ impl<'a> ScanResult<'a> {
         for (index, scanned_node) in self.parsed_nodes.into_iter() {
             if scanned_node.is_complete() {
                 if index == 0 {
-                    return Ok(scanned_node.hierarchy);
+                    return Ok(scanned_node.partial_hierarchy);
                 }
                 complete_nodes.push(scanned_node);
             } else {
@@ -721,7 +743,11 @@ impl<'a> ScanResult<'a> {
                 let parent_node = pending_nodes
                     .get_mut(&scanned_node.parent_index)
                     .ok_or(format_err!("Cannot find index {}", scanned_node.parent_index))?;
-                parent_node.hierarchy.children.push(scanned_node.hierarchy);
+                parent_node
+                    .partial_hierarchy
+                    .hierarchy
+                    .children
+                    .push(scanned_node.partial_hierarchy.hierarchy);
             }
             if pending_nodes
                 .get(&scanned_node.parent_index)
@@ -730,7 +756,7 @@ impl<'a> ScanResult<'a> {
             {
                 let parent_node = pending_nodes.remove(&scanned_node.parent_index).unwrap();
                 if scanned_node.parent_index == 0 {
-                    return Ok(parent_node.hierarchy);
+                    return Ok(parent_node.partial_hierarchy);
                 }
                 complete_nodes.push(parent_node);
             }
@@ -760,15 +786,15 @@ impl<'a> ScanResult<'a> {
         match block.block_type() {
             BlockType::IntValue => {
                 let value = block.int_value()?;
-                parent.hierarchy.properties.push(Property::Int(name, value));
+                parent.partial_hierarchy.hierarchy.properties.push(Property::Int(name, value));
             }
             BlockType::UintValue => {
                 let value = block.uint_value()?;
-                parent.hierarchy.properties.push(Property::Uint(name, value));
+                parent.partial_hierarchy.hierarchy.properties.push(Property::Uint(name, value));
             }
             BlockType::DoubleValue => {
                 let value = block.double_value()?;
-                parent.hierarchy.properties.push(Property::Double(name, value));
+                parent.partial_hierarchy.hierarchy.properties.push(Property::Double(name, value));
             }
             _ => {}
         }
@@ -788,7 +814,7 @@ impl<'a> ScanResult<'a> {
                 let values = value_indexes
                     .map(|i| block.array_get_int_slot(i).unwrap())
                     .collect::<Vec<i64>>();
-                parent.hierarchy.properties.push(Property::IntArray(
+                parent.partial_hierarchy.hierarchy.properties.push(Property::IntArray(
                     name,
                     ArrayValue::new(values, block.array_format().unwrap()),
                 ));
@@ -797,7 +823,7 @@ impl<'a> ScanResult<'a> {
                 let values = value_indexes
                     .map(|i| block.array_get_uint_slot(i).unwrap())
                     .collect::<Vec<u64>>();
-                parent.hierarchy.properties.push(Property::UintArray(
+                parent.partial_hierarchy.hierarchy.properties.push(Property::UintArray(
                     name,
                     ArrayValue::new(values, block.array_format().unwrap()),
                 ));
@@ -806,7 +832,7 @@ impl<'a> ScanResult<'a> {
                 let values = value_indexes
                     .map(|i| block.array_get_double_slot(i).unwrap())
                     .collect::<Vec<f64>>();
-                parent.hierarchy.properties.push(Property::DoubleArray(
+                parent.partial_hierarchy.hierarchy.properties.push(Property::DoubleArray(
                     name,
                     ArrayValue::new(values, block.array_format().unwrap()),
                 ));
@@ -837,12 +863,13 @@ impl<'a> ScanResult<'a> {
         match block.property_format()? {
             PropertyFormat::String => {
                 parent
+                    .partial_hierarchy
                     .hierarchy
                     .properties
                     .push(Property::String(name, String::from_utf8_lossy(&buffer).to_string()));
             }
             PropertyFormat::Bytes => {
-                parent.hierarchy.properties.push(Property::Bytes(name, buffer));
+                parent.partial_hierarchy.hierarchy.properties.push(Property::Bytes(name, buffer));
             }
         }
         Ok(())
@@ -857,7 +884,7 @@ impl<'a> ScanResult<'a> {
             .ok_or(format_err!("failed to get link content block"))?
             .name_contents()?;
         let disposition = block.link_node_disposition()?;
-        parent.hierarchy.links.push(LinkValue { name, content, disposition });
+        parent.partial_hierarchy.links.push(LinkValue { name, content, disposition });
         Ok(())
     }
 }
@@ -1082,10 +1109,11 @@ mod tests {
         // UTF8 character.  Then build a new node hierarchy based off those bytes, see if invalid
         // string is converted into a valid UTF8 string with some information lost.
         buf[byte_offset] = 0xFE;
-        let nh = NodeHierarchy::try_from(Snapshot::build(&buf)).expect("creating node hierarchy");
+        let partial =
+            PartialNodeHierarchy::try_from(Snapshot::build(&buf)).expect("creating node hierarchy");
 
         assert_eq!(
-            nh,
+            partial.hierarchy,
             NodeHierarchy::new(
                 "root",
                 vec![Property::String("property".to_string(), "\u{FFFD}ello world".to_string())],
@@ -1112,7 +1140,7 @@ mod tests {
         payload.set_array_slots_count(255);
 
         buf[offset..offset + 8].clone_from_slice(&payload.value().to_le_bytes()[..]);
-        assert!(NodeHierarchy::try_from(Snapshot::build(&buf)).is_err());
+        assert!(PartialNodeHierarchy::try_from(Snapshot::build(&buf)).is_err());
 
         Ok(())
     }
