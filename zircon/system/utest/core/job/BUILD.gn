@@ -11,8 +11,8 @@ source_set("job") {
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/mini-process",
-    "$zx/system/ulib/unittest",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
   ]
 }
