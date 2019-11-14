@@ -31,6 +31,7 @@
 #include <dev/power.h>
 #include <dev/psci.h>
 #include <dev/uart.h>
+#include <explicit-memory/bytes.h>
 #include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/dpc.h>
@@ -298,6 +299,14 @@ static zbi_result_t process_zbi_item_early(zbi_header_t* item, void* payload, vo
       char* contents = reinterpret_cast<char*>(payload);
       contents[item->length - 1] = '\0';
       gCmdline.Append(contents);
+
+      // The CMDLINE might include entropy for the zircon cprng.
+      // We don't want that information to be accesible after it has
+      // been added to the kernel cmdline.
+      mandatory_memset(payload, 0, item->length);
+      item->type = ZBI_TYPE_DISCARD;
+      item->crc32 = ZBI_ITEM_NO_CRC32;
+      item->flags &= ~ZBI_FLAG_CRC32;
       break;
     }
     case ZBI_TYPE_MEM_CONFIG: {

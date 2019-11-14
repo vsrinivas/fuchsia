@@ -36,6 +36,7 @@
 #include <zircon/types.h>
 
 #include <dev/uart.h>
+#include <explicit-memory/bytes.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/vector.h>
 #include <libzbi/zbi-cpp.h>
@@ -120,6 +121,14 @@ zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
       if (hdr->length > 0) {
         ((char*)payload)[hdr->length - 1] = 0;
         gCmdline.Append((char*)payload);
+
+        // The CMDLINE might include entropy for the zircon cprng.
+        // We don't want that information to be accesible after it has
+        // been added to the kernel cmdline.
+        mandatory_memset(payload, 0, hdr->length);
+        hdr->type = ZBI_TYPE_DISCARD;
+        hdr->crc32 = ZBI_ITEM_NO_CRC32;
+        hdr->flags &= ~ZBI_FLAG_CRC32;
       }
       break;
     case ZBI_TYPE_EFI_MEMORY_MAP:
