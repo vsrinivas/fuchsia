@@ -883,9 +883,7 @@ async fn test_pkgfs_install_update() {
         );
         let got_blobs = sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap());
 
-        let _ = (got_blobs, expected_blobs);
-        // TODO(fxb/41054): re-enable assertion once flakiness is fixed.
-        // assert_eq!(got_blobs, expected_blobs);
+        assert_eq!(got_blobs, expected_blobs);
     }
 
     drop(d);
@@ -1114,9 +1112,7 @@ async fn test_pkgfs_shadowed_cache_package() {
         );
         let got_blobs = sorted(ls_simple(blobfs_dir.list_dir(".").unwrap()).unwrap());
 
-        let _ = (got_blobs, expected_blobs);
-        // TODO(fxb/41054): re-enable assertion once flakiness is fixed.
-        // assert_eq!(got_blobs, expected_blobs);
+        assert_eq!(got_blobs, expected_blobs);
     }
 
     drop(d);

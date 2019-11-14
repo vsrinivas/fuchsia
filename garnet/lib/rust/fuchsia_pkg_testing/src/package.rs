@@ -241,7 +241,7 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     };
 
     let mut buf = vec![];
-    let read = async move {
+    let read = async {
         loop {
             let (status, chunk) =
                 file.read(fidl_fuchsia_io::MAX_BUF).await.context("file read to respond")?;
@@ -257,7 +257,12 @@ async fn read_file(dir: &DirectoryProxy, path: &str) -> Result<Vec<u8>, Verifica
     };
 
     let (open, read) = join!(open, read);
-    open.and(read)
+    let close_result = file.close().await.context("file close to respond");
+    let result = open.and(read)?;
+    // Only check close_result if everything that came before it looks good.
+    Status::ok(close_result?)
+        .map_err(|status| format_err!("unable to close {:?}: {:?}", path, status))?;
+    Ok(result)
 }
 
 /// An error that can occur while verifying the contents of a directory.
