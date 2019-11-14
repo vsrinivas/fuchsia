@@ -254,6 +254,7 @@ TEST_F(DeviceEnumerationTest, SherlockTest) {
       "wifi/brcmfmac-wlanphy",
       "sys/platform/05:04:15/aml-mipi",
       "sys/platform/05:04:1c",  // nna
+      "sys/platform/05:04:1d",  // pwm
       "gdc",
       "ge2d",
       "imx227-sensor",

@@ -20,6 +20,7 @@ zx_driver("sherlock") {
     "sherlock-mali.cc",
     "sherlock-nna.cc",
     "sherlock-ot-radio.cc",
+    "sherlock-pwm.cc",
     "sherlock-sdio.cc",
     "sherlock-securemem.cc",
     "sherlock-spi.cc",

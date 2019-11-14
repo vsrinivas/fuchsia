@@ -99,6 +99,10 @@ int Sherlock::Thread() {
     zxlogf(ERROR, "CanvasInit() failed\n");
   }
 
+  if (PwmInit() != ZX_OK) {
+    zxlogf(ERROR, "PwmInit() failed\n");
+  }
+
   /*
   // Disabling thermal driver since it sets the A73 cores
   // frequency and voltage incorrectly.

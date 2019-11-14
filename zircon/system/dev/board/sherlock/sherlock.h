@@ -107,6 +107,7 @@ class Sherlock : public SherlockType {
   zx_status_t BacklightInit();
   zx_status_t NnaInit();
   zx_status_t SecureMemInit();
+  zx_status_t PwmInit();
   int Thread();
 
   zx_status_t EnableWifi32K(void);
