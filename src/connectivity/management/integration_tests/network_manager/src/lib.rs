@@ -19,12 +19,14 @@ use fidl_fuchsia_netemul_sandbox::{SandboxMarker, SandboxProxy};
 use fidl_fuchsia_router_config::{
     RouterAdminMarker, RouterAdminProxy, RouterStateMarker, RouterStateProxy,
 };
-use fuchsia_async::{self as fasync};
+use fuchsia_async as fasync;
 use fuchsia_component::client::connect_to_service;
 use fuchsia_component::fuchsia_single_component_package_url as component_url;
 use network_manager_cli::cli::{make_cmd, run_cmd};
 use network_manager_cli::printer::Printer;
 use regex::Regex;
+use std::future::Future;
+use std::pin::Pin;
 use std::str;
 
 #[derive(Debug)]
@@ -215,21 +217,26 @@ async fn exec_cmd(env: &ManagedEnvironmentProxy, command: &str) -> String {
     actual_output
 }
 
-async fn execute_test_suite(router: &Device, commands: TestSuite) {
-    for test in commands.tests {
-        let actual_output = exec_cmd(&router.env, &test.command).await;
-        println!("command: {} - {}", test.command, test.description);
-        let re = Regex::new(&test.expected)
-            .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
-        assert!(
-            re.is_match(&actual_output),
-            "\nTest suite failed.\nStep: {}\nCommand: {}\nExpected regex: {:?}\nActual output: {:?}\n",
-            test.description,
-            test.command,
-            test.expected,
-            actual_output
-        );
-    }
+fn execute_test_suite<'a>(router: &'a Device, commands: TestSuite)
+-> Pin<Box<dyn Future<Output = ()> + 'a>> {
+    // Boxing is needed so we don't overflow the stack when running in
+    // panic=abort mode with the default Fuchsia stack size.
+    Box::pin(async move {
+        for test in commands.tests {
+            let actual_output = exec_cmd(&router.env, &test.command).await;
+            println!("command: {} - {}", test.command, test.description);
+            let re = Regex::new(&test.expected)
+                .unwrap_or_else(|e| panic!("Error parsing expected regex {:#?}: {}", test, e));
+            assert!(
+                re.is_match(&actual_output),
+                "\nTest suite failed.\nStep: {}\nCommand: {}\nExpected regex: {:?}\nActual output: {:?}\n",
+                test.description,
+                test.command,
+                test.expected,
+                actual_output
+            );
+        }
+    })
 }
 
 struct Device {

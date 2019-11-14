@@ -457,10 +457,10 @@ mod tests {
             let connector = TcpStream::connect(addr).expect("could not create client");
             let mut socket = connector.await.expect("client to connect to server");
 
-            let zeroes = [0u8; BUF_SIZE];
+            let zeroes = Box::new([0u8; BUF_SIZE]);
             let mut read = 0;
             while read < LENGTH {
-                let mut buf = [1u8; BUF_SIZE];
+                let mut buf = Box::new([1u8; BUF_SIZE]);
                 let n = socket.read(&mut buf[..]).await.expect("client read to succeed");
                 assert_eq!(&buf[0..n], &zeroes[0..n]);
                 read += n;

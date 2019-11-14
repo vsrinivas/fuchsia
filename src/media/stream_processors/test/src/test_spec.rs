@@ -97,3 +97,16 @@ async fn run_cases_concurrently(
 
     Ok(())
 }
+
+pub fn with_large_stack(f: fn() -> Result<()>) -> Result<()> {
+    // The TestSpec futures are too big to fit on Fuchsia's default stack.
+    // We need this when running the test in panic=abort mode (in unwind mode,
+    // the test harness creates a thread with a 2MB stack for us).
+    const STACK_SIZE: usize = 2 * 1024 * 1024;
+    std::thread::Builder::new()
+        .stack_size(STACK_SIZE)
+        .spawn(f)
+        .unwrap()
+        .join()
+        .unwrap()
+}

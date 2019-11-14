@@ -177,7 +177,6 @@ rustc_test("h264_decoder_test_bin") {
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:parking_lot",
   ]
 }
 
