@@ -21,7 +21,7 @@ use {
         cmp::min,
         collections::{BTreeMap, HashMap},
         convert::TryFrom,
-        ops::{Add, AddAssign, MulAssign},
+        ops::{Add, AddAssign, Deref, MulAssign},
     },
 };
 
@@ -87,7 +87,7 @@ impl NodeHierarchy {
         Self { name: name.into(), properties, children, links: vec![], missing: vec![] }
     }
 
-    pub async fn try_from_inspector(inspector: Inspector) -> Result<Self, Error> {
+    pub async fn try_from_inspector(inspector: &Inspector) -> Result<Self, Error> {
         NodeHierarchyLoader::load(inspector).await
     }
 
@@ -344,25 +344,45 @@ impl<T> ArrayBucket<T> {
     }
 }
 
-struct NodeHierarchyLoader {
-    work_stack: Vec<LoaderStep>,
+struct NodeHierarchyLoader<'a> {
+    work_stack: Vec<LoaderStep<'a>>,
 }
 
-struct LoaderStep {
-    inspector: Inspector,
+enum InspectorHold<'a> {
+    Ref(&'a Inspector),
+    Owned(Inspector),
+}
+
+impl Deref for InspectorHold<'_> {
+    type Target = Inspector;
+
+    fn deref(&self) -> &Self::Target {
+        match self {
+            InspectorHold::Ref(inspector) => inspector,
+            InspectorHold::Owned(inspector) => &inspector,
+        }
+    }
+}
+
+struct LoaderStep<'a> {
+    inspector: InspectorHold<'a>,
     hierarchy: NodeHierarchy,
     link_value: Option<LinkValue>,
 }
 
-impl NodeHierarchyLoader {
+impl<'a> NodeHierarchyLoader<'a> {
     /// Loads an inspector tree by following all the lazy links in the hierarchy.
-    pub async fn load(inspector: Inspector) -> Result<NodeHierarchy, Error> {
+    pub async fn load(inspector: &'a Inspector) -> Result<NodeHierarchy, Error> {
         let hierarchy = inspector
             .vmo
             .as_ref()
             .ok_or(format_err!("failed to read root"))
             .and_then(|vmo| NodeHierarchy::try_from(vmo))?;
-        let work_stack = vec![LoaderStep { inspector, link_value: None, hierarchy }];
+        let work_stack = vec![LoaderStep {
+            inspector: InspectorHold::Ref(inspector),
+            link_value: None,
+            hierarchy,
+        }];
         Ok(Self { work_stack }.reduce().await)
     }
 
@@ -425,7 +445,7 @@ impl NodeHierarchyLoader {
         }
     }
 
-    async fn explore_next(&mut self, mut current_step: LoaderStep) {
+    async fn explore_next(&mut self, mut current_step: LoaderStep<'a>) {
         // Safe to unwrap. Assuming this fn is *only* called as part of `expand`.
         let child_link_value = current_step.hierarchy.links.pop().unwrap();
         match self.load_tree(&current_step.inspector, &child_link_value.content).await {
@@ -448,7 +468,7 @@ impl NodeHierarchyLoader {
                     Ok(child_hierarchy) => {
                         self.work_stack.push(current_step);
                         self.work_stack.push(LoaderStep {
-                            inspector: child_inspector,
+                            inspector: InspectorHold::Owned(child_inspector),
                             link_value: Some(child_link_value),
                             hierarchy: child_hierarchy,
                         });
@@ -903,7 +923,7 @@ mod tests {
             child3_uint_array.insert(*x);
         }
 
-        let result = NodeHierarchy::try_from_inspector(inspector).await.unwrap();
+        let result = NodeHierarchy::try_from_inspector(&inspector).await.unwrap();
 
         assert_inspect_tree!(result, root: {
             "int-root": 3i64,
@@ -1131,8 +1151,8 @@ mod tests {
         assert_eq!(buckets[3], ArrayBucket { floor: 11.0, upper: std::f64::MAX, count: 15.0 });
     }
 
-    #[fasync::run_singlethreaded(test)]
-    async fn add_to_hierarchy() {
+    #[test]
+    fn add_to_hierarchy() {
         let mut hierarchy = NodeHierarchy::new_root();
         let prop_1 = Property::String("x".to_string(), "foo".to_string());
         let path_1 = vec!["root", "one"];
@@ -1298,7 +1318,7 @@ mod tests {
             .boxed()
         });
 
-        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        let hierarchy = NodeHierarchy::try_from_inspector(&inspector).await?;
         assert_inspect_tree!(hierarchy, root: {
             int: 3i64,
             child: {
@@ -1336,7 +1356,7 @@ mod tests {
             }
             .boxed()
         });
-        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        let hierarchy = NodeHierarchy::try_from_inspector(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkInvalid);
         assert_inspect_tree!(hierarchy, root: {});
@@ -1355,7 +1375,7 @@ mod tests {
             }
             .boxed()
         });
-        let hierarchy = NodeHierarchy::try_from_inspector(inspector).await?;
+        let hierarchy = NodeHierarchy::try_from_inspector(&inspector).await?;
         assert_eq!(hierarchy.missing.len(), 1);
         assert_eq!(hierarchy.missing[0].reason, MissingValueReason::LinkParseFailure);
         assert_inspect_tree!(hierarchy, root: {});

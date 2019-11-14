@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use super::{
-    reader::{NodeHierarchy, Property},
-    Inspector,
+use {
+    super::{
+        reader::{NodeHierarchy, Property},
+        Inspector,
+    },
+    failure::{bail, Error},
+    futures,
+    std::{borrow::Cow, collections::HashSet},
 };
-
-use failure::{bail, Error};
-use std::borrow::Cow;
-use std::collections::HashSet;
 
 /// Macro to simplify tree matching in tests. The first argument is the actual tree and can be
 /// a NodeHierarchy or an Inspector. The second argument is an matcher/assertion expression to
@@ -160,8 +161,12 @@ impl NodeHierarchyGetter for NodeHierarchy {
 
 impl NodeHierarchyGetter for Inspector {
     fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
-        use std::convert::TryFrom;
-        Cow::Owned(NodeHierarchy::try_from(self).unwrap())
+        let hierarchy =
+            futures::executor::block_on(
+                async move { NodeHierarchy::try_from_inspector(self).await },
+            )
+            .expect("failed to get hierarchy");
+        Cow::Owned(hierarchy)
     }
 }
 
