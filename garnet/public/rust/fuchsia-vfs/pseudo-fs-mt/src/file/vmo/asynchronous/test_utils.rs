@@ -21,7 +21,7 @@ use {
 
 #[doc(hidden)]
 pub mod reexport {
-    pub use void::unreachable;
+    pub use void::ResultVoidErrExt;
 }
 
 /// `simple_init_*` family of functions will set the capacity of the generated file to the larger
@@ -29,6 +29,13 @@ pub mod reexport {
 /// tests as all the existing tests are actually quite happy with this default.
 const DEFAULT_MIN_CAPACITY: u64 = 100;
 
+/// Creates a simple `init_vmo` callback that will allocate a VMO of at least 100 bytes, but no
+/// less than the size of `content` and will fill it with the specified `content` immediately,
+/// before returning it.  If you want to control the `capacity` of the created VMOs, use
+/// [`simple_init_vmo_with_capacity`].  The VMO is sized to be the maximum of the `content` length
+/// and the specified `capacity`.
+///
+/// The returned VMOs are non-resizable, see [`simple_init_vmo_resizable`] for that.
 pub fn simple_init_vmo(
     content: &[u8],
 ) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
@@ -36,6 +43,9 @@ pub fn simple_init_vmo(
     simple_init_vmo_with_capacity(content, capacity)
 }
 
+/// Just like [`simple_init_vmo`], but allows one to specify the capacity explicitly, instead of
+/// setting it to be the max of 100 and the content size.  The VMO is sized to be the
+/// maximum of the `content` length and the specified `capacity`.
 pub fn simple_init_vmo_with_capacity(
     content: &[u8],
     capacity: u64,
@@ -55,6 +65,10 @@ pub fn simple_init_vmo_with_capacity(
     }
 }
 
+/// Just like [`simple_init_vmo`], except that the returned VMOs have the `RESIZABLE` flag set,
+/// allowing them to grow.  `capacity` is still set as in [`simple_init_vmo`], so you most likely
+/// want to use [`simple_init_vmo_resizable_with_capacity`].  The VMO is initially sized to be the
+/// maximum of the `content` length and 100.
 pub fn simple_init_vmo_resizable(
     content: &[u8],
 ) -> impl Fn() -> BoxFuture<'static, InitVmoResult> + Send + Sync + 'static {
@@ -62,6 +76,10 @@ pub fn simple_init_vmo_resizable(
     simple_init_vmo_resizable_with_capacity(content, capacity)
 }
 
+/// Similar to the [`simple_init_vmo`], but the produced VMOs are resizable, and the `capacity` is
+/// set by the caller.  Note that this capacity is a limitation enforced by the FIDL binding layer,
+/// not something applied to the VMO.  The VMO is initially sized to be the maximum of the
+/// `content` length and the specified `capacity`.
 pub fn simple_init_vmo_resizable_with_capacity(
     content: &[u8],
     capacity: u64,
@@ -79,6 +97,8 @@ pub fn simple_init_vmo_resizable_with_capacity(
     }
 }
 
+/// It is very common in tests to create a read-only file that backed by a non-resizable VMO.  This
+/// function does just that.
 pub fn simple_read_only(
     content: &[u8],
 ) -> Arc<
@@ -92,11 +112,15 @@ pub fn simple_read_only(
     read_only(simple_init_vmo(content))
 }
 
+/// Possible errors for the [`assert_vmo_content`] function.
 pub enum AssertVmoContentError {
+    /// Failure returned from the `vmo.read()` call.
     VmoReadFailed(Status),
+    /// Expected content and the actual VMO content did not match.
     UnexpectedContent(Vec<u8>),
 }
 
+/// Reads the VMO content and matches it against the expectation.
 pub fn assert_vmo_content(vmo: &Vmo, expected: &[u8]) -> Result<(), AssertVmoContentError> {
     let mut buffer = Vec::with_capacity(expected.len());
     buffer.resize(expected.len(), 0);
@@ -108,6 +132,8 @@ pub fn assert_vmo_content(vmo: &Vmo, expected: &[u8]) -> Result<(), AssertVmoCon
     }
 }
 
+/// Wraps an [`assert_vmo_content`] call, panicking with a descriptive error message for any `Err`
+/// return values.
 #[macro_export]
 macro_rules! assert_vmo_content {
     ($vmo:expr, $expected:expr) => {{
@@ -122,7 +148,7 @@ macro_rules! assert_vmo_content {
                 panic!("`vmo.read(&mut buffer, 0)` failed: {}", status)
             }
             Err(AssertVmoContentError::UnexpectedContent(buffer)) => panic!(
-                "Unpexpected content:\n\
+                "Unexpected content:\n\
                  Expected: {:x?}\n\
                  Actual:   {:x?}\n\
                  Expected as UTF-8 lossy: {:?}\n\
@@ -136,10 +162,14 @@ macro_rules! assert_vmo_content {
     }};
 }
 
+/// Possible errors for the [`report_invalid_vmo_content`] function.
 pub enum ReportInvalidVmoContentError {
+    /// Failure returned from the `vmo.read()` call.
     VmoReadFailed(Status),
 }
 
+/// A helper function to panic with a message that includes the VMO content and a specified
+/// `context` message.
 pub fn report_invalid_vmo_content(
     vmo: &Vmo,
     context: &str,
@@ -155,22 +185,25 @@ pub fn report_invalid_vmo_content(
     );
 }
 
+/// Wraps a [`report_invalid_vmo_content`] call, panicking with a descriptive error message for any
+/// `Err` return values.
 #[macro_export]
 macro_rules! report_invalid_vmo_content {
     ($vmo:expr, $context:expr) => {{
         use $crate::file::vmo::asynchronous::test_utils::{
-            reexport::unreachable, report_invalid_vmo_content, ReportInvalidVmoContentError,
+            reexport::ResultVoidErrExt, report_invalid_vmo_content, ReportInvalidVmoContentError,
         };
 
-        match report_invalid_vmo_content($vmo, $context) {
-            Err(ReportInvalidVmoContentError::VmoReadFailed(status)) => {
+        match report_invalid_vmo_content($vmo, $context).void_unwrap_err() {
+            ReportInvalidVmoContentError::VmoReadFailed(status) => {
                 panic!("`vmo.read(&mut buffer, 0)` failed: {}", status)
             }
-            Ok(x) => unreachable(x),
         }
     }};
 }
 
+/// Creates a simple `consume_vmo` callback that will compare the VMO content with the `expected`
+/// value and will panic on any discrepancies.  The VMO is then dropped.
 pub fn simple_consume_vmo(
     expected: &[u8],
 ) -> impl Fn(Vmo) -> BoxFuture<'static, ConsumeVmoResult> + Send + Sync + 'static {
@@ -183,6 +216,10 @@ pub fn simple_consume_vmo(
     }
 }
 
+/// Similar to [`simple_consume_vmo`], but will also increment the `counter` every time the
+/// callback is invoked and will panic if the counter reaches the `max_count` value.
+/// `failure_context` is included in the error message for the case when the counter has reached
+/// the maximum allowed values.
 pub fn consume_vmo_with_counter(
     expected: &[u8],
     counter: Arc<AtomicUsize>,
@@ -211,6 +248,8 @@ pub fn consume_vmo_with_counter(
     }
 }
 
+/// Constructs a write-only file that starts empty, but when the last connection is dropped is
+/// expecting to see the VMO been populated with the `expected` bytes.
 pub fn simple_write_only(
     expected: &[u8],
 ) -> Arc<
@@ -224,6 +263,8 @@ pub fn simple_write_only(
     write_only(simple_init_vmo_resizable(b""), simple_consume_vmo(expected))
 }
 
+/// Similar to [`simple_write_only`], except allows the caller to specify the capacity of the
+/// backing VMO.
 pub fn simple_write_only_with_capacity(
     capacity: u64,
     expected: &[u8],
@@ -238,6 +279,8 @@ pub fn simple_write_only_with_capacity(
     write_only(simple_init_vmo_with_capacity(b"", capacity), simple_consume_vmo(expected))
 }
 
+/// Constructs a read-write files with the specified `initial_content` and that will check that
+/// when the last connection is dropped the VMO content will be equal to `final_content`.
 pub fn simple_read_write(
     initial_content: &[u8],
     final_content: &[u8],
@@ -252,6 +295,8 @@ pub fn simple_read_write(
     read_write(simple_init_vmo(initial_content), simple_consume_vmo(final_content))
 }
 
+/// Similar to [`simple_read_write`], except allows the caller to specify the capacity of the
+/// backing VMO.
 pub fn simple_read_write_resizeable(
     initial_content: &[u8],
     final_content: &[u8],
