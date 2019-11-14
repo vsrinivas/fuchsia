@@ -22,6 +22,12 @@ impl VendorDependent for GetPlayStatusCommand {
     }
 }
 
+impl VendorCommand for GetPlayStatusCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Status
+    }
+}
+
 impl Decodable for GetPlayStatusCommand {
     fn decode(_buf: &[u8]) -> PacketResult<Self> {
         Ok(Self {})
@@ -126,6 +132,7 @@ mod tests {
     fn test_get_play_status_command_encode() {
         let b = GetPlayStatusCommand::new();
         assert_eq!(b.encoded_len(), 0);
+        assert_eq!(b.command_type(), AvcCommandType::Status);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[]);

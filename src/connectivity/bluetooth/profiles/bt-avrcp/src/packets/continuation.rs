@@ -29,6 +29,12 @@ impl VendorDependent for RequestContinuingResponseCommand {
     }
 }
 
+impl VendorCommand for RequestContinuingResponseCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Control
+    }
+}
+
 impl Decodable for RequestContinuingResponseCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
@@ -76,6 +82,12 @@ impl AbortContinuingResponseCommand {
 impl VendorDependent for AbortContinuingResponseCommand {
     fn pdu_id(&self) -> PduId {
         PduId::AbortContinuingResponse
+    }
+}
+
+impl VendorCommand for AbortContinuingResponseCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Control
     }
 }
 
@@ -146,6 +158,7 @@ mod tests {
     fn test_request_continuing_response_encode() {
         let b = RequestContinuingResponseCommand::new(0x10);
         assert_eq!(b.pdu_id(), PduId::RequestContinuingResponse);
+        assert_eq!(b.command_type(), AvcCommandType::Control);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
@@ -182,6 +195,7 @@ mod tests {
     fn test_abort_continuing_response_command_encode() {
         let b = AbortContinuingResponseCommand::new(0x10);
         assert_eq!(b.pdu_id(), PduId::AbortContinuingResponse);
+        assert_eq!(b.command_type(), AvcCommandType::Control);
         assert_eq!(b.encoded_len(), 1);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());

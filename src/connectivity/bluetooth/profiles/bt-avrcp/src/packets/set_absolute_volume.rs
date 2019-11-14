@@ -33,6 +33,12 @@ impl VendorDependent for SetAbsoluteVolumeCommand {
     }
 }
 
+impl VendorCommand for SetAbsoluteVolumeCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Control
+    }
+}
+
 impl Decodable for SetAbsoluteVolumeCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < 1 {
@@ -129,6 +135,7 @@ mod tests {
     fn set_absolute_volume_command_encode() {
         let b = SetAbsoluteVolumeCommand::new(0x60).expect("unable to encode packet");
         assert_eq!(b.encoded_len(), 1);
+        assert_eq!(b.command_type(), AvcCommandType::Control);
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[0x60]);

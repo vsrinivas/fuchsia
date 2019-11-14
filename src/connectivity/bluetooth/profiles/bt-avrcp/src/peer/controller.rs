@@ -46,7 +46,7 @@ impl Controller {
         let peer = self.peer.get_control_connection()?;
         let cmd = SetAbsoluteVolumeCommand::new(volume).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "set_absolute_volume send command {:#?}", cmd);
-        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
         let response =
             SetAbsoluteVolumeResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "set_absolute_volume received response {:#?}", response);
@@ -60,7 +60,7 @@ impl Controller {
         let mut media_attributes = MediaAttributes::new_empty();
         let cmd = GetElementAttributesCommand::all_attributes();
         fx_vlog!(tag: "avrcp", 1, "get_media_attributes send command {:#?}", cmd);
-        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
         let response =
             GetElementAttributesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "get_media_attributes received response {:#?}", response);
@@ -87,7 +87,7 @@ impl Controller {
         let peer = self.peer.get_control_connection()?;
         let cmd = GetPlayStatusCommand::new();
         fx_vlog!(tag: "avrcp", 1, "get_play_status send command {:?}", cmd);
-        let buf = RemotePeer::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
         let response =
             GetPlayStatusResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         fx_vlog!(tag: "avrcp", 1, "get_play_status received response {:?}", response);
@@ -115,7 +115,7 @@ impl Controller {
     ) -> Result<Vec<u8>, Error> {
         let command = RawVendorDependentPacket::new(PduId::try_from(pdu_id)?, payload);
         let peer = self.peer.get_control_connection()?;
-        RemotePeer::send_status_vendor_dependent_command(&peer, &command).await
+        RemotePeer::send_vendor_dependent_command(&peer, &command).await
     }
 
     /// For the FIDL test controller. Informational only and intended for logging only. The state is

@@ -36,6 +36,12 @@ impl VendorDependent for GetCapabilitiesCommand {
     }
 }
 
+impl VendorCommand for GetCapabilitiesCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Status
+    }
+}
+
 impl Decodable for GetCapabilitiesCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         let capability_id = GetCapabilitiesCapabilityId::try_from(buf[0])?;
@@ -304,6 +310,7 @@ mod tests {
     fn test_get_capabilities_command_company_encode() {
         let b = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::CompanyId);
         assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::CompanyId);
         assert_eq!(b.encoded_len(), 1); // capability id
         let mut buf = vec![0; b.encoded_len()];
@@ -321,6 +328,7 @@ mod tests {
     fn test_get_capabilities_command_event_encode() {
         let b = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
         assert_eq!(b.pdu_id(), PduId::GetCapabilities);
+        assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.capability_id(), GetCapabilitiesCapabilityId::EventsId);
         assert_eq!(b.encoded_len(), 1); // capability id
         let mut buf = vec![0; b.encoded_len()];

@@ -80,6 +80,12 @@ impl VendorDependent for RegisterNotificationCommand {
     }
 }
 
+impl VendorCommand for RegisterNotificationCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Notify
+    }
+}
+
 impl Decodable for RegisterNotificationCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < Self::EVENT_ID_LEN + Self::PLAYBACK_INTERVAL_LEN {
@@ -359,6 +365,7 @@ mod tests {
         let cmd = RegisterNotificationCommand::new(NotificationEventId::EventVolumeChanged);
         assert_eq!(cmd.playback_interval(), 0);
         assert_eq!(cmd.encoded_len(), 5);
+        assert_eq!(cmd.command_type(), AvcCommandType::Notify);
         let mut buf = vec![0; cmd.encoded_len()];
         assert!(cmd.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[0x0d, 0x00, 0x00, 0x00, 0x00]);
@@ -370,6 +377,7 @@ mod tests {
         assert_eq!(cmd.playback_interval(), 102030405);
         assert_eq!(cmd.encoded_len(), 5);
         assert_eq!(cmd.event_id(), &NotificationEventId::EventPlaybackPosChanged);
+        assert_eq!(cmd.command_type(), AvcCommandType::Notify);
         let mut buf = vec![0; cmd.encoded_len()];
         assert!(cmd.encode(&mut buf[..]).is_ok());
         assert_eq!(buf, &[0x05, 0x06, 0x14, 0xDC, 0x45]);

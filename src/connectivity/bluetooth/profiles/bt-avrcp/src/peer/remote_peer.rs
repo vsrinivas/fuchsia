@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use super::*;
+use crate::packets::VendorCommand;
 
 #[derive(Debug, PartialEq)]
 pub enum PeerChannel<T> {
@@ -93,17 +94,17 @@ impl RemotePeer {
         self.control_channel.read().connection().ok_or(Error::RemoteNotFound)
     }
 
-    /// Send a generic "status" vendor dependent command and returns the result as a future.
+    /// Send a generic vendor dependent command and returns the result as a future.
     /// This method encodes the `command` packet, awaits and decodes all responses, will issue
     /// continuation commands for incomplete responses (eg "get_element_attributes" command), and
     /// will return a result of the decoded packet or an error for any non stable response received
-    pub async fn send_status_vendor_dependent_command<'a>(
+    pub async fn send_vendor_dependent_command<'a>(
         peer: &'a AvcPeer,
-        command: &'a impl VendorDependent,
+        command: &'a (impl VendorDependent + VendorCommand),
     ) -> Result<Vec<u8>, Error> {
         let mut buf = vec![];
         let packet = command.encode_packet().expect("unable to encode packet");
-        let mut stream = peer.send_vendor_dependent_command(AvcCommandType::Status, &packet[..])?;
+        let mut stream = peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
 
         loop {
             let response = loop {
@@ -138,11 +139,10 @@ impl RemotePeer {
                 }
             };
 
-            let packet = RequestContinuingResponseCommand::new(u8::from(&command.pdu_id()))
-                .encode_packet()
-                .expect("unable to encode packet");
+            let command = RequestContinuingResponseCommand::new(u8::from(&command.pdu_id()));
+            let packet = command.encode_packet().expect("unable to encode packet");
 
-            stream = peer.send_vendor_dependent_command(AvcCommandType::Control, &packet[..])?;
+            stream = peer.send_vendor_dependent_command(command.command_type(), &packet[..])?;
         }
         Ok(buf)
     }
@@ -179,7 +179,7 @@ impl RemotePeer {
         let peer = self.get_control_connection()?;
         let cmd = GetCapabilitiesCommand::new(GetCapabilitiesCapabilityId::EventsId);
         fx_vlog!(tag: "avrcp", 1, "get_capabilities(events) send command {:#?}", cmd);
-        let buf = Self::send_status_vendor_dependent_command(&peer, &cmd).await?;
+        let buf = Self::send_vendor_dependent_command(&peer, &cmd).await?;
         let capabilities =
             GetCapabilitiesResponse::decode(&buf[..]).map_err(|e| Error::PacketError(e))?;
         let mut event_ids = vec![];

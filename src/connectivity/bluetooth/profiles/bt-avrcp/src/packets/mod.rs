@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    bt_avctp::pub_decodable_enum,
+    bt_avctp::{pub_decodable_enum, AvcCommandType},
     failure::Fail,
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp,
     std::{convert::TryFrom, result},
@@ -235,6 +235,7 @@ impl Encodable for VendorDependentPreamble {
 
 /// Provides methods to encode one or more vendor dependent packets with their preambles. Uses to
 /// decode.
+/// TODO(2743): Add support for VendorResponse trait for RejectResponse.
 pub trait VendorDependent: Encodable {
     /// Protocol Data Unit type.
     fn pdu_id(&self) -> PduId;
@@ -300,6 +301,11 @@ pub trait VendorDependent: Encodable {
     }
 }
 
+pub trait VendorCommand: VendorDependent {
+    /// Command type.
+    fn command_type(&self) -> AvcCommandType;
+}
+
 /// For sending raw pre-assembled packets, typically as part of test packets. No decoder for this
 /// packet type.
 pub struct RawVendorDependentPacket {
@@ -331,6 +337,14 @@ impl Encodable for RawVendorDependentPacket {
 impl VendorDependent for RawVendorDependentPacket {
     fn pdu_id(&self) -> PduId {
         self.pdu_id
+    }
+}
+
+// TODO(41343): Specify the command type with the REPL when sending raw packets.
+// For now, default to Control.
+impl VendorCommand for RawVendorDependentPacket {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Control
     }
 }
 

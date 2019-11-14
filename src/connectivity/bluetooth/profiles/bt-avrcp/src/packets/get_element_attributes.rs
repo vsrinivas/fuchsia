@@ -46,6 +46,12 @@ impl VendorDependent for GetElementAttributesCommand {
     }
 }
 
+impl VendorCommand for GetElementAttributesCommand {
+    fn command_type(&self) -> AvcCommandType {
+        AvcCommandType::Status
+    }
+}
+
 impl Decodable for GetElementAttributesCommand {
     fn decode(buf: &[u8]) -> PacketResult<Self> {
         if buf.len() < IDENTIFIER_LEN + ATTRIBUTE_COUNT_LEN {
@@ -289,6 +295,7 @@ mod tests {
             ]
         );
         assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.encoded_len(), 9); // identifier, length
         let mut buf = vec![0; b.encoded_len()];
         assert!(b.encode(&mut buf[..]).is_ok());
@@ -308,6 +315,7 @@ mod tests {
             MediaAttributeId::ArtistName,
         ]);
         assert_eq!(b.pdu_id(), PduId::GetElementAttributes);
+        assert_eq!(b.command_type(), AvcCommandType::Status);
         assert_eq!(b.attributes(), &[MediaAttributeId::Title, MediaAttributeId::ArtistName]);
         assert_eq!(b.encoded_len(), 8 + 1 + 4 + 4); // identifier, length, 2 attributes
         let mut buf = vec![0; b.encoded_len()];
