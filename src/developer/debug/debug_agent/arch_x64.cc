@@ -365,7 +365,7 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t add
 zx_status_t ArchProvider::InstallWatchpoint(zx::thread* thread,
                                             const debug_ipc::AddressRange& range) {
   FXL_DCHECK(thread);
-  // NOTE: Thread needs for the thread to be stopped. Will fail otherwise.
+
   zx_status_t status;
   zx_thread_state_debug_regs_t debug_regs;
   status = thread->read_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
@@ -375,11 +375,10 @@ zx_status_t ArchProvider::InstallWatchpoint(zx::thread* thread,
   DEBUG_LOG(Archx64) << "Before installing watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  // x64 doesn't support ranges.
   uint64_t size = range.end() - range.end();
-  auto [res, slot] = SetupWatchpoint(&debug_regs, range.begin(), size);
-  if (res != ZX_OK)
-    return res;
+  auto result = SetupWatchpoint(&debug_regs, range.begin(), size);
+  if (result.status != ZX_OK)
+    return result.status;
 
   DEBUG_LOG(Archx64) << "After installing watchpoint: " << std::endl
                      << DebugRegistersToString(debug_regs);

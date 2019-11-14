@@ -244,8 +244,6 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
 
 namespace {
 
-// clang-format off
-
 // x86 uses the following bits to represent watchpoint lenghts:
 // 00: 1 byte.
 // 10: 2 bytes.
@@ -254,6 +252,7 @@ namespace {
 //
 // The following functions translate between the both.
 
+// clang-format off
 inline uint64_t x86LenToLength(uint64_t len) {
   switch (len) {
     case 0: return 1;
@@ -277,6 +276,7 @@ inline uint64_t LengthTox86Length(uint64_t len) {
   FXL_NOTREACHED() << "Invalid len: " << len;
   return 0;
 }
+// clang-format on
 
 void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size) {
   switch (slot) {
@@ -309,8 +309,20 @@ void SetWatchpointFlags(uint64_t* dr7, int slot, bool active, uint64_t size) {
   FXL_NOTREACHED() << "Invalid slot: " << slot;
 }
 
+WatchpointInstallationResult CreateResult(zx_status_t status,
+                                          debug_ipc::AddressRange installed_range = {},
+                                          int slot = -1) {
+  WatchpointInstallationResult result = {};
+  result.status = status;
+  result.installed_range = installed_range;
+  result.slot = slot;
+
+  return result;
+}
+
 }  // namespace
 
+// clang-format off
 uint64_t GetWatchpointLength(uint64_t dr7, int slot) {
   switch (slot) {
     case 0: return x86LenToLength(X86_DBG_CONTROL_LEN0_GET(dr7));
@@ -335,15 +347,15 @@ uint64_t WatchpointAddressAlign(uint64_t address, uint64_t size) {
 }
 // clang-format on
 
-std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
-                                            uint64_t address, uint64_t size) {
-  uint64_t aligned_address = WatchpointAddressAlign(address, size);
-  if (!aligned_address)
-    return {ZX_ERR_INVALID_ARGS, -1};
+WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug_regs,
+                                             uint64_t address, uint64_t size) {
+  // Create an aligned range that will cover the watchpoint.
+  auto aligned_range = AlignRange({address, address + size});
+  if (!aligned_range.has_value())
+    return CreateResult(ZX_ERR_OUT_OF_RANGE);
 
-  // Check alignment.
-  if (address != aligned_address)
-    return {ZX_ERR_OUT_OF_RANGE, -1};
+  address = aligned_range->begin();
+  size = aligned_range->end() - aligned_range->begin();
 
   // Search for a free slot.
   int slot = -1;
@@ -352,7 +364,7 @@ std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t* debug_
       // If it's the same address, we don't need to do anything.
       // For watchpoints, we need to compare against the range.
       if ((debug_regs->dr[i] == address) && GetWatchpointLength(debug_regs->dr7, i) == size) {
-        return {ZX_ERR_ALREADY_BOUND, -1};
+        return CreateResult(ZX_ERR_ALREADY_BOUND);
       }
     } else {
       slot = i;
@@ -361,13 +373,13 @@ std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t* debug_
   }
 
   if (slot == -1)
-    return {ZX_ERR_NO_RESOURCES, -1};
+    return {ZX_ERR_NO_RESOURCES, {}, -1};
 
   // We found a slot, we bind the watchpoint.
-  debug_regs->dr[slot] = aligned_address;
+  debug_regs->dr[slot] = address;
   SetWatchpointFlags(&debug_regs->dr7, slot, true, size);
 
-  return {ZX_OK, slot};
+  return CreateResult(ZX_OK, aligned_range.value(), slot);
 }
 
 zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs, uint64_t address,

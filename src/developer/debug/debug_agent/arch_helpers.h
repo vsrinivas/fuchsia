@@ -47,6 +47,13 @@ zx_status_t WriteRegisterValue(const debug_ipc::Register& reg, RegType* dest) {
 // If the range cannot be aligned (eg. unaligned 8 byte range), it will return a null option.
 std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&);
 
+// If |status| != ZX_OK, all other fields are invalid.
+struct WatchpointInstallationResult {
+  zx_status_t status = ZX_ERR_INVALID_ARGS;
+  debug_ipc::AddressRange installed_range = {};
+  int slot = -1;
+};
+
 }  // namespace arch
 }  // namespace debug_agent
 

@@ -26,6 +26,9 @@ bool VerifyRange(std::optional<debug_ipc::AddressRange> got,
 }
 
 TEST(AlignRange, AlignedRanges) {
+  // 0 byte range.
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x10}), std::nullopt));
+
   // 1 byte range.
   ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x11}), debug_ipc::AddressRange(0x10, 0x11)));
   ASSERT_TRUE(VerifyRange(AlignRange({0x11, 0x12}), debug_ipc::AddressRange(0x11, 0x12)));
@@ -37,7 +40,13 @@ TEST(AlignRange, AlignedRanges) {
   ASSERT_TRUE(VerifyRange(AlignRange({0x11, 0x13}), debug_ipc::AddressRange(0x10, 0x14)));
 
   ASSERT_TRUE(VerifyRange(AlignRange({0x12, 0x14}), debug_ipc::AddressRange(0x12, 0x14)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x13, 0x15}), debug_ipc::AddressRange(0x12, 0x16)));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x13, 0x15}), debug_ipc::AddressRange(0x10, 0x18)));
+
+  ASSERT_TRUE(VerifyRange(AlignRange({0x14, 0x16}), debug_ipc::AddressRange(0x14, 0x16)));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x15, 0x17}), debug_ipc::AddressRange(0x14, 0x18)));
+
+  ASSERT_TRUE(VerifyRange(AlignRange({0x16, 0x18}), debug_ipc::AddressRange(0x16, 0x18)));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x17, 0x19}), std::nullopt));
 
   // 3 byte range.
   ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x13}), debug_ipc::AddressRange(0x10, 0x14)));
@@ -47,8 +56,8 @@ TEST(AlignRange, AlignedRanges) {
 
   ASSERT_TRUE(VerifyRange(AlignRange({0x14, 0x17}), debug_ipc::AddressRange(0x14, 0x18)));
   ASSERT_TRUE(VerifyRange(AlignRange({0x15, 0x18}), debug_ipc::AddressRange(0x14, 0x18)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x16, 0x19}), debug_ipc::AddressRange(0x14, 0x1c)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x17, 0x1a}), debug_ipc::AddressRange(0x14, 0x1c)));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x16, 0x19}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x17, 0x1a}), std::nullopt));
 
   ASSERT_TRUE(VerifyRange(AlignRange({0x18, 0x1b}), debug_ipc::AddressRange(0x18, 0x1c)));
   ASSERT_TRUE(VerifyRange(AlignRange({0x19, 0x1c}), debug_ipc::AddressRange(0x18, 0x1c)));
@@ -62,9 +71,9 @@ TEST(AlignRange, AlignedRanges) {
   ASSERT_TRUE(VerifyRange(AlignRange({0x13, 0x17}), debug_ipc::AddressRange(0x10, 0x18)));
 
   ASSERT_TRUE(VerifyRange(AlignRange({0x14, 0x18}), debug_ipc::AddressRange(0x14, 0x18)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x15, 0x19}), debug_ipc::AddressRange(0x14, 0x1c)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x16, 0x1a}), debug_ipc::AddressRange(0x14, 0x1c)));
-  ASSERT_TRUE(VerifyRange(AlignRange({0x17, 0x1b}), debug_ipc::AddressRange(0x14, 0x1c)));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x15, 0x19}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x16, 0x1a}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x17, 0x1b}), std::nullopt));
 
   ASSERT_TRUE(VerifyRange(AlignRange({0x18, 0x1c}), debug_ipc::AddressRange(0x18, 0x1c)));
   ASSERT_TRUE(VerifyRange(AlignRange({0x19, 0x1d}), debug_ipc::AddressRange(0x18, 0x20)));
@@ -148,6 +157,15 @@ TEST(AlignRange, AlignedRanges) {
   ASSERT_TRUE(VerifyRange(AlignRange({0x1d, 0x25}), std::nullopt));
   ASSERT_TRUE(VerifyRange(AlignRange({0x1e, 0x26}), std::nullopt));
   ASSERT_TRUE(VerifyRange(AlignRange({0x1f, 0x27}), std::nullopt));
+}
+
+TEST(AlignRange, InvalidRanges) {
+  // Way to big.
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x19}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x1a}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x1b}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x1c}), std::nullopt));
+  ASSERT_TRUE(VerifyRange(AlignRange({0x10, 0x1d}), std::nullopt));
 }
 
 }  // namespace

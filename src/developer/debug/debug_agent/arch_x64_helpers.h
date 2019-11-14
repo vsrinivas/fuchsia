@@ -10,6 +10,7 @@
 
 #include <vector>
 
+#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/debug_agent/arch_x64.h"
 
 namespace debug_ipc {
@@ -60,8 +61,8 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 //
 // Returns ZX_ERR_ALREADY_BOUND if the |address|/|size| pair is already set.
 // Returns ZX_ERR_NO_RESOURCES if there are no registers left.
-std::pair<zx_status_t, int> SetupWatchpoint(zx_thread_state_debug_regs_t*, uint64_t address,
-                                            uint64_t size);
+WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t*, uint64_t address,
+                                             uint64_t size);
 
 // Removes an installed execution watchpoint for |address|. If the address is not installed, no
 // functional change will happen and ZX_ERR_NOT_FOUND will be returned.

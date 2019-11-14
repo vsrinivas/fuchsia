@@ -13,6 +13,9 @@ namespace {
 
 // Returns 0 on an invalid alignment.
 size_t GetAlignment(size_t size) {
+  if (size < 1)
+    return 0;
+
   if (size == 1) {
     return 1;
   } else if (size == 2) {
@@ -58,6 +61,8 @@ uint64_t GetMask(uint64_t size) {
 std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange& range) {
   uint64_t size = range.end() - range.begin();
   uint64_t alignment = GetAlignment(size);
+  if (alignment == 0)
+    return std::nullopt;
 
   // Check if the range is already aligned.
   uint64_t mask = GetMask(alignment);
@@ -69,15 +74,26 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
   if (aligned_address <= range.begin() && (aligned_address + alignment) >= range.end())
     return debug_ipc::AddressRange{aligned_address, aligned_address + alignment};
 
-  // See if we can over align this.
+  // See if we can over align this with a range.
+
   uint64_t next_size = GetNextSize(alignment);
+  while (next_size != 0) {
+    // Align the address to the new size.
+    aligned_address = aligned_address & ~GetMask(next_size);
+
+    // We see if we can cover the range with this size.
+    if (aligned_address > range.begin() || (aligned_address + next_size) < range.end()) {
+      next_size = GetNextSize(next_size);
+      continue;
+    }
+
+    // The range fits.
+    break;
+  }
+
+  // |next_size| == 0 means that there is no range the extends this range.
   if (next_size == 0)
     return std::nullopt;
-
-  // We see if we can cover the range with this size.
-  if (aligned_address > range.begin() || (aligned_address + next_size) < range.end())
-    return std::nullopt;
-
   return debug_ipc::AddressRange(aligned_address, aligned_address + next_size);
 }
 
