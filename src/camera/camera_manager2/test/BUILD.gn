@@ -57,3 +57,29 @@ executable("camera_plug_detector_test") {
     "//zircon/public/lib/fzl",
   ]
 }
+
+source_set("camera-fakes") {
+  sources = [
+    "fake_camera_controller.cc",
+    "fake_camera_controller.h",
+    "fake_logical_buffer_collection.cc",
+    "fake_logical_buffer_collection.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/image-format",
+  ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fzl",
+  ]
+}
