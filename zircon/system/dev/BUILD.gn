@@ -43,14 +43,15 @@ group("dev") {
 
     # test/ allows drivers to be used by IsolateDevmgr
     "$zx/system/utest/platform-bus:test",
+    "test/crash-device",
     "test/ddk-power:ddk-power-test",
     "test/ddk-power:ddk-power-test-child",
-    "test/devhost-test:devhost-test",
-    "test/devhost-test:devhost-test-manual",
-    "test/devhost-test:devhost-test-child",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test",
     "test/ddk-runcompatibilityhook:ddk-runcompatibilityhook-test-child",
     "test/ddk-schedule-work:ddk-schedule-work-test",
+    "test/devhost-test:devhost-test",
+    "test/devhost-test:devhost-test-child",
+    "test/devhost-test:devhost-test-manual",
     "test/fidl-async-llcpp-driver",
     "test/fidl-llcpp-driver",
     "test/isolateddevmgr:isolateddevmgr-test",

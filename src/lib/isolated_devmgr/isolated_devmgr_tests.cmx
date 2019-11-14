@@ -9,6 +9,7 @@
             "lib"
         ],
         "services": [
+            "fuchsia.exception.Handler",
             "fuchsia.process.Launcher",
             "fuchsia.sys.Launcher"
         ]

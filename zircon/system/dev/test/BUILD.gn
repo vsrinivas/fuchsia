@@ -5,12 +5,13 @@
 group("test") {
   testonly = true
   deps = [
+    "crash-device",
     "ddk-fidl-test",
-    "ddk-runcompatibilityhook",
     "ddk-power",
-    "devhost-test",
+    "ddk-runcompatibilityhook",
     "ddk-schedule-work",
     "ddk-test",
+    "devhost-test",
     "isolateddevmgr",
     "mock-device",
     "operation",

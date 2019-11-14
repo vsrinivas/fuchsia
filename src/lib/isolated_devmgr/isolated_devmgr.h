@@ -51,6 +51,7 @@ class IsolatedDevmgr {
  private:
   void DevmgrException(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                        const zx_packet_signal_t* signal);
+  void HandleException();
 
   ExceptionCallback exception_callback_;
   devmgr_integration_test::IsolatedDevmgr devmgr_;

@@ -18,11 +18,12 @@
             "lib"
         ],
         "services": [
+            "fuchsia.exception.Handler",
+            "fuchsia.logger.LogSink",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
             "fuchsia.scheduler.ProfileProvider",
-            "fuchsia.tracing.provider.Registry",
-            "fuchsia.logger.LogSink"
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

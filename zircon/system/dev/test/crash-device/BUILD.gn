@@ -1,0 +1,18 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# A device that causes a crash when it's operated on
+zx_driver("crash-device") {
+  sources = [
+    "crash_device.cc",
+  ]
+  deps = [
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/zircon",
+  ]
+}

@@ -18,9 +18,10 @@
             "lib"
         ],
         "services": [
+            "fuchsia.exception.Handler",
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher",
             "fuchsia.scheduler.ProfileProvider",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ],
         "system": [

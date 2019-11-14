@@ -17,6 +17,7 @@ source_set("src") {
   ]
 
   deps = [
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
@@ -29,6 +30,7 @@ source_set("src") {
     "//zircon/public/lib/inspector",
     "//zircon/public/lib/libzbi",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-exception",
   ]
 }
 

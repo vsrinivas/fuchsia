@@ -68,7 +68,8 @@ argument which can be used to create a device.
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.exception.Handler"
         ]
     }
 }

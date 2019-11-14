@@ -19,18 +19,25 @@
 namespace isolated_devmgr {
 namespace testing {
 
-constexpr zx::duration kTimeout = zx::sec(30);
-
 class DevmgrTest : public ::gtest::RealLoopFixture {
  protected:
   static constexpr const char* kSysdevDriver = "/boot/driver/test/sysdev.so";
   static constexpr const char* kPlatformDriver = "/boot/driver/platform-bus.so";
-  const board_test::DeviceEntry kDeviceEntry = []() {
+  const board_test::DeviceEntry kRtcDeviceEntry = []() {
     board_test::DeviceEntry entry = {};
     strcpy(entry.name, "fallback-rtc");
     entry.vid = PDEV_VID_GENERIC;
     entry.pid = PDEV_PID_GENERIC;
     entry.did = PDEV_DID_RTC_FALLBACK;
+    return entry;
+  }();
+
+  const board_test::DeviceEntry kCrashDeviceEntry = []() {
+    board_test::DeviceEntry entry = {};
+    strcpy(entry.name, "crash-device");
+    entry.vid = PDEV_VID_GENERIC;
+    entry.pid = PDEV_PID_GENERIC;
+    entry.did = PDEV_DID_CRASH_TEST;
     return entry;
   }();
 
@@ -53,9 +60,11 @@ class DevmgrTest : public ::gtest::RealLoopFixture {
     args.sys_device_driver = kPlatformDriver;
     args.stdio = fbl::unique_fd(open("/dev/null", O_RDWR));
     args.driver_search_paths.push_back("/boot/driver");
+    args.driver_search_paths.push_back("/boot/driver/test");
     args.disable_block_watcher = true;
     args.disable_netsvc = true;
-    device_list_ptr->push_back(kDeviceEntry);
+    device_list_ptr->push_back(kRtcDeviceEntry);
+    device_list_ptr->push_back(kCrashDeviceEntry);
     return IsolatedDevmgr::Create(std::move(args), std::move(device_list_ptr));
   }
 
@@ -122,17 +131,26 @@ TEST_F(DevmgrTest, DeviceEntryEnumerationTest) {
                        devmgr->devfs_root(), "sys/platform/00:00:f/fallback-rtc", &fd));
 }
 
-TEST_F(DevmgrTest, DISABLED_ExceptionCallback) {
-  auto devmgr = CreateDevmgrSysdev();
+TEST_F(DevmgrTest, ExceptionCallback) {
+  auto devmgr = CreateDevmgrPlatTest();
   ASSERT_TRUE(devmgr);
-  ASSERT_EQ(devmgr->WaitForFile("test/tapctl"), ZX_OK);
+
   bool exception = false;
   devmgr->SetExceptionCallback([&exception]() { exception = true; });
-  // TODO(brunodalbo): Cause devmgr crash here so we can
-  //  validate that the exception callback works and
-  //  enable this test. There's no good way to cause a crash
-  //  today.
-  ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&exception]() { return exception; }, kTimeout));
+
+  ASSERT_EQ(devmgr->WaitForFile("sys/platform/00:00:24"), ZX_OK);
+
+  zx_handle_t dir;
+  ASSERT_EQ(fdio_get_service_handle(devmgr->root(), &dir), ZX_OK);
+
+  RunLoopUntil([&exception, &dir]() {
+    // keep trying to open crash-device until we see an exception
+    zx::channel a, b;
+    EXPECT_EQ(zx::channel::create(0, &a, &b), ZX_OK);
+    fdio_service_connect_at(dir, "sys/platform/00:00:24/crash-device", b.release());
+
+    return exception;
+  });
 }
 
 TEST_F(DevmgrTest, ExposedThroughComponent) {

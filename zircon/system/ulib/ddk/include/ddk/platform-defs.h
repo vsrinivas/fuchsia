@@ -48,6 +48,7 @@ __BEGIN_CDECLS
 #define PDEV_DID_CAMERA_CONTROLLER  33  // Camera Controller
 #define PDEV_DID_CADENCE_HPNFC      34  // Cadence NAND Flash controller
 #define PDEV_DID_OT_RADIO           35  // OpenThread radio
+#define PDEV_DID_CRASH_TEST         36  // Crash-device
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
