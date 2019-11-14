@@ -14,6 +14,7 @@ executable("gesture_recognizers_tests") {
 
   sources = [
     "one_finger_tap_recognizer_test.cc",
+    "swipe_recognizer_test.cc",
   ]
 
   deps = [

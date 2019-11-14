@@ -4,8 +4,12 @@
 
 source_set("recognizers") {
   sources = [
+    "directional_swipe_recognizers.cc",
+    "directional_swipe_recognizers.h",
     "one_finger_tap_recognizer.cc",
     "one_finger_tap_recognizer.h",
+    "swipe_recognizer_base.cc",
+    "swipe_recognizer_base.h",
   ]
 
   public_deps = [
