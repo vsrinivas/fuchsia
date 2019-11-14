@@ -4,6 +4,11 @@
 
 import("//build/package.gni")
 
+declare_args() {
+  # Used by syz-ci to build with own syz-executor source.
+  syzkaller_dir = "//third_party/syzkaller"
+}
+
 group("syzkaller") {
   testonly = true
   deps = [
@@ -30,7 +35,7 @@ package("syz-executor-pkg") {
   ]
 }
 
-src = rebase_path("//third_party/syzkaller")
+src = rebase_path(syzkaller_dir)
 
 if (target_cpu == "x64") {
   GOARCH = "amd64"
