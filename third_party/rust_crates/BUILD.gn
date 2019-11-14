@@ -83,20 +83,3 @@ action("build-third-party") {
     out_deps_data,
   ]
 }
-
-# Temporary definition of some targets from the `futures-*` crates to the
-# equivalent `futures-preview-*` name.  This is necessary for a soft migration
-# of all petals over to a target over to the new targets before we've actually
-# switched to the new versions.  This will be removed once everyone is using
-# the `future` target.
-rustc_third_party_artifact("futures-preview") {
-  package_name = "futures"
-  crate_name = "futures"
-  crate_type = "lib"
-}
-
-rustc_third_party_artifact("futures-test-preview") {
-  package_name = "futures-test"
-  crate_name = "futures_test"
-  crate_type = "lib"
-}
