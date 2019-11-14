@@ -122,9 +122,9 @@ protocol Session {
     /// Note: `acquire_fences` and `release_fences` are only necessary to synchronize
     /// access to memory (and other external resources).  Any modification to
     /// resources made via the Session API are automatically synchronized.
-    Present(uint64 presentation_time,
-            vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
-        -> (fuchsia.images.PresentationInfo presentation_info);
+    [Transitional]Present(uint64 presentation_time,
+              vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
+          -> (fuchsia.images.PresentationInfo presentation_info);
 
     /// Present all previously enqueued operations. In order to pipeline the
     /// preparation of the resources required to render the scene, two lists of
