@@ -225,6 +225,25 @@ Device::Device(zx_device_t* parent_device, Driver* parent_driver)
   ZX_DEBUG_ASSERT(parent_driver_);
 }
 
+// static
+void Device::OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size) {
+  const char* pool_arg = getenv(name);
+  if (!pool_arg || strlen(pool_arg) == 0)
+    return;
+  char* end = nullptr;
+  uint64_t override_size = strtoull(pool_arg, &end, 10);
+  // Check that entire string was used and there isn't garbage at the end.
+  if (*end != '\0') {
+    DRIVER_ERROR("Ignoring flag %s with invalid size \"%s\"", name, pool_arg);
+    return;
+  }
+  // Apply this alignment to contiguous pool as well, since it's small enough.
+  constexpr uint64_t kMinProtectedAlignment = 64 * 1024;
+  override_size = fbl::round_up(override_size, kMinProtectedAlignment);
+  DRIVER_INFO("Flag %s overriding size to %ld", name, override_size);
+  *memory_size = override_size;
+}
+
 zx_status_t Device::Bind() {
   zx_status_t status = device_get_protocol(parent_device_, ZX_PROTOCOL_PDEV, &pdev_);
   if (status != ZX_OK) {
@@ -246,6 +265,9 @@ zx_status_t Device::Bind() {
     protected_memory_size = metadata.protected_memory_size;
     contiguous_memory_size = metadata.contiguous_memory_size;
   }
+
+  OverrideSizeFromCommandLine("driver.sysmem.protected_memory_size", &protected_memory_size);
+  OverrideSizeFromCommandLine("driver.sysmem.contiguous_memory_size", &contiguous_memory_size);
 
   allocators_[fuchsia_sysmem_HeapType_SYSTEM_RAM] = std::make_unique<SystemRamMemoryAllocator>();
 

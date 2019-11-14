@@ -132,6 +132,16 @@ ZIRCON\_DRIVER\_BEGIN macro. It is not, for example, the name of the device,
 which for some drivers is almost identical, except that the device may be
 named "foo-bar" whereas the driver name must use underscores, e.g., "foo_bar".
 
+## driver.sysmem.protected_memory_size=\<num>
+
+Overrides the board-driver-specified size for sysmem's default protected memory
+pool. Value is in bytes.
+
+## driver.sysmem.protected_memory_size=\<num>
+
+Overrides the board-driver-specified size for sysmem's contiguous memory pool.
+Value is in bytes.
+
 ## driver.tests.enable=\<bool>
 
 Enable the unit tests for all drivers. The unit tests will run before the

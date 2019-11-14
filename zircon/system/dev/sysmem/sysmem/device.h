@@ -33,6 +33,8 @@ class Device final : public MemoryAllocator::Owner {
  public:
   Device(zx_device_t* parent_device, Driver* parent_driver);
 
+  static void OverrideSizeFromCommandLine(const char* name, uint64_t* memory_size);
+
   zx_status_t Bind();
 
   //

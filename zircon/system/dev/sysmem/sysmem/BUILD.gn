@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_driver("sysmem") {
+source_set("common_srcs") {
   sources = [
     "allocator.cc",
     "binding.cc",
@@ -39,6 +39,12 @@ zx_driver("sysmem") {
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]
+}
+
+zx_driver("sysmem") {
+  deps = [
+    ":common_srcs",
+  ]
 
   # TODO(ZX-2863): This driver violates the allowed shlib deps policy.
   deprecated_inhibit_driver_shlib_allowlist = true
@@ -47,14 +53,14 @@ zx_driver("sysmem") {
 zx_test("sysmem-unittest") {
   output_name = "sysmem-unittest"
   sources = [
-    "contiguous_pooled_memory_allocator.cc",
-    "memory_allocator.cc",
     "test/contiguous_pooled_memory_allocator_test.cc",
+    "test/device_test.cc",
+    "test/fake_root_resource.cc",
     "test/pixel_format_cost_test.cc",
-    "usage_pixel_format_cost.cc",
   ]
   include_dirs = [ "." ]
   deps = [
+    ":common_srcs",
     "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sysmem",
