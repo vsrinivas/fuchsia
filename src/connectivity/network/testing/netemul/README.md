@@ -58,7 +58,7 @@ run it:
     "program": {
         "binary": "bin/app"
     },
-    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner",
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx",
     "facets" : {
       "fuchsia.netemul" : {
         "environment" : {
