@@ -15,7 +15,6 @@ zx_library("crypto") {
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/unittest",
     "$zx/system/ulib/explicit-memory",
-    "$zx/third_party/ulib/cryptolib",
     "$zx/third_party/ulib/uboringssl",
     "entropy",
   ]

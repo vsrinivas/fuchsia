@@ -17,7 +17,7 @@
 #include <kernel/mutex.h>
 #include <ktl/atomic.h>
 
-// See note in //zircon/third_party/ulib/uboringssl/rules.mk
+// See note in //zircon/third_party/ulib/uboringssl/BUILD.gn
 #define BORINGSSL_NO_CXX
 #include <openssl/chacha.h>
 #include <openssl/sha.h>

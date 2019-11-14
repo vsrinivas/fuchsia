@@ -2,6 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# Modules which depend on uboringssl should have a "#define BORINGSSL_NO_CXX"
+# statement before any "#include <openssl/...>" statements to avoid pulling in
+# C++ headers.
 zx_library("uboringssl") {
   kernel = true
   host = true

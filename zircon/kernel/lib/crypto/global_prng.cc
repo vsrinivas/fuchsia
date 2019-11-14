@@ -8,7 +8,6 @@
 #include <ctype.h>
 #include <err.h>
 #include <lib/cmdline.h>
-#include <lib/crypto/cryptolib.h>
 #include <lib/crypto/entropy/collector.h>
 #include <lib/crypto/entropy/hw_rng_collector.h>
 #include <lib/crypto/entropy/jitterentropy_collector.h>
@@ -26,6 +25,10 @@
 #include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <lk/init.h>
+
+// See note in //zircon/third_party/ulib/uboringssl/BUILD.gn
+#define BORINGSSL_NO_CXX
+#include <openssl/sha.h>
 
 #define LOCAL_TRACE 0
 
@@ -60,8 +63,8 @@ static bool IntegrateCmdlineEntropy() {
     }
   }
 
-  uint8_t digest[clSHA256_DIGEST_SIZE];
-  clSHA256(entropy, static_cast<int>(hex_len), digest);
+  uint8_t digest[SHA256_DIGEST_LENGTH];
+  SHA256(reinterpret_cast<const uint8_t*>(entropy), hex_len, digest);
   kGlobalPrng->AddEntropy(digest, sizeof(digest));
 
   // We have a pointer to const, but it's actually a pointer to the
