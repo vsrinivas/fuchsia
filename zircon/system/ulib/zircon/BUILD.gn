@@ -80,14 +80,6 @@ if (current_toolchain == default_toolchain) {
     }
   }
 } else {
-  # TODO(mcgrathr): Rename the source files and the abigen switch.
-  if (zircon_cpu == "x86") {
-    zircon_cpu = "x86-64"
-    abigen_cpu = "x86"
-  } else if (zircon_cpu == "arm64") {
-    abigen_cpu = "arm"
-  }
-
   zx_library("zircon") {
     shared = true
     static = false
@@ -289,7 +281,7 @@ if (current_toolchain == default_toolchain) {
         ]
       },
       {
-        args = [ "--${abigen_cpu}-asm" ]
+        args = [ "--${zircon_cpu}-asm" ]
         outputs = [
           "$target_gen_dir/zircon/syscalls-$zircon_cpu.S",
         ]

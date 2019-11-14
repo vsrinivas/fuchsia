@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include "syscall-entry.h"
-#include "zircon-syscall-x86-64.S"
+#include "zircon-syscall-x86.S"
 #include <zircon/zx-syscall-numbers.h>
 
 .text

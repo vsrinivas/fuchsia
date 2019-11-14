@@ -22,7 +22,7 @@ out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
 mkdir -p /tmp/kazoo-output
 
 out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
-  --arm-asm=/tmp/kazoo-output/arm-asm.S \
+  --arm64-asm=/tmp/kazoo-output/arm64-asm.S \
   --category=/tmp/kazoo-output/syscall-category.inc \
   --json=/tmp/kazoo-output/definitions.json \
   --kernel-branches=/tmp/kazoo-output/kernel-branches.S \
@@ -54,7 +54,7 @@ function show_if_changed() {
 # for a build at origin/master, then this will note any differences from
 # master vs. the current work.
 if [ -d "/tmp/kazoo-previous/" ]; then
-  show_if_changed "arm-asm.S"
+  show_if_changed "arm64-asm.S"
   show_if_changed "syscall-category.inc"
   show_if_changed "definitions.json"
   show_if_changed "kernel-branches.S"

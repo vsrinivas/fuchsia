@@ -5,7 +5,7 @@
 /* define and implement the zircon syscall wrappers for x86-64 */
 
 #include "syscall-entry.h"
-#include "zircon-syscall-x86-64.S"
+#include "zircon-syscall-x86.S"
 
 .text
 
@@ -56,6 +56,6 @@ syscall_entry_begin \name
 syscall_entry_end \name \public
 .endm
 
-#include <zircon/syscalls-x86-64.S>
+#include <zircon/syscalls-x86.S>
 
 #include "syscalls-stubs.S"

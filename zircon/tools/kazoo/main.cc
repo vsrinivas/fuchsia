@@ -13,7 +13,7 @@
 namespace {
 
 struct CommandLineOptions {
-  std::optional<std::string> arm_asm;
+  std::optional<std::string> arm64_asm;
   std::optional<std::string> category;
   std::optional<std::string> go_syscall_arm_asm;
   std::optional<std::string> go_syscall_stubs;
@@ -40,8 +40,8 @@ Options:
 
 )";
 
-constexpr const char kArmAsmHelp[] = R"(  --arm-asm=FILENAME
-    The output name for the .S file ARM syscalls.)";
+constexpr const char kArm64AsmHelp[] = R"(  --arm64-asm=FILENAME
+    The output name for the .S file ARM64 syscalls.)";
 
 constexpr const char kCategoryHelp[] = R"(  --category=FILENAME
     The output name for the .inc categories file.)";
@@ -86,7 +86,7 @@ constexpr const char kVdsoWrappersHelp[] = R"(  --vdso-wrappers=FILENAME
     The output name for the .inc file used for blocking VDSO call wrappers.)";
 
 constexpr const char kX86AsmHelp[] = R"(  --x86-asm=FILENAME
-    The output name for the .S file x86-64 syscalls.)";
+    The output name for the .S file x86 syscalls.)";
 
 const char kHelpHelp[] = R"(  --help
   -h
@@ -95,7 +95,7 @@ const char kHelpHelp[] = R"(  --help
 cmdline::Status ParseCommandLine(int argc, const char* argv[], CommandLineOptions* options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
-  parser.AddSwitch("arm-asm", 0, kArmAsmHelp, &CommandLineOptions::arm_asm);
+  parser.AddSwitch("arm64-asm", 0, kArm64AsmHelp, &CommandLineOptions::arm64_asm);
   parser.AddSwitch("category", 0, kCategoryHelp, &CommandLineOptions::category);
   parser.AddSwitch("go-syscall-arm-asm", 0, kGoSyscallArmAsmHelp,
                    &CommandLineOptions::go_syscall_arm_asm);
@@ -157,7 +157,7 @@ int main(int argc, const char* argv[]) {
     std::optional<std::string>* name;
     bool (*output)(const SyscallLibrary&, Writer*);
   } backends[] = {
-      {&options.arm_asm, AsmOutput},
+      {&options.arm64_asm, AsmOutput},
       {&options.category, CategoryOutput},
       {&options.go_syscall_arm_asm, GoSyscallsAsm},
       {&options.go_syscall_stubs, GoSyscallsStubs},
