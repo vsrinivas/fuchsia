@@ -12,7 +12,7 @@ use {
     fuchsia_zircon_status as zx_status,
     std::{
         cell::RefCell,
-        mem, ptr, str,
+        cmp, mem, ptr, str,
         sync::atomic::{AtomicBool, Ordering},
         u32, u64,
     },
@@ -2048,7 +2048,12 @@ where
 {
     let (ordinal, _, _) = decode_xunion_inline_portion(decoder)?;
     let member_inline_size = match ordinal {
-        1 => decoder.inline_size_of::<O>(),
+        1 => {
+            // If the inline size is 0, meaning the type is (), use an inline
+            // size of 1 instead because () in this context means an empty
+            // struct, not an absent payload.
+            cmp::max(1, decoder.inline_size_of::<O>())
+        }
         2 => decoder.inline_size_of::<E>(),
         _ => return Err(Error::UnknownUnionTag),
     };
@@ -2124,7 +2129,16 @@ where
                     1u32.encode(encoder)?;
                     // Padding
                     0u32.encode(encoder)?;
-                    encoder.recurse(|encoder| encode_in_envelope(&mut Some(val), encoder))?;
+                    encoder.recurse(|encoder|
+                        // If the inline size is 0, meaning the type is (),
+                        // encode a zero byte instead because () in this context
+                        // means an empty struct, not an absent payload.
+                        if encoder.inline_size_of::<O>() == 0 {
+                            encode_in_envelope(&mut Some(&mut 0u8), encoder)
+                        } else {
+                            encode_in_envelope(&mut Some(val), encoder)
+                        }
+                    )?;
                 }
                 Err(val) => {
                     // Encode error ordinal
@@ -2752,12 +2766,7 @@ impl TransactionHeader {
     }
     /// Creates a new transaction header with a specific context and magic number.
     pub fn new_full(tx_id: u32, ordinal: u64, context: &Context, magic_number: u8) -> Self {
-        TransactionHeader {
-            tx_id,
-            flags: context.header_flags().into(),
-            magic_number,
-            ordinal,
-        }
+        TransactionHeader { tx_id, flags: context.header_flags().into(), magic_number, ordinal }
     }
     /// Returns the header's transaction id.
     pub fn tx_id(&self) -> u32 {
@@ -2975,6 +2984,18 @@ tuple_impls!(
     (0 => A),
 );
 
+// The unit type has 0 size because it represents the absent payload after the
+// transaction header in the reponse of a two-way FIDL method such as this one:
+//
+//     Method() -> ();
+//
+// However, the unit type is also used in the following situation:
+//
+//    MethodWithError() -> () error int32;
+//
+// In this case the response type is std::result::Result<(), i32>, but the ()
+// represents an empty struct, which has size 1. To accommodate this, the encode
+// and decode methods on std::result::Result handle the () case specially.
 impl_layout!((), align: 0, size: 0);
 
 impl Encodable for () {
@@ -3146,6 +3167,31 @@ mod test {
             Animal::from_primitive(0).expect("should be dog"),
             Animal::from_primitive(Animal::Cat.into_primitive()).expect("should be cat"),
         ];
+    }
+
+    #[test]
+    fn result_encode_empty_ok_value() {
+        let ctx = &Context { unions_use_xunion_format: true };
+        // An empty response is represented by () and has zero size.
+        encode_assert_bytes(ctx, (), &[]);
+        identities![(),];
+        // But in the context of an error result type Result<(), ErrorType>, the
+        // () in Ok(()) is treated as an empty struct (with size 1).
+        encode_assert_bytes(
+            ctx,
+            Ok::<(), i32>(()),
+            &[
+                0x01, 0x00, 0x00, 0x00, // success ordinal
+                0x00, 0x00, 0x00, 0x00, // success ordinal [cont.]
+                0x08, 0x00, 0x00, 0x00, // 8 bytes (rounded up from 1)
+                0x00, 0x00, 0x00, 0x00, // 0 handles
+                0xff, 0xff, 0xff, 0xff, // present
+                0xff, 0xff, 0xff, 0xff, // present [cont.]
+                0x00, 0x00, 0x00, 0x00, // empty struct + 3 bytes padding
+                0x00, 0x00, 0x00, 0x00, // padding
+            ],
+        );
+        identities![Ok::<(), i32>(()),];
     }
 
     #[test]
