@@ -119,10 +119,15 @@ while true; do
       log "Ready to push packages!"
       # Log the uptime so that it is clear(er) from fx serve if the device rebooted.
       # The tr is present as the output sometimes contains spurious control characters.
-      uptime=$(fx-command-run shell clock --monotonic | tr '[[:cntrl:]]' ' ' ) && {
+      clock=$(fx-command-run shell clock --monotonic )
+      if [[ -n ${clock} ]]; then
+        uptime=$(echo $clock | tr '[[:cntrl:]]' ' ' )
         log "Target uptime: $(( $uptime / 1000000000 ))"
-      }
-      state="ready"
+        state="ready"
+      else
+        log "Device lost while checking uptime"
+        state="discover"
+      fi
     else
       log "Device lost while configuring update source"
       state="discover"
