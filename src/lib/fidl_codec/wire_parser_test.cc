@@ -170,11 +170,13 @@ TEST_F(WireParserTest, ParseSingleString) {
       *(reinterpret_cast<uint64_t*>(message.bytes().data() + patched_offset)) = patched_value;     \
     }                                                                                              \
                                                                                                    \
+    std::stringstream error_stream;                                                                \
     MessageDecoder decoder(message.bytes().data(),                                                 \
                            (num_bytes == -1) ? message.bytes().size() : num_bytes, handle_infos,   \
-                           message.handles().size(), std::cerr);                                   \
+                           message.handles().size(), error_stream);                                \
     std::unique_ptr<Object> object = decoder.DecodeMessage(*method->request());                    \
     if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
+      std::cerr << error_stream.str();                                                             \
       ASSERT_FALSE(decoder.HasError()) << "Could not decode message";                              \
     }                                                                                              \
     rapidjson::Document actual;                                                                    \
@@ -223,7 +225,7 @@ TEST_F(WireParserTest, ParseSingleString) {
                                                                                                    \
     auto encode_result = Encoder::EncodeMessage(header.txid, header.ordinal, header.flags,         \
                                                 header.magic_number, *object.get());               \
-    if (num_bytes == -1) {                                                                         \
+    if ((num_bytes == -1) && (patched_offset == -1)) {                                             \
       ASSERT_THAT(encode_result.bytes, ::testing::ElementsAreArray(message.bytes()));              \
       ASSERT_EQ(message.handles().size(), encode_result.handles.size());                           \
                                                                                                    \
@@ -360,6 +362,9 @@ std::string SingleToPretty(const std::string& key, const std::string& type, T va
 TEST_DECODE_WIRE(Empty, Empty, "{}", "{}")
 
 TEST_SINGLE(String, String, s, string, "Hello World!")
+
+TEST_DECODE_WIRE_PATCHED(StringBadSize, String, 16, 100, "{\"s\":\"(invalid)\"}",
+                         "{ s: #gre#string#rst# = #red#invalid#rst# }", "Hello World!")
 
 TEST_SINGLE(BoolTrue, Bool, b, bool, true)
 TEST_SINGLE(BoolFalse, Bool, b, bool, false)

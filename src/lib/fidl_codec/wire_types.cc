@@ -43,6 +43,12 @@ std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset)
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t string_length = 0;
   decoder->GetValueAt(offset, &string_length);
+  if (offset + string_length > decoder->num_bytes()) {
+    decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
+                        << ": Not enough data for string (missing "
+                        << (offset + string_length - decoder->num_bytes()) << " bytes)\n";
+    return std::make_unique<StringValue>(this, 0);
+  }
   offset += sizeof(string_length);
 
   auto result = std::make_unique<StringValue>(this, string_length);
