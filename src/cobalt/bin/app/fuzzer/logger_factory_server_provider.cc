@@ -51,14 +51,15 @@ class NoOpHTTPClient : public cobalt::lib::clearcut::HTTPClient {
   }
 };
 
-cobalt::encoder::ClearcutV1ShippingManager clearcut_shipping_manager(
-    cobalt::encoder::UploadScheduler(std::chrono::seconds(10), std::chrono::seconds(10)),
-    observation_store.get(),
-    std::make_unique<cobalt::lib::clearcut::ClearcutUploader>("http://test.com",
-                                                              std::make_unique<NoOpHTTPClient>()));
-
 std::unique_ptr<cobalt::util::EncryptedMessageMaker> encrypt_to_analyzer =
     cobalt::util::EncryptedMessageMaker::MakeUnencrypted();
+
+cobalt::encoder::ClearcutV1ShippingManager clearcut_shipping_manager(
+    cobalt::encoder::UploadScheduler(std::chrono::seconds(10), std::chrono::seconds(10)),
+    observation_store.get(), encrypt_to_analyzer.get(),
+    std::make_unique<cobalt::lib::clearcut::ClearcutUploader>("http://test.com",
+                                                              std::make_unique<NoOpHTTPClient>()),
+    nullptr, 5, "");
 
 cobalt::logger::ObservationWriter observation_writer(observation_store.get(),
                                                      &clearcut_shipping_manager,
@@ -69,9 +70,8 @@ cobalt::util::ConsistentProtoStore local_aggregate_proto_store(
 cobalt::util::ConsistentProtoStore obs_history_proto_store(
     "/tmp/obs_hist", std::make_unique<cobalt::util::PosixFileSystem>());
 
-cobalt::local_aggregation::EventAggregatorManager event_aggregator_manager(&encoder, &observation_writer,
-                                                                &local_aggregate_proto_store,
-                                                                &obs_history_proto_store, 4);
+cobalt::local_aggregation::EventAggregatorManager event_aggregator_manager(
+    &encoder, &observation_writer, &local_aggregate_proto_store, &obs_history_proto_store, 4);
 
 auto undated_event_manager = std::make_shared<cobalt::logger::UndatedEventManager>(
     &encoder, event_aggregator_manager.GetEventAggregator(), &observation_writer, nullptr);
@@ -96,7 +96,8 @@ zx_status_t fuzzer_init() {
       std::make_shared<cobalt::logger::ProjectContextFactory>(config);
 
   return fuzzer_server_provider->Init(global_project_context_factory, secret, &manager, &encoder,
-                                      &observation_writer, event_aggregator_manager.GetEventAggregator(), nullptr,
+                                      &observation_writer,
+                                      event_aggregator_manager.GetEventAggregator(), nullptr,
                                       undated_event_manager, nullptr, nullptr);
 }
 

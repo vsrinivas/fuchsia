@@ -122,6 +122,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                                .ValueOrDie();
     clearcut_shipping_manager = new encoder::ClearcutV1ShippingManager(
         UploadScheduler(target_interval, min_interval, initial_interval), observation_store_.get(),
+        encrypt_to_analyzer_.get(),
         std::make_unique<ClearcutUploader>(
             kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher)),
         nullptr, kClearcutMaxRetries, ReadApiKeyOrDefault());
