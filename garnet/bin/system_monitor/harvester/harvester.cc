@@ -64,7 +64,7 @@ void Harvester::GatherSlowData() {
   // gather_inspectable_.PostUpdate(slow_dispatcher_, now, zx::sec(3));
   // gather_introspection_.PostUpdate(slow_dispatcher_, now, zx::sec(10));
   gather_memory_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
-  gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::sec(2));
+  gather_tasks_.PostUpdate(slow_dispatcher_, now, zx::msec(500));
   gather_tasks_cpu_.PostUpdate(slow_dispatcher_, now, zx::msec(100));
 }
 
