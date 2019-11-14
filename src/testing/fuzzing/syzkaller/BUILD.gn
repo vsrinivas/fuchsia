@@ -40,7 +40,13 @@ if (target_cpu == "x64") {
 
 GOOS = "fuchsia"
 HOSTGOOS = "linux"
+
+# Like "git rev-parse HEAD", but without needing a Python script wrapper.
 GIT_REVISION = read_file("${src}/.git/HEAD", "trim string")
+GIT_BRANCH = string_replace(GIT_REVISION, "ref: ", "", 1)
+if (GIT_BRANCH != GIT_REVISION) {
+  GIT_REVISION = read_file("${src}/.git/${GIT_BRANCH}", "trim string")
+}
 
 executable("syz-executor") {
   sources = [
