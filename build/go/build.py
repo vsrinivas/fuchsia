@@ -43,6 +43,8 @@ def main():
                         required=False)
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
+    parser.add_argument('--is-fuzzer', help='True if the target is a go test',
+                        default=False)
     parser.add_argument('--go-dep-files',
                         help='List of files describing library dependencies',
                         nargs='*',
@@ -173,6 +175,8 @@ def main():
         # go command line, but Fuchsia currently has an older version of go
         # that hasn't switched to commas.
         cmd += ['-tags', ' '.join(args.tag)]
+    if args.is_fuzzer:
+      cmd += ['-buildmode', 'c-archive', '-gcflags=all=-d=libfuzzer']
     cmd += ['-pkgdir', os.path.join(project_path, 'pkg'), '-o',
             output_name, args.package]
     retcode = subprocess.call(cmd, env=env)

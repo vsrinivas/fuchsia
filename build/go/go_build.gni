@@ -47,6 +47,9 @@ declare_args() {
 #   test (optional, default: false)
 #     Whether this target defines a test.
 #
+#   fuzzer (optional, default: false)
+#     Whether this target defines a fuzzer.
+#
 #   tags (optional)
 #     List of go build tags to include in the build.
 #
@@ -60,18 +63,25 @@ template("go_build") {
 
   main_target_name = target_name
 
+  is_test = defined(invoker.test) && invoker.test
+  is_fuzzer = defined(invoker.fuzzer) && invoker.fuzzer
+
   output_name = target_name
   if (defined(invoker.output_name)) {
     output_name = invoker.output_name
   }
+  if (is_fuzzer) {
+    output_name = "${output_name}.a"
+  }
   output_path = "${root_out_dir}/${output_name}"
 
-  is_test = defined(invoker.test) && invoker.test
+  assert(!(is_test && is_fuzzer),
+         "cannot specify both test=true and fuzzer=true")
   define_sdk_target = defined(invoker.sdk_category) &&
                       invoker.sdk_category != "excluded" && !is_test
 
   # Strip target binaries and binaries that are included in the SDK.
-  use_strip = is_fuchsia || define_sdk_target
+  use_strip = (is_fuchsia || define_sdk_target) && !is_fuzzer
   if (use_strip) {
     unstripped_output_path = "${root_out_dir}/exe.unstripped/${output_name}"
   }
@@ -224,6 +234,10 @@ template("go_build") {
     if (is_test) {
       testonly = true
       args += [ "--is-test=true" ]
+    }
+    if (is_fuzzer) {
+      testonly = true
+      args += [ "--is-fuzzer=true" ]
     }
 
     if (defined(invoker.deps)) {

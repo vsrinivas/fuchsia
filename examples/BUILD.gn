@@ -10,6 +10,7 @@ group("examples") {
     "criterion_bench",
     "dotmatrix_display",
     "fortune",
+    "fuzzer",
     "hello_world",
     "isolated_cache",
     "media",
@@ -23,6 +24,7 @@ group("examples") {
 group("tests") {
   testonly = true
   data_deps = [
+    "fuzzer:tests",
     "hello_world:tests",
     "isolated_cache:tests",
     "media:tests",
