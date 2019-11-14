@@ -5,22 +5,23 @@
 use crate::bind_library;
 use crate::bind_program::{self, Condition, ConditionOp, Statement, Value};
 use crate::dependency_graph::{self, DependencyGraph};
+use crate::errors::UserError;
 use crate::instruction;
 use crate::make_identifier;
 use crate::parser_common::{self, CompoundIdentifier, Include};
 use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fmt;
 use std::fs::File;
 use std::io::Read;
 use std::ops::Deref;
 use std::path::PathBuf;
 use std::str::FromStr;
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum CompilerError {
     FileOpenError(PathBuf),
     FileReadError(PathBuf),
-    EncodingError,
     BindParserError(parser_common::BindParserError),
     DependencyError(dependency_graph::DependencyError<CompoundIdentifier>),
     DuplicateIdentifier(CompoundIdentifier),
@@ -31,6 +32,14 @@ pub enum CompilerError {
     InvalidExtendsKeyword(CompoundIdentifier),
     UnknownKey(CompoundIdentifier),
     IfStatementMustBeTerminal,
+}
+
+impl fmt::Display for CompilerError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let blah: CompilerError = self.clone();
+        let user_error = UserError::from(blah);
+        write!(f, "{}", user_error)
+    }
 }
 
 pub fn compile(

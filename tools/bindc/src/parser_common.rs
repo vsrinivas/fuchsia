@@ -16,11 +16,22 @@ use nom::{
     sequence::{delimited, preceded},
     IResult,
 };
+use std::fmt;
 
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub struct CompoundIdentifier {
     pub namespace: Vec<String>,
     pub name: String,
+}
+
+impl fmt::Display for CompoundIdentifier {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        if self.namespace.is_empty() {
+            write!(f, "{}", self.name)
+        } else {
+            write!(f, "{}.{}", self.namespace.join("."), self.name)
+        }
+    }
 }
 
 impl CompoundIdentifier {
@@ -37,21 +48,13 @@ impl CompoundIdentifier {
     }
 }
 
-impl ToString for CompoundIdentifier {
-    fn to_string(&self) -> String {
-        let mut temp = self.namespace.clone();
-        temp.push(self.name.clone());
-        temp.join(".")
-    }
-}
-
 #[derive(Debug, Clone, PartialEq)]
 pub struct Include {
     pub name: CompoundIdentifier,
     pub alias: Option<String>,
 }
 
-#[derive(Debug, PartialEq)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum BindParserError {
     Type(String),
     StringLiteral(String),

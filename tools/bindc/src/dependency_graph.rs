@@ -33,8 +33,8 @@ enum Node<K, V> {
     Zombie,
 }
 
-#[derive(Debug, PartialEq)]
-pub enum DependencyError<K: Debug + PartialEq> {
+#[derive(Debug, Clone, PartialEq)]
+pub enum DependencyError<K: Clone + Debug + PartialEq> {
     MissingDependency(K),
     CircularDependency,
 }
