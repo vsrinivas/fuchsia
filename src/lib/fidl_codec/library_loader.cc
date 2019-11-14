@@ -30,7 +30,7 @@ void Enum::DecodeTypes() {
     enclosing_library_->FieldNotFound("enum", name_, "members");
   }
 
-  size_ = type_->InlineSize();
+  size_ = type_->InlineSize(nullptr);
 }
 
 std::string Enum::GetNameFromBytes(const uint8_t* bytes) const {
@@ -65,7 +65,7 @@ void Bits::DecodeTypes() {
     enclosing_library_->FieldNotFound("bits", name_, "members");
   }
 
-  size_ = type_->InlineSize();
+  size_ = type_->InlineSize(nullptr);
 }
 
 std::string Bits::GetNameFromBytes(const uint8_t* bytes) const {
@@ -185,11 +185,27 @@ std::unique_ptr<XUnionValue> Union::DecodeXUnion(MessageDecoder* decoder, const 
 
 StructMember::StructMember(Library* enclosing_library, const rapidjson::Value& value)
     : name_(enclosing_library->ExtractString(value, "struct member", "<unknown>", "name")),
-      offset_(enclosing_library->ExtractUint64(value, "struct member", name_, "offset")),
       size_(enclosing_library->ExtractUint64(value, "struct member", name_, "size")),
-      type_(enclosing_library->ExtractType(value, "struct member", name_, "type", size_)) {}
+      type_(enclosing_library->ExtractType(value, "struct member", name_, "type", size_)) {
+  if (!value.HasMember("field_shape_old")) {
+    enclosing_library->FieldNotFound("struct member", name_, "field_shape_old");
+  } else {
+    const rapidjson::Value& v0 = value["field_shape_old"];
+    v0_offset_ = enclosing_library->ExtractUint64(v0, "struct member", name_, "offset");
+  }
+  if (!value.HasMember("field_shape_v1")) {
+    enclosing_library->FieldNotFound("struct member", name_, "field_shape_v1");
+  } else {
+    const rapidjson::Value& v1 = value["field_shape_v1"];
+    v1_offset_ = enclosing_library->ExtractUint64(v1, "struct member", name_, "offset");
+  }
+}
 
 StructMember::~StructMember() = default;
+
+uint64_t StructMember::Offset(MessageDecoder* decoder) const {
+  return decoder->unions_are_xunions() ? v1_offset_ : v0_offset_;
+}
 
 Struct::Struct(Library* enclosing_library, const rapidjson::Value& value)
     : enclosing_library_(enclosing_library), value_(value) {}
@@ -198,28 +214,34 @@ void Struct::DecodeStructTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("struct", "size", "members");
+  DecodeTypes("struct", "size", "members", "type_shape_old", "type_shape_v1");
 }
 
 void Struct::DecodeRequestTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("request", "maybe_request_size", "maybe_request");
+  DecodeTypes("request", "maybe_request_size", "maybe_request", "maybe_request_type_shape_old",
+              "maybe_request_type_shape_v1");
 }
 
 void Struct::DecodeResponseTypes() {
   if (decoded_) {
     return;
   }
-  DecodeTypes("response", "maybe_response_size", "maybe_response");
+  DecodeTypes("response", "maybe_response_size", "maybe_response", "maybe_response_type_shape_old",
+              "maybe_response_type_shape_v1");
+}
+
+uint32_t Struct::Size(MessageDecoder* decoder) const {
+  return decoder->unions_are_xunions() ? v1_size_ : v0_size_;
 }
 
 std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, const Type* type,
                                              uint64_t offset, bool nullable) const {
   std::unique_ptr<Object> result = std::make_unique<Object>(type, *this);
   if (nullable) {
-    result->DecodeNullable(decoder, offset, size_);
+    result->DecodeNullable(decoder, offset, Size(decoder));
   } else {
     result->DecodeAt(decoder, offset);
   }
@@ -227,11 +249,24 @@ std::unique_ptr<Object> Struct::DecodeObject(MessageDecoder* decoder, const Type
 }
 
 void Struct::DecodeTypes(std::string_view container_name, const char* size_name,
-                         const char* member_name) {
+                         const char* member_name, const char* v0_name, const char* v1_name) {
   FXL_DCHECK(!decoded_);
   decoded_ = true;
   name_ = enclosing_library_->ExtractString(value_, container_name, "<unknown>", "name");
-  size_ = enclosing_library_->ExtractUint64(value_, container_name, name_, size_name);
+
+  if (!value_.HasMember(v0_name)) {
+    enclosing_library_->FieldNotFound(container_name, name_, v0_name);
+  } else {
+    const rapidjson::Value& v0 = value_[v0_name];
+    v0_size_ = enclosing_library_->ExtractUint64(v0, container_name, name_, "inline_size");
+  }
+
+  if (!value_.HasMember(v1_name)) {
+    enclosing_library_->FieldNotFound(container_name, name_, v1_name);
+  } else {
+    const rapidjson::Value& v1 = value_[v1_name];
+    v1_size_ = enclosing_library_->ExtractUint64(v1, container_name, name_, "inline_size");
+  }
 
   if (!value_.HasMember(member_name)) {
     enclosing_library_->FieldNotFound(container_name, name_, member_name);

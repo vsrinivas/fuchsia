@@ -102,13 +102,14 @@ void Encoder::VisitObjectBody(const Object* node, size_t existing_size) {
   FXL_DCHECK(existing_size <= bytes_.size());
 
   size_t object_offset = bytes_.size() - existing_size;
-  size_t object_size = node->struct_definition().size();
+  size_t object_size =
+      union_as_xunion_ ? node->struct_definition().v1_size() : node->struct_definition().v0_size();
 
   for (const auto& member : node->struct_definition().members()) {
     auto it = node->fields().find(std::string(member->name()));
     FXL_DCHECK(it != node->fields().end());
     // Pad the buffer so the next object appended will be at the offset of the member.
-    bytes_.resize(object_offset + member->offset());
+    bytes_.resize(object_offset + (union_as_xunion_ ? member->v1_offset() : member->v0_offset()));
     it->second->Visit(this);
   }
 
@@ -125,7 +126,8 @@ void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
     }
   }
 
-  FXL_DCHECK(ordinal || node->is_null()) << "Invalid xunion field '" << node->field().name() << "'";
+  FXL_DCHECK(ordinal || node->is_null() || node->field().value()->is_null())
+      << "Invalid xunion field '" << node->field().name() << "'";
 
   auto field = node->field().value().get();
   Write<uint64_t>(ordinal);
@@ -164,7 +166,7 @@ void Encoder::VisitEnvelopeValue(const EnvelopeValue* node) {
   Write<uint32_t>(node->num_bytes());
   Write<uint32_t>(node->num_handles());
 
-  if (node->is_null()) {
+  if (node->is_null() || (node->value() == nullptr)) {
     Write<uint64_t>(0);
   } else {
     Write<uint64_t>(UINTPTR_MAX);

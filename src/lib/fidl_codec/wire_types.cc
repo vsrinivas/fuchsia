@@ -26,7 +26,7 @@ bool Type::ValueHas(const uint8_t* /*bytes*/, const rapidjson::Value& /*value*/)
   return false;
 }
 
-size_t Type::InlineSize() const {
+size_t Type::InlineSize(MessageDecoder* decoder) const {
   FXL_LOG(FATAL) << "Size for type not implemented";
   return 0;
 }
@@ -57,13 +57,15 @@ std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset
   return std::make_unique<BoolValue>(this, decoder->GetAddress(offset, sizeof(uint8_t)));
 }
 
-size_t StructType::InlineSize() const { return nullable_ ? sizeof(uintptr_t) : struct_.size(); }
+size_t StructType::InlineSize(MessageDecoder* decoder) const {
+  return nullable_ ? sizeof(uintptr_t) : struct_.Size(decoder);
+}
 
 std::unique_ptr<Value> StructType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return struct_.DecodeObject(decoder, this, offset, nullable_);
 }
 
-size_t TableType::InlineSize() const { return table_.size(); }
+size_t TableType::InlineSize(MessageDecoder* decoder) const { return table_.size(); }
 
 std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   uint64_t size = 0;
@@ -82,7 +84,15 @@ std::unique_ptr<Value> TableType::Decode(MessageDecoder* decoder, uint64_t offse
 
 UnionType::UnionType(const Union& uni, bool nullable) : union_(uni), nullable_(nullable) {}
 
-size_t UnionType::InlineSize() const { return nullable_ ? sizeof(uintptr_t) : union_.size(); }
+size_t UnionType::InlineSize(MessageDecoder* decoder) const {
+  FXL_DCHECK(decoder != nullptr);
+  if (decoder->unions_are_xunions()) {
+    // In v1, unions are encoded as xunion. The inline size is the size of an envelope which
+    // is always 24 bytes.
+    return 24;
+  }
+  return nullable_ ? sizeof(uintptr_t) : union_.size();
+}
 
 std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return decoder->unions_are_xunions() ? union_.DecodeXUnion(decoder, this, offset, nullable_)
@@ -91,7 +101,7 @@ std::unique_ptr<Value> UnionType::Decode(MessageDecoder* decoder, uint64_t offse
 
 XUnionType::XUnionType(const XUnion& uni, bool nullable) : xunion_(uni), nullable_(nullable) {}
 
-size_t XUnionType::InlineSize() const { return xunion_.size(); }
+size_t XUnionType::InlineSize(MessageDecoder* decoder) const { return xunion_.size(); }
 
 std::unique_ptr<Value> XUnionType::Decode(MessageDecoder* decoder, uint64_t offset) const {
   return xunion_.DecodeXUnion(decoder, this, offset, nullable_);
@@ -109,7 +119,7 @@ std::unique_ptr<Value> ArrayType::Decode(MessageDecoder* decoder, uint64_t offse
   auto result = std::make_unique<ArrayValue>(this);
   for (uint64_t i = 0; i < count_; ++i) {
     result->AddValue(component_type_->Decode(decoder, offset));
-    offset += component_type_->InlineSize();
+    offset += component_type_->InlineSize(decoder);
   }
   return result;
 }
@@ -126,7 +136,7 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
 
   // Don't need to check return value because the effects of returning false are
   // dealt with in DecodeNullable.
-  result->DecodeNullable(decoder, offset, size * component_type_->InlineSize());
+  result->DecodeNullable(decoder, offset, size * component_type_->InlineSize(decoder));
   return result;
 }
 

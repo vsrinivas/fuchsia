@@ -211,7 +211,7 @@ MessageDecoder::MessageDecoder(MessageDecoder* container, uint64_t offset, uint6
 
 std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_format) {
   // Set the offset for the next object (just after this one).
-  SkipObject(message_format.size());
+  SkipObject(message_format.Size(this));
   // Decode the object.
   std::unique_ptr<Object> object = message_format.DecodeObject(this, /*type=*/nullptr,
                                                                /*offset=*/0, /*nullable=*/false);
@@ -229,7 +229,7 @@ std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_form
 
 std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
   // Set the offset for the next object (just after this one).
-  SkipObject(type->InlineSize());
+  SkipObject(type->InlineSize(this));
   // Decode the envelope.
   std::unique_ptr<Value> result = type->Decode(this, 0);
   // It's an error if we didn't use all the bytes in the buffer.

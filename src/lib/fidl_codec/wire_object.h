@@ -28,6 +28,8 @@ class Value {
 
   const Type* type() const { return type_; }
 
+  virtual bool is_null() const { return false; }
+
   // Returns the size needed to display the value. If the needed size is
   // greater than |remaining_size|, the return value can be anything greater
   // than |remaining_size| and the only useful information is that the value
@@ -76,7 +78,7 @@ class NullableValue : public Value {
  public:
   NullableValue(const Type* type) : Value(type) {}
 
-  bool is_null() const { return is_null_; }
+  bool is_null() const override { return is_null_; }
 
   bool DecodeNullable(MessageDecoder* decoder, uint64_t offset, uint64_t size);
 

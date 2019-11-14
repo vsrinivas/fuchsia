@@ -52,7 +52,13 @@ class JsonVisitor : public Visitor {
     }
   }
 
-  void VisitEnvelopeValue(const EnvelopeValue* node) override { node->value()->Visit(this); }
+  void VisitEnvelopeValue(const EnvelopeValue* node) override {
+    if (node->is_null() || (node->value() == nullptr)) {
+      result_->SetNull();
+    } else {
+      node->value()->Visit(this);
+    }
+  }
 
   void VisitTableValue(const TableValue* node) override {
     result_->SetObject();
@@ -68,7 +74,7 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitUnionValue(const UnionValue* node) override {
-    if (node->is_null()) {
+    if (node->is_null() || (node->field().value()->is_null())) {
       result_->SetNull();
     } else {
       result_->SetObject();
@@ -76,7 +82,9 @@ class JsonVisitor : public Visitor {
       key.SetString(node->field().name().c_str(), *allocator_);
       result_->AddMember(key, rapidjson::Value(), *allocator_);
       JsonVisitor visitor(&(*result_)[node->field().name().c_str()], allocator_);
-      node->field().value()->Visit(&visitor);
+      if (node->field().value() != nullptr) {
+        node->field().value()->Visit(&visitor);
+      }
     }
   }
 

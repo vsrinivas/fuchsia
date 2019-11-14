@@ -199,14 +199,17 @@ class StructMember {
   ~StructMember();
 
   std::string_view name() const { return name_; }
-  uint64_t offset() const { return offset_; }
-  uint64_t size() const { return size_; }
+  uint64_t v0_offset() const { return v0_offset_; }
+  uint64_t v1_offset() const { return v1_offset_; }
   const Type* type() const { return type_.get(); }
+
+  uint64_t Offset(MessageDecoder* decoder) const;
 
  private:
   const std::string name_;
-  const uint64_t offset_;
   const uint64_t size_;
+  uint64_t v0_offset_;
+  uint64_t v1_offset_;
   std::unique_ptr<Type> type_;
 };
 
@@ -217,8 +220,11 @@ class Struct {
 
   Library* enclosing_library() const { return enclosing_library_; }
   const std::string& name() const { return name_; }
-  uint32_t size() const { return size_; }
+  uint32_t v0_size() const { return v0_size_; }
+  uint32_t v1_size() const { return v1_size_; }
   const std::vector<std::unique_ptr<StructMember>>& members() const { return members_; }
+
+  uint32_t Size(MessageDecoder* decoder) const;
 
   std::unique_ptr<Object> DecodeObject(MessageDecoder* decoder, const Type* type, uint64_t offset,
                                        bool nullable) const;
@@ -239,13 +245,15 @@ class Struct {
   void DecodeResponseTypes();
 
   // Decode all the values from the JSON definition.
-  void DecodeTypes(std::string_view container_name, const char* size_name, const char* member_name);
+  void DecodeTypes(std::string_view container_name, const char* size_name, const char* member_name,
+                   const char* v0_name, const char* v1_name);
 
   Library* enclosing_library_;
   const rapidjson::Value& value_;
   bool decoded_ = false;
   std::string name_;
-  uint32_t size_ = 0;
+  uint32_t v0_size_ = 0;
+  uint32_t v1_size_ = 0;
   std::vector<std::unique_ptr<StructMember>> members_;
 };
 

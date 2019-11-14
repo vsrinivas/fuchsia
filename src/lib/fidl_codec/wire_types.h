@@ -52,7 +52,7 @@ class Type {
   virtual bool ValueHas(const uint8_t* bytes, const rapidjson::Value& value) const;
 
   // Returns the size of this type when embedded in another object.
-  virtual size_t InlineSize() const;
+  virtual size_t InlineSize(MessageDecoder* decoder) const;
 
   // Decodes the type's inline part. It generates a Value and, eventually,
   // registers the field for further decoding (secondary objects).
@@ -97,7 +97,7 @@ class RawType : public Type {
 
   std::string Name() const override { return "unknown"; }
 
-  size_t InlineSize() const override { return inline_size_; }
+  size_t InlineSize(MessageDecoder* decoder) const override { return inline_size_; }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -111,7 +111,9 @@ class StringType : public Type {
  public:
   std::string Name() const override { return "string"; }
 
-  size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
+  size_t InlineSize(MessageDecoder* decoder) const override {
+    return sizeof(uint64_t) + sizeof(uint64_t);
+  }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -141,7 +143,7 @@ class NumericType : public Type {
     return lhs == rhs;
   }
 
-  size_t InlineSize() const override { return sizeof(T); }
+  size_t InlineSize(MessageDecoder* decoder) const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
     return std::make_unique<NumericValue<T>>(this, decoder->GetAddress(offset, sizeof(T)));
@@ -228,7 +230,7 @@ class BoolType : public Type {
  public:
   std::string Name() const override { return "bool"; }
 
-  size_t InlineSize() const override { return sizeof(uint8_t); }
+  size_t InlineSize(MessageDecoder* decoder) const override { return sizeof(uint8_t); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
@@ -241,7 +243,7 @@ class StructType : public Type {
 
   std::string Name() const override { return struct_.name(); }
 
-  size_t InlineSize() const override;
+  size_t InlineSize(MessageDecoder* decoder) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -256,7 +258,7 @@ class TableType : public Type {
 
   std::string Name() const override { return table_.name(); }
 
-  size_t InlineSize() const override;
+  size_t InlineSize(MessageDecoder* decoder) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -271,7 +273,7 @@ class UnionType : public Type {
   std::string Name() const override { return union_.name(); }
   bool Nullable() const override { return nullable_; }
 
-  size_t InlineSize() const override;
+  size_t InlineSize(MessageDecoder* decoder) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -287,7 +289,7 @@ class XUnionType : public Type {
   std::string Name() const override { return xunion_.name(); }
   bool Nullable() const override { return nullable_; }
 
-  size_t InlineSize() const override;
+  size_t InlineSize(MessageDecoder* decoder) const override;
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -312,7 +314,9 @@ class ArrayType : public ElementSequenceType {
     return std::string("array<") + component_type_->Name() + ">";
   }
 
-  size_t InlineSize() const override { return component_type_->InlineSize() * count_; }
+  size_t InlineSize(MessageDecoder* decoder) const override {
+    return component_type_->InlineSize(decoder) * count_;
+  }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -330,7 +334,9 @@ class VectorType : public ElementSequenceType {
 
   bool Nullable() const override { return true; }
 
-  size_t InlineSize() const override { return sizeof(uint64_t) + sizeof(uint64_t); }
+  size_t InlineSize(MessageDecoder* decoder) const override {
+    return sizeof(uint64_t) + sizeof(uint64_t);
+  }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };
@@ -341,7 +347,7 @@ class EnumType : public Type {
 
   std::string Name() const override { return enum_.name(); }
 
-  size_t InlineSize() const override { return enum_.size(); }
+  size_t InlineSize(MessageDecoder* decoder) const override { return enum_.size(); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -355,7 +361,7 @@ class BitsType : public Type {
 
   std::string Name() const override { return bits_.name(); }
 
-  size_t InlineSize() const override { return bits_.size(); }
+  size_t InlineSize(MessageDecoder* decoder) const override { return bits_.size(); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 
@@ -369,7 +375,7 @@ class HandleType : public Type {
 
   std::string Name() const override { return "handle"; }
 
-  size_t InlineSize() const override { return sizeof(zx_handle_t); }
+  size_t InlineSize(MessageDecoder* decoder) const override { return sizeof(zx_handle_t); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override;
 };

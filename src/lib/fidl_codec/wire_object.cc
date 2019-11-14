@@ -210,7 +210,8 @@ void Object::DecodeContent(MessageDecoder* decoder, uint64_t offset) { DecodeAt(
 
 void Object::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   for (const auto& member : struct_definition_.members()) {
-    std::unique_ptr<Value> value = member->type()->Decode(decoder, base_offset + member->offset());
+    std::unique_ptr<Value> value =
+        member->type()->Decode(decoder, base_offset + member->Offset(decoder));
     if (value != nullptr) {
       fields_[std::string(member->name())] = std::move(value);
     }
@@ -278,6 +279,9 @@ void Object::Visit(Visitor* visitor) const { visitor->VisitObject(this); }
 EnvelopeValue::EnvelopeValue(const Type* type) : NullableValue(type) {}
 
 int EnvelopeValue::DisplaySize(int remaining_size) const {
+  if (is_null() || (value_ == nullptr)) {
+    return 4;
+  }
   return value_->DisplaySize(remaining_size);
 }
 
@@ -325,7 +329,11 @@ void EnvelopeValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
 void EnvelopeValue::PrettyPrint(std::ostream& os, const Colors& colors,
                                 const fidl_message_header_t* header, std::string_view line_header,
                                 int tabs, int remaining_size, int max_line_size) const {
-  value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
+  if (is_null() || (value_ == nullptr)) {
+    os << colors.red << "null" << colors.reset;
+  } else {
+    value_->PrettyPrint(os, colors, header, line_header, tabs, remaining_size, max_line_size);
+  }
 }
 
 void EnvelopeValue::Visit(Visitor* visitor) const { visitor->VisitEnvelopeValue(this); }
@@ -421,7 +429,7 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void TableValue::Visit(Visitor* visitor) const { visitor->VisitTableValue(this); }
 
 int UnionValue::DisplaySize(int remaining_size) const {
-  if (is_null()) {
+  if (is_null() || field_.value()->is_null()) {
     return 4;
   }
   // Two characters for the opening brace ("{ ") + three characters for equal
@@ -461,7 +469,7 @@ void UnionValue::PrettyPrint(std::ostream& os, const Colors& colors,
   if (header != nullptr) {
     os << (fidl_should_decode_union_from_xunion(header) ? "v1!" : "v0!");
   }
-  if (is_null()) {
+  if (is_null() || field_.value()->is_null()) {
     os << colors.blue << "null" << colors.reset;
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     // Two characters for the opening brace ("{ ") + three characters for equal
@@ -576,7 +584,8 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
   }
   is_string_ = true;
   for (uint64_t i = 0;
-       (i < size_) && (offset + component_type_->InlineSize() <= decoder->num_bytes()); ++i) {
+       (i < size_) && (offset + component_type_->InlineSize(decoder) <= decoder->num_bytes());
+       ++i) {
     std::unique_ptr<Value> value = component_type_->Decode(decoder, offset);
     if (value != nullptr) {
       uint8_t uvalue = value->GetUint8Value();
@@ -589,7 +598,7 @@ void VectorValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
       }
       values_.push_back(std::move(value));
     }
-    offset += component_type_->InlineSize();
+    offset += component_type_->InlineSize(decoder);
   }
 }
 
