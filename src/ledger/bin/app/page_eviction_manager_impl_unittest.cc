@@ -85,8 +85,7 @@ class PageEvictionManagerTest : public TestWithEnvironment {
       }
       dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
       db_ = std::make_unique<PageUsageDb>(
-          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
-      EXPECT_EQ(db_->Init(handler), Status::OK);
+          &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     }));
   }
 
@@ -205,6 +204,7 @@ TEST_F(PageEvictionManagerTest, DontEvictAnEvictedPage) {
   delegate_.closed_and_synced = PagePredicateResult::YES;
 
   page_eviction_manager_->MarkPageOpened(ledger_name, page);
+  RunLoopUntilIdle();
   page_eviction_manager_->MarkPageClosed(ledger_name, page);
   RunLoopUntilIdle();
 

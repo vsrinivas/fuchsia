@@ -335,7 +335,7 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
   auto dbview_factory = std::make_unique<DbViewFactory>(std::move(base_db));
 
   auto page_usage_db = std::make_unique<PageUsageDb>(
-      environment_->clock(), dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+      environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
 
   auto disk_cleanup_manager =
       std::make_unique<DiskCleanupManagerImpl>(environment_, page_usage_db.get());

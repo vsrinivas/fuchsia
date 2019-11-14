@@ -59,8 +59,8 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
   }
 
   void ResetPageUsageDb() {
-    Status status;
-    RunInCoroutine([this, &status](coroutine::CoroutineHandler* handler) {
+    EXPECT_TRUE(RunInCoroutine([this](coroutine::CoroutineHandler* handler) {
+      Status status;
       std::unique_ptr<storage::Db> leveldb;
       if (coroutine::SyncCall(
               handler,
@@ -70,15 +70,14 @@ class DiskCleanupManagerTest : public TestWithEnvironment {
                                           std::move(callback));
               },
               &status, &leveldb) == coroutine::ContinuationStatus::INTERRUPTED) {
-        status = Status::INTERRUPTED;
+        // This should not be reached.
+        FAIL();
         return;
       }
       dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
       db_ = std::make_unique<PageUsageDb>(
-          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
-      status = db_->Init(handler);
-    });
-    FXL_DCHECK(status == Status::OK);
+          &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+    }));
   }
 
  private:

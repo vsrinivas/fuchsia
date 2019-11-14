@@ -64,20 +64,6 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
   ledger_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
   disk_cleanup_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
   background_sync_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
-  // The callback that is to be called once the initialization of this PageUsageDb is completed.
-  // The destructor may be called while a coroutine that is responsable for the PageusageDb
-  // initialization is executed, so we need to wait until the operation is done and then signal
-  // about its completion.
-  fit::function<void(Status)> callback([this](Status status) {
-    if (status != Status::INTERRUPTED) {
-      CheckDiscardable();
-    }
-  });
-  coroutine_manager_.StartCoroutine(std::move(callback),
-                                    [db_ptr = db_.get()](coroutine::CoroutineHandler* handler,
-                                                         fit::function<void(Status)> callback) {
-                                      callback(db_ptr->Init(handler));
-                                    });
   children_manager_retainer_ = ledgers_inspect_node_.SetChildrenManager(this);
 }
 

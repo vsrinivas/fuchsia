@@ -98,12 +98,18 @@ bool LogOnInitializationError(fxl::StringView operation_description, Status stat
 }
 }  // namespace
 
-PageUsageDb::PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db)
-    : clock_(clock), db_(std::move(db)) {}
+PageUsageDb::PageUsageDb(Environment* environment, std::unique_ptr<storage::Db> db)
+    : clock_(environment->clock()),
+      db_(std::move(db)),
+      initialization_completer_(environment->dispatcher()) {}
 
 PageUsageDb::~PageUsageDb() = default;
 
 Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
+  if (initialization_called_) {
+    return SyncWaitUntilDone(handler, &initialization_completer_);
+  }
+  initialization_called_ = true;
   Status status = MarkAllPagesClosed(handler);
   if (status == Status::INTERRUPTED) {
     return Status::INTERRUPTED;
@@ -114,7 +120,7 @@ Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
 
 Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name, storage::PageIdView page_id) {
-  Status status = SyncWaitUntilDone(handler, &initialization_completer_);
+  Status status = Init(handler);
   if (LogOnInitializationError("MarkPageOpened", status)) {
     return status;
   }
@@ -124,7 +130,7 @@ Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
 
 Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
                                    fxl::StringView ledger_name, storage::PageIdView page_id) {
-  Status status = SyncWaitUntilDone(handler, &initialization_completer_);
+  Status status = Init(handler);
   if (LogOnInitializationError("MarkPageClosed", status)) {
     return status;
   }
@@ -138,7 +144,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
 
 Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
                                     fxl::StringView ledger_name, storage::PageIdView page_id) {
-  Status status = SyncWaitUntilDone(handler, &initialization_completer_);
+  Status status = Init(handler);
   if (LogOnInitializationError("TryEvictPage", status)) {
     return status;
   }
@@ -170,7 +176,7 @@ Status PageUsageDb::MarkAllPagesClosed(coroutine::CoroutineHandler* handler) {
 
 Status PageUsageDb::GetPages(coroutine::CoroutineHandler* handler,
                              std::unique_ptr<storage::Iterator<const PageInfo>>* pages) {
-  Status status = SyncWaitUntilDone(handler, &initialization_completer_);
+  Status status = Init(handler);
   if (LogOnInitializationError("TryEvictPages", status)) {
     return status;
   }

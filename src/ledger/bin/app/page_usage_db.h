@@ -12,6 +12,7 @@
 
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
+#include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
@@ -35,11 +36,8 @@ namespace ledger {
 // - Value: "<timestamp>" or timestamp 0 for open pages
 class PageUsageDb {
  public:
-  PageUsageDb(timekeeper::Clock* clock, std::unique_ptr<storage::Db> db);
+  PageUsageDb(Environment* environment, std::unique_ptr<storage::Db> db);
   ~PageUsageDb();
-
-  // Asynchronously initializes this PageUsageDb.
-  Status Init(coroutine::CoroutineHandler* handler);
 
   // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
@@ -69,6 +67,9 @@ class PageUsageDb {
   bool IsInitialized();
 
  private:
+  // Asynchronously initializes this PageUsageDb if needed.
+  Status Init(coroutine::CoroutineHandler* handler);
+
   // Inserts the given |key|-|value| pair in the underlying database.
   Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key, fxl::StringView value);
 
@@ -78,6 +79,7 @@ class PageUsageDb {
   timekeeper::Clock* const clock_;
   std::unique_ptr<storage::Db> const db_;
 
+  bool initialization_called_ = false;
   // The initialization completer. |Init| method starts marking pages as closed,
   // and returns before that operation is done. This completer makes sure that
   // all methods accessing the page usage database wait until the initialization

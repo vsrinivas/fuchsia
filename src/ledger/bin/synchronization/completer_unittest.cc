@@ -16,7 +16,7 @@ namespace ledger {
 using CompleterTest = ledger::TestWithEnvironment;
 
 TEST_F(CompleterTest, TasksAreQueued) {
-  Completer completer;
+  Completer completer(environment_.dispatcher());
 
   EXPECT_FALSE(completer.IsCompleted());
 
@@ -33,6 +33,9 @@ TEST_F(CompleterTest, TasksAreQueued) {
   EXPECT_FALSE(task_2_has_run);
 
   completer.Complete(Status::IO_ERROR);
+  // Verify that tasks are not executed synchronously.
+  EXPECT_FALSE(task_1_has_run);
+  EXPECT_FALSE(task_2_has_run);
   RunLoopUntilIdle();
 
   EXPECT_TRUE(completer.IsCompleted());
@@ -51,7 +54,7 @@ TEST_F(CompleterTest, TasksAreQueued) {
 }
 
 TEST_F(CompleterTest, SyncWait) {
-  Completer completer;
+  Completer completer(environment_.dispatcher());
 
   EXPECT_FALSE(completer.IsCompleted());
 

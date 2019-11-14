@@ -5,11 +5,12 @@
 #include "src/ledger/bin/synchronization/completer.h"
 
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/logging.h"
 
 namespace ledger {
 
-Completer::Completer() = default;
+Completer::Completer(async_dispatcher_t* dispatcher) : task_runner_(dispatcher) {}
 
 Completer::~Completer() = default;
 
@@ -21,9 +22,11 @@ void Completer::Complete(Status status) {
   // them might lead to the deletion of this object, invalidating callbacks_.
   std::vector<fit::function<void(Status)>> callbacks = std::move(callbacks_);
   callbacks_.clear();
-  for (const auto& callback : callbacks) {
-    callback(status_);
-  }
+  task_runner_.PostTask([status, callbacks = std::move(callbacks)] {
+    for (const auto& callback : callbacks) {
+      callback(status);
+    }
+  });
 }
 
 void Completer::WaitUntilDone(fit::function<void(Status)> callback) {

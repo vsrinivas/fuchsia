@@ -213,7 +213,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
       FXL_CHECK(status == Status::OK);
       dbview_factory = std::make_unique<DbViewFactory>(std::move(leveldb));
       page_usage_db = std::make_unique<PageUsageDb>(
-          environment_.clock(), dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+          &environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     }));
 
     auto background_sync_manager =
@@ -473,18 +473,6 @@ TEST_F(LedgerRepositoryImplTest, CloseEmpty) {
 
   // The connection is not closed by LedgerRepositoryImpl, but by its holder.
   EXPECT_FALSE(ptr1_closed);
-}
-
-TEST_F(LedgerRepositoryImplTest, CloseWhenEmptyWithoutCallback) {
-  // Running will init the repo, that will trigger is emptyness check, which
-  // will close it given that it has no user.
-  RunLoopUntilIdle();
-
-  bool called;
-  Status status;
-  repository_->GetLedger({}, nullptr, callback::Capture(callback::SetWhenCalled(&called), &status));
-  EXPECT_TRUE(called);
-  EXPECT_EQ(status, Status::ILLEGAL_STATE);
 }
 
 // Verifies that the callback on closure is called, even if the on_discardable is not set.

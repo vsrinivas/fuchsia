@@ -102,8 +102,8 @@ class BackgroundSyncManagerTest : public TestWithEnvironment {
   }
 
   void ResetPageUsageDb() {
-    Status status = Status::ILLEGAL_STATE;
-    EXPECT_TRUE(RunInCoroutine([this, &status](coroutine::CoroutineHandler* handler) {
+    EXPECT_TRUE(RunInCoroutine([this](coroutine::CoroutineHandler* handler) {
+      Status status;
       std::unique_ptr<storage::Db> leveldb;
       if (coroutine::SyncCall(
               handler,
@@ -113,15 +113,14 @@ class BackgroundSyncManagerTest : public TestWithEnvironment {
                                           std::move(callback));
               },
               &status, &leveldb) == coroutine::ContinuationStatus::INTERRUPTED) {
-        status = Status::INTERRUPTED;
+        FAIL();
         return;
       }
+      EXPECT_EQ(status, Status::OK);
       dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
       db_ = std::make_unique<PageUsageDb>(
-          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
-      status = db_->Init(handler);
+          &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     }));
-    FXL_CHECK(status == Status::OK);
   }
 
  private:

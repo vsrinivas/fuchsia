@@ -11,6 +11,7 @@
 
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {
@@ -19,7 +20,7 @@ namespace ledger {
 // A Completer allowing waiting until the target operation is completed.
 class Completer {
  public:
-  Completer();
+  Completer(async_dispatcher_t* dispatcher);
 
   ~Completer();
 
@@ -27,9 +28,12 @@ class Completer {
   // |WaitUntilDone| calls. |Complete| can only be called once.
   void Complete(Status status);
 
-  // Blocks execution until |Complete| is called, and then returns its status.
+  // Executes the callback after |Complete| is called, and then returns its status.
   // If the operation is already completed, |WaitUntilDone| returns
   // immediately with the result status.
+  // If the operation is not yet completed, |callback| is
+  // executed asynchronously by posting it to the |dispatcher| provided in the constructor after
+  // |Complete| is called.
   void WaitUntilDone(fit::function<void(Status)> callback);
 
   // Returns true, if the operation was completed.
@@ -40,6 +44,8 @@ class Completer {
   Status status_;
   // Closures invoked upon completion to unblock the waiting coroutines.
   std::vector<fit::function<void(Status)>> callbacks_;
+
+  callback::ScopedTaskRunner task_runner_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Completer);
 };

@@ -39,13 +39,6 @@ class PageUsageDbTest : public TestWithEnvironment {
   }
 
   void SetUp() override {
-    ResetPageUsageDb();
-    RunInCoroutine([this](coroutine::CoroutineHandler* handler) {
-      EXPECT_EQ(db_->Init(handler), Status::OK);
-    });
-  }
-
-  void ResetPageUsageDb() {
     Status status;
     RunInCoroutine([this, &status](coroutine::CoroutineHandler* handler) {
       std::unique_ptr<storage::Db> leveldb;
@@ -61,9 +54,9 @@ class PageUsageDbTest : public TestWithEnvironment {
         return;
       }
       dbview_factory_ = std::make_unique<DbViewFactory>(std::move(leveldb));
-      db_ = std::make_unique<PageUsageDb>(
-          environment_.clock(), dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     });
+    db_ = std::make_unique<PageUsageDb>(
+        &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     FXL_DCHECK(status == Status::OK);
   }
 
@@ -212,22 +205,32 @@ TEST_F(PageUsageDbTest, MarkAllPagesClosed) {
 // Verifies that calls to the Db are correctly queued until an initialization of PageUsageDb is
 // completed.
 TEST_F(PageUsageDbTest, OperationsQueueWhileInitRunning) {
-  ResetPageUsageDb();
-  Status status;
+  std::string ledger_name = "ledger_name";
+  std::string page_id(::fuchsia::ledger::PAGE_ID_SIZE, 'p');
   std::unique_ptr<storage::Iterator<const PageInfo>> pages;
 
-  // Makes call to uninitialized PageUsageDb via Environment CoroutineService as Test
-  // RunInCoroutine does not allow to have two coroutines at the same time.
-  environment_.coroutine_service()->StartCoroutine(
-      [&](coroutine::CoroutineHandler* handler) { status = db_->GetPages(handler, &pages); });
-  EXPECT_EQ(pages, nullptr);
+  // Open a page and reset the database before closing it.
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    EXPECT_EQ(db_->MarkPageOpened(handler, ledger_name, page_id), Status::OK);
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
+    // Some pages are open.
+    EXPECT_TRUE(pages->Valid());
+    EXPECT_EQ((*pages)->ledger_name, ledger_name);
+    EXPECT_EQ((*pages)->page_id, page_id);
+    EXPECT_EQ((*pages)->timestamp, PageInfo::kOpenedPageTimestamp);
+  }));
 
-  RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
-    Status init_status = db_->Init(handler);
-    EXPECT_EQ(init_status, Status::OK);
-  });
-  RunLoopUntilIdle();
-  EXPECT_EQ(status, Status::OK);
+  db_ = std::make_unique<PageUsageDb>(
+      &environment_, dbview_factory_->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
+
+  // All pages should be closed, because |GetPages| triggered internal initialization.
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    EXPECT_EQ(db_->GetPages(handler, &pages), Status::OK);
+    // All pages are closed, because initialization finished.
+    EXPECT_EQ((*pages)->ledger_name, ledger_name);
+    EXPECT_EQ((*pages)->page_id, page_id);
+    EXPECT_NE((*pages)->timestamp, PageInfo::kOpenedPageTimestamp);
+  }));
 }
 
 }  // namespace
