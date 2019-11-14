@@ -190,6 +190,7 @@ __asm__(
     "int3\n"
     "ret\n"
     ".popsection\n");
+
 #elif defined(__aarch64__)
 
 __asm__(
@@ -199,12 +200,13 @@ __asm__(
     "brk 0\n"
     "ret\n"
     ".popsection\n");
+
 #endif
 
 __NO_SAFESTACK static bool should_break_on_load(void) {
   intptr_t dyn_break_on_load = 0;
   zx_status_t status =
-      zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
+      _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_BREAK_ON_LOAD,
                              &dyn_break_on_load, sizeof(dyn_break_on_load));
   if (status != ZX_OK)
     return false;
@@ -1862,30 +1864,25 @@ __NO_SAFESTACK static void* dls3(zx_handle_t exec_vmo, const char* argv0, const 
   // an injected process (launchpad_start_injected)? IWBN to print a
   // warning here but launchpad_start_injected can trigger this.
 
+  // Fallback to the previous magic number approach.
+  //
+  // The ZX_PROP_PROCESS_DEBUG_ADDR being set to 1 on startup is a signal
+  // to issue a debug breakpoint after setting the property to signal to a
+  // debugger that the property is now valid.
+  intptr_t existing_debug_addr = 0;
+  status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR,
+                                   &existing_debug_addr, sizeof(existing_debug_addr));
+
+  bool break_after_set =
+      (status == ZX_OK) && (existing_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
+
+  // Once we already checked for the magic number, we set the correct value for the property.
+  _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR, &_dl_debug_addr,
+                          sizeof(_dl_debug_addr));
+
   // First check if the user is using ZX_PROP_PROCESS_BREAK_ON_LOAD.
-  if (should_break_on_load()) {
-    _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR, &_dl_debug_addr,
-                            sizeof(_dl_debug_addr));
+  if (should_break_on_load() || break_after_set) {
     debug_break();
-  } else {
-    // Fallback to the previous magic number approach.
-    //
-    // The ZX_PROP_PROCESS_DEBUG_ADDR being set to 1 on startup is a signal
-    // to issue a debug breakpoint after setting the property to signal to a
-    // debugger that the property is now valid.
-    intptr_t existing_debug_addr = 0;
-    status = _zx_object_get_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR,
-                                     &existing_debug_addr, sizeof(existing_debug_addr));
-
-    bool break_after_set =
-        (status == ZX_OK) && (existing_debug_addr == ZX_PROCESS_DEBUG_ADDR_BREAK_ON_SET);
-
-    _zx_object_set_property(__zircon_process_self, ZX_PROP_PROCESS_DEBUG_ADDR, &_dl_debug_addr,
-                            sizeof(_dl_debug_addr));
-
-    if (break_after_set) {
-      debug_break();
-    }
   }
 
   _dl_debug_state();
