@@ -428,9 +428,6 @@ group("default") {
     ":build_time_checks",
     "//build:tests",
     "//build/images:packages",
-
-    # TODO(pylaligand): remove this when the images are used by system assembly.
-    "//build/unification/images",
     "//sdk",
   ]
   if (base_package_labels != [] || cache_package_labels != []) {

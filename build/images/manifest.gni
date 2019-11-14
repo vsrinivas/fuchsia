@@ -29,14 +29,17 @@ zircon_boot_manifests_deps = []
 zircon_aux_manifests = []
 zircon_aux_manifests_deps = []
 
-legacy_image = {
-  target = "//build/unification/images:legacy-image"
-  gen_dir = get_label_info(target, "target_out_dir")
-  name = get_label_info(target, "name")
-  file = "$gen_dir/$name.unification.manifest"
+foreach(flavor, [ "legacy-image", "migrated-image" ]) {
+  _image_flavor = {}
+  _image_flavor = {
+    target = "//build/unification/images:$flavor"
+    gen_dir = get_label_info(target, "target_out_dir")
+    name = get_label_info(target, "name")
+    file = "$gen_dir/$name.unification.manifest"
+  }
+  zircon_boot_manifests += [ _image_flavor.file ]
+  zircon_boot_manifests_deps += [ _image_flavor.target ]
 }
-zircon_boot_manifests += [ legacy_image.file ]
-zircon_boot_manifests_deps += [ legacy_image.target ]
 
 foreach(flavor, bootsvc_flavors) {
   legacy_bootsvc = {}
@@ -50,14 +53,17 @@ foreach(flavor, bootsvc_flavors) {
   zircon_boot_manifests_deps += [ legacy_bootsvc.target ]
 }
 
-legacy_aux = {
-  target = "//build/unification/images:legacy-aux"
-  gen_dir = get_label_info(target, "target_out_dir")
-  name = get_label_info(target, "name")
-  file = "$gen_dir/$name.unification.manifest"
+foreach(flavor, [ "legacy-aux", "migrated-aux" ]) {
+  _aux_flavor = {}
+  _aux_flavor = {
+    target = "//build/unification/images:$flavor"
+    gen_dir = get_label_info(target, "target_out_dir")
+    name = get_label_info(target, "name")
+    file = "$gen_dir/$name.unification.manifest"
+  }
+  zircon_aux_manifests += [ _aux_flavor.file ]
+  zircon_aux_manifests_deps += [ _aux_flavor.target ]
 }
-zircon_aux_manifests += [ legacy_aux.file ]
-zircon_aux_manifests_deps += [ legacy_aux.target ]
 
 # Action target that generates a response file in GN's "shlex" format.
 #
