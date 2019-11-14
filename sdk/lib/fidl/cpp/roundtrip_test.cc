@@ -76,8 +76,6 @@ TEST(SimpleTable, SerializeAndDeserialize) {
   EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).x());
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(fxb/41371): Fix the transformer assert that occurs in this test.
 TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   SimpleTable input;
   input.set_y(1);
@@ -90,8 +88,6 @@ TEST(SimpleTable, SerializeAndDeserializeWithReserved) {
   // We should be able to decode to it.
   EXPECT_EQ(1, RoundTrip<NewerSimpleTable>(input).y());
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(Empty, SerializeAndDeserialize) {
   Empty input{};
@@ -154,8 +150,6 @@ TEST(XUnion, Int32) {
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(39159): Enable this test when writing v1 by default.
 TEST(XUnion, SimpleUnion) {
   SimpleUnion su;
   su.set_str("hello");
@@ -177,8 +171,6 @@ TEST(XUnion, SimpleUnion) {
 
   EXPECT_TRUE(ValueToBytes(input, expected));
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(XUnion, SimpleTable) {
   SimpleTable st;
@@ -206,8 +198,6 @@ TEST(XUnion, SerializeAndDeserializeInt32) {
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
 
-#ifndef FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
-// TODO(39159): Enable this test when writing v1 by default.
 TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
   SimpleUnion su;
   su.set_str("hello");
@@ -217,8 +207,6 @@ TEST(XUnion, SerializeAndDeserializeSimpleUnion) {
 
   EXPECT_TRUE(fidl::Equals(input, RoundTrip<SampleXUnion>(input)));
 }
-
-#endif  // FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST
 
 TEST(XUnion, SerializeAndDeserializeSimpleTable) {
   SimpleTable st;

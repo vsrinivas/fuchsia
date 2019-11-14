@@ -4,7 +4,6 @@
 
 import("//build/cpp/sdk_source_set.gni")
 import("//build/fidl/fidl.gni")
-import("//build/fidl/wireformat.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
@@ -203,10 +202,6 @@ source_set("host_test_sources") {
     ":test_util",
     "//third_party/googletest:gtest",
   ]
-
-  if (fidl_write_v1_wireformat) {
-    defines = [ "FIDL_EXPERIMENTAL_WRITE_V1_WIREFORMAT_DISABLE_TEST" ]
-  }
 }
 
 source_set("test_sources") {

@@ -56,7 +56,7 @@ class Encoder final {
 
   // As part of the union to xunion migration, we will encode unions
   // as xunion bytes rather than union bytes when a flag is set.
-  bool ShouldEncodeUnionAsXUnion() const { return should_encode_union_as_xunion_; }
+  bool ShouldEncodeUnionAsXUnion() { return should_encode_union_as_xunion_; }
 
  private:
   void EncodeMessageHeader(uint64_t ordinal);

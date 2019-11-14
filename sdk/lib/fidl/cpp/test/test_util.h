@@ -27,55 +27,35 @@ class EncoderFactoryV1 {
   }
 };
 
-template <class T, class Callback>
-void WithCodingTableFor(const fidl::Encoder& enc, Callback callback) {
-  const size_t encoded_size = enc.ShouldEncodeUnionAsXUnion()
-                                  ? fidl::CodingTraits<T>::inline_size_v1_no_ee
-                                  : fidl::CodingTraits<T>::inline_size_old;
-  const size_t encoded_size_alt = enc.ShouldEncodeUnionAsXUnion()
-                                  ? fidl::CodingTraits<T>::inline_size_old
-                                  : fidl::CodingTraits<T>::inline_size_v1_no_ee;
-  const size_t padding_size = FIDL_ALIGN(encoded_size) - encoded_size;
-  const size_t padding_size_alt = FIDL_ALIGN(encoded_size) - encoded_size_alt;
-
-  uint8_t field_coding_table_alt[sizeof(::fidl::FidlStructField)];
-  ::fidl::FidlStructField field(T::FidlType, sizeof(fidl_message_header_t), padding_size,
-                                reinterpret_cast<::fidl::FidlStructField*>(field_coding_table_alt));
-  new (field_coding_table_alt)::fidl::FidlStructField(T::FidlType, sizeof(fidl_message_header_t),
-                                                      padding_size_alt, &field);
-  const ::fidl::FidlStructField fake_interface_fields[] = {field};
-
-  uint8_t struct_coding_table_alt[sizeof(::fidl::FidlCodedStruct)];
-  ::fidl::FidlCodedStruct fake_interface_struct_coded(
-      fake_interface_fields, 1, sizeof(fidl_message_header_t) + encoded_size, "Input",
-      reinterpret_cast<::fidl::FidlCodedStruct*>(struct_coding_table_alt));
-  new (struct_coding_table_alt)::fidl::FidlCodedStruct(fake_interface_fields, 1,
-                                                       sizeof(fidl_message_header_t) + encoded_size,
-                                                       "InputAlt", &fake_interface_struct_coded);
-  const fidl_type_t fake_interface_struct{fake_interface_struct_coded};
-
-  callback(encoded_size, &fake_interface_struct);
-}
-
 template <class Output, class Input>
 Output RoundTrip(const Input& input) {
   fidl::Encoder enc(0xfefefefe);
+
+  const size_t input_encoded_size = EncodingInlineSize<Input, Encoder>(&enc);
+  const size_t input_padding_size = FIDL_ALIGN(input_encoded_size) - input_encoded_size;
+  const ::fidl::FidlStructField fake_input_interface_fields[] = {
+      ::fidl::FidlStructField(Input::FidlType, 16, input_padding_size),
+  };
+  const fidl_type_t fake_input_interface_struct{
+      ::fidl::FidlCodedStruct(fake_input_interface_fields, 1, 16 + input_encoded_size, "Input")};
+  const size_t output_encoded_size = EncodingInlineSize<Input, Encoder>(&enc);
+  const size_t output_padding_size = FIDL_ALIGN(output_encoded_size) - output_encoded_size;
+  const ::fidl::FidlStructField fake_output_interface_fields[] = {
+      ::fidl::FidlStructField(Output::FidlType, 16, output_padding_size),
+  };
+  const fidl_type_t fake_output_interface_struct{
+      ::fidl::FidlCodedStruct(fake_output_interface_fields, 1, 16 + output_encoded_size, "Output")};
+
+  auto ofs = enc.Alloc(input_encoded_size);
+  fidl::Clone(input).Encode(&enc, ofs);
+  auto msg = enc.GetMessage();
+
   const char* err_msg = nullptr;
+  EXPECT_EQ(ZX_OK, msg.Validate(&fake_input_interface_struct, &err_msg)) << err_msg;
+  EXPECT_EQ(ZX_OK, msg.Decode(&fake_output_interface_struct, &err_msg)) << err_msg;
+  fidl::Decoder dec(std::move(msg));
   Output output;
-
-  WithCodingTableFor<Input>(enc, [&](size_t encoded_size, const fidl_type_t* type) {
-    auto ofs = enc.Alloc(encoded_size);
-    fidl::Clone(input).Encode(&enc, ofs);
-    auto msg = enc.GetMessage();
-    EXPECT_EQ(ZX_OK, msg.Validate(type, &err_msg)) << err_msg;
-
-    WithCodingTableFor<Output>(enc, [&](size_t encoded_size, const fidl_type_t* type) {
-      EXPECT_EQ(ZX_OK, msg.Decode(type, &err_msg)) << err_msg;
-      fidl::Decoder dec(std::move(msg));
-      Output::Decode(&dec, &output, ofs);
-    });
-  });
-
+  Output::Decode(&dec, &output, ofs);
   return output;
 }
 
