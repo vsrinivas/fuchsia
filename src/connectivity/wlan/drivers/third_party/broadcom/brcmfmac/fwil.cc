@@ -112,7 +112,7 @@ static zx_status_t brcmf_fil_cmd_data(struct brcmf_if* ifp, uint32_t cmd, void* 
   }
 
   if (data != NULL) {
-    len = min_t(uint, len, BRCMF_DCMD_MAXLEN);
+    len = std::min<uint>(len, BRCMF_DCMD_MAXLEN);
   }
   if (set) {
     err = brcmf_proto_set_dcmd(drvr, ifp->ifidx, cmd, data, len, &fwerr);
@@ -145,7 +145,7 @@ zx_status_t brcmf_fil_cmd_data_set(struct brcmf_if* ifp, uint32_t cmd, const voi
   ifp->drvr->proto_block.lock();
 
   BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   err = brcmf_fil_cmd_data(ifp, cmd, (void*)data, len, true, fwerr_ptr);
   ifp->drvr->proto_block.unlock();
@@ -161,7 +161,7 @@ zx_status_t brcmf_fil_cmd_data_get(struct brcmf_if* ifp, uint32_t cmd, void* dat
   err = brcmf_fil_cmd_data(ifp, cmd, data, len, false, fwerr_ptr);
 
   BRCMF_DBG(FIL, "ifidx=%d, cmd=%d, len=%d\n", ifp->ifidx, cmd, len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   ifp->drvr->proto_block.unlock();
 
@@ -224,7 +224,7 @@ zx_status_t brcmf_fil_iovar_data_set(struct brcmf_if* ifp, const char* name, con
   drvr->proto_block.lock();
 
   BRCMF_DBG(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   buflen = brcmf_create_iovar(name, data, len, (char*)drvr->proto_buf, sizeof(drvr->proto_buf));
   if (buflen) {
@@ -258,7 +258,7 @@ zx_status_t brcmf_fil_iovar_data_get(struct brcmf_if* ifp, const char* name, voi
   }
 
   BRCMF_DBG(FIL, "ifidx=%d, name=%s, len=%d\n", ifp->ifidx, name, len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   drvr->proto_block.unlock();
   return err;
@@ -338,7 +338,7 @@ zx_status_t brcmf_fil_bsscfg_data_set(struct brcmf_if* ifp, const char* name, co
 
   BRCMF_DBG(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
             len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   buflen = brcmf_create_bsscfg(ifp->bsscfgidx, name, data, len, (char*)drvr->proto_buf,
                                sizeof(drvr->proto_buf));
@@ -374,7 +374,7 @@ zx_status_t brcmf_fil_bsscfg_data_get(struct brcmf_if* ifp, const char* name, vo
   }
   BRCMF_DBG(FIL, "ifidx=%d, bsscfgidx=%d, name=%s, len=%d\n", ifp->ifidx, ifp->bsscfgidx, name,
             len);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, min_t(uint, len, MAX_HEX_DUMP_LEN), "data\n");
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(FIL), data, std::min<uint>(len, MAX_HEX_DUMP_LEN), "data\n");
 
   drvr->proto_block.unlock();
   return err;

@@ -1448,7 +1448,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     brcmf_configure_opensecurity(ifp);
   }
 
-  ssid_len = min_t(uint32_t, ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
+  ssid_len = std::min<uint32_t>(ifp->bss.ssid.len, WLAN_MAX_SSID_LEN);
   join_params_size = sizeof(join_params);
   memset(&join_params, 0, join_params_size);
 

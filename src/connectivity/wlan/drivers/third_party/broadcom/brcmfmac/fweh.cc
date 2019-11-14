@@ -222,7 +222,7 @@ static void brcmf_fweh_handle_event(brcmf_pub* drvr, struct brcmf_fweh_queue_ite
 
   BRCMF_DBG(EVENT, "  version %u flags %u status %u reason %u\n", emsg.version, emsg.flags,
             emsg.status, emsg.reason);
-  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, min_t(uint32_t, emsg.datalen, 64),
+  BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(EVENT), event->data, std::min<uint32_t>(emsg.datalen, 64),
                      "event payload, len=%d\n", emsg.datalen);
 
   /* special handling of interface event */

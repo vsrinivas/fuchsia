@@ -1462,7 +1462,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
       return 0;
     }
 
-    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(GLOM), pfirst->data, min_t(int, pfirst->len, 48),
+    BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(GLOM), pfirst->data, std::min<int>(pfirst->len, 48),
                        "SUPERFRAME:\n");
 
     rd_new.seq_num = rxseq;
@@ -1524,7 +1524,7 @@ static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
         continue;
       }
 
-      BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(GLOM), pfirst->data, min_t(int, pfirst->len, 32),
+      BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(GLOM), pfirst->data, std::min<int>(pfirst->len, 32),
                          "subframe %d to stack, %p (%p/%d) nxt/lnk %p/%p\n",
                          brcmf_netbuf_list_length(&bus->glom), pfirst, pfirst->data, pfirst->len,
                          brcmf_netbuf_list_next(&bus->glom, pfirst),
@@ -2038,7 +2038,7 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
   /* Send frames until the limit or some other event */
   for (cnt = 0; (cnt < maxframes) && data_ok(bus);) {
     pkt_num = 1;
-    pkt_num = min_t(uint32_t, pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
+    pkt_num = std::min<uint32_t>(pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
     brcmf_netbuf_list_init(&pktq);
     // spin_lock_bh(&bus->txq_lock);
     bus->sdiodev->drvr->irq_callback_lock.lock();
@@ -2129,7 +2129,7 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
 
   BRCMF_DBG_HEX_DUMP(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(CTL), frame, len, "Tx Frame:\n");
   BRCMF_DBG_HEX_DUMP(!(BRCMF_IS_ON(BYTES) && BRCMF_IS_ON(CTL)) && BRCMF_IS_ON(HDRS), frame,
-                     min_t(uint16_t, len, 16), "TxHdr:\n");
+                     std::min<uint16_t>(len, 16), "TxHdr:\n");
 
   do {
     ret = brcmf_sdiod_send_buf(bus->sdiodev, frame, len);

@@ -143,7 +143,7 @@ static zx_status_t brcmf_pno_config(struct brcmf_if* ifp, uint32_t scan_freq, ui
                 brcmf_fil_get_errstr(fw_err));
       goto exit;
     }
-    mscan = min_t(uint32_t, mscan, pfnmem);
+    mscan = std::min<uint32_t>(mscan, pfnmem);
     pfn_param.mscan = mscan;
     pfn_param.bestn = bestn;
     flags |= BIT(BRCMF_PNO_ENABLE_BD_SCAN_BIT);

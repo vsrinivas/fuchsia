@@ -568,7 +568,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
   zx_status_t err = ZX_OK;
   struct brcmf_netbuf* pkt;
   // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
-  uint32_t alloc_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
+  uint32_t alloc_size = std::min<uint>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
   uint32_t transfer_size;
 
@@ -629,7 +629,7 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       data = static_cast<char*>(data) + transfer_size;
     address += transfer_size;
     transfer_address += transfer_size;
-    transfer_size = min_t(uint, SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
+    transfer_size = std::min<uint>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   }
 
   brcmf_netbuf_free(pkt);
