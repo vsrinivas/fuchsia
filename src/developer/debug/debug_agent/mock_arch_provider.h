@@ -20,7 +20,8 @@ class MockArchProvider : public arch::ArchProvider {
 
   zx_status_t UninstallHWBreakpoint(zx::thread* thread, uint64_t address) override;
 
-  zx_status_t InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) override;
+  arch::WatchpointInstallationResult InstallWatchpoint(zx::thread*,
+                                                       const debug_ipc::AddressRange&) override;
 
   zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) override;
 

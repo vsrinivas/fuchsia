@@ -27,15 +27,19 @@ class Watchpoint : public ProcessBreakpoint {
 
   zx_status_t Update() override;
 
-  const debug_ipc::AddressRange& range() const { return range_; }
-
-  const std::set<zx_koid_t>& installed_threads() const { return installed_threads_; }
-
   // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
+
   void EndStepOver(DebuggedThread* thread) override;
   void ExecuteStepOver(DebuggedThread* thread) override;
-
   void StepOverCleanup(DebuggedThread* thread) override {}
+
+  // Getters.
+
+  const std::map<zx_koid_t, arch::WatchpointInstallationResult>& installed_threads() const {
+    return installed_threads_;
+  }
+
+  const debug_ipc::AddressRange& range() const { return range_; }
 
  private:
   zx_status_t Install(DebuggedThread* thread);
@@ -47,7 +51,7 @@ class Watchpoint : public ProcessBreakpoint {
 
   std::shared_ptr<arch::ArchProvider> arch_provider_;
 
-  std::set<zx_koid_t> installed_threads_;
+  std::map<zx_koid_t, arch::WatchpointInstallationResult> installed_threads_;
   std::set<zx_koid_t> current_stepping_over_threads_;
 };
 

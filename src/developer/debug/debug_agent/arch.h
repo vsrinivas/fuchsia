@@ -8,8 +8,8 @@
 #include <lib/zx/process.h>
 #include <lib/zx/thread.h>
 
+#include "src/developer/debug/debug_agent/arch_helpers.h"
 #include "src/developer/debug/ipc/protocol.h"
-
 #if defined(__x86_64__)
 #include "src/developer/debug/debug_agent/arch_x64.h"
 #elif defined(__aarch64__)
@@ -107,7 +107,8 @@ class ArchProvider {
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
 
-  virtual zx_status_t InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&);
+  virtual WatchpointInstallationResult InstallWatchpoint(zx::thread*,
+                                                         const debug_ipc::AddressRange&);
   virtual zx_status_t UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&);
 };
 

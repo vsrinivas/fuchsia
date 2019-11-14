@@ -49,6 +49,13 @@ std::optional<debug_ipc::AddressRange> AlignRange(const debug_ipc::AddressRange&
 
 // If |status| != ZX_OK, all other fields are invalid.
 struct WatchpointInstallationResult {
+  WatchpointInstallationResult() = default;
+
+  // This is for setting errors.
+  explicit WatchpointInstallationResult(zx_status_t status) : status(status) {}
+  WatchpointInstallationResult(zx_status_t status, debug_ipc::AddressRange range, int slot)
+      : status(status), installed_range(range), slot(slot) {}
+
   zx_status_t status = ZX_ERR_INVALID_ARGS;
   debug_ipc::AddressRange installed_range = {};
   int slot = -1;

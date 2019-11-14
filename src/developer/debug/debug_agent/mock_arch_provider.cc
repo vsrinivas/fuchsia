@@ -16,9 +16,10 @@ zx_status_t MockArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t
   return ZX_OK;
 }
 
-zx_status_t MockArchProvider::InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange& range) {
+arch::WatchpointInstallationResult MockArchProvider::InstallWatchpoint(
+    zx::thread*, const debug_ipc::AddressRange& range) {
   wp_installs_[range]++;
-  return ZX_OK;
+  return arch::WatchpointInstallationResult(ZX_OK, range, 0);
 }
 
 zx_status_t MockArchProvider::UninstallWatchpoint(zx::thread*,

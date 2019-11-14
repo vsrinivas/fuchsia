@@ -25,9 +25,10 @@ class MockProcessDelegate : public Breakpoint::ProcessDelegate {
 
 class MockArchProvider : public arch::ArchProvider {
  public:
-  zx_status_t InstallWatchpoint(zx::thread* thread, const AddressRange& range) override {
+  arch::WatchpointInstallationResult InstallWatchpoint(zx::thread* thread,
+                                                       const AddressRange& range) override {
     installs_.push_back({thread->get(), range});
-    return ZX_OK;
+    return arch::WatchpointInstallationResult(ZX_OK, range_to_return_, slot_to_return_);
   }
 
   zx_status_t UninstallWatchpoint(zx::thread* thread, const AddressRange& range) override {
@@ -38,9 +39,15 @@ class MockArchProvider : public arch::ArchProvider {
   const std::vector<std::pair<zx_koid_t, AddressRange>>& installs() const { return installs_; }
   const std::vector<std::pair<zx_koid_t, AddressRange>>& uninstalls() const { return uninstalls_; }
 
+  void set_range_to_return(debug_ipc::AddressRange r) { range_to_return_ = r; }
+  void set_slot_to_return(int slot) { slot_to_return_ = slot; }
+
  private:
   std::vector<std::pair<zx_koid_t, AddressRange>> installs_;
   std::vector<std::pair<zx_koid_t, AddressRange>> uninstalls_;
+
+  debug_ipc::AddressRange range_to_return_;
+  int slot_to_return_ = 0;
 };
 
 // If |thread| is null, it means a process-wide breakpoint.
@@ -252,6 +259,53 @@ TEST(Watchpoint, SimpleInstallAndRemove) {
   EXPECT_EQ(arch_provider->uninstalls()[6].second, kAddressRange);
   EXPECT_EQ(arch_provider->uninstalls()[7].first, thread6->koid());
   EXPECT_EQ(arch_provider->uninstalls()[7].second, kAddressRange);
+}
+
+TEST(Watchpoint, InstalledRanges) {
+  auto arch_provider = std::make_shared<MockArchProvider>();
+  auto object_provider = std::make_shared<ObjectProvider>();
+
+  MockProcess process(nullptr, 0x1, "process", arch_provider, object_provider);
+  MockThread* thread1 = process.AddThread(0x1001);
+
+  MockProcessDelegate process_delegate;
+
+  debug_ipc::BreakpointSettings settings;
+  settings.locations.push_back(CreateLocation(process, thread1, kAddressRange));
+
+  Breakpoint breakpoint1(&process_delegate);
+  breakpoint1.SetSettings(debug_ipc::BreakpointType::kWatchpoint, settings);
+
+  Watchpoint watchpoint(&breakpoint1, &process, arch_provider, kAddressRange);
+  ASSERT_EQ(watchpoint.breakpoints().size(), 1u);
+
+  const debug_ipc::AddressRange kSubRange = {0x900, 0x2100};
+  constexpr int kSlot = 1;
+  arch_provider->set_range_to_return(kSubRange);
+  arch_provider->set_slot_to_return(kSlot);
+
+  // Update should install one thread
+  ASSERT_EQ(watchpoint.Update(), ZX_OK);
+  ASSERT_TRUE(ContainsKoids(watchpoint, {thread1->koid()}));
+
+  // There should be an install with a different sub range.
+  ASSERT_EQ(arch_provider->installs().size(), 1u);
+  EXPECT_EQ(arch_provider->installs()[0].first, thread1->koid());
+  EXPECT_EQ(arch_provider->installs()[0].second, kAddressRange);
+  EXPECT_EQ(arch_provider->uninstalls().size(), 0u);
+
+  // The installed and actual range should be differnt.
+  {
+    auto& installations = watchpoint.installed_threads();
+
+    ASSERT_EQ(installations.size(), 1u);
+
+    auto it = installations.find(thread1->koid());
+    ASSERT_NE(it, installations.end());
+    EXPECT_EQ(it->second.status, ZX_OK) << zx_status_get_string(it->second.status);
+    EXPECT_EQ(it->second.installed_range, kSubRange);
+    EXPECT_EQ(it->second.slot, kSlot);
+  }
 }
 
 }  // namespace

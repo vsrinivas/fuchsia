@@ -24,9 +24,10 @@ class MockArchProvider : public arch::ArchProvider {
     return ZX_OK;
   }
 
-  zx_status_t InstallWatchpoint(zx::thread* thread, const debug_ipc::AddressRange& range) override {
+  arch::WatchpointInstallationResult InstallWatchpoint(
+      zx::thread* thread, const debug_ipc::AddressRange& range) override {
     wp_installs_.push_back({thread->get(), range});
-    return ZX_OK;
+    return arch::WatchpointInstallationResult(ZX_OK, range, 0);
   }
 
   zx_status_t UninstallWatchpoint(zx::thread* thread,

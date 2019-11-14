@@ -138,11 +138,11 @@ void Watchpoint::EndStepOver(DebuggedThread* thread) {
 
 zx_status_t Watchpoint::Update() {
   // We get a snapshot of which threads are already installed.
-  auto current_koids = installed_threads_;
+  auto current_installs = installed_threads_;
   auto koids_to_install = ThreadsTargeted(*this);
 
   // Uninstall pass.
-  for (zx_koid_t thread_koid : current_koids) {
+  for (auto& [thread_koid, installation] : current_installs) {
     if (koids_to_install.count(thread_koid) > 0)
       continue;
 
@@ -152,9 +152,9 @@ zx_status_t Watchpoint::Update() {
       zx_status_t status = Uninstall(thread);
       if (status != ZX_OK)
         continue;
-    }
 
-    installed_threads_.erase(thread_koid);
+      installed_threads_.erase(thread_koid);
+    }
   }
 
   // Install pass.
@@ -170,8 +170,6 @@ zx_status_t Watchpoint::Update() {
     zx_status_t status = Install(thread);
     if (status != ZX_OK)
       continue;
-
-    installed_threads_.insert(thread_koid);
   }
 
   return ZX_OK;
@@ -191,11 +189,13 @@ zx_status_t Watchpoint::Install(DebuggedThread* thread) {
   auto suspend_token = thread->RefCountedSuspend(true);
 
   // Do the actual installation.
-  zx_status_t status = arch_provider_->InstallWatchpoint(&thread->handle(), range_);
-  if (status != ZX_OK) {
-    Warn(WarningType::kInstall, thread->koid(), address(), status);
-    return status;
+  auto result = arch_provider_->InstallWatchpoint(&thread->handle(), range_);
+  if (result.status != ZX_OK) {
+    Warn(WarningType::kInstall, thread->koid(), address(), result.status);
+    return result.status;
   }
+
+  installed_threads_[thread->koid()] = result;
 
   return ZX_OK;
 }
@@ -203,7 +203,8 @@ zx_status_t Watchpoint::Install(DebuggedThread* thread) {
 // Uninstall ---------------------------------------------------------------------------------------
 
 zx_status_t Watchpoint::Uninstall() {
-  for (zx_koid_t thread_koid : installed_threads_) {
+  std::vector<zx_koid_t> uninstalled_threads;
+  for (auto& [thread_koid, installation] : installed_threads_) {
     DebuggedThread* thread = process()->GetThread(thread_koid);
     if (!thread)
       continue;
@@ -211,6 +212,13 @@ zx_status_t Watchpoint::Uninstall() {
     zx_status_t res = Uninstall(thread);
     if (res != ZX_OK)
       continue;
+
+    uninstalled_threads.push_back(thread_koid);
+  }
+
+  // Remove them from the list.
+  for (zx_koid_t thread_koid : uninstalled_threads) {
+    installed_threads_.erase(thread_koid);
   }
 
   return ZX_OK;

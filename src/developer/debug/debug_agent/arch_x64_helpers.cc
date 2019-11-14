@@ -373,7 +373,7 @@ WatchpointInstallationResult SetupWatchpoint(zx_thread_state_debug_regs_t* debug
   }
 
   if (slot == -1)
-    return {ZX_ERR_NO_RESOURCES, {}, -1};
+    return WatchpointInstallationResult(ZX_ERR_NO_RESOURCES);
 
   // We found a slot, we bind the watchpoint.
   debug_regs->dr[slot] = address;

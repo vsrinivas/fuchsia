@@ -333,9 +333,10 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread* thread, uint64_t add
                              sizeof(zx_thread_state_debug_regs_t));
 }
 
-zx_status_t ArchProvider::InstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) {
+WatchpointInstallationResult ArchProvider::InstallWatchpoint(zx::thread*,
+                                                             const debug_ipc::AddressRange&) {
   FXL_NOTIMPLEMENTED();
-  return ZX_ERR_NOT_SUPPORTED;
+  return WatchpointInstallationResult(ZX_ERR_NOT_SUPPORTED);
 }
 
 zx_status_t ArchProvider::UninstallWatchpoint(zx::thread*, const debug_ipc::AddressRange&) {
