@@ -60,7 +60,7 @@ executable("web_runner_integration_tests2") {
   ]
 }
 
-executable("web_runner_pixel_tests2") {
+executable("web_runner_pixel_tests") {
   testonly = true
 
   sources = [
@@ -71,7 +71,6 @@ executable("web_runner_pixel_tests2") {
     ":test_server",
     ":web_context",
     "//garnet/public/lib/gtest",
-    "//src/ui/testing/views",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.ui.policy",
@@ -81,6 +80,7 @@ executable("web_runner_pixel_tests2") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/ui/base_view",
+    "//src/ui/testing/views",
     "//third_party/googletest:gtest_main",
     "//zircon/public/lib/fit",
   ]
@@ -90,7 +90,7 @@ executable("web_runner_pixel_tests2") {
 test_package("web_runner_tests2") {
   deps = [
     ":web_runner_integration_tests2",
-    ":web_runner_pixel_tests2",
+    ":web_runner_pixel_tests",
   ]
 
   tests = [
@@ -110,7 +110,7 @@ test_package("web_runner_tests2") {
       ]
     },
     {
-      name = "web_runner_pixel_tests2"
+      name = "web_runner_pixel_tests"
       manifest = rebase_path("meta/web_runner_pixel_tests.cmx")
       environments = [
         {

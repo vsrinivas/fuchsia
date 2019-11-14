@@ -20,7 +20,7 @@
         }
     },
     "program": {
-        "binary": "test/web_runner_pixel_tests2"
+        "binary": "test/web_runner_pixel_tests"
     },
     "sandbox": {
         "features": [
