@@ -987,6 +987,8 @@ TEST_DECODE_WIRE(
     GetArrayNullableUnion(1234, "harpo", "chico"))
 
 TEST_F(WireParserTest, BadU8U16UnionStruct) {
+  bool save_state = fidl_global_get_should_write_union_as_xunion();
+  fidl_global_set_should_write_union_as_xunion(false);
   TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0,
                                "{\"s\":{\"u\":{\"variant_u8\":\"invalid\"}}}",
                                "{\n"
@@ -997,7 +999,7 @@ TEST_F(WireParserTest, BadU8U16UnionStruct) {
                                    "  }\n"
                                    "}",
                                16, GetU8U16UnionStruct(12));
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  fidl_global_set_should_write_union_as_xunion(true);
   TEST_DECODE_WIRE_BODY_COMMON(U8U16UnionStruct, -1, 0, "{\"s\":{\"u\":{\"variant_u8\":null}}}",
                                "{\n"
                                "  s: #gre#test.fidlcodec.examples/U8U16UnionStructType#rst# = {\n"
@@ -1007,7 +1009,7 @@ TEST_F(WireParserTest, BadU8U16UnionStruct) {
                                    "  }\n"
                                    "}",
                                24, GetU8U16UnionStruct(12));
-  fidl_global_set_should_write_union_as_xunion(!fidl_global_get_should_write_union_as_xunion());
+  fidl_global_set_should_write_union_as_xunion(save_state);
 }
 
 namespace {
