@@ -37,6 +37,10 @@ ResourceDispatcher::ResourceList ResourceDispatcher::static_resource_list_;
 RegionAllocator::RegionPool::RefPtr ResourceDispatcher::region_pool_;
 const char* kLogTag = "Resources:";
 
+// The Create() method here only validates exclusive allocations because
+// the kernel is permitted to create shared resources without restriction.
+// Validation of parent handles is handled at the syscall boundary in the
+// implementation for |zx_resource_create|.
 zx_status_t ResourceDispatcher::Create(KernelHandle<ResourceDispatcher>* handle,
                                        zx_rights_t* rights, uint32_t kind, uint64_t base,
                                        size_t size, uint32_t flags,

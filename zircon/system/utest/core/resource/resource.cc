@@ -8,12 +8,14 @@
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <unittest/unittest.h>
+#include <zircon/errors.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+
+#include <unittest/unittest.h>
 
 extern "C" zx_handle_t get_root_resource(void);
 
@@ -257,41 +259,44 @@ static bool TestCreateResourceSlice() {
     ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
                                           NULL, 0, &mmio));
     // A new resource shouldn't be able to create ROOT.
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_ROOT, mmio_test_base, PAGE_SIZE, NULL,
-                                          0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_ROOT, mmio_test_base,
+                                                         PAGE_SIZE, NULL, 0, &smaller_mmio));
     // Creating an identically sized resource with the wrong kind should fail.
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base, PAGE_SIZE, NULL,
-                                          0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base,
+                                                         PAGE_SIZE, NULL, 0, &smaller_mmio));
     // Creating a resource with a different base and the same size should fail.
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base + PAGE_SIZE,
-                                          PAGE_SIZE, NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED,
+              zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base + PAGE_SIZE, PAGE_SIZE,
+                                   NULL, 0, &smaller_mmio));
     // Creating a resource with the same base and a different size should fail.
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base, PAGE_SIZE + 34u,
-                                          NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx::resource::create(mmio, ZX_RSRC_KIND_IRQ, mmio_test_base,
+                                                         PAGE_SIZE + 34u, NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from exclusive -> shared. This should fail.
     zx::resource mmio, smaller_mmio;
     ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                           mmio_test_base, PAGE_SIZE, NULL, 0, &mmio));
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE, NULL,
-                                          0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base,
+                                                        PAGE_SIZE, NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from shared -> exclusive. This should fail.
     zx::resource mmio, smaller_mmio;
     ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE,
                                           NULL, 0, &mmio));
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
-                                          mmio_test_base, PAGE_SIZE, NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE, mmio_test_base,
+                                   PAGE_SIZE, NULL, 0, &smaller_mmio));
   }
   {
     // Try to make a slice going from exclusive -> exclusive. This should fail.
     zx::resource mmio, smaller_mmio;
     ASSERT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
                                           mmio_test_base, PAGE_SIZE, NULL, 0, &mmio));
-    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE,
-                                          mmio_test_base, PAGE_SIZE, NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+              zx::resource::create(mmio, ZX_RSRC_KIND_MMIO | ZX_RSRC_FLAG_EXCLUSIVE, mmio_test_base,
+                                   PAGE_SIZE, NULL, 0, &smaller_mmio));
   }
   {
     // Creating a identically sized resource should succeed.
@@ -303,16 +308,19 @@ static bool TestCreateResourceSlice() {
   }
   {
     // Creating an smaller resource should succeed.
-    size_t size = PAGE_SIZE / 2;
     zx::vmo vmo;
     zx::resource mmio, smaller_mmio;
-    EXPECT_EQ(ZX_OK, zx::resource::create(smaller_mmio, ZX_RSRC_KIND_MMIO, mmio_test_base, size,
-                                          NULL, 0, &smaller_mmio));
+    EXPECT_EQ(ZX_OK, zx::resource::create(*root(), ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE * 2,
+                                          NULL, 0, &mmio));
+    // This will succeed at creating an MMIO resource that is a single page size.
+    EXPECT_EQ(ZX_OK, zx::resource::create(mmio, ZX_RSRC_KIND_MMIO, mmio_test_base, PAGE_SIZE, NULL,
+                                          0, &smaller_mmio));
     // Trying to create a VMO of the original size will fail
-    EXPECT_EQ(ZX_ERR_ACCESS_DENIED, zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base,
-                                                           PAGE_SIZE, vmo.reset_and_get_address()));
+    EXPECT_EQ(ZX_ERR_OUT_OF_RANGE,
+              zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE * 2,
+                                     vmo.reset_and_get_address()));
     // Trying to create VMO that fits in the resource will succeed.
-    EXPECT_EQ(ZX_OK, zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, size,
+    EXPECT_EQ(ZX_OK, zx_vmo_create_physical(smaller_mmio.get(), mmio_test_base, PAGE_SIZE,
                                             vmo.reset_and_get_address()));
   }
   END_TEST;
@@ -363,6 +371,7 @@ static bool test_ioports(void) {
 BEGIN_TEST_CASE(resource_tests)
 RUN_TEST(probe_address_space);
 RUN_TEST(TestBasicActions);
+RUN_TEST(TestCreateResourceSlice);
 RUN_TEST(TestExclusiveShared);
 RUN_TEST(TestSharedExclusive);
 RUN_TEST(TestInvalidArgs);
