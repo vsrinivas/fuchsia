@@ -50,6 +50,8 @@ bytes written from *buffer* is undefined.
 
 **ZX_ERR_INVALID_ARGS**  *buffer* is an invalid pointer or NULL.
 
+**ZX_ERR_NOT_FOUND** *buffer* address does not map to address in address space.
+
 **ZX_ERR_NO_MEMORY**  Failure to allocate system memory to complete write.
 
 **ZX_ERR_OUT_OF_RANGE**  *offset* + *buffer_size* is greater than the size of
