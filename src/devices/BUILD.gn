@@ -34,6 +34,7 @@ generate_manifest("devices.bootfs") {
     "coordinator",
     "host",
     "host:driver",
+    "//src/ui/drivers/hid-input-report",
   ]
 
   #TODO(bwb) match the file in the image to the respective build name
@@ -42,5 +43,9 @@ generate_manifest("devices.bootfs") {
         rebase_path("$root_build_dir/coordinator", root_build_dir),
     "--entry=bin/devhost=" +
         rebase_path("$root_build_dir/device-host", root_build_dir),
+
+    # Drivers for ZBI injection
+    "--entry=driver/hid-input-report.so=" +
+        rebase_path("$root_build_dir/hid-input-report.so", root_build_dir),
   ]
 }

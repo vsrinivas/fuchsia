@@ -1,0 +1,67 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+driver_module("hid-input-report") {
+  sources = [
+    "input-report-instance.cc",
+    "input-report.cc",
+  ]
+  deps = [
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-input-report",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.hiddevice",
+    "//zircon/system/fidl/fuchsia-hardware-input:c",
+    "//zircon/system/fidl/fuchsia-input-report:llcpp",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+test("hid-input-report-test-bin") {
+  sources = [
+    "input-report-instance.cc",
+    "input-report.cc",
+    "test.cc",
+  ]
+  deps = [
+    "//src/devices:driver",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-input-report",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/banjo/ddk.protocol.hiddevice",
+    "//zircon/system/fidl/fuchsia-hardware-input:c",
+    "//zircon/system/fidl/fuchsia-input-report:llcpp",
+  ]
+}
+
+test_package("hid-input-report-test") {
+  deps = [
+    ":hid-input-report-test-bin",
+  ]
+  tests = [
+    {
+      name = "hid-input-report-test-bin"
+      dest = "hid-input-report-test"
+      environments = basic_envs
+    },
+  ]
+}

@@ -2,10 +2,16 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("$zx_build/public/gn/banjo.gni")
+group("drivers") {
+  deps = [
+    "hid-input-report",
+  ]
+}
 
-banjo_library("ddk.protocol.hiddevice") {
-  sources = [
-    "hiddevice.banjo",
+group("tests") {
+  testonly = true
+
+  deps = [
+    "hid-input-report:hid-input-report-test",
   ]
 }

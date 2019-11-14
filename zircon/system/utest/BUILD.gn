@@ -80,7 +80,6 @@ if (current_cpu != "") {
       "$zx/system/dev/input/goodix:gt92xx-test",
       "$zx/system/dev/input/hid:hid-test",
       "$zx/system/dev/input/hid-buttons:hid-buttons-test",
-      "$zx/system/dev/input/hid-input-report:hid-input-report-test",
       "$zx/system/dev/input/i2c-hid:i2c-hid-test",
       "$zx/system/dev/lib/as370:audio-dsp-test",
       "$zx/system/dev/lib/as370:syn-audio-in-test",

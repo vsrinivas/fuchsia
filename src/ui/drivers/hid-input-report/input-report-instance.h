@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_INPUT_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
-#define ZIRCON_SYSTEM_DEV_INPUT_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
+#ifndef SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
+#define SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
 
 #include <array>
 
@@ -67,4 +67,4 @@ class InputReportInstance : public InstanceDeviceType,
 
 }  // namespace hid_input_report_dev
 
-#endif  // ZIRCON_SYSTEM_DEV_INPUT_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
+#endif  // SRC_UI_DRIVERS_HID_INPUT_REPORT_INPUT_REPORT_INSTANCE_H_
