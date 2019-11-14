@@ -12,6 +12,7 @@
 
 #include <gtest/gtest.h>
 
+#include "src/ui/scenic/lib/gfx/engine/view_tree.h"
 #include "src/ui/scenic/lib/input/tests/util.h"
 
 // This test exercises the event delivery logic for mouse and touchpad events. The mouse moves from
@@ -59,6 +60,7 @@ namespace {
 using fuchsia::ui::input::InputEvent;
 using fuchsia::ui::input::PointerEventPhase;
 using fuchsia::ui::input::PointerEventType;
+using scenic_impl::gfx::ViewTree;
 
 // Class fixture for TEST_F. Sets up a 7x7 "display" for GfxSystem.
 class MouseDeliveryTest : public InputSystemTest {
@@ -167,6 +169,101 @@ TEST_F(MouseDeliveryTest, StandardTest) {
   }
 }
 
+TEST_F(MouseDeliveryTest, OffViewClickTriggersUnfocusEvent) {
+  auto [v1_token, vh1_token] = scenic::ViewTokenPair::New();
+  auto [v2_token, vh2_token] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with two views.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+
+    // Attach the translated view holders.
+    scenic::ViewHolder holder_1(session, std::move(vh1_token), "holder_1"),
+        holder_2(session, std::move(vh2_token), "holder_2");
+
+    holder_1.SetViewProperties(k5x5x1);
+    holder_2.SetViewProperties(k5x5x1);
+
+    scene->AddChild(holder_1);
+    holder_1.SetTranslation(0, 2, -2);
+
+    scene->AddChild(holder_2);
+    holder_2.SetTranslation(2, 0, -1);
+
+    // Add three "mouse cursors" to the scene.
+    for (int i = 0; i < 3; ++i) {
+      scenic::ShapeNode cursor(session);
+      cursor.SetTranslation(3, 3, -100);
+      cursor.SetLabel("mouse cursor");
+      scene->AddChild(cursor);
+
+      scenic::Rectangle rec(session, 7, 7);
+      cursor.SetShape(rec);
+
+      scenic::Material material(session);
+      cursor.SetMaterial(material);
+    }
+
+    RequestToPresent(session);
+  }
+
+  SessionWrapper client_1 = CreateClient("View 1", std::move(v1_token)),
+                 client_2 = CreateClient("View 2", std::move(v2_token));
+
+  // Transfer focus to view 1.
+  zx_koid_t root_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
+  auto status = engine()->scene_graph()->RequestFocusChange(root_koid, client_1.ViewKoid());
+  ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+
+  RunLoopUntilIdle();
+
+  root_session.events().clear();
+  client_1.events().clear();
+  client_2.events().clear();
+
+  // Send in input to display corner: clients receive no mouse events, and root session (the
+  // presenter) receives the focus event.
+  {
+    scenic::Session* const session = root_session.session();
+
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::MOUSE);
+    // A touch sequence that starts at the (0,0) location of the 7x7 display; sent in as device
+    // (display) coordinates.
+    session->Enqueue(pointer.Down(0, 0));
+  }
+  RunLoopUntilIdle();
+
+  // Verify client 1 sees just the unfocus event.
+  {
+    const std::vector<InputEvent>& events = client_1.events();
+
+    ASSERT_EQ(events.size(), 1u);
+
+    EXPECT_TRUE(events[0].is_focus());
+    EXPECT_FALSE(events[0].focus().focused);
+  }
+
+  // Verify client 2 sees nothing.
+  {
+    const std::vector<InputEvent>& events = client_2.events();
+    EXPECT_EQ(events.size(), 0u);
+  }
+
+  // Verify root session sees just the focus event.
+  {
+    const std::vector<InputEvent>& events = root_session.events();
+
+    ASSERT_EQ(events.size(), 1u);
+
+    EXPECT_TRUE(events[0].is_focus());
+    EXPECT_TRUE(events[0].focus().focused);
+
+  }
+}
+
 TEST_F(MouseDeliveryTest, NoFocusTest) {
   auto [v1_token, vh1_token] = scenic::ViewTokenPair::New();
   auto [v2_token, vh2_token] = scenic::ViewTokenPair::New();
@@ -181,7 +278,7 @@ TEST_F(MouseDeliveryTest, NoFocusTest) {
     scenic::ViewHolder holder_1(session, std::move(vh1_token), "holder_1"),
         holder_2(session, std::move(vh2_token), "holder_2");
 
-    // Set view 1 to "no-focus".
+    // View 1 may not receive focus.
     holder_1.SetViewProperties({.bounding_box = {.max = {5, 5, 1}}, .focus_change = false});
     holder_2.SetViewProperties(k5x5x1);
 

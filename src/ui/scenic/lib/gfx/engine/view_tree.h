@@ -15,6 +15,9 @@
 #include <variant>
 #include <vector>
 
+#include "src/ui/scenic/lib/gfx/id.h"
+#include "src/ui/scenic/lib/scenic/event_reporter.h"
+
 namespace scenic_impl::gfx {
 
 // Represent the tree of ViewRefs in a scene graph, and maintain the global "focus chain".
@@ -65,6 +68,15 @@ class ViewTree {
   struct RefNode {
     zx_koid_t parent = ZX_KOID_INVALID;
     fuchsia::ui::views::ViewRef view_ref;
+
+    // Focus events are generated and dispatched along this interface.
+    EventReporterWeakPtr event_reporter;
+
+    // Park a callback that returns whether a view may currently receive focus.
+    fit::function<bool()> may_receive_focus;
+
+    // TODO(24643): Remove this field.
+    SessionId gfx_session_id = 0u;  // Default value: an invalid GFX session ID.
   };
 
   // Provide detail on if/why focus change request was denied.
@@ -75,6 +87,7 @@ class ViewTree {
     kErrorRequestInvalid,
     kErrorRequestorNotAuthorized,
     kErrorRequestorNotRequestAncestor,
+    kErrorRequestCannotReceiveFocus,
     kErrorUnhandledCase,  // last
   };
 
@@ -90,6 +103,17 @@ class ViewTree {
   // Invariant: child exists in nodes_ map.
   std::optional<zx_koid_t> ParentOf(zx_koid_t child) const;
 
+  // TODO(24643): Remove this method.
+  // Return the GFX session ID declared for a tracked node.
+  // Always return 0u for AttachNode, otherwise return stored value for RefNode.
+  // NOTE: This is exclusively to provide legacy support for hard keyboard event dispatch.
+  SessionId SessionIdOf(zx_koid_t koid) const;
+
+  // Return the event reporter declared for a tracked node.
+  // Be forgiving: If koid is invalid, or is untracked, return a null event reporter.
+  // Note that a valid and tracked koid may still return null, or later become null.
+  EventReporterWeakPtr EventReporterOf(zx_koid_t koid) const;
+
   // Return true if koid is (1) valid and (2) exists in nodes_ map.
   bool IsTracked(zx_koid_t koid) const;
 
@@ -101,6 +125,12 @@ class ViewTree {
 
   // "RTTI" for type validity.
   bool IsRefNode(zx_koid_t koid) const;
+
+  // Return true if koid has "may receive focus" property set to true.
+  // Pre: koid exists in nodes_ map
+  // Pre: koid is a valid RefNode
+  // NOTE: Scene connectivity is not required.
+  bool MayReceiveFocus(zx_koid_t koid) const;
 
   // Debug-only check for state validity.  See "Invariants" section in class comment.
   // - Runtime is O(N^2), chiefly due to the "AttachNode, when a parent, has one child" check.
@@ -116,7 +146,9 @@ class ViewTree {
 
   // Pre: view_ref is a valid ViewRef
   // Pre: view_ref not in nodes_ map
-  void NewRefNode(fuchsia::ui::views::ViewRef view_ref);
+  // Pre: may_receive_focus is a non-null callback
+  void NewRefNode(fuchsia::ui::views::ViewRef view_ref, EventReporterWeakPtr reporter,
+                  fit::function<bool()> may_receive_focus, SessionId gfx_session_id = 0u);
 
   // Pre: koid is a valid KOID
   // Pre: koid not in nodes_ map
@@ -129,6 +161,7 @@ class ViewTree {
 
   // Pre: if valid, koid exists in nodes_map
   // Pre: if valid, koid is a valid RefNode
+  // Pre: if valid, koid has "may receive focus" property
   // Post: root_ is set to koid
   // NOTE: koid can be ZX_KOID_INVALID, if the intent is to disconnect the entire tree.
   void MakeGlobalRoot(zx_koid_t koid);
@@ -181,27 +214,30 @@ class ViewTree {
 
 struct ViewTreeNewRefNode {
   fuchsia::ui::views::ViewRef view_ref;
+  EventReporterWeakPtr event_reporter;
+  fit::function<bool()> may_receive_focus;
+  SessionId gfx_session_id = 0u;
 };
 
 struct ViewTreeNewAttachNode {
-  zx_koid_t koid;
+  zx_koid_t koid = ZX_KOID_INVALID;
 };
 
 struct ViewTreeDeleteNode {
-  zx_koid_t koid;
+  zx_koid_t koid = ZX_KOID_INVALID;
 };
 
 struct ViewTreeMakeGlobalRoot {
-  zx_koid_t koid;
+  zx_koid_t koid = ZX_KOID_INVALID;
 };
 
 struct ViewTreeConnectToParent {
-  zx_koid_t child;
-  zx_koid_t parent;
+  zx_koid_t child = ZX_KOID_INVALID;
+  zx_koid_t parent = ZX_KOID_INVALID;
 };
 
 struct ViewTreeDisconnectFromParent {
-  zx_koid_t koid;
+  zx_koid_t koid = ZX_KOID_INVALID;
 };
 
 // Handy alias; suitable for client usage.

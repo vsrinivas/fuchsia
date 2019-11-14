@@ -64,8 +64,7 @@ class View final : public Resource {
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
 
-  // Paired ViewHolder on the other side of the link.  This should be nullptr
-  // iff. connected() is false.
+  // Paired ViewHolder on the other side of the link.
   ViewHolder* view_holder() const { return view_holder_; }
   // Paired |ViewNode| used to attach this View and its children to the scene
   // graph.
@@ -77,7 +76,6 @@ class View final : public Resource {
   // Connection management.  Call once the View is created to initiate the link
   // to its partner ViewHolder.
   void Connect(ViewLinker::ImportLink link);
-  bool connected() const { return link_->initialized(); }
 
   // Called by |ViewHolder| to set the handle of the render event. It is
   // triggered on the next render pass this View is involved in.

@@ -9,7 +9,9 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <fuchsia/ui/policy/accessibility/cpp/fidl.h>
 
+#include <map>
 #include <memory>
+#include <optional>
 #include <unordered_map>
 #include <unordered_set>
 
@@ -33,12 +35,11 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
   static const char* kName;
 
   explicit InputSystem(SystemContext context, gfx::Engine* engine);
-  virtual ~InputSystem() = default;
+  ~InputSystem() override = default;
 
-  virtual CommandDispatcherUniquePtr CreateCommandDispatcher(
-      CommandDispatcherContext context) override;
+  CommandDispatcherUniquePtr CreateCommandDispatcher(CommandDispatcherContext context) override;
 
-  fuchsia::ui::input::ImeServicePtr& text_sync_service() { return text_sync_service_; }
+  fuchsia::ui::input::ImeServicePtr& ime_service() { return ime_service_; }
 
   fuchsia::ui::input::accessibility::PointerEventListenerPtr&
   accessibility_pointer_event_listener() {
@@ -50,7 +51,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
            accessibility_pointer_event_listener_.is_bound();
   }
 
-  std::unordered_map<SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
+  std::map<SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
     return hard_keyboard_requested_;
   }
 
@@ -62,16 +63,16 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
  private:
   gfx::Engine* const engine_;
 
-  // Send hard keyboard events to Text Sync for dispatch via IME; this is the
-  // intended flow for clients to receive *mediated* keyboard events.
-  // The connection to Text Sync is shared between all dispatchers.
-  fuchsia::ui::input::ImeServicePtr text_sync_service_;
+  // Send hard keyboard events to IME Service for dispatch via IME.
+  // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
+  fuchsia::ui::input::ImeServicePtr ime_service_;
 
   // By default, clients don't get hard keyboard events directly from Scenic.
   // Clients may request these events via the SetHardKeyboardDeliveryCmd;
   // this set remembers which sessions have opted in.  We need this map because
   // each InputCommandDispatcher works independently.
-  std::unordered_map<SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
+  // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
+  std::map<SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
 
   fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
       accessibility_pointer_event_registry_;
@@ -101,28 +102,25 @@ class InputCommandDispatcher : public CommandDispatcher {
   // consume / reject them.
   class PointerEventBuffer {
    public:
-    // Represents a parallel dispatch of pointer events. Position 0 of this
-    // vector holds the top-most view.
-    using DeferredPerViewPointerEvents =
-        std::vector<std::pair<ViewStack::Entry, fuchsia::ui::input::PointerEvent>>;
+    // Captures the deferred parallel dispatch of pointer events, along with pointer phase.
+    struct DeferredPerViewPointerEvents {
+      fuchsia::ui::input::PointerEventPhase phase;
+      // Position 0 of the vector holds the top-most view. The vector may be empty.
+      std::vector<std::pair<ViewStack::Entry, fuchsia::ui::input::PointerEvent>> parallel_events;
+    };
+    // Represents a stream of pointer events. A stream is a sequence of pointer events with phase
+    // ADD -> * -> REMOVE.
+    struct PointerIdStream {
+      // The temporally-ordered pointer events of this stream. Each element of this vector (indexed
+      // by time) contains another vector (indexed by view); one touch event may be dispatched
+      // multiple times, to multiple views, in parallel (simultaneously).
+      std::vector<DeferredPerViewPointerEvents> serial_events;
+    };
     // Possible states of a stream.
     enum PointerIdStreamStatus {
       WAITING_RESPONSE = 0,  // accessibility listener hasn't responded yet.
       CONSUMED = 1,
       REJECTED = 2,
-    };
-    // Represents a stream of pointer events, where a stream is a sequence of
-    // ADD -> * -> REMOVE pointer event phases.
-    struct PointerIdStream {
-      // The pointer events of this stream. Please note that each element
-      // of this vector is another vector itself. The reason is because one
-      // pointer event may turn into multiple touch events when there are
-      // several views receiving in parallel the same event.
-      std::vector<DeferredPerViewPointerEvents> events;
-      // Cache the focusability of the top-most View for this stream;
-      // the ViewStack's focus_change only tracks the current stream. This field
-      // is set when the stream is added (new ADD event coming).
-      bool focus_change = true;
     };
 
     PointerEventBuffer(InputCommandDispatcher* dispatcher);
@@ -135,9 +133,8 @@ class InputCommandDispatcher : public CommandDispatcher {
     void AddEvents(uint32_t pointer_id, DeferredPerViewPointerEvents views_and_events,
                    fuchsia::ui::input::accessibility::PointerEvent accessibility_pointer_event);
 
-    // Adds a new stream associated with |pointer_id|. |focus_change|
-    // defines whether the top most view is focusable or not.
-    void AddStream(uint32_t pointer_id, bool focus_change);
+    // Adds a new stream associated with |pointer_id|.
+    void AddStream(uint32_t pointer_id);
 
     // Updates the oldest stream associated with |pointer_id|, triggering an
     // appropriate action depending on |handled|.
@@ -146,32 +143,25 @@ class InputCommandDispatcher : public CommandDispatcher {
     void UpdateStream(uint32_t pointer_id,
                       fuchsia::ui::input::accessibility::EventHandling handled);
 
-    // Sets the status and focusability of view of the active stream for a
-    // pointer ID.
-    void SetActiveStreamInfo(uint32_t pointer_id, PointerIdStreamStatus status, bool focus_change) {
-      active_stream_info_[pointer_id] = {status, focus_change};
+    // Sets the status of view of the active stream for a pointer ID.
+    void SetActiveStreamInfo(uint32_t pointer_id, PointerIdStreamStatus status) {
+      active_stream_info_[pointer_id] = {status};
     }
 
    private:
-    // Dispatches a parallel set of events to views.
+    // Dispatches a parallel set of events to views; set may be empty.
+    // Conditionally trigger focus change request, based on |views_and_events.phase|.
     void DispatchEvents(DeferredPerViewPointerEvents views_and_events);
 
-    // Helper function to dispatch a focus event when a deferred parallel
-    // dispatch of pointer events corresponds to a DOWN event and the top-most
-    // view is focusable.
-    void MaybeDispatchFocusEvent(
-        const InputCommandDispatcher::PointerEventBuffer::DeferredPerViewPointerEvents&
-            views_and_events,
-        bool focus_change);
-
     InputCommandDispatcher* const dispatcher_;
+
     // NOTE: We assume there is one touch screen, and hence unique pointer IDs.
     // key = pointer ID, value = a list of pointer streams. Every new stream is
     // added to the end of the list, where a consume / reject response from the
     // listener always removes the first element.
     std::unordered_map<uint32_t, std::deque<PointerIdStream>> buffer_;
-    // Key = pointer ID, value = the status and focusability of the current
-    // active stream.
+
+    // Key = pointer ID, value = the status of the current active stream.
     //
     // This is kept separate from the map above because this must outlive
     // the stream itself. When the accessibility listener responds, the first
@@ -180,16 +170,9 @@ class InputCommandDispatcher : public CommandDispatcher {
     // phase == REMOVE), so it is necessary to still keep track of where the
     // incoming pointer events should go, although they don't need to be
     // buffered anymore.
-    // In addition, focusability of the top-most view for the stream is also
-    // tracked here to deal with the case:
-    // 1. Send ADD event. 2. a11y listener rejects the stream. 3. We remove the
-    // buffered  stream, dispatching events. 4. An incoming down event must be
-    // dispatched, but it needs the focusability information as well as the
-    // status of the stream (rejected).
+    //
     // Whenever a pointer ID is added, its default value is WAITING_RESPONSE.
-    std::unordered_map</*pointer ID*/ uint32_t,
-                       std::pair<PointerIdStreamStatus, /*focusable*/ bool>>
-        active_stream_info_;
+    std::unordered_map</*pointer ID*/ uint32_t, PointerIdStreamStatus> active_stream_info_;
   };
 
   // Per-command dispatch logic.
@@ -202,9 +185,6 @@ class InputCommandDispatcher : public CommandDispatcher {
   void DispatchTouchCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
   void DispatchMouseCommand(const fuchsia::ui::input::SendPointerInputCmd& command);
 
-  // Enqueue the focus event into an EventReporter.
-  static void ReportFocusEvent(EventReporter* reporter, fuchsia::ui::input::FocusEvent focus);
-
   // Enqueue the pointer event into the entry in a ViewStack.
   static void ReportPointerEvent(const ViewStack::Entry& view_info,
                                  fuchsia::ui::input::PointerEvent pointer);
@@ -213,17 +193,24 @@ class InputCommandDispatcher : public CommandDispatcher {
   static void ReportKeyboardEvent(EventReporter* reporter,
                                   fuchsia::ui::input::KeyboardEvent keyboard);
 
-  // Enqueue the keyboard event to the Text Sync service.
-  static void SyncText(const fuchsia::ui::input::ImeServicePtr& text_sync,
-                       fuchsia::ui::input::KeyboardEvent keyboard);
+  // Enqueue the keyboard event to the IME Service.
+  static void ReportToImeService(const fuchsia::ui::input::ImeServicePtr& ime_service,
+                                 fuchsia::ui::input::KeyboardEvent keyboard);
 
-  // Maybe fires a focus event to a view.
+  // Retrieve focused ViewRef's KOID from the scene graph.
+  // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
+  zx_koid_t focus() const;
+
+  // Retrieve KOID of focus chain's root view.
+  // Return ZX_KOID_INVALID if scene does not exist, or if the focus chain is empty.
+  zx_koid_t focus_chain_root() const;
+
+  // Request a focus change in the SceneGraph's ViewTree.
   //
-  //  The new focus can be either the old focus (either
-  // deliberately, or by the no-focus property), or another view.
-  // |focus_change| defines whether the top most view is focusable or not.
-  // |view_info| is the top most view of a hit stack.
-  void MaybeChangeFocus(bool focus_change, const ViewStack::Entry& view_info);
+  // The request is performed with the authority of the focus chain's root view (typically the
+  // Scene). However, a request may be denied if the requested view may not receive focus (a
+  // property set by the view holder).
+  void RequestFocusChange(zx_koid_t view_ref_koid);
 
   // Checks if an accessibility listener is intercepting pointer events. If the
   // listener is on, initializes the buffer if it hasn't been created.
@@ -241,23 +228,18 @@ class InputCommandDispatcher : public CommandDispatcher {
   gfx::Engine* const engine_ = nullptr;
   InputSystem* const input_system_ = nullptr;
 
-  // Tracks which View has focus.
-  ViewStack::Entry focus_;
-
-  // Tracks the set of Views each touch event is delivered to; a map from
-  // pointer ID to a stack of GlobalIds. This is used to ensure consistent
-  // delivery of pointer events for a given finger to its original destination
-  // targets on their respective DOWN event. In particular, a focus change
-  // triggered by a new finger should *not* affect delivery of events to
+  // Tracks the set of Views each touch event is delivered to; basically, a map from pointer ID to a
+  // stack of ViewRef KOIDs. This is used to ensure consistent delivery of pointer events for a
+  // given finger to its original destination targets on their respective DOWN event.  In
+  // particular, a focus change triggered by a new finger should *not* affect delivery of events to
   // existing fingers.
   //
   // NOTE: We assume there is one touch screen, and hence unique pointer IDs.
   std::unordered_map<uint32_t, ViewStack> touch_targets_;
 
-  // Tracks the View each mouse pointer is delivered to; a map from device ID to
-  // a GlobalId. This is used to ensure consistent delivery of mouse events for
-  // a given device. A focus change triggered by other pointer events should
-  // *not* affect delivery of events to existing mice.
+  // Tracks the View each mouse pointer is delivered to; a map from device ID to a ViewRef KOID.
+  // This is used to ensure consistent delivery of mouse events for a given device.  A focus change
+  // triggered by other pointer events should *not* affect delivery of events to existing mice.
   //
   // NOTE: We reuse the ViewStack here just for convenience.
   std::unordered_map<uint32_t, ViewStack> mouse_targets_;

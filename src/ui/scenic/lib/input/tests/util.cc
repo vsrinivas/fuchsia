@@ -7,6 +7,7 @@
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fostr/fidl/fuchsia/ui/input/formatting.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 
 #include <unordered_set>
 
@@ -52,20 +53,28 @@ SessionWrapper::SessionWrapper(Scenic* scenic) {
   fidl::InterfaceRequest<SessionListener> listener_request = listener_handle.NewRequest();
   scenic->CreateSession(session_ptr.NewRequest(), std::move(listener_handle));
   session_ = std::make_unique<scenic::Session>(std::move(session_ptr), std::move(listener_request));
+  session_->set_event_handler(fit::bind_member(this, &SessionWrapper::OnEvent));
+}
 
-  session_->set_event_handler([this](std::vector<ScenicEvent> events) {
-    for (ScenicEvent& event : events) {
-      if (event.is_input()) {
-        events_.push_back(std::move(event.input()));
-      }
-      // Ignore other event types for these tests.
-    }
-  });
+SessionWrapper::SessionWrapper(SessionWrapper&& original) {
+  session_ = std::move(original.session_);
+  session_->set_event_handler(fit::bind_member(this, &SessionWrapper::OnEvent));
+  view_koid_ = original.view_koid_;
+  events_ = std::move(original.events_);
 }
 
 SessionWrapper::~SessionWrapper() {
   if (session_) {
     session_->Flush();  // Ensure Scenic receives all release commands.
+  }
+}
+
+void SessionWrapper::OnEvent(std::vector<ScenicEvent> events) {
+  for (ScenicEvent& event : events) {
+    if (event.is_input()) {
+      events_.push_back(std::move(event.input()));
+    }
+    // Ignore other event types for these tests.
   }
 }
 
@@ -113,7 +122,10 @@ void InputSystemTest::SetUpTestView(scenic::View* view) {
 SessionWrapper InputSystemTest::CreateClient(const std::string& name,
                                              fuchsia::ui::views::ViewToken view_token) {
   SessionWrapper session_wrapper(scenic());
-  scenic::View view(session_wrapper.session(), std::move(view_token), name);
+  auto pair = scenic::ViewRefPair::New();
+  session_wrapper.SetViewKoid(scenic_impl::gfx::ExtractKoid(pair.view_ref));
+  scenic::View view(session_wrapper.session(), std::move(view_token), std::move(pair.control_ref),
+                    std::move(pair.view_ref), name);
   SetUpTestView(&view);
 
   return session_wrapper;

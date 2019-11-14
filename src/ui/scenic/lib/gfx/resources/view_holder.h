@@ -49,12 +49,10 @@ class ViewHolder final : public Node {
   // Connection management.  Call once the ViewHolder is created to initiate the
   // link to its partner View.
   void Connect(ViewLinker::ExportLink link);
-  bool connected() const { return link_->initialized(); }
 
   std::string debug_name() { return debug_name_; }
 
-  // Paired View on the other side of the link.  This should be nullptr
-  // iff. connected() is false.
+  // Paired View on the other side of the link.
   View* view() const { return view_; }
 
   // ViewProperties management.

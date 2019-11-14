@@ -127,7 +127,7 @@ class HitTestTest : public gtest::TestLoopFixture {
   CustomSession CreateRootSession(float layer_width, float layer_height) {
     layer_width_ = layer_width;
     layer_height_ = layer_height;
-    CustomSession session = CreateSession(0);
+    CustomSession session = CreateSession(1);
 
     session.Apply(scenic::NewCreateCompositorCmd(kCompositorId));
     session.Apply(scenic::NewCreateLayerStackCmd(kLayerStackId));
@@ -234,7 +234,7 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
     const glm::vec4 view = hit.transform * ray.At(hit.distance);
@@ -298,7 +298,7 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
     const glm::vec4 view = hit.transform * ray.At(hit.distance);
@@ -363,7 +363,7 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     // TODO(38389): .998f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.998f, std::numeric_limits<float>::epsilon());
     const glm::vec4 view = hit.transform * ray.At(hit.distance);
@@ -433,7 +433,7 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
-    EXPECT_EQ(hit.view->global_id(), GlobalId(0, kViewId));
+    EXPECT_EQ(hit.view->global_id(), GlobalId(1, kViewId));
     // TODO(38389): .999f (ray origin is currently 1 length behind the camera)
     EXPECT_NEAR(hit.distance, 1.999f, std::numeric_limits<float>::epsilon());
     const glm::vec4 view = hit.transform * ray.At(hit.distance);
@@ -714,7 +714,7 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
   }
 
   // Sets up the parent view.
-  CustomSession sess1 = CreateSession(1);
+  CustomSession sess1 = CreateSession(2);
   {
     const uint32_t kViewId = 15;
     const uint32_t kMiddleNodeId = 37;
@@ -738,7 +738,7 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
 
   // Set up the child view.
   const uint32_t kInnerShapeNodeId = 50;
-  CustomSession sess2 = CreateSession(2);
+  CustomSession sess2 = CreateSession(3);
   {
     const uint32_t kViewId2 = 16;
     const uint32_t kOuterShapeNodeId = 51;
@@ -820,7 +820,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   }
 
   // Sets up the parent view.
-  CustomSession sess1 = CreateSession(1);
+  CustomSession sess1 = CreateSession(2);
   {
     const uint32_t kViewId = 15;
     const uint32_t kMiddleNodeId = 37;
@@ -842,7 +842,7 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   }
 
   // Set up the child view.
-  CustomSession sess2 = CreateSession(2);
+  CustomSession sess2 = CreateSession(3);
   {
     const uint32_t kViewId2 = 16;
     const uint32_t kShapeNodeId = 50;
@@ -920,7 +920,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
 
   // Two sessions (s_1 and s_2) create an overlapping and hittable surface.
   const uint32_t kViewId1 = 2001;
-  CustomSession s_1(1, engine()->session_context());
+  CustomSession s_1(2, engine()->session_context());
   {
     s_1.Apply(scenic::NewCreateViewCmd(kViewId1, std::move(view_token_1), "view_1"));
 
@@ -940,7 +940,7 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   const uint32_t kViewId2 = 3001;
-  CustomSession s_2(2, engine()->session_context());
+  CustomSession s_2(3, engine()->session_context());
   {
     s_2.Apply(scenic::NewCreateViewCmd(kViewId2, std::move(view_token_2), "view_2"));
 

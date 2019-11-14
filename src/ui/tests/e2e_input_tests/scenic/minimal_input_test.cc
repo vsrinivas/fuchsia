@@ -48,8 +48,13 @@ constexpr zx::duration kTimeout = zx::min(5);
 // input events for examination.
 class MinimalClientView : public scenic::BaseView {
  public:
-  MinimalClientView(scenic::ViewContext context, async_dispatcher_t* dispatcher)
-      : scenic::BaseView(std::move(context), "MinimalClientView"), dispatcher_(dispatcher) {
+  MinimalClientView(scenic::ViewContext context, fit::function<void()> on_view_attached_to_scene,
+                    fit::function<void(const std::vector<InputEvent>&)> on_terminate,
+                    async_dispatcher_t* dispatcher)
+      : scenic::BaseView(std::move(context), "MinimalClientView"),
+        on_view_attached_to_scene_(std::move(on_view_attached_to_scene)),
+        on_terminate_(std::move(on_terminate)),
+        dispatcher_(dispatcher) {
     FXL_CHECK(dispatcher_);
   }
 
@@ -71,10 +76,34 @@ class MinimalClientView : public scenic::BaseView {
   }
 
   // |scenic::BaseView|
+  void OnPropertiesChanged(fuchsia::ui::gfx::ViewProperties old_properties) override {
+    if (has_logical_size()) {
+      CreateScene(logical_size().x, logical_size().y);
+      session()->Present(zx_clock_get_monotonic(),
+                         [](auto info) { FXL_LOG(INFO) << "Client: scene created."; });
+    }
+  }
+
+  // |scenic::BaseView|
+  void OnScenicEvent(fuchsia::ui::scenic::Event event) override {
+    if (event.is_gfx() && event.gfx().is_view_attached_to_scene()) {
+      // TODO(fxb/41382): Remove this extra Present() call. Today we need it to ensure the ViewTree
+      // connection gets flushed on time.
+      session()->Present(zx_clock_get_monotonic(), [this](auto info) {
+        // When view is connected to scene (a proxy for "has rendered"), trigger input injection.
+        FXL_LOG(INFO) << "Client: view attached to scene.";
+        FXL_CHECK(on_view_attached_to_scene_) << "on_view_attached_to_scene_ was not set!";
+        on_view_attached_to_scene_();
+      });
+    }
+  }
+
+  // |scenic::BaseView|
   void OnInputEvent(InputEvent event) override {
     // Simple termination condition: Last event of first gesture.
     if (event.is_pointer() && event.pointer().phase == Phase::REMOVE) {
       async::PostTask(dispatcher_, [this] {
+        FXL_LOG(INFO) << "Client: all expected inputs received.";
         FXL_CHECK(on_terminate_) << "on_terminate_ was not set!";
         on_terminate_(observed_);
       });
@@ -84,76 +113,31 @@ class MinimalClientView : public scenic::BaseView {
     observed_.push_back(std::move(event));
   }
 
-  void SetOnTerminateCallback(fit::function<void(const std::vector<InputEvent>&)> on_terminate) {
-    on_terminate_ = std::move(on_terminate);
-  }
-
  private:
   // |scenic::SessionListener|
   void OnScenicError(std::string error) override { FXL_LOG(FATAL) << error; }
 
-  async_dispatcher_t* dispatcher_ = nullptr;
-  std::vector<InputEvent> observed_;
+  fit::function<void()> on_view_attached_to_scene_;
   fit::function<void(const std::vector<InputEvent>&)> on_terminate_;
+
+  std::vector<InputEvent> observed_;
+
+  async_dispatcher_t* dispatcher_ = nullptr;
 };
 
 class MinimalInputTest : public gtest::RealLoopFixture {
  protected:
-  // Mildly complex ctor, but we don't throw and we don't call virtual methods.
   MinimalInputTest() {
     // This fixture constructor may run multiple times, but we want the context
     // to be set up just once per process.
     if (g_context == nullptr) {
       g_context = sys::ComponentContext::Create().release();
     }
-
-    auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
-    // Connect to Scenic, create a View.
-    scenic_ = g_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
-    scenic_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
-    });
-    scenic::ViewContext view_context = {
-        .session_and_listener_request =
-            scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
-        .view_token = std::move(view_token),
-        .component_context = g_context,
-    };
-    view_ = std::make_unique<MinimalClientView>(std::move(view_context), dispatcher());
-
-    // Connect to RootPresenter, create a ViewHolder.
-    root_presenter_ = g_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
-    root_presenter_.set_error_handler([](zx_status_t status) {
-      FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
-    });
-    root_presenter_->PresentView(std::move(view_holder_token), nullptr);
-
-    // When display is available, create content and drive input to touchscreen.
-    scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
-      display_width_ = display_info.width_in_px;
-      display_height_ = display_info.height_in_px;
-
-      FXL_CHECK(display_width_ > 0 && display_height_ > 0)
-          << "Display size unsuitable for this test: (" << display_width_ << ", " << display_height_
-          << ").";
-
-      view_->CreateScene(display_width_, display_height_);
-      view_->session()->Present(zx_clock_get_monotonic(),
-                                [this](fuchsia::images::PresentationInfo info) {
-                                  inject_input_();  // Display up, content ready. Send in input.
-                                  test_was_run_ = true;  // Actually did work for this test.
-                                });
-    });
-
-    // Post a "just in case" quit task, if the test hangs.
-    async::PostDelayedTask(
-        dispatcher(),
-        [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
-        kTimeout);
   }
 
-  ~MinimalInputTest() override { FXL_CHECK(test_was_run_) << "Oops, didn't actually do anything."; }
+  ~MinimalInputTest() override {
+    FXL_CHECK(injection_count_ == 1) << "Oops, didn't actually do anything.";
+  }
 
   void InjectInput(std::vector<const char*> args) {
     // Start with process name, end with nullptr.
@@ -178,10 +162,6 @@ class MinimalInputTest : public gtest::RealLoopFixture {
     FXL_CHECK(info.return_code == 0) << "info.return_code: " << info.return_code;
   }
 
-  void SetInjectInputCallback(fit::function<void()> inject_input) {
-    inject_input_ = std::move(inject_input);
-  }
-
   fuchsia::ui::policy::PresenterPtr root_presenter_;
   fuchsia::ui::scenic::ScenicPtr scenic_;
 
@@ -189,37 +169,95 @@ class MinimalInputTest : public gtest::RealLoopFixture {
   uint32_t display_width_ = 0;
   uint32_t display_height_ = 0;
 
-  fit::function<void()> inject_input_;
-  bool test_was_run_ = false;
+  uint32_t injection_count_ = 0;
 };
 
 TEST_F(MinimalInputTest, Tap) {
-  // Set up inputs. Fires when display and content are available.
-  SetInjectInputCallback([this] {
-    InjectInput({"tap",  // Tap at the center of the display
-                 std::to_string(display_width_ / 2).c_str(),
-                 std::to_string(display_height_ / 2).c_str(), nullptr});
+  // Set up inputs. Fires when client view's content is connected to the scene.
+  fit::function<void()> on_view_attached_to_scene =
+      [this] {
+        FXL_LOG(INFO) << "Client: injecting input.";
+        FXL_CHECK(display_width_ > 0 && display_height_ > 0) << "precondition";
+        {
+          std::string x = std::to_string(display_width_ / 2);
+          std::string y = std::to_string(display_height_ / 2);
+          std::string width = "--width=" + std::to_string(display_width_);
+          std::string height = "--height=" + std::to_string(display_height_);
+          InjectInput({"tap",  // Tap at the center of the display
+                       x.c_str(), y.c_str(), width.c_str(), height.c_str(), nullptr});
+        }
+        ++injection_count_;
+      };
+
+  // Set up expectations. Fires when we see the "quit" condition.
+  fit::function<void(const std::vector<InputEvent>&)> on_terminate =
+      [this](const std::vector<InputEvent>& observed) {
+        if (FXL_VLOG_IS_ON(2)) {
+          for (const auto& event : observed) {
+            FXL_LOG(INFO) << "Input event observed: " << event;
+          }
+        }
+
+        ASSERT_EQ(observed.size(), 5u);
+
+        ASSERT_TRUE(observed[0].is_pointer());
+        EXPECT_EQ(observed[0].pointer().phase, Phase::ADD);
+
+        ASSERT_TRUE(observed[1].is_focus());
+        EXPECT_TRUE(observed[1].focus().focused);
+
+        ASSERT_TRUE(observed[2].is_pointer());
+        EXPECT_EQ(observed[2].pointer().phase, Phase::DOWN);
+
+        ASSERT_TRUE(observed[3].is_pointer());
+        EXPECT_EQ(observed[3].pointer().phase, Phase::UP);
+
+        ASSERT_TRUE(observed[4].is_pointer());
+        EXPECT_EQ(observed[4].pointer().phase, Phase::REMOVE);
+
+        QuitLoop();
+        // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
+      };
+
+  // Connect to Scenic, park a callback to obtain display dimensions.
+  scenic_ = g_context->svc()->Connect<fuchsia::ui::scenic::Scenic>();
+  scenic_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(FATAL) << "Lost connection to Scenic: " << zx_status_get_string(status);
+  });
+  scenic_->GetDisplayInfo([this](fuchsia::ui::gfx::DisplayInfo display_info) {
+    display_width_ = display_info.width_in_px;
+    display_height_ = display_info.height_in_px;
+
+    FXL_CHECK(display_width_ > 0 && display_height_ > 0)
+        << "Display size unsuitable for this test: (" << display_width_ << ", " << display_height_
+        << ").";
   });
 
-  // Set up expectations. Fires when we see the "quit" message.
-  view_->SetOnTerminateCallback([this](const std::vector<InputEvent>& observed) {
-    if (FXL_VLOG_IS_ON(2)) {
-      for (const auto& event : observed) {
-        FXL_LOG(INFO) << "Input event observed: " << event;
-      }
-    }
+  auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
-    EXPECT_EQ(observed.size(), 5u);
-
-    EXPECT_EQ(observed[0].pointer().phase, Phase::ADD);
-    EXPECT_TRUE(observed[1].focus().focused);
-    EXPECT_EQ(observed[2].pointer().phase, Phase::DOWN);
-    EXPECT_EQ(observed[3].pointer().phase, Phase::UP);
-    EXPECT_EQ(observed[4].pointer().phase, Phase::REMOVE);
-
-    QuitLoop();
-    // TODO(SCN-1449): Cleanly break the View/ViewHolder connection.
+  // Connect to RootPresenter, create a ViewHolder.
+  root_presenter_ = g_context->svc()->Connect<fuchsia::ui::policy::Presenter>();
+  root_presenter_.set_error_handler([](zx_status_t status) {
+    FXL_LOG(FATAL) << "Lost connection to RootPresenter: " << zx_status_get_string(status);
   });
+  root_presenter_->PresentView(std::move(view_holder_token), nullptr);
+
+  // Create a View.
+  scenic::ViewContext view_context = {
+      .session_and_listener_request =
+          scenic::CreateScenicSessionPtrAndListenerRequest(scenic_.get()),
+      .view_token = std::move(view_token),
+      .component_context = g_context,
+  };
+  view_ = std::make_unique<MinimalClientView>(std::move(view_context),
+                                              std::move(on_view_attached_to_scene),
+                                              std::move(on_terminate), dispatcher());
+
+  // Post a "just in case" quit task, if the test hangs.
+  async::PostDelayedTask(
+      dispatcher(),
+      [] { FXL_LOG(FATAL) << "\n\n>> Test did not complete in time, terminating. <<\n\n"; },
+      kTimeout);
 
   RunLoop();  // Go!
 }

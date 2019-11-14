@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
+#include <lib/ui/scenic/cpp/view_ref_pair.h>
 #include <lib/zx/eventpair.h>
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
@@ -72,6 +73,73 @@ TEST_F(SceneGraphTest, FirstCompositorIsStable) {
     ASSERT_EQ(2u, scene_graph.compositors().size());
     ASSERT_EQ(scene_graph.first_compositor().get(), c2.get());
   }
+}
+
+TEST_F(SceneGraphTest, RequestFocusChange) {
+  // Construct ViewTree with 2 ViewRefs in a parent-child relationship.
+  sys::testing::ComponentContextProvider context_provider;
+  SceneGraph scene_graph(context_provider.context());
+  auto parent_view_pair = scenic::ViewRefPair::New();
+  const zx_koid_t parent_koid = ExtractKoid(parent_view_pair.view_ref);
+  auto child_view_pair = scenic::ViewRefPair::New();
+  const zx_koid_t child_koid = ExtractKoid(child_view_pair.view_ref);
+  {
+    ViewTreeUpdates updates;
+    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
+                                         .may_receive_focus = [] { return true; }});
+    updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
+    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
+                                         .may_receive_focus = [] { return true; }});
+    updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
+    updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
+    updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
+
+    scene_graph.StageViewTreeUpdates(std::move(updates));
+    scene_graph.ProcessViewTreeUpdates();
+  }
+
+  ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 1u);
+  EXPECT_EQ(scene_graph.view_tree().focus_chain()[0], parent_koid);
+
+  auto status = scene_graph.RequestFocusChange(parent_koid, child_koid);
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+
+  ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 2u);
+  EXPECT_EQ(scene_graph.view_tree().focus_chain()[0], parent_koid);
+  EXPECT_EQ(scene_graph.view_tree().focus_chain()[1], child_koid);
+}
+
+TEST_F(SceneGraphTest, RequestFocusChangeButMayNotReceiveFocus) {
+  // Construct ViewTree with 2 ViewRefs in a parent-child relationship.
+  sys::testing::ComponentContextProvider context_provider;
+  SceneGraph scene_graph(context_provider.context());
+  auto parent_view_pair = scenic::ViewRefPair::New();
+  const zx_koid_t parent_koid = ExtractKoid(parent_view_pair.view_ref);
+  auto child_view_pair = scenic::ViewRefPair::New();
+  const zx_koid_t child_koid = ExtractKoid(child_view_pair.view_ref);
+  {
+    ViewTreeUpdates updates;
+    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(parent_view_pair.view_ref),
+                                         .may_receive_focus = [] { return true; }});
+    updates.push_back(ViewTreeNewAttachNode{.koid = 1111u});
+    updates.push_back(ViewTreeNewRefNode{.view_ref = std::move(child_view_pair.view_ref),
+                                         .may_receive_focus = [] { return false; }});  // Different!
+    updates.push_back(ViewTreeMakeGlobalRoot{.koid = parent_koid});
+    updates.push_back(ViewTreeConnectToParent{.child = child_koid, .parent = 1111u});
+    updates.push_back(ViewTreeConnectToParent{.child = 1111u, .parent = parent_koid});
+
+    scene_graph.StageViewTreeUpdates(std::move(updates));
+    scene_graph.ProcessViewTreeUpdates();
+  }
+
+  ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 1u);
+  EXPECT_EQ(scene_graph.view_tree().focus_chain()[0], parent_koid);
+
+  auto status = scene_graph.RequestFocusChange(parent_koid, child_koid);
+  EXPECT_EQ(status, ViewTree::FocusChangeStatus::kErrorRequestCannotReceiveFocus);
+
+  ASSERT_EQ(scene_graph.view_tree().focus_chain().size(), 1u);
+  EXPECT_EQ(scene_graph.view_tree().focus_chain()[0], parent_koid);
 }
 
 }  // namespace test

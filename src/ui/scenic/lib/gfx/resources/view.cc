@@ -4,6 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
+#include <trace/event.h>
+
 #include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
@@ -11,6 +13,7 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/util/validate_eventpair.h"
+#include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -35,9 +38,30 @@ View::View(Session* session, ResourceId id, fuchsia::ui::views::ViewRefControl c
 
   node_ = fxl::AdoptRef<ViewNode>(new ViewNode(session, session->id(), weak_factory_.GetWeakPtr()));
 
-  fuchsia::ui::views::ViewRef clone;
-  fidl::Clone(view_ref_, &clone);
-  gfx_session_->view_tree_updates().push_back(ViewTreeNewRefNode{.view_ref = std::move(clone)});
+  {
+    TRACE_DURATION_BEGIN("gfx", "ResourceCtorViewRefClone");
+    fuchsia::ui::views::ViewRef clone;
+    fidl::Clone(view_ref_, &clone);
+    TRACE_DURATION_END("gfx", "ResourceCtorViewRefClone");
+
+    EventReporterWeakPtr reporter = event_reporter->GetWeakPtr();
+
+    fit::function<bool()> may_receive_focus = [view_ptr = GetWeakPtr()] {
+      if (view_ptr && view_ptr->view_holder_) {
+        return view_ptr->view_holder_->GetViewProperties().focus_change;
+      }
+
+      // By default, a view may receive focus.
+      return true;
+    };
+
+    FXL_DCHECK(session->id() != 0u) << "GFX-side invariant for ViewTree";
+    gfx_session_->view_tree_updates().push_back(
+        ViewTreeNewRefNode{.view_ref = std::move(clone),
+                           .event_reporter = std::move(reporter),
+                           .may_receive_focus = std::move(may_receive_focus),
+                           .gfx_session_id = session->id()});
+  }
 
   FXL_DCHECK(validate_viewref(control_ref_, view_ref_));
 }

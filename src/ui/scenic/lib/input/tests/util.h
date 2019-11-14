@@ -28,16 +28,24 @@ namespace lib_ui_input_tests {
 class SessionWrapper {
  public:
   SessionWrapper(scenic_impl::Scenic* scenic);
-  SessionWrapper(SessionWrapper&&) = default;
+  SessionWrapper(SessionWrapper&&);
   virtual ~SessionWrapper();
 
   scenic::Session* session() { return session_.get(); }
   std::vector<fuchsia::ui::input::InputEvent>& events() { return events_; }
   const std::vector<fuchsia::ui::input::InputEvent>& events() const { return events_; }
 
+  void SetViewKoid(zx_koid_t koid) { view_koid_ = koid; }
+  zx_koid_t ViewKoid() const { return view_koid_; }
+
  private:
+  // Callback to capture returned events.
+  void OnEvent(std::vector<fuchsia::ui::scenic::Event> events);
+
   // Client-side session object.
   std::unique_ptr<scenic::Session> session_;
+  // View koid, if any.
+  zx_koid_t view_koid_ = ZX_KOID_INVALID;
   // Collects input events conveyed to this session.
   std::vector<fuchsia::ui::input::InputEvent> events_;
 };
@@ -67,6 +75,8 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
 
   scenic_impl::input::InputSystem* input_system() { return input_system_; }
 
+  scenic_impl::gfx::Engine* engine() { return engine_.get(); }
+
   // Each test fixture defines its own test display parameters.  It's needed
   // both here (to define the display), and in the client (to define the size of
   // a layer (TODO(SCN-248)).
@@ -82,14 +92,14 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   // Creates a test session with a view containing a 5x5 rectangle centered at (2, 2).
   SessionWrapper CreateClient(const std::string& name, fuchsia::ui::views::ViewToken view_token);
 
+  // |testing::Test|
+  // InputSystemTest needs its own teardown sequence, for session management.
+  void TearDown() override;
+
  private:
   // |scenic_impl::test::ScenicTest|
   // Create a dummy GFX system, as well as a live input system to test.
   void InitializeScenic(scenic_impl::Scenic* scenic) override;
-
-  // |testing::Test|
-  // InputSystemTest needs its own teardown sequence, for session management.
-  void TearDown() override;
 
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;

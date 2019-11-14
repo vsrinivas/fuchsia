@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_INPUT_VIEW_STACK_H_
 #define SRC_UI_SCENIC_LIB_INPUT_VIEW_STACK_H_
 
+#include <zircon/types.h>
+
 #include <ostream>
 #include <vector>
 
@@ -18,10 +20,8 @@ namespace scenic_impl::input {
 // events. The top level endpoint is index 0, and grows downward.
 struct ViewStack {
   struct Entry {
-    // The ViewRef's koid associated with this endpoint.
+    // The ViewRef's KOID associated with this endpoint.
     zx_koid_t view_ref_koid = ZX_KOID_INVALID;
-    // The session ID associated with this endpoint.
-    SessionId session_id = 0;
     // The generic interface to send events to this endpoint. If the endpoint dies (either due to
     // the client closing it or due to the server responding to an error) this pointer should go out
     // of scope.
@@ -31,11 +31,8 @@ struct ViewStack {
     // move events to an element that was hit on down (in addition to saving on the hit test).
     glm::mat4 transform = glm::mat4(1.f);
   };
-  std::vector<Entry> stack;
 
-  // Whether the top-level endpoint is focusable or not.
-  // We write this field in an ADD event and read it in a DOWN event.
-  bool focus_change = true;
+  std::vector<Entry> stack;
 };
 
 std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value);

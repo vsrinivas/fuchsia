@@ -9,7 +9,8 @@ namespace scenic_impl::input {
 using escher::operator<<;
 
 std::ostream& operator<<(std::ostream& os, const ViewStack::Entry& value) {
-  return os << "Entry: [" << value.session_id << ", Transform=\n" << value.transform << "\n]";
+  return os << "Entry: [ViewRefKoid=" << value.view_ref_koid << ", Transform=\n"
+            << value.transform << "\n]";
 }
 
 std::ostream& operator<<(std::ostream& os, const ViewStack& value) {

@@ -41,6 +41,7 @@ using fuchsia::ui::input::PointerEventType;
 using fuchsia::ui::views::ViewHolderToken;
 using fuchsia::ui::views::ViewToken;
 using scenic_impl::gfx::ExtractKoid;
+using scenic_impl::gfx::ViewTree;
 
 constexpr float kNdcEpsilon = std::numeric_limits<float>::epsilon();
 
@@ -92,21 +93,10 @@ class MockAccessibilityPointerEventListener
   uint32_t num_events_until_response_ = 0;
 };
 
-class AccessibilitySessionWrapper : public SessionWrapper {
- public:
-  AccessibilitySessionWrapper(scenic_impl::Scenic* scenic, zx_koid_t viewref_koid)
-      : SessionWrapper(scenic), viewref_koid_(viewref_koid) {}
-
-  zx_koid_t viewref_koid() const { return viewref_koid_; }
-
- private:
-  const zx_koid_t viewref_koid_;
-};
-
 // Setup common to most of the tests in this suite, which set up a single view.
 struct SingleViewSetup {
   SessionWrapper root_session;
-  AccessibilitySessionWrapper view;
+  SessionWrapper view;
   const uint32_t compositor_id;
 };
 
@@ -138,16 +128,16 @@ class AccessibilityPointerEventsTest : public InputSystemTest {
 
   // Sets up a client and captures its view ref KOID. For the most part, one client is created per
   // test.
-  AccessibilitySessionWrapper CreateClient(ViewToken view_token) {
+  SessionWrapper CreateClient(ViewToken view_token) {
     auto [control_ref, view_ref] = scenic::ViewRefPair::New();
-    AccessibilitySessionWrapper session_wrapper(scenic(), ExtractKoid(view_ref));
+    zx_koid_t koid = ExtractKoid(view_ref);
+    SessionWrapper session_wrapper(scenic());
+    session_wrapper.SetViewKoid(koid);
     scenic::View view(session_wrapper.session(), std::move(view_token), std::move(control_ref),
                       std::move(view_ref), "View");
     SetUpTestView(&view);
     return session_wrapper;
   }
-
- private:
 };
 
 // This test makes sure that first to register win is working.
@@ -207,7 +197,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       // -1  -.8    -.4     0      .4     .8 1
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
     }
@@ -218,7 +208,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_EQ(down.ndc_point().x, 0);
       EXPECT_EQ(down.ndc_point().y, 0);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 2.5);
       EXPECT_EQ(down.local_point().y, 2.5);
     }
@@ -252,7 +242,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_EQ(up.ndc_point().x, 0);
       EXPECT_NEAR(up.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(up.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(up.local_point().x, 2.5);
       EXPECT_EQ(up.local_point().y, 3.5);
     }
@@ -263,7 +253,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_EQ(remove.ndc_point().x, 0);
       EXPECT_NEAR(remove.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(remove.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 2.5);
       EXPECT_EQ(remove.local_point().y, 3.5);
     }
@@ -298,7 +288,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_NEAR(add.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(add.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 3.5);
       EXPECT_EQ(add.local_point().y, 1.5);
     }
@@ -309,7 +299,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_NEAR(down.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(down.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 3.5);
       EXPECT_EQ(down.local_point().y, 1.5);
     }
@@ -320,7 +310,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_NEAR(up.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(up.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(up.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(up.local_point().x, 3.5);
       EXPECT_EQ(up.local_point().y, 1.5);
     }
@@ -331,7 +321,7 @@ TEST_F(AccessibilityPointerEventsTest, ConsumesPointerEvents) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_NEAR(remove.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(remove.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(remove.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 3.5);
       EXPECT_EQ(remove.local_point().y, 1.5);
     }
@@ -393,7 +383,7 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
     }
@@ -404,7 +394,7 @@ TEST_F(AccessibilityPointerEventsTest, RejectsPointerEvents) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_EQ(down.ndc_point().x, 0);
       EXPECT_EQ(down.ndc_point().y, 0);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 2.5);
       EXPECT_EQ(down.local_point().y, 2.5);
     }
@@ -537,7 +527,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_NEAR(add.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(add.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 1.5);
       EXPECT_EQ(add.local_point().y, 1.5);
     }
@@ -548,7 +538,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_NEAR(down.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(down.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 1.5);
       EXPECT_EQ(down.local_point().y, 1.5);
     }
@@ -559,7 +549,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_NEAR(up.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(up.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(up.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(up.local_point().x, 1.5);
       EXPECT_EQ(up.local_point().y, 1.5);
     }
@@ -570,7 +560,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_NEAR(remove.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(remove.ndc_point().y, -.4, kNdcEpsilon);
-      EXPECT_EQ(remove.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 1.5);
       EXPECT_EQ(remove.local_point().y, 1.5);
     }
@@ -581,7 +571,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
     }
@@ -592,7 +582,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_EQ(down.ndc_point().x, 0);
       EXPECT_EQ(down.ndc_point().y, 0);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 2.5);
       EXPECT_EQ(down.local_point().y, 2.5);
     }
@@ -603,7 +593,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_EQ(up.ndc_point().x, 0);
       EXPECT_EQ(up.ndc_point().y, 0);
-      EXPECT_EQ(up.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(up.local_point().x, 2.5);
       EXPECT_EQ(up.local_point().y, 2.5);
     }
@@ -614,7 +604,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_EQ(remove.ndc_point().x, 0);
       EXPECT_EQ(remove.ndc_point().y, 0);
-      EXPECT_EQ(remove.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 2.5);
       EXPECT_EQ(remove.local_point().y, 2.5);
     }
@@ -625,7 +615,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_NEAR(add.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(add.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 3.5);
       EXPECT_EQ(add.local_point().y, 3.5);
     }
@@ -636,7 +626,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_NEAR(down.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(down.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(down.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(down.local_point().x, 3.5);
       EXPECT_EQ(down.local_point().y, 3.5);
     }
@@ -647,7 +637,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_NEAR(up.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(up.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(up.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(up.local_point().x, 3.5);
       EXPECT_EQ(up.local_point().y, 3.5);
     }
@@ -658,7 +648,7 @@ TEST_F(AccessibilityPointerEventsTest, AlternatingResponses) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_NEAR(remove.ndc_point().x, .4, kNdcEpsilon);
       EXPECT_NEAR(remove.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(remove.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 3.5);
       EXPECT_EQ(remove.local_point().y, 3.5);
     }
@@ -865,7 +855,7 @@ TEST_F(AccessibilityPointerEventsTest, FocusGetsSentAfterAddRejecting) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
-      EXPECT_EQ(add.viewref_koid(), view.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view.ViewKoid());
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
     }
@@ -940,8 +930,7 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
 
   RequestToPresent(session);
 
-  AccessibilitySessionWrapper view_a = CreateClient(std::move(v_a)),
-                              view_b = CreateClient(std::move(v_b));
+  SessionWrapper view_a = CreateClient(std::move(v_a)), view_b = CreateClient(std::move(v_b));
 
   const uint32_t compositor_id = root_resources.compositor.id();
 
@@ -969,7 +958,7 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
       EXPECT_EQ(add.phase(), Phase::ADD);
       EXPECT_EQ(add.ndc_point().x, 0);
       EXPECT_EQ(add.ndc_point().y, 0);
-      EXPECT_EQ(add.viewref_koid(), view_a.viewref_koid());
+      EXPECT_EQ(add.viewref_koid(), view_a.ViewKoid());
       EXPECT_EQ(add.local_point().x, 2.5);
       EXPECT_EQ(add.local_point().y, 2.5);
     }
@@ -980,7 +969,7 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
       EXPECT_EQ(down.phase(), Phase::DOWN);
       EXPECT_EQ(down.ndc_point().x, 0);
       EXPECT_EQ(down.ndc_point().y, 0);
-      EXPECT_EQ(down.viewref_koid(), view_a.viewref_koid());
+      EXPECT_EQ(down.viewref_koid(), view_a.ViewKoid());
       EXPECT_EQ(down.local_point().x, 2.5);
       EXPECT_EQ(down.local_point().y, 2.5);
     }
@@ -1019,7 +1008,7 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
       EXPECT_EQ(up.phase(), Phase::UP);
       EXPECT_NEAR(up.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(up.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(up.viewref_koid(), view_b.viewref_koid());
+      EXPECT_EQ(up.viewref_koid(), view_b.ViewKoid());
       EXPECT_EQ(up.local_point().x, 1.5);
       EXPECT_EQ(up.local_point().y, 3.5);
     }
@@ -1030,9 +1019,203 @@ TEST_F(AccessibilityPointerEventsTest, ExposeTopMostViewRefKoid) {
       EXPECT_EQ(remove.phase(), Phase::REMOVE);
       EXPECT_NEAR(remove.ndc_point().x, -.4, kNdcEpsilon);
       EXPECT_NEAR(remove.ndc_point().y, .4, kNdcEpsilon);
-      EXPECT_EQ(remove.viewref_koid(), view_b.viewref_koid());
+      EXPECT_EQ(remove.viewref_koid(), view_b.ViewKoid());
       EXPECT_EQ(remove.local_point().x, 1.5);
       EXPECT_EQ(remove.local_point().y, 3.5);
+    }
+  }
+}
+
+// Create a larger 7x7 display, so that the scene (5x5) does not fully cover the display.
+class LargeDisplayAccessibilityPointerEventsTest : public AccessibilityPointerEventsTest {
+ protected:
+  uint32_t test_display_width_px() const override { return 7; }
+  uint32_t test_display_height_px() const override { return 7; }
+};
+
+// This test has a DOWN event see an empty hit test, which means there is no client that latches.
+// However, (1) accessibility should receive initial events, and (2) rejection by accessibility
+// (on first MOVE) should trigger the expected focus change.
+TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yRejects) {
+  MockAccessibilityPointerEventListener listener(input_system());
+  // Respond after three events: ADD / DOWN / MOVE.
+  listener.SetResponses({{3, fuchsia::ui::input::accessibility::EventHandling::REJECTED}});
+
+  auto [vt, vht] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with one view.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+    // Set scene origin (0, 0) to coincide with display (1, 1) -- this translation ensures that a
+    // 5x5 view is centered on the display.
+    scene->SetTranslation(1, 1, 0);
+
+    scenic::ViewHolder view_holder(session, std::move(vht), "view holder");
+    view_holder.SetViewProperties(k5x5x1);
+    scene->AddChild(view_holder);
+
+    RequestToPresent(session);
+  }
+
+  SessionWrapper view = CreateClient(std::move(vt));
+
+  // Transfer focus to view.
+  {
+    zx_koid_t scene_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
+    auto status = engine()->scene_graph()->RequestFocusChange(scene_koid, view.ViewKoid());
+    ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+  }
+  RunLoopUntilIdle();  // Flush out focus events to clients.
+
+  // Clear out events.
+  root_session.events().clear();
+  view.events().clear();
+
+  // Setup is finished.  Scene is now set up; send in the input.
+  {
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // A touch sequence that starts at the (0,0) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Add(0, 0));
+    root_session.session()->Enqueue(pointer.Down(0, 0));
+  }
+  RunLoopUntilIdle();
+
+  // Verify view did not receive events.
+  EXPECT_EQ(view.events().size(), 0u);
+  // Verify root session did not receive events.
+  EXPECT_EQ(root_session.events().size(), 0u);
+
+  // Send in third touch event, which causes accessibility to reject.
+  {
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // A touch sequence that starts at the (0,0) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Move(0, 0));
+  }
+  RunLoopUntilIdle();
+
+  // Verify view received only the unfocus event.
+  {
+    const std::vector<InputEvent>& events = view.events();
+    ASSERT_EQ(events.size(), 1u);
+    EXPECT_TRUE(events[0].is_focus());
+    EXPECT_FALSE(events[0].focus().focused);
+  }
+
+  // Verify root session received only the focus event (since we revert to root of focus chain).
+  {
+    const std::vector<InputEvent>& events = root_session.events();
+    ASSERT_EQ(events.size(), 1u);
+    EXPECT_TRUE(events[0].is_focus());
+    EXPECT_TRUE(events[0].focus().focused);
+  }
+}
+
+// This test has a DOWN event see an empty hit test, which means there is no client that latches.
+// However, (1) accessibility should receive initial events, and (2) acceptance by accessibility (on
+// first MOVE) means accessibility continues to observe events, despite absence of latch.
+TEST_F(LargeDisplayAccessibilityPointerEventsTest, NoDownLatchAndA11yAccepts) {
+  MockAccessibilityPointerEventListener listener(input_system());
+  // Respond after three events: ADD / DOWN / MOVE.
+  listener.SetResponses({{3, fuchsia::ui::input::accessibility::EventHandling::CONSUMED}});
+
+  auto [vt, vht] = scenic::ViewTokenPair::New();
+
+  // Set up a scene with one view.
+  auto [root_session, root_resources] = CreateScene();
+  {
+    scenic::Session* const session = root_session.session();
+    scenic::Scene* const scene = &root_resources.scene;
+    // Set scene origin (0, 0) to coincide with display (1, 1) -- this translation ensures that a
+    // 5x5 view is centered on the display.
+    scene->SetTranslation(1, 1, 0);
+
+    scenic::ViewHolder view_holder(session, std::move(vht), "view holder");
+    view_holder.SetViewProperties(k5x5x1);
+    scene->AddChild(view_holder);
+
+    RequestToPresent(session);
+  }
+
+  SessionWrapper view = CreateClient(std::move(vt));
+
+  // Transfer focus to view.
+  {
+    zx_koid_t scene_koid = engine()->scene_graph()->view_tree().focus_chain()[0];
+    auto status = engine()->scene_graph()->RequestFocusChange(scene_koid, view.ViewKoid());
+    ASSERT_EQ(status, ViewTree::FocusChangeStatus::kAccept);
+  }
+  RunLoopUntilIdle();  // Flush out focus events to clients.
+
+  // Clear out events.
+  root_session.events().clear();
+  view.events().clear();
+
+  // Setup is finished.  Scene is now set up; send in the input.
+  {
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // A touch sequence that starts at the (0,0) location of the 7x7 display.
+    root_session.session()->Enqueue(pointer.Add(0, 0));
+    root_session.session()->Enqueue(pointer.Down(0, 0));
+  }
+  RunLoopUntilIdle();
+
+  // Verify view did not receive events.
+  EXPECT_EQ(view.events().size(), 0u);
+  // Verify root session did not receive events.
+  EXPECT_EQ(root_session.events().size(), 0u);
+
+  // Send in third touch event, which causes accessibility to consume existing and future events.
+  {
+    PointerCommandGenerator pointer(root_resources.compositor.id(), /*device id*/ 1,
+                                    /*pointer id*/ 1, PointerEventType::TOUCH);
+    // Send MOVE events *over* the view.
+    root_session.session()->Enqueue(pointer.Move(1, 1));
+    root_session.session()->Enqueue(pointer.Move(2, 2));
+  }
+  RunLoopUntilIdle();
+
+  // Verify view did not receive events.
+  EXPECT_EQ(view.events().size(), 0u);
+  // Verify root session did not receive events.
+  EXPECT_EQ(root_session.events().size(), 0u);
+
+  // Verify accessibility received 4 events so far.
+  {
+    const std::vector<AccessibilityPointerEvent>& events = listener.events();
+    ASSERT_EQ(events.size(), 4u);
+
+    // ADD
+    {
+      const AccessibilityPointerEvent& add = events[0];
+      EXPECT_EQ(add.phase(), Phase::ADD);
+      EXPECT_EQ(add.viewref_koid(), ZX_KOID_INVALID);
+    }
+    // DOWN
+    {
+      const AccessibilityPointerEvent& down = events[1];
+      EXPECT_EQ(down.phase(), Phase::DOWN);
+      EXPECT_EQ(down.viewref_koid(), ZX_KOID_INVALID);
+    }
+    // MOVE
+    {
+      const AccessibilityPointerEvent& move = events[2];
+      EXPECT_EQ(move.phase(), Phase::MOVE);
+      EXPECT_EQ(move.viewref_koid(), view.ViewKoid());
+      EXPECT_EQ(move.local_point().x, 0.5);
+      EXPECT_EQ(move.local_point().y, 0.5);
+    }
+    // MOVE
+    {
+      const AccessibilityPointerEvent& move = events[3];
+      EXPECT_EQ(move.phase(), Phase::MOVE);
+      EXPECT_EQ(move.viewref_koid(), view.ViewKoid());
+      EXPECT_EQ(move.local_point().x, 1.5);
+      EXPECT_EQ(move.local_point().y, 1.5);
     }
   }
 }

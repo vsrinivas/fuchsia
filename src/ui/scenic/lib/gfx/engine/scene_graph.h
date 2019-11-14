@@ -58,6 +58,8 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
   // View tree and focus chain functions
   //
 
+  // Expose view tree in a read-only manner.
+  // NOTE: Modifications are handled exclusively by SceneGraph, for correct dispatch of FIDL events.
   const ViewTree& view_tree() const { return view_tree_; }
 
   // Tree topology: Enqueue transactional updates to the view tree, but do not apply them yet.
@@ -85,8 +87,9 @@ class SceneGraph : public fuchsia::ui::focus::FocusChainListenerRegistry {
   void AddCompositor(const CompositorWeakPtr& compositor);
   void RemoveCompositor(const CompositorWeakPtr& compositor);
 
-  // If the focus chain has changed, dispatch an updated focus chain to the FocusChainListener.
-  void MaybeDispatchFidlFocusChain(const std::vector<zx_koid_t>& old_focus_chain);
+  // If the focus chain has changed, (1) dispatch an updated focus chain to the FocusChainListener,
+  // and (2) dispatch a FocusEvent to the clients that have gained and lost focus.
+  void MaybeDispatchFidlFocusChainAndFocusEvents(const std::vector<zx_koid_t>& old_focus_chain);
 
   std::vector<CompositorWeakPtr> compositors_;
 

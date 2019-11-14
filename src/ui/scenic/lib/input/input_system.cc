@@ -40,11 +40,11 @@ namespace input {
 
 const char* InputSystem::kName = "InputSystem";
 
+using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
+using FocusChangeStatus = scenic_impl::gfx::ViewTree::FocusChangeStatus;
 using InputCommand = fuchsia::ui::input::Command;
 using Phase = fuchsia::ui::input::PointerEventPhase;
 using ScenicCommand = fuchsia::ui::scenic::Command;
-using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
-using fuchsia::ui::input::FocusEvent;
 using fuchsia::ui::input::ImeService;
 using fuchsia::ui::input::ImeServicePtr;
 using fuchsia::ui::input::InputEvent;
@@ -55,11 +55,9 @@ using fuchsia::ui::input::SendKeyboardInputCmd;
 using fuchsia::ui::input::SendPointerInputCmd;
 using fuchsia::ui::input::SetHardKeyboardDeliveryCmd;
 using fuchsia::ui::input::SetParallelDispatchCmd;
+using scenic_impl::gfx::ViewTree;
 
 namespace {
-
-// Helper for Dispatch[Touch|Mouse]Command.
-int64_t NowInNs() { return fxl::TimePoint::Now().ToEpochDelta().ToNanoseconds(); }
 
 // TODO(SCN-1278): Remove this.
 // Turn two floats (high bits, low bits) into a 64-bit uint.
@@ -187,17 +185,6 @@ PointerEvent BuildLocalPointerEvent(const PointerEvent& pointer_event, const glm
                                 TransformPointerCoords(PointerCoords(pointer_event), transform));
 }
 
-// Helper for Dispatch[Touch|Mouse]Command.
-bool IsFocusChange(gfx::ViewPtr view) {
-  FXL_DCHECK(view);
-
-  if (view->connected()) {
-    return view->view_holder()->GetViewProperties().focus_change;
-  }
-
-  return true;  // Implicitly, all Views can receive focus.
-}
-
 // Helper function to build an AccessibilityPointerEvent when there is a
 // registered accessibility listener.
 AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& original,
@@ -222,8 +209,8 @@ AccessibilityPointerEvent BuildAccessibilityPointerEvent(const PointerEvent& ori
 InputSystem::InputSystem(SystemContext context, gfx::Engine* engine)
     : System(std::move(context)), engine_(engine) {
   FXL_CHECK(engine_);
-  text_sync_service_ = this->context()->app_context()->svc()->Connect<ImeService>();
-  text_sync_service_.set_error_handler(
+  ime_service_ = this->context()->app_context()->svc()->Connect<ImeService>();
+  ime_service_.set_error_handler(
       [](zx_status_t status) { FXL_LOG(ERROR) << "Scenic lost connection to TextSync"; });
 
   this->context()->app_context()->outgoing()->AddPublicService(
@@ -314,7 +301,7 @@ void InputCommandDispatcher::DispatchCommand(const SendPointerInputCmd& command)
 //  - Touch ADD associates the following ADD/DOWN/MOVE*/UP/REMOVE event sequence
 //    with the set of clients available at that time. To enable gesture
 //    disambiguation, we perform parallel dispatch to all clients.
-//  - Touch DOWN triggers a focus change, but honors the no-focus property.
+//  - Touch DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Touch REMOVE drops the association between event stream and client.
 void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& command) {
   TRACE_DURATION("input", "dispatch_command", "command", "TouchCmd");
@@ -340,13 +327,11 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
 
     // Find input targets.  Honor the "input masking" view property.
     ViewStack hit_views;
-    bool is_focus_change = true;
     {
       // Find the transform (input -> view coordinates) for each hit and fill out hit_views.
       for (const gfx::ViewHit& hit : hits) {
         hit_views.stack.push_back({
             hit.view->view_ref_koid(),
-            hit.view->session_id(),
             hit.view->event_reporter()->GetWeakPtr(),
             hit.transform,
         });
@@ -354,31 +339,29 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
           break;
         }
       }
-
-      // Determine focusability of top-level view.
-      if (!hits.empty()) {
-        is_focus_change = IsFocusChange(hits.front().view);
-        hit_views.focus_change = is_focus_change;
-      }
     }
     FXL_VLOG(1) << "View stack of hits: " << hit_views;
 
     // Save targets for consistent delivery of touch events.
     touch_targets_[pointer_id] = hit_views;
-    // If there is an accessibility pointer event listener enabled, an ADD event
-    // means that a new pointer id stream started.
+
+    // If there is an accessibility pointer event listener enabled, an ADD event means that a new
+    // pointer id stream started. Perform it unconditionally, even if the view stack is empty.
     if (a11y_enabled) {
-      pointer_event_buffer_->AddStream(pointer_id, is_focus_change);
+      pointer_event_buffer_->AddStream(pointer_id);
     }
   } else if (pointer_phase == Phase::DOWN) {
     // If accessibility listener is on, focus change events must be sent only if
     // the stream is rejected. This way, this operation is deferred.
     if (!a11y_enabled) {
-      // New focus can be: (1) empty (if no views), or (2) the old focus (either
-      // deliberately, or by the no-focus property), or (3) another view.
       if (!touch_targets_[pointer_id].stack.empty()) {
-        const ViewStack::Entry& view_info = touch_targets_[pointer_id].stack[0];
-        MaybeChangeFocus(touch_targets_[pointer_id].focus_change, view_info);
+        // Request that focus be transferred to the top view.
+        RequestFocusChange(touch_targets_[pointer_id].stack[0].view_ref_koid);
+      } else if (focus_chain_root() != ZX_KOID_INVALID) {
+        // The touch event stream has no designated receiver.
+        // Request that focus be transferred to the root view, so that (1) the currently focused
+        // view becomes unfocused, and (2) the focus chain remains under control of the root view.
+        RequestFocusChange(focus_chain_root());
       }
     }
   }
@@ -400,7 +383,16 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
 
   FXL_DCHECK(a11y_enabled || deferred_events.empty())
       << "When a11y pointer forwarding is off, never defer events.";
-  if (a11y_enabled && !deferred_events.empty()) {
+  if (a11y_enabled) {
+    // We handle both latched (!deferred_events.empty()) and unlatched (deferred_events.empty())
+    // touch events, for two reasons.
+    // (1) We must notify accessibility about events regardless of latch, so that it has full
+    //     information about a gesture stream. E.g., the gesture could start traversal in empty
+    //     space before MOVE-ing onto a rect; accessibility needs both the gesture and the rect.
+    // (2) We must trigger a potential focus change request, even if no view receives the triggering
+    //     DOWN event, so that (a) the focused view receives an unfocus event, and (b) the focus
+    //     chain gets updated and dispatched accordingly.
+    //
     // NOTE: Do not rely on the latched view stack for "top hit" information; elevation can change
     // dynamically (it's only guaranteed correct for DOWN). Instead, perform an independent query
     // for "top hit".
@@ -427,7 +419,9 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
     const auto top_hit_view_local = TransformPointerCoords(pointer, view_transform);
     AccessibilityPointerEvent packet = BuildAccessibilityPointerEvent(
         command.pointer_event, ndc, top_hit_view_local, view_ref_koid);
-    pointer_event_buffer_->AddEvents(pointer_id, std::move(deferred_events), std::move(packet));
+    pointer_event_buffer_->AddEvents(
+        pointer_id, {.phase = pointer_phase, .parallel_events = std::move(deferred_events)},
+        std::move(packet));
   }
 
   if (pointer_phase == Phase::REMOVE || pointer_phase == Phase::CANCEL) {
@@ -441,10 +435,10 @@ void InputCommandDispatcher::DispatchTouchCommand(const SendPointerInputCmd& com
 //  - Mouse DOWN associates the following DOWN/MOVE*/UP event sequence with one
 //    particular client: the top-hit View. Mouse events aren't associated with
 //    gestures, so there is no parallel dispatch.
-//  - Mouse DOWN triggers a focus change, but honors the no-focus property.
+//  - Mouse DOWN triggers a focus change, honoring the "may receive focus" property.
 //  - Mouse UP drops the association between event stream and client.
-//  - For an unassociated MOVE event, we perform a hit test, and send the
-//    top-most client this MOVE event. Focus does not change for unassociated
+//  - For an unlatched MOVE event, we perform a hit test, and send the
+//    top-most client this MOVE event. Focus does not change for unlatched
 //    MOVEs.
 //  - The hit test must account for the mouse cursor itself, which today is
 //    owned by the root presenter. The nodes associated with visible mouse
@@ -477,18 +471,20 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 
       hit_view.stack.push_back({
           hit.view->view_ref_koid(),
-          hit.view->session_id(),
           hit.view->event_reporter()->GetWeakPtr(),
           hit.transform,
       });
-      hit_view.focus_change = IsFocusChange(hit.view);
     }
     FXL_VLOG(1) << "View hit: " << hit_view;
 
-    // New focus can be: (1) empty (if no views), or (2) the old focus (either
-    // deliberately, or by the no-focus property), or (3) another view.
     if (!hit_view.stack.empty()) {
-      MaybeChangeFocus(hit_view.focus_change, hit_view.stack[0]);
+      // Request that focus be transferred to the top view.
+      RequestFocusChange(hit_view.stack[0].view_ref_koid);
+    } else if (focus_chain_root() != ZX_KOID_INVALID) {
+      // The mouse event stream has no designated receiver.
+      // Request that focus be transferred to the root view, so that (1) the currently focused view
+      // becomes unfocused, and (2) the focus chain remains under control of the root view.
+      RequestFocusChange(focus_chain_root());
     }
 
     // Save target for consistent delivery of mouse events.
@@ -507,7 +503,7 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
     mouse_targets_.erase(device_id);
   }
 
-  // Deal with unassociated MOVE events.
+  // Deal with unlatched MOVE events.
   if (pointer_phase == Phase::MOVE && mouse_targets_.count(device_id) == 0) {
     GlobalId compositor_id(command_dispatcher_context()->session_id(), command.compositor_id);
 
@@ -531,16 +527,24 @@ void InputCommandDispatcher::DispatchMouseCommand(const SendPointerInputCmd& com
 }
 
 void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd& command) {
-  // Send keyboard events to the active focus via Text Sync.
-  SyncText(input_system_->text_sync_service(), command.keyboard_event);
+  // Expected (but soon to be deprecated) event flow.
+  ReportToImeService(input_system_->ime_service(), command.keyboard_event);
 
-  // Clients may request direct delivery.
-  if (focus_.reporter && input_system_->hard_keyboard_requested().count(focus_.session_id) > 0) {
-    ReportKeyboardEvent(focus_.reporter.get(), command.keyboard_event);
+  // Unusual: Clients may have requested direct delivery when focused.
+  const zx_koid_t focused_view = focus();
+  if (focused_view == ZX_KOID_INVALID)
+    return;  // No receiver.
+
+  const ViewTree& view_tree = engine_->scene_graph()->view_tree();
+  EventReporterWeakPtr reporter = view_tree.EventReporterOf(focused_view);
+  SessionId gfx_session_id = view_tree.SessionIdOf(focused_view);
+  if (reporter && input_system_->hard_keyboard_requested().count(gfx_session_id) > 0) {
+    ReportKeyboardEvent(reporter.get(), command.keyboard_event);
   }
 }
 
 void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd& command) {
+  // Can't easily retrieve owning view's ViewRef KOID from just the Session or SessionId.
   const SessionId session_id = command_dispatcher_context()->session_id();
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
@@ -572,14 +576,6 @@ void InputCommandDispatcher::DispatchCommand(const SetParallelDispatchCmd& comma
   parallel_dispatch_ = command.parallel_dispatch;
 }
 
-void InputCommandDispatcher::ReportFocusEvent(EventReporter* reporter, FocusEvent focus) {
-  FXL_DCHECK(reporter) << "precondition";
-
-  InputEvent event;
-  event.set_focus(std::move(focus));
-  reporter->EnqueueEvent(std::move(event));
-}
-
 void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_info,
                                                 PointerEvent pointer) {
   if (!view_info.reporter)
@@ -588,8 +584,6 @@ void InputCommandDispatcher::ReportPointerEvent(const ViewStack::Entry& view_inf
   TRACE_DURATION("input", "dispatch_event_to_client", "event_type", "pointer");
   trace_flow_id_t trace_id = PointerTraceHACK(pointer.radius_major, pointer.radius_minor);
   TRACE_FLOW_BEGIN("input", "dispatch_event_to_client", trace_id);
-
-  FXL_VLOG(2) << "Sending pointer event to session " << view_info.session_id;
 
   InputEvent event;
   event.set_pointer(BuildLocalPointerEvent(pointer, view_info.transform));
@@ -605,13 +599,40 @@ void InputCommandDispatcher::ReportKeyboardEvent(EventReporter* reporter, Keyboa
   reporter->EnqueueEvent(std::move(event));
 }
 
-void InputCommandDispatcher::SyncText(const ImeServicePtr& text_sync, KeyboardEvent keyboard) {
-  if (text_sync && text_sync.is_bound()) {
+void InputCommandDispatcher::ReportToImeService(const ImeServicePtr& ime_service,
+                                                KeyboardEvent keyboard) {
+  if (ime_service && ime_service.is_bound()) {
     InputEvent event;
     event.set_keyboard(std::move(keyboard));
 
-    text_sync->InjectInput(std::move(event));
+    ime_service->InjectInput(std::move(event));
   }
+}
+
+zx_koid_t InputCommandDispatcher::focus() const {
+  if (!engine_->scene_graph())
+    return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
+
+  const auto& chain = engine_->scene_graph()->view_tree().focus_chain();
+  if (chain.empty())
+    return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
+
+  const zx_koid_t focused_view = chain.back();
+  FXL_DCHECK(focused_view != ZX_KOID_INVALID) << "invariant";
+  return focused_view;
+}
+
+zx_koid_t InputCommandDispatcher::focus_chain_root() const {
+  if (!engine_->scene_graph())
+    return ZX_KOID_INVALID;  // No scene graph, no view tree, no focus chain.
+
+  const auto& chain = engine_->scene_graph()->view_tree().focus_chain();
+  if (chain.empty())
+    return ZX_KOID_INVALID;  // Scene not present, or scene not connected to compositor.
+
+  const zx_koid_t root_view = chain.front();
+  FXL_DCHECK(root_view != ZX_KOID_INVALID) << "invariant";
+  return root_view;
 }
 
 bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
@@ -626,8 +647,7 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
         // they will automatically be sent for the a11y listener decide
         // what to do with them as the status will change to WAITING_RESPONSE.
         pointer_event_buffer_->SetActiveStreamInfo(
-            /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED,
-            /*focus_change=*/false);
+            /*pointer_id=*/kv.first, PointerEventBuffer::PointerIdStreamStatus::REJECTED);
       }
       // Registers an event handler for this listener. This callback captures a pointer to the event
       // buffer that we own, so we need to clear it before we destroy it (see below).
@@ -647,35 +667,27 @@ bool InputCommandDispatcher::ShouldForwardAccessibilityPointerEvents() {
   return false;
 }
 
-void InputCommandDispatcher::MaybeChangeFocus(bool focus_change,
-                                              const ViewStack::Entry& view_info) {
-  ViewStack::Entry new_focus;
-  if (focus_change) {
-    new_focus = view_info;
-  } else {
-    new_focus = focus_;  // No focus change.
-  }
-  FXL_VLOG(1) << "Focus, old and new: " << focus_ << " vs " << new_focus;
+void InputCommandDispatcher::RequestFocusChange(zx_koid_t view) {
+  FXL_DCHECK(view != ZX_KOID_INVALID) << "precondition";
 
-  // Deliver focus events.
-  if (focus_.session_id != new_focus.session_id) {
-    const int64_t focus_time = NowInNs();
-    if (focus_.reporter) {
-      FocusEvent event;
-      event.event_time = focus_time;
-      event.focused = false;
-      ReportFocusEvent(focus_.reporter.get(), event);
-      FXL_VLOG(1) << "Input focus lost by " << focus_;
-    }
-    if (new_focus.reporter) {
-      FocusEvent event;
-      event.event_time = focus_time;
-      event.focused = true;
-      ReportFocusEvent(new_focus.reporter.get(), event);
-      FXL_VLOG(1) << "Input focus gained by " << new_focus;
-    }
-    focus_ = new_focus;
-  }
+  if (!engine_->scene_graph())
+    return;  // No scene graph, no view tree, no focus chain.
+
+  if (engine_->scene_graph()->view_tree().focus_chain().empty())
+    return;  // Scene not present, or scene not connected to compositor.
+
+  // Input system acts on authority of top-most view.
+  const zx_koid_t requestor = engine_->scene_graph()->view_tree().focus_chain()[0];
+
+  auto status = engine_->scene_graph()->RequestFocusChange(requestor, view);
+  FXL_VLOG(1) << "Scenic RequestFocusChange. Authority: " << requestor << ", request: " << view
+              << ", status: " << static_cast<int>(status);
+
+  FXL_DCHECK(status == FocusChangeStatus::kAccept ||
+             status == FocusChangeStatus::kErrorRequestCannotReceiveFocus)
+      << "User has authority to request focus change, but the only valid rejection is when the "
+         "requested view may not receive focus. Error code: "
+      << static_cast<int>(status);
 }
 
 InputCommandDispatcher::PointerEventBuffer::PointerEventBuffer(InputCommandDispatcher* dispatcher)
@@ -684,13 +696,11 @@ InputCommandDispatcher::PointerEventBuffer::PointerEventBuffer(InputCommandDispa
 }
 
 InputCommandDispatcher::PointerEventBuffer::~PointerEventBuffer() {
-  // Any remaining pointer events are dispatched to clients to keep a consistent
-  // state:
+  // Any remaining pointer events are dispatched to clients to keep a consistent state.
   for (auto& pointer_id_and_streams : buffer_) {
     for (auto& stream : pointer_id_and_streams.second) {
-      for (DeferredPerViewPointerEvents& views_and_events : stream.events) {
-        MaybeDispatchFocusEvent(views_and_events, stream.focus_change);
-        DispatchEvents(std::move(views_and_events));
+      for (auto& deferred_events : stream.serial_events) {
+        DispatchEvents(std::move(deferred_events));
       }
     }
   }
@@ -720,17 +730,15 @@ void InputCommandDispatcher::PointerEventBuffer::UpdateStream(
       // sent to views. All buffered (past events), are sent, as well as
       // potential future (in case this stream is not done yet).
       status = PointerIdStreamStatus::REJECTED;
-      for (DeferredPerViewPointerEvents& views_and_events : stream.events) {
-        MaybeDispatchFocusEvent(views_and_events, stream.focus_change);
-        DispatchEvents(std::move(views_and_events));
+      for (auto& deferred_events : stream.serial_events) {
+        DispatchEvents(std::move(deferred_events));
       }
       // Clears the stream -- objects have been moved, but container still holds
       // their space.
-      stream.events.clear();
+      stream.serial_events.clear();
       break;
   };
   // Remove this stream from the buffer, as it was already processed.
-  bool focus_change = stream.focus_change;  // record this before the stream goes away.
   pointer_id_buffer.pop_front();
   // If the buffer is now empty, this means that this stream hasn't finished
   // yet. Record this so that incoming future pointer events know where to go.
@@ -739,10 +747,10 @@ void InputCommandDispatcher::PointerEventBuffer::UpdateStream(
   // anymore. If this is the case, |active_stream_info_| will not be updated
   // and thus will still have a status of WAITING_RESPONSE.
   if (pointer_id_buffer.empty()) {
-    SetActiveStreamInfo(pointer_id, status, focus_change);
+    SetActiveStreamInfo(pointer_id, status);
   }
   FXL_DCHECK(pointer_id_buffer.empty() ||
-             active_stream_info_[pointer_id].first == PointerIdStreamStatus::WAITING_RESPONSE)
+             active_stream_info_[pointer_id] == PointerIdStreamStatus::WAITING_RESPONSE)
       << "invariant: streams are waiting, so status is waiting";
 }
 
@@ -751,17 +759,15 @@ void InputCommandDispatcher::PointerEventBuffer::AddEvents(
     AccessibilityPointerEvent accessibility_pointer_event) {
   auto it = active_stream_info_.find(pointer_id);
   FXL_DCHECK(it != active_stream_info_.end()) << "Received an invalid pointer id.";
-  const auto status = it->second.first;
-  const bool focus_change = it->second.second;
+  const auto status = it->second;
   if (status == PointerIdStreamStatus::WAITING_RESPONSE) {
     PointerIdStream& stream = buffer_[pointer_id].back();
-    stream.events.emplace_back(std::move(views_and_events));
+    stream.serial_events.emplace_back(std::move(views_and_events));
   } else if (status == PointerIdStreamStatus::REJECTED) {
     // All previous events were already dispatched when this stream was
     // rejected. Sends this new incoming events to their normal flow as well.
     // There is still the possibility of triggering a focus change event, when
     // ADD -> a11y listener rejected -> DOWN event arrived.
-    MaybeDispatchFocusEvent(views_and_events, focus_change);
     DispatchEvents(std::move(views_and_events));
     return;
   }
@@ -775,30 +781,34 @@ void InputCommandDispatcher::PointerEventBuffer::AddEvents(
   }
 }
 
-void InputCommandDispatcher::PointerEventBuffer::AddStream(uint32_t pointer_id, bool focus_change) {
+void InputCommandDispatcher::PointerEventBuffer::AddStream(uint32_t pointer_id) {
   auto& pointer_id_buffer = buffer_[pointer_id];
   pointer_id_buffer.emplace_back();
-  pointer_id_buffer.back().focus_change = focus_change;
-  active_stream_info_[pointer_id] = {PointerIdStreamStatus::WAITING_RESPONSE, focus_change};
+  active_stream_info_[pointer_id] = PointerIdStreamStatus::WAITING_RESPONSE;
 }
 
 void InputCommandDispatcher::PointerEventBuffer::DispatchEvents(
     DeferredPerViewPointerEvents views_and_events) {
-  for (auto& view_and_event : views_and_events) {
-    dispatcher_->ReportPointerEvent(view_and_event.first, std::move(view_and_event.second));
-  }
-}
-
-void InputCommandDispatcher::PointerEventBuffer::MaybeDispatchFocusEvent(
-    const InputCommandDispatcher::PointerEventBuffer::DeferredPerViewPointerEvents&
-        views_and_events,
-    bool focus_change) {
   // If this parallel dispatch of events corresponds to a DOWN event, this
   // triggers a possible deferred focus change event.
-  FXL_DCHECK(!views_and_events.empty()) << "Received an empty parallel dispatch of events.";
-  const auto& event = views_and_events[0].second;
-  if (event.phase == Phase::DOWN) {
-    dispatcher_->MaybeChangeFocus(focus_change, views_and_events[0].first);
+  if (views_and_events.phase == Phase::DOWN) {
+    if (!views_and_events.parallel_events.empty()) {
+      // Request that focus be transferred to the top view.
+      FXL_DCHECK(views_and_events.parallel_events[0].second.phase == views_and_events.phase)
+          << "invariant";
+      const zx_koid_t view_koid = views_and_events.parallel_events[0].first.view_ref_koid;
+      FXL_DCHECK(view_koid != ZX_KOID_INVALID) << "invariant";
+      dispatcher_->RequestFocusChange(view_koid);
+    } else if (dispatcher_->focus_chain_root() != ZX_KOID_INVALID) {
+      // The touch event stream has no designated receiver.
+      // Request that focus be transferred to the root view, so that (1) the currently focused
+      // view becomes unfocused, and (2) the focus chain remains under control of the root view.
+      dispatcher_->RequestFocusChange(dispatcher_->focus_chain_root());
+    }
+  }
+
+  for (auto& view_and_event : views_and_events.parallel_events) {
+    dispatcher_->ReportPointerEvent(view_and_event.first, std::move(view_and_event.second));
   }
 }
 
