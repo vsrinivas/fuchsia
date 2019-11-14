@@ -17,6 +17,39 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
   TRACE_DURATION("gfx", "escher::NaiveImage::AdoptImage (from VkImage)");
   FXL_CHECK(vk_image);
   FXL_CHECK(mem);
+
+  // Check image memory requirements before binding the image to memory.
+  auto mem_requirements = image_owner->vk_device()
+                              .getImageMemoryRequirements2KHR<vk::MemoryRequirements2KHR,
+                                                              vk::MemoryDedicatedRequirementsKHR>(
+                                  vk_image, image_owner->vulkan_context().loader);
+
+  auto size_required = mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.size;
+  auto alignment_required =
+      mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
+  auto dedicated_required =
+      mem_requirements.get<vk::MemoryDedicatedRequirementsKHR>().requiresDedicatedAllocation;
+
+  if (mem->size() < size_required) {
+    FXL_LOG(ERROR) << "AdoptVkImage failed: Image requires " << size_required
+                   << " bytes of memory, while the provided mem size is " << mem->size()
+                   << " bytes.";
+    return nullptr;
+  }
+
+  if (mem->offset() % alignment_required != 0) {
+    FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
+                   << alignment_required << " bytes, while the provided mem offset is "
+                   << mem->offset();
+    return nullptr;
+  }
+
+  if (dedicated_required) {
+    FXL_LOG(ERROR) << "AdoptVkImage failed: Image requires dedicated allocation, cannot use "
+                      "NaiveImage.";
+    return nullptr;
+  }
+
   auto bind_result = image_owner->vk_device().bindImageMemory(vk_image, mem->base(), mem->offset());
   if (bind_result != vk::Result::eSuccess) {
     FXL_DLOG(ERROR) << "vkBindImageMemory failed: " << vk::to_string(bind_result);

@@ -99,12 +99,6 @@ VK_TEST_F(PoseBufferTest, Validation) {
                                                        time_interval)));
 
   device.freeMemory(memory);
-
-  // TODO(36831): Now Vulkan validation layer has warnings:
-  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidBuffer ] Object: 0x2c (Type = 9) |
-  //   vkBindBufferMemory(): Binding memory to VkBuffer 0x2c[] but vkGetBufferMemoryRequirements()
-  //   has not been called on that buffer.
-  SUPPRESS_VK_VALIDATION_WARNINGS();
 }
 
 }  // namespace test

@@ -356,12 +356,6 @@ VK_TEST_F(BufferSessionTest, BufferAliasing) {
   EXPECT_EQ(base_buffer->escher_buffer()->host_ptr()[kOffset], 1);
   EXPECT_EQ(offset_buffer->escher_buffer()->host_ptr()[0], 1);
   device.freeMemory(memory);
-
-  // TODO(36831): Now Vulkan validation layer has warnings:
-  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidBuffer ] Object: 0x32 (Type = 9) |
-  //   vkBindBufferMemory(): Binding memory to VkBuffer 0x32[] but vkGetBufferMemoryRequirements()
-  //   has not been called on that buffer.
-  SUPPRESS_VK_VALIDATION_WARNINGS();
 }
 
 // TODO:

@@ -183,12 +183,6 @@ VK_TEST_F(HostImageTest, YuvImportOnUmaPlatform) {
   // The images should have been constructed directly, not through the image
   // factory.
   EXPECT_EQ(0u, listener->images_created_);
-
-  // TODO(36831): Now Vulkan validation layer has warnings:
-  //   [ UNASSIGNED-CoreValidation-DrawState-InvalidBuffer ] Object: 0x13 (Type = 10) |
-  //   vkBindBufferMemory(): Binding memory to VkBuffer 0x13[] but vkGetBufferMemoryRequirements()
-  //   has not been called on that buffer.
-  SUPPRESS_VK_VALIDATION_WARNINGS();
 }
 
 }  // namespace test

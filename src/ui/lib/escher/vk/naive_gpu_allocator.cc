@@ -82,7 +82,7 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(ResourceManager* manager, vk::Device
   if (out_ptr) {
     *out_ptr = mem;
   }
-  return fxl::AdoptRef(new impl::NaiveBuffer(manager, std::move(mem), size, vk_buffer));
+  return impl::NaiveBuffer::AdoptVkBuffer(manager, std::move(mem), size, vk_buffer);
 }
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager, const ImageInfo& info,

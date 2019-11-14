@@ -112,6 +112,12 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
       auto escher_image = escher::impl::NaiveImage::AdoptVkImage(
           session->resource_context().escher_resource_recycler, escher_image_info, vk_image,
           gpu_memory);
+
+      if (!escher_image) {
+        error_reporter->ERROR() << "Image::CreateFromMemory(): cannot create NaiveImage.";
+        return nullptr;
+      }
+
       auto host_image = fxl::AdoptRef(new HostImage(
           session, id, std::move(memory), std::move(escher_image), memory_offset, image_info));
       host_image->is_directly_mapped_ = true;

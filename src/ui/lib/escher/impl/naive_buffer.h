@@ -21,13 +21,19 @@ class NaiveBuffer : public Buffer {
   // This constructor uses |mem->size()| as its |size_| property.
   static BufferPtr New(ResourceManager* manager, GpuMemPtr mem, vk::BufferUsageFlags usage_flags);
 
-  // This constructor uses |vk_buffer_size| as its |size_| property, which
-  // can be different from the size of |mem|.
-  NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::DeviceSize vk_buffer_size,
-              vk::Buffer buffer);
+  // This constructor adopts existing VkBuffer and uses |vk_buffer_size| as its
+  // |size_| property, which can be different from the size of |mem|.
+  static BufferPtr AdoptVkBuffer(ResourceManager* manager, GpuMemPtr mem,
+                                 vk::DeviceSize vk_buffer_size, vk::Buffer vk_buffer);
+
   ~NaiveBuffer() override;
 
  private:
+  // Private constructor. |vk_buffer_size| may be different from the defined
+  // size of |buffer|.
+  NaiveBuffer(ResourceManager* manager, GpuMemPtr mem, vk::DeviceSize vk_buffer_size,
+              vk::Buffer buffer);
+
   // Backing memory object.
   GpuMemPtr mem_;
 };
