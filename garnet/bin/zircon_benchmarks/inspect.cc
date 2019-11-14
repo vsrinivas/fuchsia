@@ -100,6 +100,18 @@ inspect::ExponentialDoubleHistogram CreateArrayMetric(Node* root, size_t size) {
                                                 kExponentialStepMultiplier, size);
 }
 
+bool TestNodeLifecycle(perftest::RepeatState* state) {
+  auto inspector = Inspector();
+  auto& root = inspector.GetRoot();
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    auto node = root.CreateChild(kName);
+    state->NextStep();
+  }
+  return true;
+}
+
 template <typename T>
 bool TestMetricLifecycle(perftest::RepeatState* state) {
   auto inspector = Inspector();
@@ -258,6 +270,7 @@ bool TestHeapExtend(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
+  perftest::RegisterTest("Inspect/Node/Lifecycle", TestNodeLifecycle);
   perftest::RegisterTest("Inspect/IntMetric/Lifecycle", TestMetricLifecycle<int64_t>);
   perftest::RegisterTest("Inspect/IntMetric/Modify", TestMetricModify<int64_t>);
   perftest::RegisterTest("Inspect/UintMetric/Lifecycle", TestMetricLifecycle<uint64_t>);
