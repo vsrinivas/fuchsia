@@ -8,6 +8,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/util/type_utils.h"
+#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
@@ -92,10 +93,7 @@ bool Layer::IsDrawable() const {
   return renderer_ && renderer_->camera() && renderer_->camera()->scene();
 }
 
-void Layer::HitTest(const escher::ray4& ray, HitTester* hit_tester,
-                    HitAccumulator<ViewHit>* hit_accumulator) const {
-  FXL_CHECK(hit_tester);
-
+void Layer::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const {
   if (width() == 0.f || height() == 0.f) {
     return;
   }
@@ -119,7 +117,7 @@ void Layer::HitTest(const escher::ray4& ray, HitTester* hit_tester,
       hit_accumulator,
       [&layer_transform](const NodeHit& hit) { return CreateViewHit(hit, layer_transform); });
 
-  hit_tester->HitTest(camera->scene().get(), camera_ray, &transforming_accumulator);
+  gfx::HitTest(camera->scene().get(), camera_ray, &transforming_accumulator);
 }
 
 escher::ViewingVolume Layer::GetViewingVolume() const {

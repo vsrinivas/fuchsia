@@ -20,7 +20,6 @@
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe.h"

@@ -101,6 +101,8 @@ class TestHitAccumulator : public HitAccumulator<T> {
 };
 
 // Loop fixture provides dispatcher for Engine's EventTimestamper.
+// Many hit tests are performed indirectly through a LayerStack owned by this class to access the
+// scene graph.
 class HitTestTest : public gtest::TestLoopFixture {
  public:
   enum : uint32_t {
@@ -227,10 +229,9 @@ TEST_F(SingleSessionHitTestTest, HitCoordinates) {
     // the -z and 1-offset, but it may also be possible to redefine device-space z in terms of the
     // view volume depth (though the relative scale isn't used for anything user facing so it
     // doesn't actually matter).
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = HitRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -291,10 +292,9 @@ TEST_F(SingleSessionHitTestTest, Scaling) {
     // Hit from (1, 1.5) should be at (1, 1.5, -1) in view coordinates and depth should be 1.999 (z
     // = -1 in 1000-space, + 1 due to the ray origin). Although the rectangle is scaled, the view is
     // not.
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = HitRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -356,10 +356,9 @@ TEST_F(SingleSessionHitTestTest, ViewTransform) {
   {
     // Hit from (5, 6) should be at (2/3, 4/3, -1) in view coordinates and depth should be 1.998 (z
     // = -2 in 1000-space, + 1 due to the ray origin).
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = HitRay(5, 6);
-    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -426,10 +425,9 @@ TEST_F(SingleSessionHitTestTest, CameraTransform) {
     // Hit from (1, 1.5) should be at (5, 7.5 / 3, -1) in view coordinates (i.e. (15, 7.5) in the
     // effective input space, scaled down 3x to view space).
     // Depth should still be 1.999 (the clip-space scaling is not applied to Z).
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
     const escher::ray4 ray = HitRay(1, 1.5f);
-    layer_stack()->HitTest(ray, &hit_tester, &accumulator);
+    layer_stack()->HitTest(ray, &accumulator);
     ASSERT_FALSE(accumulator.hits().empty());
 
     const ViewHit& hit = accumulator.hits().front();
@@ -508,17 +506,14 @@ TEST_F(SingleSessionHitTestTest, ViewClipping) {
   // Perform two hit tests on either side of the display.
   {
     // First hit test should intersect the view's bounding box.
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(5, layer_height() / 2), &hit_tester, &accumulator);
+    layer_stack()->HitTest(HitRay(5, layer_height() / 2), &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u) << "Should see a hit on the rectangle";
   }
   {
     // Second hit test should completely miss the view's bounding box.
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &hit_tester,
-                           &accumulator);
+    layer_stack()->HitTest(HitRay(layer_width() / 2 + 50, layer_height() / 2), &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 0u)
         << "Should see no hits since its outside the view bounds";
   }
@@ -598,10 +593,8 @@ TEST_F(SingleSessionHitTestTest, SuppressedHitTestForSubtree) {
   }
 
   {
-    HitTester hit_tester;
     TestHitAccumulator<NodeHit> accumulator;
-    hit_tester.HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2),
-                       &accumulator);
+    HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2), &accumulator);
 
     ASSERT_EQ(accumulator.hits().size(), 1u);
     EXPECT_EQ(accumulator.hits().front().node->id(), kHittableShapeNodeId);
@@ -659,15 +652,14 @@ TEST_F(SingleSessionHitTestTest, InclusiveViewBounds) {
     sess.Apply(scenic::NewAddChildCmd(kViewId, kShape2Id));
   }
 
-  HitTester hit_tester;
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(4, 4.5f), &hit_tester, &accumulator);
+    layer_stack()->HitTest(HitRay(4, 4.5f), &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
   {
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(12, 4.5f), &hit_tester, &accumulator);
+    layer_stack()->HitTest(HitRay(12, 4.5f), &accumulator);
     EXPECT_FALSE(accumulator.hits().empty());
   }
 }
@@ -766,10 +758,8 @@ TEST_F(MultiSessionHitTestTest, ChildBiggerThanParent) {
   }
 
   {
-    HitTester hit_tester;
     TestHitAccumulator<NodeHit> accumulator;
-    hit_tester.HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2),
-                       &accumulator);
+    HitTest(scene(), WorldSpaceHitRay(layer_width() / 2, layer_height() / 2), &accumulator);
     EXPECT_EQ(accumulator.hits().size(), 1u)
         << "Should only hit the shape encompassed by both views.";
     EXPECT_EQ(accumulator.hits().front().node->id(), kInnerShapeNodeId);
@@ -862,10 +852,8 @@ TEST_F(MultiSessionHitTestTest, ChildCompletelyClipped) {
   }
 
   {
-    HitTester hit_tester;
     TestHitAccumulator<ViewHit> accumulator;
-    layer_stack()->HitTest(HitRay(3 * layer_width() / 4, 3 * layer_height() / 4), &hit_tester,
-                           &accumulator);
+    layer_stack()->HitTest(HitRay(3 * layer_width() / 4, 3 * layer_height() / 4), &accumulator);
     EXPECT_TRUE(accumulator.hits().empty());
   }
 }
@@ -960,9 +948,8 @@ TEST_F(MultiSessionHitTestTest, GlobalHits) {
   }
 
   {
-    HitTester hit_tester;
     SessionHitAccumulator accumulator;
-    layer_stack()->HitTest(HitRay(4, 4), &hit_tester, &accumulator);
+    layer_stack()->HitTest(HitRay(4, 4), &accumulator);
 
     const auto& hits = accumulator.hits();
 

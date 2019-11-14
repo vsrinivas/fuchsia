@@ -22,7 +22,6 @@
 #include "src/ui/lib/escher/util/type_utils.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
@@ -127,8 +126,7 @@ void PerformGlobalHitTest(const gfx::LayerStackPtr& layer_stack, const escher::v
   escher::ray4 ray = CreateScreenPerpendicularRay(pointer.x, pointer.y);
   FXL_VLOG(1) << "HitTest: device point (" << ray.origin.x << ", " << ray.origin.y << ")";
 
-  gfx::HitTester hit_tester;
-  layer_stack->HitTest(ray, &hit_tester, accumulator);
+  layer_stack->HitTest(ray, accumulator);
 }
 
 // Helper for DispatchCommand.

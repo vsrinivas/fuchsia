@@ -17,7 +17,6 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"

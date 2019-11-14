@@ -10,7 +10,6 @@
 
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 
 namespace scenic_impl {
@@ -33,10 +32,9 @@ class LayerStack : public Resource {
   // Performs a hit test on all the layers in this stack, along the provided ray
   // in the layer stack's coordinate system.
   //
-  // The hit collection behavior depends on the hit tester and accumulator. These hits include
-  // transforms into view space.
-  void HitTest(const escher::ray4& ray, HitTester* hit_tester,
-               HitAccumulator<ViewHit>* hit_accumulator) const;
+  // The hit collection behavior depends on the accumulator. These hits include transforms into view
+  // space.
+  void HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const;
 
   // AddLayerCmd.
   bool AddLayer(LayerPtr layer, ErrorReporter* reporter);

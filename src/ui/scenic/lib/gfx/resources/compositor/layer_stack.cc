@@ -18,13 +18,11 @@ LayerStack::LayerStack(Session* session, SessionId session_id, ResourceId id)
 
 LayerStack::~LayerStack() = default;
 
-void LayerStack::HitTest(const escher::ray4& ray, HitTester* hit_tester,
-                         HitAccumulator<ViewHit>* hit_accumulator) const {
-  FXL_CHECK(hit_tester);
+void LayerStack::HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const {
   FXL_CHECK(hit_accumulator);
 
   for (auto& layer : layers_) {
-    layer->HitTest(ray, hit_tester, hit_accumulator);
+    layer->HitTest(ray, hit_accumulator);
     if (!hit_accumulator->EndLayer()) {
       break;
     }

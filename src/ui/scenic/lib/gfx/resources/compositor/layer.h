@@ -12,7 +12,6 @@
 #include "src/ui/lib/escher/scene/viewing_volume.h"
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
-#include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 
 namespace scenic_impl {
@@ -71,8 +70,7 @@ class Layer : public Resource {
   //
   // The hit collection behavior depends on the hit tester and accumulator. These hits include
   // transforms into view space.
-  void HitTest(const escher::ray4& ray, HitTester* hit_tester,
-               HitAccumulator<ViewHit>* hit_accumulator) const;
+  void HitTest(const escher::ray4& ray, HitAccumulator<ViewHit>* hit_accumulator) const;
 
   // Returns the current viewing volume of the layer. Used by the compositor
   // when initializing the stage, as well as for hit testing.
