@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fidl/transformer.h>
+#include <zircon/fidl.h>
+#include <zircon/types.h>
+
 #include "multiple-device-test.h"
 
 // Reads a CreateDevice from remote, checks expectations, and sends a ZX_OK
@@ -280,8 +284,17 @@ void MultipleDeviceTestCase::SendUnbindReply(const zx::channel& remote) {
   ASSERT_LT(0, actual_bytes);
   ASSERT_EQ(0, actual_handles);
 
+  FIDL_ALIGNDECL uint8_t out_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  uint32_t actual_out_bytes;
+  bool response_is_v1 =
+      fidl_should_decode_union_from_xunion(reinterpret_cast<fidl_message_header_t*>(bytes));
+  ASSERT_OK(fidl_transform(
+      response_is_v1 ? FIDL_TRANSFORMATION_V1_TO_OLD : FIDL_TRANSFORMATION_NONE,
+      ::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse::AltType, bytes,
+      actual_bytes, out_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &actual_out_bytes, nullptr));
+
   fidl::EncodedMessage<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> encoded(
-      fidl::BytePart(bytes, actual_bytes, actual_bytes));
+      fidl::BytePart(out_bytes, actual_out_bytes, actual_out_bytes));
   auto decode_result = fidl::Decode(std::move(encoded));
   ASSERT_OK(decode_result.status);
 
@@ -347,8 +360,17 @@ void MultipleDeviceTestCase::SendRemoveReply(const zx::channel& remote) {
   ASSERT_LT(0, actual_bytes);
   ASSERT_EQ(0, actual_handles);
 
+  FIDL_ALIGNDECL uint8_t out_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  uint32_t actual_out_bytes;
+  bool response_is_v1 =
+      fidl_should_decode_union_from_xunion(reinterpret_cast<fidl_message_header_t*>(bytes));
+  ASSERT_OK(fidl_transform(
+      response_is_v1 ? FIDL_TRANSFORMATION_V1_TO_OLD : FIDL_TRANSFORMATION_NONE,
+      ::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse::AltType, bytes,
+      actual_bytes, out_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &actual_out_bytes, nullptr));
+
   fidl::EncodedMessage<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> encoded(
-      fidl::BytePart(bytes, actual_bytes, actual_bytes));
+      fidl::BytePart(out_bytes, actual_out_bytes, actual_out_bytes));
   auto decode_result = fidl::Decode(std::move(encoded));
   ASSERT_OK(decode_result.status);
 
