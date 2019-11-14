@@ -416,7 +416,7 @@ bool GptDevicePartitioner::FindGptDevices(const fbl::unique_fd& devfs_root, GptD
     if (response.info->flags & BLOCK_FLAG_REMOVABLE) {
       continue;
     }
-    auto result2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(caller.channel());
+    auto result2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(caller.channel());
     if (result2.status() != ZX_OK) {
       continue;
     }
@@ -1275,7 +1275,7 @@ zx_status_t SkipBlockDevicePartitioner::WipeFvm() const {
 
   ::llcpp::fuchsia::device::Controller::SyncClient block_client(std::move(chan));
 
-  auto result = block_client.GetTopologicalPathNew();
+  auto result = block_client.GetTopologicalPath();
   if (!result.ok()) {
     ERROR("Warning: Could not get name for partition: %s\n", zx_status_get_string(result.status()));
     return result.status();

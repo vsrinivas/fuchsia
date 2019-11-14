@@ -604,6 +604,65 @@ int32_t& ::llcpp::fuchsia::device::Controller_Rebind_Result::mutable_err() {
 }
 
 
+::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::Controller_GetTopologicalPath_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::~Controller_GetTopologicalPath_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Controller_GetTopologicalPath_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::MoveImpl_(Controller_GetTopologicalPath_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result, response_) == 8);
+  static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result, err_) == 8);
+  static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result) == ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result::Controller_GetTopologicalPathNew_Result() {
   tag_ = Tag::Invalid;
 }
@@ -2707,7 +2766,7 @@ void Controller::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMes
 }
 
 
-void Controller::Interface::GetTopologicalPathCompleterBase::Reply(int32_t status, ::fidl::StringView path) {
+void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetTopologicalPathResponse, ::fidl::MessageDirection::kSending>();
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
@@ -2717,8 +2776,7 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(int32_t statu
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetTopologicalPathResponse::PrimarySize,
               GetTopologicalPathResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _response.path = std::move(path);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
                                                                           _kWriteAllocSize));
   if (_linearize_result.status != ZX_OK) {
@@ -2727,8 +2785,17 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(int32_t statu
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
 }
+void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::StringView path) {
+  Controller_GetTopologicalPath_Response response;
+  response.path = std::move(path);
 
-void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::StringView path) {
+  Reply(Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_GetTopologicalPath_Result::WithErr(std::move(error)));
+}
+
+void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result) {
   if (_buffer.capacity() < GetTopologicalPathResponse::PrimarySize) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
@@ -2739,14 +2806,19 @@ void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::ByteP
           ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
               GetTopologicalPathResponse::PrimarySize,
               GetTopologicalPathResponse::PrimarySize)));
-  _response.status = std::move(status);
-  _response.path = std::move(path);
+  _response.result = std::move(result);
   auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
   if (_linearize_result.status != ZX_OK) {
     CompleterBase::Close(ZX_ERR_INTERNAL);
     return;
   }
   CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path) {
+  Controller_GetTopologicalPath_Response response;
+  response.path = std::move(path);
+
+  Reply(std::move(_buffer), Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
 }
 
 void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {

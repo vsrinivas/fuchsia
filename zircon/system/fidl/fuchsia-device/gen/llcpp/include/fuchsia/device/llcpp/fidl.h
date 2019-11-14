@@ -52,6 +52,8 @@ struct Controller_ScheduleUnbind_Response;
 struct Controller_ScheduleUnbind_Result;
 struct Controller_Rebind_Response;
 struct Controller_Rebind_Result;
+struct Controller_GetTopologicalPath_Response;
+struct Controller_GetTopologicalPath_Result;
 struct Controller_GetTopologicalPathNew_Response;
 struct Controller_GetTopologicalPathNew_Result;
 struct Controller_Bind_Response;
@@ -1192,6 +1194,123 @@ struct Controller_Rebind_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+
+struct Controller_GetTopologicalPath_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPath_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 16;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1024;
+
+  ::fidl::StringView path = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+
+struct Controller_GetTopologicalPath_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_GetTopologicalPath_Result();
+  ~Controller_GetTopologicalPath_Result();
+
+  Controller_GetTopologicalPath_Result(Controller_GetTopologicalPath_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_GetTopologicalPath_Result& operator=(Controller_GetTopologicalPath_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response&& val) {
+    Controller_GetTopologicalPath_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_GetTopologicalPath_Result WithErr(int32_t&& val) {
+    Controller_GetTopologicalPath_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 1024;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 1040;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_GetTopologicalPath_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
 
@@ -1649,8 +1768,7 @@ class Controller final {
   struct GetTopologicalPathResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    int32_t status;
-    ::fidl::StringView path;
+    ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetTopologicalPathResponseTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
@@ -1658,9 +1776,9 @@ class Controller final {
     static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 1024;
     static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 1024;
+    static constexpr uint32_t AltMaxOutOfLine = 1040;
     static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
+    static constexpr bool ContainsUnion = true;
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
@@ -3427,8 +3545,11 @@ class Controller final {
 
     class GetTopologicalPathCompleterBase : public _Base {
      public:
-      void Reply(int32_t status, ::fidl::StringView path);
-      void Reply(::fidl::BytePart _buffer, int32_t status, ::fidl::StringView path);
+      void Reply(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result);
+      void ReplySuccess(::fidl::StringView path);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path);
       void Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params);
 
      protected:
@@ -3845,6 +3966,16 @@ struct IsFidlType<::llcpp::fuchsia::device::Controller_Rebind_Result> : public s
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Rebind_Result>);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response, path) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response) == ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response, path) == 0);
@@ -3927,8 +4058,7 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse)
     == ::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, status) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, path) == 24);
+static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse> : public std::true_type {};

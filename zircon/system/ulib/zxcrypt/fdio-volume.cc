@@ -670,7 +670,7 @@ zx_status_t FdioVolume::RelativeTopologicalPath(fzl::UnownedFdioCaller& caller, 
   fbl::StringBuffer<PATH_MAX> path;
   path.Resize(path.capacity());
   size_t path_len;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(caller.borrow_channel()));
   rc = resp.status();
   if (rc == ZX_OK) {

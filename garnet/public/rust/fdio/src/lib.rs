@@ -211,7 +211,7 @@ pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     let channel = clone_channel(dev)?;
     let mut interface = ControllerSynchronousProxy::new(channel);
     interface
-        .get_topological_path_new(fuchsia_zircon::Time::INFINITE)
+        .get_topological_path(fuchsia_zircon::Time::INFINITE)
         .map_err(|_| zx::Status::IO)?
         .map_err(|e| zx::Status::from_raw(e))
 }

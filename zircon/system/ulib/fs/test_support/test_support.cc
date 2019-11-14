@@ -30,7 +30,7 @@ std::string GetTopologicalPath(zx_handle_t channel) {
   size_t path_len;
   char disk_path[PATH_MAX];
   auto resp =
-      ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(zx::unowned_channel(channel));
+      ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(zx::unowned_channel(channel));
   zx_status_t io_status = resp.status();
   if (io_status != ZX_OK) {
     status = io_status;

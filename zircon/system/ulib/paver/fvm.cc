@@ -56,7 +56,7 @@ constexpr size_t kZxcryptExtraSlices = 1;
 // Upon success, |buf| will contain the null-terminated topological path.
 zx_status_t GetTopoPathFromFd(const fbl::unique_fd& fd, char* buf, size_t buf_len) {
   fzl::UnownedFdioCaller caller(fd.get());
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(caller.channel());
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(caller.channel());
   if (!resp.ok()) {
     return resp.status();
   }

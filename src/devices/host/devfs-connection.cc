@@ -170,15 +170,14 @@ void DevfsConnection::GetTopologicalPath(GetTopologicalPathCompleter::Sync compl
   size_t actual;
   zx_status_t status = devhost_get_topo_path(this->dev, buf, sizeof(buf), &actual);
   if (status != ZX_OK) {
-    auto path = ::fidl::StringView(nullptr, 0);
-    return completer.Reply(status, path);
+    return completer.ReplyError(status);
   }
   if (actual > 0) {
     // Remove the accounting for the null byte
     actual--;
   }
   auto path = ::fidl::StringView(buf, actual);
-  completer.Reply(status, path);
+  completer.ReplySuccess(path);
 }
 
 void DevfsConnection::GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync completer) {

@@ -111,7 +111,7 @@ zx_status_t expr_topo(const char* arg, int fd) {
   }
   zx_status_t call_status = ZX_OK;
   size_t path_len;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(fdio_unsafe_borrow_channel(io)));
   zx_status_t status = resp.status();
 

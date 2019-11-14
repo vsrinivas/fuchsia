@@ -70,7 +70,7 @@ fbl::unique_fd FindGpt() {
     if (info_response.status != ZX_OK) {
       continue;
     }
-    auto result2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+    auto result2 = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
         zx::unowned_channel(dev.get()));
     if (result2.status() != ZX_OK) {
       continue;

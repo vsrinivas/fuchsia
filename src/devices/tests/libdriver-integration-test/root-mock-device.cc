@@ -87,8 +87,8 @@ zx_status_t RootMockDevice::CreateFromTestRoot(
   // case where we're testing composite devices
   fidl::SynchronousInterfacePtr<fuchsia::device::Controller> test_root_controller;
   test_root_controller.Bind(test_root.Unbind().TakeChannel());
-  fuchsia::device::Controller_GetTopologicalPathNew_Result result;
-  status = test_root_controller->GetTopologicalPathNew(&result);
+  fuchsia::device::Controller_GetTopologicalPath_Result result;
+  status = test_root_controller->GetTopologicalPath(&result);
   if (status != ZX_OK) {
     return status;
   }

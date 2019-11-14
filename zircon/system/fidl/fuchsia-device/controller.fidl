@@ -144,9 +144,10 @@ protocol Controller {
     GetDeviceName() -> (string:MAX_DEVICE_NAME_LEN name);
 
     /// Return the topological path for this device
-    GetTopologicalPath() -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
+    GetTopologicalPath() -> (string:MAX_DEVICE_PATH_LEN path) error zx.status;
 
     /// Return the topological path for this device
+    // deprecated. in migration path back to GetTopologicalPath
     GetTopologicalPathNew() -> (string:MAX_DEVICE_PATH_LEN path) error zx.status;
 
     /// Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)

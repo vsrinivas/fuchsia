@@ -178,7 +178,7 @@ zx_status_t BlockDevice::IsUnsealedZxcrypt(bool* is_unsealed_zxcrypt) {
   // determine which it actually is. We do this by looking up the topological
   // path.
 
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(disk_connection.borrow_channel()));
   zx_status_t status = resp.status();
 

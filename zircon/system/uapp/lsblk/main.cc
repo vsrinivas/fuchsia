@@ -70,7 +70,7 @@ typedef struct blkinfo {
 static void populate_topo_path(const zx::unowned_channel& channel, blkinfo_t* info) {
   zx_status_t call_status = ZX_OK;
   size_t path_len;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(channel->get()));
   zx_status_t status = resp.status();
 

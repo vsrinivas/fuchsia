@@ -419,7 +419,7 @@ bool TestDevice::CreateFvmPart(size_t device_size, size_t block_size) {
   size_t out_len;
   zx_status_t status;
   zx_status_t call_status;
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPathNew(
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(
       zx::unowned_channel(parent_channel()->get()));
   status = resp.status();
 
