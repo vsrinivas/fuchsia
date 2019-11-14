@@ -440,6 +440,10 @@ impl HostDispatcher {
         }
     }
 
+    fn stash(&self) -> Stash {
+        self.state.read().stash.clone()
+    }
+
     pub async fn forget(&mut self, peer_id: PeerId) -> types::Result<()> {
         // Try to delete from each adapter, even if it might not have the peer.
         // peers will be updated by the disconnection(s).
@@ -464,9 +468,8 @@ impl HostDispatcher {
             }
         }
 
-        match self.state.write().stash.rm_peer(peer_id) {
-            Err(_) => return Err(err_msg("Couldn't remove peer").into()),
-            Ok(_) => (),
+        if let Err(_) = self.stash().rm_peer(peer_id).await {
+            return Err(err_msg("Couldn't remove peer").into());
         }
 
         if adapters_removed == 0 {
@@ -567,8 +570,10 @@ impl HostDispatcher {
         self.state.write().pairing_delegate()
     }
 
-    pub fn store_bond(&self, bond_data: BondingData) -> Result<(), Error> {
-        self.state.write().stash.store_bond(bond_data)
+    // This is not an async method as we do not want to borrow `self` for the duration of the async
+    // call, and we also want to trigger the send immediately even if the future is not yet awaited
+    pub fn store_bond(&self, bond_data: BondingData) -> impl Future<Output = Result<(), Error>> {
+        self.stash().store_bond(bond_data)
     }
 
     pub fn on_device_updated(&self, peer: Peer) {
@@ -643,7 +648,7 @@ impl HostDispatcher {
         //   - BR/EDR connectable mode
 
         let address = host_device.read().get_info().address.clone();
-        assign_host_data(host_device.clone(), self.clone(), &address)?;
+        assign_host_data(host_device.clone(), self.clone(), &address).await?;
         try_restore_bonds(host_device.clone(), self.clone(), &address)
             .await
             .map_err(|e| e.as_failure())?;
@@ -730,8 +735,9 @@ impl HostListener for HostDispatcher {
     fn on_peer_removed(&mut self, identifier: String) {
         self.on_device_removed(identifier)
     }
-    fn on_new_host_bond(&mut self, data: BondingData) -> Result<(), failure::Error> {
-        self.store_bond(data)
+    type HostBondFut = futures::future::BoxFuture<'static, Result<(), failure::Error>>;
+    fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut {
+        self.store_bond(data).boxed()
     }
 }
 
@@ -818,10 +824,7 @@ async fn try_restore_bonds(
     address: &Address,
 ) -> types::Result<()> {
     // Load bonding data that use this host's `address` as their "local identity address".
-    let opt_data: Option<Vec<_>> = {
-        let lock = hd.state.read();
-        lock.stash.list_bonds(address).map(|iter| iter.cloned().collect())
-    };
+    let opt_data = hd.stash().list_bonds(address.clone()).await?;
     let data = match opt_data {
         Some(data) => data,
         None => return Ok(()),
@@ -840,14 +843,13 @@ fn generate_irk() -> Result<LocalKey, zx::Status> {
     Ok(LocalKey { value: buf })
 }
 
-fn assign_host_data(
+async fn assign_host_data(
     host_device: Arc<RwLock<HostDevice>>,
     hd: HostDispatcher,
     address: &Address,
 ) -> Result<(), Error> {
     // Obtain an existing IRK or generate a new one if one doesn't already exists for |address|.
-    let stash = &mut hd.state.write().stash;
-    let data = match stash.get_host_data(address) {
+    let data = match hd.stash().get_host_data(address.clone()).await? {
         Some(host_data) => {
             fx_vlog!(1, "restored IRK");
             host_data.clone()
@@ -857,14 +859,15 @@ fn assign_host_data(
             fx_vlog!(1, "generating new IRK");
             let new_data = HostData { irk: Some(Box::new(generate_irk()?)) };
 
-            if let Err(e) = stash.store_host_data(address, new_data.clone()) {
+            if let Err(e) = hd.stash().store_host_data(address.clone(), new_data.clone()).await {
                 fx_log_err!("failed to persist local IRK");
                 return Err(e.into());
             }
             new_data
         }
     };
-    host_device.read().set_local_data(data).map_err(|e| e.into())
+    let host = host_device.read();
+    host.set_local_data(data).map_err(|e| e.into())
 }
 
 fn start_pairing_delegate(

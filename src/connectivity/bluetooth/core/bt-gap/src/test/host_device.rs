@@ -14,8 +14,11 @@ use {
         types::{AdapterInfo, Address, BondingData, Peer},
     },
     fuchsia_zircon::DurationNum,
-    futures::FutureExt,
-    futures::{future::join3, stream::StreamExt},
+    futures::{
+        FutureExt,
+        future::{self, join3},
+        stream::StreamExt,
+    },
     parking_lot::RwLock,
     std::path::PathBuf,
     std::sync::Arc,
@@ -31,8 +34,9 @@ use crate::{
 impl HostListener for () {
     fn on_peer_updated(&mut self, _peer: Peer) {}
     fn on_peer_removed(&mut self, _identifier: String) {}
-    fn on_new_host_bond(&mut self, _data: BondingData) -> Result<(), failure::Error> {
-        Ok(())
+    type HostBondFut = future::Ready<Result<(), failure::Error>>;
+    fn on_new_host_bond(&mut self, _data: BondingData) -> Self::HostBondFut {
+        future::ok(())
     }
 }
 

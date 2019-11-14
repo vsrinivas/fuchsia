@@ -139,7 +139,9 @@ impl HostDevice {
 pub trait HostListener {
     fn on_peer_updated(&mut self, peer: Peer);
     fn on_peer_removed(&mut self, identifier: String);
-    fn on_new_host_bond(&mut self, data: BondingData) -> Result<(), failure::Error>;
+
+    type HostBondFut: Future<Output = Result<(), failure::Error>>;
+    fn on_new_host_bond(&mut self, data: BondingData) -> Self::HostBondFut;
 }
 
 pub async fn handle_events<H: HostListener>(
@@ -167,7 +169,7 @@ pub async fn handle_events<H: HostListener>(
                     }
                     Ok(data) => data,
                 };
-                if let Err(e) = listener.on_new_host_bond(data.into()) {
+                if let Err(e) = listener.on_new_host_bond(data.into()).await {
                     fx_log_err!("Failed to persist bonding data: {:#?}", e);
                 }
             }
