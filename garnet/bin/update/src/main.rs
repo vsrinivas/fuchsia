@@ -10,7 +10,8 @@ use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
 use fuchsia_async as fasync;
 use fuchsia_component::client::{launch, launcher};
 use futures::prelude::*;
-use structopt::StructOpt;
+
+mod args;
 
 fn print_state(state: State) {
     if let Some(state) = state.state {
@@ -35,82 +36,30 @@ async fn monitor_state(monitor: MonitorProxy) -> Result<(), Error> {
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    #[derive(Debug, StructOpt)]
-    #[structopt(name = "update")]
-    struct Opt {
-        #[structopt(
-            long = "server",
-            help = "URL of fuchsia.update server",
-            default_value = "fuchsia-pkg://fuchsia.com/omaha_client#meta/omaha_client_service.cmx"
-        )]
-        server_url: String,
-
-        #[structopt(subcommand)]
-        cmd: Command,
-    }
-    #[derive(Debug, StructOpt)]
-    #[structopt(rename_all = "kebab-case")]
-    enum Command {
-        // fuchsia.update.channelcontrol.ChannelControl protocol:
-        Channel {
-            #[structopt(subcommand)]
-            cmd: Channel,
-        },
-
-        // fuchsia.update Manager protocol:
-        /// Print the current update state.
-        State,
-        /// Start an update.
-        CheckNow {
-            /// The update check was initiated by a service, in the background.
-            #[structopt(long = "service-initiated")]
-            service_initiated: bool,
-
-            /// Monitor for state update.
-            #[structopt(long)]
-            monitor: bool,
-        },
-        /// Monitor an in-progress update.
-        Monitor,
-    }
-
-    #[derive(Debug, StructOpt)]
-    #[structopt(rename_all = "kebab-case")]
-    enum Channel {
-        /// Get the current (running) channel.
-        Get,
-        /// Get the target channel.
-        Target,
-        /// Set the target channel.
-        Set { channel: String },
-        /// List of known target channels.
-        List,
-    }
-
     // Launch the server and connect to the omaha client service.
-    let Opt { server_url, cmd } = Opt::from_args();
+    let args::Update { server_url, cmd } = argh::from_env();
     let launcher = launcher().context("Failed to open launcher service")?;
     let app =
         launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
     match cmd {
-        Command::Channel { cmd } => {
+        args::Command::Channel(args::Channel { cmd }) => {
             let channel_control = app
                 .connect_to_service::<ChannelControlMarker>()
                 .context("Failed to connect to channel control service")?;
 
             match cmd {
-                Channel::Get => {
+                args::channel::Command::Get(_) => {
                     let channel = channel_control.get_current().await?;
                     println!("current channel: {}", channel);
                 }
-                Channel::Target => {
+                args::channel::Command::Target(_) => {
                     let channel = channel_control.get_target().await?;
                     println!("target channel: {}", channel);
                 }
-                Channel::Set { channel } => {
+                args::channel::Command::Set(args::channel::Set { channel }) => {
                     channel_control.set_target(&channel).await?;
                 }
-                Channel::List => {
+                args::channel::Command::List(_) => {
                     let channels = channel_control.get_target_list().await?;
                     if channels.is_empty() {
                         println!("known channels list is empty.");
@@ -123,17 +72,17 @@ async fn main() -> Result<(), Error> {
                 }
             }
         }
-        Command::State | Command::CheckNow { .. } | Command::Monitor => {
+        args::Command::State(_) | args::Command::CheckNow(_) | args::Command::Monitor(_) => {
             let omaha_client = app
                 .connect_to_service::<ManagerMarker>()
                 .context("Failed to connect to omaha client manager service")?;
 
             match cmd {
-                Command::State => {
+                args::Command::State(_) => {
                     let state = omaha_client.get_state().await?;
                     print_state(state);
                 }
-                Command::CheckNow { service_initiated, monitor } => {
+                args::Command::CheckNow(args::CheckNow { service_initiated, monitor }) => {
                     let options = Options {
                         initiator: Some(if service_initiated {
                             Initiator::Service
@@ -152,7 +101,7 @@ async fn main() -> Result<(), Error> {
                         println!("Check started result: {:?}", result);
                     }
                 }
-                Command::Monitor => {
+                args::Command::Monitor(_) => {
                     let (client_proxy, server_end) =
                         fidl::endpoints::create_proxy::<MonitorMarker>()?;
                     omaha_client.add_monitor(server_end)?;

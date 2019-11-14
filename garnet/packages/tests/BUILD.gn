@@ -1133,6 +1133,7 @@ group("omaha_client") {
     "//garnet/bin/omaha_client:omaha_client_channels_test_config",
     "//garnet/bin/omaha_client:omaha_client_service_bin_tests",
     "//garnet/bin/omaha_client:omaha_client_test_config",
+    "//garnet/bin/update:update_bin_tests",
     "//garnet/lib/rust/omaha_client:omaha_client_lib_tests",
     "//garnet/packages/prod:omaha_client",
   ]
