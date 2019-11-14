@@ -271,50 +271,24 @@ zx_status_t RndisHost::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
 
 void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
                                     ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
-  size_t length = netbuf->data_size;
-  const uint8_t* byte_data = static_cast<const uint8_t*>(netbuf->data_buffer);
   zx_status_t status = ZX_OK;
 
   fbl::AutoLock lock(&mutex_);
 
   usb_request_t* req = usb_req_list_remove_head(&free_write_reqs_, parent_req_size_);
-  if (req == NULL) {
+  if (req == nullptr) {
     zxlogf(TRACE, "rndishost dropped a packet\n");
     status = ZX_ERR_NO_RESOURCES;
     goto done;
   }
 
-  static_assert(RNDIS_MAX_XFER_SIZE >= sizeof(rndis_packet_header));
-
-  if (length > RNDIS_MAX_XFER_SIZE - sizeof(rndis_packet_header)) {
-    zxlogf(TRACE, "rndishost attempted to send a packet that's too large.\n");
+  status = PrepareDataPacket(req, netbuf->data_buffer, netbuf->data_size);
+  if (status != ZX_OK) {
     status = usb_req_list_add_tail(&free_write_reqs_, req, parent_req_size_);
     ZX_DEBUG_ASSERT(status == ZX_OK);
-    status = ZX_ERR_INVALID_ARGS;
     goto done;
   }
 
-  {
-    rndis_packet_header header;
-    uint8_t* header_data = reinterpret_cast<uint8_t*>(&header);
-    memset(header_data, 0, sizeof(rndis_packet_header));
-    header.msg_type = RNDIS_PACKET_MSG;
-    header.msg_length = static_cast<uint32_t>(sizeof(rndis_packet_header) + length);
-    static_assert(offsetof(rndis_packet_header, data_offset) == 8);
-    header.data_offset = sizeof(rndis_packet_header) - offsetof(rndis_packet_header, data_offset);
-    header.data_length = static_cast<uint32_t>(length);
-
-    usb_request_copy_to(req, header_data, sizeof(rndis_packet_header), 0);
-
-    ssize_t bytes_copied = usb_request_copy_to(req, byte_data, length, sizeof(rndis_packet_header));
-    req->header.length = sizeof(rndis_packet_header) + length;
-    if (bytes_copied < 0) {
-      zxlogf(ERROR, "rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
-      status = usb_req_list_add_tail(&free_write_reqs_, req, parent_req_size_);
-      ZX_DEBUG_ASSERT(status == ZX_OK);
-      goto done;
-    }
-  }
   zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
   {
     usb_request_complete_t complete = {
@@ -329,6 +303,51 @@ void RndisHost::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
 done:
   lock.release();
   completion_cb(cookie, status, netbuf);
+}
+
+zx_status_t RndisHost::PrepareDataPacket(usb_request_t* req, const void* data, size_t data_length) {
+  if (data_length > RNDIS_MAX_DATA_SIZE) {
+    zxlogf(ERROR, "rndishost: data packet too large (%zu bytes, maximum %u)\n", data_length,
+           RNDIS_MAX_DATA_SIZE);
+    return ZX_ERR_IO_OVERRUN;
+  }
+  static_assert(sizeof(rndis_packet_header) < UINT32_MAX &&
+                RNDIS_MAX_DATA_SIZE < UINT32_MAX - sizeof(rndis_packet_header));
+
+  rndis_packet_header header{};
+  header.msg_type = RNDIS_PACKET_MSG;
+  header.msg_length = static_cast<uint32_t>(sizeof(header) + data_length);
+  header.data_offset = sizeof(header) - offsetof(rndis_packet_header, data_offset);
+  header.data_length = static_cast<uint32_t>(data_length);
+
+  ssize_t bytes_copied = usb_request_copy_to(req, &header, sizeof(header), 0);
+  if (bytes_copied < 0) {
+    zxlogf(ERROR, "rndishost: failed to copy request header into send txn (error %zd)\n",
+           bytes_copied);
+    return ZX_ERR_IO;
+  }
+  if (static_cast<size_t>(bytes_copied) < sizeof(header)) {
+    zxlogf(ERROR,
+           "rndishost: failed to copy whole request header into send txn (copied %zd out of %zu "
+           "bytes)\n",
+           bytes_copied, sizeof(header));
+    return ZX_ERR_IO_OVERRUN;
+  }
+
+  bytes_copied = usb_request_copy_to(req, data, data_length, sizeof(header));
+  if (bytes_copied < 0) {
+    zxlogf(ERROR, "rndishost: failed to copy data into send txn (error %zd)\n", bytes_copied);
+    return ZX_ERR_IO;
+  }
+  if (static_cast<size_t>(bytes_copied) < data_length) {
+    zxlogf(ERROR,
+           "rndishost: failed to copy all data into send txn (copied %zd out of %zu bytes)\n",
+           bytes_copied, data_length);
+    return ZX_ERR_IO_OVERRUN;
+  }
+
+  req->header.length = sizeof(header) + data_length;
+  return ZX_OK;
 }
 
 void RndisHost::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }

@@ -64,7 +64,8 @@
 
 #define RNDIS_SET_INFO_BUFFER_LENGTH      0x00000014
 
-#define RNDIS_BUFFER_SIZE (ETH_FRAME_MAX_SIZE + sizeof(rndis_packet_header))
+#define RNDIS_MAX_DATA_SIZE (ETH_FRAME_MAX_SIZE)
+#define RNDIS_BUFFER_SIZE (RNDIS_MAX_DATA_SIZE + sizeof(rndis_packet_header))
 #define RNDIS_QUERY_BUFFER_OFFSET 20
 #define RNDIS_CONTROL_TIMEOUT ZX_SEC(5)
 #define RNDIS_CONTROL_BUFFER_SIZE 1024
@@ -206,6 +207,8 @@ class RndisHost : public RndisHostType,
   zx_status_t InitializeDevice();
   zx_status_t QueryDevice(uint32_t oid, void* info_buffer_out, size_t expected_info_buffer_length);
   zx_status_t SetDeviceOid(uint32_t oid, const void* data, size_t data_length);
+
+  zx_status_t PrepareDataPacket(usb_request_t* req, const void* data, size_t data_length);
 
   usb::UsbDevice usb_;
 
