@@ -15,6 +15,7 @@ group("tz-util") {
 group("broadcom") {
   testonly = true
   public_deps = [
+    "//src/connectivity/bluetooth/hci/vendor/broadcom",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac",
     "//src/connectivity/wlan/drivers/wlanif",
     "//src/connectivity/wlan/drivers/wlanphy",
@@ -62,7 +63,7 @@ group("bluetooth_intel") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_hci",
-    "//src/connectivity/bluetooth/hci/intel",
+    "//src/connectivity/bluetooth/hci/vendor/intel",
   ]
 }
 
@@ -396,14 +397,14 @@ group("bluetooth_atheros") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:bluetooth_hci",
-    "//src/connectivity/bluetooth/hci/atheros",
+    "//src/connectivity/bluetooth/hci/vendor/atheros",
   ]
 }
 
 group("bluetooth_hci") {
   testonly = true
   public_deps = [
-    "//src/connectivity/bluetooth/hci/passthrough",
+    "//src/connectivity/bluetooth/hci/vendor/passthrough",
   ]
 }
 
@@ -429,10 +430,14 @@ group("bluetooth_drivers") {
   testonly = true
   public_deps = [
     "//src/connectivity/bluetooth/core/bt-host",
-    "//src/connectivity/bluetooth/hci/atheros",
     "//src/connectivity/bluetooth/hci/emulator",
-    "//src/connectivity/bluetooth/hci/intel",
-    "//src/connectivity/bluetooth/hci/passthrough",
+    "//src/connectivity/bluetooth/hci/transport/uart",
+    "//src/connectivity/bluetooth/hci/transport/usb",
+    "//src/connectivity/bluetooth/hci/vendor/atheros",
+    "//src/connectivity/bluetooth/hci/vendor/broadcom",
+    "//src/connectivity/bluetooth/hci/vendor/intel",
+    "//src/connectivity/bluetooth/hci/vendor/mediatek",
+    "//src/connectivity/bluetooth/hci/vendor/passthrough",
     "//src/connectivity/bluetooth/profiles/bt-hog",
   ]
 }
