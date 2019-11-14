@@ -8,12 +8,14 @@ import 'dart:io';
 
 import 'package:fidl_fuchsia_app_discover/fidl_async.dart'
     show SuggestionsProxy;
+import 'package:fidl_fuchsia_intl/fidl_async.dart';
 import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_shortcut/fidl_async.dart' as ui_shortcut
     show RegistryProxy;
 
 import 'package:flutter/material.dart';
+import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_inspect/inspect.dart' as inspect;
 import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
 import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
@@ -34,6 +36,7 @@ class AppModel {
   final _suggestionsService = SuggestionsProxy();
   final _puppetMaster = modular.PuppetMasterProxy();
   final _shortcutRegistry = ui_shortcut.RegistryProxy();
+  final _intl = PropertyProviderProxy();
 
   SessionShell sessionShell;
 
@@ -69,6 +72,8 @@ class AppModel {
         .incoming
         .connectToService(_shortcutRegistry);
 
+    StartupContext.fromStartupInfo().incoming.connectToService(_intl);
+
     sessionShell = SessionShell(
       startupContext: _startupContext,
       onStoryStarted: clustersModel.addStory,
@@ -92,6 +97,8 @@ class AppModel {
   SuggestionService get suggestions => SuggestionService(_suggestionsService);
 
   modular.PuppetMaster get puppetMaster => _puppetMaster;
+
+  Stream<Locale> get localeStream => LocaleSource(_intl).stream();
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
 
@@ -243,6 +250,7 @@ class AppModel {
 
     _suggestionsService.ctrl.close();
     _puppetMaster.ctrl.close();
+    _intl.ctrl.close();
     status.dispose();
     _keyboardShortcuts.dispose();
     _shortcutRegistry.ctrl.close();

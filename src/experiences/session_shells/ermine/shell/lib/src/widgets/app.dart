@@ -4,6 +4,12 @@
 
 import 'package:flutter/material.dart';
 
+import 'package:internationalization/localizations_delegate.dart'
+    as localizations;
+import 'package:internationalization/supported_locales.dart'
+    as supported_locales;
+import 'package:flutter_localizations/flutter_localizations.dart';
+
 import '../models/app_model.dart';
 import '../utils/styles.dart';
 
@@ -19,26 +25,38 @@ class App extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      theme: ErmineStyle.kErmineTheme,
-      home: Material(
-          color: ErmineStyle.kBackgroundColor,
-          child: Stack(
-            fit: StackFit.expand,
-            children: <Widget>[
-              // Recents.
-              RecentsContainer(model: model),
-
-              // Overview or Home.
-              AnimatedBuilder(
-                animation: model.overviewVisibility,
-                builder: (context, _) => model.overviewVisibility.value
-                    ? OverviewContainer(model: model)
-                    : HomeContainer(model: model),
-              ),
+    return StreamBuilder<Locale>(
+        stream: model.localeStream,
+        builder: (context, snapshot) {
+          final locale = snapshot.data;
+          return MaterialApp(
+            debugShowCheckedModeBanner: false,
+            theme: ErmineStyle.kErmineTheme,
+            locale: locale,
+            localizationsDelegates: [
+              localizations.delegate(),
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
             ],
-          )),
-    );
+            supportedLocales: supported_locales.locales,
+            home: Material(
+                color: ErmineStyle.kBackgroundColor,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: <Widget>[
+                    // Recents.
+                    RecentsContainer(model: model),
+
+                    // Overview or Home.
+                    AnimatedBuilder(
+                      animation: model.overviewVisibility,
+                      builder: (context, _) => model.overviewVisibility.value
+                          ? OverviewContainer(model: model)
+                          : HomeContainer(model: model),
+                    ),
+                  ],
+                )),
+          );
+        });
   }
 }
