@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::{inspect::DebugExt, types::PeerId},
+    fuchsia_bluetooth::inspect::DebugExt,
     fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType},
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect as inspect,
@@ -20,16 +20,11 @@ use {
     fuchsia_zircon as zx,
     futures::{
         channel::mpsc::{self as mpsc, Receiver, Sender},
-        select, Future, FutureExt, StreamExt,
+        select, FutureExt, StreamExt,
     },
     lazy_static::lazy_static,
-    parking_lot::{Mutex, RwLock},
-    std::{
-        collections::hash_map::{self, Entry},
-        collections::{HashMap, HashSet},
-        string::String,
-        sync::Arc,
-    },
+    parking_lot::Mutex,
+    std::{collections::hash_map, collections::HashMap, sync::Arc},
 };
 
 use crate::inspect_types::StreamingInspectData;
@@ -43,11 +38,12 @@ lazy_static! {
     };
 }
 
-fn get_cobalt_logger() -> CobaltSender {
+pub(crate) fn get_cobalt_logger() -> CobaltSender {
     COBALT_SENDER.clone()
 }
 
 mod avdtp_controller;
+mod connected_peers;
 mod inspect_types;
 mod peer;
 mod player;
@@ -377,70 +373,6 @@ impl Streams {
     }
 }
 
-fn codectype_to_availability_metric(
-    codec_type: avdtp::MediaCodecType,
-) -> metrics::A2dpCodecAvailabilityMetricDimensionCodec {
-    match codec_type {
-        avdtp::MediaCodecType::AUDIO_SBC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Sbc,
-        avdtp::MediaCodecType::AUDIO_MPEG12 => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::Mpeg12
-        }
-        avdtp::MediaCodecType::AUDIO_AAC => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Aac,
-        avdtp::MediaCodecType::AUDIO_ATRAC => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::Atrac
-        }
-        avdtp::MediaCodecType::AUDIO_NON_A2DP => {
-            metrics::A2dpCodecAvailabilityMetricDimensionCodec::VendorSpecific
-        }
-        _ => metrics::A2dpCodecAvailabilityMetricDimensionCodec::Unknown,
-    }
-}
-
-/// Discovers any remote streams and reports their information to the log.
-fn discover_remote_streams(peer: &peer::Peer) -> impl Future<Output = ()> {
-    let collect_fut = peer.collect_capabilities();
-    let remote_capabilities_inspect = peer.remote_capabilities_inspect();
-
-    async move {
-        let mut cobalt = get_cobalt_logger();
-        // Store deduplicated set of codec event codes for logging.
-        let mut codec_event_codes = HashSet::new();
-
-        let streams = match collect_fut.await {
-            Ok(streams) => streams,
-            Err(e) => {
-                fx_log_info!("Collecting capabilities failed: {:?}", e);
-                return;
-            }
-        };
-
-        for stream in streams {
-            let capabilities = stream.capabilities();
-            remote_capabilities_inspect.append(stream.local_id(), &capabilities).await;
-            for cap in capabilities {
-                if let avdtp::ServiceCapability::MediaCodec {
-                    media_type: avdtp::MediaType::Audio,
-                    codec_type,
-                    ..
-                } = cap
-                {
-                    codec_event_codes
-                        .insert(codectype_to_availability_metric(codec_type.clone()) as u32);
-                }
-            }
-        }
-
-        for event_code in codec_event_codes {
-            cobalt.log_event(metrics::A2DP_CODEC_AVAILABILITY_METRIC_ID, event_code);
-        }
-    }
-}
-
-type PeerMap = HashMap<PeerId, peer::Peer>;
-
-// Profiles of AVDTP peers that have been discovered but not connected
-type ProfilesMap = HashMap<PeerId, Option<ProfileDescriptor>>;
-
 /// Decodes a media stream by starting a Player and transferring media stream packets from AVDTP
 /// to the player.  Restarts the player on player errors.
 /// Ends when signaled from `end_signal`, or when the media transport stream is closed.
@@ -523,10 +455,6 @@ async fn decode_media_stream(
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["a2dp-sink"]).expect("Can't init logger");
 
-    // Stateful objects for tracking connected peers
-    let remotes: Arc<RwLock<PeerMap>> = Arc::new(RwLock::new(HashMap::new()));
-    let profiles: Arc<RwLock<ProfilesMap>> = Arc::new(RwLock::new(HashMap::new()));
-
     let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
 
     let inspect = inspect::Inspector::new();
@@ -549,6 +477,8 @@ async fn main() -> Result<(), Error> {
         return Err(format_err!("Can't play media - no codecs found or media player missing"));
     }
 
+    let mut peers = connected_peers::ConnectedPeers::new(streams);
+
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()?;
 
     let mut service_def = make_profile_service_definition();
@@ -561,6 +491,7 @@ async fn main() -> Result<(), Error> {
         ATTR_BLUETOOTH_PROFILE_DESCRIPTOR_LIST,
         ATTR_A2DP_SUPPORTED_FEATURES,
     ];
+
     profile_svc.add_search(ServiceClassProfileIdentifier::AudioSource, &mut attrs.into_iter())?;
 
     fx_log_info!("Registered Service ID {}", service_id);
@@ -581,62 +512,14 @@ async fn main() -> Result<(), Error> {
                     attributes
                 );
                 let peer_id = peer_id.parse().expect("peer ids from profile should parse");
-                let prof_desc: ProfileDescriptor = profile.clone();
-
-                // Update the profile for the peer that is found
-                // If the peer already exists, also run discovery for capabilities
-                // Otherwise, only insert profile
-                if let Some(_) = profiles.write().insert(peer_id, Some(prof_desc)) {
-                    if let Entry::Occupied(mut entry) = remotes.write().entry(peer_id) {
-                        let remote = entry.get_mut();
-                        remote.set_descriptor(prof_desc);
-                        let discovery_fut = discover_remote_streams(remote);
-                        fuchsia_async::spawn(discovery_fut);
-                    }
-                }
+                peers.found(peer_id, profile);
             }
             Ok(ProfileEvent::OnConnected { device_id, service_id: _, channel, protocol }) => {
                 fx_log_info!("Connection from {}: {:?} {:?}!", device_id, channel, protocol);
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
-                match remotes.write().entry(peer_id) {
-                    Entry::Occupied(mut entry) => {
-                        if let Err(e) = entry.get_mut().receive_channel(channel) {
-                            fx_log_warn!("{} failed to connect channel: {}", peer_id, e);
-                        }
-                    }
-                    Entry::Vacant(entry) => {
-                        fx_log_info!("Adding new peer for {}", peer_id);
-                        let avdtp_peer = match avdtp::Peer::new(channel) {
-                            Ok(peer) => peer,
-                            Err(e) => {
-                                fx_log_warn!("Error adding signaling peer {}: {:?}", peer_id, e);
-                                continue;
-                            }
-                        };
-                        let inspect = inspect.root().create_child(format!("peer {}", peer_id));
-                        let mut peer =
-                            peer::Peer::create(peer_id, avdtp_peer, streams.clone(), inspect);
-
-                        // Start remote discovery if profile information exists for the device_id
-                        match profiles.write().entry(peer_id) {
-                            Entry::Occupied(entry) => {
-                                if let Some(prof) = entry.get() {
-                                    peer.set_descriptor(prof.clone());
-                                    let discovery_fut = discover_remote_streams(&peer);
-                                    fuchsia_async::spawn(discovery_fut);
-                                }
-                            }
-                            // Otherwise just insert the device ID with no profile
-                            // Run discovery when profile is updated
-                            Entry::Vacant(entry) => {
-                                entry.insert(None);
-                            }
-                        }
-
-                        controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
-
-                        entry.insert(peer);
-                    }
+                peers.connected(&inspect, peer_id, channel);
+                if let Some(peer) = peers.get(&peer_id) {
+                    controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
                 }
             }
         }
