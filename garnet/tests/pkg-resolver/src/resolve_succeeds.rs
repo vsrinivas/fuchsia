@@ -10,7 +10,10 @@ use {
     super::*,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_merkle::{Hash, MerkleTree},
-    fuchsia_pkg_testing::{serve::UriPathHandler, RepositoryBuilder, VerificationError},
+    fuchsia_pkg_testing::{
+        serve::{AtomicToggle, UriPathHandler},
+        RepositoryBuilder, VerificationError,
+    },
     futures::{
         channel::{mpsc, oneshot},
         future::{ready, BoxFuture},
@@ -301,12 +304,15 @@ async fn download_blob_experiment_uses_cached_package() {
         .build()
         .await
         .unwrap();
-    let repo = RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
-        .add_package(&pkg)
-        .build()
-        .await
-        .unwrap();
-    let served_repository = repo.serve(env.launcher()).await.unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let fail_requests = AtomicToggle::new(true);
+    let served_repository = repo.build_server().inject_500_toggle(&fail_requests).start().unwrap();
 
     let repo_url = "fuchsia-pkg://test".parse().unwrap();
     let repo_config = served_repository.make_repo_config(repo_url);
@@ -321,17 +327,25 @@ async fn download_blob_experiment_uses_cached_package() {
 
     env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
 
+    // the package can't be resolved before the repository can be updated without error.
+    assert_matches!(
+        env.resolve_package("fuchsia-pkg://test/resolve-twice").await,
+        Err(Status::INTERNAL)
+    );
+
     // package resolves as expected.
+    fail_requests.unset();
     let package_dir =
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
     // if no mirrors are accessible, the cached package is returned.
-    served_repository.stop().await;
+    fail_requests.set();
     let package_dir =
         env.resolve_package("fuchsia-pkg://test/resolve-twice").await.expect("package to resolve");
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
 
+    served_repository.stop().await;
     env.stop().await;
 }
 
@@ -488,7 +502,7 @@ impl UriPathHandler for BlockResponseBodyOnceUriPathHandler {
                 .send(Box::new(move || sender.send_data(contents.into()).expect("sending body")));
             response
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -629,7 +643,7 @@ impl UriPathHandler for BlockResponseUriPathHandler {
             waiter.await.expect("request to be unblocked");
             response
         }
-            .boxed()
+        .boxed()
     }
 }
 

@@ -20,14 +20,17 @@ use {
     std::{
         net::{Ipv4Addr, SocketAddr},
         path::{Path, PathBuf},
-        sync::Arc,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
     },
 };
 
 /// A builder to construct a test repository server.
 pub struct ServedRepositoryBuilder {
     repo: Arc<Repository>,
-    uri_path_override_handler: Option<Arc<dyn UriPathHandler>>,
+    uri_path_override_handlers: Vec<Arc<dyn UriPathHandler>>,
 }
 
 /// Override how a `ServedRepository` responds to GET requests on valid URI paths.
@@ -46,13 +49,48 @@ impl UriPathHandler for PassThroughUriPathHandler {
 
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
-        ServedRepositoryBuilder { repo, uri_path_override_handler: None }
+        ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![] }
     }
 
     /// Override how the `ServedRepositoryBuilder` responds to some URI paths.
+    ///
+    /// Requests are passed through URI path handlers in the order in which they were added to this
+    /// builder.
     pub fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
-        self.uri_path_override_handler = Some(Arc::new(handler));
+        self.uri_path_override_handlers.push(Arc::new(handler));
         self
+    }
+
+    /// Add a new path handler to reject all incoming requests while the given toggle switch is
+    /// set.
+    pub fn inject_500_toggle(self, should_fail: &AtomicToggle) -> Self {
+        struct FailSwitchUriPathHandler {
+            should_fail: Arc<AtomicBool>,
+        }
+
+        impl UriPathHandler for FailSwitchUriPathHandler {
+            fn handle(
+                &self,
+                _uri_path: &Path,
+                response: Response<Body>,
+            ) -> BoxFuture<Response<Body>> {
+                async move {
+                    if self.should_fail.load(Ordering::SeqCst) {
+                        Response::builder()
+                            .status(StatusCode::INTERNAL_SERVER_ERROR)
+                            .body(Body::empty())
+                            .unwrap()
+                    } else {
+                        response
+                    }
+                }
+                .boxed()
+            }
+        }
+
+        self.uri_path_override_handler(FailSwitchUriPathHandler {
+            should_fail: Arc::clone(&should_fail.0),
+        })
     }
 
     /// Spawn the server on the current executor, returning a handle to manage the server.
@@ -66,17 +104,16 @@ impl ServedRepositoryBuilder {
         };
 
         let root = self.repo.path();
-        let uri_path_override_handler =
-            self.uri_path_override_handler.unwrap_or(Arc::new(PassThroughUriPathHandler));
+        let uri_path_override_handlers = Arc::new(self.uri_path_override_handlers);
 
         let service = move || {
             let root = root.clone();
-            let uri_path_override_handler = uri_path_override_handler.clone();
+            let uri_path_override_handlers = Arc::clone(&uri_path_override_handlers);
 
             service_fn(move |req| {
                 ServedRepository::handle_tuf_repo_request(
                     root.clone(),
-                    uri_path_override_handler.clone(),
+                    Arc::clone(&uri_path_override_handlers),
                     req,
                 )
                 .boxed()
@@ -134,7 +171,7 @@ impl ServedRepository {
 
     async fn handle_tuf_repo_request(
         repo: PathBuf,
-        uri_path_override_handler: Arc<dyn UriPathHandler>,
+        uri_path_override_handlers: Arc<Vec<Arc<dyn UriPathHandler>>>,
         req: Request<Body>,
     ) -> Result<Response<Body>, hyper::Error> {
         let fail =
@@ -166,16 +203,38 @@ impl ServedRepository {
             }
         };
 
-        Ok(uri_path_override_handler
-            .handle(
-                uri_path,
-                Response::builder()
-                    .status(StatusCode::OK)
-                    .header(header::CONTENT_LENGTH, data.len())
-                    .body(Body::from(data))
-                    .unwrap(),
-            )
-            .await)
+        let mut response = Response::builder()
+            .status(StatusCode::OK)
+            .header(header::CONTENT_LENGTH, data.len())
+            .body(Body::from(data))
+            .unwrap();
+
+        for handler in uri_path_override_handlers.iter() {
+            response = handler.handle(uri_path, response).await
+        }
+
+        Ok(response)
+    }
+}
+
+/// An atomic toggle switch.
+#[derive(Debug, Default)]
+pub struct AtomicToggle(Arc<AtomicBool>);
+
+impl AtomicToggle {
+    /// Creates a new AtomicToggle initialized to `initial`.
+    pub fn new(initial: bool) -> Self {
+        Self(Arc::new(initial.into()))
+    }
+
+    /// Atomically sets this toggle to true.
+    pub fn set(&self) {
+        self.0.store(true, Ordering::SeqCst);
+    }
+
+    /// Atomically sets this toggle to false.
+    pub fn unset(&self) {
+        self.0.store(false, Ordering::SeqCst);
     }
 }
 
