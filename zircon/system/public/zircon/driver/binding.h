@@ -141,6 +141,9 @@ __BEGIN_CDECLS
 #define BIND_SPI_BUS_ID 0x0A41
 #define BIND_SPI_CHIP_SELECT 0x0A42
 
+// PWM binding variables at 0x0A5X
+#define BIND_PWM_ID 0x0A50
+
 // Fuchsia-defined topological path properties are at 0x0B00 through 0x0B7F.
 // Vendor-defined topological path properties are at 0x0B80 to 0x0BFF.
 // For vendor properties, it is recommended that a vendor ID be included
