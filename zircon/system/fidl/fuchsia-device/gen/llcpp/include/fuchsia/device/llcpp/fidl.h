@@ -54,8 +54,6 @@ struct Controller_Rebind_Response;
 struct Controller_Rebind_Result;
 struct Controller_GetTopologicalPath_Response;
 struct Controller_GetTopologicalPath_Result;
-struct Controller_GetTopologicalPathNew_Response;
-struct Controller_GetTopologicalPathNew_Result;
 struct Controller_Bind_Response;
 struct Controller_Bind_Result;
 class Controller;
@@ -1311,123 +1309,6 @@ struct Controller_GetTopologicalPath_Result {
   };
 };
 
-extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
-
-struct Controller_GetTopologicalPathNew_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPathNew_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 1024;
-  static constexpr uint32_t AltPrimarySize = 16;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 1024;
-
-  ::fidl::StringView path = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
-
-struct Controller_GetTopologicalPathNew_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  Controller_GetTopologicalPathNew_Result();
-  ~Controller_GetTopologicalPathNew_Result();
-
-  Controller_GetTopologicalPathNew_Result(Controller_GetTopologicalPathNew_Result&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Controller_GetTopologicalPathNew_Result& operator=(Controller_GetTopologicalPathNew_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_response() const { return tag_ == Tag::kResponse; }
-
-  static Controller_GetTopologicalPathNew_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response&& val) {
-    Controller_GetTopologicalPathNew_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response const & response() const { return response_; }
-
-  bool is_err() const { return tag_ == Tag::kErr; }
-
-  static Controller_GetTopologicalPathNew_Result WithErr(int32_t&& val) {
-    Controller_GetTopologicalPathNew_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPathNew_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 1024;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 1040;
-
- private:
-  void Destroy();
-  void MoveImpl_(Controller_GetTopologicalPathNew_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response response_;
-    int32_t err_;
-  };
-};
-
 extern "C" const fidl_type_t fuchsia_device_Controller_Bind_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_Controller_Bind_ResponseTable;
 
@@ -1569,10 +1450,6 @@ extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathRequestT
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathResponseTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathNewRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathNewRequestTable;
-extern "C" const fidl_type_t fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_ControllerGetEventHandleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_ControllerGetEventHandleResponseTable;
@@ -1783,25 +1660,6 @@ class Controller final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using GetTopologicalPathRequest = ::fidl::AnyZeroArgMessage;
-
-  struct GetTopologicalPathNewResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_ControllerGetTopologicalPathNewResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 40;
-    static constexpr uint32_t MaxOutOfLine = 1024;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 1040;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using GetTopologicalPathNewRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetEventHandleResponse final {
     FIDL_ALIGNDECL
@@ -2297,22 +2155,6 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
-    class GetTopologicalPathNew_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      GetTopologicalPathNew_Impl(zx::unowned_channel _client_end);
-      ~GetTopologicalPathNew_Impl() = default;
-      GetTopologicalPathNew_Impl(GetTopologicalPathNew_Impl&& other) = default;
-      GetTopologicalPathNew_Impl& operator=(GetTopologicalPathNew_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class GetEventHandle_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2544,7 +2386,6 @@ class Controller final {
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
-    using GetTopologicalPathNew = GetTopologicalPathNew_Impl<GetTopologicalPathNewResponse>;
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
@@ -2654,22 +2495,6 @@ class Controller final {
       ~GetTopologicalPath_Impl() = default;
       GetTopologicalPath_Impl(GetTopologicalPath_Impl&& other) = default;
       GetTopologicalPath_Impl& operator=(GetTopologicalPath_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class GetTopologicalPathNew_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      GetTopologicalPathNew_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~GetTopologicalPathNew_Impl() = default;
-      GetTopologicalPathNew_Impl(GetTopologicalPathNew_Impl&& other) = default;
-      GetTopologicalPathNew_Impl& operator=(GetTopologicalPathNew_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
@@ -2910,7 +2735,6 @@ class Controller final {
     using GetDriverName = GetDriverName_Impl<GetDriverNameResponse>;
     using GetDeviceName = GetDeviceName_Impl<GetDeviceNameResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
-    using GetTopologicalPathNew = GetTopologicalPathNew_Impl<GetTopologicalPathNewResponse>;
     using GetEventHandle = GetEventHandle_Impl<GetEventHandleResponse>;
     using GetDriverLogFlags = GetDriverLogFlags_Impl<GetDriverLogFlagsResponse>;
     using SetDriverLogFlags = SetDriverLogFlags_Impl<SetDriverLogFlagsResponse>;
@@ -2991,14 +2815,6 @@ class Controller final {
     // Return the topological path for this device
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetTopologicalPath GetTopologicalPath(::fidl::BytePart _response_buffer);
-
-    // Return the topological path for this device
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    ResultOf::GetTopologicalPathNew GetTopologicalPathNew();
-
-    // Return the topological path for this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::GetTopologicalPathNew GetTopologicalPathNew(::fidl::BytePart _response_buffer);
 
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3209,14 +3025,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetTopologicalPath GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
-    // Return the topological path for this device
-    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
-    static ResultOf::GetTopologicalPathNew GetTopologicalPathNew(zx::unowned_channel _client_end);
-
-    // Return the topological path for this device
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::GetTopologicalPathNew GetTopologicalPathNew(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetEventHandle GetEventHandle(zx::unowned_channel _client_end);
@@ -3392,9 +3200,6 @@ class Controller final {
     // Return the topological path for this device
     static ::fidl::DecodeResult<GetTopologicalPathResponse> GetTopologicalPath(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
-    // Return the topological path for this device
-    static ::fidl::DecodeResult<GetTopologicalPathNewResponse> GetTopologicalPathNew(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Get an event for monitoring device conditions (see `DEVICE_SIGNAL_*` constants)
     static ::fidl::DecodeResult<GetEventHandleResponse> GetEventHandle(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
@@ -3559,23 +3364,6 @@ class Controller final {
     using GetTopologicalPathCompleter = ::fidl::Completer<GetTopologicalPathCompleterBase>;
 
     virtual void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) = 0;
-
-    class GetTopologicalPathNewCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result);
-      void ReplySuccess(::fidl::StringView path);
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer, ::fidl::StringView path);
-      void Reply(::fidl::DecodedMessage<GetTopologicalPathNewResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using GetTopologicalPathNewCompleter = ::fidl::Completer<GetTopologicalPathNewCompleterBase>;
-
-    virtual void GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync _completer) = 0;
 
     class GetEventHandleCompleterBase : public _Base {
      public:
@@ -3822,8 +3610,6 @@ class Controller final {
     static void GetDeviceNameResponse(const ::fidl::DecodedMessage<Controller::GetDeviceNameResponse>& _msg);
     static void GetTopologicalPathRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathRequest>& _msg);
     static void GetTopologicalPathResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathResponse>& _msg);
-    static void GetTopologicalPathNewRequest(const ::fidl::DecodedMessage<Controller::GetTopologicalPathNewRequest>& _msg);
-    static void GetTopologicalPathNewResponse(const ::fidl::DecodedMessage<Controller::GetTopologicalPathNewResponse>& _msg);
     static void GetEventHandleRequest(const ::fidl::DecodedMessage<Controller::GetEventHandleRequest>& _msg);
     static void GetEventHandleResponse(const ::fidl::DecodedMessage<Controller::GetEventHandleResponse>& _msg);
     static void GetDriverLogFlagsRequest(const ::fidl::DecodedMessage<Controller::GetDriverLogFlagsRequest>& _msg);
@@ -3976,16 +3762,6 @@ struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result>);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response>);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response, path) == 0);
-static_assert(sizeof(::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response) == ::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Response::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_GetTopologicalPathNew_Result>);
-
-template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller_Bind_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::Controller_Bind_Response>);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller_Bind_Response, __reserved) == 0);
@@ -4059,14 +3835,6 @@ struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetTopologicalPathRes
 static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse)
     == ::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathResponse, result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse)
-    == ::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::Controller::GetTopologicalPathNewResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::Controller::GetEventHandleResponse> : public std::true_type {};

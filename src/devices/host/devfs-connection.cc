@@ -180,21 +180,6 @@ void DevfsConnection::GetTopologicalPath(GetTopologicalPathCompleter::Sync compl
   completer.ReplySuccess(path);
 }
 
-void DevfsConnection::GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync completer) {
-  char buf[fuchsia_device_MAX_DEVICE_PATH_LEN + 1];
-  size_t actual;
-  zx_status_t status = devhost_get_topo_path(this->dev, buf, sizeof(buf), &actual);
-  if (status != ZX_OK) {
-    return completer.ReplyError(status);
-  }
-  if (actual > 0) {
-    // Remove the accounting for the null byte
-    actual--;
-  }
-  auto path = ::fidl::StringView(buf, actual);
-  completer.ReplySuccess(path);
-}
-
 void DevfsConnection::GetEventHandle(GetEventHandleCompleter::Sync completer) {
   zx::eventpair event;
   zx_status_t status = this->dev->event.duplicate(ZX_RIGHTS_BASIC, &event);

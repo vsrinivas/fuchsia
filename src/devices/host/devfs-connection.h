@@ -79,7 +79,6 @@ class DevfsConnection : public fbl::RefCounted<DevfsConnection>,
   void GetDriverName(GetDriverNameCompleter::Sync _completer) override;
   void GetDeviceName(GetDeviceNameCompleter::Sync _completer) override;
   void GetTopologicalPath(GetTopologicalPathCompleter::Sync _completer) override;
-  void GetTopologicalPathNew(GetTopologicalPathNewCompleter::Sync _completer) override;
   void GetEventHandle(GetEventHandleCompleter::Sync _completer) override;
   void GetDriverLogFlags(GetDriverLogFlagsCompleter::Sync _completer) override;
   void GetDevicePerformanceStates(GetDevicePerformanceStatesCompleter::Sync completer) override;
