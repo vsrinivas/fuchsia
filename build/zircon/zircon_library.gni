@@ -185,10 +185,9 @@ template("zircon_library") {
     foreach(file, invoker.install) {
       if (get_path_info(file.dest, "dir") == "dist") {
         file_name = get_path_info(file.dest, "file")
-        location = rebase_path(file.source, root_build_dir, zircon_root_build_dir)
-        migrated_manifest_lines += [
-          "lib/$file_name=$location"
-        ]
+        location =
+            rebase_path(file.source, root_build_dir, zircon_root_build_dir)
+        migrated_manifest_lines += [ "lib/$file_name=$location" ]
       }
     }
   }
@@ -219,7 +218,8 @@ template("zircon_library") {
     if (!is_fuchsia) {
       public_deps += [ "//zircon/system/public" ]
     }
-    metadata = {}
+    metadata = {
+    }
     if (zx_lib_dirs != []) {
       metadata.zircon_lib_dirs = zx_lib_dirs
     }
