@@ -65,6 +65,7 @@ class FormatNode {
     kValue,        // Value is given, nothing to do.
     kExpression,   // Evaluate an expression in some context to get the value.
     kProgramatic,  // Evaluate a GetProgramaticValue() callback.
+    kDescription,  // This FormatNode is already described and shouldn't be reevaluated.
   };
 
   // The kind of thing the description describes. This is set when the node is put in the described
@@ -142,6 +143,7 @@ class FormatNode {
   fxl::WeakPtr<FormatNode> GetWeakPtr();
 
   Source source() const { return source_; }
+  void set_source(Source s) { source_ = s; }
 
   State state() const { return state_; }
   void set_state(State s) { state_ = s; }

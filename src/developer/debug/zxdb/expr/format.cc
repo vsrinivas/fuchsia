@@ -631,6 +631,8 @@ void FillFormatNodeValue(FormatNode* node, const fxl::RefPtr<EvalContext>& conte
       // Lambda provides the value.
       node->FillProgramaticValue(std::move(context), std::move(cb));
       return;
+    case FormatNode::kDescription:
+      return;
   }
   FXL_NOTREACHED();
 }
@@ -639,6 +641,10 @@ void FillFormatNodeDescription(FormatNode* node, const FormatOptions& options,
                                const fxl::RefPtr<EvalContext>& context, fit::deferred_callback cb) {
   if (node->state() == FormatNode::kEmpty || node->err().has_error()) {
     node->set_state(FormatNode::kDescribed);
+    return;
+  }
+
+  if (node->source() == FormatNode::kDescription) {
     return;
   }
 

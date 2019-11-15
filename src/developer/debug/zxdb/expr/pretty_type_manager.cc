@@ -225,6 +225,10 @@ void PrettyTypeManager::AddDefaultRustPrettyTypes() {
       std::make_unique<PrettyPointer>("pointer", GetterList{{"as_ptr", "ptr.pointer"},
                                                             {"as_ref", "*ptr.pointer"},
                                                             {"as_mut", "*ptr.pointer"}}));
+
+  // Rust's wrapper for zx_status_t
+  rust_.emplace_back(InternalGlob("fuchsia_zircon_status::Status"),
+                     std::make_unique<PrettyRustZirconStatus>());
 }
 
 void PrettyTypeManager::AddDefaultFuchsiaCppPrettyTypes() {

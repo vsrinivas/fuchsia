@@ -25,7 +25,7 @@ class PrettyRustTupleTest : public TestWithLoop {
   // Evaluates the given member, promotes the result to 64-bit and expects that it's equal to the
   // given value.
   void ExpectMemberValue(const ExprValue& input, const std::string& member_name,
-                         uint64_t expected) {
+                         int64_t expected) {
     PrettyRustTuple pretty;
 
     auto getter = pretty.GetMember(member_name);
@@ -38,7 +38,7 @@ class PrettyRustTupleTest : public TestWithLoop {
 
       ASSERT_TRUE(v.ok()) << v.err().msg();
 
-      uint64_t actual = 0;
+      int64_t actual = 0;
       Err err = v.value().PromoteTo64(&actual);
       ASSERT_TRUE(err.ok());
       EXPECT_EQ(expected, actual);
@@ -121,6 +121,35 @@ TEST_F(PrettyRustTupleTest, TupleStruct) {
   EXPECT_EQ("value = MyStruct, \n  0 = int32_t, 13\n", GetDebugTreeForFormatNode(&node));
 
   ExpectMemberValue(value, "0", 13);
+}
+
+TEST_F(PrettyRustTupleTest, Status) {
+  const char kRustStatusName[] = "fuchsia_zircon_status::Status";
+
+  // Encodes -6 as a 32-bit integer.
+  uint8_t kMem[4] = {
+      0xfa,
+      0xff,
+      0xff,
+      0xff,
+  };
+
+  auto int32_type = MakeInt32Type();
+  auto type = MakeTestRustTuple(kRustStatusName, {int32_type});
+
+  ExprValue value(type, std::vector<uint8_t>(std::begin(kMem), std::end(kMem)));
+  FormatNode node("value", value);
+
+  PrettyRustZirconStatus pretty;
+
+  // Expect synchronous completion for the inline value case.
+  bool completed = false;
+  pretty.Format(&node, FormatOptions(), context(),
+                fit::defer_callback([&completed]() { completed = true; }));
+  EXPECT_TRUE(completed);
+  ASSERT_EQ(1u, node.children().size());
+
+  EXPECT_EQ("-6 (ZX_ERR_INTERNAL_INTR_RETRY)", node.children()[0]->description());
 }
 
 }  // namespace zxdb

@@ -60,4 +60,38 @@ PrettyRustTuple::EvalFunction PrettyRustTuple::GetMember(const std::string& gett
   };
 }
 
+void PrettyRustZirconStatus::Format(FormatNode* node, const FormatOptions& options,
+                                    const fxl::RefPtr<EvalContext>& context,
+                                    fit::deferred_callback cb) {
+  auto collection = node->value().type()->AsCollection();
+  if (!collection || collection->GetSpecialType() != Collection::kRustTupleStruct) {
+    return;
+  }
+
+  node->set_description_kind(FormatNode::kRustTupleStruct);
+
+  const auto& members = collection->data_members();
+  if (members.size() != 1) {
+    return;
+  }
+
+  if (const DataMember* member = members[0].Get()->AsDataMember()) {
+    auto child = std::make_unique<FormatNode>(
+        "0", ResolveNonstaticMember(context, node->value(), FoundMember(member)));
+
+    // The status formatter can return immediately, meaning this node gets printed before this
+    // function is done, so we have to share the return callback, not just pass it along.
+    auto shared_cb = std::make_shared<fit::deferred_callback>(std::move(cb));
+
+    PrettyZxStatusT status_formatter;
+    status_formatter.Format(child.get(), options, context,
+                            fit::defer_callback([shared_cb]() mutable {}));
+
+    child->set_state(FormatNode::kDescribed);
+    child->set_source(FormatNode::kDescription);
+
+    node->children().push_back(std::move(child));
+  }
+}
+
 }  // namespace zxdb
