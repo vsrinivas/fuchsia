@@ -1,19 +1,16 @@
 {
-	"encrypted": true,
-	"data": {
-		"kdf": {
-			"name": "scrypt",
-			"params": {
-				"N": 32768,
-				"r": 8,
-				"p": 1
-			},
-			"salt": "m8HDPiWZgMlGChTNXhzO1/pqwQyvLISZ1jwT5prCy9g="
-		},
-		"cipher": {
-			"name": "nacl/secretbox",
-			"nonce": "raNiG6gPwBo6wj1TqCv4R22dRpprrLGq"
-		},
-		"ciphertext": "kvXsMxPuaaTgsxQ36RvK8rCOb7WwkF0zHG08hCTowwHxrPLiRjtsQo4XfxOQSxpL25PGFK9TdhuANsHYNWH/eH+T0Udqberc7jsSwWGw1ZmOAz/gpmgQOuo53S4Ejgf4RaWPAR3W1XiRh9zDEskWcUi99Xl+k6CmA+5jVjZEm66AFBTZr9I7A/2lhPsiF9hPTvw+avg6YLdhVVkAvz4cxSTzGPJoNXKbXj9ARdoJLgpgTBRv7yupowUB+brxyiFWsdgtfcSibSt9yy3FypHn6Z6Zg5NpZ8+w5lGlxVh63nTeIWumtIH0jkJ3okm6CdyEOUgMHuFBU4PijnSocFUmWbJwKMXaSglfPW+I+LhZda7pEUNQu8moTkAW14T62XC1q/rIUjjVABv7w17O/0LpSf/u2SPMi7Pa505hH9kvDr9IMr8nJLOuLuCvqiGUQ4ZU457JSbabTZGeL9FXrBkGYULar3WPMwAf9Tg="
-	}
+	"encrypted": false,
+	"data": [
+		{
+			"keytype": "ed25519",
+			"scheme": "ed25519",
+			"keyid_hash_algorithms": [
+				"sha256"
+			],
+			"keyval": {
+				"public": "d579d1393accdf185495abce83bbcd9924118ff61beac8a46df126e4abe36e50",
+				"private": "960ee0af74e6c9a37c91c545d7c1287be82005bac5d77e89bd3e1ededaab35e3d579d1393accdf185495abce83bbcd9924118ff61beac8a46df126e4abe36e50"
+			}
+		}
+	]
 }
