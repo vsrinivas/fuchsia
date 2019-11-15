@@ -82,9 +82,9 @@ Eventually, the vendor will be able to build and test for Fuchsia, so the Fuchsi
 ### Validation Stages
 
 * A simple Vulkan test passes
-	* Test: [vkreadback](/garnet/lib/magma/tests/vkreadback) (draws a color then reads back the framebuffer values)
+	* Test: [vkreadback](/src/graphics/tests/vkreadback) (draws a color then reads back the framebuffer values)
 * Add support for fuchsia window system integration extensions using zircon framebuffer library
     * Test: [vkcube](/src/graphics/examples/vkcube/) (animated, using VK_KHR_swapchain)
 * Add support for fuchsia external memory and semaphore extensions
-	* Test: [vkext](/garnet/lib/magma/tests/vkext)
+	* Test: [vkext](/src/graphics/tests/vkext)
 

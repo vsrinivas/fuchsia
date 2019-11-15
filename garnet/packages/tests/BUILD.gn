@@ -849,6 +849,8 @@ group("vulkan") {
   testonly = true
   public_deps = [
     "//garnet/packages/prod:vulkan",
+    "//src/graphics/tests:vulkan-tests",
+    "//src/graphics/tests/benchmark:vulkan-benchmark",
     "//src/graphics/tests/vkvalidation:test-vk-validation",
     "//src/lib/vulkan:loader_and_validation_tests",
   ]
@@ -870,10 +872,7 @@ group("magma") {
     "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
     "//garnet/lib/magma/gnbuild/magma-img-rgx:magma-vulkan-no-hardware",
     "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",
-    "//garnet/lib/magma/tests:magma_abi_conformance_tests",
-    "//garnet/lib/magma/tests:magma_nonhardware_tests",
-    "//garnet/lib/magma/tests:tests",
-    "//garnet/lib/magma/tests:vulkan-tests",
+    "//garnet/lib/magma/tests",
     "//garnet/packages/prod:vulkan",
   ]
   if (target_cpu == "x64") {
@@ -882,6 +881,13 @@ group("magma") {
       "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
     ]
   }
+
+  # Ensure the test MSDs are built even when not deployed
+  public_deps += [
+    "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
+    "//garnet/drivers/gpu/msd-intel-gen:msd_intel_test",
+    "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test",
+  ]
 }
 
 group("json") {

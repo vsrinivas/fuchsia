@@ -6,41 +6,15 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
-import("//src/lib/vulkan/layers.gni")
 
 group("tests") {
   testonly = true
 
   deps = [
-    "benchmark",
+    ":magma_abi_conformance_tests",
+    ":magma_nonhardware_tests",
     "codegen",
-    "icd_load",
-    "unit_tests",
-    "vkext",
-    "vkloop",
-    "vkpriority",
-    "vkreadback",
   ]
-
-  # Intel
-  if (target_cpu == "x64") {
-    deps += [
-      "$msd_intel_gen_build_root:msd_intel_test",
-      "$msd_intel_gen_build_root:tests",
-      "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
-      "//third_party/mesa:tests",
-    ]
-  }
-
-  # arm/mali
-  deps += [
-    "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
-    "//garnet/drivers/gpu/msd-arm-mali:tests",
-    "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
-  ]
-
-  # vsl/gc
-  deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
 }
 
 test_package("magma_nonhardware_tests") {
@@ -65,82 +39,6 @@ test_package("magma_abi_conformance_tests") {
     {
       name = "magma_abi_conformance_tests"
       environments = magma_hardware_envs
-    },
-  ]
-}
-
-protected_libvulkan_envs = []
-
-# Filter out everything that's not astro or sherlock.
-foreach(env, magma_libvulkan_hardware_envs) {
-  if (env == sherlock_env || env == astro_env) {
-    protected_libvulkan_envs += [ env ]
-  }
-}
-
-test_package("vulkan-tests") {
-  deps = [
-    "benchmark",
-    "icd_load",
-    "vk_timer_query",
-    "vkext",
-    "vkloop",
-    "vkpriority",
-    "vkreadback",
-  ]
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
-  public_deps = vulkan_validation_layers.public_deps
-
-  tests = [
-    {
-      name = "icd_load"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "magma_memcpy"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "vkreadback"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "vkloop"
-
-      # TODO(MA-530): re-enable once working again.
-      disabled = true
-    },
-    {
-      name = "vkext"
-      dest = "vkext_unprotected"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "vkext"
-      dest = "vkext_protected"
-      environments = protected_libvulkan_envs
-    },
-    {
-      name = "vkcopy"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
-      name = "vkpriority"
-
-      # No available hardware to run it on; cannot run with an Intel GPU.
-      disabled = true
-    },
-    {
-      name = "vk_timer_query_tests"
-      environments = magma_libvulkan_arm_hardware_envs
-    },
-  ]
-
-  resources += [
-    {
-      path = "vkloop/comp.spv"
-      dest = "vkloop.spv"
     },
   ]
 }

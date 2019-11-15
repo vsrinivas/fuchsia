@@ -2,12 +2,85 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//src/lib/vulkan/layers.gni")
+
 group("tests") {
   testonly = true
 
   deps = [
+    ":vulkan-tests",
+    "benchmark",
     "goldfish_benchmark",
     "goldfish_test",
     "vkvalidation:test-vk-validation",
+  ]
+}
+
+protected_libvulkan_envs = []
+
+# Filter out everything that's not astro or sherlock.
+foreach(env, magma_libvulkan_hardware_envs) {
+  if (env == sherlock_env || env == astro_env) {
+    protected_libvulkan_envs += [ env ]
+  }
+}
+
+test_package("vulkan-tests") {
+  deps = [
+    "icd_load",
+    "vk_timer_query",
+    "vkext",
+    "vkloop",
+    "vkpriority",
+    "vkreadback",
+  ]
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+  public_deps = vulkan_validation_layers.public_deps
+
+  tests = [
+    {
+      name = "icd_load"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkreadback"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkloop"
+
+      # TODO(MA-530): re-enable once working again.
+      disabled = true
+    },
+    {
+      name = "vkext"
+      dest = "vkext_unprotected"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "vkext"
+      dest = "vkext_protected"
+      environments = protected_libvulkan_envs
+    },
+    {
+      name = "vkpriority"
+
+      # No available hardware to run it on; cannot run with an Intel GPU.
+      disabled = true
+    },
+    {
+      name = "vk_timer_query_tests"
+      environments = magma_libvulkan_arm_hardware_envs
+    },
+  ]
+
+  resources += [
+    {
+      path = "vkloop/comp.spv"
+      dest = "vkloop.spv"
+    },
   ]
 }

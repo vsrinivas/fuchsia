@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_LIB_MAGMA_TESTS_VKREADBACK_VKREADBACK_H_
-#define GARNET_LIB_MAGMA_TESTS_VKREADBACK_VKREADBACK_H_
+#ifndef SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_
+#define SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_
 
 #include <stdint.h>
 #include <stdio.h>
@@ -59,4 +59,4 @@ class VkReadbackTest {
   uint64_t bind_offset_;
 };
 
-#endif  // GARNET_LIB_MAGMA_TESTS_VKREADBACK_VKREADBACK_H_
+#endif  // SRC_GRAPHICS_TESTS_VKREADBACK_VKREADBACK_H_

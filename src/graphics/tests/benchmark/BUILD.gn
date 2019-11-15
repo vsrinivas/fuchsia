@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 group("benchmark") {
@@ -10,11 +11,29 @@ group("benchmark") {
   public_deps = [
     ":memcpy",
     ":vkcopy",
+    ":vulkan-benchmark",
+  ]
+}
+
+test_package("vulkan-benchmark") {
+  deps = [
+    ":memcpy",
+    ":vkcopy",
+  ]
+
+  tests = [
+    {
+      name = "vkcopy"
+      environments = magma_libvulkan_hardware_envs
+    },
+    {
+      name = "test_memcpy"
+    },
   ]
 }
 
 executable("memcpy") {
-  output_name = "magma_memcpy"
+  output_name = "test_memcpy"
 
   sources = [
     "test_memcpy.cc",
