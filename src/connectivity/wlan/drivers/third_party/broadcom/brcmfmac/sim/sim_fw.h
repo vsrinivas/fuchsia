@@ -52,9 +52,13 @@ class SimFirmware {
     uint8_t msg_[BRCMF_DCMD_MAXLEN];
   };
 
-  using ScanResultHandler = std::function<void(const wlan_channel_t& channel,
-                                               const wlan_ssid_t& ssid,
-                                               const common::MacAddr& bssid)>;
+  struct ScanResult {
+    wlan_channel_t channel;
+    wlan_ssid_t ssid;
+    common::MacAddr bssid;
+  };
+
+  using ScanResultHandler = std::function<void(const ScanResult& scan_result)>;
   using ScanDoneHandler = std::function<void()>;
 
   struct ScanOpts {
@@ -157,8 +161,7 @@ class SimFirmware {
 
   // Escan operations
   zx_status_t EscanStart(uint16_t sync_id, const brcmf_scan_params_le* params, size_t params_len);
-  void EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                       const common::MacAddr& bssid);
+  void EscanResultSeen(const ScanResult& scan_result);
   void EscanComplete();
 
   // Handlers for events from hardware

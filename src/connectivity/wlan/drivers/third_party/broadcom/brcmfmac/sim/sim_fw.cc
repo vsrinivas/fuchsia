@@ -547,8 +547,7 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
     scan_opts->dwell_time = zx::msec(params->passive_time);
   }
 
-  scan_opts->on_result_fn = std::bind(&SimFirmware::EscanResultSeen, this, std::placeholders::_1,
-                                      std::placeholders::_2, std::placeholders::_3);
+  scan_opts->on_result_fn = std::bind(&SimFirmware::EscanResultSeen, this, std::placeholders::_1);
   scan_opts->on_done_fn = std::bind(&SimFirmware::EscanComplete, this);
   return ScanStart(std::move(scan_opts));
 }
@@ -565,15 +564,15 @@ void SimFirmware::EscanComplete() {
 
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                            const common::MacAddr& bssid) {
-  scan_state_.opts->on_result_fn(channel, ssid, bssid);
+  ScanResult scan_result = { .channel = channel, .ssid = ssid, .bssid = bssid };
+  scan_state_.opts->on_result_fn(scan_result);
 }
 
 // Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
 // brcmf_escan_result.
-void SimFirmware::EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                                  const common::MacAddr& bssid) {
+void SimFirmware::EscanResultSeen(const ScanResult& result_in) {
   // For now, the only IE we will include will be for the SSID
-  size_t ssid_ie_size = 2 + ssid.len;
+  size_t ssid_ie_size = 2 + result_in.ssid.len;
 
   // scan_result_size includes all BSS info structures (each including IEs). We (like the firmware)
   // only send one result back at a time.
@@ -590,29 +589,29 @@ void SimFirmware::EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid
   msg_be->status = htobe32(BRCMF_E_STATUS_PARTIAL);
 
   uint8_t* buffer_data = buf->data();
-  auto scan_result = reinterpret_cast<brcmf_escan_result_le*>(&buffer_data[scan_result_offset]);
-  scan_result->buflen = scan_result_size;
-  scan_result->version = BRCMF_BSS_INFO_VERSION;
-  scan_result->sync_id = scan_state_.opts->sync_id;
-  scan_result->bss_count = 1;
+  auto result_out = reinterpret_cast<brcmf_escan_result_le*>(&buffer_data[scan_result_offset]);
+  result_out->buflen = scan_result_size;
+  result_out->version = BRCMF_BSS_INFO_VERSION;
+  result_out->sync_id = scan_state_.opts->sync_id;
+  result_out->bss_count = 1;
 
-  struct brcmf_bss_info_le* bss_info = &scan_result->bss_info_le;
+  struct brcmf_bss_info_le* bss_info = &result_out->bss_info_le;
   bss_info->version = BRCMF_BSS_INFO_VERSION;
 
   // length of this record (includes IEs)
   bss_info->length = roundup(sizeof(brcmf_bss_info_le) + ssid_ie_size, 4);
 
   // channel
-  bss_info->chanspec = channel_to_chanspec(&d11_inf_, &channel);
+  bss_info->chanspec = channel_to_chanspec(&d11_inf_, &result_in.channel);
 
   // ssid
-  ZX_ASSERT(sizeof(bss_info->SSID) == sizeof(ssid.ssid));
-  ZX_ASSERT(ssid.len <= sizeof(ssid.ssid));
+  ZX_ASSERT(sizeof(bss_info->SSID) == sizeof(result_in.ssid.ssid));
+  ZX_ASSERT(result_in.ssid.len <= sizeof(result_in.ssid.ssid));
   bss_info->SSID_len = 0;  // SSID will go into an IE
 
   // bssid
   ZX_ASSERT(sizeof(bss_info->BSSID) == common::kMacAddrLen);
-  memcpy(bss_info->BSSID, bssid.byte, common::kMacAddrLen);
+  memcpy(bss_info->BSSID, result_in.bssid.byte, common::kMacAddrLen);
 
   // IEs
   bss_info->ie_offset = sizeof(brcmf_bss_info_le);
@@ -622,9 +621,9 @@ void SimFirmware::EscanResultSeen(const wlan_channel_t& channel, const wlan_ssid
   size_t ie_len = 0;
   uint8_t* ie_data = &buffer_data[ie_offset];
   ie_data[ie_len++] = IEEE80211_ASSOC_TAG_SSID;
-  ie_data[ie_len++] = ssid.len;
-  memcpy(&ie_data[ie_len], ssid.ssid, ssid.len);
-  ie_len += ssid.len;
+  ie_data[ie_len++] = result_in.ssid.len;
+  memcpy(&ie_data[ie_len], result_in.ssid.ssid, result_in.ssid.len);
+  ie_len += result_in.ssid.len;
 
   bss_info->ie_length = ie_len;
 
