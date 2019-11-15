@@ -329,15 +329,6 @@ zx_handle_t get_root_resource(void);
 // returned in size.
 zx_status_t load_firmware(zx_device_t* device, const char* path, zx_handle_t* fw, size_t* size);
 
-// panic is for handling non-recoverable, non-reportable fatal
-// errors in a way that will get logged.  Right now this just
-// does a bogus write to unmapped memory.
-static inline void panic(void) {
-  for (;;) {
-    *((int*)0xdead) = 1;
-  }
-}
-
 // Protocol Identifiers
 #define DDK_PROTOCOL_DEF(tag, val, name, flags) ZX_PROTOCOL_##tag = val,
 enum {

@@ -172,7 +172,7 @@ static void reap_tx_buffers(struct adapter* adapter) {
         }
         struct framebuf* frame = list_remove_head_type(&adapter->busy_frames, struct framebuf, node);
         if (frame == NULL) {
-            panic();
+            ZX_PANIC("e1000: frame is invalid");
         }
         // TODO: verify that this is the matching buffer to txd[n] addr?
         list_add_tail(&adapter->free_frames, &frame->node);

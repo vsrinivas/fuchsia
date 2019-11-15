@@ -478,18 +478,16 @@ zx_status_t devhost_device_remove(const fbl::RefPtr<zx_device_t>& dev,
 
 void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK {
   if (dev->flags & REMOVAL_BAD_FLAGS) {
-    printf("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
-           removal_problem(dev->flags));
-    panic();
+    ZX_PANIC("device: %p(%s): cannot reply to unbind, bad flags: (%s)\n", dev.get(), dev->name,
+             removal_problem(dev->flags));
   }
   if (!(dev->flags & DEV_FLAG_UNBOUND)) {
     ZX_PANIC("device: %p(%s): cannot reply to unbind, not in unbinding state, flags are 0x%x\n",
              dev.get(), dev->name, dev->flags);
   }
   if (dev->outstanding_transactions > 0) {
-    printf("device: %p(%s): cannot reply to unbind, currently has %d outstanding transactions\n",
-           dev.get(), dev->name, dev->outstanding_transactions.load());
-    panic();
+    ZX_PANIC("device: %p(%s): cannot reply to unbind, currently has %d outstanding transactions\n",
+             dev.get(), dev->name, dev->outstanding_transactions.load());
   }
 
 #if TRACE_ADD_REMOVE
@@ -498,9 +496,8 @@ void devhost_device_unbind_reply(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOC
   if (dev->unbind_cb) {
     dev->unbind_cb(ZX_OK);
   } else {
-    printf("device: %p(%s): cannot reply to unbind, no callback set, flags are 0x%x\n", dev.get(),
+    ZX_PANIC("device: %p(%s): cannot reply to unbind, no callback set, flags are 0x%x\n", dev.get(),
            dev->name, dev->flags);
-    panic();
   }
 }
 
@@ -583,8 +580,7 @@ zx_status_t devhost_device_open(const fbl::RefPtr<zx_device_t>& dev, fbl::RefPtr
     new_ref = fbl::ImportFromRawPtr(opened_dev);
 
     if (!(opened_dev->flags & DEV_FLAG_INSTANCE)) {
-      printf("device open: %p(%s) in bad state %x\n", opened_dev, opened_dev->name, flags);
-      panic();
+      ZX_PANIC("device open: %p(%s) in bad state %x\n", opened_dev, opened_dev->name, flags);
     }
   }
   *out = std::move(new_ref);
@@ -713,9 +709,10 @@ zx_status_t devhost_device_suspend_new(const fbl::RefPtr<zx_device>& dev,
     *out_state = static_cast<::llcpp::fuchsia::device::DevicePowerState>(raw_out);
     // We expect 1 outstanding transaction (and a copy of it) for the suspend operation itself.
     if (status == ZX_OK && dev->outstanding_transactions > 2) {
-      printf("device: %p(%s): cannot reply to suspend, currently has %d outstanding transactions\n",
-             dev.get(), dev->name, dev->outstanding_transactions.load());
-      panic();
+      ZX_PANIC(
+          "device: %p(%s): cannot reply to suspend, "
+          "currently has %d outstanding transactions\n",
+          dev.get(), dev->name, dev->outstanding_transactions.load());
     }
   }
   return status;

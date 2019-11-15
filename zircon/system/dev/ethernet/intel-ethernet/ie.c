@@ -8,6 +8,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
+#include <zircon/assert.h>
 #include <zircon/listnode.h>
 
 #if _KERNEL
@@ -94,7 +95,7 @@ static void reap_tx_buffers(ethdev_t* eth) {
     }
     framebuf_t* frame = list_remove_head_type(&eth->busy_frames, framebuf_t, node);
     if (frame == NULL) {
-      panic();
+      ZX_PANIC("intel-eth: frame is invalid");
     }
     // TODO: verify that this is the matching buffer to txd[n] addr?
     list_add_tail(&eth->free_frames, &frame->node);
