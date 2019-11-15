@@ -92,6 +92,8 @@ struct ImageConfig {
     array<ImagePlane>:4 planes;
 };
 const uint32 typeSimple = 0;
+// Intentionally left some gap between Simple and Capture types.
+const uint32 typeCapture = 10; //The image is used for capture
 
 // Rotations are applied counter-clockwise, and are applied before reflections.
 enum Transform : uint8 {
@@ -471,6 +473,9 @@ protocol Controller {
     // If the system only supports single-buffered mode with a single framebuffer, then this returns
     // that buffer and its stride. Otherwise it can return ZX_ERR_NOT_SUPPORTED.
     GetSingleBufferFramebuffer() -> (zx.status res, handle<vmo>? vmo, uint32 stride);
+
+    /// Returns true if Capture is supported on the platform.
+    IsCaptureSupported() -> (bool supported) error zx.status;
 
     /// Imports a buffer collection backed VMO into the display controller. The VMO
     /// will be used by display controller to capture the image being displayed.

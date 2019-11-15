@@ -5,9 +5,14 @@
 #include "fake-display.h"
 
 #include <fuchsia/sysmem/c/fidl.h>
+#include <lib/fzl/vmo-mapper.h>
+#include <lib/image-format/image_format.h>
+#include <lib/zx/pmt.h>
 #include <lib/zx/time.h>
+#include <sys/types.h>
 #include <threads.h>
 #include <zircon/errors.h>
+#include <zircon/limits.h>
 
 #include <algorithm>
 #include <memory>
@@ -22,6 +27,9 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+
+#include "fbl/vector.h"
+#include "zircon/types.h"
 
 namespace fake_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -84,7 +92,7 @@ zx_status_t FakeDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx:
     return status;
   }
 
-  import_info->paddr = GetNextFakePaddr();
+  import_info->vmo = std::move(vmo);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
 
@@ -106,8 +114,28 @@ zx_status_t FakeDisplay::DisplayControllerImplImportImage(image_t* image,
     status = ZX_ERR_INVALID_ARGS;
     return status;
   }
+  zx_status_t status2;
+  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+  status =
+      fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
 
-  import_info->paddr = GetNextFakePaddr();
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (status2 != ZX_OK) {
+    return status2;
+  }
+
+  fbl::Vector<zx::vmo> vmos;
+  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+  }
+
+  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  import_info->vmo = std::move(vmos[index]);
   image->handle = reinterpret_cast<uint64_t>(import_info.get());
   imported_images_.push_back(std::move(import_info));
   return status;
@@ -260,55 +288,82 @@ void FakeDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void FakeDisplay::DisplayCaptureImplSetDisplayCaptureInterface(
     const display_capture_interface_protocol_t* intf) {
-  fbl::AutoLock lock(&display_lock_);
+  fbl::AutoLock lock(&capture_lock_);
   capture_intf_ = ddk::DisplayCaptureInterfaceProtocolClient(intf);
   capture_active_id_ = INVALID_ID;
 }
 
-zx_status_t FakeDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t /*unused*/,
-                                                                 uint32_t /*unused*/,
+zx_status_t FakeDisplay::DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
+                                                                 uint32_t index,
                                                                  uint64_t* out_capture_handle) {
   auto import_capture = std::make_unique<ImageInfo>();
   if (import_capture == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }
-  fbl::AutoLock lock(&display_lock_);
-  import_capture->paddr = GetNextFakePaddr();
+  fbl::AutoLock lock(&capture_lock_);
+  zx_status_t status, status2;
+  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
+  status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection, &status2,
+                                                                  &collection_info);
+  if (status != ZX_OK) {
+    return status;
+  }
+  if (status2 != ZX_OK) {
+    return status2;
+  }
 
+  fbl::Vector<zx::vmo> vmos;
+  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
+    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
+  }
+
+  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+    return ZX_ERR_OUT_OF_RANGE;
+  }
+
+  import_capture->vmo = std::move(vmos[index]);
   *out_capture_handle = reinterpret_cast<uint64_t>(import_capture.get());
   imported_captures_.push_back(std::move(import_capture));
   return ZX_OK;
 }
 
 zx_status_t FakeDisplay::DisplayCaptureImplStartCapture(uint64_t capture_handle) {
-  fbl::AutoLock lock(&display_lock_);
+  fbl::AutoLock lock(&capture_lock_);
   if (capture_active_id_ != INVALID_ID) {
     return ZX_ERR_SHOULD_WAIT;
   }
+
   // Confirm the handle was previously imported (hence valid)
   auto info = reinterpret_cast<ImageInfo*>(capture_handle);
-  if (imported_captures_.find_if([info](auto& i) { return i.paddr == info->paddr; }) ==
+  if (imported_captures_.find_if([info](auto& i) { return i.vmo.get() == info->vmo.get(); }) ==
       imported_captures_.end()) {
     // invalid handle
     return ZX_ERR_INVALID_ARGS;
   }
   capture_active_id_ = capture_handle;
+
   return ZX_OK;
 }
 
 zx_status_t FakeDisplay::DisplayCaptureImplReleaseCapture(uint64_t capture_handle) {
-  fbl::AutoLock lock(&display_lock_);
+  fbl::AutoLock lock(&capture_lock_);
   if (capture_handle == capture_active_id_) {
     return ZX_ERR_SHOULD_WAIT;
   }
 
   // Confirm the handle was previously imported (hence valid)
   auto info = reinterpret_cast<ImageInfo*>(capture_handle);
-  if (imported_captures_.erase_if([info](auto& i) { return i.paddr == info->paddr; }) == nullptr) {
+  if (imported_captures_.erase_if([info](auto& i) { return i.vmo.get() == info->vmo.get(); }) ==
+      nullptr) {
     // invalid handle
     return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
+}
+
+bool FakeDisplay::DisplayCaptureImplIsCaptureCompleted() {
+  fbl::AutoLock lock(&capture_lock_);
+  return (capture_active_id_ == INVALID_ID);
 }
 
 void FakeDisplay::DdkRelease() {
@@ -317,6 +372,8 @@ void FakeDisplay::DdkRelease() {
     // Ignore return value here in case the vsync_thread_ isn't running.
     thrd_join(vsync_thread_, nullptr);
   }
+  capture_shutdown_flag_.store(true);
+  thrd_join(capture_thread_, nullptr);
   delete this;
 }
 
@@ -349,6 +406,65 @@ zx_status_t FakeDisplay::SetupDisplayInterface() {
   return ZX_OK;
 }
 
+int FakeDisplay::CaptureThread() {
+  while (true) {
+    zx::nanosleep(zx::deadline_after(zx::sec(1) / kRefreshRateFps));
+    if (capture_shutdown_flag_.load()) {
+      break;
+    }
+    {
+      fbl::AutoLock lock(&capture_lock_);
+      if (capture_intf_.is_valid() && (capture_active_id_ != INVALID_ID) &&
+          ++capture_complete_signal_count_ >= kNumOfVsyncsForCapture) {
+        {
+          fbl::AutoLock lock(&display_lock_);
+          if (current_image_) {
+            // We have a valid image being displayed. Let's capture it.
+            auto src = reinterpret_cast<ImageInfo*>(current_image_);
+            auto dst = reinterpret_cast<ImageInfo*>(capture_active_id_);
+
+            size_t src_vmo_size;
+            auto status = src->vmo.get_size(&src_vmo_size);
+            if (status != ZX_OK) {
+              DISP_ERROR("Could not get vmo size of displayed image\n");
+              continue;
+            }
+            size_t dst_vmo_size;
+            status = dst->vmo.get_size(&dst_vmo_size);
+            if (status != ZX_OK) {
+              DISP_ERROR("Could not get vmo size of captured image\n");
+              continue;
+            }
+            if (dst_vmo_size != src_vmo_size) {
+              DISP_ERROR("Size mismatch between src (%zu) and dst (%zu)\n", src_vmo_size,
+                         dst_vmo_size);
+              continue;
+            }
+            fzl::VmoMapper mapped_src;
+            status = mapped_src.Map(src->vmo, 0, src_vmo_size, ZX_VM_PERM_READ);
+            if (status != ZX_OK) {
+              DISP_ERROR("Could not map source %d\n", status);
+              return status;
+            }
+
+            fzl::VmoMapper mapped_dst;
+            status = mapped_dst.Map(dst->vmo, 0, dst_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+            if (status != ZX_OK) {
+              DISP_ERROR("Could not map destination %d\n", status);
+              return status;
+            }
+            memcpy(mapped_dst.start(), mapped_src.start(), dst_vmo_size);
+          }
+        }
+        capture_intf_.OnCaptureComplete();
+        capture_active_id_ = INVALID_ID;
+        capture_complete_signal_count_ = 0;
+      }
+    }
+  }
+  return ZX_OK;
+}
+
 int FakeDisplay::VSyncThread() {
   while (true) {
     zx::nanosleep(zx::deadline_after(zx::sec(1) / kRefreshRateFps));
@@ -365,13 +481,6 @@ void FakeDisplay::SendVsync() {
   if (dc_intf_.is_valid()) {
     uint64_t live[] = {current_image_};
     dc_intf_.OnDisplayVsync(kDisplayId, zx_clock_get_monotonic(), live, current_image_valid_);
-  }
-
-  if (capture_intf_.is_valid() && (capture_active_id_ != INVALID_ID) &&
-      ++capture_complete_signal_count_ >= kNumOfVsyncsForCapture) {
-    capture_intf_.OnCaptureComplete();
-    capture_active_id_ = INVALID_ID;
-    capture_complete_signal_count_ = 0;
   }
 }
 
@@ -416,6 +525,13 @@ zx_status_t FakeDisplay::Bind(bool start_vsync) {
     }
   }
   vsync_thread_running_ = start_vsync;
+
+  auto c_thread = [](void* arg) { return static_cast<FakeDisplay*>(arg)->CaptureThread(); };
+  status = thrd_create_with_name(&capture_thread_, c_thread, this, "capture_thread");
+  if (status != ZX_OK) {
+    DISP_ERROR("Could not create capture_thread\n");
+    return status;
+  }
 
   status = DdkAdd("fake-display");
   if (status != ZX_OK) {

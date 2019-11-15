@@ -51,6 +51,8 @@ class VirtualLayer {
   // Renders the current frame (and signals the fence if necessary).
   virtual void Render(int32_t frame_num) = 0;
 
+  virtual void* GetCurrentImageBuf() = 0;
+
   // Gets the display controller layer ID for usage on the given display.
   uint64_t id(uint64_t display_id) const {
     for (unsigned i = 0; i < displays_.size(); i++) {
@@ -139,6 +141,8 @@ class PrimaryLayer : public VirtualLayer {
   void SendLayout(Controller::SyncClient* channel) override;
   void Render(int32_t frame_num) override;
 
+  void* GetCurrentImageBuf() override;
+
   uint64_t image_id(uint64_t display_id) const override {
     for (unsigned i = 0; i < displays_.size(); i++) {
       if (displays_[i]->id() == display_id && layers_[i].active) {
@@ -187,6 +191,8 @@ class CursorLayer : public VirtualLayer {
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}
 
+  void* GetCurrentImageBuf() override { return nullptr; }
+
   uint64_t image_id(uint64_t display_id) const override {
     for (unsigned i = 0; i < displays_.size(); i++) {
       if (displays_[i]->id() == display_id && layers_[i].active) {
@@ -214,6 +220,7 @@ class ColorLayer : public VirtualLayer {
   void StepLayout(int32_t frame_num) override {}
   bool WaitForReady() override { return true; }
   void Render(int32_t frame_num) override {}
+  void* GetCurrentImageBuf() override { return nullptr; }
   uint64_t image_id(uint64_t display_id) const override {
     return ::llcpp::fuchsia::hardware::display::invalidId;
   }

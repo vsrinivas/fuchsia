@@ -4,6 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/fidl/cpp/message.h>
 #include <lib/fzl/fdio.h>
 #include <stdio.h>
@@ -18,19 +19,29 @@
 
 #include <memory>
 
-//#include <ddk/protocol/display/controller.h>
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 
 #include "display.h"
+#include "fuchsia/hardware/display/llcpp/fidl.h"
+#include "lib/fdio/directory.h"
+#include "lib/fzl/vmo-mapper.h"
 #include "virtual-layer.h"
 
 namespace fhd = ::llcpp::fuchsia::hardware::display;
+namespace sysmem = ::llcpp::fuchsia::sysmem;
 
 static zx_handle_t device_handle;
 static std::unique_ptr<fhd::Controller::SyncClient> dc;
 static bool has_ownership;
+
+constexpr uint64_t kEventId = 13;
+constexpr uint32_t kCollectionId = 12;
+uint64_t capture_id = 0;
+zx::event client_event_;
+std::unique_ptr<sysmem::BufferCollection::SyncClient> collection_;
+zx::vmo capture_vmo;
 
 static bool wait_for_driver_event(zx_time_t deadline) {
   zx_handle_t observed;
@@ -226,6 +237,214 @@ zx_status_t wait_for_vsync(const fbl::Vector<std::unique_ptr<VirtualLayer>>& lay
   return dc->HandleEvents(std::move(handlers));
 }
 
+zx_status_t capture_setup() {
+  // TODO(41413): Pull common image setup code into a library
+
+  // First make sure capture is supported on this platform
+  auto support_resp = dc->IsCaptureSupported();
+  if (!support_resp.value().result.response().supported) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+  // Import event used to get notified once capture is completed
+  auto status = zx::event::create(0, &client_event_);
+  if (status != ZX_OK) {
+    printf("Could not create event %d\n", status);
+    return status;
+  }
+  zx::event e2;
+  status = client_event_.duplicate(ZX_RIGHT_SAME_RIGHTS, &e2);
+  if (status != ZX_OK) {
+    printf("Could not dupicate event %d\n", status);
+    return status;
+  }
+  auto event_status = dc->ImportEvent(std::move(e2), kEventId);
+  if (event_status.status() != ZX_OK) {
+    printf("Could not import event: %s\n", event_status.error());
+    return event_status.status();
+  }
+
+  // get connection to sysmem
+  zx::channel sysmem_server_channel;
+  zx::channel sysmem_client_channel;
+  status = zx::channel::create(0, &sysmem_server_channel, &sysmem_client_channel);
+  if (status != ZX_OK) {
+    printf("Could not create sysmem channel %d\n", status);
+    return status;
+  }
+  status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator", sysmem_server_channel.release());
+  if (status != ZX_OK) {
+    printf("Could not connect to sysmem Allocator %d\n", status);
+    return status;
+  }
+  std::unique_ptr<sysmem::Allocator::SyncClient> sysmem_allocator;
+  sysmem_allocator =
+      std::make_unique<sysmem::Allocator::SyncClient>(std::move(sysmem_client_channel));
+
+  // Create and import token
+  zx::channel token_server;
+  zx::channel token_client;
+  status = zx::channel::create(0, &token_server, &token_client);
+  if (status != ZX_OK) {
+    printf("Could not create token channel %d\n", status);
+    return status;
+  }
+  std::unique_ptr<sysmem::BufferCollectionToken::SyncClient> token =
+      std::make_unique<sysmem::BufferCollectionToken::SyncClient>(std::move(token_client));
+
+  // pass token server to sysmem allocator
+  auto alloc_status = sysmem_allocator->AllocateSharedCollection(std::move(token_server));
+  if (alloc_status.status() != ZX_OK) {
+    printf("Could not pass token to sysmem allocator: %s\n", alloc_status.error());
+    return alloc_status.status();
+  }
+
+  // duplicate the token and pass to display driver
+  zx::channel token_dup_client;
+  zx::channel token_dup_server;
+  status = zx::channel::create(0, &token_dup_server, &token_dup_client);
+  if (status != ZX_OK) {
+    printf("Could not create duplicate token channel %d\n", status);
+    return status;
+  }
+  sysmem::BufferCollectionToken::SyncClient display_token(std::move(token_dup_client));
+  auto dup_res = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, std::move(token_dup_server));
+  if (dup_res.status() != ZX_OK) {
+    printf("Could not duplicate token: %s\n", dup_res.error());
+    return dup_res.status();
+  }
+  token->Sync();
+  auto import_resp =
+      dc->ImportBufferCollection(kCollectionId, std::move(*display_token.mutable_channel()));
+  if (import_resp.status() != ZX_OK) {
+    printf("Could not import token: %s\n", import_resp.error());
+    return import_resp.status();
+  }
+
+  // set buffer constraints
+  fhd::ImageConfig image_config = {};
+  image_config.type = fhd::typeCapture;
+  auto constraints_resp = dc->SetBufferCollectionConstraints(kCollectionId, image_config);
+  if (constraints_resp.status() != ZX_OK) {
+    printf("Could not set capture constraints %s\n", constraints_resp.error());
+    return constraints_resp.status();
+  }
+
+  // setup our our constraints for buffer to be allocated
+  zx::channel collection_client;
+  zx::channel collection_server;
+  status = zx::channel::create(0, &collection_server, &collection_client);
+  if (status != ZX_OK) {
+    printf("Could not create collection channel %d\n", status);
+    return status;
+  }
+  // let's return token
+  auto bind_resp = sysmem_allocator->BindSharedCollection(std::move(*token->mutable_channel()),
+                                                          std::move(collection_server));
+  if (bind_resp.status() != ZX_OK) {
+    printf("Could not bind to shared collection: %s\n", bind_resp.error());
+    return bind_resp.status();
+  }
+
+  // finally setup our constraints
+  sysmem::BufferCollectionConstraints constraints = {};
+  constraints.usage.cpu = sysmem::cpuUsageReadOften | sysmem::cpuUsageWriteOften;
+  constraints.min_buffer_count_for_camping = 1;
+  constraints.has_buffer_memory_constraints = false;
+  constraints.image_format_constraints_count = 1;
+  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
+  image_constraints.color_spaces_count = 1;
+  image_constraints.color_space[0] = sysmem::ColorSpace{
+      .type = sysmem::ColorSpaceType::SRGB,
+  };
+  image_constraints.min_coded_width = 0;
+  image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_coded_height = 0;
+  image_constraints.max_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.min_bytes_per_row = 0;
+  image_constraints.max_bytes_per_row = std::numeric_limits<uint32_t>::max();
+  image_constraints.max_coded_width_times_coded_height = std::numeric_limits<uint32_t>::max();
+  image_constraints.layers = 1;
+  image_constraints.coded_width_divisor = 1;
+  image_constraints.coded_height_divisor = 1;
+  image_constraints.bytes_per_row_divisor = 1;
+  image_constraints.start_offset_divisor = 1;
+  image_constraints.display_width_divisor = 1;
+  image_constraints.display_height_divisor = 1;
+
+  collection_ =
+      std::make_unique<sysmem::BufferCollection::SyncClient>(std::move(collection_client));
+  auto collection_resp = collection_->SetConstraints(true, constraints);
+  if (collection_resp.status() != ZX_OK) {
+    printf("Could not set buffer constraints: %s\n", collection_resp.error());
+    return collection_resp.status();
+  }
+
+  // wait for allocation
+  auto wait_resp = collection_->WaitForBuffersAllocated();
+  if (wait_resp.status() != ZX_OK) {
+    printf("Wait for buffer allocation failed: %s\n", wait_resp.error());
+    return wait_resp.status();
+  }
+
+  capture_vmo = std::move(wait_resp.value().buffer_collection_info.buffers[0].vmo);
+  // import image for capture
+  fhd::ImageConfig capture_cfg = {};  // will contain a handle
+  auto importcap_resp = dc->ImportImageForCapture(capture_cfg, kCollectionId, 0);
+  if (importcap_resp.status() != ZX_OK) {
+    printf("Failed to start capture: %s\n", importcap_resp.error());
+    return importcap_resp.status();
+  }
+  capture_id = importcap_resp.value().result.response().image_id;
+
+  return ZX_OK;
+}
+
+zx_status_t capture_start() {
+  // start capture
+  auto capstart_resp = dc->StartCapture(kEventId, capture_id);
+  if (capstart_resp.status() != ZX_OK) {
+    printf("Could not start capture: %s\n", capstart_resp.error());
+    return capstart_resp.status();
+  }
+  // wait for capture to complete
+  uint32_t observed;
+  auto event_res =
+      client_event_.wait_one(ZX_EVENT_SIGNALED, zx::deadline_after(zx::sec(1)), &observed);
+  if (event_res == ZX_OK) {
+    client_event_.signal(ZX_EVENT_SIGNALED, 0);
+  } else {
+    printf("capture failed %d\n", event_res);
+    return event_res;
+  }
+  return ZX_OK;
+}
+
+bool capture_compare(void* image_buf) {
+  if (image_buf == nullptr) {
+    printf("%s: null buf\n", __func__);
+    return false;
+  }
+  fzl::VmoMapper mapped_capture_vmo;
+  size_t capture_vmo_size;
+  auto status = capture_vmo.get_size(&capture_vmo_size);
+  if (status != ZX_OK) {
+    printf("capture vmo get size failed %d\n", status);
+    return status;
+  }
+  status =
+      mapped_capture_vmo.Map(capture_vmo, 0, capture_vmo_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
+  if (status != ZX_OK) {
+    printf("Could not map capture vmo %d\n", status);
+    return status;
+  }
+  return (!memcmp(image_buf, mapped_capture_vmo.start(), capture_vmo_size));
+}
+
+void capture_release() {
+  dc->ReleaseCapture(capture_id);
+  dc->ReleaseBufferCollection(kCollectionId);
+}
 int main(int argc, const char* argv[]) {
   printf("Running display test\n");
 
@@ -234,6 +453,8 @@ int main(int argc, const char* argv[]) {
   fbl::Vector<std::unique_ptr<VirtualLayer>> layers;
   int32_t num_frames = 120;  // default to 120 frames
   int32_t delay = 0;
+  bool capture = false;
+  bool verify_capture = false;
   enum Platform {
     SIMPLE,
     INTEL,
@@ -309,10 +530,20 @@ int main(int argc, const char* argv[]) {
       platform = SIMPLE;
       argv += 1;
       argc -= 1;
+    } else if (strcmp(argv[0], "--capture") == 0) {
+      capture = true;
+      verify_capture = true;
+      argv += 1;
+      argc -= 1;
     } else {
       printf("Unrecognized argument \"%s\"\n", argv[0]);
       return -1;
     }
+  }
+
+  if (capture && capture_setup() != ZX_OK) {
+    printf("Cound not setup capture\n");
+    capture = false;
   }
 
   fbl::AllocChecker ac;
@@ -453,7 +684,16 @@ int main(int argc, const char* argv[]) {
     display.Init(dc.get());
   }
 
+  if (capture && layers.size() > 1) {
+    printf("Capture verification disabled for multi-layer display tests\n");
+    verify_capture = false;
+  }
+
   printf("Starting rendering\n");
+  if (capture) {
+    printf("Capturing every frame. Verification is %s\n", verify_capture ? "enabled" : "disabled");
+  }
+  bool capture_result = true;
   for (int i = 0; i < num_frames; i++) {
     for (auto& layer : layers) {
       // Step before waiting, since not every layer is used every frame
@@ -490,10 +730,34 @@ int main(int argc, const char* argv[]) {
     while ((status = wait_for_vsync(layers)) == ZX_ERR_NEXT) {
     }
     ZX_ASSERT(status == ZX_OK);
+    if (capture) {
+      // capture has been requested.
+      status = capture_start();
+      if (status != ZX_OK) {
+        printf("Capture start failed %d\n", status);
+        capture_release();
+        capture = false;
+        break;
+      }
+      if (verify_capture && !capture_compare(layers[0]->GetCurrentImageBuf())) {
+        capture_result = false;
+      }
+    }
   }
 
   printf("Done rendering\n");
 
+  if (capture) {
+    printf("Capture completed\n");
+    if (verify_capture) {
+      if (capture_result) {
+        printf("Capture Verification Passed\n");
+      } else {
+        printf("Capture Verification Failed!\n");
+      }
+    }
+    capture_release();
+  }
   zx_handle_close(device_handle);
 
   return 0;

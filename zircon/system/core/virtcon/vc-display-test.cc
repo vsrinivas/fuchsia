@@ -168,6 +168,10 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
+  void IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) override {
+    EXPECT_TRUE(false);
+  }
+
   void ImportImageForCapture(fhd::ImageConfig image_config, uint64_t collection_id, uint32_t index,
                              ImportImageForCaptureCompleter::Sync _completer) override {
     EXPECT_TRUE(false);

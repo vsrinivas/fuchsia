@@ -57,6 +57,8 @@ struct Controller_StartCapture_Response;
 struct Controller_StartCapture_Result;
 struct Controller_ReleaseCapture_Response;
 struct Controller_ReleaseCapture_Result;
+struct Controller_IsCaptureSupported_Response;
+struct Controller_IsCaptureSupported_Result;
 struct Controller_ImportImageForCapture_Response;
 struct Controller_ImportImageForCapture_Result;
 enum class ConfigResult : uint32_t {
@@ -91,6 +93,8 @@ enum class AlphaMode : uint8_t {
 class Controller;
 
 constexpr uint32_t typeSimple = 0u;
+
+constexpr uint32_t typeCapture = 10u;
 
 constexpr int32_t modeInterlaced = 1u;
 
@@ -845,6 +849,123 @@ struct Controller_ReleaseCapture_Result {
   };
 };
 
+extern "C" const fidl_type_t fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
+
+struct Controller_IsCaptureSupported_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  bool supported = {};
+};
+
+extern "C" const fidl_type_t fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
+
+struct Controller_IsCaptureSupported_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  Controller_IsCaptureSupported_Result();
+  ~Controller_IsCaptureSupported_Result();
+
+  Controller_IsCaptureSupported_Result(Controller_IsCaptureSupported_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  Controller_IsCaptureSupported_Result& operator=(Controller_IsCaptureSupported_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static Controller_IsCaptureSupported_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response&& val) {
+    Controller_IsCaptureSupported_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static Controller_IsCaptureSupported_Result WithErr(int32_t&& val) {
+    Controller_IsCaptureSupported_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(Controller_IsCaptureSupported_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResponseTable;
 
@@ -1103,6 +1224,10 @@ extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferF
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerIsCaptureSupportedRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportImageForCaptureRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportImageForCaptureResponseTable;
@@ -1820,6 +1945,25 @@ class Controller final {
   };
   using GetSingleBufferFramebufferRequest = ::fidl::AnyZeroArgMessage;
 
+  struct IsCaptureSupportedResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using IsCaptureSupportedRequest = ::fidl::AnyZeroArgMessage;
+
   struct ImportImageForCaptureResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -2291,6 +2435,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class IsCaptureSupported_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      IsCaptureSupported_Impl(zx::unowned_channel _client_end);
+      ~IsCaptureSupported_Impl() = default;
+      IsCaptureSupported_Impl(IsCaptureSupported_Impl&& other) = default;
+      IsCaptureSupported_Impl& operator=(IsCaptureSupported_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class ImportImageForCapture_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2367,6 +2527,7 @@ class Controller final {
     using ReleaseBufferCollection = ReleaseBufferCollection_Impl;
     using SetBufferCollectionConstraints = SetBufferCollectionConstraints_Impl<SetBufferCollectionConstraintsResponse>;
     using GetSingleBufferFramebuffer = GetSingleBufferFramebuffer_Impl<GetSingleBufferFramebufferResponse>;
+    using IsCaptureSupported = IsCaptureSupported_Impl<IsCaptureSupportedResponse>;
     using ImportImageForCapture = ImportImageForCapture_Impl<ImportImageForCaptureResponse>;
     using StartCapture = StartCapture_Impl<StartCaptureResponse>;
     using ReleaseCapture = ReleaseCapture_Impl<ReleaseCaptureResponse>;
@@ -2720,6 +2881,22 @@ class Controller final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class IsCaptureSupported_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      IsCaptureSupported_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~IsCaptureSupported_Impl() = default;
+      IsCaptureSupported_Impl(IsCaptureSupported_Impl&& other) = default;
+      IsCaptureSupported_Impl& operator=(IsCaptureSupported_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class ImportImageForCapture_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -2796,6 +2973,7 @@ class Controller final {
     using ReleaseBufferCollection = ReleaseBufferCollection_Impl;
     using SetBufferCollectionConstraints = SetBufferCollectionConstraints_Impl<SetBufferCollectionConstraintsResponse>;
     using GetSingleBufferFramebuffer = GetSingleBufferFramebuffer_Impl<GetSingleBufferFramebufferResponse>;
+    using IsCaptureSupported = IsCaptureSupported_Impl<IsCaptureSupportedResponse>;
     using ImportImageForCapture = ImportImageForCapture_Impl<ImportImageForCaptureResponse>;
     using StartCapture = StartCapture_Impl<StartCaptureResponse>;
     using ReleaseCapture = ReleaseCapture_Impl<ReleaseCaptureResponse>;
@@ -2971,6 +3149,14 @@ class Controller final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(::fidl::BytePart _response_buffer);
+
+    // Returns true if Capture is supported on the platform.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::IsCaptureSupported IsCaptureSupported();
+
+    // Returns true if Capture is supported on the platform.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::IsCaptureSupported IsCaptureSupported(::fidl::BytePart _response_buffer);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -3190,6 +3376,14 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetSingleBufferFramebuffer GetSingleBufferFramebuffer(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Returns true if Capture is supported on the platform.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::IsCaptureSupported IsCaptureSupported(zx::unowned_channel _client_end);
+
+    // Returns true if Capture is supported on the platform.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::IsCaptureSupported IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
     // Returns ZX_OK along with an image_id.
@@ -3300,6 +3494,9 @@ class Controller final {
     static ::fidl::DecodeResult<SetBufferCollectionConstraintsResponse> SetBufferCollectionConstraints(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetBufferCollectionConstraintsRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<GetSingleBufferFramebufferResponse> GetSingleBufferFramebuffer(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    // Returns true if Capture is supported on the platform.
+    static ::fidl::DecodeResult<IsCaptureSupportedResponse> IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Imports a buffer collection backed VMO into the display controller. The VMO
     // will be used by display controller to capture the image being displayed.
@@ -3528,6 +3725,23 @@ class Controller final {
 
     virtual void GetSingleBufferFramebuffer(GetSingleBufferFramebufferCompleter::Sync _completer) = 0;
 
+    class IsCaptureSupportedCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result);
+      void ReplySuccess(bool supported);
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer, bool supported);
+      void Reply(::fidl::DecodedMessage<IsCaptureSupportedResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using IsCaptureSupportedCompleter = ::fidl::Completer<IsCaptureSupportedCompleterBase>;
+
+    virtual void IsCaptureSupported(IsCaptureSupportedCompleter::Sync _completer) = 0;
+
     class ImportImageForCaptureCompleterBase : public _Base {
      public:
       void Reply(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result);
@@ -3667,6 +3881,8 @@ class Controller final {
     static void SetBufferCollectionConstraintsResponse(const ::fidl::DecodedMessage<Controller::SetBufferCollectionConstraintsResponse>& _msg);
     static void GetSingleBufferFramebufferRequest(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferRequest>& _msg);
     static void GetSingleBufferFramebufferResponse(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferResponse>& _msg);
+    static void IsCaptureSupportedRequest(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedRequest>& _msg);
+    static void IsCaptureSupportedResponse(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedResponse>& _msg);
     static void ImportImageForCaptureRequest(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureRequest>& _msg);
     static void ImportImageForCaptureResponse(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureResponse>& _msg);
     static void StartCaptureRequest(const ::fidl::DecodedMessage<Controller::StartCaptureRequest>& _msg);
@@ -3791,6 +4007,16 @@ static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapt
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response>);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response, supported) == 0);
+static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response) == ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response> : public std::true_type {};
@@ -4134,6 +4360,14 @@ static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::GetSingleB
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::GetSingleBufferFramebufferResponse, res) == 16);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::GetSingleBufferFramebufferResponse, vmo) == 20);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::GetSingleBufferFramebufferResponse, stride) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::IsCaptureSupportedResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::IsCaptureSupportedResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::IsCaptureSupportedResponse)
+    == ::llcpp::fuchsia::hardware::display::Controller::IsCaptureSupportedResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::IsCaptureSupportedResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ImportImageForCaptureRequest> : public std::true_type {};

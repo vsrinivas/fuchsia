@@ -228,6 +228,9 @@ class Client : private FenceCallback {
       const fuchsia_hardware_display_ControllerReleaseBufferCollectionRequest* req,
       fidl::Builder* resp_builder, const fidl_type_t** resp_table);
 
+  void HandleIsCaptureSupported(
+      const fuchsia_hardware_display_ControllerIsCaptureSupportedRequest* req,
+      fidl::Builder* resp_builder, const fidl_type_t** resp_table);
   void HandleImportImageForCapture(
       const fuchsia_hardware_display_ControllerImportImageForCaptureRequest* req,
       fidl::Builder* resp_builder, const fidl_type_t** resp_table);

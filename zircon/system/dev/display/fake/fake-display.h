@@ -30,7 +30,7 @@
 namespace fake_display {
 
 struct ImageInfo : public fbl::DoublyLinkedListable<std::unique_ptr<ImageInfo>> {
-  zx_paddr_t paddr;
+  zx::vmo vmo;
 };
 
 class FakeDisplay;
@@ -75,20 +75,17 @@ class FakeDisplay : public DeviceType,
       const display_capture_interface_protocol_t* intf);
 
   zx_status_t DisplayCaptureImplImportImageForCapture(zx_unowned_handle_t collection,
-                                                      uint32_t index, uint64_t* out_capture_handle);
-  zx_status_t DisplayCaptureImplStartCapture(uint64_t capture_handle);
-  zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle);
-  bool DisplayCaptureImplIsCaptureCompleted() {
-    fbl::AutoLock lock(&display_lock_);
-    return (capture_active_id_ == INVALID_ID);
-  }
+                                                      uint32_t index, uint64_t* out_capture_handle)
+      __TA_EXCLUDES(capture_lock_);
+  zx_status_t DisplayCaptureImplStartCapture(uint64_t capture_handle) __TA_EXCLUDES(capture_lock_);
+  zx_status_t DisplayCaptureImplReleaseCapture(uint64_t capture_handle)
+      __TA_EXCLUDES(capture_lock_);
+  bool DisplayCaptureImplIsCaptureCompleted() __TA_EXCLUDES(capture_lock_);
 
   // Required functions for DeviceType
   void DdkUnbindNew(ddk::UnbindTxn txn);
   void DdkRelease();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
-
-  zx_paddr_t GetNextFakePaddr() { return (++fake_image_paddr_ << 2); }
 
   const display_controller_impl_protocol_t* dcimpl_proto() const { return &dcimpl_proto_; }
   void SendVsync();
@@ -103,6 +100,7 @@ class FakeDisplay : public DeviceType,
 
   zx_status_t SetupDisplayInterface();
   int VSyncThread();
+  int CaptureThread() __TA_EXCLUDES(capture_lock_, display_lock_);
   void PopulateAddedDisplayArgs(added_display_args_t* args);
 
   display_controller_impl_protocol_t dcimpl_proto_ = {};
@@ -110,28 +108,27 @@ class FakeDisplay : public DeviceType,
   sysmem_protocol_t sysmem_ = {};
 
   std::atomic_bool vsync_shutdown_flag_ = false;
+  std::atomic_bool capture_shutdown_flag_ = false;
 
   // Thread handles
   bool vsync_thread_running_ = false;
   thrd_t vsync_thread_;
+  thrd_t capture_thread_;
 
   // Locks used by the display driver
   fbl::Mutex display_lock_;  // general display state (i.e. display_id)
   fbl::Mutex image_lock_;    // used for accessing imported_images
+  fbl::Mutex capture_lock_;  // general capture state
 
   // The ID for currently active capture
-  uint64_t capture_active_id_ TA_GUARDED(display_lock_);
+  uint64_t capture_active_id_ TA_GUARDED(capture_lock_);
 
   // Imported Images
   fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_images_ TA_GUARDED(image_lock_);
-  fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_captures_ TA_GUARDED(display_lock_);
+  fbl::DoublyLinkedList<std::unique_ptr<ImageInfo>> imported_captures_ TA_GUARDED(capture_lock_);
 
   uint64_t current_image_ TA_GUARDED(display_lock_);
   bool current_image_valid_ TA_GUARDED(display_lock_);
-
-  // Fake addresses are stored in ImageInfo (which is used when importing an image for
-  // for either display or capture.
-  zx_paddr_t fake_image_paddr_ = 0;
 
   // Capture complete is signaled at vsync time. This counter introduces a bit of delay
   // for signal capture complete
@@ -141,7 +138,7 @@ class FakeDisplay : public DeviceType,
   ddk::DisplayControllerInterfaceProtocolClient dc_intf_ TA_GUARDED(display_lock_);
 
   // Display Capture interface protocol
-  ddk::DisplayCaptureInterfaceProtocolClient capture_intf_ TA_GUARDED(display_lock_);
+  ddk::DisplayCaptureInterfaceProtocolClient capture_intf_ TA_GUARDED(capture_lock_);
 };
 
 }  // namespace fake_display

@@ -416,6 +416,65 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::
 }
 
 
+::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Controller_IsCaptureSupported_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::~Controller_IsCaptureSupported_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~Controller_IsCaptureSupported_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::MoveImpl_(Controller_IsCaptureSupported_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result) == ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::Controller_ImportImageForCapture_Result() {
   tag_ = Tag::Invalid;
 }
@@ -687,6 +746,13 @@ constexpr uint64_t kController_GetSingleBufferFramebuffer_GenOrdinal = 0x65cd908
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerGetSingleBufferFramebufferResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kController_IsCaptureSupported_Ordinal = 0x6dfc193a00000000lu;
+[[maybe_unused]]
+constexpr uint64_t kController_IsCaptureSupported_GenOrdinal = 0x1cd2541e93a17760lu;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedRequestTable;
+extern "C" const fidl_type_t fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportImageForCapture_Ordinal = 0x3150d1a200000000lu;
 [[maybe_unused]]
@@ -2444,6 +2510,67 @@ Controller::UnownedResultOf::GetSingleBufferFramebuffer Controller::Call::GetSin
 }
 
 template <>
+Controller::ResultOf::IsCaptureSupported_Impl<Controller::IsCaptureSupportedResponse>::IsCaptureSupported_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IsCaptureSupportedRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, IsCaptureSupportedRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(IsCaptureSupportedRequest));
+  ::fidl::DecodedMessage<IsCaptureSupportedRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Controller::InPlace::IsCaptureSupported(std::move(_client_end), Super::response_buffer()));
+}
+
+Controller::ResultOf::IsCaptureSupported Controller::SyncClient::IsCaptureSupported() {
+  return ResultOf::IsCaptureSupported(zx::unowned_channel(this->channel_));
+}
+
+Controller::ResultOf::IsCaptureSupported Controller::Call::IsCaptureSupported(zx::unowned_channel _client_end) {
+  return ResultOf::IsCaptureSupported(std::move(_client_end));
+}
+
+template <>
+Controller::UnownedResultOf::IsCaptureSupported_Impl<Controller::IsCaptureSupportedResponse>::IsCaptureSupported_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(IsCaptureSupportedRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, IsCaptureSupportedRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(IsCaptureSupportedRequest));
+  ::fidl::DecodedMessage<IsCaptureSupportedRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Controller::InPlace::IsCaptureSupported(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Controller::UnownedResultOf::IsCaptureSupported Controller::SyncClient::IsCaptureSupported(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::IsCaptureSupported(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Controller::UnownedResultOf::IsCaptureSupported Controller::Call::IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::IsCaptureSupported(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Controller::IsCaptureSupportedResponse> Controller::InPlace::IsCaptureSupported(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(IsCaptureSupportedRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<IsCaptureSupportedRequest> params(std::move(_request_buffer));
+  Controller::SetTransactionHeaderFor::IsCaptureSupportedRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::IsCaptureSupportedResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<IsCaptureSupportedRequest, IsCaptureSupportedResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Controller::IsCaptureSupportedResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 Controller::ResultOf::ImportImageForCapture_Impl<Controller::ImportImageForCaptureResponse>::ImportImageForCapture_Impl(zx::unowned_channel _client_end, ::llcpp::fuchsia::hardware::display::ImageConfig image_config, uint64_t collection_id, uint32_t index) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -3106,6 +3233,18 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
           Interface::GetSingleBufferFramebufferCompleter::Sync(txn));
       return true;
     }
+    case kController_IsCaptureSupported_Ordinal:
+    case kController_IsCaptureSupported_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<IsCaptureSupportedRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->IsCaptureSupported(
+          Interface::IsCaptureSupportedCompleter::Sync(txn));
+      return true;
+    }
     case kController_ImportImageForCapture_Ordinal:
     case kController_ImportImageForCapture_GenOrdinal:
     {
@@ -3636,6 +3775,57 @@ void Controller::Interface::GetSingleBufferFramebufferCompleterBase::Reply(::fid
 }
 
 
+void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<IsCaptureSupportedResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<IsCaptureSupportedResponse*>(_write_bytes);
+  Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(
+      ::fidl::DecodedMessage<IsCaptureSupportedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              IsCaptureSupportedResponse::PrimarySize,
+              IsCaptureSupportedResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(IsCaptureSupportedResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<IsCaptureSupportedResponse>(std::move(_response_bytes)));
+}
+void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(bool supported) {
+  Controller_IsCaptureSupported_Response response;
+  response.supported = std::move(supported);
+
+  Reply(Controller_IsCaptureSupported_Result::WithResponse(std::move(response)));
+}
+void Controller::Interface::IsCaptureSupportedCompleterBase::ReplyError(int32_t error) {
+  Reply(Controller_IsCaptureSupported_Result::WithErr(std::move(error)));
+}
+
+void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result) {
+  if (_buffer.capacity() < IsCaptureSupportedResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<IsCaptureSupportedResponse*>(_buffer.data());
+  Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(
+      ::fidl::DecodedMessage<IsCaptureSupportedResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              IsCaptureSupportedResponse::PrimarySize,
+              IsCaptureSupportedResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(IsCaptureSupportedResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<IsCaptureSupportedResponse>(std::move(_buffer)));
+}
+void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(::fidl::BytePart _buffer, bool supported) {
+  Controller_IsCaptureSupported_Response response;
+  response.supported = std::move(supported);
+
+  Reply(std::move(_buffer), Controller_IsCaptureSupported_Result::WithResponse(std::move(response)));
+}
+
+void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::DecodedMessage<IsCaptureSupportedResponse> params) {
+  Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportImageForCaptureResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
@@ -3931,6 +4121,13 @@ void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferRequest(cons
 }
 void Controller::SetTransactionHeaderFor::GetSingleBufferFramebufferResponse(const ::fidl::DecodedMessage<Controller::GetSingleBufferFramebufferResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetSingleBufferFramebuffer_Ordinal);
+}
+
+void Controller::SetTransactionHeaderFor::IsCaptureSupportedRequest(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_IsCaptureSupported_Ordinal);
+}
+void Controller::SetTransactionHeaderFor::IsCaptureSupportedResponse(const ::fidl::DecodedMessage<Controller::IsCaptureSupportedResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_IsCaptureSupported_Ordinal);
 }
 
 void Controller::SetTransactionHeaderFor::ImportImageForCaptureRequest(const ::fidl::DecodedMessage<Controller::ImportImageForCaptureRequest>& _msg) {

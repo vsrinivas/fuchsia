@@ -168,6 +168,8 @@ bool PrimaryLayer::Init(fhd::Controller::SyncClient* dc) {
   return true;
 }
 
+void* PrimaryLayer::GetCurrentImageBuf() { return images_[alt_image_]->buffer(); }
+
 void PrimaryLayer::StepLayout(int32_t frame_num) {
   if (layer_flipping_) {
     alt_image_ = frame_num % 2;

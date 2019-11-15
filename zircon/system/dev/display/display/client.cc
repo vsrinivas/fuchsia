@@ -79,6 +79,7 @@ zx_status_t decode_message(fidl::Message* msg) {
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerGetSingleBufferFramebuffer);
+  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerIsCaptureSupported);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportImageForCapture);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerStartCapture);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseCapture);
@@ -216,6 +217,7 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
   HANDLE_REQUEST_CASE(ImportBufferCollection);
   HANDLE_REQUEST_CASE(ReleaseBufferCollection);
   HANDLE_REQUEST_CASE(SetBufferCollectionConstraints);
+  HANDLE_REQUEST_CASE(IsCaptureSupported);
   HANDLE_REQUEST_CASE(ImportImageForCapture);
   HANDLE_REQUEST_CASE(StartCapture);
   HANDLE_REQUEST_CASE(ReleaseCapture);
@@ -1192,6 +1194,14 @@ void Client::HandleGetSingleBufferFramebuffer(
   *handle_out = vmo.release();
   resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
   resp->stride = stride;
+}
+
+void Client::HandleIsCaptureSupported(
+    const fuchsia_hardware_display_ControllerIsCaptureSupportedRequest* /*req*/,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+  auto resp = resp_builder->New<fuchsia_hardware_display_ControllerIsCaptureSupportedResponse>();
+  *resp_table = &fuchsia_hardware_display_ControllerIsCaptureSupportedResponseTable;
+  resp->result.response.supported = controller_->dc_capture() != nullptr;
 }
 
 void Client::HandleImportImageForCapture(
