@@ -3,6 +3,9 @@
        "binary": "bin/app"
    },
    "sandbox": {
-       "services": [ "fuchsia.overnet.Overnet" ]
+       "services": [
+           "fuchsia.overnet.Overnet",
+           "fuchsia.overnet.ServicePublisher"
+       ]
    }
 }
