@@ -66,9 +66,11 @@ func TestDisableDebuggingSyscalls(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	ensureContains(t, stdout, "zx_debug_read: disabled")
+	// TODO(fxb/38409): Temporarily excluded from disabled set; these should be "disabled".
+	ensureContains(t, stdout, "zx_debug_read: enabled")
+	ensureContains(t, stdout, "zx_debug_write: enabled")
+
 	ensureContains(t, stdout, "zx_debug_send_command: disabled")
-	ensureContains(t, stdout, "zx_debug_write: disabled")
 	ensureContains(t, stdout, "zx_ktrace_control: disabled")
 	ensureContains(t, stdout, "zx_ktrace_read: disabled")
 	ensureContains(t, stdout, "zx_ktrace_write: disabled")
