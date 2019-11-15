@@ -58,11 +58,13 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
             "interruption",
             "background",
             "communications"
-          ]
+          ],
+          "eligible_for_loopback": true
         },
         {
           "device_id": "*",
-          "supported_output_stream_types": ["media", "system_agent"]
+          "supported_output_stream_types": ["media", "system_agent"],
+          "eligible_for_loopback": false
         }
       ]
     }
@@ -83,12 +85,15 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicy) {
   using fuchsia::media::AudioRenderUsage;
   auto& config = process_config->routing_config();
 
-  EXPECT_TRUE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::MEDIA));
-  EXPECT_TRUE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::INTERRUPTION));
-  EXPECT_FALSE(config.DeviceSupportsOutputUsage(expected_id, AudioRenderUsage::SYSTEM_AGENT));
+  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_FALSE(config.device_profile(expected_id).supports_usage(AudioRenderUsage::SYSTEM_AGENT));
 
-  EXPECT_FALSE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::MEDIA));
+  EXPECT_FALSE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+
+  EXPECT_TRUE(config.device_profile(expected_id).eligible_for_loopback());
+  EXPECT_FALSE(config.device_profile(unknown_id).eligible_for_loopback());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
@@ -114,7 +119,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
             "background",
             "communications",
             "system_agent"
-          ]
+          ],
+          "eligible_for_loopback": true
         }
       ]
     }
@@ -132,8 +138,10 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyNoDefault) {
   using fuchsia::media::AudioRenderUsage;
   auto& config = process_config->routing_config();
 
-  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::INTERRUPTION));
-  EXPECT_TRUE(config.DeviceSupportsOutputUsage(unknown_id, AudioRenderUsage::MEDIA));
+  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::INTERRUPTION));
+  EXPECT_TRUE(config.device_profile(unknown_id).supports_usage(AudioRenderUsage::MEDIA));
+
+  EXPECT_TRUE(config.device_profile(unknown_id).eligible_for_loopback());
 }
 
 TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCoverage) {
@@ -157,7 +165,8 @@ TEST(ProcessConfigLoaderTest, LoadProcessConfigWithRoutingPolicyInsufficientCove
             "media",
             "interruption",
             "system_agent"
-          ]
+          ],
+          "eligible_for_loopback": true
         }
       ]
     }

@@ -50,9 +50,10 @@
         "supported_output_stream_types": {
           "type": "array",
           "items" : { "$ref" : "#definitions/output_stream_type" }
-        }
+        },
+        "eligible_for_loopback": "bool"
       },
-      "required": [ "device_id", "supported_output_stream_types" ],
+      "required": [ "device_id", "supported_output_stream_types", "eligible_for_loopback" ],
       "additionalProperties": false
     }
    },

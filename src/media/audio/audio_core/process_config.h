@@ -23,13 +23,15 @@ class ProcessConfigBuilder {
   ProcessConfigBuilder& SetMixEffects(PipelineConfig::MixGroup effects);
   ProcessConfigBuilder& SetLinearizeEffects(PipelineConfig::MixGroup effects);
   ProcessConfigBuilder& AddDeviceRoutingProfile(
-      std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::UsageSupportSet> profile);
+      std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
+          keyed_profile);
   ProcessConfig Build();
 
  private:
   PipelineConfig pipeline_;
   std::optional<VolumeCurve> default_volume_curve_;
-  RoutingConfig routing_config_;
+  std::vector<std::pair<audio_stream_unique_id_t, RoutingConfig::DeviceProfile>> device_profiles_;
+  std::optional<RoutingConfig::DeviceProfile> default_device_profile_;
 };
 
 class ProcessConfig {

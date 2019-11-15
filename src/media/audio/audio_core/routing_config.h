@@ -17,19 +17,51 @@ class RoutingConfig {
  public:
   using UsageSupportSet = std::unordered_set<uint32_t>;
 
-  bool DeviceSupportsOutputUsage(const audio_stream_unique_id_t& id,
-                                 fuchsia::media::AudioRenderUsage usage) const;
+  // A routing profile for a device.
+  class DeviceProfile {
+   public:
+    DeviceProfile() = default;
+
+    DeviceProfile(bool eligible_for_loopback, UsageSupportSet output_usage_support_set)
+        : eligible_for_loopback_(eligible_for_loopback),
+          output_usage_support_set_(std::move(output_usage_support_set)) {}
+
+    bool supports_usage(fuchsia::media::AudioRenderUsage usage) const {
+      return !output_usage_support_set_ ||
+             output_usage_support_set_->find(fidl::ToUnderlying(usage)) !=
+                 output_usage_support_set_->end();
+    }
+
+    bool eligible_for_loopback() const { return eligible_for_loopback_; }
+
+   private:
+    // Whether this device is eligible to be looped back to loopback capturers.
+    bool eligible_for_loopback_ = true;
+    // The set of output usages supported by the device.
+    std::optional<UsageSupportSet> output_usage_support_set_;
+  };
+
+  RoutingConfig(std::vector<std::pair<audio_stream_unique_id_t, DeviceProfile>> device_profiles,
+                std::optional<DeviceProfile> default_device_profile)
+      : device_profiles_(std::move(device_profiles)),
+        default_device_profile_(default_device_profile.value_or(DeviceProfile())) {}
+
+  const DeviceProfile& device_profile(const audio_stream_unique_id_t& id) const {
+    auto it = std::find_if(device_profiles_.begin(), device_profiles_.end(), [id](auto set) {
+      return std::memcmp(id.data, set.first.data, sizeof(id.data)) == 0;
+    });
+
+    return it != device_profiles_.end() ? it->second : default_device_profile_;
+  }
 
  private:
   friend class ProcessConfigBuilder;
 
-  // The usage support sets for explicitly configured devices.
-  std::vector<std::pair<audio_stream_unique_id_t, UsageSupportSet>>
-      device_output_usage_support_sets_;
+  // Profiles for explicitly configured devices.
+  std::vector<std::pair<audio_stream_unique_id_t, DeviceProfile>> device_profiles_;
 
-  // The output usage support set to apply to devices without an explicit support set. If not
-  // provided in the config, the behavior is to allow all usages for unrecognized devices.
-  std::optional<UsageSupportSet> default_output_usage_support_set_;
+  // The device profile to apply to devices without an explicit profile.
+  DeviceProfile default_device_profile_;
 };
 
 }  // namespace media::audio

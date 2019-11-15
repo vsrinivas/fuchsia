@@ -34,6 +34,7 @@ static constexpr char kJsonKeyRoutingPolicy[] = "routing_policy";
 static constexpr char kJsonKeyDeviceProfiles[] = "device_profiles";
 static constexpr char kJsonKeyDeviceId[] = "device_id";
 static constexpr char kJsonKeySupportedOutputStreamTypes[] = "supported_output_stream_types";
+static constexpr char kJsonKeyEligibleForLoopback[] = "eligible_for_loopback";
 
 rapidjson::SchemaDocument LoadProcessConfigSchema() {
   rapidjson::Document schema_doc;
@@ -146,7 +147,7 @@ void ParsePipelineConfigFromJsonObject(const rapidjson::Value& value,
   }
 }
 
-std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::UsageSupportSet>
+std::pair<std::optional<audio_stream_unique_id_t>, RoutingConfig::DeviceProfile>
 ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
                                         std::unordered_set<uint32_t>* all_supported_usages) {
   FX_CHECK(value.IsObject());
@@ -172,6 +173,11 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
     FX_CHECK(captures == 16);
   }
 
+  auto eligible_for_loopback_it = value.FindMember(kJsonKeyEligibleForLoopback);
+  FX_CHECK(eligible_for_loopback_it != value.MemberEnd());
+  FX_CHECK(eligible_for_loopback_it->value.IsBool());
+  const auto eligible_for_loopback = eligible_for_loopback_it->value.GetBool();
+
   auto supported_output_stream_types_it = value.FindMember(kJsonKeySupportedOutputStreamTypes);
   FX_CHECK(supported_output_stream_types_it != value.MemberEnd());
   auto& supported_output_stream_types_value = supported_output_stream_types_it->value;
@@ -185,7 +191,8 @@ ParseDeviceRoutingProfileFromJsonObject(const rapidjson::Value& value,
     supported_output_stream_types.insert(supported_usage);
   }
 
-  return {device_id, std::move(supported_output_stream_types)};
+  return {device_id, RoutingConfig::DeviceProfile(eligible_for_loopback,
+                                                  std::move(supported_output_stream_types))};
 }
 
 void ParseRoutingPolicyFromJsonObject(const rapidjson::Value& value,
