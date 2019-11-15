@@ -148,7 +148,8 @@ def write_archive(outfile, format, images, board_name, additional_bootserver_arg
             'path': 'pave.sh'
         }),
         (generate_script([image for path, image in path_images], board_name,
-                                 'bootserver_pave_zedboot', additional_bootserver_arguments), {
+                         'bootserver_pave_zedboot',
+                         additional_bootserver_arguments + " --allow-zedboot-version-mismatch"), {
             'name': 'pave-zedboot',
             'type': 'sh',
             'path': 'pave-zedboot.sh'
