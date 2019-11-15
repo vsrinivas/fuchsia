@@ -3,26 +3,28 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.syzkaller.flag banjo file
+// Generated from the banjo.examples.example9 banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
 use fuchsia_zircon as zircon;
 
 
-
+pub const FAVORITE_ECHO: EchoMe = zero;
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct EchoMore {
+    pub first: u32,
+    pub second: u64,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Topic(u32);
+pub struct EchoMe(u32);
 
-impl Topic {
-    pub const TOPIC0: Self = Self(0);
-    pub const TOPIC1: Self = Self(1);
-    pub const TOPIC2: Self = Self(2);
-    pub const TOPIC3: Self = Self(3);
-    pub const TOPIC4: Self = Self(4);
-    pub const TOPIC5: Self = Self(5);
+impl EchoMe {
+    pub const ZERO: Self = Self(0);
+    pub const ONE: Self = Self(1);
 }
 
 

@@ -72,6 +72,31 @@ mod c {
     codegen_test!(callback, CBackend, ["../zx.banjo", "banjo/callback.test.banjo"], "c/callback.h");
 }
 
+
+
+mod rust {
+    use super::*;
+
+    codegen_test!(alignment, RustBackend, ["banjo/alignment.test.banjo"],   "rust/alignment.rs");
+    codegen_test!(attributes, RustBackend, ["banjo/attributes.test.banjo"], "rust/attributes.rs");
+    codegen_test!(empty, RustBackend, ["banjo/empty.test.banjo"], "rust/empty.rs");
+    codegen_test!(enums, RustBackend, ["banjo/enums.test.banjo"], "rust/enums.rs");
+    codegen_test!(example_0, RustBackend, ["banjo/example-0.test.banjo"], "rust/example-0.rs");
+    codegen_test!(example_1, RustBackend, ["banjo/example-1.test.banjo"], "rust/example-1.rs");
+    codegen_test!(example_2, RustBackend, ["banjo/example-2.test.banjo"], "rust/example-2.rs");
+    codegen_test!(example_3, RustBackend, ["banjo/example-3.test.banjo"], "rust/example-3.rs");
+    codegen_test!(example_4, RustBackend, ["banjo/example-4.test.banjo"], "rust/example-4.rs");
+    codegen_test!(example_6, RustBackend, ["banjo/example-6.test.banjo"], "rust/example-6.rs");
+    codegen_test!(example_7, RustBackend, ["banjo/example-7.test.banjo"], "rust/example-7.rs");
+    codegen_test!(example_8, RustBackend, ["banjo/example-8.test.banjo"], "rust/example-8.rs");
+    codegen_test!(example_9, RustBackend, ["banjo/example-9.test.banjo"], "rust/example-9.rs");
+    codegen_test!(point, RustBackend, ["banjo/point.test.banjo"], "rust/point.rs");
+    codegen_test!(table, RustBackend, ["banjo/tables.test.banjo"], "rust/tables.rs");
+    codegen_test!(simple, RustBackend, ["../zx.banjo", "banjo/simple.test.banjo"], "rust/simple.rs");
+    codegen_test!(view, RustBackend, ["banjo/point.test.banjo", "banjo/view.test.banjo"], "rust/view.rs");
+    codegen_test!(types, RustBackend, ["banjo/types.test.banjo"], "rust/types.rs");
+}
+
 mod cpp {
     use super::*;
     use banjo_lib::backends::CppSubtype;

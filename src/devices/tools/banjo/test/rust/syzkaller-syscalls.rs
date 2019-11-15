@@ -10,11 +10,9 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
-
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_handle_basic {
     pub koid: zircon::sys::zx_koid_t,
     pub rights: zircon::sys::zx_rights_t,
@@ -24,19 +22,19 @@ pub struct zx_info_handle_basic {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_handle_count {
     pub handle_count: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_process_handle_stats {
     pub handle_count: [u32; 64 as usize],
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_process {
     pub return_code: i64,
     pub started: bool,
@@ -45,7 +43,7 @@ pub struct zx_info_process {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_job {
     pub return_code: i64,
     pub exited: bool,
@@ -54,19 +52,19 @@ pub struct zx_info_job {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_thread {
     pub state: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_thread_stats {
     pub total_runtime: zircon::sys::zx_duration_t,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_task_stats {
     pub mem_mapped_bytes: usize,
     pub mem_private_bytes: usize,
@@ -75,21 +73,21 @@ pub struct zx_info_task_stats {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_vmar {
     pub base: usize,
     pub len: usize,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_bti {
     pub minimum_contiguity: u64,
     pub aspace_size: u64,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_socket {
     pub options: u32,
     pub rx_buf_max: usize,
@@ -100,7 +98,7 @@ pub struct zx_info_socket {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_maps_mapping {
     pub mmu_flags: zircon::sys::zx_vm_option_t,
     pub vmo_koid: zircon::sys::zx_koid_t,
@@ -109,7 +107,7 @@ pub struct zx_info_maps_mapping {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_maps {
     pub name: [i8; 32 as usize],
     pub base: zircon::sys::zx_vaddr_t,
@@ -119,7 +117,7 @@ pub struct zx_info_maps {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_vmo {
     pub koid: zircon::sys::zx_koid_t,
     pub name: [i8; 32 as usize],
@@ -135,7 +133,7 @@ pub struct zx_info_vmo {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_cpu_stats {
     pub cpu_number: u32,
     pub flags: u32,
@@ -156,7 +154,7 @@ pub struct zx_info_cpu_stats {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_kmem_stats {
     pub total_bytes: u64,
     pub free_bytes: u64,
@@ -170,7 +168,7 @@ pub struct zx_info_kmem_stats {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_info_resource {
     pub kind: u32,
     pub flags: u32,
@@ -180,7 +178,7 @@ pub struct zx_info_resource {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_wait_item {
     pub handle: zircon::sys::zx_handle_t,
     pub waitfor: zircon::sys::zx_signals_t,
@@ -188,14 +186,14 @@ pub struct zx_wait_item {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_exception_header {
     pub size: u32,
     pub type: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_x86_64_exc_data {
     pub vector: u64,
     pub err_code: u64,
@@ -203,41 +201,41 @@ pub struct zx_x86_64_exc_data {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_arm64_exc_data {
     pub esr: u32,
     pub far: u64,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_exception_context {
 
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_exception_report {
     pub header: zx_exception_header,
     pub context: zx_exception_context,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_policy_basic {
     pub condition: u32,
     pub policy: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_policy_timer_slack {
     pub min_slack: zircon::sys::zx_duration_t,
     pub default_mode: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_signal {
     pub trigger: zircon::sys::zx_signals_t,
     pub observed: zircon::sys::zx_signals_t,
@@ -247,7 +245,7 @@ pub struct zx_packet_signal {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_exception {
     pub pid: u64,
     pub tid: u64,
@@ -256,7 +254,7 @@ pub struct zx_packet_exception {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_guest_bell {
     pub addr: zircon::sys::zx_gpaddr_t,
     pub reserved0: u64,
@@ -265,7 +263,7 @@ pub struct zx_packet_guest_bell {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_guest_mem {
     pub addr: zircon::sys::zx_gpaddr_t,
     pub inst_len: u8,
@@ -275,7 +273,7 @@ pub struct zx_packet_guest_mem {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_guest_io {
     pub port: u16,
     pub access_size: u8,
@@ -286,14 +284,14 @@ pub struct zx_packet_guest_io {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_guest_vcpu {
     pub type: u8,
     pub reserved: u64,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_interrupt {
     pub timestamp: zircon::sys::zx_time_t,
     pub reserved0: u64,
@@ -302,7 +300,7 @@ pub struct zx_packet_interrupt {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_packet_page_request {
     pub command: u16,
     pub flags: u16,
@@ -313,7 +311,7 @@ pub struct zx_packet_page_request {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_port_packet {
     pub key: u64,
     pub type: u32,
@@ -321,7 +319,7 @@ pub struct zx_port_packet {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_profile_scheduler {
     pub priority: i32,
     pub boost: u32,
@@ -330,30 +328,30 @@ pub struct zx_profile_scheduler {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_profile_info {
     pub type: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_iommu_desc_dummy {
     pub reserved: u8,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_iommu_desc_intel {
     pub register_base: u64,
     pub pci_segment: u16,
     pub whole_segment: bool,
     pub scope_bytes: u8,
     pub reserved_memory_bytes: u16,
-    pub reserved: [u8; 2 as usize],
+    pub _reserved: [u8; 2 as usize],
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_pci_bar {
     pub id: u32,
     pub type: u32,
@@ -361,7 +359,7 @@ pub struct zx_pci_bar {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_pcie_device_info {
     pub vendor_id: u16,
     pub device_id: u16,
@@ -375,14 +373,14 @@ pub struct zx_pcie_device_info {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_pci_init_arg {
     pub num_irqs: u32,
     pub addr_window_count: u32,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_smc_parameters {
     pub func_id: u32,
     pub arg1: u64,
@@ -396,7 +394,7 @@ pub struct zx_smc_parameters {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_smc_result {
     pub arg0: u64,
     pub arg1: u64,
@@ -406,7 +404,7 @@ pub struct zx_smc_result {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_vcpu_state {
     pub rax: u64,
     pub rcx: u64,
@@ -428,500 +426,639 @@ pub struct zx_vcpu_state {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_vcpu_io {
     pub access_size: u8,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct zx_system_powerctl_arg {
 
 }
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_clock_id(zircon::sys::zx_clock_t);
 
-#[repr(zircon::sys::zx_clock_t)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_clock_id_t {
-    ZX_CLOCK_MONOTONIC = 0,
-    ZX_CLOCK_UTC = 1,
-    ZX_CLOCK_THREAD = 2,
+impl zx_clock_id {
+    pub const ZX_CLOCK_MONOTONIC: Self = Self(0);
+    pub const ZX_CLOCK_UTC: Self = Self(1);
+    pub const ZX_CLOCK_THREAD: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_feature_kind_t {
-    ZX_FEATURE_KIND_CPU = 0,
-    ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT = 1,
-    ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_feature_kind(u32);
+
+impl zx_feature_kind {
+    pub const ZX_FEATURE_KIND_CPU: Self = Self(0);
+    pub const ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT: Self = Self(1);
+    pub const ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_event_kind_t {
-    ZX_SYSTEM_EVENT_LOW_MEMORY = 0,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_event_kind(u32);
+
+impl zx_event_kind {
+    pub const ZX_SYSTEM_EVENT_LOW_MEMORY: Self = Self(0);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_cache_flush_options_t {
-    ZX_CACHE_FLUSH_DATA = 1,
-    ZX_CACHE_FLUSH_INVALIDATE = 2,
-    ZX_CACHE_FLUSH_INSN = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_cache_flush_options(u32);
+
+impl zx_cache_flush_options {
+    pub const ZX_CACHE_FLUSH_DATA: Self = Self(1);
+    pub const ZX_CACHE_FLUSH_INVALIDATE: Self = Self(2);
+    pub const ZX_CACHE_FLUSH_INSN: Self = Self(4);
 }
-#[repr(zircon::sys::zx_rights_t)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_rights_t {
-    ZX_RIGHT_NONE = 0,
-    ZX_RIGHT_DUPLICATE = 1,
-    ZX_RIGHT_TRANSFER = 2,
-    ZX_RIGHT_READ = 4,
-    ZX_RIGHT_WRITE = 8,
-    ZX_RIGHT_EXECUTE = 16,
-    ZX_RIGHT_MAP = 32,
-    ZX_RIGHT_GET_PROPERTY = 64,
-    ZX_RIGHT_SET_PROPERTY = 128,
-    ZX_RIGHT_ENUMERATE = 256,
-    ZX_RIGHT_DESTROY = 512,
-    ZX_RIGHT_SET_POLICY = 1024,
-    ZX_RIGHT_GET_POLICY = 2048,
-    ZX_RIGHT_SIGNAL = 4096,
-    ZX_RIGHT_SIGNAL_PEER = 8192,
-    ZX_RIGHT_WAIT = 16384,
-    ZX_RIGHT_INSPECT = 32768,
-    ZX_RIGHT_MANAGE_JOB = 65536,
-    ZX_RIGHT_MANAGE_PROCESS = 131072,
-    ZX_RIGHT_MANAGE_THREAD = 262144,
-    ZX_RIGHT_APPLY_PROFILE = 524288,
-    ZX_RIGHT_SAME_RIGHTS = 2147483648,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_rights(zircon::sys::zx_rights_t);
+
+impl zx_rights {
+    pub const ZX_RIGHT_NONE: Self = Self(0);
+    pub const ZX_RIGHT_DUPLICATE: Self = Self(1);
+    pub const ZX_RIGHT_TRANSFER: Self = Self(2);
+    pub const ZX_RIGHT_READ: Self = Self(4);
+    pub const ZX_RIGHT_WRITE: Self = Self(8);
+    pub const ZX_RIGHT_EXECUTE: Self = Self(16);
+    pub const ZX_RIGHT_MAP: Self = Self(32);
+    pub const ZX_RIGHT_GET_PROPERTY: Self = Self(64);
+    pub const ZX_RIGHT_SET_PROPERTY: Self = Self(128);
+    pub const ZX_RIGHT_ENUMERATE: Self = Self(256);
+    pub const ZX_RIGHT_DESTROY: Self = Self(512);
+    pub const ZX_RIGHT_SET_POLICY: Self = Self(1024);
+    pub const ZX_RIGHT_GET_POLICY: Self = Self(2048);
+    pub const ZX_RIGHT_SIGNAL: Self = Self(4096);
+    pub const ZX_RIGHT_SIGNAL_PEER: Self = Self(8192);
+    pub const ZX_RIGHT_WAIT: Self = Self(16384);
+    pub const ZX_RIGHT_INSPECT: Self = Self(32768);
+    pub const ZX_RIGHT_MANAGE_JOB: Self = Self(65536);
+    pub const ZX_RIGHT_MANAGE_PROCESS: Self = Self(131072);
+    pub const ZX_RIGHT_MANAGE_THREAD: Self = Self(262144);
+    pub const ZX_RIGHT_APPLY_PROFILE: Self = Self(524288);
+    pub const ZX_RIGHT_SAME_RIGHTS: Self = Self(2147483648);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_object_wait_async_options_t {
-    ZX_WAIT_ASYNC_ONCE = 0,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_object_wait_async_options(u32);
+
+impl zx_object_wait_async_options {
+    pub const ZX_WAIT_ASYNC_ONCE: Self = Self(0);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_object_property_values_t {
-    ZX_PROP_NAME = 3,
-    ZX_PROP_PROCESS_DEBUG_ADDR = 5,
-    ZX_PROP_PROCESS_VDSO_BASE_ADDRESS = 6,
-    ZX_PROP_SOCKET_RX_THRESHOLD = 12,
-    ZX_PROP_SOCKET_TX_THRESHOLD = 13,
-    ZX_PROP_JOB_KILL_ON_OOM = 15,
-    ZX_PROP_EXCEPTION_STATE = 16,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_object_property_values(u32);
+
+impl zx_object_property_values {
+    pub const ZX_PROP_NAME: Self = Self(3);
+    pub const ZX_PROP_PROCESS_DEBUG_ADDR: Self = Self(5);
+    pub const ZX_PROP_PROCESS_VDSO_BASE_ADDRESS: Self = Self(6);
+    pub const ZX_PROP_SOCKET_RX_THRESHOLD: Self = Self(12);
+    pub const ZX_PROP_SOCKET_TX_THRESHOLD: Self = Self(13);
+    pub const ZX_PROP_JOB_KILL_ON_OOM: Self = Self(15);
+    pub const ZX_PROP_EXCEPTION_STATE: Self = Self(16);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_object_info_topics_t {
-    ZX_INFO_NONE = 0,
-    ZX_INFO_HANDLE_VALID = 1,
-    ZX_INFO_HANDLE_BASIC = 2,
-    ZX_INFO_PROCESS = 3,
-    ZX_INFO_PROCESS_THREADS = 4,
-    ZX_INFO_VMAR = 7,
-    ZX_INFO_JOB_CHILDREN = 8,
-    ZX_INFO_JOB_PROCESSES = 9,
-    ZX_INFO_THREAD = 10,
-    ZX_INFO_THREAD_EXCEPTION_REPORT = 11,
-    ZX_INFO_TASK_STATS = 12,
-    ZX_INFO_PROCESS_MAPS = 13,
-    ZX_INFO_PROCESS_VMOS = 14,
-    ZX_INFO_THREAD_STATS = 15,
-    ZX_INFO_CPU_STATS = 16,
-    ZX_INFO_KMEM_STATS = 17,
-    ZX_INFO_RESOURCE = 18,
-    ZX_INFO_HANDLE_COUNT = 19,
-    ZX_INFO_BTI = 20,
-    ZX_INFO_PROCESS_HANDLE_STATS = 21,
-    ZX_INFO_SOCKET = 22,
-    ZX_INFO_VMO = 23,
-    ZX_INFO_JOB = 24,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_object_info_topics(u32);
+
+impl zx_object_info_topics {
+    pub const ZX_INFO_NONE: Self = Self(0);
+    pub const ZX_INFO_HANDLE_VALID: Self = Self(1);
+    pub const ZX_INFO_HANDLE_BASIC: Self = Self(2);
+    pub const ZX_INFO_PROCESS: Self = Self(3);
+    pub const ZX_INFO_PROCESS_THREADS: Self = Self(4);
+    pub const ZX_INFO_VMAR: Self = Self(7);
+    pub const ZX_INFO_JOB_CHILDREN: Self = Self(8);
+    pub const ZX_INFO_JOB_PROCESSES: Self = Self(9);
+    pub const ZX_INFO_THREAD: Self = Self(10);
+    pub const ZX_INFO_THREAD_EXCEPTION_REPORT: Self = Self(11);
+    pub const ZX_INFO_TASK_STATS: Self = Self(12);
+    pub const ZX_INFO_PROCESS_MAPS: Self = Self(13);
+    pub const ZX_INFO_PROCESS_VMOS: Self = Self(14);
+    pub const ZX_INFO_THREAD_STATS: Self = Self(15);
+    pub const ZX_INFO_CPU_STATS: Self = Self(16);
+    pub const ZX_INFO_KMEM_STATS: Self = Self(17);
+    pub const ZX_INFO_RESOURCE: Self = Self(18);
+    pub const ZX_INFO_HANDLE_COUNT: Self = Self(19);
+    pub const ZX_INFO_BTI: Self = Self(20);
+    pub const ZX_INFO_PROCESS_HANDLE_STATS: Self = Self(21);
+    pub const ZX_INFO_SOCKET: Self = Self(22);
+    pub const ZX_INFO_VMO: Self = Self(23);
+    pub const ZX_INFO_JOB: Self = Self(24);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_obj_props_t {
-    ZX_OBJ_PROP_NONE = 0,
-    ZX_OBJ_PROP_WAITABLE = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_obj_props(u32);
+
+impl zx_obj_props {
+    pub const ZX_OBJ_PROP_NONE: Self = Self(0);
+    pub const ZX_OBJ_PROP_WAITABLE: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_obj_types_t {
-    ZX_OBJ_TYPE_NONE = 0,
-    ZX_OBJ_TYPE_PROCESS = 1,
-    ZX_OBJ_TYPE_THREAD = 2,
-    ZX_OBJ_TYPE_VMO = 3,
-    ZX_OBJ_TYPE_CHANNEL = 4,
-    ZX_OBJ_TYPE_EVENT = 5,
-    ZX_OBJ_TYPE_PORT = 6,
-    ZX_OBJ_TYPE_INTERRUPT = 9,
-    ZX_OBJ_TYPE_PCI_DEVICE = 11,
-    ZX_OBJ_TYPE_LOG = 12,
-    ZX_OBJ_TYPE_SOCKET = 14,
-    ZX_OBJ_TYPE_RESOURCE = 15,
-    ZX_OBJ_TYPE_EVENTPAIR = 16,
-    ZX_OBJ_TYPE_JOB = 17,
-    ZX_OBJ_TYPE_VMAR = 18,
-    ZX_OBJ_TYPE_FIFO = 19,
-    ZX_OBJ_TYPE_GUEST = 20,
-    ZX_OBJ_TYPE_VCPU = 21,
-    ZX_OBJ_TYPE_TIMER = 22,
-    ZX_OBJ_TYPE_IOMMU = 23,
-    ZX_OBJ_TYPE_BTI = 24,
-    ZX_OBJ_TYPE_PROFILE = 25,
-    ZX_OBJ_TYPE_PMT = 26,
-    ZX_OBJ_TYPE_SUSPEND_TOKEN = 27,
-    ZX_OBJ_TYPE_PAGER = 28,
-    ZX_OBJ_TYPE_EXCEPTION = 29,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_obj_types(u32);
+
+impl zx_obj_types {
+    pub const ZX_OBJ_TYPE_NONE: Self = Self(0);
+    pub const ZX_OBJ_TYPE_PROCESS: Self = Self(1);
+    pub const ZX_OBJ_TYPE_THREAD: Self = Self(2);
+    pub const ZX_OBJ_TYPE_VMO: Self = Self(3);
+    pub const ZX_OBJ_TYPE_CHANNEL: Self = Self(4);
+    pub const ZX_OBJ_TYPE_EVENT: Self = Self(5);
+    pub const ZX_OBJ_TYPE_PORT: Self = Self(6);
+    pub const ZX_OBJ_TYPE_INTERRUPT: Self = Self(9);
+    pub const ZX_OBJ_TYPE_PCI_DEVICE: Self = Self(11);
+    pub const ZX_OBJ_TYPE_LOG: Self = Self(12);
+    pub const ZX_OBJ_TYPE_SOCKET: Self = Self(14);
+    pub const ZX_OBJ_TYPE_RESOURCE: Self = Self(15);
+    pub const ZX_OBJ_TYPE_EVENTPAIR: Self = Self(16);
+    pub const ZX_OBJ_TYPE_JOB: Self = Self(17);
+    pub const ZX_OBJ_TYPE_VMAR: Self = Self(18);
+    pub const ZX_OBJ_TYPE_FIFO: Self = Self(19);
+    pub const ZX_OBJ_TYPE_GUEST: Self = Self(20);
+    pub const ZX_OBJ_TYPE_VCPU: Self = Self(21);
+    pub const ZX_OBJ_TYPE_TIMER: Self = Self(22);
+    pub const ZX_OBJ_TYPE_IOMMU: Self = Self(23);
+    pub const ZX_OBJ_TYPE_BTI: Self = Self(24);
+    pub const ZX_OBJ_TYPE_PROFILE: Self = Self(25);
+    pub const ZX_OBJ_TYPE_PMT: Self = Self(26);
+    pub const ZX_OBJ_TYPE_SUSPEND_TOKEN: Self = Self(27);
+    pub const ZX_OBJ_TYPE_PAGER: Self = Self(28);
+    pub const ZX_OBJ_TYPE_EXCEPTION: Self = Self(29);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_thread_state_values_t {
-    ZX_THREAD_STATE_NEW = 0,
-    ZX_THREAD_STATE_RUNNING = 1,
-    ZX_THREAD_STATE_SUSPENDED = 2,
-    ZX_THREAD_STATE_BLOCKED = 3,
-    ZX_THREAD_STATE_DYING = 4,
-    ZX_THREAD_STATE_DEAD = 5,
-    ZX_THREAD_STATE_BLOCKED_EXCEPTION = 259,
-    ZX_THREAD_STATE_BLOCKED_SLEEPING = 515,
-    ZX_THREAD_STATE_BLOCKED_FUTEX = 771,
-    ZX_THREAD_STATE_BLOCKED_PORT = 1027,
-    ZX_THREAD_STATE_BLOCKED_CHANNEL = 1283,
-    ZX_THREAD_STATE_BLOCKED_WAIT_ONE = 1539,
-    ZX_THREAD_STATE_BLOCKED_WAIT_MANY = 1795,
-    ZX_THREAD_STATE_BLOCKED_INTERRUPT = 2051,
-    ZX_THREAD_STATE_BLOCKED_PAGER = 2307,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_thread_state_values(u32);
+
+impl zx_thread_state_values {
+    pub const ZX_THREAD_STATE_NEW: Self = Self(0);
+    pub const ZX_THREAD_STATE_RUNNING: Self = Self(1);
+    pub const ZX_THREAD_STATE_SUSPENDED: Self = Self(2);
+    pub const ZX_THREAD_STATE_BLOCKED: Self = Self(3);
+    pub const ZX_THREAD_STATE_DYING: Self = Self(4);
+    pub const ZX_THREAD_STATE_DEAD: Self = Self(5);
+    pub const ZX_THREAD_STATE_BLOCKED_EXCEPTION: Self = Self(259);
+    pub const ZX_THREAD_STATE_BLOCKED_SLEEPING: Self = Self(515);
+    pub const ZX_THREAD_STATE_BLOCKED_FUTEX: Self = Self(771);
+    pub const ZX_THREAD_STATE_BLOCKED_PORT: Self = Self(1027);
+    pub const ZX_THREAD_STATE_BLOCKED_CHANNEL: Self = Self(1283);
+    pub const ZX_THREAD_STATE_BLOCKED_WAIT_ONE: Self = Self(1539);
+    pub const ZX_THREAD_STATE_BLOCKED_WAIT_MANY: Self = Self(1795);
+    pub const ZX_THREAD_STATE_BLOCKED_INTERRUPT: Self = Self(2051);
+    pub const ZX_THREAD_STATE_BLOCKED_PAGER: Self = Self(2307);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_exception_channel_types_t {
-    ZX_EXCEPTION_CHANNEL_TYPE_NONE = 0,
-    ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER = 1,
-    ZX_EXCEPTION_CHANNEL_TYPE_THREAD = 2,
-    ZX_EXCEPTION_CHANNEL_TYPE_PROCESS = 3,
-    ZX_EXCEPTION_CHANNEL_TYPE_JOB = 4,
-    ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER = 5,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_exception_channel_types(u32);
+
+impl zx_exception_channel_types {
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_NONE: Self = Self(0);
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_DEBUGGER: Self = Self(1);
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_THREAD: Self = Self(2);
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_PROCESS: Self = Self(3);
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_JOB: Self = Self(4);
+    pub const ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER: Self = Self(5);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_exception_port_types_t {
-    ZX_EXCEPTION_PORT_TYPE_NONE = 0,
-    ZX_EXCEPTION_PORT_TYPE_DEBUGGER = 1,
-    ZX_EXCEPTION_PORT_TYPE_THREAD = 2,
-    ZX_EXCEPTION_PORT_TYPE_PROCESS = 3,
-    ZX_EXCEPTION_PORT_TYPE_JOB = 4,
-    ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER = 5,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_exception_port_types(u32);
+
+impl zx_exception_port_types {
+    pub const ZX_EXCEPTION_PORT_TYPE_NONE: Self = Self(0);
+    pub const ZX_EXCEPTION_PORT_TYPE_DEBUGGER: Self = Self(1);
+    pub const ZX_EXCEPTION_PORT_TYPE_THREAD: Self = Self(2);
+    pub const ZX_EXCEPTION_PORT_TYPE_PROCESS: Self = Self(3);
+    pub const ZX_EXCEPTION_PORT_TYPE_JOB: Self = Self(4);
+    pub const ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER: Self = Self(5);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_info_maps_type_vals_t {
-    ZX_INFO_MAPS_TYPE_NONE = 0,
-    ZX_INFO_MAPS_TYPE_ASPACE = 1,
-    ZX_INFO_MAPS_TYPE_VMAR = 2,
-    ZX_INFO_MAPS_TYPE_MAPPING = 3,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_info_maps_type_vals(u32);
+
+impl zx_info_maps_type_vals {
+    pub const ZX_INFO_MAPS_TYPE_NONE: Self = Self(0);
+    pub const ZX_INFO_MAPS_TYPE_ASPACE: Self = Self(1);
+    pub const ZX_INFO_MAPS_TYPE_VMAR: Self = Self(2);
+    pub const ZX_INFO_MAPS_TYPE_MAPPING: Self = Self(3);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_cache_policy_options_t {
-    ZX_CACHE_POLICY_CACHED = 0,
-    ZX_CACHE_POLICY_UNCACHED = 1,
-    ZX_CACHE_POLICY_UNCACHED_DEVICE = 2,
-    ZX_CACHE_POLICY_WRITE_COMBINING = 3,
-    ZX_CACHE_POLICY_MASK = 3,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_cache_policy_options(u32);
+
+impl zx_cache_policy_options {
+    pub const ZX_CACHE_POLICY_CACHED: Self = Self(0);
+    pub const ZX_CACHE_POLICY_UNCACHED: Self = Self(1);
+    pub const ZX_CACHE_POLICY_UNCACHED_DEVICE: Self = Self(2);
+    pub const ZX_CACHE_POLICY_WRITE_COMBINING: Self = Self(3);
+    pub const ZX_CACHE_POLICY_MASK: Self = Self(3);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_info_vmo_type_vals_t {
-    ZX_INFO_VMO_TYPE_PAGED = 1,
-    ZX_INFO_VMO_TYPE_PHYSICAL = 0,
-    ZX_INFO_VMO_RESIZABLE = 2,
-    ZX_INFO_VMO_IS_COW_CLONE = 4,
-    ZX_INFO_VMO_VIA_HANDLE = 8,
-    ZX_INFO_VMO_VIA_MAPPING = 16,
-    ZX_INFO_VMO_PAGER_BACKED = 32,
-    ZX_INFO_VMO_CONTIGUOUS = 64,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_info_vmo_type_vals(u32);
+
+impl zx_info_vmo_type_vals {
+    pub const ZX_INFO_VMO_TYPE_PAGED: Self = Self(1);
+    pub const ZX_INFO_VMO_TYPE_PHYSICAL: Self = Self(0);
+    pub const ZX_INFO_VMO_RESIZABLE: Self = Self(2);
+    pub const ZX_INFO_VMO_IS_COW_CLONE: Self = Self(4);
+    pub const ZX_INFO_VMO_VIA_HANDLE: Self = Self(8);
+    pub const ZX_INFO_VMO_VIA_MAPPING: Self = Self(16);
+    pub const ZX_INFO_VMO_PAGER_BACKED: Self = Self(32);
+    pub const ZX_INFO_VMO_CONTIGUOUS: Self = Self(64);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_socket_create_options_t {
-    ZX_SOCKET_STREAM = 0,
-    ZX_SOCKET_DATAGRAM = 1,
-    ZX_SOCKET_HAS_CONTROL = 2,
-    ZX_SOCKET_HAS_ACCEPT = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_socket_create_options(u32);
+
+impl zx_socket_create_options {
+    pub const ZX_SOCKET_STREAM: Self = Self(0);
+    pub const ZX_SOCKET_DATAGRAM: Self = Self(1);
+    pub const ZX_SOCKET_HAS_CONTROL: Self = Self(2);
+    pub const ZX_SOCKET_HAS_ACCEPT: Self = Self(4);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_socket_read_options_t {
-    ZX_SOCKET_CONTROL = 4,
-    ZX_SOCKET_PEEK = 8,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_socket_read_options(u32);
+
+impl zx_socket_read_options {
+    pub const ZX_SOCKET_CONTROL: Self = Self(4);
+    pub const ZX_SOCKET_PEEK: Self = Self(8);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_socket_write_options_t {
-    ZX_SOCKET_CONTROL = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_socket_write_options(u32);
+
+impl zx_socket_write_options {
+    pub const ZX_SOCKET_CONTROL: Self = Self(4);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_socket_shutdown_options_t {
-    ZX_SOCKET_SHUTDOWN_WRITE = 1,
-    ZX_SOCKET_SHUTDOWN_READ = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_socket_shutdown_options(u32);
+
+impl zx_socket_shutdown_options {
+    pub const ZX_SOCKET_SHUTDOWN_WRITE: Self = Self(1);
+    pub const ZX_SOCKET_SHUTDOWN_READ: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum thread_state_kind_t {
-    ZX_THREAD_STATE_GENERAL_REGS = 0,
-    ZX_THREAD_STATE_FP_REGS = 1,
-    ZX_THREAD_STATE_VECTOR_REGS = 2,
-    ZX_THREAD_STATE_DEBUG_REGS = 4,
-    ZX_THREAD_STATE_SINGLE_STEP = 5,
-    ZX_THREAD_X86_REGISTER_FS = 6,
-    ZX_THREAD_X86_REGISTER_GS = 7,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct thread_state_kind(u32);
+
+impl thread_state_kind {
+    pub const ZX_THREAD_STATE_GENERAL_REGS: Self = Self(0);
+    pub const ZX_THREAD_STATE_FP_REGS: Self = Self(1);
+    pub const ZX_THREAD_STATE_VECTOR_REGS: Self = Self(2);
+    pub const ZX_THREAD_STATE_DEBUG_REGS: Self = Self(4);
+    pub const ZX_THREAD_STATE_SINGLE_STEP: Self = Self(5);
+    pub const ZX_THREAD_X86_REGISTER_FS: Self = Self(6);
+    pub const ZX_THREAD_X86_REGISTER_GS: Self = Self(7);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_job_policy_options_t {
-    ZX_JOB_POL_RELATIVE = 0,
-    ZX_JOB_POL_ABSOLUTE = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_job_policy_options(u32);
+
+impl zx_job_policy_options {
+    pub const ZX_JOB_POL_RELATIVE: Self = Self(0);
+    pub const ZX_JOB_POL_ABSOLUTE: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_job_policy_topic_t {
-    ZX_JOB_POL_BASIC = 0,
-    ZX_JOB_POL_TIMER_SLACK = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_job_policy_topic(u32);
+
+impl zx_job_policy_topic {
+    pub const ZX_JOB_POL_BASIC: Self = Self(0);
+    pub const ZX_JOB_POL_TIMER_SLACK: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_job_policy_conditions_t {
-    ZX_POL_BAD_HANDLE = 0,
-    ZX_POL_WRONG_OBJECT = 1,
-    ZX_POL_VMAR_WX = 2,
-    ZX_POL_NEW_ANY = 3,
-    ZX_POL_NEW_VMO = 4,
-    ZX_POL_NEW_CHANNEL = 5,
-    ZX_POL_NEW_EVENT = 6,
-    ZX_POL_NEW_EVENTPAIR = 7,
-    ZX_POL_NEW_PORT = 8,
-    ZX_POL_NEW_SOCKET = 9,
-    ZX_POL_NEW_FIFO = 10,
-    ZX_POL_NEW_TIMER = 11,
-    ZX_POL_NEW_PROCESS = 12,
-    ZX_POL_NEW_PROFILE = 13,
-    ZX_POL_AMBIENT_MARK_VMO_EXEC = 14,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_job_policy_conditions(u32);
+
+impl zx_job_policy_conditions {
+    pub const ZX_POL_BAD_HANDLE: Self = Self(0);
+    pub const ZX_POL_WRONG_OBJECT: Self = Self(1);
+    pub const ZX_POL_VMAR_WX: Self = Self(2);
+    pub const ZX_POL_NEW_ANY: Self = Self(3);
+    pub const ZX_POL_NEW_VMO: Self = Self(4);
+    pub const ZX_POL_NEW_CHANNEL: Self = Self(5);
+    pub const ZX_POL_NEW_EVENT: Self = Self(6);
+    pub const ZX_POL_NEW_EVENTPAIR: Self = Self(7);
+    pub const ZX_POL_NEW_PORT: Self = Self(8);
+    pub const ZX_POL_NEW_SOCKET: Self = Self(9);
+    pub const ZX_POL_NEW_FIFO: Self = Self(10);
+    pub const ZX_POL_NEW_TIMER: Self = Self(11);
+    pub const ZX_POL_NEW_PROCESS: Self = Self(12);
+    pub const ZX_POL_NEW_PROFILE: Self = Self(13);
+    pub const ZX_POL_AMBIENT_MARK_VMO_EXEC: Self = Self(14);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_job_policy_actions_t {
-    ZX_POL_ACTION_ALLOW = 0,
-    ZX_POL_ACTION_DENY = 1,
-    ZX_POL_ACTION_ALLOW_EXCEPTION = 2,
-    ZX_POL_ACTION_DENY_EXCEPTION = 3,
-    ZX_POL_ACTION_KILL = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_job_policy_actions(u32);
+
+impl zx_job_policy_actions {
+    pub const ZX_POL_ACTION_ALLOW: Self = Self(0);
+    pub const ZX_POL_ACTION_DENY: Self = Self(1);
+    pub const ZX_POL_ACTION_ALLOW_EXCEPTION: Self = Self(2);
+    pub const ZX_POL_ACTION_DENY_EXCEPTION: Self = Self(3);
+    pub const ZX_POL_ACTION_KILL: Self = Self(4);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_task_exception_port_options_t {
-    ZX_EXCEPTION_PORT_DEBUGGER = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_task_exception_port_options(u32);
+
+impl zx_task_exception_port_options {
+    pub const ZX_EXCEPTION_PORT_DEBUGGER: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_task_resume_options_t {
-    ZX_RESUME_TRY_NEXT = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_task_resume_options(u32);
+
+impl zx_task_resume_options {
+    pub const ZX_RESUME_TRY_NEXT: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_port_create_options_t {
-    ZX_PORT_BIND_TO_INTERRUPT = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_port_create_options(u32);
+
+impl zx_port_create_options {
+    pub const ZX_PORT_BIND_TO_INTERRUPT: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_port_packet_type_t {
-    ZX_PKT_TYPE_USER = 0,
-    ZX_PKT_TYPE_SIGNAL_ONE = 1,
-    ZX_PKT_TYPE_SIGNAL_REP = 2,
-    ZX_PKT_TYPE_GUEST_BELL = 3,
-    ZX_PKT_TYPE_GUEST_MEM = 4,
-    ZX_PKT_TYPE_GUEST_IO = 5,
-    ZX_PKT_TYPE_GUEST_VCPU = 6,
-    ZX_PKT_TYPE_INTERRUPT = 7,
-    ZX_PKT_TYPE_PAGE_REQUEST = 9,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_port_packet_type(u32);
+
+impl zx_port_packet_type {
+    pub const ZX_PKT_TYPE_USER: Self = Self(0);
+    pub const ZX_PKT_TYPE_SIGNAL_ONE: Self = Self(1);
+    pub const ZX_PKT_TYPE_SIGNAL_REP: Self = Self(2);
+    pub const ZX_PKT_TYPE_GUEST_BELL: Self = Self(3);
+    pub const ZX_PKT_TYPE_GUEST_MEM: Self = Self(4);
+    pub const ZX_PKT_TYPE_GUEST_IO: Self = Self(5);
+    pub const ZX_PKT_TYPE_GUEST_VCPU: Self = Self(6);
+    pub const ZX_PKT_TYPE_INTERRUPT: Self = Self(7);
+    pub const ZX_PKT_TYPE_PAGE_REQUEST: Self = Self(9);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_timer_options_t {
-    ZX_TIMER_SLACK_CENTER = 0,
-    ZX_TIMER_SLACK_EARLY = 1,
-    ZX_TIMER_SLACK_LATE = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_timer_options(u32);
+
+impl zx_timer_options {
+    pub const ZX_TIMER_SLACK_CENTER: Self = Self(0);
+    pub const ZX_TIMER_SLACK_EARLY: Self = Self(1);
+    pub const ZX_TIMER_SLACK_LATE: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmo_create_options_t {
-    ZX_VMO_RESIZABLE = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmo_create_options(u32);
+
+impl zx_vmo_create_options {
+    pub const ZX_VMO_RESIZABLE: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmo_opcodes_t {
-    ZX_VMO_OP_COMMIT = 1,
-    ZX_VMO_OP_DECOMMIT = 2,
-    ZX_VMO_OP_LOCK = 3,
-    ZX_VMO_OP_UNLOCK = 4,
-    ZX_VMO_OP_CACHE_SYNC = 6,
-    ZX_VMO_OP_CACHE_INVALIDATE = 7,
-    ZX_VMO_OP_CACHE_CLEAN = 8,
-    ZX_VMO_OP_CACHE_CLEAN_INVALIDATE = 9,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmo_opcodes(u32);
+
+impl zx_vmo_opcodes {
+    pub const ZX_VMO_OP_COMMIT: Self = Self(1);
+    pub const ZX_VMO_OP_DECOMMIT: Self = Self(2);
+    pub const ZX_VMO_OP_LOCK: Self = Self(3);
+    pub const ZX_VMO_OP_UNLOCK: Self = Self(4);
+    pub const ZX_VMO_OP_CACHE_SYNC: Self = Self(6);
+    pub const ZX_VMO_OP_CACHE_INVALIDATE: Self = Self(7);
+    pub const ZX_VMO_OP_CACHE_CLEAN: Self = Self(8);
+    pub const ZX_VMO_OP_CACHE_CLEAN_INVALIDATE: Self = Self(9);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmo_cache_policy_options_t {
-    ZX_CACHE_POLICY_CACHED = 0,
-    ZX_CACHE_POLICY_UNCACHED = 1,
-    ZX_CACHE_POLICY_UNCACHED_DEVICE = 2,
-    ZX_CACHE_POLICY_WRITE_COMBINING = 3,
-    ZX_CACHE_POLICY_MASK = 3,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmo_cache_policy_options(u32);
+
+impl zx_vmo_cache_policy_options {
+    pub const ZX_CACHE_POLICY_CACHED: Self = Self(0);
+    pub const ZX_CACHE_POLICY_UNCACHED: Self = Self(1);
+    pub const ZX_CACHE_POLICY_UNCACHED_DEVICE: Self = Self(2);
+    pub const ZX_CACHE_POLICY_WRITE_COMBINING: Self = Self(3);
+    pub const ZX_CACHE_POLICY_MASK: Self = Self(3);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmo_clone_options_t {
-    ZX_VMO_CLONE_COPY_ON_WRITE = 1,
-    ZX_VMO_CHILD_COPY_ON_WRITE = 1,
-    ZX_VMO_CHILD_RESIZABLE = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmo_clone_options(u32);
+
+impl zx_vmo_clone_options {
+    pub const ZX_VMO_CLONE_COPY_ON_WRITE: Self = Self(1);
+    pub const ZX_VMO_CHILD_COPY_ON_WRITE: Self = Self(1);
+    pub const ZX_VMO_CHILD_RESIZABLE: Self = Self(4);
 }
-#[repr(zircon::sys::zx_vm_option_t)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmar_allocate_map_options_t {
-    ZX_VM_PERM_READ = 1,
-    ZX_VM_PERM_WRITE = 2,
-    ZX_VM_PERM_EXECUTE = 4,
-    ZX_VM_COMPACT = 8,
-    ZX_VM_SPECIFIC = 16,
-    ZX_VM_SPECIFIC_OVERWRITE = 32,
-    ZX_VM_CAN_MAP_SPECIFIC = 64,
-    ZX_VM_CAN_MAP_READ = 128,
-    ZX_VM_CAN_MAP_WRITE = 256,
-    ZX_VM_CAN_MAP_EXECUTE = 512,
-    ZX_VM_MAP_RANGE = 1024,
-    ZX_VM_REQUIRE_NON_RESIZABLE = 2048,
-    ZX_VM_ALLOW_FAULTS = 4096,
-    ZX_VM_ALIGN_1KB = 167772160,
-    ZX_VM_ALIGN_2KB = 184549376,
-    ZX_VM_ALIGN_4KB = 201326592,
-    ZX_VM_ALIGN_8KB = 218103808,
-    ZX_VM_ALIGN_16KB = 234881024,
-    ZX_VM_ALIGN_32KB = 251658240,
-    ZX_VM_ALIGN_64KB = 268435456,
-    ZX_VM_ALIGN_128KB = 285212672,
-    ZX_VM_ALIGN_256KB = 301989888,
-    ZX_VM_ALIGN_512KB = 318767104,
-    ZX_VM_ALIGN_1MB = 335544320,
-    ZX_VM_ALIGN_2MB = 352321536,
-    ZX_VM_ALIGN_4MB = 369098752,
-    ZX_VM_ALIGN_8MB = 385875968,
-    ZX_VM_ALIGN_16MB = 402653184,
-    ZX_VM_ALIGN_32MB = 419430400,
-    ZX_VM_ALIGN_64MB = 436207616,
-    ZX_VM_ALIGN_128MB = 452984832,
-    ZX_VM_ALIGN_256MB = 469762048,
-    ZX_VM_ALIGN_512MB = 486539264,
-    ZX_VM_ALIGN_1GB = 503316480,
-    ZX_VM_ALIGN_2GB = 520093696,
-    ZX_VM_ALIGN_4GB = 536870912,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmar_allocate_map_options(zircon::sys::zx_vm_option_t);
+
+impl zx_vmar_allocate_map_options {
+    pub const ZX_VM_PERM_READ: Self = Self(1);
+    pub const ZX_VM_PERM_WRITE: Self = Self(2);
+    pub const ZX_VM_PERM_EXECUTE: Self = Self(4);
+    pub const ZX_VM_COMPACT: Self = Self(8);
+    pub const ZX_VM_SPECIFIC: Self = Self(16);
+    pub const ZX_VM_SPECIFIC_OVERWRITE: Self = Self(32);
+    pub const ZX_VM_CAN_MAP_SPECIFIC: Self = Self(64);
+    pub const ZX_VM_CAN_MAP_READ: Self = Self(128);
+    pub const ZX_VM_CAN_MAP_WRITE: Self = Self(256);
+    pub const ZX_VM_CAN_MAP_EXECUTE: Self = Self(512);
+    pub const ZX_VM_MAP_RANGE: Self = Self(1024);
+    pub const ZX_VM_REQUIRE_NON_RESIZABLE: Self = Self(2048);
+    pub const ZX_VM_ALLOW_FAULTS: Self = Self(4096);
+    pub const ZX_VM_ALIGN_1KB: Self = Self(167772160);
+    pub const ZX_VM_ALIGN_2KB: Self = Self(184549376);
+    pub const ZX_VM_ALIGN_4KB: Self = Self(201326592);
+    pub const ZX_VM_ALIGN_8KB: Self = Self(218103808);
+    pub const ZX_VM_ALIGN_16KB: Self = Self(234881024);
+    pub const ZX_VM_ALIGN_32KB: Self = Self(251658240);
+    pub const ZX_VM_ALIGN_64KB: Self = Self(268435456);
+    pub const ZX_VM_ALIGN_128KB: Self = Self(285212672);
+    pub const ZX_VM_ALIGN_256KB: Self = Self(301989888);
+    pub const ZX_VM_ALIGN_512KB: Self = Self(318767104);
+    pub const ZX_VM_ALIGN_1MB: Self = Self(335544320);
+    pub const ZX_VM_ALIGN_2MB: Self = Self(352321536);
+    pub const ZX_VM_ALIGN_4MB: Self = Self(369098752);
+    pub const ZX_VM_ALIGN_8MB: Self = Self(385875968);
+    pub const ZX_VM_ALIGN_16MB: Self = Self(402653184);
+    pub const ZX_VM_ALIGN_32MB: Self = Self(419430400);
+    pub const ZX_VM_ALIGN_64MB: Self = Self(436207616);
+    pub const ZX_VM_ALIGN_128MB: Self = Self(452984832);
+    pub const ZX_VM_ALIGN_256MB: Self = Self(469762048);
+    pub const ZX_VM_ALIGN_512MB: Self = Self(486539264);
+    pub const ZX_VM_ALIGN_1GB: Self = Self(503316480);
+    pub const ZX_VM_ALIGN_2GB: Self = Self(520093696);
+    pub const ZX_VM_ALIGN_4GB: Self = Self(536870912);
 }
-#[repr(zircon::sys::zx_vm_option_t)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vmar_protect_options_t {
-    ZX_VM_PERM_READ = 1,
-    ZX_VM_PERM_WRITE = 2,
-    ZX_VM_PERM_EXECUTE = 4,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vmar_protect_options(zircon::sys::zx_vm_option_t);
+
+impl zx_vmar_protect_options {
+    pub const ZX_VM_PERM_READ: Self = Self(1);
+    pub const ZX_VM_PERM_WRITE: Self = Self(2);
+    pub const ZX_VM_PERM_EXECUTE: Self = Self(4);
 }
-#[repr(i32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_profile_scheduler_priority_t {
-    ZX_PRIORITY_LOWEST = 0,
-    ZX_PRIORITY_LOW = 8,
-    ZX_PRIORITY_DEFAULT = 16,
-    ZX_PRIORITY_HIGH = 24,
-    ZX_PRIORITY_HIGHEST = 31,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_profile_scheduler_priority(i32);
+
+impl zx_profile_scheduler_priority {
+    pub const ZX_PRIORITY_LOWEST: Self = Self(0);
+    pub const ZX_PRIORITY_LOW: Self = Self(8);
+    pub const ZX_PRIORITY_DEFAULT: Self = Self(16);
+    pub const ZX_PRIORITY_HIGH: Self = Self(24);
+    pub const ZX_PRIORITY_HIGHEST: Self = Self(31);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_profile_info_type_t {
-    ZX_PROFILE_INFO_SCHEDULER = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_profile_info_type(u32);
+
+impl zx_profile_info_type {
+    pub const ZX_PROFILE_INFO_SCHEDULER: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_debuglog_create_options_t {
-    ZX_LOG_FLAG_READABLE = 1073741824,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_debuglog_create_options(u32);
+
+impl zx_debuglog_create_options {
+    pub const ZX_LOG_FLAG_READABLE: Self = Self(1073741824);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_interrupt_options_t {
-    ZX_INTERRUPT_REMAP_IRQ = 1,
-    ZX_INTERRUPT_MODE_DEFAULT = 0,
-    ZX_INTERRUPT_MODE_EDGE_LOW = 2,
-    ZX_INTERRUPT_MODE_EDGE_HIGH = 4,
-    ZX_INTERRUPT_MODE_LEVEL_LOW = 6,
-    ZX_INTERRUPT_MODE_LEVEL_HIGH = 8,
-    ZX_INTERRUPT_MODE_EDGE_BOTH = 10,
-    ZX_INTERRUPT_MODE_MASK = 14,
-    ZX_INTERRUPT_VIRTUAL = 16,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_interrupt_options(u32);
+
+impl zx_interrupt_options {
+    pub const ZX_INTERRUPT_REMAP_IRQ: Self = Self(1);
+    pub const ZX_INTERRUPT_MODE_DEFAULT: Self = Self(0);
+    pub const ZX_INTERRUPT_MODE_EDGE_LOW: Self = Self(2);
+    pub const ZX_INTERRUPT_MODE_EDGE_HIGH: Self = Self(4);
+    pub const ZX_INTERRUPT_MODE_LEVEL_LOW: Self = Self(6);
+    pub const ZX_INTERRUPT_MODE_LEVEL_HIGH: Self = Self(8);
+    pub const ZX_INTERRUPT_MODE_EDGE_BOTH: Self = Self(10);
+    pub const ZX_INTERRUPT_MODE_MASK: Self = Self(14);
+    pub const ZX_INTERRUPT_VIRTUAL: Self = Self(16);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_iommu_type_t {
-    ZX_IOMMU_TYPE_DUMMY = 0,
-    ZX_IOMMU_TYPE_INTEL = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_iommu_type(u32);
+
+impl zx_iommu_type {
+    pub const ZX_IOMMU_TYPE_DUMMY: Self = Self(0);
+    pub const ZX_IOMMU_TYPE_INTEL: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_bti_pin_options_t {
-    ZX_BTI_PERM_READ = 1,
-    ZX_BTI_PERM_WRITE = 2,
-    ZX_BTI_PERM_EXECUTE = 4,
-    ZX_BTI_COMPRESS = 8,
-    ZX_BTI_CONTIGUOUS = 16,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_bti_pin_options(u32);
+
+impl zx_bti_pin_options {
+    pub const ZX_BTI_PERM_READ: Self = Self(1);
+    pub const ZX_BTI_PERM_WRITE: Self = Self(2);
+    pub const ZX_BTI_PERM_EXECUTE: Self = Self(4);
+    pub const ZX_BTI_COMPRESS: Self = Self(8);
+    pub const ZX_BTI_CONTIGUOUS: Self = Self(16);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_rsrc_kind_vals_t {
-    ZX_RSRC_KIND_MMIO = 0,
-    ZX_RSRC_KIND_IRQ = 1,
-    ZX_RSRC_KIND_IOPORT = 2,
-    ZX_RSRC_KIND_HYPERVISOR = 3,
-    ZX_RSRC_KIND_ROOT = 4,
-    ZX_RSRC_KIND_VMEX = 5,
-    ZX_RSRC_KIND_SMC = 6,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_rsrc_kind_vals(u32);
+
+impl zx_rsrc_kind_vals {
+    pub const ZX_RSRC_KIND_MMIO: Self = Self(0);
+    pub const ZX_RSRC_KIND_IRQ: Self = Self(1);
+    pub const ZX_RSRC_KIND_IOPORT: Self = Self(2);
+    pub const ZX_RSRC_KIND_HYPERVISOR: Self = Self(3);
+    pub const ZX_RSRC_KIND_ROOT: Self = Self(4);
+    pub const ZX_RSRC_KIND_VMEX: Self = Self(5);
+    pub const ZX_RSRC_KIND_SMC: Self = Self(6);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_guest_trap_kind_t {
-    ZX_GUEST_TRAP_BELL = 0,
-    ZX_GUEST_TRAP_MEM = 1,
-    ZX_GUEST_TRAP_IO = 2,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_guest_trap_kind(u32);
+
+impl zx_guest_trap_kind {
+    pub const ZX_GUEST_TRAP_BELL: Self = Self(0);
+    pub const ZX_GUEST_TRAP_MEM: Self = Self(1);
+    pub const ZX_GUEST_TRAP_IO: Self = Self(2);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vcpu_read_state_kind_t {
-    ZX_VCPU_STATE = 0,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vcpu_read_state_kind(u32);
+
+impl zx_vcpu_read_state_kind {
+    pub const ZX_VCPU_STATE: Self = Self(0);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_vcpu_write_state_kind_t {
-    ZX_VCPU_STATE = 0,
-    ZX_VCPU_IO = 1,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_vcpu_write_state_kind(u32);
+
+impl zx_vcpu_write_state_kind {
+    pub const ZX_VCPU_STATE: Self = Self(0);
+    pub const ZX_VCPU_IO: Self = Self(1);
 }
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_system_powerctl_cmd_t {
-    ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS = 1,
-    ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY = 2,
-    ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE = 3,
-    ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1 = 4,
-    ZX_SYSTEM_POWERCTL_REBOOT = 5,
-    ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER = 6,
-    ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY = 7,
-    ZX_SYSTEM_POWERCTL_SHUTDOWN = 8,
+
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_system_powerctl_cmd(u32);
+
+impl zx_system_powerctl_cmd {
+    pub const ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS: Self = Self(1);
+    pub const ZX_SYSTEM_POWERCTL_DISABLE_ALL_CPUS_BUT_PRIMARY: Self = Self(2);
+    pub const ZX_SYSTEM_POWERCTL_ACPI_TRANSITION_S_STATE: Self = Self(3);
+    pub const ZX_SYSTEM_POWERCTL_X86_SET_PKG_PL1: Self = Self(4);
+    pub const ZX_SYSTEM_POWERCTL_REBOOT: Self = Self(5);
+    pub const ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER: Self = Self(6);
+    pub const ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY: Self = Self(7);
+    pub const ZX_SYSTEM_POWERCTL_SHUTDOWN: Self = Self(8);
 }
 
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_object_property_handles {
     pub type1: zircon::sys::zx_handle_t,
     pub type2: zircon::sys::zx_handle_t,
@@ -933,7 +1070,7 @@ pub union zx_object_property_handles {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_object_info_types {
     pub type1: [bool; 1 as usize],
     pub type2: [bool; 1 as usize],
@@ -961,7 +1098,7 @@ pub union zx_object_info_types {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_object_info_handles {
     pub type1: zircon::sys::zx_handle_t,
     pub type2: zircon::sys::zx_handle_t,
@@ -989,14 +1126,14 @@ pub union zx_object_info_handles {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_job_policy_types {
     pub type1: [zx_policy_basic; 1 as usize],
     pub type2: [zx_policy_timer_slack; 1 as usize],
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_packet_user {
     pub u64: [u64; 4 as usize],
     pub u32: [u32; 8 as usize],
@@ -1005,20 +1142,20 @@ pub union zx_packet_user {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_iommu_types {
     pub type1: [zx_iommu_desc_dummy; 1 as usize],
     pub type2: [zx_iommu_desc_intel; 1 as usize],
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_vcpu_read_state_types {
     pub type1: [zx_vcpu_state; 1 as usize],
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_vcpu_write_state_types {
     pub type1: [zx_vcpu_state; 1 as usize],
     pub type2: [zx_vcpu_io; 1 as usize],

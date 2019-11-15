@@ -10,11 +10,7 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
 pub const ARRAY_SIZE: u32 = 32;
-
-
-
 
 
 

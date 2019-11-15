@@ -10,15 +10,11 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
-
-
-
 
 
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union primitive_types {
     pub b: bool,
     pub i8: i8,
@@ -33,7 +29,7 @@ pub union primitive_types {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union arrays {
     pub rd_vptr: [*mut std::ffi::c_void /* Voidptr */ ; 1 as usize],
     pub wr_vptr: [*mut std::ffi::c_void /* Voidptr */ ; 1 as usize],
@@ -62,7 +58,7 @@ pub union arrays {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union Packet {
     pub i32: u32,
     pub u32: u32,

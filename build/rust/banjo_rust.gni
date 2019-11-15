@@ -27,12 +27,11 @@ template("banjo_rust") {
   }
 
   underscore_name = "banjo_" + string_replace(library_name, ".", "_")
-  dash_name = string_replace(library_name, ".", "-")
 
   banjo_target_gen_dir =
       get_label_info(":bogus($banjo_toolchain)", "target_gen_dir")
   file_stem = "$banjo_target_gen_dir/$underscore_name.rs"
-  file_args = "$banjo_target_gen_dir/rust/$dash_name.args"
+  file_args = "$banjo_target_gen_dir/rust/$library_name.args"
 
   compiled_action(generation_target_name) {
     forward_variables_from(invoker, [ "testonly" ])

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.syzkaller.flag banjo file
+// Generated from the banjo.examples.callback banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
@@ -11,18 +11,22 @@ use fuchsia_zircon as zircon;
 
 
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct Point {
+    pub x: i32,
+    pub y: i32,
+}
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Topic(u32);
+pub struct Direction(u32);
 
-impl Topic {
-    pub const TOPIC0: Self = Self(0);
-    pub const TOPIC1: Self = Self(1);
-    pub const TOPIC2: Self = Self(2);
-    pub const TOPIC3: Self = Self(3);
-    pub const TOPIC4: Self = Self(4);
-    pub const TOPIC5: Self = Self(5);
+impl Direction {
+    pub const UP: Self = Self(0);
+    pub const DOWN: Self = Self(1);
+    pub const LEFT: Self = Self(2);
+    pub const RIGHT: Self = Self(3);
 }
 
 

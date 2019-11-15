@@ -3,32 +3,37 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.protocol.other.types banjo file
+// Generated from the banjo.examples.tables banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
 use fuchsia_zircon as zircon;
 
 
-pub const STRINGS_SIZE: u32 = 32;
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct ThisIsAStruct {
-    pub s: *mut std::ffi::c_void /* String */,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct ThisIsAnEnum(u32);
-
-impl ThisIsAnEnum {
-    pub const X: Self = Self(23);
-}
-
 
 #[repr(C)]
 #[derive(Copy, Clone)]
-pub union ThisIsAUnion {
-    pub s: *mut std::ffi::c_void /* String */,
+pub struct A {
+    pub foo: *mut B,
 }
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct B {
+    pub bar: *mut A,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct C {
+    pub baz: zircon::sys::zx_handle_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct D {
+    pub qux: C,
+}
+
+
 

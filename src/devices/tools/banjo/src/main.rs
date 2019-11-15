@@ -99,9 +99,9 @@ fn main() -> Result<(), Error> {
         if let Some(c) = args[1].chars().nth(0) {
             if c == String::from("@").chars().nth(0).unwrap() {
                 let (_, f_name) = args[1].split_at(1);
-                let mut f = File::open(f_name).expect("file not found");
+                let mut f = File::open(f_name)?;
                 let mut contents = String::new();
-                f.read_to_string(&mut contents).expect("something went wrong reading the file");
+                f.read_to_string(&mut contents)?;
                 // program name
                 args = vec![args[0].clone()];
                 // program arguments
@@ -176,6 +176,7 @@ fn main() -> Result<(), Error> {
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),
         BackendName::Fidlcat => Box::new(FidlcatBackend::new(&mut output)),
         BackendName::Syzkaller => Box::new(SyzkallerBackend::new(&mut output)),
+        BackendName::Rust => Box::new(RustBackend::new(&mut output)),
         e => {
             eprintln!("{:?} backend is not yet implemented", e);
             ::std::process::exit(1);

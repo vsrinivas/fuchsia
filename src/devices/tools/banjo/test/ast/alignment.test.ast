@@ -4,7 +4,12 @@ BanjoAst {
         "banjo.examples.alignment": [
             Struct {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
@@ -50,7 +55,12 @@ BanjoAst {
             },
             Struct {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
@@ -107,7 +117,12 @@ BanjoAst {
             },
             Struct {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(
@@ -164,7 +179,12 @@ BanjoAst {
             },
             Struct {
                 attributes: Attrs(
-                    [],
+                    [
+                        Attr {
+                            key: "Packed",
+                            val: None,
+                        },
+                    ],
                 ),
                 name: Ident {
                     namespace: Some(

@@ -3,14 +3,16 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.syzkaller.protocol.zx banjo file
+// Generated from the banjo.examples.attributes banjo file
 
-#![allow(unused_imports, non_camel_case_types)]
+#pragma once
 
-use fuchsia_zircon as zircon;
+#include <type_traits>
+
+namespace ddk {
+namespace internal {
 
 
 
-
-
-
+} // namespace internal
+} // namespace ddk

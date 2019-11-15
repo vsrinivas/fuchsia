@@ -10,11 +10,9 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
-
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct primitive_types {
     pub b: bool,
     pub i8: i8,
@@ -29,16 +27,16 @@ pub struct primitive_types {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct strings {
-    pub rd_str: [u8; rd_str_len as usize],
-    pub wr_str: [u8; wr_str_len as usize],
+    pub rd_str: [u8; RD_STR_LEN as usize],
+    pub wr_str: [u8; WR_STR_LEN as usize],
     pub rd_str_len: usize,
     pub wr_str_len: usize,
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct arrays {
     pub rd_vptr: [*mut std::ffi::c_void /* Voidptr */ ; RD_VPTR_LEN as usize],
     pub wr_vptr: [*mut std::ffi::c_void /* Voidptr */ ; WR_VPTR_LEN as usize],
@@ -91,13 +89,11 @@ pub struct arrays {
 }
 
 #[repr(C)]
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone)]
 pub struct Point {
     pub x: i32,
     pub y: i32,
 }
-
-
 
 
 

@@ -10,3 +10,37 @@
 use fuchsia_zircon as zircon;
 
 
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct none_struct {
+    pub foo: i32,
+    pub bar: i32,
+    pub baz: i32,
+}
+
+#[repr(packed)]
+#[derive(Copy, Clone)]
+pub struct packed_struct {
+    pub foo: i32,
+    pub bar: i32,
+    pub baz: i32,
+}
+
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union none_union {
+    pub foo: i32,
+    pub bar: i32,
+    pub baz: i32,
+}
+
+#[repr(packed)]
+#[derive(Copy, Clone)]
+pub union packed_union {
+    pub foo: i32,
+    pub bar: i32,
+    pub baz: i32,
+}
+

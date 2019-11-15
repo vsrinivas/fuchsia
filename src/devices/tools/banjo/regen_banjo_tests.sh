@@ -3,15 +3,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-SCRIPT_DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
-FUCHSIA="$SCRIPT_DIR/../../"
-BANJO_DIR="$FUCHSIA/src/devices/tools/banjo/"
+if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
+  echo "FUCHSIA_BUILD_DIR environment variable not a directory; are you running under fx exec?" 1>&2
+  exit 1
+fi
+
+BANJO_DIR="$FUCHSIA_DIR/src/devices/tools/banjo/"
 BANJO_FILES="$BANJO_DIR/test/banjo"
 C_FILES="$BANJO_DIR/test/c"
 CPP_FILES="$BANJO_DIR/test/cpp"
 RUST_FILES="$BANJO_DIR/test/rust"
 #BANJO_BIN=${BANJO_BIN:-"$FUCHSIA/zircon/prebuilt/downloads/banjo/banjo_bin"}
-BANJO_BIN="$FUCHSIA/out/default/host_x64/banjo_bin"
+BANJO_BIN="$FUCHSIA_BUILD_DIR/host_x64/banjo_bin"
 
 for f in $BANJO_FILES/*
 do
@@ -45,5 +48,5 @@ do
     $BANJO_BIN --backend cpp $zx --output "$CPP_FILES/$filename.h" $dependencies --files $f
     $BANJO_BIN --backend cpp_i $zx --output "$CPP_FILES/$filename-internal.h" $dependencies --files $f
   fi
-  # $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
+  $BANJO_BIN --backend rust $zx --output "$RUST_FILES/$filename.rs" $dependencies --files $f
 done

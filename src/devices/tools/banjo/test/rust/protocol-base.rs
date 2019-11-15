@@ -10,10 +10,6 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
-
-
-
 
 
 

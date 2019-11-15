@@ -10,22 +10,21 @@
 use fuchsia_zircon as zircon;
 
 
-// C ABI compat
 
 
+#[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub struct zx_create_options(u32);
 
-
-#[repr(u32)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_create_options_t {
-    VARIANT0 = 0,
-    VARIANT1 = 1,
-    VARIANT2 = 2,
+impl zx_create_options {
+    pub const VARIANT0: Self = Self(0);
+    pub const VARIANT1: Self = Self(1);
+    pub const VARIANT2: Self = Self(2);
 }
 
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_create_types {
     pub type0: [i8; 1 as usize],
     pub type1: [i16; 1 as usize],
@@ -33,7 +32,7 @@ pub union zx_create_types {
 }
 
 #[repr(C)]
-#[derive(Debug, Default, PartialEq)]
+#[derive(Copy, Clone)]
 pub union zx_handle_types {
     pub type0: zircon::sys::zx_handle_t,
     pub type1: zircon::sys::zx_handle_t,

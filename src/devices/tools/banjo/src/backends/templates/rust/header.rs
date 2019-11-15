@@ -3,14 +3,10 @@
 // found in the LICENSE file.
 
 // WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.
-// Generated from the banjo.examples.syzkaller.protocol.zx banjo file
+// Generated from the {primary_namespace} banjo file
 
 #![allow(unused_imports, non_camel_case_types)]
 
 use fuchsia_zircon as zircon;
 
-
-
-
-
-
+{includes}
