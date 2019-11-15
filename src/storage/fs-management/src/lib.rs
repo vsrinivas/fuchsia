@@ -50,7 +50,9 @@
 use {
     cstr::cstr,
     failure::{bail, format_err, Error, ResultExt},
-    fdio::{spawn_etc, Namespace, SpawnAction, SpawnOptions},
+    fdio::{
+        clone_channel, create_fd, spawn_etc, transfer_fd, Namespace, SpawnAction, SpawnOptions,
+    },
     fidl_fuchsia_io::{DirectoryAdminSynchronousProxy, OPEN_RIGHT_ADMIN},
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, AsHandleRef},
@@ -89,7 +91,7 @@ where
     FSType: Layout,
 {
     namespace: Namespace,
-    device_path: String,
+    device: Option<zx::Channel>,
     mount_point: Option<String>,
     launcher: FSLauncher<FSType, ProcLauncher>,
 }
@@ -112,7 +114,15 @@ impl Blobfs {
     /// Manage a blobfs partition on the provided device. The device is not formatted, mounted, or
     /// modified at this point.
     pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::new(device_path)
+        let (block_device, server_chan) = zx::Channel::create()?;
+        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
+        Filesystem::new(block_device)
+    }
+
+    /// Manage a blobfs partition on the provided device. The device is not formatted, mounted, or
+    /// modified at this point.
+    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::new(device_channel)
     }
 }
 
@@ -137,7 +147,15 @@ impl Minfs {
     /// Manage a minfs partition on the provided device. The device is not formatted, mounted, or
     /// modified at this point.
     pub fn new(device_path: &str) -> Result<Filesystem<Self>, Error> {
-        Filesystem::new(device_path)
+        let (block_device, server_chan) = zx::Channel::create()?;
+        fdio::service_connect(device_path, server_chan).context("connecting to block device")?;
+        Filesystem::new(block_device)
+    }
+
+    /// Manage a minfs partition on the provided device. The device is not formatted, mounted, or
+    /// modified at this point.
+    pub fn from_channel(device_channel: zx::Channel) -> Result<Filesystem<Self>, Error> {
+        Filesystem::new(device_channel)
     }
 }
 
@@ -171,11 +189,11 @@ where
     ///
     /// This function is not public. The only way to construct a new filesystem type is through one
     /// of the structs that implements Layout.
-    fn new(device_path: &str) -> Result<Filesystem<FSType>, Error> {
+    fn new(device: zx::Channel) -> Result<Filesystem<FSType>, Error> {
         let namespace = Namespace::installed().context("failed to get installed namespace")?;
         Ok(Filesystem {
             namespace,
-            device_path: String::from(device_path),
+            device: Some(device),
             mount_point: None,
             launcher: FSLauncher::new(FSType::options()),
         })
@@ -197,7 +215,7 @@ where
     }
 
     /// Initialize the filesystem partition that exists on the provided block device, allowing it to
-    /// recieve requests on the root channel. In order to be mounted in the traditional sense, the
+    /// receive requests on the root channel. In order to be mounted in the traditional sense, the
     /// client side of the provided root channel needs to be bound to a path in a namespace
     /// somewhere.
     fn initialize(&self, block_device: zx::Channel) -> Result<zx::Channel, Error> {
@@ -224,15 +242,27 @@ where
         Ok(client_chan)
     }
 
+    /// Returns a channel to the block device.
+    fn get_channel(&mut self) -> Result<zx::Channel, Error> {
+        // Create a channel clone.
+        let file = create_fd(self.device.take().unwrap().into())?;
+        let channel = clone_channel(&file).context("Clonning device channel")?;
+        self.device = Some((transfer_fd(file)?).into());
+
+        Ok(channel)
+    }
+
     /// Format the associated device with a fresh filesystem. It must not be mounted.
-    pub fn format(&self) -> Result<(), Error> {
+    pub fn format(&mut self) -> Result<(), Error> {
         if let Some(mount_point) = &self.mount_point {
             // shouldn't be mounted if we are going to format it
             bail!("failed to format {}: mounted at {}", FSType::name(), mount_point);
         }
 
+        let device = self.get_channel()?;
+
         self.launcher
-            .run_command_with_device(cstr!("mkfs"), &self.device_path)
+            .run_command_with_device(cstr!("mkfs"), device)
             .context("failed to format device")?;
 
         Ok(())
@@ -248,9 +278,8 @@ where
             bail!("failed to mount {}: already mounted at {}", FSType::name(), mount_point);
         }
 
-        let (block_device, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(&self.device_path, server_chan)?;
-        let client_chan = self.initialize(block_device)?;
+        let channel = self.get_channel()?;
+        let client_chan = self.initialize(channel)?;
         self.namespace
             .bind(mount_point, client_chan)
             .context("failed to bind client channel into default namespace")?;
@@ -281,14 +310,14 @@ where
 
     /// Run fsck on the filesystem partition. Returns Ok(()) if fsck succeeds, or the associated
     /// error if it doesn't. Will fail if run on a mounted partition.
-    pub fn fsck(&self) -> Result<(), Error> {
+    pub fn fsck(&mut self) -> Result<(), Error> {
         if let Some(mount_point) = &self.mount_point {
             bail!("failed to fsck: mounted at {}", mount_point);
         }
 
-        self.launcher
-            .run_command_with_device(cstr!("fsck"), &self.device_path)
-            .context("fsck failed")?;
+        let device = self.get_channel()?;
+
+        self.launcher.run_command_with_device(cstr!("fsck"), device).context("fsck failed")?;
 
         Ok(())
     }
@@ -348,11 +377,8 @@ where
     pub fn run_command_with_device(
         &self,
         command: &'static CStr,
-        device_path: &str,
+        block_device: zx::Channel,
     ) -> Result<(), Error> {
-        let (block_device, server_chan) = zx::Channel::create()?;
-        fdio::service_connect(device_path, server_chan)
-            .context(format!("failed to connect to device at {} (wrong path?)", device_path))?;
         let actions = vec![
             // device handle is passed in as a PA_USER0 handle at argument 1
             SpawnAction::add_handle(HandleInfo::new(HandleType::User0, 1), block_device.into()),
@@ -410,8 +436,8 @@ mod tests {
     };
 
     /// the only way to really move info out of the launch_process function is through the return
-    /// value. we want to confirm that the correct one was called, so we return something only a test
-    /// impl can return - something defined in the test mod - through the error type.
+    /// value. we want to confirm that the correct one was called, so we return something only a
+    /// test impl can return - something defined in the test mod - through the error type.
     #[derive(Debug, Copy, Clone, PartialEq, Eq)]
     struct ExpectedError;
     impl std::fmt::Display for ExpectedError {
@@ -493,7 +519,23 @@ mod tests {
     #[test]
     fn blobfs_format_fsck_success() {
         let block_size = 512;
-        let (ramdisk, blobfs) = ramdisk_blobfs(block_size);
+        let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
+
+        blobfs.format().expect("failed to format blobfs");
+        blobfs.fsck().expect("failed to fsck blobfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
+    }
+
+    #[test]
+    fn blobfs_from_channel_format_fsck_success() {
+        let block_size = 512;
+        let (ramdisk, _) = ramdisk_blobfs(block_size);
+
+        let (block_device, server_chan) = zx::Channel::create().expect("failed to create channel");
+        fdio::service_connect(ramdisk.get_path(), server_chan).expect("failed to connect");
+
+        let mut blobfs = Blobfs::from_channel(block_device).expect("failed to make new blobfs");
 
         blobfs.format().expect("failed to format blobfs");
         blobfs.fsck().expect("failed to fsck blobfs");
@@ -504,7 +546,7 @@ mod tests {
     #[test]
     fn blobfs_format_fsck_fail() {
         let block_size = 512;
-        let (ramdisk, blobfs) = ramdisk_blobfs(block_size);
+        let (ramdisk, mut blobfs) = ramdisk_blobfs(block_size);
 
         blobfs.format().expect("failed to format blobfs");
 
@@ -567,7 +609,23 @@ mod tests {
     #[test]
     fn minfs_format_fsck_success() {
         let block_size = 8192;
-        let (ramdisk, minfs) = ramdisk_minfs(block_size);
+        let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
+
+        minfs.format().expect("failed to format minfs");
+        minfs.fsck().expect("failed to fsck minfs");
+
+        ramdisk.destroy().expect("failed to destroy ramdisk");
+    }
+
+    #[test]
+    fn minfs_from_channel_format_fsck_success() {
+        let block_size = 8192;
+        let (ramdisk, _) = ramdisk_minfs(block_size);
+
+        let (block_device, server_chan) = zx::Channel::create().expect("failed to create channel");
+        fdio::service_connect(ramdisk.get_path(), server_chan).expect("failed to connect");
+
+        let mut minfs = Minfs::from_channel(block_device).expect("failed to make new minfs");
 
         minfs.format().expect("failed to format minfs");
         minfs.fsck().expect("failed to fsck minfs");
@@ -578,7 +636,7 @@ mod tests {
     #[test]
     fn minfs_format_fsck_fail() {
         let block_size = 8192;
-        let (ramdisk, minfs) = ramdisk_minfs(block_size);
+        let (ramdisk, mut minfs) = ramdisk_minfs(block_size);
 
         minfs.format().expect("failed to format minfs");
 

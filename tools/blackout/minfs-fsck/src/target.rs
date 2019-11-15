@@ -23,7 +23,7 @@ struct Opts {
     commands: CommonCommand,
 }
 
-fn setup(minfs: Filesystem<Minfs>) -> Result<(), Error> {
+fn setup(mut minfs: Filesystem<Minfs>) -> Result<(), Error> {
     println!("formatting block device with minfs");
     minfs.format().context("failed to format minfs")?;
 
@@ -57,7 +57,7 @@ fn test(mut minfs: Filesystem<Minfs>, seed: u64) -> Result<(), Error> {
     }
 }
 
-fn verify(minfs: Filesystem<Minfs>) -> Result<(), Error> {
+fn verify(mut minfs: Filesystem<Minfs>) -> Result<(), Error> {
     println!("verifying disk with fsck");
     minfs.fsck().context("failed to run fsck")?;
 
