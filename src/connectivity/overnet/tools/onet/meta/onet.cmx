@@ -5,6 +5,7 @@
     "sandbox": {
         "services": [
             "fuchsia.overnet.Overnet",
+            "fuchsia.overnet.MeshController",
             "fuchsia.tracing.provider.Registry"
         ]
     }
