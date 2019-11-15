@@ -23,10 +23,10 @@ class Volume extends UiSpec {
   static String get _min => Strings.min;
   static String get _max => Strings.max;
 
-  _VolumeModel _model;
+  _VolumeModel model;
 
   Volume(vol.AudioCoreProxy control) {
-    _model = _VolumeModel(control: control, onChange: _onChange);
+    model = _VolumeModel(control: control, onChange: _onChange);
   }
 
   factory Volume.fromStartupContext(StartupContext context) {
@@ -36,25 +36,25 @@ class Volume extends UiSpec {
   }
 
   void _onChange() {
-    spec = _specForVolume(_model.volume);
+    spec = _specForVolume(model.volume);
   }
 
   @override
   void update(Value value) async {
     if (value.$tag == ValueTag.button) {
       if (value.button.action == minVolumeAction) {
-        _model.volume = 0;
+        model.volume = 0;
       } else if (value.button.action == maxVolumeAction) {
-        _model.volume = 1;
+        model.volume = 1;
       }
     } else if (value.$tag == ValueTag.progress) {
-      _model.volume = value.progress.value;
+      model.volume = value.progress.value;
     }
   }
 
   @override
   void dispose() {
-    _model.dispose();
+    model.dispose();
   }
 
   static Spec _specForVolume(double value) {

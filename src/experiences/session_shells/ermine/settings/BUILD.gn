@@ -41,6 +41,7 @@ flutter_test("ermine_settings_unittests") {
     "datetime_test.dart",
     "memory_test.dart",
     "timezone_test.dart",
+    "volume_test.dart",
   ]
 
   deps = [
