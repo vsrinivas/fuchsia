@@ -7,8 +7,6 @@
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/media_metrics_registry.cb.h"
 
-using namespace audio_output_underflow_duration_metric_dimension_time_since_boot_scope;
-
 namespace media::audio {
 
 #if ENABLE_REPORTER
@@ -368,27 +366,29 @@ void Reporter::OutputUnderflow(zx::duration output_underflow_duration,
   // Bucket this into exponentially-increasing time since system boot.
   // By default, bucket the overflow into the last bucket
 
-  int bucket = UpMoreThan64m;
+  using TimeSinceBoot = AudioOutputUnderflowDurationMetricDimensionTimeSinceBoot;
+
+  TimeSinceBoot bucket = TimeSinceBoot::UpMoreThan64m;
   zx::duration uptime = uptime_to_underflow - zx::time(0);
 
   if (uptime < zx::sec(15)) {
-    bucket = UpLessThan15s;
+    bucket = TimeSinceBoot::UpLessThan15s;
   } else if (uptime < zx::sec(30)) {
-    bucket = UpLessThan30s;
+    bucket = TimeSinceBoot::UpLessThan30s;
   } else if (uptime < zx::min(1)) {
-    bucket = UpLessThan1m;
+    bucket = TimeSinceBoot::UpLessThan1m;
   } else if (uptime < zx::min(2)) {
-    bucket = UpLessThan2m;
+    bucket = TimeSinceBoot::UpLessThan2m;
   } else if (uptime < zx::min(4)) {
-    bucket = UpLessThan4m;
+    bucket = TimeSinceBoot::UpLessThan4m;
   } else if (uptime < zx::min(8)) {
-    bucket = UpLessThan8m;
+    bucket = TimeSinceBoot::UpLessThan8m;
   } else if (uptime < zx::min(16)) {
-    bucket = UpLessThan16m;
+    bucket = TimeSinceBoot::UpLessThan16m;
   } else if (uptime < zx::min(32)) {
-    bucket = UpLessThan32m;
+    bucket = TimeSinceBoot::UpLessThan32m;
   } else if (uptime < zx::min(64)) {
-    bucket = UpLessThan64m;
+    bucket = TimeSinceBoot::UpLessThan64m;
   }
 
   if (!cobalt_logger_) {
