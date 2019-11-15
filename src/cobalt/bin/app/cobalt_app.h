@@ -85,11 +85,6 @@ class CobaltApp {
   //
   //           Example: 20190220_01_RC00
   //
-  // |release_stage| The release stage of the system. This is used to determine which metrics are
-  //                 allowed to be collected. For example a metric with |max_release_stage| set to
-  //                 DEBUG will only be allowed to be collected on a system whose release_stage is
-  //                 DEBUG.
-  //
   // REQUIRED:
   //   0 <= min_interval <= target_interval <= kMaxSeconds
   //   0 <= initial_interval <= target_interval
@@ -98,8 +93,7 @@ class CobaltApp {
             std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
             bool start_event_aggregator_worker, bool use_memory_observation_store,
             size_t max_bytes_per_observation_store, const std::string& product_name,
-            const std::string& board_name, const std::string& version,
-            cobalt::ReleaseStage release_stage);
+            const std::string& board_name, const std::string& version);
 
  private:
   static encoder::ClientSecret getClientSecret();
@@ -110,8 +104,8 @@ class CobaltApp {
       const std::string& customer_name, const std::string& project_name,
       ReleaseStage release_stage);
 
-  encoder::SystemData system_data_;
   FuchsiaConfigurationData configuration_data_;
+  encoder::SystemData system_data_;
 
   std::unique_ptr<sys::ComponentContext> context_;
 

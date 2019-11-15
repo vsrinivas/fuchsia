@@ -10,6 +10,7 @@
 #include <string>
 #include <vector>
 
+#include "third_party/cobalt/src/registry/metric_definition.pb.h"
 #include "third_party/cobalt/src/system_data/configuration_data.h"
 
 namespace cobalt {
@@ -31,9 +32,12 @@ class FuchsiaConfigurationData {
   // Get the Clearcut Log Source ID that Cobalt should write its logs to.
   int32_t GetLogSourceId(const config::Environment& backend_environment) const;
 
+  cobalt::ReleaseStage GetReleaseStage() const;
+
  private:
   static const char kDefaultConfigDir[];
   std::map<config::Environment, const config::ConfigurationData> backend_configurations_;
+  cobalt::ReleaseStage release_stage_;
 };
 
 }  // namespace cobalt

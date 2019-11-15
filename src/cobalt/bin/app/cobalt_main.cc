@@ -27,6 +27,7 @@
 #include <trace-provider/provider.h>
 
 #include "src/cobalt/bin/app/cobalt_app.h"
+#include "src/lib/files/file.h"
 #include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/log_settings_command_line.h"
@@ -127,14 +128,6 @@ std::string ReadBuildInfo(std::string value) {
   }
 }
 
-// Returns the ReleaseStage of the currently running system. This is used
-// to determine which Cobalt metrics are allowed to be collected.
-cobalt::ReleaseStage DetermineReleaseStage() {
-  // TODO(fxb/34960) Fuchsia needs a mechanism by which to determine whether
-  // or not the currently running system is considered debug/dev.
-  return cobalt::ReleaseStage::DEBUG;
-}
-
 int main(int argc, const char** argv) {
   // Parse the flags.
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
@@ -211,16 +204,13 @@ int main(int argc, const char** argv) {
     }
   }
 
-  auto release_stage = DetermineReleaseStage();
-
   FX_LOGS(INFO) << "Cobalt is starting with the following parameters: "
                 << "schedule_interval=" << schedule_interval.count()
                 << " seconds, min_interval=" << min_interval.count()
                 << " seconds, initial_interval=" << initial_interval.count()
                 << " seconds, max_bytes_per_observation_store=" << max_bytes_per_observation_store
                 << ", event_aggregator_backfill_days=" << event_aggregator_backfill_days
-                << ", start_event_aggregator_worker=" << start_event_aggregator_worker
-                << ", release_stage=" << release_stage << ".";
+                << ", start_event_aggregator_worker=" << start_event_aggregator_worker << ".";
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
@@ -252,7 +242,7 @@ int main(int argc, const char** argv) {
                         initial_interval, event_aggregator_backfill_days,
                         start_event_aggregator_worker, use_memory_observation_store,
                         max_bytes_per_observation_store, ReadBuildInfo("product"), ReadBoardName(),
-                        ReadBuildInfo("version"), release_stage);
+                        ReadBuildInfo("version"));
   loop.Run();
   return 0;
 }

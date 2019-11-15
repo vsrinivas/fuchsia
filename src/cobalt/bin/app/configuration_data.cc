@@ -6,6 +6,7 @@
 
 #include <third_party/protobuf/src/google/protobuf/stubs/map_util.h>
 
+#include "src/cobalt/bin/app/utils.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/syslogger/init.h"
@@ -17,6 +18,9 @@ const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/pkg/data";
 constexpr char kCobaltEnvironmentFile[] = "cobalt_environment";
 // TODO(camrdale): change the default to PROD once its pipeline is working.
 const config::Environment kDefaultEnvironment = config::Environment::DEVEL;
+
+constexpr char kReleaseStageFile[] = "release_stage";
+const cobalt::ReleaseStage kDefaultReleaseStage = cobalt::ReleaseStage::GA;
 
 constexpr char kAnalyzerDevelTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_devel_public";
 constexpr char kShufflerDevelTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_devel_public";
@@ -49,10 +53,37 @@ std::vector<config::Environment> LookupCobaltEnvironment(const std::string& conf
   return std::vector({kDefaultEnvironment});
 }
 
+cobalt::ReleaseStage LookupReleaseStage(const std::string& config_dir) {
+  auto release_stage_path = files::JoinPath(config_dir, kReleaseStageFile);
+  std::string release_stage;
+  if (files::ReadFileToString(release_stage_path, &release_stage)) {
+    FX_LOGS(INFO) << "Loaded Cobalt release stage from config file " << release_stage_path << ": "
+                  << release_stage;
+    if (release_stage == "DEBUG") {
+      return cobalt::ReleaseStage::DEBUG;
+    } else if (release_stage == "FISHFOOD") {
+      return cobalt::ReleaseStage::FISHFOOD;
+    } else if (release_stage == "DOGFOOD") {
+      return cobalt::ReleaseStage::DOGFOOD;
+    } else if (release_stage == "GA") {
+      return cobalt::ReleaseStage::GA;
+    }
+
+    FX_LOGS(ERROR) << "Failed to parse the release stage: `" << release_stage
+                   << "`. Falling back to default of " << kDefaultReleaseStage << ".";
+    return kDefaultReleaseStage;
+  } else {
+    FX_LOGS(ERROR) << "Unable to determine release stage. Defaulting to " << kDefaultReleaseStage
+                   << ".";
+    return kDefaultReleaseStage;
+  }
+}
+
 FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir) {
   for (const auto& environment : LookupCobaltEnvironment(config_dir)) {
     backend_configurations_.emplace(environment, environment);
   }
+  release_stage_ = LookupReleaseStage(config_dir);
 }
 
 std::vector<config::Environment> FuchsiaConfigurationData::GetBackendEnvironments() const {
@@ -94,5 +125,7 @@ int32_t FuchsiaConfigurationData::GetLogSourceId(
     const config::Environment& backend_environment) const {
   return backend_configurations_.find(backend_environment)->second.GetLogSourceId();
 }
+
+cobalt::ReleaseStage FuchsiaConfigurationData::GetReleaseStage() const { return release_stage_; }
 
 }  // namespace cobalt

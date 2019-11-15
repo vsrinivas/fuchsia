@@ -31,6 +31,7 @@ TEST(ConfigTest, Empty) {
   ASSERT_EQ(1, envs.size());
   EXPECT_EQ(config::Environment::DEVEL, envs[0]);
   EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "devel"));
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
 // Tests behavior when there is one valid config file.
@@ -46,6 +47,7 @@ TEST(ConfigTest, OneValidFile) {
   ASSERT_EQ(1, envs.size());
   EXPECT_EQ(config::Environment::PROD, envs[0]);
   EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "prod"));
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
 // Tests behavior when there is one invalid config file.
@@ -61,6 +63,7 @@ TEST(ConfigTest, OneInvalidFile) {
   ASSERT_EQ(1, envs.size());
   EXPECT_EQ(config::Environment::DEVEL, envs[0]);
   EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "devel"));
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
 
 // Tests behavior when there are multiple backends.
@@ -77,6 +80,27 @@ TEST(ConfigTest, MultipleBackends) {
   ASSERT_EQ(2, envs.size());
   EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[0]), "prod"));
   EXPECT_TRUE(absl::StrContains(config_data.ShufflerPublicKeyPath(envs[1]), "devel"));
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
+}
+
+TEST(ConfigTest, ReleaseStagePathGA) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("release_stage", "GA"));
+
+  FuchsiaConfigurationData config_data(kTestDir);
+
+  EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
+}
+
+TEST(ConfigTest, ReleaseStagePathDEBUG) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("release_stage", "DEBUG"));
+
+  FuchsiaConfigurationData config_data(kTestDir);
+
+  EXPECT_EQ(cobalt::ReleaseStage::DEBUG, config_data.GetReleaseStage());
 }
 
 }  // namespace cobalt::test

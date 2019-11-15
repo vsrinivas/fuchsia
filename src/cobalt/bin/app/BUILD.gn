@@ -15,6 +15,10 @@ declare_args() {
   #   "DEVEL_AND_PROD" - both the non-prod and production environment
   # TODO(camrdale): change the default to PROD once its pipeline is working.
   cobalt_environment = "DEVEL_AND_PROD"
+
+  # If this is true, Cobalt will upload all metrics, even those marked with max_release_stage=DEBUG.
+  # Otherwise Cobalt will only upload metrics marked with max_release_stage=GA.
+  cobalt_report_debug_metrics = true
 }
 
 # Generates the global_metrics_registry.pb file. This may be selectively
@@ -117,6 +121,15 @@ package("cobalt") {
         assert(false, "Unknown cobalt_environment: $cobalt_environment")
       }
       dest = "cobalt_environment"
+    },
+    {
+      # Cobalt release stage
+      if (cobalt_report_debug_metrics) {
+        path = "configs/release_stage_debug"
+      } else {
+        path = "configs/release_stage_ga"
+      }
+      dest = "release_stage"
     },
     {
       # Cobalt 1.0 analyzer public key for devel environment.

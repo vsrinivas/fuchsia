@@ -85,9 +85,8 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
                      std::chrono::seconds initial_interval, size_t event_aggregator_backfill_days,
                      bool start_event_aggregator_worker, bool use_memory_observation_store,
                      size_t max_bytes_per_observation_store, const std::string& product_name,
-                     const std::string& board_name, const std::string& version,
-                     cobalt::ReleaseStage release_stage)
-    : system_data_(product_name, board_name, release_stage, version),
+                     const std::string& board_name, const std::string& version)
+    : system_data_(product_name, board_name, configuration_data_.GetReleaseStage(), version),
       context_(std::move(context)),
       system_clock_(FuchsiaSystemClock(context_.get())),
       network_wrapper_(dispatcher, std::make_unique<backoff::ExponentialBackoff>(),
@@ -157,7 +156,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   // Create internal Logger and pass a pointer to objects which use it.
   internal_logger_ = NewInternalLogger(global_project_context_factory, logger::kCustomerName,
-                                       logger::kProjectName, ReleaseStage::GA);
+                                       logger::kProjectName, configuration_data_.GetReleaseStage());
 
   observation_store_->ResetInternalMetrics(internal_logger_.get());
   if (clearcut_shipping_manager != nullptr) {
@@ -213,7 +212,7 @@ std::unique_ptr<logger::Logger> CobaltApp::NewInternalLogger(
     const std::shared_ptr<logger::ProjectContextFactory> global_project_context_factory,
     const std::string& customer_name, const std::string& project_name, ReleaseStage release_stage) {
   auto internal_project_context = global_project_context_factory->NewProjectContext(
-      logger::kCustomerName, logger::kProjectName, ReleaseStage::GA);
+      logger::kCustomerName, logger::kProjectName, release_stage);
   if (!internal_project_context) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
                       "include the expected internal metrics project. "
