@@ -487,11 +487,14 @@ void DecryptorAdapter::ProcessInput() {
       secure_output.data_offset = output_buffer->offset();
       secure_output.data_length = output_buffer->size();
       output = secure_output;
-    } else {
+    } else if (IsCoreCodecMappedBufferUseful(kOutputPort)) {
       ClearOutputBuffer clear_output;
       clear_output.data = output_buffer->base();
       clear_output.data_length = output_buffer->size();
       output = clear_output;
+    } else {
+      events_->onCoreCodecFailCodec("Unmapped clear output buffer is unsupported.");
+      return;
     }
 
     auto error = Decrypt(encryption_params_, input, output, output_packet);

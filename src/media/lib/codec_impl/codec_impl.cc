@@ -2805,10 +2805,13 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
   }
   ZX_DEBUG_ASSERT(!usage.display);
   if (IsDecryptor()) {
-    // Decryptors should not be setting video usage bits.
+    // DecryptorAdapter should not be setting video usage bits.
     if (usage.video) {
       FailLocked("Core codec set disallowed video usage bits for decryptor");
       return false;
+    }
+    if (port == kOutputPort) {
+      usage.video |= fuchsia::sysmem::videoUsageDecryptorOutput;
     }
   } else if (IsCoreCodecHwBased()) {
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant

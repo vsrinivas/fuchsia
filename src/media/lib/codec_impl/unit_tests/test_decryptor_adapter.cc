@@ -98,8 +98,20 @@ class FakeDecryptorAdapter : public DecryptorAdapter {
   void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
   bool has_keys() const { return has_keys_; }
 
+  void set_use_mapped_output(bool use_mapped_output) { use_mapped_output_ = use_mapped_output; }
+  bool use_mapped_output() const { return use_mapped_output_; }
+
+  bool IsCoreCodecMappedBufferUseful(CodecPort port) override {
+    if (!use_mapped_output_ && port == kOutputPort) {
+      return false;
+    } else {
+      return DecryptorAdapter::IsCoreCodecMappedBufferUseful(port);
+    }
+  }
+
  private:
   bool has_keys_ = false;
+  bool use_mapped_output_ = true;
 };
 
 class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
@@ -184,6 +196,16 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
         fit::bind_member(this, &DecryptorAdapterTest::OnFreeInputPacket);
     decryptor_.events().OnOutputEndOfStream =
         fit::bind_member(this, &DecryptorAdapterTest::OnOutputEndOfStream);
+  }
+
+  ~DecryptorAdapterTest() {
+    // Cleanly terminate BufferCollection view to avoid errors as the test halts.
+    if (input_collection_.is_bound()) {
+      input_collection_->Close();
+    }
+    if (output_collection_.is_bound()) {
+      output_collection_->Close();
+    }
   }
 
   void ConnectDecryptor() {
@@ -394,6 +416,11 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
         << "Output BufferCollection error = " << *output_collection_error_;
   }
 
+  bool HasChannelErrors() {
+    return decryptor_error_.has_value() || sysmem_error_.has_value() ||
+           input_collection_error_.has_value() || output_collection_error_.has_value();
+  }
+
   std::unique_ptr<sys::testing::EnclosingEnvironment> environment_;
   fuchsia::media::StreamProcessorPtr decryptor_;
   fuchsia::sysmem::AllocatorPtr allocator_;
@@ -486,6 +513,32 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 
   ASSERT_TRUE(stream_error_.has_value());
   EXPECT_EQ(*stream_error_, fuchsia::media::StreamError::DECRYPTOR_NO_KEY);
+}
+
+TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
+  ConnectDecryptor();
+  decryptor_adapter_->set_has_keys(true);
+  decryptor_adapter_->set_use_mapped_output(false);
+
+  RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
+
+  AssertNoChannelErrors();
+  ASSERT_TRUE(input_buffer_info_);
+
+  ConfigureInputPackets();
+
+  decryptor_->QueueInputFormatDetails(kStreamLifetimeOrdinal,
+                                      CreateInputFormatDetails("clear", {}, {}));
+
+  PumpInput();
+
+  RunLoopUntil([this]() { return HasChannelErrors(); });
+
+  // The decryptor should have failed (since unmapped buffers are unsupported),
+  // and nothing else should have failed.
+  EXPECT_TRUE(decryptor_error_.has_value());
+  decryptor_error_.reset();
+  AssertNoChannelErrors();
 }
 
 class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecryptorAdapter> {};
