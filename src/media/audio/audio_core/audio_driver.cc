@@ -805,6 +805,8 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
 
   fifo_depth_bytes_ = resp.fifo_depth;
   fifo_depth_frames_ = (fifo_depth_bytes_ + bytes_per_frame_ - 1) / bytes_per_frame_;
+  fifo_depth_duration_ =
+      zx::nsec(TimelineRate::Scale(fifo_depth_frames_, ZX_SEC(1), frames_per_sec_));
 
   AUD_VLOG(TRACE) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 

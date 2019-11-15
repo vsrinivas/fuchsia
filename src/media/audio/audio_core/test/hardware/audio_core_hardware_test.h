@@ -13,13 +13,16 @@ namespace media::audio::test {
 
 class AudioCoreHardwareTest : public TestFixture {
  protected:
-  static constexpr uint32_t kLimitConsecFramesZero = 7;
-  static constexpr uint32_t kBufferDurationMsec = 1000;
+  // Once this test is shown to be flake-free in our test environment, lower this to perhaps 2.
+  // If gain is full, and if we are capturing from a real microphone in a normal acoustic
+  // environment (not an anechoic enclosure), then 2 frames is a very reasonable limit.
+  static constexpr uint32_t kLimitConsecFramesZero = 5;
 
   // We'll use just one payload buffer here.
-  static constexpr uint32_t kPayloadBufferId = 0u;
+  static constexpr uint32_t kPayloadBufferId = 0;
+  static constexpr uint32_t kBufferDurationMsec = 1000;
 
-  static constexpr uint32_t kDefaultFramesPerSecond = 48000;
+  static constexpr uint32_t kDefaultFramesPerSecond = 16000;
   static constexpr uint32_t kDefaultChannelCount = 2;
 
   static constexpr fuchsia::media::AudioSampleFormat kSampleFormat =

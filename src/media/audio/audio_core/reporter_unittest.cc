@@ -430,6 +430,7 @@ TEST_F(ReporterTest, CapturerMetrics) {
                                             UintIs("sample format", 0), UintIs("channels", 0),
                                             UintIs("frames per second", 0),
                                             DoubleIs("gain db", 0.0), UintIs("muted", 0),
+                                            UintIs("min fence time (ns)", 0),
                                             UintIs("calls to SetGainWithRamp", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
@@ -448,6 +449,7 @@ TEST_F(ReporterTest, CapturerMetrics) {
   under_test_.SettingCapturerGainWithRamp(capturer, -1.0, zx::sec(1),
                                           fuchsia::media::audio::RampType::SCALE_LINEAR);
   under_test_.SettingCapturerMute(capturer, true);
+  under_test_.SettingCapturerMinFenceTime(capturer, zx::nsec(2'000'000));
 
   EXPECT_THAT(
       GetHierarchy(),
@@ -470,6 +472,7 @@ TEST_F(ReporterTest, CapturerMetrics) {
                       UintIs("channels", stream_type.channels),
                       UintIs("frames per second", stream_type.frames_per_second),
                       DoubleIs("gain db", -1.0), UintIs("muted", 1),
+                      UintIs("min fence time (ns)", 2'000'000),
                       UintIs("calls to SetGainWithRamp", 2))))))))))));
 }
 

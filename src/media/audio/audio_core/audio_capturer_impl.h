@@ -229,6 +229,8 @@ class AudioCapturerImpl : public AudioObject,
   // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
   void RemoveFromRouteGraph();
 
+  void RecomputeMinFenceTime();
+
   friend class fbl::Recyclable<AudioCapturerImpl>;
   void fbl_recycle();
 
@@ -243,6 +245,7 @@ class AudioCapturerImpl : public AudioObject,
   RouteGraph& route_graph_;
   std::atomic<State> state_;
   const bool loopback_;
+  zx::duration min_fence_time_;
 
   // Capture format and gain state.
   fuchsia::media::AudioStreamTypePtr format_;

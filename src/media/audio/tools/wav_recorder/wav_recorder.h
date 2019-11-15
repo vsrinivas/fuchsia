@@ -16,6 +16,10 @@
 namespace media::tools {
 
 class WavRecorder {
+  static constexpr float kDefaultCaptureGainDb = 0.0f;
+  static constexpr zx_duration_t kDefaultPacketDuration = ZX_MSEC(100);
+  static constexpr float kMinPacketSizeMsec = 1.0f;  // minimum packet size 1 msec!
+
  public:
   WavRecorder(fxl::CommandLine cmd_line, fit::closure quit_callback)
       : cmd_line_(std::move(cmd_line)), quit_callback_(std::move(quit_callback)) {
@@ -32,6 +36,8 @@ class WavRecorder {
   void SendCaptureJob();
   void OnDefaultFormatFetched(fuchsia::media::StreamType type);
   void OnPacketProduced(fuchsia::media::StreamPacket pkt);
+  void TimeToStr(int64_t time, char* time_str);
+  void DisplayPacket(fuchsia::media::StreamPacket pkt);
   void OnQuit();
 
   fuchsia::media::AudioCapturerPtr audio_capturer_;
@@ -45,11 +51,10 @@ class WavRecorder {
   bool verbose_ = false;
   bool loopback_ = false;
 
-  zx_duration_t buffer_duration_nsec_ = ZX_SEC(1);
   zx::vmo payload_buf_vmo_;
   void* payload_buf_virt_ = nullptr;
-  size_t payload_buf_size_ = 0;
-  size_t payload_buf_frames_ = 0;
+  uint32_t payload_buf_size_ = 0;
+  uint32_t payload_buf_frames_ = 0;
   std::unique_ptr<uint8_t[]> compress_32_24_buff_;  // only used for 'packed-24'
   bool pack_24bit_samples_ = false;
 
@@ -59,8 +64,10 @@ class WavRecorder {
   uint32_t channel_count_ = 0;
   uint32_t frames_per_second_ = 0;
   uint32_t bytes_per_frame_ = 0;
-  size_t capture_frames_per_chunk_ = 0;
-  size_t capture_frame_offset_ = 0;
+  zx_duration_t packet_duration_ = kDefaultPacketDuration;
+  uint32_t frames_per_packet_ = 0;
+  uint32_t packets_per_payload_buf_ = 0;
+  uint32_t payload_buf_frame_offset_ = 0;
   bool clean_shutdown_ = false;
   uint32_t outstanding_capture_jobs_ = 0;
 };

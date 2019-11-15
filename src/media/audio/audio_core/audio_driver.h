@@ -103,6 +103,7 @@ class AudioDriver {
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
   uint32_t fifo_depth_bytes() const { return fifo_depth_bytes_; }
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
+  zx::duration fifo_depth_duration() const { return fifo_depth_duration_; }
   zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const { return hw_gain_state_; }
 
@@ -259,6 +260,7 @@ class AudioDriver {
   zx::duration min_ring_buffer_duration_;
   uint32_t fifo_depth_bytes_;
   uint32_t fifo_depth_frames_;
+  zx::duration fifo_depth_duration_;
   zx::time configuration_deadline_ = zx::time::infinite();
 
   // A stashed copy of current format, queryable by destinations (outputs or AudioCapturers) when

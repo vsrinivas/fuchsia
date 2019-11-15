@@ -936,8 +936,6 @@ void AudioRendererImpl::EnableMinLeadTimeEvents(bool enabled) {
   }
 }
 
-// For now, we pad what we report for min lead time. We don't simply increase the minleadtime by
-// this amount -- we don't also need mixing to occur early.
 void AudioRendererImpl::GetMinLeadTime(GetMinLeadTimeCallback callback) {
   TRACE_DURATION("audio", "AudioRendererImpl::GetMinLeadTime");
   AUD_VLOG_OBJ(TRACE, this);

@@ -329,6 +329,17 @@ void Reporter::SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer
   c->muted_.Set(muted);
 }
 
+void Reporter::SettingCapturerMinFenceTime(const fuchsia::media::AudioCapturer& capturer,
+                                           zx::duration min_fence_time) {
+  Capturer* c = FindCapturer(capturer);
+  if (c == nullptr) {
+    FX_LOGS(ERROR) << kCapturerNotFound;
+    return;
+  }
+
+  c->min_fence_time_ns_.Set(static_cast<uint64_t>(min_fence_time.to_nsecs()));
+}
+
 Reporter::Device* Reporter::FindOutput(const AudioDevice& device) {
   auto i = outputs_.find(&device);
   return i == outputs_.end() ? nullptr : &i->second;

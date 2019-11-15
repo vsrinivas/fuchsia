@@ -110,6 +110,8 @@ class Reporter {
                                    zx::duration duration,
                                    fuchsia::media::audio::RampType ramp_type);
   void SettingCapturerMute(const fuchsia::media::AudioCapturer& capturer, bool muted);
+  void SettingCapturerMinFenceTime(const fuchsia::media::AudioCapturer& capturer,
+                                   zx::duration min_fence_time);
 
   // Logs an Underflow event to cobalt. output_duration_missed is the amount of time by which we
   // missed a time-critical write into the output buffer.
@@ -188,7 +190,10 @@ class Reporter {
   };
 
   struct Capturer : ClientPort {
-    Capturer(inspect::Node node) : ClientPort(std::move(node)) {}
+    Capturer(inspect::Node node) : ClientPort(std::move(node)) {
+      min_fence_time_ns_ = node_.CreateUint("min fence time (ns)", 0);
+    }
+    inspect::UintProperty min_fence_time_ns_;
   };
 
   Device* FindOutput(const AudioDevice& device);

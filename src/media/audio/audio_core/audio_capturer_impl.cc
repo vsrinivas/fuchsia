@@ -31,17 +31,21 @@ constexpr bool VERBOSE_TIMING_DEBUG = false;
 // occurrences, depending on audio_core's logging level, we throttle how frequently these are
 // displayed. If log_level is set to TRACE or SPEW, all client-side overflows are logged -- at
 // log_level -1: VLOG TRACE -- as specified by kCaptureOverflowTraceInterval. If set to INFO, we
-// log less often, at log_level 1: INFO, throttling by the factor kCaptureOverflowInfoInterval. If
-// set to WARNING or higher, we throttle these even more, specified by
-// kCaptureOverflowErrorInterval. Note: by default we set NDEBUG builds to WARNING and DEBUG builds
-// to INFO. To disable all logging of client-side overflows, set kLogCaptureOverflow to false.
+// log less often, at log_level 1: INFO, throttling by factor kCaptureOverflowInfoInterval. If set
+// to WARNING or higher, we throttle these even more, specified by kCaptureOverflowErrorInterval.
+// To disable all logging of client-side overflows, set kLogCaptureOverflow to false.
+//
+// Note: by default we set NDEBUG builds to WARNING and DEBUG builds to INFO.
 static constexpr bool kLogCaptureOverflow = true;
 static constexpr uint16_t kCaptureOverflowTraceInterval = 1;
 static constexpr uint16_t kCaptureOverflowInfoInterval = 10;
 static constexpr uint16_t kCaptureOverflowErrorInterval = 100;
 
-// TODO(40183): Eliminate this and instead use FIFO depth, queried from the input device.
-zx::duration kAssumedWorstSourceFenceTime = zx::usec(5500);
+// Currently, the time we spend mixing must also be taken into account when reasoning about the
+// capture fence duration. Today (before any attempt at optimization), a particularly heavy mix
+// pass may take longer than 1.5 msec on a DEBUG build(!) on relevant hardware. The constant below
+// accounts for this, with additional padding for safety.
+const zx::duration kFenceTimePadding = zx::msec(3);
 
 constexpr float kInitialCaptureGainDb = Gain::kUnityGainDb;
 constexpr int64_t kMaxTimePerCapture = ZX_MSEC(50);
@@ -79,6 +83,7 @@ AudioCapturerImpl::AudioCapturerImpl(
       route_graph_(*route_graph),
       state_(State::WaitingForVmo),
       loopback_(loopback),
+      min_fence_time_(zx::nsec(0)),
       stream_gain_db_(kInitialCaptureGainDb),
       mute_(false),
       overflow_count_(0u),
@@ -119,7 +124,10 @@ void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true,
 
 void AudioCapturerImpl::ReportStop() { admin_.UpdateCapturerState(usage_, false, this); }
 
-void AudioCapturerImpl::OnLinkAdded() { volume_manager_.NotifyStreamChanged(this); }
+void AudioCapturerImpl::OnLinkAdded() {
+  volume_manager_.NotifyStreamChanged(this);
+  RecomputeMinFenceTime();
+}
 
 bool AudioCapturerImpl::GetStreamMute() const { return mute_; }
 
@@ -256,8 +264,7 @@ void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_
   // If something goes wrong, hang up the phone and shutdown.
   auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
 
-  // If our shared buffer has already been assigned, then we are operating and
-  // the mode can no longer be changed.
+  // If our shared buffer has been assigned, we are operating and our mode can no longer be changed.
   State state = state_.load();
   if (state != State::WaitingForVmo) {
     FX_DCHECK(payload_buf_vmo_.is_valid());
@@ -442,8 +449,8 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
     return;
   }
 
-  // Buffers submitted by clients must exist entirely within the shared payload
-  // buffer, and must have at least some payloads in them.
+  // Buffers submitted by clients must exist entirely within the shared payload buffer, and must
+  // have at least some payloads in them.
   uint64_t buffer_end = static_cast<uint64_t>(offset_frames) + num_frames;
   if (!num_frames || (buffer_end > payload_buf_frames_)) {
     FX_LOGS(ERROR) << "Bad buffer range submitted. "
@@ -501,14 +508,12 @@ void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
     return;
   }
 
-  // Lock and move the contents of the finished list and pending list to a
-  // temporary list. Then deliver the flushed buffers back to the client and
-  // send an OnEndOfStream event.
+  // Lock and move the contents of the finished list and pending list to a temporary list. Then
+  // deliver the flushed buffers back to the client and send an OnEndOfStream event.
   //
-  // Note: It is possible that the capture thread is currently mixing frames for
-  // the buffer at the head of the pending queue at the time that we clear the
-  // queue. The fact that these frames were mixed will not be reported to the
-  // client, however the frames will be written to the shared payload buffer.
+  // Note: the capture thread may currently be mixing frames for the buffer at the head of the
+  // pending queue, when the queue is cleared. The fact that these frames were mixed will not be
+  // reported to the client; however, the frames will be written to the shared payload buffer.
   PcbList finished;
   {
     std::lock_guard<std::mutex> pending_lock(pending_lock_);
@@ -532,8 +537,7 @@ void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   TRACE_DURATION("audio", "AudioCapturerImpl::StartAsyncCapture");
   auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
 
-  // In order to enter async mode, we must be operating in synchronous mode, and
-  // we must not have any pending buffers in flight.
+  // To enter Async mode, we must be in Synchronous mode and not have pending buffers in flight.
   State state = state_.load();
   if (state != State::OperatingSync) {
     FX_LOGS(ERROR) << "Bad state while attempting to enter async capture mode "
@@ -588,9 +592,8 @@ void AudioCapturerImpl::StopAsyncCaptureNoReply() {
 
 void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   TRACE_DURATION("audio", "AudioCapturerImpl::StopAsyncCapture");
-  // In order to leave async mode, we must be operating in async mode, or we
-  // must already be operating in sync mode (in which case, there is really
-  // nothing to do but signal the callback if one was provided)
+  // To leave async mode, we must be (1) in Async mode or (2) already in Sync mode (in which case,
+  // there is really nothing to do but signal the callback if one was provided).
   State state = state_.load();
   if (state == State::OperatingSync) {
     if (cbk != nullptr) {
@@ -606,13 +609,34 @@ void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
     return;
   }
 
-  // Stash our callback, transition to the AsyncStopping state, then poke the
-  // work thread so it knows that it needs to shut down.
+  // Stash our callback, transition to AsyncStopping, then poke the work thread to shut down.
   FX_DCHECK(pending_async_stop_cbk_ == nullptr);
   pending_async_stop_cbk_ = std::move(cbk);
   ReportStop();
   state_.store(State::AsyncStopping);
   mix_wakeup_.Signal();
+}
+
+void AudioCapturerImpl::RecomputeMinFenceTime() {
+  TRACE_DURATION("audio", "AudioCapturerImpl::RecomputeMinFenceTime");
+
+  zx::duration cur_min_fence_time{0};
+  ForEachSourceLink([&cur_min_fence_time](auto& source_link) {
+    if (source_link.GetSource()->is_input()) {
+      const auto device = fbl::RefPtr<AudioDevice>::Downcast(source_link.GetSource());
+      auto fence_time = device->driver()->fifo_depth_duration();
+
+      cur_min_fence_time = std::max(cur_min_fence_time, fence_time);
+    }
+  });
+
+  if (min_fence_time_ != cur_min_fence_time) {
+    FX_VLOGS(TRACE) << "Changing min_fence_time_ (ns) from " << min_fence_time_.get() << " to "
+                    << cur_min_fence_time.get();
+
+    REP(SettingCapturerMinFenceTime(*this, cur_min_fence_time));
+    min_fence_time_ = cur_min_fence_time;
+  }
 }
 
 struct RbRegion {
@@ -638,9 +662,9 @@ void DumpRbRegions(const RbRegion* regions) {
 
 // Display a timeline function.
 void DumpTimelineFunction(const media::TimelineFunction& timeline_function) {
-  FX_LOGS(WARNING) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
-                   << timeline_function.reference_delta() << ", sub/ref times "
-                   << timeline_function.subject_time() << "/" << timeline_function.reference_time();
+  FX_VLOGS(SPEW) << "(TLFunction) sub/ref deltas " << timeline_function.subject_delta() << "/"
+                 << timeline_function.reference_delta() << ", sub/ref times "
+                 << timeline_function.subject_time() << "/" << timeline_function.reference_time();
 }
 
 // Display a ring-buffer snapshot.
@@ -690,8 +714,7 @@ zx_status_t AudioCapturerImpl::Process() {
         ShutdownFromMixDomain();
         return ZX_ERR_INTERNAL;
 
-      // If we have woken up while we are in the callback pending state, this is
-      // a spurious wakeup. Just ignore it.
+      // If we are awakened while in the callback pending state, this is spurious wakeup: ignore it.
       case State::AsyncStoppingCallbackPending:
         return ZX_OK;
 
@@ -715,8 +738,7 @@ zx_status_t AudioCapturerImpl::Process() {
         return ZX_ERR_INTERNAL;
     }
 
-    // Look at the front of the queue and figure out the position in the payload
-    // buffer we are supposed to be filling and get to work.
+    // Look at the head of the queue, determine our payload buffer position, and get to work.
     void* mix_target = nullptr;
     uint32_t mix_frames;
     uint32_t buffer_sequence_number;
@@ -735,8 +757,7 @@ zx_status_t AudioCapturerImpl::Process() {
           p.flags |= fuchsia::media::STREAM_PACKET_FLAG_DISCONTINUITY;
         }
 
-        // If we are still running, there should be no way that our shared
-        // buffer has been stolen out from under us.
+        // If we are running, there is no way our shared buffer can get stolen out from under us.
         FX_DCHECK(payload_buf_virt_ != nullptr);
 
         uint64_t offset_bytes =
@@ -753,18 +774,14 @@ zx_status_t AudioCapturerImpl::Process() {
       }
     }
 
-    // If there was nothing in our pending capture buffer queue, then one of two
-    // things is true.
+    // If there was nothing in our pending capture buffer queue, then one of two things is true:
     //
-    // 1) We are operating in synchronous mode and our user is not supplying
-    //    buffers fast enough.
-    // 2) We are starting up in asynchronous mode and have not queued our first
-    //    buffer yet.
+    // 1) We are operating in synchronous mode and our user is not supplying buffers fast enough.
+    // 2) We are starting up in asynchronous mode and have not queued our first buffer yet.
     //
-    // Either way, invalidate the frames_to_clock_mono transformation and make
-    // sure we don't have a wakeup timer pending. Then, if we are in
-    // synchronous mode, simply get out. If we are in asynchronous mode, reset
-    // our async ring buffer state, add a new pending capture buffer to the
+    // Either way, invalidate the frames_to_clock_mono transformation and make sure we don't have a
+    // wakeup timer pending. Then, if we are in synchronous mode, simply get out. If we are in
+    // asynchronous mode, reset our async ring buffer state, add a new pending capture buffer to the
     // queue, and restart the main Process loop.
     if (mix_target == nullptr) {
       dest_frames_to_clock_mono_ = TimelineFunction();
@@ -776,20 +793,18 @@ zx_status_t AudioCapturerImpl::Process() {
         return ZX_OK;
       }
 
-      // If we cannot queue a new pending buffer, it is a fatal error. Simply
-      // return instead of trying again as we are now shutting down.
+      // If we cannot queue a new pending buffer, it is a fatal error. Simply return instead of
+      // trying again, as we are now shutting down.
       async_next_frame_offset_ = 0;
       if (!QueueNextAsyncPendingBuffer()) {
-        // If this fails, QueueNextAsyncPendingBuffer should have already shut
-        // us down. Assert this.
+        // If this fails, QueueNextAsyncPendingBuffer should have already shut us down. Assert this.
         FX_DCHECK(state_.load() == State::Shutdown);
         return ZX_ERR_INTERNAL;
       }
       continue;
     }
 
-    // If we have yet to establish a timeline transformation from capture frames
-    // to clock monotonic, establish one now.
+    // Establish the transform from capture frames to clock monotonic, if we haven't already.
     //
     // Ideally, if there were only one capture source and our frame rates match, we would align our
     // start time exactly with a source sample boundary.
@@ -826,7 +841,8 @@ zx_status_t AudioCapturerImpl::Process() {
       // Additionally, we must be mindful that if a newly-arriving source causes our "fence time" to
       // increase, we will wake up early. At wakeup time, we need to be able to detect this case and
       // sleep a bit longer before mixing.
-      zx::time next_mix_time = last_frame_time + kAssumedWorstSourceFenceTime;
+      zx::time next_mix_time = last_frame_time + min_fence_time_ + kFenceTimePadding;
+
       zx_status_t status = mix_timer_.PostForTime(mix_domain_->dispatcher(), next_mix_time);
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status) << "Failed to schedule capturer mix";
@@ -836,8 +852,7 @@ zx_status_t AudioCapturerImpl::Process() {
       return ZX_OK;
     }
 
-    // Mix the requested number of frames from our sources to our intermediate
-    // buffer, then the intermediate buffer into our output target.
+    // Mix the requested number of frames from sources to intermediate buffer, then into output.
     if (!MixToIntermediate(mix_frames)) {
       ShutdownFromMixDomain();
       return ZX_ERR_INTERNAL;
@@ -846,10 +861,8 @@ zx_status_t AudioCapturerImpl::Process() {
     FX_DCHECK(output_producer_ != nullptr);
     output_producer_->ProduceOutput(mix_buf_.get(), mix_target, mix_frames);
 
-    // Update the pending buffer in progress, and if it is finished, send it
-    // back to the user. If the buffer has been flushed (there is either no
-    // packet in the pending queue, or the front of the queue has a different
-    // sequence number from the buffer we were working on), just move on.
+    // Update the pending buffer in progress. If finished, return it to the user. If flushed (no
+    // pending packet, or queue head was different from what we were working on), just move on.
     bool buffer_finished = false;
     bool wakeup_service_thread = false;
     {
@@ -867,17 +880,15 @@ zx_status_t AudioCapturerImpl::Process() {
             p.capture_timestamp = dest_frames_to_clock_mono_.Apply(frame_count_);
           }
 
-          // If we have finished filling this buffer, place it in the finished
-          // queue to be sent back to the user.
+          // If we filled the entire buffer, put it in the queue to be returned to the user.
           buffer_finished = p.filled_frames >= p.num_frames;
           if (buffer_finished) {
             wakeup_service_thread = finished_capture_buffers_.is_empty();
             finished_capture_buffers_.push_back(pending_capture_buffers_.pop_front());
           }
         } else {
-          // It looks like we were flushed while we were mixing. Invalidate our
-          // timeline function, we will re-establish it and flag a discontinuity
-          // next time we have work to do.
+          // It looks like we were flushed while we were mixing. Invalidate our timeline function,
+          // we will re-establish it and flag a discontinuity next time we have work to do.
           dest_frames_to_clock_mono_ =
               TimelineFunction(now.get(), frame_count_, dest_frames_to_clock_mono_rate_);
           dest_frames_to_clock_mono_gen_.Next();
@@ -894,11 +905,9 @@ zx_status_t AudioCapturerImpl::Process() {
                       [thiz = fbl::RefPtr(this)]() { thiz->FinishBuffersThunk(); });
     }
 
-    // If we are in async mode, and we just finished a buffer, queue a new
-    // pending buffer (or die trying).
+    // If in async mode, and we just finished a buffer, queue a new pending buffer (or die trying).
     if (buffer_finished && async_mode && !QueueNextAsyncPendingBuffer()) {
-      // If this fails, QueueNextAsyncPendingBuffer should have already shut
-      // us down. Assert this.
+      // If this fails, QueueNextAsyncPendingBuffer should have already shut us down. Assert this.
       FX_DCHECK(state_.load() == State::Shutdown);
       return ZX_ERR_INTERNAL;
     }
@@ -1091,6 +1100,11 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
     int64_t end_fence_frames =
         (info.clock_mono_to_frac_source_frames.Apply(now)) >> kPtsFractionalBits;
+    // If, because of significant FIFO depth or external delay, the calculated end_fence_frames
+    // value is in the past, MOD it up into our ring buffer range.
+    while (end_fence_frames < 0) {
+      end_fence_frames += rb->frames();
+    }
 
     auto start_fence_frames = end_fence_frames - rb_snap.end_fence_to_start_fence_frames;
     auto rb_frames = rb->frames();
@@ -1206,9 +1220,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
 
         // In scaling our (fractional) source_offset to (integral) dest_offset, we want to "round
         // up" to the next integer dest frame, but the 'scale' operation truncates any fractional
-        // result. So we will add 1 in all cases (since all cases have SOME fractional component)
-        // but also subtract 1 before scaling (because the only case in which we DON'T need to add 1
-        // to the result is when the input val is X.0).
+        // result. ALL source_offset values have SOME fractional component except for the X.0 case.
+        // So to "round up" while scaling, we subtract the smallest fractional value first, then
+        // scale-truncate, then add one to the final result.
         dest_offset_64 = dest_to_src.Inverse().Scale(src_to_skip - 1) + 1;
         source_offset_64 += dest_to_src.Scale(dest_offset_64);
 
@@ -1344,10 +1358,9 @@ void AudioCapturerImpl::DoStopAsyncCapture() {
   // If this is being called, we had better be in the async stopping state.
   FX_DCHECK(state_.load() == State::AsyncStopping);
 
-  // Finish all pending buffers. We should have at most one pending buffer.
-  // Don't bother to move an empty buffer into the finished queue. If there are
-  // any buffers in the finished queue waiting to be sent back to the user, make
-  // sure that the last one is flagged as the end of stream.
+  // Finish all pending buffers. We should have at most one pending buffer. Don't bother to move an
+  // empty buffer into the finished queue. If there are any buffers in the finished queue waiting to
+  // be sent back to the user, make sure that the last one is flagged as the end of stream.
   {
     std::lock_guard<std::mutex> pending_lock(pending_lock_);
 
