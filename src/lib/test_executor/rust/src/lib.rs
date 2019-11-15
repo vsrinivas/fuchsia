@@ -233,7 +233,7 @@ pub async fn run_test_component(
 
     fx_vlog!(1, "connecting to test component {}", test_url);
     let is_v2_component = test_url.ends_with(".cm");
-    let mut app;
+    let app;
     if is_v2_component {
         app = fuchsia_component::client::launch(
             &launcher,
@@ -252,8 +252,6 @@ pub async fn run_test_component(
         .map_err(|e| format_err!("Error connecting to test service: {}", e))?;
 
     run_and_collect_results(suite, sender, test_url.clone()).await?;
-
-    app.kill().map_err(|e| format_err!("Error killing test '{}': {}", test_url, e))?;
 
     Ok(())
 }
