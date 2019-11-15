@@ -6,6 +6,8 @@
         "services": [
             "fuchsia.overnet.Overnet",
             "fuchsia.overnet.MeshController",
+            "fuchsia.overnet.ServiceConsumer",
+            "fuchsia.overnet.ServicePublisher",
             "fuchsia.tracing.provider.Registry"
         ]
     }
