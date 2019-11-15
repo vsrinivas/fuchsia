@@ -29,6 +29,7 @@ using DeviceSetWatcherPtr = fuchsia::ledger::cloud::DeviceSetWatcherPtr;
 using Diff = fuchsia::ledger::cloud::Diff;
 using DiffEntry = fuchsia::ledger::cloud::DiffEntry;
 using DiffPack = fuchsia::ledger::cloud::DiffPack;
+using DiffSupport = fuchsia::ledger::cloud::test::DiffSupport;
 using NetworkState = fuchsia::ledger::cloud::test::NetworkState;
 using Operation = fuchsia::ledger::cloud::Operation;
 using PageCloud = fuchsia::ledger::cloud::PageCloud;

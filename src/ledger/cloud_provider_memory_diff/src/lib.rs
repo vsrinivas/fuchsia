@@ -23,16 +23,23 @@ use crate::session::{CloudSession, CloudSessionShared};
 use crate::state::Cloud;
 
 /// A factory for instances of the cloud provider sharing the same data storage.
-pub struct CloudFactory(Rc<RefCell<Cloud>>);
+pub struct CloudFactory {
+    cloud: Rc<RefCell<Cloud>>,
+    rng: Rc<RefCell<dyn rand::RngCore>>,
+}
 
 impl CloudFactory {
     /// Create a factory with empty storage.
-    pub fn new() -> CloudFactory {
-        CloudFactory(Rc::new(RefCell::new(Cloud::new())))
+    pub fn new(rng: Rc<RefCell<dyn rand::RngCore>>) -> CloudFactory {
+        CloudFactory { cloud: Rc::new(RefCell::new(Cloud::new())), rng }
     }
 
     /// Returns a future that handles the request stream.
     pub fn spawn(&self, stream: CloudProviderRequestStream) -> LocalFutureObj<'static, ()> {
-        CloudSession::new(Rc::new(CloudSessionShared::new(Rc::clone(&self.0))), stream).run()
+        CloudSession::new(
+            Rc::new(CloudSessionShared::new(Rc::clone(&self.cloud), Rc::clone(&self.rng))),
+            stream,
+        )
+        .run()
     }
 }

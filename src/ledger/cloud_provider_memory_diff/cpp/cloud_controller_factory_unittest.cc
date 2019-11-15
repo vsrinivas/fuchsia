@@ -21,7 +21,8 @@ using CloudControllerFactoryTest = gtest::TestLoopFixture;
 
 TEST_F(CloudControllerFactoryTest, Launch) {
   CloudControllerFactoryPtr cloud_controller_factory;
-  async_test_subloop_t* subloop = NewCloudControllerFactory(cloud_controller_factory.NewRequest());
+  async_test_subloop_t* subloop =
+      NewCloudControllerFactory(cloud_controller_factory.NewRequest(), 42);
   ASSERT_TRUE(subloop);
   auto token = test_loop().RegisterLoop(subloop);
 

@@ -11,15 +11,16 @@
 #include "src/ledger/bin/fidl/include/types.h"
 
 extern "C" {
-async_test_subloop_t* cloud_provider_memory_diff_new_cloud_controller_factory(zx_handle_t handle);
+async_test_subloop_t* cloud_provider_memory_diff_new_cloud_controller_factory(zx_handle_t handle,
+                                                                              uint64_t seed);
 }
 
 namespace cloud_provider {
 
 async_test_subloop_t* NewCloudControllerFactory(
-    fidl::InterfaceRequest<CloudControllerFactory> request) {
+    fidl::InterfaceRequest<CloudControllerFactory> request, uint64_t seed) {
   zx_handle_t handle = request.TakeChannel().release();
-  return cloud_provider_memory_diff_new_cloud_controller_factory(handle);
+  return cloud_provider_memory_diff_new_cloud_controller_factory(handle, seed);
 }
 
 }  // namespace cloud_provider

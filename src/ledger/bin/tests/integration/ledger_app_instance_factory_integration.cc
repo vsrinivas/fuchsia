@@ -246,8 +246,8 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
         overnet_factory_(services_loop_->dispatcher()),
         enable_sync_(enable_sync),
         enable_p2p_mesh_(enable_p2p_mesh) {
-    async_test_subloop_t* cloud_subloop =
-        cloud_provider::NewCloudControllerFactory(cloud_controller_factory_.NewRequest());
+    async_test_subloop_t* cloud_subloop = cloud_provider::NewCloudControllerFactory(
+        cloud_controller_factory_.NewRequest(), random_.Draw<uint64_t>());
     cloud_provider_loop_ = loop_.RegisterLoop(cloud_subloop);
     cloud_controller_factory_->Build(cloud_controller_.NewRequest());
     if (inject_network_error == InjectNetworkError::YES) {

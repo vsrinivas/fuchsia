@@ -29,16 +29,21 @@ pub struct CloudControllerFactory {
     storage: Rc<RefCell<Cloud>>,
     controllers: FuturesUnordered<CloudControllerFuture>,
     requests: stream::Fuse<CloudControllerFactoryRequestStream>,
+    rng: Rc<RefCell<dyn rand::RngCore>>,
 }
 
 type CloudControllerFactoryFuture = LocalFutureObj<'static, ()>;
 
 impl CloudControllerFactory {
-    pub fn new(requests: CloudControllerFactoryRequestStream) -> CloudControllerFactory {
+    pub fn new(
+        requests: CloudControllerFactoryRequestStream,
+        rng: Rc<RefCell<dyn rand::RngCore>>,
+    ) -> CloudControllerFactory {
         CloudControllerFactory {
             storage: Rc::new(RefCell::new(Cloud::new())),
             controllers: FuturesUnordered::new(),
             requests: requests.fuse(),
+            rng,
         }
     }
 
@@ -46,15 +51,20 @@ impl CloudControllerFactory {
         loop {
             select! {
                 _ = self.controllers.next() => {
-                    // One of the controller futures completed. We
-                    // don't need to do anything.
+                    // One of the controller futures completed. We don't need to do anything.
                 },
                 req = self.requests.try_next() =>
                     match req? {
                         None => return Ok(()),
                         Some(CloudControllerFactoryRequest::Build {controller, ..}) => {
                             let controller = controller.into_stream()?;
-                            self.controllers.push(CloudController::new(self.storage.clone(), controller).run())
+                            self.controllers.push(
+                                CloudController::new(
+                                    self.storage.clone(),
+                                    self.rng.clone(),
+                                    controller,
+                                ).run()
+                            )
                         }
                     }
             }
@@ -77,9 +87,10 @@ type CloudControllerFuture = LocalFutureObj<'static, ()>;
 impl CloudController {
     fn new(
         storage: Rc<RefCell<Cloud>>,
+        rng: Rc<RefCell<dyn rand::RngCore>>,
         controller: CloudControllerRequestStream,
     ) -> CloudController {
-        let state = Rc::new(CloudSessionShared::new(storage));
+        let state = Rc::new(CloudSessionShared::new(storage, rng));
         CloudController {
             controller_requests: controller.fuse(),
             cloud_state: state,
@@ -104,6 +115,10 @@ impl CloudController {
                         Some(CloudControllerRequest::Connect {provider, ..}) => {
                             let provider = provider.into_stream()?;
                             self.cloud_futures.push(CloudSession::new(Rc::clone(&self.cloud_state), provider).run())
+                        },
+                        Some(CloudControllerRequest::SetDiffSupport {support, responder}) => {
+                            *self.cloud_state.diff_support.borrow_mut() = support;
+                            responder.send()?
                         }
                     }
             }
@@ -137,6 +152,10 @@ mod tests {
         device_set: DeviceSetProxy,
     }
 
+    fn rng() -> Rc<RefCell<dyn rand::RngCore>> {
+        Rc::new(RefCell::new(rand::thread_rng()))
+    }
+
     async fn connect_device_set(
         factory: &CloudControllerFactoryProxy,
     ) -> Result<DeviceSetConnection, fidl::Error> {
@@ -165,7 +184,7 @@ mod tests {
         let (client, server) = create_endpoints::<CloudControllerFactoryMarker>().unwrap();
 
         let stream = server.into_stream().unwrap();
-        let server_fut = CloudControllerFactory::new(stream).run();
+        let server_fut = CloudControllerFactory::new(stream, rng()).run();
         fasync::spawn_local(server_fut);
 
         let proxy = client.into_proxy().unwrap();
@@ -196,7 +215,7 @@ mod tests {
         let (client, server) = create_endpoints::<CloudControllerFactoryMarker>().unwrap();
 
         let stream = server.into_stream().unwrap();
-        let server_fut = CloudControllerFactory::new(stream).run();
+        let server_fut = CloudControllerFactory::new(stream, rng()).run();
         fasync::spawn_local(server_fut);
 
         let proxy = client.into_proxy().unwrap();

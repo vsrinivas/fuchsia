@@ -4,6 +4,7 @@
 
 use crate::error::*;
 use crate::types::*;
+use fidl::encoding::Decodable;
 use fidl_fuchsia_ledger_cloud as cloud;
 use fuchsia_zircon::Vmo;
 use std::convert::TryFrom;
@@ -35,6 +36,22 @@ impl Commit {
     pub fn serialize_pack(commits: Vec<&Commit>) -> cloud::CommitPack {
         let mut serialized =
             cloud::Commits { commits: commits.into_iter().map(cloud::Commit::from).collect() };
+        fidl::encoding::with_tls_encoded(&mut serialized, |data, _handles| {
+            Ok::<_, fidl::Error>(cloud::CommitPack { buffer: write_buffer(data.as_slice()) })
+        })
+        .expect("Failed to write FIDL-encoded commit data to buffer")
+    }
+
+    pub fn serialize_pack_with_diffs(commits: Vec<(Commit, Option<Diff>)>) -> cloud::CommitPack {
+        let mut serialized = cloud::Commits {
+            commits: commits
+                .into_iter()
+                .map(|(commit, diff)| cloud::Commit {
+                    diff: diff.map(cloud::Diff::from),
+                    ..cloud::Commit::from(&commit)
+                })
+                .collect(),
+        };
         fidl::encoding::with_tls_encoded(&mut serialized, |data, _handles| {
             Ok::<_, fidl::Error>(cloud::CommitPack { buffer: write_buffer(data.as_slice()) })
         })
@@ -80,5 +97,27 @@ impl Diff {
             Ok::<_, fidl::Error>(cloud::DiffPack { buffer: write_buffer(data.as_slice()) })
         })
         .expect("Failed to write FIDL-encoded diff data to buffer")
+    }
+
+    pub fn deserialize_pack(pack: &cloud::DiffPack) -> Result<Diff, ClientError> {
+        let buf = &pack.buffer;
+        fidl::encoding::with_tls_coding_bufs(|data, _handles| {
+            read_buffer(buf, data)?;
+            let mut serialized_diff = cloud::Diff::new_empty();
+
+            // This is OK because ledger interfaces do not use static unions.
+            let context = fidl::encoding::Context { unions_use_xunion_format: true };
+            fidl::encoding::Decoder::decode_with_context(
+                &context,
+                &data,
+                &mut [],
+                &mut serialized_diff,
+            )
+            .map_err(|err| {
+                err.client_error(Status::ArgumentError)
+                    .with_explanation("couldn't decode commits from FIDL data")
+            })?;
+            Diff::try_from(serialized_diff)
+        })
     }
 }

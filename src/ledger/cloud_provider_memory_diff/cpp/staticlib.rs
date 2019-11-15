@@ -12,17 +12,23 @@ use fuchsia_async as fasync;
 use fuchsia_async_testloop::async_test_subloop_t;
 use fuchsia_zircon::{self as zx, HandleBased};
 use fuchsia_zircon_sys::zx_handle_t;
+use rand::SeedableRng;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 #[no_mangle]
-/// Creates a subloop running a `CloudControllerFactory` answering on the given channel.
+/// Creates a subloop running a `CloudControllerFactory` answering on the given channel. The random
+/// number generator for the factory is deterministically seeded from |seed|.
 extern "C" fn cloud_provider_memory_diff_new_cloud_controller_factory(
     channel: zx_handle_t,
+    seed: u64,
 ) -> *mut async_test_subloop_t {
     let fut = async move {
+        let rng = Rc::new(RefCell::new(rand_xorshift::XorShiftRng::seed_from_u64(seed)));
         let handle = unsafe { zx::Handle::from_raw(channel) };
         let channel = fasync::Channel::from_channel(zx::Channel::from_handle(handle)).unwrap();
         let stream = CloudControllerFactoryRequestStream::from_channel(channel);
-        CloudControllerFactory::new(stream).run().await
+        CloudControllerFactory::new(stream, rng).run().await
     };
 
     fuchsia_async_testloop::new_subloop(fut)

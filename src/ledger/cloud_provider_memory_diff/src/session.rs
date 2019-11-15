@@ -7,11 +7,13 @@ use fidl_fuchsia_ledger_cloud::{
     CloudProviderRequest, CloudProviderRequestStream, DeviceSetRequest, DeviceSetRequestStream,
     DeviceSetWatcherProxy, PageCloudRequest, PageCloudRequestStream, PageCloudWatcherProxy, Status,
 };
+use fidl_fuchsia_ledger_cloud_test::DiffSupport;
 use futures::future;
 use futures::future::LocalFutureObj;
 use futures::prelude::*;
 use futures::select;
 use futures::stream::FuturesUnordered;
+use rand::Rng;
 use std::cell::{Ref, RefCell};
 use std::convert::{Into, TryFrom};
 use std::rc::Rc;
@@ -28,14 +30,21 @@ pub struct CloudSessionShared {
     pub storage: Rc<RefCell<Cloud>>,
     filter: RefCell<Box<dyn filter::RequestFilter>>,
     filter_change_signal: RefCell<Signal>,
+    pub diff_support: RefCell<DiffSupport>,
+    rng: Rc<RefCell<dyn rand::RngCore>>,
 }
 
 impl CloudSessionShared {
-    pub fn new(storage: Rc<RefCell<Cloud>>) -> CloudSessionShared {
+    pub fn new(
+        storage: Rc<RefCell<Cloud>>,
+        rng: Rc<RefCell<dyn rand::RngCore>>,
+    ) -> CloudSessionShared {
         CloudSessionShared {
             storage,
             filter: RefCell::new(Box::new(filter::Always::new(filter::Status::Ok))),
             filter_change_signal: RefCell::new(Signal::new()),
+            diff_support: RefCell::new(DiffSupport::AcceptAllDiffs),
+            rng,
         }
     }
 
@@ -226,6 +235,23 @@ impl PageSession {
         }
     }
 
+    fn maybe_remove_diffs(
+        &self,
+        commits: Vec<(Commit, Option<Diff>)>,
+    ) -> Vec<(Commit, Option<Diff>)> {
+        commits
+            .into_iter()
+            .map(|(commit, diff)| (commit, if self.should_accept_diff() { diff } else { None }))
+            .collect()
+    }
+
+    fn should_accept_diff(&self) -> bool {
+        match *self.shared.diff_support.borrow() {
+            DiffSupport::AcceptAllDiffs => true,
+            DiffSupport::AcceptDiffsRandomly => self.shared.rng.borrow_mut().gen(),
+        }
+    }
+
     fn handle_request(&mut self, request: PageCloudRequest) -> Result<(), fidl::Error> {
         let mut storage = self.shared.storage.borrow_mut();
         let page = storage.get_page(self.page_id.clone());
@@ -233,7 +259,10 @@ impl PageSession {
             PageCloudRequest::AddCommits { commits, responder } => {
                 match Commit::deserialize_pack(&commits) {
                     Err(e) => responder.send(e.report()),
-                    Ok(commits) => responder.send(page.add_commits(commits).report_if_error()),
+                    Ok(commits) => {
+                        let commits = self.maybe_remove_diffs(commits);
+                        responder.send(page.add_commits(commits).report_if_error())
+                    }
                 }
             }
             PageCloudRequest::GetCommits { min_position_token, responder } => {
@@ -437,6 +466,10 @@ mod tests {
 
     use super::*;
 
+    fn rng() -> Rc<RefCell<dyn rand::RngCore>> {
+        Rc::new(RefCell::new(rand::thread_rng()))
+    }
+
     #[test]
     fn page_cloud_disconnection() {
         let mut exec = fasync::Executor::new().unwrap();
@@ -444,7 +477,8 @@ mod tests {
         let (client, server) = create_endpoints::<PageCloudMarker>().unwrap();
 
         let stream = server.into_stream().unwrap();
-        let server_state = Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new()))));
+        let server_state =
+            Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new())), rng()));
         let server_fut =
             PageSession::new(Rc::clone(&server_state), PageId(vec![], vec![]), stream).run();
         fasync::spawn_local(server_fut);
@@ -509,7 +543,8 @@ mod tests {
         let (client, server) = create_endpoints::<DeviceSetMarker>().unwrap();
 
         let stream = server.into_stream().unwrap();
-        let server_state = Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new()))));
+        let server_state =
+            Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new())), rng()));
         let server_fut = DeviceSetSession::new(Rc::clone(&server_state), stream).run();
         fasync::spawn_local(server_fut);
 
@@ -581,7 +616,8 @@ mod tests {
         let (client, server) = create_endpoints::<PageCloudMarker>().unwrap();
 
         let stream = server.into_stream().unwrap();
-        let server_state = Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new()))));
+        let server_state =
+            Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new())), rng()));
         let server_fut =
             PageSession::new(Rc::clone(&server_state), PageId(vec![], vec![]), stream).run();
         server_state.set_filter(Box::new(filter::Flaky::new(2)));
@@ -611,6 +647,98 @@ mod tests {
         };
         pin_mut!(client_fut);
 
+        assert!(exec.run_until_stalled(&mut client_fut).is_ready());
+    }
+
+    struct ConstRng(u64);
+
+    impl rand::RngCore for ConstRng {
+        fn next_u32(&mut self) -> u32 {
+            self.0 as u32
+        }
+
+        fn next_u64(&mut self) -> u64 {
+            self.0
+        }
+
+        fn fill_bytes(&mut self, dest: &mut [u8]) {
+            for el in dest.iter_mut() {
+                *el = self.0 as u8
+            }
+        }
+
+        fn try_fill_bytes(&mut self, dest: &mut [u8]) -> Result<(), rand::Error> {
+            Ok(self.fill_bytes(dest))
+        }
+    }
+
+    #[test]
+    fn diff_mode() {
+        let mut exec = fasync::Executor::new().unwrap();
+        let page_id = PageId(vec![], vec![]);
+
+        let (client, server) = create_endpoints::<PageCloudMarker>().unwrap();
+
+        let stream = server.into_stream().unwrap();
+        let rng: Rc<RefCell<ConstRng>> = Rc::new(RefCell::new(ConstRng(0)));
+        let server_state =
+            Rc::new(CloudSessionShared::new(Rc::new(RefCell::new(Cloud::new())), rng.clone()));
+        // Add one commit.
+        let commit = (Commit { id: CommitId(vec![0]), data: vec![] }, None);
+        server_state
+            .storage
+            .borrow_mut()
+            .get_page(page_id.clone())
+            .add_commits(vec![commit])
+            .unwrap();
+        let server_fut = PageSession::new(Rc::clone(&server_state), page_id, stream).run();
+        fasync::spawn_local(server_fut);
+
+        let proxy = &client.into_proxy().unwrap();
+        let client_fut = async move {
+            // Default mode: add one commit
+            let make_commit = |i| {
+                Commit::serialize_pack_with_diffs(vec![(
+                    Commit { id: CommitId(vec![i]), data: vec![] },
+                    Some(Diff { base_state: PageState::EmptyPage, changes: vec![] }),
+                )])
+            };
+            assert_eq!(proxy.add_commits(&mut make_commit(1)).await.unwrap(), Status::Ok);
+
+            // Random mode, add one commit, with the random generator saying "no"
+            *server_state.diff_support.borrow_mut() = DiffSupport::AcceptDiffsRandomly;
+            assert_eq!(proxy.add_commits(&mut make_commit(2)).await.unwrap(), Status::Ok);
+
+            // Random mode, add one commit, generator says "yes".
+            rng.borrow_mut().0 = 0xffff_ffff_ffff_ffff;
+            assert_eq!(proxy.add_commits(&mut make_commit(3)).await.unwrap(), Status::Ok);
+
+            // Get the three diffs.
+            let get_diff_base = |i: u8| {
+                async move {
+                    let i: u8 = i.clone();
+                    Diff::deserialize_pack(
+                        proxy
+                            .get_diff(&mut vec![i].into_iter(), &mut vec![].into_iter())
+                            .await
+                            .unwrap()
+                            .1
+                            .unwrap()
+                            .as_ref(),
+                    )
+                    .unwrap()
+                    .base_state
+                }
+            };
+            // For commit 1, we get a meaningful diff from the empty state.
+            assert_eq!(get_diff_base(1).await, PageState::EmptyPage);
+            // For commit 2, we get a diff from itself.
+            assert_eq!(get_diff_base(2).await, PageState::AtCommit(CommitId(vec![2])));
+            // For commit 3, we get a meaningful diff from the empty state
+            assert_eq!(get_diff_base(1).await, PageState::EmptyPage);
+        };
+
+        pin_mut!(client_fut);
         assert!(exec.run_until_stalled(&mut client_fut).is_ready());
     }
 }

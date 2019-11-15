@@ -9,6 +9,8 @@ use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_syslog;
 use futures::prelude::*;
+use std::cell::RefCell;
+use std::rc::Rc;
 
 use cloud_provider_memory_diff_lib::{CloudControllerFactory, CloudFactory};
 
@@ -21,7 +23,8 @@ enum IncomingServices {
 async fn main() -> Result<(), Error> {
     fuchsia_syslog::init()?;
 
-    let cloud_factory = CloudFactory::new();
+    let rng = Rc::new(RefCell::new(rand::thread_rng()));
+    let cloud_factory = CloudFactory::new(rng.clone());
     let mut fs = ServiceFs::new_local();
     fs.dir("svc")
         .add_fidl_service(IncomingServices::CloudProvider)
@@ -32,7 +35,7 @@ async fn main() -> Result<(), Error> {
     let fut = fs.for_each_concurrent(None, |req| match req {
         IncomingServices::CloudProvider(stream) => cloud_factory.spawn(stream),
         IncomingServices::CloudControllerFactory(stream) => {
-            CloudControllerFactory::new(stream).run()
+            CloudControllerFactory::new(stream, rng.clone()).run()
         }
     });
 

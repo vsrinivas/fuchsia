@@ -29,6 +29,23 @@ enum NetworkState : int32 {
     INJECT_NETWORK_ERRORS = 3;
 };
 
+/// Simulated level of support for diffs.
+///
+/// This is used to test Ledger's compatibility with non diff-enabled peers and cloud providers.
+enum DiffSupport : int32 {
+    /// The cloud always accepts diffs sent by clients.
+    ///
+    /// This is used to test Ledger's non-compatible mode of operation.
+    ACCEPT_ALL_DIFFS = 1;
+
+    /// The cloud accepts diffs sent by clients with 50% probability.
+    ///
+    /// This is used to test the compatibility strategy: missing a diff is the observable
+    /// consequence of either having a cloud provider that did not support diffs when the commit was
+    /// uploaded, or that the commit was uploaded by a non diff-supporting Ledger.
+    ACCEPT_DIFFS_RANDOMLY = 2;
+};
+
 /// Service controlling some CloudProvider connections sharing the same network
 /// state.
 ///
@@ -46,4 +63,7 @@ protocol CloudController {
     /// created from this CloudController, and the data of all CloudProviders
     /// created from the same CloudControllerFactory.
     Connect(request<fuchsia.ledger.cloud.CloudProvider> provider);
+
+    /// Sets the diff support level for the controller.
+    SetDiffSupport(DiffSupport support) -> ();
 };

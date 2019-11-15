@@ -12,9 +12,10 @@
 
 namespace cloud_provider {
 
-// Creates a new CloudControllerFactory that runs on the returned subloop.
+// Creates a new CloudControllerFactory that runs on the returned subloop. The random number
+// generator of the factory is deterministically seeded with |seed|.
 async_test_subloop_t* NewCloudControllerFactory(
-    fidl::InterfaceRequest<CloudControllerFactory> request);
+    fidl::InterfaceRequest<CloudControllerFactory> request, uint64_t seed);
 
 }  // namespace cloud_provider
 
