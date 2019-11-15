@@ -7,7 +7,8 @@
             "class/input"
         ],
         "features": [
-            "build-info"
+            "build-info",
+            "config-data"
         ],
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",

@@ -54,6 +54,7 @@ mod privacy;
 mod setup;
 mod system;
 
+pub mod config;
 pub mod registry;
 pub mod switchboard;
 

@@ -7,8 +7,9 @@
             "class/input"
         ],
         "features": [
-            "isolated-persistent-storage",
-            "build-info"
+            "build-info",
+            "config-data",
+            "isolated-persistent-storage"
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
