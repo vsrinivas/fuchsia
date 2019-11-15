@@ -8,7 +8,10 @@ use {
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, StreamExt},
     lazy_static::lazy_static,
-    std::{convert::TryInto, sync::Arc},
+    std::{
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -17,22 +20,18 @@ lazy_static! {
 }
 
 pub struct BreakpointCapabilityHook {
-    breakpoint_capability_hook_inner: Arc<BreakpointCapabilityHookInner>,
+    inner: Arc<BreakpointCapabilityHookInner>,
 }
 
 impl BreakpointCapabilityHook {
     pub fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
-        Self {
-            breakpoint_capability_hook_inner: Arc::new(BreakpointCapabilityHookInner::new(
-                breakpoint_registry,
-            )),
-        }
+        Self { inner: Arc::new(BreakpointCapabilityHookInner::new(breakpoint_registry)) }
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: self.breakpoint_capability_hook_inner.clone(),
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
 }

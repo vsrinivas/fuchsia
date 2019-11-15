@@ -305,7 +305,7 @@ mod tests {
         cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
-        std::task::Context,
+        std::{sync::Weak, task::Context},
     };
 
     macro_rules! results_eq {
@@ -390,7 +390,7 @@ mod tests {
             root_component: &'static str,
             components: Vec<(&'static str, ComponentDecl)>,
             realm_moniker: Option<AbsoluteMoniker>,
-            extra_hooks: Vec<HookRegistration>,
+            extra_hooks: Vec<HooksRegistration>,
         ) -> Self {
             // Ensure that kernel logging has been set up
             let _ = klog::KernelLogger::init();
@@ -956,9 +956,27 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn shutdown_error() {
         struct StopErrorHook {
+            inner: Arc<StopErrorHookInner>,
+        }
+
+        impl StopErrorHook {
+            fn new(moniker: AbsoluteMoniker) -> Self {
+                Self { inner: StopErrorHookInner::new(moniker) }
+            }
+
+            fn hooks(&self) -> Vec<HooksRegistration> {
+                vec![HooksRegistration {
+                    events: vec![EventType::StopInstance],
+                    callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                }]
+            }
+        }
+
+        struct StopErrorHookInner {
             moniker: AbsoluteMoniker,
         }
-        impl StopErrorHook {
+
+        impl StopErrorHookInner {
             fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
                 Arc::new(Self { moniker })
             }
@@ -972,16 +990,9 @@ mod tests {
                 }
                 Ok(())
             }
-
-            fn hooks(hook: Arc<StopErrorHook>) -> Vec<HookRegistration> {
-                vec![HookRegistration {
-                    event_type: EventType::StopInstance,
-                    callback: hook.clone(),
-                }]
-            }
         }
 
-        impl Hook for StopErrorHook {
+        impl Hook for StopErrorHookInner {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let Event::StopInstance { realm } = event {
@@ -1037,13 +1048,7 @@ mod tests {
             ("d", ComponentDecl { ..default_component_decl() }),
         ];
         let error_hook = StopErrorHook::new(vec!["a:0", "b:0"].into());
-        let test = ActionsTest::new_with_hooks(
-            "root",
-            components,
-            None,
-            StopErrorHook::hooks(error_hook.clone()),
-        )
-        .await;
+        let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
         let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
         let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
@@ -1649,9 +1654,27 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_error() {
         struct DestroyErrorHook {
+            inner: Arc<DestroyErrorHookInner>,
+        }
+
+        impl DestroyErrorHook {
+            fn new(moniker: AbsoluteMoniker) -> Self {
+                Self { inner: DestroyErrorHookInner::new(moniker) }
+            }
+
+            fn hooks(&self) -> Vec<HooksRegistration> {
+                vec![HooksRegistration {
+                    events: vec![EventType::PostDestroyInstance],
+                    callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+                }]
+            }
+        }
+
+        struct DestroyErrorHookInner {
             moniker: AbsoluteMoniker,
         }
-        impl DestroyErrorHook {
+
+        impl DestroyErrorHookInner {
             fn new(moniker: AbsoluteMoniker) -> Arc<Self> {
                 Arc::new(Self { moniker })
             }
@@ -1662,16 +1685,9 @@ mod tests {
                 }
                 Ok(())
             }
-
-            fn hooks(hook: Arc<DestroyErrorHook>) -> Vec<HookRegistration> {
-                vec![HookRegistration {
-                    event_type: EventType::PostDestroyInstance,
-                    callback: hook.clone(),
-                }]
-            }
         }
 
-        impl Hook for DestroyErrorHook {
+        impl Hook for DestroyErrorHookInner {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
                     if let Event::PostDestroyInstance { realm } = event {
@@ -1730,13 +1746,7 @@ mod tests {
         // list of children. Therefore, to cause destruction of `a` to fail, fail removal of
         // `/a/b`.
         let error_hook = DestroyErrorHook::new(vec!["a:0", "b:0"].into());
-        let test = ActionsTest::new_with_hooks(
-            "root",
-            components,
-            None,
-            DestroyErrorHook::hooks(error_hook.clone()),
-        )
-        .await;
+        let test = ActionsTest::new_with_hooks("root", components, None, error_hook.hooks()).await;
         let realm_root = test.look_up(vec![].into()).await;
         let realm_a = test.look_up(vec!["a:0"].into()).await;
         let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;

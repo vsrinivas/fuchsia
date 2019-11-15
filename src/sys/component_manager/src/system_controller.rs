@@ -16,7 +16,11 @@ use {
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
     log::warn,
-    std::{convert::TryInto, process, sync::Arc},
+    std::{
+        convert::TryInto,
+        process,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -34,10 +38,10 @@ impl SystemController {
         Self { inner: Arc::new(SystemControllerInner::new()) }
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::RouteBuiltinCapability,
-            callback: self.inner.clone(),
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::RouteBuiltinCapability],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
 }

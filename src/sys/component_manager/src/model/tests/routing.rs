@@ -26,7 +26,7 @@ use {
     log::*,
     std::{
         convert::{TryFrom, TryInto},
-        sync::Arc,
+        sync::{Arc, Weak},
     },
 };
 
@@ -195,9 +195,9 @@ async fn use_framework_service() {
     test.model
         .root_realm
         .hooks
-        .install(vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: realm_service_host.clone(),
+        .install(vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&realm_service_host) as Weak<dyn Hook>,
         }])
         .await;
     test.check_use_realm(vec!["b:0"].into(), realm_service_host.bind_calls()).await;

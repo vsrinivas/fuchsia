@@ -56,12 +56,13 @@ pub trait Hook: Send + Sync {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>>;
 }
 
-/// An object registers a hook into a component manager event via a `HookRegistration` object.
-/// A single object may register for multiple events through a vector of `HookRegistration`
-/// objects.
-pub struct HookRegistration {
-    pub event_type: EventType,
-    pub callback: Arc<dyn Hook>,
+/// An object registers a hook into a component manager event via a `HooksRegistration` object.
+/// A single object may register for multiple events through a vector of `EventType`. `Hooks`
+/// does not retain the callback. The hook is lazily removed when the callback object loses
+/// strong references.
+pub struct HooksRegistration {
+    pub events: Vec<EventType>,
+    pub callback: Weak<dyn Hook>,
 }
 
 #[derive(Clone)]
@@ -152,13 +153,15 @@ impl Hooks {
         }
     }
 
-    pub async fn install(&self, hooks: Vec<HookRegistration>) {
+    pub async fn install(&self, hooks: Vec<HooksRegistration>) {
         let mut inner = self.inner.lock().await;
         for hook in hooks {
-            let hooks = &mut inner.hooks.entry(hook.event_type).or_insert(vec![]);
-            // We cannot compare weak pointers, so we won't dedup pointers at
-            // install time but at dispatch time when we go to upgrade pointers.
-            hooks.push(Arc::downgrade(&hook.callback));
+            for event in hook.events {
+                let event_hooks = &mut inner.hooks.entry(event).or_insert(vec![]);
+                // We cannot compare weak pointers, so we won't dedup pointers at
+                // install time but at dispatch time when we go to upgrade pointers.
+                event_hooks.push(hook.callback.clone());
+            }
         }
     }
 
@@ -286,15 +289,15 @@ mod tests {
 
         // Attempt to install CallCounter twice.
         hooks
-            .install(vec![HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: call_counter.clone(),
+            .install(vec![HooksRegistration {
+                events: vec![EventType::AddDynamicChild],
+                callback: Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             }])
             .await;
         hooks
-            .install(vec![HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: call_counter.clone(),
+            .install(vec![HooksRegistration {
+                events: vec![EventType::AddDynamicChild],
+                callback: Arc::downgrade(&call_counter) as Weak<dyn Hook>,
             }])
             .await;
 
@@ -317,17 +320,17 @@ mod tests {
         let event_log = EventLog::new();
         let parent_call_counter = CallCounter::new("ParentCallCounter", Some(event_log.clone()));
         parent_hooks
-            .install(vec![HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: parent_call_counter.clone(),
+            .install(vec![HooksRegistration {
+                events: vec![EventType::AddDynamicChild],
+                callback: Arc::downgrade(&parent_call_counter) as Weak<dyn Hook>,
             }])
             .await;
 
         let child_call_counter = CallCounter::new("ChildCallCounter", Some(event_log.clone()));
         child_hooks
-            .install(vec![HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: child_call_counter.clone(),
+            .install(vec![HooksRegistration {
+                events: vec![EventType::AddDynamicChild],
+                callback: Arc::downgrade(&child_call_counter) as Weak<dyn Hook>,
             }])
             .await;
 

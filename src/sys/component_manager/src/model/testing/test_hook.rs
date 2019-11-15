@@ -15,7 +15,14 @@ use {
     fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
     fuchsia_zircon as zx,
     futures::{executor::block_on, future::BoxFuture, lock::Mutex, prelude::*},
-    std::{cmp::Eq, collections::HashMap, fmt, ops::Deref, pin::Pin, sync::Arc},
+    std::{
+        cmp::Eq,
+        collections::HashMap,
+        fmt,
+        ops::Deref,
+        pin::Pin,
+        sync::{Arc, Weak},
+    },
 };
 
 struct ComponentInstance {
@@ -117,23 +124,17 @@ impl TestHook {
     }
 
     /// Returns the set of hooks into the component manager that TestHook is interested in.
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![
-            HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: self.inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::PreDestroyInstance,
-                callback: self.inner.clone(),
-            },
-            HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
-            HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
-            HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: self.inner.clone(),
-            },
-        ]
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![
+                EventType::AddDynamicChild,
+                EventType::PreDestroyInstance,
+                EventType::BindInstance,
+                EventType::StopInstance,
+                EventType::PostDestroyInstance,
+            ],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        }]
     }
 
     /// Recursively traverse the Instance tree to generate a string representing the component

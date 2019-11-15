@@ -24,7 +24,10 @@ use {
         future::{AbortHandle, Abortable, BoxFuture},
         lock::Mutex,
     },
-    std::{collections::HashMap, sync::Arc},
+    std::{
+        collections::HashMap,
+        sync::{Arc, Weak},
+    },
 };
 
 struct HubCapabilityProvider {
@@ -116,29 +119,19 @@ impl Hub {
         Ok(())
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        // List the hooks the Hub implements here.
-        vec![
-            HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: self.inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::PreDestroyInstance,
-                callback: self.inner.clone(),
-            },
-            HookRegistration { event_type: EventType::BindInstance, callback: self.inner.clone() },
-            HookRegistration {
-                event_type: EventType::RouteFrameworkCapability,
-                callback: self.inner.clone(),
-            },
-            HookRegistration { event_type: EventType::StopInstance, callback: self.inner.clone() },
-            HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: self.inner.clone(),
-            },
-            HookRegistration { event_type: EventType::CapabilityUse, callback: self.inner.clone() },
-        ]
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![
+                EventType::AddDynamicChild,
+                EventType::BindInstance,
+                EventType::CapabilityUse,
+                EventType::PostDestroyInstance,
+                EventType::PreDestroyInstance,
+                EventType::RouteFrameworkCapability,
+                EventType::StopInstance,
+            ],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        }]
     }
 }
 
@@ -716,7 +709,7 @@ mod tests {
     async fn start_component_manager_with_hub_and_hooks(
         root_component_url: String,
         components: Vec<ComponentDescriptor>,
-        additional_hooks: Vec<HookRegistration>,
+        additional_hooks: Vec<HooksRegistration>,
     ) -> (Arc<model::Model>, BuiltinEnvironment, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
@@ -887,9 +880,9 @@ mod tests {
                 host_fn: None,
                 runtime_host_fn: None,
             }],
-            vec![HookRegistration {
-                event_type: EventType::RouteFrameworkCapability,
-                callback: hub_injection_test_hook.clone(),
+            vec![HooksRegistration {
+                events: vec![EventType::RouteFrameworkCapability],
+                callback: Arc::downgrade(&hub_injection_test_hook) as Weak<dyn Hook>,
             }],
         )
         .await;

@@ -22,7 +22,7 @@ async fn new_model(
 async fn new_model_with(
     mock_resolver: MockResolver,
     mock_runner: MockRunner,
-    additional_hooks: Vec<HookRegistration>,
+    additional_hooks: Vec<HooksRegistration>,
 ) -> (Arc<Model>, BuiltinEnvironment) {
     let mut resolver = ResolverRegistry::new();
     resolver.register("test".to_string(), Box::new(mock_resolver));

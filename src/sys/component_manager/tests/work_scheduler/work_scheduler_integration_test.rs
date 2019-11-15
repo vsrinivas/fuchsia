@@ -12,7 +12,7 @@ use {
     failure::{self, Error},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_test_workscheduler as fws,
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
     work_scheduler_test_hook::*,
 };
 
@@ -41,9 +41,9 @@ async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTes
     model
         .root_realm
         .hooks
-        .install(vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: work_scheduler_test_hook.clone(),
+        .install(vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&work_scheduler_test_hook) as Weak<dyn Hook>,
         }])
         .await;
     work_scheduler_test_hook

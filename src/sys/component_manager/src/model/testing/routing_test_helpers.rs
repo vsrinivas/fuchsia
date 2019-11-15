@@ -94,7 +94,7 @@ impl RoutingTest {
     pub async fn new_with_hooks(
         root_component: &'static str,
         components: Vec<(&'static str, ComponentDecl)>,
-        additional_hooks: Vec<HookRegistration>,
+        additional_hooks: Vec<HooksRegistration>,
     ) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();

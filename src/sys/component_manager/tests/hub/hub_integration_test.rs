@@ -21,7 +21,11 @@ use {
     fidl_fuchsia_test_hub as fhub, fuchsia_zircon as zx,
     futures::TryStreamExt,
     hub_test_hook::*,
-    std::{path::PathBuf, sync::Arc, vec::Vec},
+    std::{
+        path::PathBuf,
+        sync::{Arc, Weak},
+        vec::Vec,
+    },
 };
 
 struct TestRunner {
@@ -39,9 +43,9 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
     model
         .root_realm
         .hooks
-        .install(vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: hub_test_hook.clone(),
+        .install(vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&hub_test_hook) as Weak<dyn Hook>,
         }])
         .await;
     hub_test_hook

@@ -3,11 +3,11 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::{AbsoluteMoniker, Event, EventType, Hook, HookRegistration, ModelError},
+    crate::model::{AbsoluteMoniker, Event, EventType, Hook, HooksRegistration, ModelError},
     futures::channel::*,
     futures::future::BoxFuture,
     futures::lock::Mutex,
-    std::sync::Arc,
+    std::sync::{Arc, Weak},
 };
 
 /// Notifies when the root instance has been destroyed by ComponentManager.
@@ -25,10 +25,10 @@ impl RootRealmPostDestroyNotifier {
         return Self { rx, inner };
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::PostDestroyInstance,
-            callback: self.inner.clone(),
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::PostDestroyInstance],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
 

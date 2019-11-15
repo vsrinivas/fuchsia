@@ -189,8 +189,8 @@ impl BuiltinRootCapabilities {
         }
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        let mut all_hooks: Vec<HookRegistration> = vec![];
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        let mut all_hooks: Vec<HooksRegistration> = vec![];
         all_hooks.append(&mut self.work_scheduler.hooks());
         if let Some(process_launcher) = &self.process_launcher {
             all_hooks.append(&mut process_launcher.hooks());

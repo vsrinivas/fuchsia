@@ -6,7 +6,11 @@ use {
     crate::model::*,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
     lazy_static::lazy_static,
-    std::{collections::HashMap, convert::TryInto, sync::Arc},
+    std::{
+        collections::HashMap,
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -153,47 +157,29 @@ impl BreakpointRegistry {
 /// component manager, a list of BreakpointInvocationSenders are obtained from the
 /// BreakpointRegistry and a BreakpointInvocation is sent via each.
 pub struct BreakpointHook {
-    breakpoint_hook_inner: Arc<BreakpointHookInner>,
+    inner: Arc<BreakpointHookInner>,
 }
 
 impl BreakpointHook {
     pub fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
-        Self { breakpoint_hook_inner: Arc::new(BreakpointHookInner::new(breakpoint_registry)) }
+        Self { inner: Arc::new(BreakpointHookInner::new(breakpoint_registry)) }
     }
 
     /// This hook must be registered with all events.
     /// However, a task will only receive events that it registered breakpoints for.
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![
-            HookRegistration {
-                event_type: EventType::AddDynamicChild,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::BindInstance,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::CapabilityUse,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::PostDestroyInstance,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::PreDestroyInstance,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::RouteFrameworkCapability,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::StopInstance,
-                callback: self.breakpoint_hook_inner.clone(),
-            },
-        ]
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![
+                EventType::AddDynamicChild,
+                EventType::BindInstance,
+                EventType::CapabilityUse,
+                EventType::PostDestroyInstance,
+                EventType::PreDestroyInstance,
+                EventType::RouteFrameworkCapability,
+                EventType::StopInstance,
+            ],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        }]
     }
 }
 

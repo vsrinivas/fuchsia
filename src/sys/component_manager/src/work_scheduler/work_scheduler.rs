@@ -32,7 +32,10 @@ use {
     },
     lazy_static::lazy_static,
     log::warn,
-    std::{convert::TryInto, sync::Arc},
+    std::{
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 // If you change this block, please update test `work_scheduler_capability_paths`.
@@ -124,17 +127,11 @@ impl WorkScheduler {
         Self { inner: Arc::new(WorkSchedulerInner::new()) }
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![
-            HookRegistration {
-                event_type: EventType::RouteBuiltinCapability,
-                callback: self.inner.clone(),
-            },
-            HookRegistration {
-                event_type: EventType::RouteFrameworkCapability,
-                callback: self.inner.clone(),
-            },
-        ]
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::RouteBuiltinCapability, EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+        }]
     }
 
     pub async fn schedule_work(

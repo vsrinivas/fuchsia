@@ -13,7 +13,11 @@ use {
     futures::{future::BoxFuture, prelude::*},
     lazy_static::lazy_static,
     log::*,
-    std::{cmp, convert::TryInto, sync::Arc},
+    std::{
+        cmp,
+        convert::TryInto,
+        sync::{Arc, Weak},
+    },
 };
 
 lazy_static! {
@@ -81,10 +85,10 @@ impl RealmCapabilityHost {
         Self { inner: Arc::new(RealmCapabilityHostInner::new(model, config)) }
     }
 
-    pub fn hooks(&self) -> Vec<HookRegistration> {
-        vec![HookRegistration {
-            event_type: EventType::RouteFrameworkCapability,
-            callback: self.inner.clone(),
+    pub fn hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
 
@@ -177,10 +181,8 @@ impl RealmCapabilityHostInner {
             realm_state.get_live_child_realm(&partial_moniker).map(|r| r.clone())
         };
         if let Some(child_realm) = child_realm {
-            model
-                .bind_open_exposed(child_realm, exposed_dir.into_channel())
-                .await
-                .map_err(|e| match e {
+            model.bind_open_exposed(child_realm, exposed_dir.into_channel()).await.map_err(
+                |e| match e {
                     ModelError::ResolverError { err } => {
                         debug!("failed to resolve child: {:?}", err);
                         fsys::Error::InstanceCannotResolve
@@ -193,7 +195,8 @@ impl RealmCapabilityHostInner {
                         error!("bind_open_exposed() failed: {}", e);
                         fsys::Error::Internal
                     }
-                })?;
+                },
+            )?;
         } else {
             return Err(fsys::Error::InstanceNotFound);
         }
@@ -364,7 +367,7 @@ mod tests {
             mock_resolver: MockResolver,
             mock_runner: MockRunner,
             realm_moniker: AbsoluteMoniker,
-            hooks: Vec<HookRegistration>,
+            hooks: Vec<HooksRegistration>,
         ) -> Self {
             // Init model.
             let mut resolver = ResolverRegistry::new();
