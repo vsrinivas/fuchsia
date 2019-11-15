@@ -5,6 +5,8 @@
 #ifndef TOOLS_SHELL_LIB_RUNTIME_H_
 #define TOOLS_SHELL_LIB_RUNTIME_H_
 
+#include <string>
+
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 
@@ -38,11 +40,14 @@ class Context {
   bool InitStd();
 
   // Initialize Fuchsia-isms: zx_internal, fdio, etc.
-  bool InitBuiltins();
+  // fidl_path is the directory to look for the FIDL IR.
+  bool InitBuiltins(const std::string& fidl_path);
 
  private:
   JSContext* ctx_;
   bool is_valid_;
+
+  bool Export(const std::string&);
 };
 
 }  // namespace shell

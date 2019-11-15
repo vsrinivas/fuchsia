@@ -17,8 +17,14 @@ namespace zx {
 // Returns an Error with message
 JSValue ZxStatusToError(JSContext *ctx, zx_status_t status);
 
+// Extracts a handle from a given JSValue Handle object.
+zx_handle_info_t HandleFromJsval(JSValue val);
+
 // Returns a module that supports syscall functionality.
 JSModuleDef *ZxModuleInit(JSContext *ctx, const char *module_name);
+
+// Creates a JSValue of class Handle with the given handle of the given type.
+JSValue HandleCreate(JSContext *ctx, zx_handle_t handle, zx_obj_type_t type);
 
 }  // namespace zx
 

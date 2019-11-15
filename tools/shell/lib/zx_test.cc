@@ -8,43 +8,19 @@
 #include <string>
 
 #include "gtest/gtest.h"
+#include "tools/shell/lib/js_testing_utils.h"
 #include "tools/shell/lib/runtime.h"
 
 namespace shell {
 
-class ZxTest : public ::testing::Test {
+class ZxTest : public JsTest {
  protected:
-  void SetUp() override {
-    rt_ = std::make_unique<Runtime>();
-    ASSERT_NE(nullptr, rt_.get()) << "Cannot allocate JS runtime";
-
-    ctx_ = std::make_unique<Context>(rt_.get());
-    ASSERT_NE(nullptr, ctx_.get()) << "Cannot allocate JS context";
-    if (!ctx_->InitStd()) {
-      ctx_->DumpError();
-      FAIL();
-    }
-
-    if (!ctx_->InitBuiltins()) {
-      ctx_->DumpError();
-      FAIL();
-    }
-  }
-
-  void Eval(std::string command) {
-    JSValue result = JS_Eval(ctx_->Get(), command.c_str(), command.length(), "batch", 0);
-    if (JS_IsException(result)) {
-      ctx_->DumpError();
-      FAIL();
-    }
-  }
-
-  std::unique_ptr<Context> ctx_;
-  std::unique_ptr<Runtime> rt_;
+  void SetUp() override { JsTest::SetUp(); }
 };
 
 // Sanity check test to make sure Hello World works.
 TEST_F(ZxTest, BasicChannelOps) {
+  InitBuiltins("");
   std::string test_string = R"(
 const TEST_VAL = 42;
 let ch = zx.Channel.create();
@@ -63,7 +39,7 @@ view.setInt8(0, TEST_VAL);
 ch[0].write(writeBuffer, []);
 Promise.all([p]);
 )";
-  Eval(test_string);
+  ASSERT_TRUE(Eval(test_string));
 }
 
 }  // namespace shell

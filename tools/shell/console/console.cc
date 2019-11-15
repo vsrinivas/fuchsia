@@ -43,7 +43,7 @@ int ConsoleMain(int argc, const char **argv) {
     return 1;
   }
 
-  if (!ctx.InitBuiltins()) {
+  if (!ctx.InitBuiltins(options.fidl_ir_path[0])) {
     ctx.DumpError();
     return 1;
   }

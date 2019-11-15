@@ -7,6 +7,7 @@
 
 #include <optional>
 #include <string>
+#include <vector>
 
 #include <cmdline/status.h>
 
@@ -14,6 +15,7 @@ namespace shell {
 
 struct CommandLineOptions {
   std::optional<std::string> command_string;
+  std::vector<std::string> fidl_ir_path;
 };
 
 // Parses the given command line into options and params.

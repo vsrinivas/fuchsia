@@ -35,6 +35,15 @@ JSClassDef handle_class_ = {
     .finalizer = nullptr,
 };
 
+zx_handle_info_t HandleFromJsval(JSValue val) {
+  JSFuchsiaHandle *opaque =
+      reinterpret_cast<JSFuchsiaHandle *>(JS_GetOpaque(val, handle_class_id_));
+  zx_handle_info_t handle;
+  handle.handle = opaque->handle;
+  handle.type = opaque->type;
+  return handle;
+}
+
 JSValue HandleCreate(JSContext *ctx, zx_handle_t handle, zx_obj_type_t type) {
   JSValue obj = JS_NewObjectClass(ctx, handle_class_id_);
   if (JS_IsException(obj)) {
@@ -67,7 +76,7 @@ static JSValue HandleClose(JSContext *ctx, JSValueConst this_val, int argc, JSVa
   return JS_UNDEFINED;
 }
 
-JSValue HandleWaitAsync(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+JSValue ObjectWaitAsync(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
   if (argc != 3) {
     return JS_ThrowSyntaxError(ctx, "Wrong number of arguments to zx.close(), was %d, expected 3",
                                argc);
@@ -211,7 +220,7 @@ static const JSCFunctionListEntry funcs_[] = {
     /* Fuchsia handle operations */
     JS_CFUNC_DEF("channelCreate", 0, ChannelCreate), JS_CFUNC_DEF("channelRead", 0, ChannelRead),
     JS_CFUNC_DEF("channelWrite", 0, ChannelWrite), JS_CFUNC_DEF("handleClose", 0, HandleClose),
-    JS_CFUNC_DEF("handleWaitAsync", 0, HandleWaitAsync),
+    JS_CFUNC_DEF("objectWaitAsync", 0, ObjectWaitAsync),
     /* Handle signal constants */
     FLAG(ZX_CHANNEL_READABLE), FLAG(ZX_CHANNEL_WRITABLE), FLAG(ZX_CHANNEL_PEER_CLOSED),
     /* zx_object_get_info flags */
