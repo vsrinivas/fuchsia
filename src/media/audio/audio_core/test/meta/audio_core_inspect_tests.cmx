@@ -1,8 +1,0 @@
-{
-    "program": {
-        "binary": "test/audio_core_inspect_tests"
-    },
-    "sandbox": {
-        "services": []
-    }
-}

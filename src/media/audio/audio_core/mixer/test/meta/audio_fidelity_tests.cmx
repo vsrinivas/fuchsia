@@ -3,6 +3,8 @@
         "binary": "test/audio_fidelity_tests"
     },
     "sandbox": {
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

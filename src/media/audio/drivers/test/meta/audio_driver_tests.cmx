@@ -15,6 +15,7 @@
             "class/audio-output"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.scheduler.ProfileProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"
