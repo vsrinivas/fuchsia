@@ -20,7 +20,7 @@ rustc_library("lib") {
 }
 
 rustc_binary("bin") {
-  name = "cs"
+  name = "cs_bin"
   edition = "2018"
 
   deps = [
@@ -39,7 +39,8 @@ package("cs") {
 
   binaries = [
     {
-      name = "cs"
+      name = "cs_bin"
+      dest = "cs"
       shell = true
     },
   ]
