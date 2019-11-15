@@ -5,6 +5,7 @@
 import("//build/cpp/fidl_cpp.gni")
 import("//build/dart/toolchain.gni")
 import("//build/fidl/toolchain.gni")
+import("//build/fidl/wireformat.gni")
 import("//build/go/toolchain.gni")
 import("//build/rust/toolchain.gni")
 
