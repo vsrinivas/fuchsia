@@ -46,7 +46,6 @@ void BindReply(const fbl::RefPtr<zx_device_t>& dev,
 void DeviceControllerConnection::CompleteCompatibilityTests(
     llcpp::fuchsia::device::manager::CompatibilityTestStatus status,
     CompleteCompatibilityTestsCompleter::Sync _completer) {
-
   if (auto compat_conn = dev()->PopTestCompatibilityConn(); compat_conn) {
     compat_conn(static_cast<zx_status_t>(status));
   }
@@ -151,20 +150,36 @@ void DeviceControllerConnection::BindDriver(::fidl::StringView driver_path_view,
 }
 
 void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
+  ZX_ASSERT(this->dev()->unbind_cb == nullptr);
+  this->dev()->unbind_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
+    result.set_response(llcpp::fuchsia::device::manager::DeviceController_Unbind_Response{});
+    completer.Reply(std::move(result));
+  };
   ApiAutoLock lock;
   devhost_device_unbind(this->dev());
 }
 
 void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync completer) {
+  ZX_ASSERT(this->dev()->removal_cb == nullptr);
+  this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
+    llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
+    result.set_response(
+        llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response{});
+    completer.Reply(std::move(result));
+  };
   ApiAutoLock lock;
   devhost_device_complete_removal(this->dev());
 }
 
-DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc)
+DeviceControllerConnection::DeviceControllerConnection(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+                                                       zx::channel coordinator_rpc)
     : dev_(std::move(dev)) {
   dev_->rpc = zx::unowned_channel(rpc);
+  dev_->coordinator_rpc = zx::unowned_channel(coordinator_rpc);
   dev_->conn.store(this);
   set_channel(std::move(rpc));
+  set_coordinator_channel(std::move(coordinator_rpc));
 }
 
 DeviceControllerConnection::~DeviceControllerConnection() {
@@ -175,9 +190,12 @@ DeviceControllerConnection::~DeviceControllerConnection() {
   dev_->rpc = zx::unowned_channel();
 }
 
-zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+zx_status_t DeviceControllerConnection::Create(fbl::RefPtr<zx_device> dev,
+                                               zx::channel controller_rpc,
+                                               zx::channel coordinator_rpc,
                                                std::unique_ptr<DeviceControllerConnection>* conn) {
-  *conn = std::make_unique<DeviceControllerConnection>(std::move(dev), std::move(rpc));
+  *conn = std::make_unique<DeviceControllerConnection>(std::move(dev), std::move(controller_rpc),
+                                                       std::move(coordinator_rpc));
   if (*conn == nullptr) {
     return ZX_ERR_NO_MEMORY;
   }

@@ -42,6 +42,9 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
@@ -62,6 +65,7 @@ source_set("lib") {
     "//zircon/public/lib/zircon-internal",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot:c",
+    "//zircon/system/fidl/fuchsia-device-manager",
     "//zircon/system/fidl/fuchsia-device-manager:c",
     "//zircon/system/fidl/fuchsia-device-manager:llcpp",
     "//zircon/system/fidl/fuchsia-driver-test:c",

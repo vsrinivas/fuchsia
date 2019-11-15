@@ -27,6 +27,7 @@ zx_driver("zxcrypt") {
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/pretty",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcrypt:zxcrypt-dev.static",

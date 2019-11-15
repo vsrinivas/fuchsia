@@ -44,12 +44,12 @@ struct Coordinator_AddDevice_Result;
 struct Coordinator_AddDeviceInvisible_Response;
 struct Coordinator_AddDeviceInvisible_Result;
 struct DeviceMetadata;
-struct Coordinator_UnbindDone_Response;
-struct Coordinator_UnbindDone_Result;
+struct DeviceController_Unbind_Response;
+struct DeviceController_Unbind_Result;
+struct DeviceController_CompleteRemoval_Response;
+struct DeviceController_CompleteRemoval_Result;
 struct Coordinator_RunCompatibilityTests_Response;
 struct Coordinator_RunCompatibilityTests_Result;
-struct Coordinator_RemoveDone_Response;
-struct Coordinator_RemoveDone_Result;
 struct Coordinator_PublishMetadata_Response;
 struct Coordinator_PublishMetadata_Result;
 struct Coordinator_MakeVisible_Response;
@@ -828,16 +828,17 @@ class DevhostController final {
   struct CreateDeviceStubRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel rpc;
+    ::zx::channel coordinator_rpc;
+    ::zx::channel device_controller_rpc;
     uint32_t protocol_id;
     uint64_t local_device_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateDeviceStubRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxNumHandles = 2;
+    static constexpr uint32_t PrimarySize = 40;
     static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltPrimarySize = 40;
     static constexpr uint32_t AltMaxOutOfLine = 0;
     static constexpr bool HasFlexibleEnvelope = false;
     static constexpr bool ContainsUnion = false;
@@ -848,7 +849,8 @@ class DevhostController final {
   struct CreateDeviceRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel rpc;
+    ::zx::channel coordinator_rpc;
+    ::zx::channel device_controller_rpc;
     ::fidl::StringView driver_path;
     ::zx::vmo driver;
     ::zx::handle parent_proxy;
@@ -857,7 +859,7 @@ class DevhostController final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateDeviceRequestTable;
-    static constexpr uint32_t MaxNumHandles = 3;
+    static constexpr uint32_t MaxNumHandles = 4;
     static constexpr uint32_t PrimarySize = 72;
     static constexpr uint32_t MaxOutOfLine = 2048;
     static constexpr uint32_t AltPrimarySize = 72;
@@ -888,14 +890,15 @@ class DevhostController final {
   struct CreateCompositeDeviceRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel rpc;
+    ::zx::channel coordinator_rpc;
+    ::zx::channel device_controller_rpc;
     ::fidl::VectorView<uint64_t> components;
     ::fidl::StringView name;
     uint64_t local_device_id;
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DevhostControllerCreateCompositeDeviceRequestTable;
-    static constexpr uint32_t MaxNumHandles = 1;
+    static constexpr uint32_t MaxNumHandles = 2;
     static constexpr uint32_t PrimarySize = 64;
     static constexpr uint32_t MaxOutOfLine = 160;
     static constexpr uint32_t AltPrimarySize = 64;
@@ -915,7 +918,7 @@ class DevhostController final {
     class CreateDeviceStub_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+      CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
       ~CreateDeviceStub_Impl() = default;
       CreateDeviceStub_Impl(CreateDeviceStub_Impl&& other) = default;
       CreateDeviceStub_Impl& operator=(CreateDeviceStub_Impl&& other) = default;
@@ -926,7 +929,7 @@ class DevhostController final {
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      CreateDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+      CreateDevice_Impl(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
       ~CreateDevice_Impl() = default;
       CreateDevice_Impl(CreateDevice_Impl&& other) = default;
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
@@ -938,7 +941,7 @@ class DevhostController final {
     class CreateCompositeDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
+      CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
       ~CreateCompositeDevice_Impl() = default;
       CreateCompositeDevice_Impl(CreateCompositeDevice_Impl&& other) = default;
       CreateCompositeDevice_Impl& operator=(CreateCompositeDevice_Impl&& other) = default;
@@ -965,7 +968,7 @@ class DevhostController final {
     class CreateDeviceStub_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+      CreateDeviceStub_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
       ~CreateDeviceStub_Impl() = default;
       CreateDeviceStub_Impl(CreateDeviceStub_Impl&& other) = default;
       CreateDeviceStub_Impl& operator=(CreateDeviceStub_Impl&& other) = default;
@@ -976,7 +979,7 @@ class DevhostController final {
     class CreateDevice_Impl final : private ::fidl::internal::StatusAndError {
       using Super = ::fidl::internal::StatusAndError;
      public:
-      CreateDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+      CreateDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
       ~CreateDevice_Impl() = default;
       CreateDevice_Impl(CreateDevice_Impl&& other) = default;
       CreateDevice_Impl& operator=(CreateDevice_Impl&& other) = default;
@@ -988,7 +991,7 @@ class DevhostController final {
     class CreateCompositeDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
+      CreateCompositeDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
       ~CreateCompositeDevice_Impl() = default;
       CreateCompositeDevice_Impl(CreateCompositeDevice_Impl&& other) = default;
       CreateCompositeDevice_Impl& operator=(CreateCompositeDevice_Impl&& other) = default;
@@ -1020,15 +1023,15 @@ class DevhostController final {
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::CreateDeviceStub CreateDeviceStub(::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+    // with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::CreateDeviceStub CreateDeviceStub(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
+    // with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::CreateDeviceStub CreateDeviceStub(::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+    UnownedResultOf::CreateDeviceStub CreateDeviceStub(::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
@@ -1045,7 +1048,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost
     // Request is heap-allocated.
-    ResultOf::CreateDevice CreateDevice(::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+    ResultOf::CreateDevice CreateDevice(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
@@ -1062,7 +1065,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::CreateDevice CreateDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+    UnownedResultOf::CreateDevice CreateDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
@@ -1073,7 +1076,7 @@ class DevhostController final {
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
     // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::CreateCompositeDevice CreateCompositeDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
+    ResultOf::CreateCompositeDevice CreateCompositeDevice(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
@@ -1084,7 +1087,7 @@ class DevhostController final {
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::CreateCompositeDevice CreateCompositeDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::CreateCompositeDevice CreateCompositeDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
 
    private:
     ::zx::channel channel_;
@@ -1097,15 +1100,15 @@ class DevhostController final {
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
-    // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateDeviceStub CreateDeviceStub(zx::unowned_channel _client_end, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+    // with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::CreateDeviceStub CreateDeviceStub(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
+    // with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateDeviceStub CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id);
+    static UnownedResultOf::CreateDeviceStub CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
@@ -1122,7 +1125,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost
     // Request is heap-allocated.
-    static ResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+    static ResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Create a device in the devhost representing the shadowed half of device
     // in another devhost.  This new device will communicate with the devcoordinator
@@ -1139,7 +1142,7 @@ class DevhostController final {
     //
     // `local_device_id` will be a unique value within the device's devhost
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
+    static UnownedResultOf::CreateDevice CreateDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
@@ -1150,7 +1153,7 @@ class DevhostController final {
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
     // Allocates 248 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
+    static ResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id);
 
     // Introduce a composite device that has the given name and properties.
     // `components` will be a list of all of the composite's components,
@@ -1161,7 +1164,7 @@ class DevhostController final {
     // `local_device_id` will be a unique value within the device's devhost, identifying
     // the resulting composite device.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::CreateCompositeDevice CreateCompositeDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, ::fidl::BytePart _response_buffer);
 
   };
 
@@ -1173,7 +1176,7 @@ class DevhostController final {
 
     // Create a device in the devhost that only implements the device protocol
     // and claims to support the given `protocol_id`.  This device will communicate
-    // with the devcoordinator via `rpc`.
+    // with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
     static ::fidl::internal::StatusAndError CreateDeviceStub(zx::unowned_channel _client_end, ::fidl::DecodedMessage<CreateDeviceStubRequest> params);
 
     // Create a device in the devhost representing the shadowed half of device
@@ -1214,11 +1217,11 @@ class DevhostController final {
 
     using CreateDeviceStubCompleter = ::fidl::Completer<>;
 
-    virtual void CreateDeviceStub(::zx::channel rpc, uint32_t protocol_id, uint64_t local_device_id, CreateDeviceStubCompleter::Sync _completer) = 0;
+    virtual void CreateDeviceStub(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, uint32_t protocol_id, uint64_t local_device_id, CreateDeviceStubCompleter::Sync _completer) = 0;
 
     using CreateDeviceCompleter = ::fidl::Completer<>;
 
-    virtual void CreateDevice(::zx::channel rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id, CreateDeviceCompleter::Sync _completer) = 0;
+    virtual void CreateDevice(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::StringView driver_path, ::zx::vmo driver, ::zx::handle parent_proxy, ::fidl::StringView proxy_args, uint64_t local_device_id, CreateDeviceCompleter::Sync _completer) = 0;
 
     class CreateCompositeDeviceCompleterBase : public _Base {
      public:
@@ -1232,7 +1235,7 @@ class DevhostController final {
 
     using CreateCompositeDeviceCompleter = ::fidl::Completer<CreateCompositeDeviceCompleterBase>;
 
-    virtual void CreateCompositeDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, CreateCompositeDeviceCompleter::Sync _completer) = 0;
+    virtual void CreateCompositeDevice(::zx::channel coordinator_rpc, ::zx::channel device_controller_rpc, ::fidl::VectorView<uint64_t> components, ::fidl::StringView name, uint64_t local_device_id, CreateCompositeDeviceCompleter::Sync _completer) = 0;
 
   };
 
@@ -1520,27 +1523,12 @@ struct DeviceMetadata {
   ::fidl::VectorView<uint8_t> data = {};
 };
 
-// Maximum number of bytes in a path
-constexpr uint32_t DEVICE_PATH_MAX = 1024u;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceController_Unbind_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceController_Unbind_ResponseTable;
 
-// This definition must match `ZX_DEVICE_NAME_MAX` and is checked by a static assert.
-constexpr uint32_t DEVICE_NAME_MAX = 31u;
-
-// Maximum instructions in a match program
-constexpr uint32_t DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32u;
-
-// Maximum number of parts that a composite device component can have
-constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
-
-// Maximum number of bytes in a device arguments string.
-constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
-
-extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
-
-struct Coordinator_UnbindDone_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_UnbindDone_ResponseTable;
+struct DeviceController_Unbind_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_Unbind_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_Unbind_ResponseTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 1;
   [[maybe_unused]]
@@ -1552,27 +1540,27 @@ struct Coordinator_UnbindDone_Response {
   uint8_t __reserved = {};
 };
 
-extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceController_Unbind_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceController_Unbind_ResultTable;
 
-struct Coordinator_UnbindDone_Result {
+struct DeviceController_Unbind_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
     Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
-  Coordinator_UnbindDone_Result();
-  ~Coordinator_UnbindDone_Result();
+  DeviceController_Unbind_Result();
+  ~DeviceController_Unbind_Result();
 
-  Coordinator_UnbindDone_Result(Coordinator_UnbindDone_Result&& other) {
+  DeviceController_Unbind_Result(DeviceController_Unbind_Result&& other) {
     tag_ = Tag::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
   }
 
-  Coordinator_UnbindDone_Result& operator=(Coordinator_UnbindDone_Result&& other) {
+  DeviceController_Unbind_Result& operator=(DeviceController_Unbind_Result&& other) {
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1583,32 +1571,32 @@ struct Coordinator_UnbindDone_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
-  static Coordinator_UnbindDone_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response&& val) {
-    Coordinator_UnbindDone_Result result;
+  static DeviceController_Unbind_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response&& val) {
+    DeviceController_Unbind_Result result;
     result.set_response(std::move(val));
     return result;
   }
 
-  ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response& mutable_response();
+  ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& mutable_response();
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response>::value && std::is_copy_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
     mutable_response() = v;
   }
 
   template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response>::value && std::is_move_assignable<T>::value>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
   }
 
-  ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response const & response() const { return response_; }
+  ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
-  static Coordinator_UnbindDone_Result WithErr(int32_t&& val) {
-    Coordinator_UnbindDone_Result result;
+  static DeviceController_Unbind_Result WithErr(int32_t&& val) {
+    DeviceController_Unbind_Result result;
     result.set_err(std::move(val));
     return result;
   }
@@ -1631,8 +1619,8 @@ struct Coordinator_UnbindDone_Result {
 
   Tag which() const { return tag_; }
 
-  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_UnbindDone_ResultTable;
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_Unbind_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_Unbind_ResultTable;
   static constexpr uint32_t MaxNumHandles = 0;
   static constexpr uint32_t PrimarySize = 8;
   [[maybe_unused]]
@@ -1643,14 +1631,146 @@ struct Coordinator_UnbindDone_Result {
 
  private:
   void Destroy();
-  void MoveImpl_(Coordinator_UnbindDone_Result&& other);
+  void MoveImpl_(DeviceController_Unbind_Result&& other);
   static void SizeAndOffsetAssertionHelper();
   Tag tag_;
   union {
-    ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response response_;
+    ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response_;
     int32_t err_;
   };
 };
+
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceController_CompleteRemoval_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResponseTable;
+
+struct DeviceController_CompleteRemoval_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_CompleteRemoval_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
+
+struct DeviceController_CompleteRemoval_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  DeviceController_CompleteRemoval_Result();
+  ~DeviceController_CompleteRemoval_Result();
+
+  DeviceController_CompleteRemoval_Result(DeviceController_CompleteRemoval_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  DeviceController_CompleteRemoval_Result& operator=(DeviceController_CompleteRemoval_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static DeviceController_CompleteRemoval_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response&& val) {
+    DeviceController_CompleteRemoval_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static DeviceController_CompleteRemoval_Result WithErr(int32_t&& val) {
+    DeviceController_CompleteRemoval_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(DeviceController_CompleteRemoval_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response response_;
+    int32_t err_;
+  };
+};
+
+// Maximum number of bytes in a path
+constexpr uint32_t DEVICE_PATH_MAX = 1024u;
+
+// This definition must match `ZX_DEVICE_NAME_MAX` and is checked by a static assert.
+constexpr uint32_t DEVICE_NAME_MAX = 31u;
+
+// Maximum instructions in a match program
+constexpr uint32_t DEVICE_COMPONENT_PART_INSTRUCTIONS_MAX = 32u;
+
+// Maximum number of parts that a composite device component can have
+constexpr uint32_t DEVICE_COMPONENT_PARTS_MAX = 16u;
+
+// Maximum number of bytes in a device arguments string.
+constexpr uint32_t DEVICE_ARGS_MAX = 1024u;
 
 extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResponseTable;
@@ -1765,123 +1885,6 @@ struct Coordinator_RunCompatibilityTests_Result {
   Tag tag_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response response_;
-    int32_t err_;
-  };
-};
-
-extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
-
-struct Coordinator_RemoveDone_Response {
-  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RemoveDone_ResponseTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 1;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 0;
-
-  uint8_t __reserved = {};
-};
-
-extern "C" const fidl_type_t fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
-
-struct Coordinator_RemoveDone_Result {
-  enum class Tag : fidl_union_tag_t {
-    kResponse = 0,
-    kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
-  };
-
-  Coordinator_RemoveDone_Result();
-  ~Coordinator_RemoveDone_Result();
-
-  Coordinator_RemoveDone_Result(Coordinator_RemoveDone_Result&& other) {
-    tag_ = Tag::Invalid;
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-  }
-
-  Coordinator_RemoveDone_Result& operator=(Coordinator_RemoveDone_Result&& other) {
-    if (this != &other) {
-      MoveImpl_(std::move(other));
-    }
-    return *this;
-  }
-
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
-
-  bool is_response() const { return tag_ == Tag::kResponse; }
-
-  static Coordinator_RemoveDone_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response&& val) {
-    Coordinator_RemoveDone_Result result;
-    result.set_response(std::move(val));
-    return result;
-  }
-
-  ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response& mutable_response();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response>::value && std::is_copy_assignable<T>::value>
-  set_response(const T& v) {
-    mutable_response() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response>::value && std::is_move_assignable<T>::value>
-  set_response(T&& v) {
-    mutable_response() = std::move(v);
-  }
-
-  ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response const & response() const { return response_; }
-
-  bool is_err() const { return tag_ == Tag::kErr; }
-
-  static Coordinator_RemoveDone_Result WithErr(int32_t&& val) {
-    Coordinator_RemoveDone_Result result;
-    result.set_err(std::move(val));
-    return result;
-  }
-
-  int32_t& mutable_err();
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
-  set_err(const T& v) {
-    mutable_err() = v;
-  }
-
-  template <typename T>
-  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
-  set_err(T&& v) {
-    mutable_err() = std::move(v);
-  }
-
-  int32_t const & err() const { return err_; }
-
-  Tag which() const { return tag_; }
-
-  static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
-  static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RemoveDone_ResultTable;
-  static constexpr uint32_t MaxNumHandles = 0;
-  static constexpr uint32_t PrimarySize = 8;
-  [[maybe_unused]]
-  static constexpr uint32_t MaxOutOfLine = 0;
-  static constexpr uint32_t AltPrimarySize = 24;
-  [[maybe_unused]]
-  static constexpr uint32_t AltMaxOutOfLine = 8;
-
- private:
-  void Destroy();
-  void MoveImpl_(Coordinator_RemoveDone_Result&& other);
-  static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
-  union {
-    ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response response_;
     int32_t err_;
   };
 };
@@ -3148,8 +3151,42 @@ class DeviceController final {
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
 
+  struct UnbindResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerUnbindResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerUnbindResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
   using UnbindRequest = ::fidl::AnyZeroArgMessage;
 
+  struct CompleteRemovalResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerCompleteRemovalResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
   using CompleteRemovalRequest = ::fidl::AnyZeroArgMessage;
 
   struct SuspendResponse final {
@@ -3274,8 +3311,9 @@ class DeviceController final {
       using Super::error;
       using Super::ok;
     };
-    class Unbind_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class Unbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
       Unbind_Impl(zx::unowned_channel _client_end);
       ~Unbind_Impl() = default;
@@ -3284,9 +3322,14 @@ class DeviceController final {
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
-    class CompleteRemoval_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class CompleteRemoval_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
       CompleteRemoval_Impl(zx::unowned_channel _client_end);
       ~CompleteRemoval_Impl() = default;
@@ -3295,6 +3338,10 @@ class DeviceController final {
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -3343,8 +3390,8 @@ class DeviceController final {
    public:
     using BindDriver = BindDriver_Impl<BindDriverResponse>;
     using ConnectProxy = ConnectProxy_Impl;
-    using Unbind = Unbind_Impl;
-    using CompleteRemoval = CompleteRemoval_Impl;
+    using Unbind = Unbind_Impl<UnbindResponse>;
+    using CompleteRemoval = CompleteRemoval_Impl<CompleteRemovalResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
@@ -3382,27 +3429,37 @@ class DeviceController final {
       using Super::error;
       using Super::ok;
     };
-    class Unbind_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class Unbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      Unbind_Impl(zx::unowned_channel _client_end);
+      Unbind_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~Unbind_Impl() = default;
       Unbind_Impl(Unbind_Impl&& other) = default;
       Unbind_Impl& operator=(Unbind_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
-    class CompleteRemoval_Impl final : private ::fidl::internal::StatusAndError {
-      using Super = ::fidl::internal::StatusAndError;
+    template <typename ResponseType>
+    class CompleteRemoval_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      CompleteRemoval_Impl(zx::unowned_channel _client_end);
+      CompleteRemoval_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
       ~CompleteRemoval_Impl() = default;
       CompleteRemoval_Impl(CompleteRemoval_Impl&& other) = default;
       CompleteRemoval_Impl& operator=(CompleteRemoval_Impl&& other) = default;
       using Super::status;
       using Super::error;
       using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Suspend_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -3451,8 +3508,8 @@ class DeviceController final {
    public:
     using BindDriver = BindDriver_Impl<BindDriverResponse>;
     using ConnectProxy = ConnectProxy_Impl;
-    using Unbind = Unbind_Impl;
-    using CompleteRemoval = CompleteRemoval_Impl;
+    using Unbind = Unbind_Impl<UnbindResponse>;
+    using CompleteRemoval = CompleteRemoval_Impl<CompleteRemovalResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
     using Resume = Resume_Impl<ResumeResponse>;
     using CompleteCompatibilityTests = CompleteCompatibilityTests_Impl;
@@ -3497,16 +3554,25 @@ class DeviceController final {
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::Unbind Unbind();
 
+    // Ask devhost to unbind this device. On success, the remote end of this
+    // interface channel will close instead of returning a result.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Unbind Unbind(::fidl::BytePart _response_buffer);
 
     // Ask the devhost to complete the removal of this device, which previously had
     // invoked |ScheduleRemove|. This is a special case that can be removed
     // once |device_remove| invokes |unbind|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::CompleteRemoval CompleteRemoval();
 
+    // Ask the devhost to complete the removal of this device, which previously had
+    // invoked |ScheduleRemove|. This is a special case that can be removed
+    // once |device_remove| invokes |unbind|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::CompleteRemoval CompleteRemoval(::fidl::BytePart _response_buffer);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3573,16 +3639,25 @@ class DeviceController final {
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::Unbind Unbind(zx::unowned_channel _client_end);
 
+    // Ask devhost to unbind this device. On success, the remote end of this
+    // interface channel will close instead of returning a result.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Unbind Unbind(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Ask the devhost to complete the removal of this device, which previously had
     // invoked |ScheduleRemove|. This is a special case that can be removed
     // once |device_remove| invokes |unbind|.
-    // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::CompleteRemoval CompleteRemoval(zx::unowned_channel _client_end);
 
+    // Ask the devhost to complete the removal of this device, which previously had
+    // invoked |ScheduleRemove|. This is a special case that can be removed
+    // once |device_remove| invokes |unbind|.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::CompleteRemoval CompleteRemoval(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
@@ -3633,12 +3708,12 @@ class DeviceController final {
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
-    static ::fidl::internal::StatusAndError Unbind(zx::unowned_channel _client_end);
+    static ::fidl::DecodeResult<UnbindResponse> Unbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Ask the devhost to complete the removal of this device, which previously had
     // invoked |ScheduleRemove|. This is a special case that can be removed
     // once |device_remove| invokes |unbind|.
-    static ::fidl::internal::StatusAndError CompleteRemoval(zx::unowned_channel _client_end);
+    static ::fidl::DecodeResult<CompleteRemovalResponse> CompleteRemoval(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Ask devhost to suspend this device, using the target state indicated by `flags`.
     static ::fidl::DecodeResult<SuspendResponse> Suspend(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SuspendRequest> params, ::fidl::BytePart response_buffer);
@@ -3679,11 +3754,37 @@ class DeviceController final {
 
     virtual void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) = 0;
 
-    using UnbindCompleter = ::fidl::Completer<>;
+    class UnbindCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<UnbindResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using UnbindCompleter = ::fidl::Completer<UnbindCompleterBase>;
 
     virtual void Unbind(UnbindCompleter::Sync _completer) = 0;
 
-    using CompleteRemovalCompleter = ::fidl::Completer<>;
+    class CompleteRemovalCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<CompleteRemovalResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using CompleteRemovalCompleter = ::fidl::Completer<CompleteRemovalCompleterBase>;
 
     virtual void CompleteRemoval(CompleteRemovalCompleter::Sync _completer) = 0;
 
@@ -3748,7 +3849,9 @@ class DeviceController final {
     static void BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg);
     static void ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg);
     static void UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg);
+    static void UnbindResponse(const ::fidl::DecodedMessage<DeviceController::UnbindResponse>& _msg);
     static void CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg);
+    static void CompleteRemovalResponse(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalResponse>& _msg);
     static void SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg);
     static void SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg);
     static void ResumeRequest(const ::fidl::DecodedMessage<DeviceController::ResumeRequest>& _msg);
@@ -3861,14 +3964,6 @@ extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChi
 extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleUnbindChildrenRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorScheduleUnbindChildrenResponseTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorUnbindDoneRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRemoveDoneRequestTable;
-extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_CoordinatorMakeVisibleRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_CoordinatorMakeVisibleResponseTable;
@@ -3939,7 +4034,8 @@ class Coordinator final {
   struct AddDeviceRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel rpc;
+    ::zx::channel coordinator;
+    ::zx::channel device_controller;
     ::fidl::VectorView<uint64_t> props;
     ::fidl::StringView name;
     uint32_t protocol_id;
@@ -3950,7 +4046,7 @@ class Coordinator final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
+    static constexpr uint32_t MaxNumHandles = 3;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 4128;
     static constexpr uint32_t AltPrimarySize = 104;
@@ -3982,7 +4078,8 @@ class Coordinator final {
   struct AddDeviceInvisibleRequest final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
-    ::zx::channel rpc;
+    ::zx::channel coordinator;
+    ::zx::channel device_controller;
     ::fidl::VectorView<uint64_t> props;
     ::fidl::StringView name;
     uint32_t protocol_id;
@@ -3992,7 +4089,7 @@ class Coordinator final {
 
     static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
     static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorAddDeviceInvisibleRequestTable;
-    static constexpr uint32_t MaxNumHandles = 2;
+    static constexpr uint32_t MaxNumHandles = 3;
     static constexpr uint32_t PrimarySize = 104;
     static constexpr uint32_t MaxOutOfLine = 4128;
     static constexpr uint32_t AltPrimarySize = 104;
@@ -4023,44 +4120,6 @@ class Coordinator final {
   };
 
   using ScheduleUnbindChildrenRequest = ::fidl::AnyZeroArgMessage;
-
-  struct UnbindDoneResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorUnbindDoneResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using UnbindDoneRequest = ::fidl::AnyZeroArgMessage;
-
-  struct RemoveDoneResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_CoordinatorRemoveDoneResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 40;
-    static constexpr uint32_t AltMaxOutOfLine = 8;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = true;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  using RemoveDoneRequest = ::fidl::AnyZeroArgMessage;
 
   struct MakeVisibleResponse final {
     FIDL_ALIGNDECL
@@ -4439,7 +4498,7 @@ class Coordinator final {
     class AddDevice_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddDevice_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+      AddDevice_Impl(zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
       ~AddDevice_Impl() = default;
       AddDevice_Impl(AddDevice_Impl&& other) = default;
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
@@ -4455,7 +4514,7 @@ class Coordinator final {
     class AddDeviceInvisible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
-      AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+      AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
       ~AddDeviceInvisible_Impl() = default;
       AddDeviceInvisible_Impl(AddDeviceInvisible_Impl&& other) = default;
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
@@ -4488,38 +4547,6 @@ class Coordinator final {
       using Super::status;
       using Super::error;
       using Super::ok;
-    };
-    template <typename ResponseType>
-    class UnbindDone_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      UnbindDone_Impl(zx::unowned_channel _client_end);
-      ~UnbindDone_Impl() = default;
-      UnbindDone_Impl(UnbindDone_Impl&& other) = default;
-      UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class RemoveDone_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      RemoveDone_Impl(zx::unowned_channel _client_end);
-      ~RemoveDone_Impl() = default;
-      RemoveDone_Impl(RemoveDone_Impl&& other) = default;
-      RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
     };
     template <typename ResponseType>
     class MakeVisible_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
@@ -4703,8 +4730,6 @@ class Coordinator final {
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
-    using UnbindDone = UnbindDone_Impl<UnbindDoneResponse>;
-    using RemoveDone = RemoveDone_Impl<RemoveDoneResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -4727,7 +4752,7 @@ class Coordinator final {
     class AddDevice_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+      AddDevice_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
       ~AddDevice_Impl() = default;
       AddDevice_Impl(AddDevice_Impl&& other) = default;
       AddDevice_Impl& operator=(AddDevice_Impl&& other) = default;
@@ -4743,7 +4768,7 @@ class Coordinator final {
     class AddDeviceInvisible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
-      AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+      AddDeviceInvisible_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
       ~AddDeviceInvisible_Impl() = default;
       AddDeviceInvisible_Impl(AddDeviceInvisible_Impl&& other) = default;
       AddDeviceInvisible_Impl& operator=(AddDeviceInvisible_Impl&& other) = default;
@@ -4776,38 +4801,6 @@ class Coordinator final {
       using Super::status;
       using Super::error;
       using Super::ok;
-    };
-    template <typename ResponseType>
-    class UnbindDone_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      UnbindDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~UnbindDone_Impl() = default;
-      UnbindDone_Impl(UnbindDone_Impl&& other) = default;
-      UnbindDone_Impl& operator=(UnbindDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class RemoveDone_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      RemoveDone_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-      ~RemoveDone_Impl() = default;
-      RemoveDone_Impl(RemoveDone_Impl&& other) = default;
-      RemoveDone_Impl& operator=(RemoveDone_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
     };
     template <typename ResponseType>
     class MakeVisible_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4991,8 +4984,6 @@ class Coordinator final {
     using AddDeviceInvisible = AddDeviceInvisible_Impl<AddDeviceInvisibleResponse>;
     using ScheduleRemove = ScheduleRemove_Impl;
     using ScheduleUnbindChildren = ScheduleUnbindChildren_Impl;
-    using UnbindDone = UnbindDone_Impl<UnbindDoneResponse>;
-    using RemoveDone = RemoveDone_Impl<RemoveDoneResponse>;
     using MakeVisible = MakeVisible_Impl<MakeVisibleResponse>;
     using BindDevice = BindDevice_Impl<BindDeviceResponse>;
     using GetTopologicalPath = GetTopologicalPath_Impl<GetTopologicalPathResponse>;
@@ -5025,7 +5016,7 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::AddDevice AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+    ResultOf::AddDevice AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -5035,19 +5026,19 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddDevice AddDevice(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddDevice AddDevice(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
-    ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+    ResultOf::AddDeviceInvisible AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -5065,22 +5056,6 @@ class Coordinator final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren();
 
-
-    // Sent as the response to |Unbind|.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::UnbindDone UnbindDone();
-
-    // Sent as the response to |Unbind|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::UnbindDone UnbindDone(::fidl::BytePart _response_buffer);
-
-    // Sent as the response to |CompleteRemoval|.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::RemoveDone RemoveDone();
-
-    // Sent as the response to |CompleteRemoval|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::RemoveDone RemoveDone(::fidl::BytePart _response_buffer);
 
     // Mark this device as visible.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -5213,7 +5188,7 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddDevice AddDevice(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
+    static ResultOf::AddDevice AddDevice(zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote);
 
     // Record the addition of a new device that can be communicated with via `rpc`.
     // For binding purposes, it is has properties `props`. `name` and `driver_path`
@@ -5223,19 +5198,19 @@ class Coordinator final {
     // will be passed to the device as an open connection for the client.
     // On success, the returned `local_device_id` is the identifier assigned by devmgr.
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDevice AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddDevice AddDevice(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Allocates 32 bytes of response buffer on the stack. Request is heap-allocated.
-    static ResultOf::AddDeviceInvisible AddDeviceInvisible(zx::unowned_channel _client_end, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
+    static ResultOf::AddDeviceInvisible AddDeviceInvisible(zx::unowned_channel _client_end, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote);
 
     // Behaves as AddDevice, but marks the device as initially invisible.  This means
     // that it will not be visible to other devices or the devfs until it is later marked
     // visible (via MakeVisible).
     // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
+    static UnownedResultOf::AddDeviceInvisible AddDeviceInvisible(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, ::fidl::BytePart _response_buffer);
 
     // Requests the devcoordinator schedule the removal of this device,
     // and the unbinding of its children.
@@ -5253,22 +5228,6 @@ class Coordinator final {
     // Allocates 16 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ScheduleUnbindChildren ScheduleUnbindChildren(zx::unowned_channel _client_end);
 
-
-    // Sent as the response to |Unbind|.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end);
-
-    // Sent as the response to |Unbind|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::UnbindDone UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
-
-    // Sent as the response to |CompleteRemoval|.
-    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::RemoveDone RemoveDone(zx::unowned_channel _client_end);
-
-    // Sent as the response to |CompleteRemoval|.
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::RemoveDone RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
     // Mark this device as visible.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -5414,12 +5373,6 @@ class Coordinator final {
     // Requests the devcoordinator schedule the unbinding of this device's children.
     static ::fidl::internal::StatusAndError ScheduleUnbindChildren(zx::unowned_channel _client_end);
 
-    // Sent as the response to |Unbind|.
-    static ::fidl::DecodeResult<UnbindDoneResponse> UnbindDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
-    // Sent as the response to |CompleteRemoval|.
-    static ::fidl::DecodeResult<RemoveDoneResponse> RemoveDone(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
-
     // Mark this device as visible.
     static ::fidl::DecodeResult<MakeVisibleResponse> MakeVisible(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
@@ -5491,7 +5444,7 @@ class Coordinator final {
 
     using AddDeviceCompleter = ::fidl::Completer<AddDeviceCompleterBase>;
 
-    virtual void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
+    virtual void AddDevice(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config, ::zx::channel client_remote, AddDeviceCompleter::Sync _completer) = 0;
 
     class AddDeviceInvisibleCompleterBase : public _Base {
      public:
@@ -5508,7 +5461,7 @@ class Coordinator final {
 
     using AddDeviceInvisibleCompleter = ::fidl::Completer<AddDeviceInvisibleCompleterBase>;
 
-    virtual void AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, AddDeviceInvisibleCompleter::Sync _completer) = 0;
+    virtual void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args, ::zx::channel client_remote, AddDeviceInvisibleCompleter::Sync _completer) = 0;
 
     using ScheduleRemoveCompleter = ::fidl::Completer<>;
 
@@ -5517,40 +5470,6 @@ class Coordinator final {
     using ScheduleUnbindChildrenCompleter = ::fidl::Completer<>;
 
     virtual void ScheduleUnbindChildren(ScheduleUnbindChildrenCompleter::Sync _completer) = 0;
-
-    class UnbindDoneCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result);
-      void ReplySuccess();
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer);
-      void Reply(::fidl::DecodedMessage<UnbindDoneResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using UnbindDoneCompleter = ::fidl::Completer<UnbindDoneCompleterBase>;
-
-    virtual void UnbindDone(UnbindDoneCompleter::Sync _completer) = 0;
-
-    class RemoveDoneCompleterBase : public _Base {
-     public:
-      void Reply(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result);
-      void ReplySuccess();
-      void ReplyError(int32_t error);
-      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result result);
-      void ReplySuccess(::fidl::BytePart _buffer);
-      void Reply(::fidl::DecodedMessage<RemoveDoneResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using RemoveDoneCompleter = ::fidl::Completer<RemoveDoneCompleterBase>;
-
-    virtual void RemoveDone(RemoveDoneCompleter::Sync _completer) = 0;
 
     class MakeVisibleCompleterBase : public _Base {
      public:
@@ -5770,10 +5689,6 @@ class Coordinator final {
     static void AddDeviceInvisibleResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>& _msg);
     static void ScheduleRemoveRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleRemoveRequest>& _msg);
     static void ScheduleUnbindChildrenRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleUnbindChildrenRequest>& _msg);
-    static void UnbindDoneRequest(const ::fidl::DecodedMessage<Coordinator::UnbindDoneRequest>& _msg);
-    static void UnbindDoneResponse(const ::fidl::DecodedMessage<Coordinator::UnbindDoneResponse>& _msg);
-    static void RemoveDoneRequest(const ::fidl::DecodedMessage<Coordinator::RemoveDoneRequest>& _msg);
-    static void RemoveDoneResponse(const ::fidl::DecodedMessage<Coordinator::RemoveDoneResponse>& _msg);
     static void MakeVisibleRequest(const ::fidl::DecodedMessage<Coordinator::MakeVisibleRequest>& _msg);
     static void MakeVisibleResponse(const ::fidl::DecodedMessage<Coordinator::MakeVisibleResponse>& _msg);
     static void BindDeviceRequest(const ::fidl::DecodedMessage<Coordinator::BindDeviceRequest>& _msg);
@@ -5882,9 +5797,10 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest)
     == ::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, rpc) == 16);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, protocol_id) == 20);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, local_device_id) == 24);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, coordinator_rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, device_controller_rpc) == 20);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, protocol_id) == 24);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceStubRequest, local_device_id) == 32);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest> : public std::true_type {};
@@ -5892,7 +5808,8 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest)
     == ::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, coordinator_rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, device_controller_rpc) == 20);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, driver_path) == 24);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, driver) == 40);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateDeviceRequest, parent_proxy) == 44);
@@ -5905,7 +5822,8 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest)
     == ::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, coordinator_rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, device_controller_rpc) == 20);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, components) == 24);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, name) == 40);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DevhostController::CreateCompositeDeviceRequest, local_device_id) == 56);
@@ -5946,14 +5864,24 @@ static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceMetadata, data) 
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceMetadata) == ::llcpp::fuchsia::device::manager::DeviceMetadata::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response>);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response) == ::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Response::PrimarySize);
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response) == ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response::PrimarySize);
 
 template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result>);
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response>);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response) == ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response> : public std::true_type {};
@@ -5964,16 +5892,6 @@ static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibi
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result>);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response>);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response, __reserved) == 0);
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response) == ::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Response::PrimarySize);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result> : public std::true_type {};
-static_assert(std::is_standard_layout_v<::llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response> : public std::true_type {};
@@ -6103,6 +6021,22 @@ static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::Connec
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest, shadow) == 16);
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::CompleteRemovalResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::CompleteRemovalResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::CompleteRemovalResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::CompleteRemovalResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::CompleteRemovalResponse, result) == 16);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
 template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::SuspendRequest> : public std::true_type {};
@@ -6183,7 +6117,8 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest)
     == ::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, coordinator) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, device_controller) == 20);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, props) == 24);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, name) == 40);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceRequest, protocol_id) == 56);
@@ -6206,7 +6141,8 @@ template <>
 struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest> : public std::true_type {};
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest)
     == ::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, rpc) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, coordinator) == 16);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, device_controller) == 20);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, props) == 24);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, name) == 40);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::AddDeviceInvisibleRequest, protocol_id) == 56);
@@ -6229,22 +6165,6 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::ScheduleRem
 static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest)
     == ::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::ScheduleRemoveRequest, unbind_self) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse)
-    == ::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::UnbindDoneResponse, result) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse)
-    == ::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::device::manager::Coordinator::RemoveDoneResponse, result) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::Coordinator::MakeVisibleResponse> : public std::true_type {};

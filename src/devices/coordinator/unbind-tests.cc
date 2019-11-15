@@ -164,12 +164,13 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
         continue;
       }
       ASSERT_NE(desc.want_action, Action::kNone);
+      zx_txid_t txid;
       if (desc.want_action == Action::kUnbind) {
-        ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(desc.index)->remote));
+        ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(device(desc.index)->controller_remote, &txid));
         if (desc.unbind_op) {
           desc.unbind_op();
         }
-        ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(desc.index)->remote));
+        ASSERT_NO_FATAL_FAILURES(SendUnbindReply(device(desc.index)->controller_remote, txid));
         desc.unbound = true;
       }
       // Check if the parent is expected to have been unbound already.
@@ -202,7 +203,7 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
       }
 
       ASSERT_NE(desc.want_action, Action::kNone);
-      ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(desc.index)->remote));
+      ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(device(desc.index)->controller_remote));
 
       // Check that all our children have already been removed.
       for (size_t j = 0; j < num_devices; ++j) {
@@ -228,23 +229,22 @@ void UnbindTestCase::UnbindTest(DeviceDesc devices[], size_t num_devices,
     ASSERT_NULL(device(desc.index)->device->GetActiveRemove());
   }
 }
-
 TEST_F(UnbindTestCase, UnbindSysDevice) {
   // Since the sys device is immortal, only its children will be unbound.
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_coordinator_remote_));
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_remote()));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_controller_remote()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_coordinator_remote_));
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_remote()));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_controller_remote()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_controller_remote_));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
@@ -260,44 +260,22 @@ TEST_F(UnbindTestCase, UnbindWhileRemovingProxy) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(coordinator_.sys_device()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_coordinator_remote_));
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_remote()));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(platform_bus_controller_remote()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_remote_));
+  ASSERT_FALSE(DeviceHasPendingMessages(sys_proxy_coordinator_remote_));
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_remote()));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(platform_bus_controller_remote()));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_remote_));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(sys_proxy_controller_remote_));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
   ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
 }
-
-TEST_F(UnbindTestCase, NumRemovals) {
-  size_t child_index;
-  ASSERT_NO_FATAL_FAILURES(
-      AddDevice(platform_bus(), "child", 0 /* protocol id */, "", &child_index));
-
-  auto* child_device = device(child_index);
-
-  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
-  coordinator_loop()->RunUntilIdle();
-
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
-  coordinator_loop()->RunUntilIdle();
-
-  // Make sure the coordinator device does not detect the devhost's channel closing,
-  // otherwise it will try to remove an already dead device and we will get a log error.
-  child_device->remote.reset();
-  coordinator_loop()->RunUntilIdle();
-
-  ASSERT_EQ(child_device->device->num_removal_attempts(), 1);
-}
-
 TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -307,15 +285,24 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
+  zx_txid_t txid;
   // Don't reply to the request until we add the device.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(parent_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(parent_device->controller_remote, &txid));
 
   // Adding a child device to an unbinding parent should fail.
   fbl::RefPtr<devmgr::Device> child;
-  zx::channel local, remote;
-  zx_status_t status = zx::channel::create(0, &local, &remote);
+
+  zx::channel coordinator_local, coordinator_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_local, &coordinator_remote);
   ASSERT_OK(status);
-  status = coordinator_.AddDevice(parent_device->device, std::move(local), nullptr /* props_data */,
+
+  zx::channel controller_local, controller_remote;
+  status = zx::channel::create(0, &controller_local, &controller_remote);
+  ASSERT_OK(status);
+
+  fbl::RefPtr<devmgr::Device> device;
+  status = coordinator_.AddDevice(parent_device->device, std::move(controller_local),
+                                  std::move(coordinator_local), nullptr /* props_data */,
                                   0 /* props_count */, "child", 0 /* protocol_id */,
                                   nullptr /* driver_path */, nullptr /* args */,
                                   false /* invisible */, zx::channel() /* client_remote */, &child);
@@ -323,10 +310,9 @@ TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   coordinator_loop()->RunUntilIdle();
 
   // Complete the original parent unbind.
-  ASSERT_NO_FATAL_FAILURES(SendRemoveReply(parent_device->remote));
+  ASSERT_NO_FATAL_FAILURES(SendRemoveReply(parent_device->controller_remote, txid));
   coordinator_loop()->RunUntilIdle();
 }
-
 TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -345,10 +331,10 @@ TEST_F(UnbindTestCase, TwoConcurrentRemovals) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 }
 
@@ -369,11 +355,10 @@ TEST_F(UnbindTestCase, ManyConcurrentRemovals) {
 
   for (size_t i = 0; i < num_devices; i++) {
     ASSERT_NO_FATAL_FAILURES(
-        CheckRemoveReceivedAndReply(device(idx_map[num_devices - i - 1])->remote));
+        CheckRemoveReceivedAndReply(device(idx_map[num_devices - i - 1])->controller_remote));
     coordinator_loop()->RunUntilIdle();
   }
 }
-
 TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -390,11 +375,13 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
+  zx_txid_t txid;
   // Don't reply to the unbind request.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->controller_remote, &txid));
 
   // Close the parent device's channel to trigger a forced removal of the parent and child.
-  parent_device->remote = zx::channel();
+  parent_device->controller_remote = zx::channel();
+  parent_device->coordinator_remote = zx::channel();
   coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
@@ -406,7 +393,6 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringUnbind) {
   ASSERT_NULL(child_device->device->GetActiveUnbind());
   ASSERT_NULL(parent_device->device->GetActiveRemove());
 }
-
 TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
@@ -423,14 +409,16 @@ TEST_F(UnbindTestCase, ForcedRemovalDuringRemove) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(child_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
   // Don't reply to the remove request.
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(child_device->remote));
+  zx_txid_t txid;
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceived(child_device->controller_remote, &txid));
 
   // Close the parent device's channel to trigger a forced removal of the parent and child.
-  parent_device->remote = zx::channel();
+  parent_device->controller_remote = zx::channel();
+  parent_device->coordinator_remote = zx::channel();
   coordinator_loop()->RunUntilIdle();
 
   // Check that both devices are dead and have no pending unbind or remove tasks.
@@ -474,16 +462,16 @@ TEST_F(UnbindTestCase, RemoveParentWhileRemovingChild) {
   ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(parent_device->device));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(grandchild_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceivedAndReply(grandchild_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(grandchild_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(grandchild_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 }
 
@@ -509,13 +497,14 @@ TEST_F(UnbindTestCase, RemoveParentAndChildSimultaneously) {
       coordinator_.ScheduleDevhostRequestedRemove(child_device->device, false /* do_unbind */));
   coordinator_loop()->RunUntilIdle();
 
+  zx_txid_t txid;
   // The child device will not reply, as it already called device_remove previously.
-  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckUnbindReceived(child_device->controller_remote, &txid));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 
-  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->remote));
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(parent_device->controller_remote));
   coordinator_loop()->RunUntilIdle();
 }

@@ -28,10 +28,14 @@ TEST(DeviceControllerConnectionTestCase, Creation) {
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
+  zx::channel device_local2, device_remote2;
+  ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
+
   std::unique_ptr<devmgr::DeviceControllerConnection> conn;
 
   ASSERT_NULL(dev->conn.load());
-  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &conn));
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote),
+                                                       std::move(device_remote2), &conn));
   ASSERT_NOT_NULL(dev->conn.load());
 
   ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
@@ -47,11 +51,16 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
+  zx::channel device_local2, device_remote2;
+  ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
+
   class DeviceControllerConnectionTest : public devmgr::DeviceControllerConnection {
    public:
     DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
-                                   async_dispatcher_t* dispatcher, zx::channel local)
-        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc)) {
+                                   zx::channel coordinator_rpc, async_dispatcher_t* dispatcher,
+                                   zx::channel local)
+        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc),
+                                             std::move(coordinator_rpc)) {
       dispatcher_ = dispatcher;
       local_ = std::move(local);
     }
@@ -75,7 +84,8 @@ TEST(DeviceControllerConnectionTestCase, PeerClosedDuringReply) {
   std::unique_ptr<DeviceControllerConnectionTest> conn;
   auto device_local_handle = device_local.get();
   conn = std::make_unique<DeviceControllerConnectionTest>(
-      std::move(dev), std::move(device_remote), loop.dispatcher(), std::move(device_local));
+      std::move(dev), std::move(device_remote), std::move(device_remote2), loop.dispatcher(),
+      std::move(device_local));
 
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
@@ -127,8 +137,12 @@ TEST(DeviceControllerConnectionTestCase, PeerClosed) {
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
+  zx::channel device_local2, device_remote2;
+  ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
+
   std::unique_ptr<devmgr::DeviceControllerConnection> conn;
-  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote), &conn));
+  ASSERT_OK(devmgr::DeviceControllerConnection::Create(dev, std::move(device_remote),
+                                                       std::move(device_remote2), &conn));
 
   ASSERT_OK(devmgr::DeviceControllerConnection::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());
@@ -151,21 +165,30 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
   zx::channel device_local, device_remote;
   ASSERT_OK(zx::channel::create(0, &device_local, &device_remote));
 
+  zx::channel device_local2, device_remote2;
+  ASSERT_OK(zx::channel::create(0, &device_local2, &device_remote2));
+
   class DeviceControllerConnectionTest : public devmgr::DeviceControllerConnection {
    public:
-    DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc)
-        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc)) {}
+    DeviceControllerConnectionTest(fbl::RefPtr<zx_device> dev, zx::channel rpc,
+                                   zx::channel coordinator_rpc)
+        : devmgr::DeviceControllerConnection(std::move(dev), std::move(rpc),
+                                             std::move(coordinator_rpc)) {}
 
     void Unbind(UnbindCompleter::Sync completer) {
       fbl::RefPtr<zx_device> dev = this->dev();
       // Set dev->flags so that we can check that the unbind hook is called in
       // the test.
       dev->flags = DEV_FLAG_DEAD;
+      llcpp::fuchsia::device::manager::DeviceController_Unbind_Result resp;
+      resp.set_response(llcpp::fuchsia::device::manager::DeviceController_Unbind_Response{});
+      completer.Reply(std::move(resp));
     }
   };
 
   std::unique_ptr<DeviceControllerConnectionTest> conn;
-  conn = std::make_unique<DeviceControllerConnectionTest>(std::move(dev), std::move(device_remote));
+  conn = std::make_unique<DeviceControllerConnectionTest>(std::move(dev), std::move(device_remote),
+                                                          std::move(device_remote2));
   fbl::RefPtr<zx_device> my_dev = conn->dev();
   ASSERT_OK(DeviceControllerConnectionTest::BeginWait(std::move(conn), loop.dispatcher()));
   ASSERT_OK(loop.RunUntilIdle());

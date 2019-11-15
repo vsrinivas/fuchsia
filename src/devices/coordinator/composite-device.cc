@@ -185,14 +185,21 @@ zx_status_t CompositeDevice::TryAssemble() {
     component_local_ids[component.index()] = component_dev->proxy()->local_id();
   }
 
-  zx::channel rpc_local, rpc_remote;
-  zx_status_t status = zx::channel::create(0, &rpc_local, &rpc_remote);
+  zx::channel coordinator_rpc_local, coordinator_rpc_remote;
+  zx_status_t status = zx::channel::create(0, &coordinator_rpc_local, &coordinator_rpc_remote);
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  zx::channel device_controller_rpc_local, device_controller_rpc_remote;
+  status = zx::channel::create(0, &device_controller_rpc_local, &device_controller_rpc_remote);
   if (status != ZX_OK) {
     return status;
   }
 
   fbl::RefPtr<Device> new_device;
-  status = Device::CreateComposite(coordinator, devhost, *this, std::move(rpc_local), &new_device);
+  status = Device::CreateComposite(coordinator, devhost, *this, std::move(coordinator_rpc_local),
+                                   std::move(device_controller_rpc_remote), &new_device);
   if (status != ZX_OK) {
     return status;
   }
@@ -200,7 +207,8 @@ zx_status_t CompositeDevice::TryAssemble() {
 
   // Create the composite device in the devhost
   status = dh_send_create_composite_device(devhost, new_device.get(), *this, component_local_ids,
-                                           std::move(rpc_remote));
+                                           std::move(coordinator_rpc_remote),
+                                           std::move(device_controller_rpc_local));
   if (status != ZX_OK) {
     log(ERROR, "devcoordinator: create composite device request failed: %s\n",
         zx_status_get_string(status));

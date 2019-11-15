@@ -83,7 +83,10 @@ void SuspendTask::Run() {
   // top-level devices like /sys provided by devcoordinator,
   // or the device is already dead.
   if (device_->host() == nullptr) {
-    device_->set_state(Device::State::kSuspended);
+    // device shouldn't be set to suspended if it's already dead
+    if (device_->state() != Device::State::kDead) {
+      device_->set_state(Device::State::kSuspended);
+    }
     return Complete(ZX_OK);
   }
 

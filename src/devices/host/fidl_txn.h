@@ -21,12 +21,6 @@ class DevmgrFidlTxn : public fidl::Transaction {
   DevmgrFidlTxn(const zx::channel& channel, uint32_t txid)
       : channel_(channel), txid_(txid), status_called_(false) {}
 
-  DevmgrFidlTxn& operator=(const DevmgrFidlTxn&) = delete;
-  DevmgrFidlTxn(const DevmgrFidlTxn&) = delete;
-
-  DevmgrFidlTxn& operator=(DevmgrFidlTxn&&) = delete;
-  DevmgrFidlTxn(DevmgrFidlTxn&&) = delete;
-
   ~DevmgrFidlTxn() {
     ZX_ASSERT_MSG(status_called_,
                   "DevmgrFidlTxn must have it's Status() method used. \
@@ -50,12 +44,14 @@ class DevmgrFidlTxn : public fidl::Transaction {
     message.ClearHandlesUnsafe();
   }
 
-  void Close(zx_status_t close_status) final {
+  void Close(zx_status_t close_status) override {
     // no-op for devmgr
   }
 
-  std::unique_ptr<Transaction> TakeOwnership() final {
-    ZX_ASSERT_MSG(false, "DevmgrFidlTxn cannot take ownership of the transaction.\n");
+  std::unique_ptr<Transaction> TakeOwnership() override {
+    // status isn't called, but not relevant in a Async context
+    status_called_ = true;
+    return std::make_unique<DevmgrFidlTxn>(std::move(*this));
   }
 
   zx_status_t Status() __WARN_UNUSED_RESULT {

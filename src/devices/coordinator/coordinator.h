@@ -196,10 +196,11 @@ class Coordinator {
                                  const AttemptBindFunc& attempt_bind);
 
   // Used to implement fuchsia::device::manager::Coordinator.
-  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel rpc,
-                        const uint64_t* props_data, size_t props_count, fbl::StringPiece name,
-                        uint32_t protocol_id, fbl::StringPiece driver_path, fbl::StringPiece args,
-                        bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* new_device);
+  zx_status_t AddDevice(const fbl::RefPtr<Device>& parent, zx::channel device_controller,
+                        zx::channel coordinator, const uint64_t* props_data, size_t props_count,
+                        fbl::StringPiece name, uint32_t protocol_id, fbl::StringPiece driver_path,
+                        fbl::StringPiece args, bool invisible, zx::channel client_remote,
+                        fbl::RefPtr<Device>* new_device);
   // Begin scheduling for removal of the device and unbinding of its children.
   void ScheduleRemove(const fbl::RefPtr<Device>& dev);
   // This is for scheduling the initial unbind task as a result of a devhost's |ScheduleRemove|

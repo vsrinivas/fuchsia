@@ -9,6 +9,23 @@ class SuspendTestCase : public MultipleDeviceTestCase {
   void SuspendTest(uint32_t flags);
   void StateTest(zx_status_t suspend_status, devmgr::Device::State want_device_state);
 };
+TEST_F(SuspendTestCase, Poweroff) {
+  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
+}
+
+TEST_F(SuspendTestCase, Reboot) {
+  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT));
+}
+
+TEST_F(SuspendTestCase, RebootWithFlags) {
+  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER));
+}
+
+TEST_F(SuspendTestCase, Mexec) { ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_MEXEC)); }
+
+TEST_F(SuspendTestCase, SuspendToRam) {
+  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_SUSPEND_RAM));
+}
 
 // Verify the suspend order is correct
 void SuspendTestCase::SuspendTest(uint32_t flags) {
@@ -40,7 +57,7 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
   size_t num_to_suspend = fbl::count_of(devices);
   while (num_to_suspend > 0) {
     // Check that platform bus is not suspended yet.
-    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_remote()));
+    ASSERT_FALSE(DeviceHasPendingMessages(platform_bus_controller_remote()));
 
     bool made_progress = false;
     // Since the table of devices above is topologically sorted (i.e.
@@ -56,7 +73,8 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
         continue;
       }
 
-      ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(desc.index)->remote, flags, ZX_OK));
+      ASSERT_NO_FATAL_FAILURES(
+          CheckSuspendReceivedAndReply(device(desc.index)->controller_remote, flags, ZX_OK));
 
       // Make sure all descendants of this device are already suspended.
       // We just need to check immediate children since this will
@@ -77,7 +95,16 @@ void SuspendTestCase::SuspendTest(uint32_t flags) {
     coordinator_loop()->RunUntilIdle();
   }
 
-  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(platform_bus_remote(), flags, ZX_OK));
+  ASSERT_NO_FATAL_FAILURES(
+      CheckSuspendReceivedAndReply(platform_bus_controller_remote(), flags, ZX_OK));
+}
+
+TEST_F(SuspendTestCase, SuspendSuccess) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, devmgr::Device::State::kSuspended));
+}
+
+TEST_F(SuspendTestCase, SuspendFail) {
+  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, devmgr::Device::State::kActive));
 }
 
 // Verify the device transitions in and out of the suspending state.
@@ -89,39 +116,15 @@ void SuspendTestCase::StateTest(zx_status_t suspend_status,
   const uint32_t flags = DEVICE_SUSPEND_FLAG_POWEROFF;
   ASSERT_NO_FATAL_FAILURES(DoSuspend(flags));
 
+  zx_txid_t txid;
   // Check for the suspend message without replying.
-  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(index)->remote, flags));
+  ASSERT_NO_FATAL_FAILURES(CheckSuspendReceived(device(index)->controller_remote, flags, &txid));
 
   ASSERT_EQ(device(index)->device->state(), devmgr::Device::State::kSuspending);
 
-  ASSERT_NO_FATAL_FAILURES(SendSuspendReply(device(index)->remote, suspend_status));
+  ASSERT_NO_FATAL_FAILURES(
+      SendSuspendReply(device(index)->controller_remote, suspend_status, txid));
   coordinator_loop()->RunUntilIdle();
 
   ASSERT_EQ(device(index)->device->state(), want_device_state);
-}
-
-TEST_F(SuspendTestCase, Poweroff) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_POWEROFF));
-}
-
-TEST_F(SuspendTestCase, Reboot) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT));
-}
-
-TEST_F(SuspendTestCase, RebootWithFlags) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER));
-}
-
-TEST_F(SuspendTestCase, Mexec) { ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_MEXEC)); }
-
-TEST_F(SuspendTestCase, SuspendToRam) {
-  ASSERT_NO_FATAL_FAILURES(SuspendTest(DEVICE_SUSPEND_FLAG_SUSPEND_RAM));
-}
-
-TEST_F(SuspendTestCase, SuspendSuccess) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_OK, devmgr::Device::State::kSuspended));
-}
-
-TEST_F(SuspendTestCase, SuspendFail) {
-  ASSERT_NO_FATAL_FAILURES(StateTest(ZX_ERR_BAD_STATE, devmgr::Device::State::kActive));
 }

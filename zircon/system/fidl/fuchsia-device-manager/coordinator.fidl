@@ -120,12 +120,12 @@ protocol DeviceController {
 
     /// Ask devhost to unbind this device. On success, the remote end of this
     /// interface channel will close instead of returning a result.
-    Unbind();
+    Unbind() -> () error zx.status;
 
     /// Ask the devhost to complete the removal of this device, which previously had
     /// invoked |ScheduleRemove|. This is a special case that can be removed
     /// once |device_remove| invokes |unbind|.
-    CompleteRemoval();
+    CompleteRemoval() -> () error zx.status;
 
     /// Ask devhost to suspend this device, using the target state indicated by `flags`.
     Suspend(uint32 flags) -> (zx.status status);
@@ -146,8 +146,8 @@ protocol DeviceController {
 protocol DevhostController {
     /// Create a device in the devhost that only implements the device protocol
     /// and claims to support the given `protocol_id`.  This device will communicate
-    /// with the devcoordinator via `rpc`.
-    CreateDeviceStub(handle<channel> rpc, uint32 protocol_id, LocalDeviceId local_device_id);
+    /// with the devcoordinator via `coordinator`. Implements DeviceController on device_controller_rpc
+    CreateDeviceStub(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc, uint32 protocol_id, LocalDeviceId local_device_id);
 
     /// Create a device in the devhost representing the shadowed half of device
     /// in another devhost.  This new device will communicate with the devcoordinator
@@ -163,7 +163,7 @@ protocol DevhostController {
     /// fuchsia.boot.Items protocol.
     ///
     /// `local_device_id` will be a unique value within the device's devhost
-    CreateDevice(handle<channel> rpc, string:DEVICE_PATH_MAX driver_path,
+    CreateDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc, string:DEVICE_PATH_MAX driver_path,
                  handle<vmo> driver, handle? parent_proxy,
                  string:DEVICE_ARGS_MAX? proxy_args, LocalDeviceId local_device_id);
 
@@ -175,7 +175,7 @@ protocol DevhostController {
     ///
     /// `local_device_id` will be a unique value within the device's devhost, identifying
     /// the resulting composite device.
-    CreateCompositeDevice(handle<channel> rpc,
+    CreateCompositeDevice(Coordinator coordinator_rpc, request<DeviceController> device_controller_rpc,
                           vector<LocalDeviceId>:COMPONENTS_MAX components,
                           string:DEVICE_NAME_MAX name, LocalDeviceId local_device_id)
         -> (zx.status status);
@@ -190,7 +190,7 @@ protocol Coordinator {
     /// and will be forwarded to the shadow device. `client_remote`, if present,
     /// will be passed to the device as an open connection for the client.
     /// On success, the returned `local_device_id` is the identifier assigned by devmgr.
-    AddDevice(handle<channel> rpc,
+    AddDevice(request<Coordinator> coordinator, DeviceController device_controller,
               vector<DeviceProperty>:PROPERTIES_MAX props,
               string:DEVICE_NAME_MAX name, uint32 protocol_id,
               string:DEVICE_PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
@@ -201,7 +201,7 @@ protocol Coordinator {
     /// Behaves as AddDevice, but marks the device as initially invisible.  This means
     /// that it will not be visible to other devices or the devfs until it is later marked
     /// visible (via MakeVisible).
-    AddDeviceInvisible(handle<channel> rpc,
+    AddDeviceInvisible(request<Coordinator> coordinator, DeviceController device_controller,
                        vector<DeviceProperty>:PROPERTIES_MAX props,
                        string:DEVICE_NAME_MAX name, uint32 protocol_id,
                        string:DEVICE_PATH_MAX? driver_path,
@@ -215,12 +215,6 @@ protocol Coordinator {
 
     /// Requests the devcoordinator schedule the unbinding of this device's children.
     ScheduleUnbindChildren();
-
-    /// Sent as the response to |Unbind|.
-    UnbindDone() -> () error zx.status;
-
-    /// Sent as the response to |CompleteRemoval|.
-    RemoveDone() -> () error zx.status;
 
     /// Mark this device as visible.
     MakeVisible() -> () error zx.status;

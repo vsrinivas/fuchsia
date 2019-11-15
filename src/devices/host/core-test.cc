@@ -21,23 +21,13 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     return fidl::Bind(dispatcher, std::move(request), this);
   }
 
-  void AddDevice(::zx::channel rpc, ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
-                 uint32_t protocol_id, ::fidl::StringView driver_path, ::fidl::StringView args,
+  void AddDevice(::zx::channel coordinator, ::zx::channel device_controller,
+                 ::fidl::VectorView<uint64_t> props, ::fidl::StringView name, uint32_t protocol_id,
+                 ::fidl::StringView driver_path, ::fidl::StringView args,
                  llcpp::fuchsia::device::manager::AddDeviceConfig device_add_config,
                  ::zx::channel client_remote, AddDeviceCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result response;
     response.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(response));
-  }
-  void UnbindDone(UnbindDoneCompleter::Sync completer) override {
-    unbind_reply_count_++;
-    llcpp::fuchsia::device::manager::Coordinator_UnbindDone_Result response;
-    response.set_err(ZX_OK);
-    completer.Reply(std::move(response));
-  }
-  void RemoveDone(RemoveDoneCompleter::Sync completer) override {
-    llcpp::fuchsia::device::manager::Coordinator_RemoveDone_Result response;
-    response.set_err(ZX_OK);
     completer.Reply(std::move(response));
   }
   void ScheduleRemove(bool unbind_self, ScheduleRemoveCompleter::Sync completer) override {}
@@ -55,10 +45,10 @@ class FakeCoordinator : public ::llcpp::fuchsia::device::manager::Coordinator::I
     response.set_err(ZX_ERR_NOT_SUPPORTED);
     completer.Reply(std::move(response));
   }
-  void AddDeviceInvisible(::zx::channel rpc, ::fidl::VectorView<uint64_t> props,
-                          ::fidl::StringView name, uint32_t protocol_id,
-                          ::fidl::StringView driver_path, ::fidl::StringView args,
-                          ::zx::channel client_remote,
+  void AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_controller,
+                          ::fidl::VectorView<uint64_t> props, ::fidl::StringView name,
+                          uint32_t protocol_id, ::fidl::StringView driver_path,
+                          ::fidl::StringView args, ::zx::channel client_remote,
                           AddDeviceInvisibleCompleter::Sync completer) override {
     llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
     response.set_err(ZX_ERR_NOT_SUPPORTED);
@@ -156,7 +146,7 @@ TEST_F(CoreTest, RebindNoChildren) {
 
   zx::channel rpc;
   ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
-  dev->rpc = zx::unowned(rpc);
+  dev->coordinator_rpc = zx::unowned(rpc);
 
   EXPECT_EQ(device_rebind(dev.get()), ZX_OK);
   EXPECT_EQ(coordinator_.bind_count_, 1);
@@ -178,7 +168,7 @@ TEST_F(CoreTest, RebindHasOneChild) {
     ASSERT_OK(zx_device::Create(&parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
-    parent->rpc = zx::unowned(rpc);
+    parent->coordinator_rpc = zx::unowned(rpc);
     {
       fbl::RefPtr<zx_device> child;
       ASSERT_OK(zx_device::Create(&child));
@@ -214,7 +204,7 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     ASSERT_OK(zx_device::Create(&parent));
     parent->ops = &ops;
     parent->ctx = &unbind_count;
-    parent->rpc = zx::unowned(rpc);
+    parent->coordinator_rpc = zx::unowned(rpc);
     {
       std::array<fbl::RefPtr<zx_device>, 5> children;
       for (auto& child : children) {
@@ -242,24 +232,6 @@ TEST_F(CoreTest, RebindHasMultipleChildren) {
     parent->flags |= DEV_FLAG_DEAD;
   }
   EXPECT_EQ(coordinator_.bind_count_, 1);
-}
-
-TEST_F(CoreTest, NoUnbindHook) {
-  fbl::RefPtr<zx_device> dev;
-  ASSERT_OK(zx_device::Create(&dev));
-
-  zx_protocol_device_t ops = {};
-  dev->ops = &ops;
-
-  zx::channel rpc;
-  ASSERT_NO_FATAL_FAILURES(Connect(&rpc));
-  dev->rpc = zx::unowned(rpc);
-
-  ASSERT_NO_FATAL_FAILURES(UnbindDevice(dev));
-  // No unbind hook implemented, but the devhost should auto-reply for us.
-  EXPECT_EQ(coordinator_.unbind_reply_count_, 1);
-
-  dev->flags |= DEV_FLAG_DEAD;
 }
 
 }  // namespace
