@@ -51,6 +51,7 @@ test_package("keyboard-e2e") {
           dimensions = {
             device_type = "Intel NUC Kit NUC7i5DNHE"
           }
+          tags = [ "flaky" ]  # Bug: 40902
         },
       ]
     },
