@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HID_INPUT_REPORT_TOUCH_H_
-#define HID_INPUT_REPORT_TOUCH_H_
+#ifndef SRC_UI_LIB_HID_INPUT_REPORT_TOUCH_H_
+#define SRC_UI_LIB_HID_INPUT_REPORT_TOUCH_H_
 
-#include <hid-input-report/descriptors.h>
-#include <hid-input-report/device.h>
+#include "src/ui/lib/hid-input-report/descriptors.h"
+#include "src/ui/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
 
@@ -41,4 +41,4 @@ class Touch : public Device {
 
 }  // namespace hid_input_report
 
-#endif  // HID_INPUT_REPORT_TOUCH_H_
+#endif  // SRC_UI_LIB_HID_INPUT_REPORT_TOUCH_H_

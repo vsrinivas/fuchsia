@@ -2,15 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HID_INPUT_REPORT_DEVICE_H_
-#define HID_INPUT_REPORT_DEVICE_H_
+#ifndef SRC_UI_LIB_HID_INPUT_REPORT_DEVICE_H_
+#define SRC_UI_LIB_HID_INPUT_REPORT_DEVICE_H_
 
 #include <stddef.h>
 #include <stdint.h>
 
-#include <hid-input-report/descriptors.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/units.h>
+
+#include "src/ui/lib/hid-input-report/descriptors.h"
 
 namespace hid_input_report {
 
@@ -36,4 +37,4 @@ class Device {
 
 }  // namespace hid_input_report
 
-#endif  // HID_INPUT_REPORT_DEVICE_H_
+#endif  // SRC_UI_LIB_HID_INPUT_REPORT_DEVICE_H_

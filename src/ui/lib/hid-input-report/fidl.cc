@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/hid-input-report/fidl.h"
+
 #include <stdio.h>
 
 #include <variant>
 
-#include <hid-input-report/fidl.h>
 #include <hid-parser/usages.h>
 namespace hid_input_report {
 

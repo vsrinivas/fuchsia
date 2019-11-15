@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HID_INPUT_REPORT_AXIS_H_
-#define HID_INPUT_REPORT_AXIS_H_
+#ifndef SRC_UI_LIB_HID_INPUT_REPORT_AXIS_H_
+#define SRC_UI_LIB_HID_INPUT_REPORT_AXIS_H_
 
 #include <hid-parser/parser.h>
 #include <hid-parser/units.h>
@@ -25,4 +25,4 @@ void SetAxisFromAttribute(const hid::Attributes& attrs, Axis* axis);
 
 }  // namespace hid_input_report
 
-#endif  // HID_INPUT_REPORT_AXIS_H_
+#endif  // SRC_UI_LIB_HID_INPUT_REPORT_AXIS_H_

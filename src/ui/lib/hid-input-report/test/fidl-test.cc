@@ -2,13 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/hid-input-report/fidl.h"
+
 #include <variant>
 
-#include <hid-input-report/descriptors.h>
-#include <hid-input-report/device.h>
-#include <hid-input-report/fidl.h>
-#include <hid-input-report/mouse.h>
 #include <zxtest/zxtest.h>
+
+#include "src/ui/lib/hid-input-report/descriptors.h"
+#include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/hid-input-report/mouse.h"
 
 namespace llcpp_report = ::llcpp::fuchsia::input::report;
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HID_INPUT_REPORT_DESCRIPTORS_H_
-#define HID_INPUT_REPORT_DESCRIPTORS_H_
+#ifndef SRC_UI_LIB_HID_INPUT_REPORT_DESCRIPTORS_H_
+#define SRC_UI_LIB_HID_INPUT_REPORT_DESCRIPTORS_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 #include <stddef.h>
@@ -11,9 +11,10 @@
 
 #include <variant>
 
-#include <hid-input-report/axis.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
+
+#include "src/ui/lib/hid-input-report/axis.h"
 
 namespace hid_input_report {
 
@@ -147,4 +148,4 @@ struct Report {
 
 }  // namespace hid_input_report
 
-#endif  // HID_INPUT_REPORT_DESCRIPTORS_H_
+#endif  // SRC_UI_LIB_HID_INPUT_REPORT_DESCRIPTORS_H_

@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("hid-input-report") {
+  sources = [
+    "axis.cc",
+    "fidl.cc",
+    "mouse.cc",
+    "sensor.cc",
+    "touch.cc",
+  ]
+  public_deps = [
+    "//zircon/public/lib/hid-parser",
+    "//zircon/system/fidl/fuchsia-input-report:llcpp",
+  ]
+}
+
+test("lib-hid-input-report-test") {
+  sources = [
+    "axis.cc",
+    "fidl.cc",
+    "mouse.cc",
+    "sensor.cc",
+    "test/fidl-test.cc",
+    "test/mouse-test.cc",
+    "test/sensor-test.cc",
+    "test/touch-test.cc",
+    "touch.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-input-report:llcpp",
+  ]
+}
+
+unittest_package("test") {
+  package_name = "lib-hid-input-report-test"
+  deps = [
+    ":lib-hid-input-report-test",
+  ]
+  tests = [
+    {
+      name = "lib-hid-input-report-test"
+      environments = basic_envs
+    },
+  ]
+}

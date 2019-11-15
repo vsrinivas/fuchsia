@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/hid-input-report/mouse.h"
+
 #include <variant>
 
-#include <hid-input-report/device.h>
-#include <hid-input-report/mouse.h>
 #include <hid/boot.h>
 #include <zxtest/zxtest.h>
+
+#include "src/ui/lib/hid-input-report/device.h"
 
 // Each test parses the report descriptor for the mouse and then sends one
 // report to ensure that it has been parsed correctly.

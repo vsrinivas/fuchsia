@@ -161,7 +161,6 @@ if (current_cpu != "") {
       "$zx/system/ulib/gpt/test",
       "$zx/system/ulib/hermetic-compute/test",
       "$zx/system/ulib/hermetic-decompressor/test",
-      "$zx/system/ulib/hid-input-report/test:hid-input-report",
       "$zx/system/ulib/hid-parser/test",
       "$zx/system/ulib/hwreg/test",
       "$zx/system/ulib/id_allocator/test",

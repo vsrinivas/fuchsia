@@ -47,12 +47,12 @@ test("print-input-report-test-bin") {
 
   deps = [
     "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/hid-input-report",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-async-cpp",
-    "//zircon/public/lib/hid-input-report",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/sync",
     "//zircon/system/fidl/fuchsia-input-report:fuchsia-input-report_llcpp",

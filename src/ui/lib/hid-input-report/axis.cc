@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid-input-report/axis.h>
+#include "src/ui/lib/hid-input-report/axis.h"
 
 namespace hid_input_report {
 

@@ -2,16 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/hid-input-report/sensor.h"
+
 #include <stdint.h>
 #include <zircon/compiler.h>
 
-#include <hid-input-report/axis.h>
-#include <hid-input-report/device.h>
-#include <hid-input-report/sensor.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
 #include <hid-parser/usages.h>
+
+#include "src/ui/lib/hid-input-report/axis.h"
+#include "src/ui/lib/hid-input-report/device.h"
 
 namespace hid_input_report {
 

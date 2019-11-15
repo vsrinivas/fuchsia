@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef HID_INPUT_REPORT_FIDL_H_
-#define HID_INPUT_REPORT_FIDL_H_
+#ifndef SRC_UI_LIB_HID_INPUT_REPORT_FIDL_H_
+#define SRC_UI_LIB_HID_INPUT_REPORT_FIDL_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
 
-#include <hid-input-report/descriptors.h>
+#include "src/ui/lib/hid-input-report/descriptors.h"
 
 namespace hid_input_report {
 
@@ -134,4 +134,4 @@ zx_status_t SetFidlReport(const Report& hid_report, FidlReport* report);
 
 }  // namespace hid_input_report
 
-#endif  // HID_INPUT_REPORT_FIDL_H_
+#endif  // SRC_UI_LIB_HID_INPUT_REPORT_FIDL_H_

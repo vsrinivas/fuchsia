@@ -11,12 +11,12 @@
 #include <unistd.h>
 
 #include <ddktl/protocol/hiddevice.h>
-#include <hid-input-report/descriptors.h>
 #include <hid/ambient-light.h>
 #include <hid/paradise.h>
 #include <zxtest/zxtest.h>
 
 #include "input-report.h"
+#include "src/ui/lib/hid-input-report/descriptors.h"
 
 namespace hid_input_report_dev {
 

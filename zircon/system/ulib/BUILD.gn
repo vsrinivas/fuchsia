@@ -80,7 +80,6 @@ group("ulib") {
     "gfx-font-data",
     "gpt",
     "hid",
-    "hid-input-report",
     "hid-parser",
     "hwreg",
     "image-format",

@@ -14,11 +14,11 @@ driver_module("hid-input-report") {
   ]
   deps = [
     "//src/devices:driver",
+    "//src/ui/lib/hid-input-report",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-input-report",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.hiddevice",
@@ -37,12 +37,12 @@ test("hid-input-report-test-bin") {
   ]
   deps = [
     "//src/devices:driver",
+    "//src/ui/lib/hid-input-report",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/fake_ddk",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/hid",
-    "//zircon/public/lib/hid-input-report",
     "//zircon/public/lib/hid-parser",
     "//zircon/public/lib/sync",
     "//zircon/public/lib/zx",

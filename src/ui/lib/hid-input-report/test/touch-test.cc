@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/ui/lib/hid-input-report/touch.h"
+
 #include <variant>
 
-#include <hid-input-report/device.h>
-#include <hid-input-report/touch.h>
 #include <hid/paradise.h>
 #include <zxtest/zxtest.h>
+
+#include "src/ui/lib/hid-input-report/device.h"
 
 // Each test parses the report descriptor for the touchscreen and then sends one
 // report to ensure that it has been parsed correctly.

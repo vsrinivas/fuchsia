@@ -15,8 +15,8 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>
-#include <hid-input-report/fidl.h>
 
+#include "src/ui/lib/hid-input-report/fidl.h"
 #include "src/ui/tools/print-input-report/devices.h"
 #include "src/ui/tools/print-input-report/printer.h"
 

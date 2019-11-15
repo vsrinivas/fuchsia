@@ -11,9 +11,9 @@
 #include <ddktl/protocol/hiddevice.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
-#include <hid-input-report/device.h>
 
 #include "input-report-instance.h"
+#include "src/ui/lib/hid-input-report/device.h"
 
 namespace hid_input_report_dev {
 

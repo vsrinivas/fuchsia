@@ -18,14 +18,15 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
-#include <hid-input-report/descriptors.h>
-#include <hid-input-report/device.h>
-#include <hid-input-report/mouse.h>
-#include <hid-input-report/sensor.h>
-#include <hid-input-report/touch.h>
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
 #include <hid-parser/usages.h>
+
+#include "src/ui/lib/hid-input-report/descriptors.h"
+#include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/hid-input-report/mouse.h"
+#include "src/ui/lib/hid-input-report/sensor.h"
+#include "src/ui/lib/hid-input-report/touch.h"
 
 namespace hid_input_report_dev {
 

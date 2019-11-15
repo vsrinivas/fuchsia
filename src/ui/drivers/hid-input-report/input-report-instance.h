@@ -12,10 +12,11 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/mutex.h>
 #include <fbl/ring_buffer.h>
-#include <hid-input-report/descriptors.h>
-#include <hid-input-report/device.h>
-#include <hid-input-report/fidl.h>
-#include <hid-input-report/mouse.h>
+
+#include "src/ui/lib/hid-input-report/descriptors.h"
+#include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/hid-input-report/fidl.h"
+#include "src/ui/lib/hid-input-report/mouse.h"
 
 namespace hid_input_report_dev {
 
