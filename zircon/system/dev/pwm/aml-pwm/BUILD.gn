@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_driver("aml-pwm") {
+  sources = [
+    "aml-pwm.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/mmio",
+  ]
+}
+
+zx_test("aml-pwm-test") {
+  testonly = true
+  output_name = "aml-pwm-test"
+  sources = [
+    "aml-pwm-test.cc",
+    "aml-pwm.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/dev/lib/mock-mmio-reg",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("common") {
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.pwm",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/dev/lib/device-protocol-pdev",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}

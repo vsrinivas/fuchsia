@@ -1,0 +1,39 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_driver("pwm") {
+  sources = [
+    "pwm.cc",
+  ]
+  deps = [
+    ":common",
+  ]
+}
+
+zx_test("pwm-test") {
+  testonly = true
+  output_name = "pwm-test"
+  sources = [
+    "pwm-test.cc",
+    "pwm.cc",
+  ]
+  deps = [
+    ":common",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+group("common") {
+  public_deps = [
+    "$zx/system/banjo/ddk.protocol.pwm",
+    "$zx/system/dev/lib/amlogic",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+  ]
+}
