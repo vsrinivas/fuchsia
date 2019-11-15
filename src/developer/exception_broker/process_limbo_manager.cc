@@ -207,18 +207,18 @@ void ProcessLimboHandler::WatchActive(WatchActiveCallback cb) {
 
 void ProcessLimboHandler::WatchProcessesWaitingOnException(
     WatchProcessesWaitingOnExceptionCallback cb) {
-  if (!limbo_manager_) {
-    cb(fit::error(ZX_ERR_BAD_STATE));
-    return;
-  }
-
-  if (!limbo_manager_->active()) {
-    cb(fit::error(ZX_ERR_UNAVAILABLE));
-    return;
-  }
-
   if (watch_limbo_dirty_bit_) {
     watch_limbo_dirty_bit_ = false;
+
+    if (!limbo_manager_) {
+      cb(fit::error(ZX_ERR_BAD_STATE));
+      return;
+    }
+
+    if (!limbo_manager_->active()) {
+      cb(fit::error(ZX_ERR_UNAVAILABLE));
+      return;
+    }
 
     auto processes = limbo_manager_->ListProcessesInLimbo();
     cb(fit::ok(std::move(processes)));

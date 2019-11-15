@@ -158,21 +158,6 @@ TEST(ProcessLimboManager, ProcessLimboHandler) {
 
   limbo_manager.SetActive(true);
 
-  {
-    // With no exceptions, it should be empty.
-    bool called = false;
-    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
-    handler->WatchProcessesWaitingOnException(
-        [&called, &result](ProcessLimbo_WatchProcessesWaitingOnException_Result res) {
-          called = true;
-          result = std::move(res);
-        });
-
-    ASSERT_TRUE(called);
-    ASSERT_TRUE(result.is_response()) << zx_status_get_string(result.err());
-    ASSERT_EQ(result.response().exception_list.size(), 0u);
-  }
-
   // We create multiple exceptions.
   ExceptionContext excps[3];
   ASSERT_TRUE(RetrieveExceptionContext(excps + 0));
