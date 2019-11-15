@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::node::Node;
+use crate::types::{Celsius, Seconds, Watts};
 use failure::{format_err, Error};
 use fuchsia_syslog::fx_log_info;
 use std::rc::Rc;
@@ -37,22 +38,35 @@ impl PowerManager {
     }
 
     fn init_astro(&mut self) -> Result<(), Error> {
-        let temperature = temperature_handler::TemperatureHandler::new();
-        self.nodes.push(temperature.clone());
+        let temperature_node = temperature_handler::TemperatureHandler::new();
+        self.nodes.push(temperature_node.clone());
 
-        let stats = cpu_stats_handler::CpuStatsHandler::new()?;
-        self.nodes.push(stats.clone());
+        let cpu_stats_node = cpu_stats_handler::CpuStatsHandler::new()?;
+        self.nodes.push(cpu_stats_node);
 
-        let control = cpu_control_handler::CpuControlHandler::new();
-        self.nodes.push(control.clone());
+        let cpu_control_node = cpu_control_handler::CpuControlHandler::new();
+        self.nodes.push(cpu_control_node.clone());
 
         let thermal_config = thermal_policy::ThermalConfig {
             temperature_driver: "/dev/class/thermal/000".to_string(),
-            poll_interval_ms: 1000,
+            temperature_node,
+            cpu_control_node,
+
+            // TODO(fxb/41452): these are just placeholder ThermalParams. The real params should be
+            // populated here once they have been properly determined.
+            thermal_params: thermal_policy::ThermalParams {
+                sample_interval: Seconds(1.0),
+                filter_time_constant: Seconds(10.0),
+                target_temperature: Celsius(85.0),
+                e_integral_min: -20.0,
+                e_integral_max: 0.0,
+                sustainable_power: Watts(1.1),
+                proportional_gain: 0.0,
+                integral_gain: 0.2,
+            },
         };
-        let thermal =
-            thermal_policy::ThermalPolicy::new(thermal_config, temperature, stats, control)?;
-        self.nodes.push(thermal);
+        let thermal_policy = thermal_policy::ThermalPolicy::new(thermal_config)?;
+        self.nodes.push(thermal_policy);
 
         Ok(())
     }

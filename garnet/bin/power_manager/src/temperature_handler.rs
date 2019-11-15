@@ -72,7 +72,7 @@ impl TemperatureHandler {
             .map_err(|e| format_err!("get_temperature_celsius IPC failed: {}", e))?;
         zx::Status::ok(status)
             .map_err(|e| format_err!("get_temperature_celsius driver returned error: {}", e))?;
-        Ok(Celsius(temperature))
+        Ok(Celsius(temperature as f64))
     }
 }
 
@@ -91,53 +91,62 @@ impl Node for TemperatureHandler {
 }
 
 #[cfg(test)]
-mod tests {
+pub mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
-    use fuchsia_async as fasync;
     use futures::TryStreamExt;
 
     // Spawns a new task that acts as a fake thermal driver for testing purposes. The driver only
     // handles requests for GetTemperatureCelsius - trying to send any other requests to it is a
-    // bug. Responds with a specified temperature that is verified in the test.
-    fn setup_fake_driver(mut stream: fthermal::DeviceRequestStream, temperature: f32) {
+    // bug. Each GetTemperatureCelsius request responds with the next element from
+    // `temperature_readings`, which wraps back around at the end of the vector.
+    fn setup_fake_driver(temperature_readings: Vec<f32>) -> fthermal::DeviceProxy {
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fthermal::DeviceMarker>().unwrap();
+        let mut temperaure_index = 0;
+
         fasync::spawn(async move {
             while let Ok(req) = stream.try_next().await {
                 match req {
                     Some(fthermal::DeviceRequest::GetTemperatureCelsius { responder }) => {
-                        let _ = responder.send(zx::Status::OK.into_raw(), temperature);
+                        let _ = responder.send(
+                            zx::Status::OK.into_raw(),
+                            temperature_readings[temperaure_index],
+                        );
+                        temperaure_index = (temperaure_index + 1) % temperature_readings.len();
                     }
                     _ => assert!(false),
                 }
             }
         });
+
+        proxy
+    }
+
+    pub fn setup_test_node(path: &str, temperature_readings: Vec<f32>) -> Rc<TemperatureHandler> {
+        let node = TemperatureHandler::new();
+        let fake_driver = setup_fake_driver(temperature_readings);
+        node.drivers.borrow_mut().insert(String::from(path), fake_driver);
+        node
     }
 
     /// Tests that the node can handle the 'ReadTemperature' message as expected. The test
     /// checks for the expected temperature value which is returned by the fake thermal driver.
     #[fasync::run_singlethreaded(test)]
     async fn test_read_temperature() {
-        let test_temperature = 12.34;
         let driver_path = "/dev/class/thermal/fake";
-        let node = TemperatureHandler::new();
-
-        // setup fake driver connection
-        let (client, server) = zx::Channel::create().unwrap();
-        let client = fasync::Channel::from_channel(client).unwrap();
-        let server = fasync::Channel::from_channel(server).unwrap();
-        let driver = fthermal::DeviceProxy::new(client);
-        let stream = fthermal::DeviceRequestStream::from_channel(server);
-        setup_fake_driver(stream, test_temperature);
-        node.drivers.borrow_mut().insert(String::from(driver_path), driver);
+        let temperature_readings = vec![1.2, 3.4, 5.6, 7.8, 9.0];
+        let node = setup_test_node(driver_path, temperature_readings.to_vec());
 
         // send ReadTemperature message and check for expected value
-        let message = Message::ReadTemperature(driver_path);
-        let result = node.handle_message(&message).await;
-        let temperature = result.unwrap();
-        if let MessageReturn::ReadTemperature(t) = temperature {
-            assert_eq!(t.0, test_temperature);
-        } else {
-            assert!(false);
+        for temperature_reading in temperature_readings {
+            let message = Message::ReadTemperature(driver_path);
+            let result = node.handle_message(&message).await;
+            let temperature = result.unwrap();
+            if let MessageReturn::ReadTemperature(t) = temperature {
+                assert_eq!(t.0, temperature_reading as f64);
+            } else {
+                assert!(false);
+            }
         }
     }
 

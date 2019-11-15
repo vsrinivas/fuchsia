@@ -108,7 +108,7 @@ impl CpuStatsHandler {
         let per_cpu_stats =
             cpu_stats.per_cpu_stats.ok_or(format_err!("Received null per_cpu_stats"))?;
 
-        idle_stats.timestamp = Nanoseconds(zx::Time::get(zx::ClockId::Monotonic).into_nanos());
+        idle_stats.timestamp = Nanoseconds(fasync::Time::now().into_nanos());
         for i in 0..cpu_stats.actual_num_cpus as usize {
             idle_stats.idle_times.push(Nanoseconds(
                 per_cpu_stats[i]
@@ -183,7 +183,6 @@ impl Node for CpuStatsHandler {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
     use futures::TryStreamExt;
 
     const TEST_NUM_CORES: u32 = 4;
@@ -219,10 +218,8 @@ mod tests {
     }
 
     fn setup_fake_service() -> fstats::StatsProxy {
-        let (client, server) = zx::Channel::create().unwrap();
-        let client = fasync::Channel::from_channel(client).unwrap();
-        let server = fasync::Channel::from_channel(server).unwrap();
-        let mut stream = fstats::StatsRequestStream::from_channel(server);
+        let (proxy, mut stream) =
+            fidl::endpoints::create_proxy_and_stream::<fstats::StatsMarker>().unwrap();
 
         fasync::spawn(async move {
             while let Ok(req) = stream.try_next().await {
@@ -235,7 +232,7 @@ mod tests {
             }
         });
 
-        fstats::StatsProxy::new(client)
+        proxy
     }
 
     fn setup_test_node() -> CpuStatsHandler {

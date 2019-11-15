@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::types::Celsius;
+use crate::types::{Celsius, Watts};
 
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug)]
@@ -22,6 +22,10 @@ pub enum Message<'a> {
     /// first call returns a load of 0.0 because the time duration required to calculate load is
     /// undefined without a second call.
     GetTotalCpuLoad,
+
+    /// Instruct the node to limit the power consumption of its corresponding component (e.g., CPU)
+    /// Arg: the max number of watts that the component should be allowed to consume
+    SetMaxPowerConsumption(Watts),
 }
 
 /// Defines the return values for each of the Message types from above
@@ -37,4 +41,7 @@ pub enum MessageReturn {
     /// Arg: the sum of the load from all CPUs in the system. The value is defined as
     /// 0.0 - [number_cpus]. The first call will return a load of 0.0.
     GetTotalCpuLoad(f32),
+
+    /// There is no arg in this MessageReturn type. It essentially only serves as an ACK.
+    SetMaxPowerConsumption,
 }
