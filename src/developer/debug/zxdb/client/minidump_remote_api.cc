@@ -36,11 +36,6 @@ class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
  public:
   X64ExceptionInfo(const crashpad::ExceptionSnapshot* snapshot) : snapshot_(snapshot) {}
 
-  bool AddrIsWatchpoint(uint64_t addr) override {
-    // TODO: Find out if there's a way to get a list of set watchpoints out of minidump.
-    return false;
-  }
-
   std::optional<debug_ipc::X64ExceptionInfo::DebugRegs> FetchDebugRegs() override {
     debug_ipc::X64ExceptionInfo::DebugRegs ret;
     auto context = snapshot_->Context()->x86_64;

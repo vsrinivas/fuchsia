@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <zircon/hw/debug/x86.h>
 #include <zircon/syscalls/exception.h>
 
 #include <gtest/gtest.h>
@@ -22,9 +23,7 @@ class ArmTestInfo : public Arm64ExceptionInfo {
 class X64TestInfo : public X64ExceptionInfo {
  public:
   X64ExceptionInfo::DebugRegs regs;
-  uint64_t watchpoint = 0;
 
-  bool AddrIsWatchpoint(uint64_t addr) override { return addr == watchpoint; }
   std::optional<X64ExceptionInfo::DebugRegs> FetchDebugRegs() override { return regs; }
 };
 
@@ -84,29 +83,29 @@ TEST(DecodeException, X64) {
   info.regs.dr2 = 0x3333333333333333;
   info.regs.dr3 = 0x4444444444444444;
 
-  info.regs.dr6 = X86_FLAG_MASK(DR6B0);
+  info.regs.dr6 = 0;
+  X86_DBG_STATUS_B0_SET(&info.regs.dr6, 1);
   EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
-  info.watchpoint = info.regs.dr0;
+  X86_DBG_CONTROL_RW0_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
-  info.regs.dr6 = X86_FLAG_MASK(DR6B1);
+  info.regs.dr6 = 0;
+  X86_DBG_STATUS_B1_SET(&info.regs.dr6, 1);
   EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
-  info.watchpoint = info.regs.dr1;
+  X86_DBG_CONTROL_RW1_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
-  info.regs.dr6 = X86_FLAG_MASK(DR6B2);
+  info.regs.dr6 = 0;
+  X86_DBG_STATUS_B2_SET(&info.regs.dr6, 1);
   EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
-  info.watchpoint = info.regs.dr2;
+  X86_DBG_CONTROL_RW2_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 
-  info.regs.dr6 = X86_FLAG_MASK(DR6B3);
+  info.regs.dr6 = 0;
+  X86_DBG_STATUS_B3_SET(&info.regs.dr6, 1);
   EXPECT_EQ(ExceptionType::kHardware, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
-  info.watchpoint = info.regs.dr3;
+  X86_DBG_CONTROL_RW3_SET(&info.regs.dr7, 1);
   EXPECT_EQ(ExceptionType::kWatchpoint, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
-
-  info.watchpoint = 0;
-  info.regs.dr6 = X86_FLAG_MASK(DR6BS);
-  EXPECT_EQ(ExceptionType::kSingleStep, DecodeException(ZX_EXCP_HW_BREAKPOINT, &info));
 }
 
 }  // namespace debug_ipc

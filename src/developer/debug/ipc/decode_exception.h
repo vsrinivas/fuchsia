@@ -30,9 +30,6 @@ class X64ExceptionInfo {
     uint64_t dr7 = 0;
   };
 
-  // Return whether there is a watchpoint at the specified address.
-  virtual bool AddrIsWatchpoint(uint64_t addr) = 0;
-
   // Get the necessary debug registers for decoding exceptions. A nullopt indicates failure.
   virtual std::optional<DebugRegs> FetchDebugRegs() = 0;
 };

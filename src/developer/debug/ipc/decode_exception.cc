@@ -4,40 +4,100 @@
 
 #include "src/developer/debug/ipc/decode_exception.h"
 
+#include <zircon/hw/debug/x86.h>
 #include <zircon/syscalls/exception.h>
 
 #include "src/developer/debug/shared/arch_arm64.h"
 #include "src/developer/debug/shared/arch_x86.h"
+#include "src/developer/debug/shared/logging/logging.h"
 #include "src/lib/fxl/logging.h"
 
 namespace debug_ipc {
 namespace {
 
+// clang-format off
 ExceptionType DecodeZircon(uint32_t code) {
-  if (code == ZX_EXCP_SW_BREAKPOINT) {
-    return ExceptionType::kSoftware;
-  } else if (code == ZX_EXCP_HW_BREAKPOINT) {
-    return ExceptionType::kLast;
-  } else if (code == ZX_EXCP_GENERAL) {
-    return ExceptionType::kGeneral;
-  } else if (code == ZX_EXCP_FATAL_PAGE_FAULT) {
-    return ExceptionType::kPageFault;
-  } else if (code == ZX_EXCP_UNDEFINED_INSTRUCTION) {
-    return ExceptionType::kUndefinedInstruction;
-  } else if (code == ZX_EXCP_UNALIGNED_ACCESS) {
-    return ExceptionType::kUnalignedAccess;
-  } else if (code == ZX_EXCP_THREAD_STARTING) {
-    return ExceptionType::kThreadStarting;
-  } else if (code == ZX_EXCP_PROCESS_STARTING) {
-    return ExceptionType::kProcessStarting;
-  } else if (code == ZX_EXCP_THREAD_EXITING) {
-    return ExceptionType::kThreadExiting;
-  } else if (code == ZX_EXCP_POLICY_ERROR) {
-    return ExceptionType::kPolicyError;
+  switch (code) {
+    case ZX_EXCP_SW_BREAKPOINT: return ExceptionType::kSoftware;
+    case ZX_EXCP_HW_BREAKPOINT: return ExceptionType::kHardware;
+    case ZX_EXCP_GENERAL: return ExceptionType::kGeneral;
+    case ZX_EXCP_FATAL_PAGE_FAULT: return ExceptionType::kPageFault;
+    case ZX_EXCP_UNDEFINED_INSTRUCTION: return ExceptionType::kUndefinedInstruction;
+    case ZX_EXCP_UNALIGNED_ACCESS: return ExceptionType::kUnalignedAccess;
+    case ZX_EXCP_THREAD_STARTING: return ExceptionType::kThreadStarting;
+    case ZX_EXCP_PROCESS_STARTING: return ExceptionType::kProcessStarting;
+    case ZX_EXCP_THREAD_EXITING: return ExceptionType::kThreadExiting;
+    case ZX_EXCP_POLICY_ERROR: return ExceptionType::kPolicyError;
+    default:
+      return ExceptionType::kUnknown;
+  }
+}
+// clang-format on
+
+}  // namespace
+
+// x64 ---------------------------------------------------------------------------------------------
+
+namespace {
+
+ExceptionType DecodeHardwareRegister(uint64_t dr7, int slot) {
+  // clang-format off
+  bool is_watchpoint = false;
+  switch (slot) {
+    case 0: is_watchpoint = X86_DBG_CONTROL_RW0_GET(dr7) != 0; break;
+    case 1: is_watchpoint = X86_DBG_CONTROL_RW1_GET(dr7) != 0; break;
+    case 2: is_watchpoint = X86_DBG_CONTROL_RW2_GET(dr7) != 0; break;
+    case 3: is_watchpoint = X86_DBG_CONTROL_RW3_GET(dr7) != 0; break;
+    default:
+      FXL_NOTREACHED();
+      return ExceptionType::kUnknown;
+  }
+  // clang-format on
+
+  return is_watchpoint ? ExceptionType::kWatchpoint : ExceptionType::kHardware;
+}
+
+}  // namespace
+
+ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
+  // HW exceptions have to be analysed further.
+  ExceptionType type = DecodeZircon(code);
+  if (type != ExceptionType::kHardware)
+    return type;
+
+  X64ExceptionInfo::DebugRegs regs;
+
+  if (auto got = info->FetchDebugRegs()) {
+    regs = *got;
   } else {
+    DEBUG_LOG(Thread) << "Could not get debug regs: asuming single step.";
+    return ExceptionType::kSingleStep;
+  }
+
+  // TODO(DX-1445): This permits only one trigger per exception, when overlaps
+  //                could occur. For a first pass this is acceptable.
+
+  // Single step has more priority than other exceptions.
+  if (X86_DBG_STATUS_BS_GET(regs.dr6))
+    return ExceptionType::kSingleStep;
+
+  if (X86_DBG_STATUS_B0_GET(regs.dr6)) {
+    return DecodeHardwareRegister(regs.dr7, 0);
+  } else if (X86_DBG_STATUS_B1_GET(regs.dr6)) {
+    return DecodeHardwareRegister(regs.dr7, 1);
+  } else if (X86_DBG_STATUS_B2_GET(regs.dr6)) {
+    return DecodeHardwareRegister(regs.dr7, 2);
+  } else if (X86_DBG_STATUS_B3_GET(regs.dr6)) {
+    return DecodeHardwareRegister(regs.dr7, 3);
+  } else {
+    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
     return ExceptionType::kUnknown;
   }
 }
+
+// arm64 -------------------------------------------------------------------------------------------
+
+namespace {
 
 ExceptionType DecodeESR(uint32_t esr) {
   // The ESR register holds information about the last exception in the form of:
@@ -69,52 +129,11 @@ ExceptionType DecodeESR(uint32_t esr) {
 
 }  // namespace
 
-ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
-  auto ret = DecodeZircon(code);
-
-  if (ret != ExceptionType::kLast) {
-    return ret;
-  }
-
-  X64ExceptionInfo::DebugRegs regs;
-
-  if (auto got = info->FetchDebugRegs()) {
-    regs = *got;
-  } else {
-    return ExceptionType::kSingleStep;
-  }
-
-  // TODO(DX-1445): This permits only one trigger per exception, when overlaps
-  //                could occur. For a first pass this is acceptable.
-  uint64_t exception_address = 0;
-  // HW breakpoints have priority over single-step.
-  if (X86_FLAG_VALUE(regs.dr6, DR6B0)) {
-    exception_address = regs.dr0;
-  } else if (X86_FLAG_VALUE(regs.dr6, DR6B1)) {
-    exception_address = regs.dr1;
-  } else if (X86_FLAG_VALUE(regs.dr6, DR6B2)) {
-    exception_address = regs.dr2;
-  } else if (X86_FLAG_VALUE(regs.dr6, DR6B3)) {
-    exception_address = regs.dr3;
-  } else if (X86_FLAG_VALUE(regs.dr6, DR6BS)) {
-    return ExceptionType::kSingleStep;
-  } else {
-    FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
-  }
-
-  if (info->AddrIsWatchpoint(exception_address)) {
-    return ExceptionType::kWatchpoint;
-  }
-
-  return ExceptionType::kHardware;
-}
-
 ExceptionType DecodeException(uint32_t code, Arm64ExceptionInfo* info) {
-  auto ret = DecodeZircon(code);
-
-  if (ret != ExceptionType::kLast) {
-    return ret;
-  }
+  // HW exceptions have to be analysed further.
+  ExceptionType type = DecodeZircon(code);
+  if (type != ExceptionType::kHardware)
+    return type;
 
   uint32_t esr;
 
