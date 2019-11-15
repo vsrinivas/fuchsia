@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	nicid      = tcpip.NICID(1)
+	testNICID  = tcpip.NICID(1)
 	serverAddr = tcpip.Address("\xc0\xa8\x03\x01")
 
 	defaultAcquireTimeout = 1000 * time.Millisecond
@@ -33,14 +33,8 @@ const (
 
 const defaultMTU = 65536
 
-func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack.Stack, *channel.Endpoint) {
-	ch := channel.New(256, defaultMTU, "")
-	var linkEP stack.LinkEndpoint = ch
-	if testing.Verbose() {
-		linkEP = sniffer.New(linkEP)
-	}
-
-	s := stack.New(stack.Options{
+func createTestStack() *stack.Stack {
+	return stack.New(stack.Options{
 		NetworkProtocols: []stack.NetworkProtocol{
 			ipv4.NewProtocol(),
 		},
@@ -48,13 +42,22 @@ func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack
 			udp.NewProtocol(),
 		},
 	})
+}
+
+func addChannelToStack(t *testing.T, addresses []tcpip.Address, nicid tcpip.NICID, s *stack.Stack) *channel.Endpoint {
+	t.Helper()
+	ch := channel.New(256, defaultMTU, "")
+	var linkEP stack.LinkEndpoint = ch
+	if testing.Verbose() {
+		linkEP = sniffer.New(linkEP)
+	}
 
 	if err := s.CreateNIC(nicid, linkEP); err != nil {
-		t.Fatal(err)
+		t.Fatalf("failed CreateNIC(%d, %v): %s", nicid, linkEP, err)
 	}
 	for _, address := range addresses {
 		if err := s.AddAddress(nicid, ipv4.ProtocolNumber, address); err != nil {
-			t.Fatal(err)
+			t.Fatalf("failed AddAddress(%d, %d, %v): %s", nicid, ipv4.ProtocolNumber, address, err)
 		}
 	}
 
@@ -63,6 +66,13 @@ func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack
 		NIC:         nicid,
 	}})
 
+	return ch
+}
+
+func createTestStackWithChannel(t *testing.T, addresses []tcpip.Address) (*stack.Stack, *channel.Endpoint) {
+	t.Helper()
+	s := createTestStack()
+	ch := addChannelToStack(t, addresses, testNICID, s)
 	return s, ch
 }
 
@@ -88,11 +98,13 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	// Start the clients.
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
+	clientStack := createTestStack()
 	for i := 0; i < clientCount; i++ {
-		clientStack, clientLinkEP := createTestStackWithChannel(t, nil)
+		clientNICID := tcpip.NICID(i + 1)
+		clientLinkEP := addChannelToStack(t, nil, clientNICID, clientStack)
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-		c := NewClient(clientStack, nicid, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c := NewClient(clientStack, clientNICID, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		go func() {
 			// Packets from the clients get sent to the server.
 			for pkt := range clientLinkEP.C {
@@ -169,7 +181,7 @@ func TestDHCP(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c0 := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c0 := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	{
 		{
 			cfg, err := c0.acquire(ctx, initSelecting)
@@ -199,7 +211,7 @@ func TestDHCP(t *testing.T) {
 
 	{
 		const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
-		c1 := NewClient(s, nicid, clientLinkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		c1 := NewClient(s, testNICID, clientLinkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 		cfg, err := c1.acquire(ctx, initSelecting)
 		if err != nil {
 			t.Fatal(err)
@@ -213,13 +225,13 @@ func TestDHCP(t *testing.T) {
 	}
 
 	{
-		if err := s.AddProtocolAddressWithOptions(nicid, tcpip.ProtocolAddress{
+		if err := s.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
 			AddressWithPrefix: c0.addr,
 		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer s.RemoveAddress(nicid, c0.addr.Address)
+		defer s.RemoveAddress(testNICID, c0.addr.Address)
 
 		cfg, err := c0.acquire(ctx, initSelecting)
 		if err != nil {
@@ -320,7 +332,7 @@ func TestDelayRetransmission(t *testing.T) {
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c0 := NewClient(clientStack, nicid, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			c0 := NewClient(clientStack, testNICID, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
 			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
 			defer cancel()
 			cfg, err := c0.acquire(ctx, initSelecting)
@@ -441,7 +453,7 @@ func TestStateTransition(t *testing.T) {
 				// will need to send from that address when it tries to renew its lease.
 				if curAddr != oldAddr {
 					if oldAddr != (tcpip.AddressWithPrefix{}) {
-						if err := clientStack.RemoveAddress(nicid, oldAddr.Address); err != nil {
+						if err := clientStack.RemoveAddress(testNICID, oldAddr.Address); err != nil {
 							t.Fatalf("RemoveAddress(%s): %s", oldAddr.Address, err)
 						}
 					}
@@ -451,7 +463,7 @@ func TestStateTransition(t *testing.T) {
 							Protocol:          ipv4.ProtocolNumber,
 							AddressWithPrefix: curAddr,
 						}
-						if err := clientStack.AddProtocolAddress(nicid, protocolAddress); err != nil {
+						if err := clientStack.AddProtocolAddress(testNICID, protocolAddress); err != nil {
 							t.Fatalf("AddProtocolAddress(%+v): %s", protocolAddress, err)
 						}
 					}
@@ -466,7 +478,7 @@ func TestStateTransition(t *testing.T) {
 			}
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-			c := NewClient(clientStack, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
+			c := NewClient(clientStack, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, acquiredFunc)
 
 			c.Run(ctx)
 
@@ -625,7 +637,7 @@ func TestTwoServers(t *testing.T) {
 	}
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
-	c := NewClient(s, nicid, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	c := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
 	if _, err := c.acquire(ctx, initSelecting); err != nil {
 		t.Fatal(err)
 	}
