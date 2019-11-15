@@ -63,17 +63,18 @@ ThreadController::StopOp StepIntoThreadController::OnThreadStop(
   // If we get here the step controller thinks it's done. If we're not in a prologue now, we're
   // done. Otherwise we need to step through the prologue.
 
-  // We can only be in a prologue if we've stepped into a new frame.
+  // We can only be in a prologue if we've stepped into a new physical frame.
   //
   // This check is unnecessary as the symbol lookup below should handle all cases since stepping by
   // line should never leave you in a function prologue that's not a new frame. But most of the time
   // we're stepping in the same frame and a symbol lookup is relatively heavyweight. This is a nice
   // filter before doing the full lookup.
-  if (!FrameFingerprint::Newer(thread()->GetStack().GetFrameFingerprint(0),
-                               original_frame_fingerprint_))
+  const Stack& stack = thread()->GetStack();
+  if (stack[0]->IsInline())
+    return kStopDone;  // Inline frames don't have prologues.
+  if (!FrameFingerprint::Newer(stack.GetFrameFingerprint(0), original_frame_fingerprint_))
     return kStopDone;  // Not in a newer frame, no prologue to skip.
 
-  const Stack& stack = thread()->GetStack();
   if (stack.empty()) {
     FXL_NOTREACHED();  // Should always have a current frame on stop.
     return kUnexpected;

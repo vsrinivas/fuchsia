@@ -358,8 +358,7 @@ TEST_F(StepThreadControllerTest, AmbiguousInline) {
   // That should have requested a synthetic exception which will be sent out asynchronously. The
   // Resume() call will cause the MockRemoteAPI to exit the message loop.
   EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
-  loop().PostTask(FROM_HERE, [loop = &loop()]() { loop->QuitNow(); });
-  loop().Run();
+  loop().RunUntilNoTasks();
 
   // The operation should have unhidden the inline stack frame rather than actually affecting the
   // backend.

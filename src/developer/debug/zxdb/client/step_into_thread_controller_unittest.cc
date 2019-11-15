@@ -4,10 +4,11 @@
 
 #include "src/developer/debug/zxdb/client/step_into_thread_controller.h"
 
+#include "src/developer/debug/zxdb/client/inline_thread_controller_test.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
-#include "src/developer/debug/zxdb/client/thread_controller_test.h"
 #include "src/developer/debug/zxdb/symbols/input_location.h"
+#include "src/developer/debug/zxdb/symbols/line_details.h"
 
 namespace zxdb {
 
@@ -18,12 +19,10 @@ namespace {
 // control).
 class StepIntoMockModuleSymbols : public MockModuleSymbols {
  public:
-  // IP of beginning of nested function where the prologue will be queried.
-  static constexpr uint64_t kNestedBegin = ThreadControllerTest::kSymbolizedModuleAddress + 0x2000;
-
+  // IP of beginning of function where the prologue will be queried.
+  static const uint64_t kNestedBegin;
   // IP of first non-prologue instruction of the function above.
-  static constexpr uint64_t kNestedPrologueEnd =
-      ThreadControllerTest::kSymbolizedModuleAddress + 0x2010;
+  static const uint64_t kNestedPrologueEnd;
 
   // ModuleSymbols overrides.
   std::vector<Location> ResolveInputLocation(const SymbolContext& symbol_context,
@@ -43,11 +42,20 @@ class StepIntoMockModuleSymbols : public MockModuleSymbols {
   FRIEND_MAKE_REF_COUNTED(StepIntoMockModuleSymbols);
   FRIEND_REF_COUNTED_THREAD_SAFE(StepIntoMockModuleSymbols);
 
-  StepIntoMockModuleSymbols() : MockModuleSymbols("file.so") {}
+  StepIntoMockModuleSymbols() : MockModuleSymbols("file.so") {
+    AddLineDetails(
+        InlineThreadControllerTest::kTopInlineFunctionRange.begin(),
+        LineDetails(InlineThreadControllerTest::kTopInlineFileLine,
+                    {LineDetails::LineEntry(InlineThreadControllerTest::kTopInlineFunctionRange)}));
+  }
   ~StepIntoMockModuleSymbols() override {}
 };
 
-class StepIntoThreadControllerTest : public ThreadControllerTest {
+const uint64_t StepIntoMockModuleSymbols::kNestedBegin =
+    InlineThreadControllerTest::kTopInlineFunctionRange.begin();
+const uint64_t StepIntoMockModuleSymbols::kNestedPrologueEnd = kNestedBegin + 4;
+
+class StepIntoThreadControllerTest : public InlineThreadControllerTest {
  public:
   void DoStepTest(bool skip_prologue) {
     constexpr uint64_t kBeginAddr = kSymbolizedModuleAddress + 0x1000;
@@ -118,5 +126,43 @@ class StepIntoThreadControllerTest : public ThreadControllerTest {
 TEST_F(StepIntoThreadControllerTest, SkipPrologue) { DoStepTest(true); }
 
 TEST_F(StepIntoThreadControllerTest, WithPrologue) { DoStepTest(false); }
+
+// Inlines should never have prologues skipped. The prologue finder has a fallback that it will
+// find a prologue even if one isn't explicitly noted to handle some GCC-generated code. If called
+// on an inline routine, it will skip the first line.
+TEST_F(StepIntoThreadControllerTest, Inline) {
+  // Recall the top frame from GetStack() is inline.
+  auto mock_frames = GetStack();
+
+  // Stepping into the 0th frame from the first. These are the source locations.
+  FileLine file_line = mock_frames[1]->GetLocation().file_line();
+
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(mock_frames)), true);
+
+  // Hide the inline frame at the top so we're about to step into it.
+  Stack& stack = thread()->GetStack();
+  stack.SetHideAmbiguousInlineFrameCount(1);
+
+  // Do the "step into".
+  auto step_into_controller = std::make_unique<StepIntoThreadController>(StepMode::kSourceLine);
+  bool continued = false;
+  thread()->ContinueWith(std::move(step_into_controller), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
+  EXPECT_TRUE(continued);
+
+  // That should have requested a synthetic exception which will be sent out asynchronously. The
+  // Resume() call will cause the MockRemoteAPI to exit the message loop.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Nothing yet.
+  loop().RunUntilNoTasks();
+
+  // The operation should have unhidden the inline stack frame rather than actually affecting the
+  // backend.
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());
+  EXPECT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
+}
 
 }  // namespace zxdb
