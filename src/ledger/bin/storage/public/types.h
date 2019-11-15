@@ -5,11 +5,14 @@
 #ifndef SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_
 #define SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_
 
+#include <map>
 #include <ostream>
 #include <set>
 #include <string>
+#include <variant>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/clocks/public/types.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/lib/fxl/compiler_specific.h"
 #include "src/lib/fxl/strings/string_view.h"
@@ -21,8 +24,6 @@ using PageIdView = convert::ExtendedStringView;
 using CommitId = std::string;
 using CommitIdView = convert::ExtendedStringView;
 using EntryId = std::string;
-using DeviceId = std::string;
-using DeviceIdView = convert::ExtendedStringView;
 
 // The type of object.
 // Ledger stores user created content on BTrees, where the nodes (TREE_NODE
@@ -257,6 +258,32 @@ struct ClockEntry {
 bool operator==(const ClockEntry& lhs, const ClockEntry& rhs);
 bool operator!=(const ClockEntry& lhs, const ClockEntry& rhs);
 std::ostream& operator<<(std::ostream& os, const ClockEntry& e);
+
+// Entry for an active device in the page clock.
+struct DeviceEntry {
+  // Latest known unique local head of the device.
+  ClockEntry head;
+  // Latest known unique head of the device in the cloud.
+  std::optional<ClockEntry> cloud;
+};
+
+bool operator==(const DeviceEntry& lhs, const DeviceEntry& rhs);
+bool operator!=(const DeviceEntry& lhs, const DeviceEntry& rhs);
+std::ostream& operator<<(std::ostream& os, const DeviceEntry& e);
+
+// Clock tombstone for a specific device
+// We know the device no longer possesses the page. This state may be stored so that
+// other devices can be informed.
+class ClockTombstone : public std::monostate {};
+// Clock deletion
+// All references to this device should be removed from storage.
+class ClockDeletion : public std::monostate {};
+
+// The entry for one device in the page clock.
+using DeviceClock = std::variant<DeviceEntry, ClockTombstone, ClockDeletion>;
+
+// A full clock, for all devices interested in a page and the Cloud.
+using Clock = std::map<clocks::DeviceId, DeviceClock>;
 
 }  // namespace storage
 #endif  // SRC_LEDGER_BIN_STORAGE_PUBLIC_TYPES_H_

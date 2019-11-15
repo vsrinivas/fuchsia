@@ -292,7 +292,7 @@ class PageStorage : public PageSyncClient {
                                        fit::function<void(Status)> on_done) = 0;
 
   // Gets the current clock for this page.
-  virtual void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) = 0;
+  virtual void GetClock(fit::function<void(Status, Clock)> callback) = 0;
 
   // Finds the commit id of the commit with the given |remote_commit_id|.
   virtual void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,

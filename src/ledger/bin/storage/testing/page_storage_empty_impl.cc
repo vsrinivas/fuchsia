@@ -208,8 +208,7 @@ void PageStorageEmptyImpl::GetThreeWayContentsDiff(
   on_done(Status::NOT_IMPLEMENTED);
 }
 
-void PageStorageEmptyImpl::GetClock(
-    fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
+void PageStorageEmptyImpl::GetClock(fit::function<void(Status, Clock)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, {});
 }

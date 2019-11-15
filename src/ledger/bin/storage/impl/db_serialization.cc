@@ -148,11 +148,7 @@ constexpr fxl::StringView PageIsOnlineRow::kKey;
 // ClockRow.
 
 constexpr fxl::StringView ClockRow::kDeviceIdKey;
-constexpr fxl::StringView ClockRow::kEntriesPrefix;
-
-std::string ClockRow::GetClockEntryForKey(DeviceIdView device_id) {
-  return fxl::Concatenate({kEntriesPrefix, device_id});
-}
+constexpr fxl::StringView ClockRow::kEntriesKey;
 
 // RemoteCommitIdToLocalRow.
 

@@ -118,7 +118,7 @@ class PageStorageEmptyImpl : public PageStorage {
                                fit::function<bool(ThreeWayChange)> on_next_diff,
                                fit::function<void(Status)> on_done) override;
 
-  void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) override;
+  void GetClock(fit::function<void(Status, Clock)> callback) override;
 
   void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
                                fit::function<void(Status, CommitId)> callback) override;

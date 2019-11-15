@@ -6,9 +6,35 @@ include "src/ledger/bin/storage/impl/commit.fbs";
 
 namespace storage;
 
-table ClockEntryStorage {
+table DeviceIdStorage {
+  fingerprint: [ubyte];
+  epoch: ulong;
+}
+
+table CommitIdAndGenerationStorage {
   commit_id: storage.IdStorage;
   generation: ulong;
 }
 
-root_type ClockEntryStorage;
+table DeviceEntryStorage {
+  head: CommitIdAndGenerationStorage;
+  cloud: CommitIdAndGenerationStorage;
+}
+
+table Tombstone {}
+
+union DeviceEntryUnion {
+  DeviceEntryStorage,
+  Tombstone,
+}
+
+table DeviceClockStorage {
+  device_id: DeviceIdStorage;
+  device_entry: DeviceEntryUnion;
+}
+
+table ClockStorage {
+  devices: [DeviceClockStorage];
+}
+
+root_type ClockStorage;

@@ -9,6 +9,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
@@ -82,7 +83,9 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
       storage::CommitPruningPolicy::NEVER);
 
   bool called;
-  local_page_storage->Init(callback::Capture(callback::SetWhenCalled(&called), &status));
+  clocks::DeviceIdManagerEmptyImpl device_id_manager;
+  local_page_storage->Init(&device_id_manager,
+                           callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
   if (!called) {
     return ::testing::AssertionFailure() << "PageStorage::Init never called the callback.";

@@ -27,6 +27,7 @@
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
 #include "src/lib/callback/capture.h"
+#include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/io/fd.h"
@@ -236,7 +237,6 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   bool ledger_shut_down = false;
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
-  ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
   const std::string content_path = ledger::kSerializationVersion.ToString();
   const std::string deletion_sentinel_path = content_path + "/sentinel";
@@ -244,29 +244,45 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
   ASSERT_TRUE(files::IsFileAt(tmpfs.root_fd(), deletion_sentinel_path));
 
-  // Write a fingerprint file, so that Ledger will check if it is still in the
-  // cloud device set.
-  const std::string fingerprint_path = content_path + "/fingerprint";
-  const std::string fingerprint = "bazinga";
-  ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), fingerprint_path, fingerprint.c_str(),
-                                 fingerprint.size()));
-
   // Create a cloud provider configured to trigger the cloude erase recovery on
   // initial check.
-  auto cloud_provider = ledger::FakeCloudProvider::Builder(dispatcher())
-                            .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
-                            .Build();
+  bool device_set_watcher_set;
+  auto cloud_provider =
+      std::move(ledger::FakeCloudProvider::Builder(dispatcher())
+                    .SetCloudEraseOnCheck(ledger::CloudEraseOnCheck::YES)
+                    .SetOnWatcherSet(callback::SetWhenCalled(&device_set_watcher_set)))
+          .Build();
+  {
+    cloud_provider::CloudProviderPtr cloud_provider_ptr;
+    fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
+        cloud_provider.get(), cloud_provider_ptr.NewRequest());
+    ledger_internal::LedgerRepositoryPtr ledger_repository;
+    ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
+                                              std::move(cloud_provider_ptr), "user_id",
+                                              ledger_repository.NewRequest());
+
+    RunLoopUntil([&] { return device_set_watcher_set; });
+
+    bool repo_disconnected = false;
+    ledger_repository.set_error_handler(
+        [&repo_disconnected](zx_status_t /*status*/) { repo_disconnected = true; });
+
+    ledger_repository->Close();
+    RunLoopUntil([&] { return repo_disconnected; });
+  }
+
+  // The device fingerprint is set. Now we can test its erasure.
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(
       cloud_provider.get(), cloud_provider_ptr.NewRequest());
-
+  ledger_internal::LedgerRepositoryPtr ledger_repository;
   ledger_repository_factory_->GetRepository(fsl::CloneChannelFromFileDescriptor(tmpfs.root_fd()),
                                             std::move(cloud_provider_ptr), "user_id",
                                             ledger_repository.NewRequest());
 
   bool repo_disconnected = false;
   ledger_repository.set_error_handler(
-      [&repo_disconnected](zx_status_t status) { repo_disconnected = true; });
+      [&repo_disconnected](zx_status_t /*status*/) { repo_disconnected = true; });
 
   // Run the message loop until Ledger clears the repo directory and disconnects
   // the client.
@@ -311,8 +327,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   // Create a cloud provider configured to trigger the cloud erase recovery
   // while Ledger is connected.
-  auto cloud_provider = ledger::FakeCloudProvider::Builder(dispatcher())
-                            .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES)
+  auto cloud_provider = std::move(ledger::FakeCloudProvider::Builder(dispatcher())
+                                      .SetCloudEraseFromWatcher(ledger::CloudEraseFromWatcher::YES))
                             .Build();
   cloud_provider::CloudProviderPtr cloud_provider_ptr;
   fidl::Binding<cloud_provider::CloudProvider> cloud_provider_binding(

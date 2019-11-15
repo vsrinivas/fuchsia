@@ -19,8 +19,10 @@
 #include "src/ledger/bin/app/ledger_manager.h"
 #include "src/ledger/bin/app/page_eviction_manager.h"
 #include "src/ledger/bin/app/page_usage_db.h"
+#include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/app/sync_watcher_set.h"
 #include "src/ledger/bin/app/types.h"
+#include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/impl/encryption_service_factory_impl.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -53,6 +55,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
                        std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
                        std::unique_ptr<BackgroundSyncManager> background_sync_manager,
                        std::vector<PageUsageListener*> page_usage_listeners,
+                       std::unique_ptr<clocks::DeviceIdManager> device_id_manager,
                        inspect_deprecated::Node inspect_node);
   ~LedgerRepositoryImpl() override;
 
@@ -129,6 +132,8 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   callback::AutoCleanableMap<std::string, LedgerManager, convert::StringViewComparator>
       ledger_managers_;
   fit::closure on_discardable_;
+
+  std::unique_ptr<clocks::DeviceIdManager> device_id_manager_;
 
   std::vector<fit::function<void(Status)>> cleanup_callbacks_;
 

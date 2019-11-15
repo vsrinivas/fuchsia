@@ -29,14 +29,20 @@ FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetCloudEraseFromWatcher
   cloud_erase_from_watcher_ = cloud_erase_from_watcher;
   return *this;
 }
-
-std::unique_ptr<FakeCloudProvider> FakeCloudProvider::Builder::Build() {
-  return std::make_unique<FakeCloudProvider>(*this);
+FakeCloudProvider::Builder& FakeCloudProvider::Builder::SetOnWatcherSet(
+    fit::closure on_watcher_set) {
+  on_watcher_set_ = std::move(on_watcher_set);
+  return *this;
 }
 
-FakeCloudProvider::FakeCloudProvider(const Builder& builder)
+std::unique_ptr<FakeCloudProvider> FakeCloudProvider::Builder::Build() && {
+  return std::make_unique<FakeCloudProvider>(std::move(*this));
+}
+
+FakeCloudProvider::FakeCloudProvider(Builder&& builder)
     : dispatcher_(builder.dispatcher_),
-      device_set_(builder.cloud_erase_on_check_, builder.cloud_erase_from_watcher_),
+      device_set_(builder.cloud_erase_on_check_, builder.cloud_erase_from_watcher_,
+                  std::move(builder.on_watcher_set_)),
       page_clouds_(builder.dispatcher_),
       inject_network_error_(builder.inject_network_error_) {}
 

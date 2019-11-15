@@ -34,6 +34,7 @@ source_set("public") {
     "//peridot/lib/convert",
     "//peridot/lib/util:ptr",
     "//sdk/lib/fidl/cpp",
+    "//src/ledger/bin/clocks/public",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/public",

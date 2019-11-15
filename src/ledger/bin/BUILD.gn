@@ -29,6 +29,7 @@ test("ledger_unittests") {
   deps = [
     "//src/ledger/bin/app:unittests",
     "//src/ledger/bin/cache:unittests",
+    "//src/ledger/bin/clocks/impl:unittests",
     "//src/ledger/bin/cloud_sync/impl:unittests",
     "//src/ledger/bin/encryption/fake:unittests",
     "//src/ledger/bin/encryption/impl:unittests",
@@ -70,6 +71,8 @@ fuzzers_package("ledger_fuzzers") {
     "//src/ledger/bin/p2p_sync/impl:p2p_sync_fuzzer",
     "//src/ledger/bin/storage/impl/btree:encoding_fuzzer",
     "//src/ledger/bin/storage/impl:leveldb_fuzzer",
+    "//src/ledger/bin/storage/impl:clock_serialization_fuzzer",
+    "//src/ledger/bin/storage/impl:clock_serialization_device_id_fuzzer",
     "//src/ledger/lib/commit_pack:commit_pack_fuzzer",
   ]
   generated_test_package = "ledger_fuzzer_tests"

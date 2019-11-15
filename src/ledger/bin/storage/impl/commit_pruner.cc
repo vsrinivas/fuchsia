@@ -6,6 +6,10 @@
 
 #include <lib/async/cpp/task.h>
 
+#include <utility>
+#include <variant>
+
+#include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/callback/waiter.h"
 
@@ -87,6 +91,11 @@ void CommitPruner::Prune() {
   });
 }
 
+void CommitPruner::CommitPruner::LoadClock(clocks::DeviceId self_id, Clock clock) {
+  self_id_ = std::move(self_id);
+  clock_ = std::move(clock);
+}
+
 Status CommitPruner::SynchronousPrune(coroutine::CoroutineHandler* handler) {
   if (policy_ == CommitPruningPolicy::NEVER) {
     return Status::OK;
@@ -96,9 +105,15 @@ Status CommitPruner::SynchronousPrune(coroutine::CoroutineHandler* handler) {
 
   std::unique_ptr<const storage::Commit> luca;
   RETURN_ON_ERROR(FindLatestUniqueCommonAncestorSync(handler, &luca));
-  ClockEntry clock_entry{luca->GetId(), luca->GetGeneration()};
+  auto it = clock_.find(self_id_);
+  if (it == clock_.end()) {
+    clock_[self_id_] = DeviceEntry{};
+  } else if (std::holds_alternative<ClockTombstone>(it->second)) {
+    it->second = DeviceEntry{};
+  }
+  std::get<DeviceEntry>(clock_[self_id_]).head = {luca->GetId(), luca->GetGeneration()};
 
-  RETURN_ON_ERROR(delegate_->UpdateSelfClockEntry(handler, clock_entry));
+  RETURN_ON_ERROR(delegate_->SetClock(handler, clock_));
 
   std::vector<std::unique_ptr<const Commit>> commits;
   RETURN_ON_ERROR(GetAllAncestors(handler, std::move(luca), &commits));

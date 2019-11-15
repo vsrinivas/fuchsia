@@ -16,6 +16,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
@@ -71,7 +72,9 @@ class PageDbTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     Status status;
     bool called;
-    page_storage_.Init(callback::Capture(callback::SetWhenCalled(&called), &status));
+    clocks::DeviceIdManagerEmptyImpl device_id_manager;
+    page_storage_.Init(&device_id_manager,
+                       callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);
@@ -856,13 +859,13 @@ TEST_F(PageDbTest, LE_451_ReproductionTest) {
 
 TEST_F(PageDbTest, DeviceId) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    DeviceId device_id;
+    clocks::DeviceId device_id;
     EXPECT_EQ(page_db_.GetDeviceId(handler, &device_id), Status::INTERNAL_NOT_FOUND);
 
-    device_id = "device_id";
+    device_id = clocks::DeviceId{"device_id", 2};
     EXPECT_EQ(page_db_.SetDeviceId(handler, device_id), Status::OK);
 
-    DeviceId actual_device_id;
+    clocks::DeviceId actual_device_id;
     EXPECT_EQ(page_db_.GetDeviceId(handler, &actual_device_id), Status::OK);
 
     EXPECT_EQ(actual_device_id, device_id);
@@ -890,7 +893,7 @@ TEST_F(PageDbTest, SetDeviceIdInterrupted) {
   environment_.coroutine_service()->StartCoroutine([&](CoroutineHandler* handler) {
     handler_ptr = handler;
     // On debug mode, |SetDeviceId| is interrupted because of the call to |Db::HasKey|.
-    EXPECT_EQ(page_db.SetDeviceId(handler, "device_id"), Status::INTERRUPTED);
+    EXPECT_EQ(page_db.SetDeviceId(handler, clocks::DeviceId{"device_id", 0}), Status::INTERRUPTED);
 
     handler_ptr = nullptr;
   });
@@ -911,18 +914,24 @@ TEST_F(PageDbTest, SetDeviceIdInterrupted) {
 
 TEST_F(PageDbTest, GetClock) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    std::map<DeviceId, ClockEntry> clock;
+    Clock clock;
+    // No clock at the beginning.
+    EXPECT_EQ(page_db_.GetClock(handler, &clock), Status::INTERNAL_NOT_FOUND);
+    // Set an empty clock and retrieve it.
+    EXPECT_EQ(page_db_.SetClock(handler, clock), Status::OK);
     EXPECT_EQ(page_db_.GetClock(handler, &clock), Status::OK);
     EXPECT_THAT(clock, IsEmpty());
 
-    ClockEntry entry1{RandomCommitId(environment_.random()), 1};
-    clock.emplace("device1", entry1);
-    ClockEntry entry2{RandomCommitId(environment_.random()), 2};
-    clock.emplace("device2", entry2);
-    EXPECT_EQ(page_db_.SetClockEntry(handler, "device1", entry1), Status::OK);
-    EXPECT_EQ(page_db_.SetClockEntry(handler, "device2", entry2), Status::OK);
+    clock.emplace(clocks::DeviceId{"device_id_1", 0},
+                  DeviceEntry{ClockEntry{RandomCommitId(environment_.random()), 1},
+                              std::make_optional<ClockEntry>(
+                                  ClockEntry{RandomCommitId(environment_.random()), 2})});
+    clock.emplace(clocks::DeviceId{"device_id_2", 0},
+                  DeviceEntry{ClockEntry{RandomCommitId(environment_.random()), 3}, std::nullopt});
+    clock.emplace(clocks::DeviceId{"device_id_3", 0}, ClockTombstone());
+    EXPECT_EQ(page_db_.SetClock(handler, clock), Status::OK);
 
-    std::map<DeviceId, ClockEntry> actual_clock;
+    Clock actual_clock;
     EXPECT_EQ(page_db_.GetClock(handler, &actual_clock), Status::OK);
 
     EXPECT_EQ(actual_clock, clock);

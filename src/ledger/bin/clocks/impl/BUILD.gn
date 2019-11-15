@@ -1,0 +1,41 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("impl") {
+  sources = [
+    "device_id_manager_impl.cc",
+    "device_id_manager_impl.h",
+  ]
+
+  deps = [
+    "//src/ledger/bin/clocks/public",
+    "//src/ledger/bin/environment",
+    "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/synchronization:completer",
+    "//src/ledger/lib/coroutine",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "device_id_manager_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":impl",
+    "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/bin/storage/fake:lib",
+    "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/coroutine",
+    "//src/lib/callback",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

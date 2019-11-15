@@ -7,6 +7,7 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/impl/journal_impl.h"
@@ -40,7 +41,9 @@ class JournalTest : public ledger::TestWithEnvironment {
   void SetUp() override {
     Status status;
     bool called;
-    page_storage_.Init(callback::Capture(callback::SetWhenCalled(&called), &status));
+    clocks::DeviceIdManagerEmptyImpl device_id_manager;
+    page_storage_.Init(&device_id_manager,
+                       callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     ASSERT_EQ(status, Status::OK);

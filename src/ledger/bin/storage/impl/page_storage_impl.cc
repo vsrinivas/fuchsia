@@ -121,10 +121,12 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
 
 PageStorageImpl::~PageStorageImpl() = default;
 
-void PageStorageImpl::Init(fit::function<void(Status)> callback) {
+void PageStorageImpl::Init(clocks::DeviceIdManager* device_id_manager,
+                           fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this](CoroutineHandler* handler, fit::function<void(Status)> callback) {
-        callback(SynchronousInit(handler));
+      std::move(callback),
+      [this, device_id_manager](CoroutineHandler* handler, fit::function<void(Status)> callback) {
+        callback(SynchronousInit(handler, device_id_manager));
       });
 }
 
@@ -831,13 +833,11 @@ void PageStorageImpl::GetThreeWayContentsDiff(const Commit& base_commit, const C
                              std::move(min_key), std::move(on_next_diff), std::move(on_done));
 }
 
-void PageStorageImpl::GetClock(
-    fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
+void PageStorageImpl::GetClock(fit::function<void(Status, Clock)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this](coroutine::CoroutineHandler* handler,
-             fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) {
-        std::map<DeviceId, ClockEntry> clock;
+      [this](coroutine::CoroutineHandler* handler, fit::function<void(Status, Clock)> callback) {
+        Clock clock;
         Status status = db_->GetClock(handler, &clock);
         callback(status, std::move(clock));
       });
@@ -880,9 +880,8 @@ Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageStorageImpl::UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
-                                             const ClockEntry& entry) {
-  return db_->SetClockEntry(handler, device_id_, entry);
+Status PageStorageImpl::SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) {
+  return db_->SetClock(handler, clock);
 }
 
 void PageStorageImpl::NotifyWatchersOfNewCommits(
@@ -1315,7 +1314,8 @@ ObjectIdentifierFactory* PageStorageImpl::GetObjectIdentifierFactory() {
 
 CommitFactory* PageStorageImpl::GetCommitFactory() { return &commit_factory_; }
 
-Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
+Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler,
+                                        clocks::DeviceIdManager* device_id_manager) {
   // Add the default page head if this page is empty.
   std::vector<std::pair<zx::time_utc, CommitId>> heads;
   RETURN_ON_ERROR(db_->GetHeads(handler, &heads));
@@ -1353,15 +1353,23 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler) {
                                           {commit->GetRootIdentifier(), base_parent_root});
   }
 
-  Status status = db_->GetDeviceId(handler, &device_id_);
+  clocks::DeviceId device_id;
+  Status status = db_->GetDeviceId(handler, &device_id);
   if (status == Status::INTERNAL_NOT_FOUND) {
-    char device_id[kDeviceIdSize];
-    environment_->random()->Draw(device_id, kDeviceIdSize);
-    device_id_ = std::string(device_id, kDeviceIdSize);
-    status = db_->SetDeviceId(handler, device_id_);
+    RETURN_ON_ERROR(device_id_manager->GetNewDeviceId(handler, &device_id));
+    RETURN_ON_ERROR(db_->SetDeviceId(handler, device_id));
+  } else {
+    RETURN_ON_ERROR(status);
   }
 
-  RETURN_ON_ERROR(status);
+  Clock clock;
+  status = db_->GetClock(handler, &clock);
+  if (status == Status::INTERNAL_NOT_FOUND) {
+    RETURN_ON_ERROR(db_->SetClock(handler, clock));
+  } else {
+    RETURN_ON_ERROR(status);
+  }
+  commit_pruner_.LoadClock(std::move(device_id), std::move(clock));
 
   if (environment_->gc_policy() == GarbageCollectionPolicy::EAGER_LIVE_REFERENCES) {
     object_identifier_factory_.SetUntrackedCallback(

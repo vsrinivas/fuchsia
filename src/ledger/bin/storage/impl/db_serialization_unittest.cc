@@ -82,7 +82,7 @@ TEST_F(DbSerialization, SerializationVersionControl) {
   EXPECT_EQ(ClockRow::kDeviceIdKey, "+");
 
   // Clock row: entries (prefix ',').
-  EXPECT_EQ(ClockRow::GetClockEntryForKey(DeviceId("device")), ",device");
+  EXPECT_EQ(ClockRow::kEntriesKey, ",");
 
   // Remote commit id to local row (prefix '-').
   EXPECT_EQ(RemoteCommitIdToLocalRow::GetKeyFor("remote_commit_id"), "-remote_commit_id");

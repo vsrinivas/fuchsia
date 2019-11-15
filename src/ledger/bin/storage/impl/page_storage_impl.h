@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
@@ -46,7 +47,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   // Initializes this PageStorageImpl. This includes initializing the underlying
   // database and adding the default page head if the page is empty.
-  void Init(fit::function<void(Status)> callback);
+  void Init(clocks::DeviceIdManager* device_id_manager, fit::function<void(Status)> callback);
 
   // Checks whether the given |object_identifier| is untracked, i.e. has been
   // created using |AddObjectFromLocal()|, but is not yet part of any commit.
@@ -127,7 +128,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                                fit::function<bool(ThreeWayChange)> on_next_diff,
                                fit::function<void(Status)> on_done) override;
 
-  void GetClock(fit::function<void(Status, std::map<DeviceId, ClockEntry>)> callback) override;
+  void GetClock(fit::function<void(Status, Clock)> callback) override;
 
   void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
                                fit::function<void(Status, CommitId)> callback) override;
@@ -135,8 +136,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // CommitPrunerDelegate:
   Status DeleteCommits(coroutine::CoroutineHandler* handler,
                        std::vector<std::unique_ptr<const Commit>> commits) override;
-  Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
-                              const ClockEntry& entry) override;
+  Status SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) override;
 
   CommitFactory* GetCommitFactory();
 
@@ -226,7 +226,8 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   void ScheduleObjectGarbageCollection(const ObjectDigest& object_digest);
 
   // Synchronous versions of API methods using coroutines.
-  FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler);
+  FXL_WARN_UNUSED_RESULT Status SynchronousInit(coroutine::CoroutineHandler* handler,
+                                                clocks::DeviceIdManager* device_id_manager);
 
   FXL_WARN_UNUSED_RESULT Status SynchronousGetCommit(coroutine::CoroutineHandler* handler,
                                                      CommitId commit_id,
@@ -308,7 +309,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
   // successfully added to the storage.
   std::map<std::string, CommitId, std::less<>> remote_ids_of_commits_being_added_;
   // Identifier for this device on the page clock. It does not need to be consistent across pages.
-  DeviceId device_id_;
+  clocks::DeviceId device_id_;
 
   callback::OperationSerializer commit_serializer_;
   coroutine::CoroutineManager download_manager_;

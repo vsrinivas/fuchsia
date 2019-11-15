@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/clock_serialization.h"
 
+#include <optional>
+
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
@@ -13,23 +15,49 @@
 namespace storage {
 namespace {
 
-using ::testing::ElementsAre;
-using ::testing::Pair;
+using ::testing::AllOf;
+using ::testing::Field;
 
 using ClockSerializationTest = ::ledger::TestWithEnvironment;
 
-TEST_F(ClockSerializationTest, SerializeDeserialize) {
-  ClockEntry entry{RandomCommitId(environment_.random()), 12};
-  std::string data;
-  SerializeClockEntry(entry, &data);
+clocks::DeviceId RandomDeviceId(rng::Random* random) {
+  std::string device_fingerprint;
+  device_fingerprint.resize(16);
+  random->Draw(&device_fingerprint);
+  return clocks::DeviceId{convert::ToHex(device_fingerprint), random->Draw<uint64_t>()};
+}
 
-  std::string device_id = "device_id";
-  std::vector<std::pair<std::string, std::string>> db_entries;
-  db_entries.emplace_back(device_id, data);
+ClockEntry RandomClockEntry(rng::Random* random) {
+  return ClockEntry{RandomCommitId(random), random->Draw<uint64_t>()};
+}
 
-  std::map<DeviceId, ClockEntry> actual_entries;
-  EXPECT_TRUE(ExtractClockFromStorage(std::move(db_entries), &actual_entries));
-  EXPECT_THAT(actual_entries, ElementsAre(Pair(device_id, entry)));
+TEST_F(ClockSerializationTest, SerializeDeserializeClock) {
+  Clock clock;
+  // Add a few head entries, cloud entries, and tombstones.
+  clock.emplace(
+      RandomDeviceId(environment_.random()),
+      DeviceEntry{RandomClockEntry(environment_.random()),
+                  std::make_optional<ClockEntry>(RandomClockEntry(environment_.random()))});
+  clock.emplace(RandomDeviceId(environment_.random()),
+                DeviceEntry{RandomClockEntry(environment_.random()), std::nullopt});
+
+  clock.emplace(RandomDeviceId(environment_.random()), ClockTombstone());
+
+  std::string data = SerializeClock(clock);
+
+  Clock actual_clock;
+  EXPECT_TRUE(ExtractClockFromStorage(std::move(data), &actual_clock));
+  EXPECT_EQ(actual_clock, clock);
+}
+
+TEST_F(ClockSerializationTest, SerializeDeserializeDeviceId) {
+  clocks::DeviceId id = RandomDeviceId(environment_.random());
+
+  std::string data = SerializeDeviceId(id);
+
+  clocks::DeviceId actual_id;
+  EXPECT_TRUE(ExtractDeviceIdFromStorage(std::move(data), &actual_id));
+  EXPECT_EQ(actual_id, id);
 }
 
 }  // namespace

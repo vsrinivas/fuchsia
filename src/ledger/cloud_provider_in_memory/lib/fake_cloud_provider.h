@@ -27,8 +27,10 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
     Builder& SetInjectNetworkError(InjectNetworkError inject_network_error);
     Builder& SetCloudEraseOnCheck(CloudEraseOnCheck cloud_erase_on_check);
     Builder& SetCloudEraseFromWatcher(CloudEraseFromWatcher cloud_erase_from_watcher);
+    // |on_watcher_set| will be called every time a watcher is set.
+    Builder& SetOnWatcherSet(fit::closure on_watcher_set);
 
-    std::unique_ptr<FakeCloudProvider> Build();
+    std::unique_ptr<FakeCloudProvider> Build() &&;
 
    private:
     friend FakeCloudProvider;
@@ -37,10 +39,11 @@ class FakeCloudProvider : public cloud_provider::CloudProvider {
     InjectNetworkError inject_network_error_ = InjectNetworkError::NO;
     CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
     CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
+    fit::closure on_watcher_set_ = nullptr;
   };
 
   explicit FakeCloudProvider(async_dispatcher_t* dispatcher);
-  explicit FakeCloudProvider(const Builder& builder);
+  explicit FakeCloudProvider(Builder&& builder);
   ~FakeCloudProvider() override;
 
  private:

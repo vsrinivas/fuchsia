@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//src/ledger/*" ]
+
+source_set("public") {
+  sources = [
+    "device_fingerprint_manager.h",
+    "device_id_manager.h",
+    "types.cc",
+    "types.h",
+  ]
+
+  public_deps = [
+    "//src/ledger/bin/public",
+    "//src/ledger/lib/coroutine",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}

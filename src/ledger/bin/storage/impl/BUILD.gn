@@ -224,6 +224,7 @@ source_set("unittests") {
     ":test_utils",
     "//peridot/lib/rng",
     "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/bin/clocks/testing",
     "//src/ledger/bin/cloud_sync/impl",
     "//src/ledger/bin/encryption/fake",
     "//src/ledger/bin/encryption/primitives",
@@ -251,5 +252,23 @@ fuzzer("leveldb_fuzzer") {
     "//peridot/lib/scoped_tmpfs",
     "//src/ledger/bin/testing:lib",
     "//zircon/public/lib/async-testing",
+  ]
+}
+
+fuzzer("clock_serialization_fuzzer") {
+  sources = [
+    "clock_serialization_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
+  ]
+}
+
+fuzzer("clock_serialization_device_id_fuzzer") {
+  sources = [
+    "clock_serialization_device_id_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
   ]
 }

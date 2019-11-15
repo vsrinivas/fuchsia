@@ -123,4 +123,20 @@ std::ostream& operator<<(std::ostream& os, const ClockEntry& e) {
   return os << "ClockEntry{commit_id: " << e.commit_id << ", generation: " << e.generation << "}";
 }
 
+bool operator==(const DeviceEntry& lhs, const DeviceEntry& rhs) {
+  return std::tie(lhs.head, lhs.cloud) == std::tie(rhs.head, rhs.cloud);
+}
+
+bool operator!=(const DeviceEntry& lhs, const DeviceEntry& rhs) { return !(lhs == rhs); }
+
+std::ostream& operator<<(std::ostream& os, const DeviceEntry& e) {
+  os << "DeviceEntry{head: " << e.head << ", cloud: ";
+  if (e.cloud.has_value()) {
+    os << *e.cloud;
+  } else {
+    os << "<empty>";
+  }
+  return os << "}";
+}
+
 }  // namespace storage

@@ -12,6 +12,7 @@
 
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
+#include "src/ledger/bin/app/page_eviction_policies.h"
 #include "src/ledger/bin/app/page_usage_db.h"
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/storage/public/constants.h"
@@ -41,9 +42,7 @@ void LogOnPageUpdateError(fxl::StringView operation_description, Status status,
 }  // namespace
 
 PageEvictionManagerImpl::PageEvictionManagerImpl(Environment* environment, PageUsageDb* db)
-    : environment_(environment),
-      db_(db),
-      coroutine_manager_(environment_->coroutine_service()) {}
+    : environment_(environment), db_(db), coroutine_manager_(environment_->coroutine_service()) {}
 
 PageEvictionManagerImpl::~PageEvictionManagerImpl() = default;
 

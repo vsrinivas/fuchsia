@@ -83,12 +83,11 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status SetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
                          fxl::StringView value) override;
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
-  Status GetDeviceId(coroutine::CoroutineHandler* handler, DeviceId* device_id) override;
-  Status GetClock(coroutine::CoroutineHandler* handler,
-                  std::map<DeviceId, ClockEntry>* clock) override;
-  Status SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) override;
-  Status SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
-                       const ClockEntry& entry) override;
+  Status GetDeviceId(coroutine::CoroutineHandler* handler, clocks::DeviceId* device_id) override;
+  Status GetClock(coroutine::CoroutineHandler* handler, Clock* clock) override;
+  Status SetDeviceId(coroutine::CoroutineHandler* handler,
+                     const clocks::DeviceId& device_id) override;
+  Status SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) override;
 
   // PageDb::Batch:
   Status Execute(coroutine::CoroutineHandler* handler) override;

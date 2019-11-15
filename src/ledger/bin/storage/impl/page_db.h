@@ -131,12 +131,12 @@ class PageDbMutator {
   // Clock management:
   // Sets a unique ID for this device on this page.
   FXL_WARN_UNUSED_RESULT virtual Status SetDeviceId(coroutine::CoroutineHandler* handler,
-                                                    DeviceIdView device_id) = 0;
+                                                    const clocks::DeviceId& device_id) = 0;
 
-  // Updates the clock entry for a device.
-  FXL_WARN_UNUSED_RESULT virtual Status SetClockEntry(coroutine::CoroutineHandler* handler,
-                                                      DeviceIdView device_id,
-                                                      const ClockEntry& entry) = 0;
+  // Sets the clock for a device. This method entirely replaces any existing clock, including
+  // removing device entries missing from |clock| but present locally.
+  FXL_WARN_UNUSED_RESULT virtual Status SetClock(coroutine::CoroutineHandler* handler,
+                                                 const Clock& clock) = 0;
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(PageDbMutator);
@@ -279,11 +279,11 @@ class PageDb : public PageDbMutator {
   // Clock management:
   // Gets the unique ID for this device on this page.
   FXL_WARN_UNUSED_RESULT virtual Status GetDeviceId(coroutine::CoroutineHandler* handler,
-                                                    DeviceId* device_id) = 0;
+                                                    clocks::DeviceId* device_id) = 0;
 
   // Gets the full vector clock for this page as currently stored.
   FXL_WARN_UNUSED_RESULT virtual Status GetClock(coroutine::CoroutineHandler* handler,
-                                                 std::map<DeviceId, ClockEntry>* clock) = 0;
+                                                 Clock* clock) = 0;
 
   FXL_WARN_UNUSED_RESULT virtual Status GetCommitIdFromRemoteId(
       coroutine::CoroutineHandler* handler, fxl::StringView remote_id, CommitId* commit_id) = 0;

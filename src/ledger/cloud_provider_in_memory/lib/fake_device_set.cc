@@ -9,9 +9,11 @@
 namespace ledger {
 
 FakeDeviceSet::FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
-                             CloudEraseFromWatcher cloud_erase_from_watcher)
+                             CloudEraseFromWatcher cloud_erase_from_watcher,
+                             fit::closure on_watcher_set)
     : cloud_erase_on_check_(cloud_erase_on_check),
-      cloud_erase_from_watcher_(cloud_erase_from_watcher) {}
+      cloud_erase_from_watcher_(cloud_erase_from_watcher),
+      on_watcher_set_(std::move(on_watcher_set)) {}
 
 FakeDeviceSet::~FakeDeviceSet() = default;
 
@@ -43,6 +45,9 @@ void FakeDeviceSet::SetWatcher(std::vector<uint8_t> fingerprint,
   }
   watcher_ = watcher.Bind();
   callback(cloud_provider::Status::OK);
+  if (on_watcher_set_) {
+    on_watcher_set_();
+  }
 
   if (cloud_erase_from_watcher_ == CloudEraseFromWatcher::YES) {
     watcher_->OnCloudErased();

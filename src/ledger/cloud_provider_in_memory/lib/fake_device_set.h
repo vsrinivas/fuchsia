@@ -20,7 +20,7 @@ namespace ledger {
 class FakeDeviceSet : public cloud_provider::DeviceSet {
  public:
   FakeDeviceSet(CloudEraseOnCheck cloud_erase_on_check,
-                CloudEraseFromWatcher cloud_erase_from_watcher);
+                CloudEraseFromWatcher cloud_erase_from_watcher, fit::closure on_watcher_set);
   ~FakeDeviceSet() override;
 
  private:
@@ -38,6 +38,8 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
   const CloudEraseOnCheck cloud_erase_on_check_ = CloudEraseOnCheck::NO;
 
   const CloudEraseFromWatcher cloud_erase_from_watcher_ = CloudEraseFromWatcher::NO;
+
+  fit::closure on_watcher_set_;
 
   std::set<std::string> fingerprints_;
 

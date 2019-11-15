@@ -23,6 +23,7 @@
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
@@ -40,7 +41,9 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
     std::unique_ptr<sync_coordinator::UserSync> user_sync,
     std::unique_ptr<DiskCleanupManager> disk_cleanup_manager,
     std::unique_ptr<BackgroundSyncManager> background_sync_manager,
-    std::vector<PageUsageListener*> page_usage_listeners, inspect_deprecated::Node inspect_node)
+    std::vector<PageUsageListener*> page_usage_listeners,
+    std::unique_ptr<clocks::DeviceIdManager> device_id_manager,
+    inspect_deprecated::Node inspect_node)
     : content_path_(std::move(content_path)),
       environment_(environment),
       bindings_(environment->dispatcher()),
@@ -54,6 +57,7 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       disk_cleanup_manager_(std::move(disk_cleanup_manager)),
       background_sync_manager_(std::move(background_sync_manager)),
       ledger_managers_(environment_->dispatcher()),
+      device_id_manager_(std::move(device_id_manager)),
       coroutine_manager_(environment_->coroutine_service()),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
@@ -152,7 +156,30 @@ void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
     return;
   }
   FXL_DCHECK(ledger_manager);
-  return ledger_manager->DeletePageStorage(page_id, std::move(callback));
+  coroutine_manager_.StartCoroutine(
+      std::move(callback), [this, page_id, ledger_manager](coroutine::CoroutineHandler* handler,
+                                                           fit::function<void(Status)> callback) {
+        // We need to increase the DeviceId counter each time a page is created then destroyed.
+        // There is no correctness issue with increasing this counter too much. Thus, we increase
+        // the counter each time a page is evicted/deleted locally. We have to do it before the page
+        // is actually deleted otherwise we risk being interrupted in the middle and not actually
+        // increase the counter.
+        Status status = device_id_manager_->OnPageDeleted(handler);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        if (coroutine::SyncCall(
+                handler,
+                [ledger_manager, page_id](fit::function<void(Status)> sync_callback) {
+                  ledger_manager->DeletePageStorage(page_id, std::move(sync_callback));
+                },
+                &status) != coroutine::ContinuationStatus::OK) {
+          callback(Status::INTERRUPTED);
+          return;
+        }
+        callback(status);
+      });
 }
 
 void LedgerRepositoryImpl::TrySyncClosedPage(fxl::StringView ledger_name,
@@ -227,7 +254,7 @@ Status LedgerRepositoryImpl::GetLedgerManager(convert::ExtendedStringView ledger
   }
   auto ledger_storage = std::make_unique<storage::LedgerStorageImpl>(
       environment_, encryption_service.get(), db_factory_.get(), GetPathFor(name_as_string),
-      pruning_policy);
+      pruning_policy, device_id_manager_.get());
   RETURN_ON_ERROR(ledger_storage->Init());
   auto result = ledger_managers_.try_emplace(
       name_as_string, environment_, name_as_string,

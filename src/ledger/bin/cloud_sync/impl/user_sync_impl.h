@@ -12,22 +12,24 @@
 #include <memory>
 #include <set>
 
+#include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/cloud_sync/impl/aggregator.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_sync.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
 
 namespace cloud_sync {
-
 class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
  public:
   // Parameters:
   //   |on_version_mismatch| is called when the local state is detected to be
   //     incompatible with the state in the cloud and has to be erased.
   UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
-               std::unique_ptr<backoff::Backoff> backoff, fit::closure on_version_mismatch);
+               std::unique_ptr<backoff::Backoff> backoff, fit::closure on_version_mismatch,
+               clocks::DeviceFingerprintManager* fingerprint_manager);
   ~UserSyncImpl() override;
 
   // UserSync:
@@ -48,7 +50,6 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   // Checks that the cloud was not erased since the last sync using the device
   // fingerprint.
   void CheckCloudNotErased();
-  void CreateFingerprint();
   void HandleDeviceSetResult(cloud_provider::Status status);
 
   // Sets a watcher to detect that the cloud is cleared while sync is running.
@@ -69,14 +70,15 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   bool upload_enabled_ = false;
   cloud_provider::DeviceSetPtr device_set_;
   fidl::Binding<cloud_provider::DeviceSetWatcher> watcher_binding_;
-  // Fingerprint of the device in the cloud device list.
-  std::string fingerprint_;
+  clocks::DeviceFingerprint fingerprint_;
+  clocks::DeviceFingerprintManager* fingerprint_manager_;
   std::set<LedgerSyncImpl*> active_ledger_syncs_;
 
   // Aggregates the synchronization state of multiple ledgers into one
   // notification stream.
   Aggregator aggregator_;
 
+  coroutine::CoroutineManager coroutine_manager_;
   // This must be the last member of this class.
   callback::ScopedTaskRunner task_runner_;
 };

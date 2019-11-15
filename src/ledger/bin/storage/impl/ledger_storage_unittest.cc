@@ -12,6 +12,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/storage/impl/ledger_storage_impl.h"
@@ -34,7 +35,8 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
       : encryption_service_(dispatcher()),
         db_factory_(dispatcher()),
         storage_(&environment_, &encryption_service_, &db_factory_,
-                 ledger::DetachedPath(tmpfs_.root_fd()), CommitPruningPolicy::NEVER) {}
+                 ledger::DetachedPath(tmpfs_.root_fd()), CommitPruningPolicy::NEVER,
+                 &device_id_manager_) {}
 
   ~LedgerStorageTest() override = default;
 
@@ -51,6 +53,7 @@ class LedgerStorageTest : public ledger::TestWithEnvironment {
 
  protected:
   fake::FakeDbFactory db_factory_;
+  clocks::DeviceIdManagerEmptyImpl device_id_manager_;
   LedgerStorageImpl storage_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerStorageTest);

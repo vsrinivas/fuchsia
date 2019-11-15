@@ -10,6 +10,7 @@
 
 #include <set>
 
+#include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/filesystem/detached_path.h"
@@ -26,7 +27,7 @@ class LedgerStorageImpl : public LedgerStorage {
   LedgerStorageImpl(ledger::Environment* environment,
                     encryption::EncryptionService* encryption_service,
                     storage::DbFactory* db_factory, ledger::DetachedPath content_dir,
-                    CommitPruningPolicy policy);
+                    CommitPruningPolicy policy, clocks::DeviceIdManager* device_id_manager);
   ~LedgerStorageImpl() override;
 
   // Initializes this LedgerStorageImpl by creating the |content_dir| directory
@@ -69,6 +70,8 @@ class LedgerStorageImpl : public LedgerStorage {
 
   // Pruning policy for all pages created in this ledger.
   CommitPruningPolicy pruning_policy_;
+  // Manager used to generate device IDs for new pages.
+  clocks::DeviceIdManager* const device_id_manager_;
 
   // This must be the last member of the class.
   fxl::WeakPtrFactory<LedgerStorageImpl> weak_factory_;

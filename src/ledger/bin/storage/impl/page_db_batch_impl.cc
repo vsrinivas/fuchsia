@@ -179,15 +179,15 @@ Status PageDbBatchImpl::MarkPageOnline(coroutine::CoroutineHandler* handler) {
   return batch_->Put(handler, PageIsOnlineRow::kKey, "");
 }
 
-Status PageDbBatchImpl::SetDeviceId(coroutine::CoroutineHandler* handler, DeviceIdView device_id) {
-  return batch_->Put(handler, ClockRow::kDeviceIdKey, device_id);
+Status PageDbBatchImpl::SetDeviceId(coroutine::CoroutineHandler* handler,
+                                    const clocks::DeviceId& device_id) {
+  std::string device_id_data = SerializeDeviceId(device_id);
+  return batch_->Put(handler, ClockRow::kDeviceIdKey, device_id_data);
 }
 
-Status PageDbBatchImpl::SetClockEntry(coroutine::CoroutineHandler* handler, DeviceIdView device_id,
-                                      const ClockEntry& entry) {
-  std::string data;
-  SerializeClockEntry(entry, &data);
-  return batch_->Put(handler, ClockRow::GetClockEntryForKey(device_id), data);
+Status PageDbBatchImpl::SetClock(coroutine::CoroutineHandler* handler, const Clock& entry) {
+  std::string data = SerializeClock(entry);
+  return batch_->Put(handler, ClockRow::kEntriesKey, data);
 }
 
 Status PageDbBatchImpl::Execute(CoroutineHandler* handler) {

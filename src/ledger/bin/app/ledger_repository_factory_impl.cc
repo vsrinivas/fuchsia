@@ -25,6 +25,8 @@
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/app/serialization_version.h"
+#include "src/ledger/bin/clocks/impl/device_id_manager_impl.h"
+#include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
@@ -334,6 +336,10 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
 
   auto dbview_factory = std::make_unique<DbViewFactory>(std::move(base_db));
 
+  auto device_id_manager = std::make_unique<clocks::DeviceIdManagerImpl>(
+      environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::CLOCKS));
+  RETURN_ON_ERROR(device_id_manager->Init(handler));
+
   auto page_usage_db = std::make_unique<PageUsageDb>(
       environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
 
@@ -344,9 +350,8 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
 
   std::unique_ptr<SyncWatcherSet> watchers =
       std::make_unique<SyncWatcherSet>(environment_->dispatcher());
-
-  std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync =
-      CreateUserSync(repository_information, std::move(cloud_provider), watchers.get());
+  std::unique_ptr<sync_coordinator::UserSyncImpl> user_sync = CreateUserSync(
+      repository_information, std::move(cloud_provider), watchers.get(), device_id_manager.get());
   if (!user_sync) {
     FXL_LOG(WARNING) << "No cloud provider nor P2P communicator - Ledger will work locally but "
                      << "not sync. (running in Guest mode?)";
@@ -359,6 +364,7 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
       std::move(dbview_factory), std::move(page_usage_db), std::move(watchers),
       std::move(user_sync), std::move(disk_cleanup_manager), std::move(background_sync_manager),
       std::vector<PageUsageListener*>{disk_cleanup_manager_ptr, background_sync_manager_ptr},
+      std::move(device_id_manager),
       inspect_node_.CreateChild(convert::ToHex(repository_information.name)));
   disk_cleanup_manager_ptr->SetPageEvictionDelegate(repository->get());
   background_sync_manager_ptr->SetDelegate(repository->get());
@@ -367,9 +373,10 @@ Status LedgerRepositoryFactoryImpl::SynchronousCreateLedgerRepository(
 
 std::unique_ptr<sync_coordinator::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateUserSync(
     const RepositoryInformation& repository_information,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, SyncWatcherSet* watchers) {
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, SyncWatcherSet* watchers,
+    clocks::DeviceFingerprintManager* fingerprint_manager) {
   std::unique_ptr<cloud_sync::UserSyncImpl> cloud_sync =
-      CreateCloudSync(repository_information, std::move(cloud_provider));
+      CreateCloudSync(repository_information, std::move(cloud_provider), fingerprint_manager);
   std::unique_ptr<p2p_sync::UserCommunicator> p2p_sync = CreateP2PSync(repository_information);
 
   if (!cloud_sync && !p2p_sync) {
@@ -385,7 +392,8 @@ std::unique_ptr<sync_coordinator::UserSyncImpl> LedgerRepositoryFactoryImpl::Cre
 
 std::unique_ptr<cloud_sync::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateCloudSync(
     const RepositoryInformation& repository_information,
-    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider) {
+    fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+    clocks::DeviceFingerprintManager* fingerprint_manager) {
   if (!cloud_provider) {
     return nullptr;
   }
@@ -401,9 +409,9 @@ std::unique_ptr<cloud_sync::UserSyncImpl> LedgerRepositoryFactoryImpl::CreateClo
   fit::closure on_version_mismatch = [this, repository_information]() mutable {
     OnVersionMismatch(repository_information);
   };
-  return std::make_unique<cloud_sync::UserSyncImpl>(environment_, std::move(user_config),
-                                                    environment_->MakeBackoff(),
-                                                    std::move(on_version_mismatch));
+  return std::make_unique<cloud_sync::UserSyncImpl>(
+      environment_, std::move(user_config), environment_->MakeBackoff(),
+      std::move(on_version_mismatch), fingerprint_manager);
 }
 
 std::unique_ptr<p2p_sync::UserCommunicator> LedgerRepositoryFactoryImpl::CreateP2PSync(

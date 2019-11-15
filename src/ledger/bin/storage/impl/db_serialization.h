@@ -177,10 +177,7 @@ class ClockRow {
 
  public:
   static constexpr fxl::StringView kDeviceIdKey = fxl::StringView(&kClockDeviceIdChar, 1);
-  static constexpr fxl::StringView kEntriesPrefix = fxl::StringView(&kClockEntriesPrefixChar, 1);
-
-  // Gets the clock entry key for the provided |device_id|.
-  static std::string GetClockEntryForKey(DeviceIdView device_id);
+  static constexpr fxl::StringView kEntriesKey = fxl::StringView(&kClockEntriesPrefixChar, 1);
 };
 
 class RemoteCommitIdToLocalRow {

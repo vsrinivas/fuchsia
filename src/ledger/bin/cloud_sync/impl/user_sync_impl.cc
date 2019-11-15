@@ -10,26 +10,28 @@
 #include <utility>
 
 #include "peridot/lib/convert/convert.h"
+#include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/cloud_sync/impl/ledger_sync_impl.h"
+#include "src/ledger/bin/public/status.h"
+#include "src/ledger/lib/coroutine/coroutine.h"
+#include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
 namespace cloud_sync {
 
-namespace {
-constexpr size_t kFingerprintSize = 16;
-
-}  // namespace
-
 UserSyncImpl::UserSyncImpl(ledger::Environment* environment, UserConfig user_config,
                            std::unique_ptr<backoff::Backoff> backoff,
-                           fit::closure on_version_mismatch)
+                           fit::closure on_version_mismatch,
+                           clocks::DeviceFingerprintManager* fingerprint_manager)
     : environment_(environment),
       user_config_(std::move(user_config)),
       backoff_(std::move(backoff)),
       on_version_mismatch_(std::move(on_version_mismatch)),
       watcher_binding_(this),
+      fingerprint_manager_(fingerprint_manager),
+      coroutine_manager_(environment_->coroutine_service()),
       task_runner_(environment_->dispatcher()) {
   FXL_DCHECK(on_version_mismatch_);
 }
@@ -78,15 +80,16 @@ void UserSyncImpl::Start() {
     return;
   }
 
-  user_config_.cloud_provider->GetDeviceSet(device_set_.NewRequest(), [this](auto status) {
-    if (status != cloud_provider::Status::OK) {
-      FXL_LOG(ERROR) << "Failed to retrieve the device map: " << fidl::ToUnderlying(status)
-                     << ", sync upload will not work.";
-      return;
-    }
-    CheckCloudNotErased();
-  });
-
+  user_config_.cloud_provider->GetDeviceSet(
+      device_set_.NewRequest(),
+      task_runner_.MakeScoped([this](fuchsia::ledger::cloud::Status status) {
+        if (status != cloud_provider::Status::OK) {
+          FXL_LOG(ERROR) << "Failed to retrieve the device map: " << fidl::ToUnderlying(status)
+                         << ", sync upload will not work.";
+          return;
+        }
+        CheckCloudNotErased();
+      }));
   started_ = true;
 }
 
@@ -98,52 +101,44 @@ void UserSyncImpl::CheckCloudNotErased() {
     return;
   }
 
-  ledger::DetachedPath fingerprint_path = GetFingerprintPath();
-  if (!files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path())) {
-    CreateFingerprint();
-    return;
-  }
-
-  if (!files::ReadFileToStringAt(fingerprint_path.root_fd(), fingerprint_path.path(),
-                                 &fingerprint_)) {
-    FXL_LOG(ERROR) << "Unable to read the fingerprint file at: " << fingerprint_path.path()
-                   << ", sync upload will not work.";
-    return;
-  }
-
-  device_set_->CheckFingerprint(
-      convert::ToArray(fingerprint_),
-      [this](cloud_provider::Status status) { HandleDeviceSetResult(status); });
-}
-
-void UserSyncImpl::CreateFingerprint() {
-  if (!device_set_) {
-    // TODO(ppi): handle recovery from cloud provider disconnection, LE-567.
-    FXL_LOG(WARNING) << "Cloud provider is disconnected, will not verify "
-                     << "the cloud fingerprint";
-    return;
-  }
-
-  // Generate the fingerprint.
-  char fingerprint_array[kFingerprintSize];
-  environment_->random()->Draw(fingerprint_array, kFingerprintSize);
-  fingerprint_ = convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
-
-  device_set_->SetFingerprint(
-      convert::ToArray(fingerprint_), [this](cloud_provider::Status status) {
+  coroutine_manager_.StartCoroutine([this](coroutine::CoroutineHandler* handler) {
+    cloud_provider::Status status;
+    clocks::DeviceFingerprintManager::CloudUploadStatus upload_status;
+    if (fingerprint_manager_->GetDeviceFingerprint(handler, &fingerprint_, &upload_status) !=
+        ledger::Status::OK) {
+      return;
+    }
+    switch (upload_status) {
+      case clocks::DeviceFingerprintManager::CloudUploadStatus::NOT_UPLOADED: {
+        if (coroutine::SyncCall(
+                handler,
+                [this](fit::function<void(cloud_provider::Status)> callback) {
+                  device_set_->SetFingerprint(convert::ToArray(fingerprint_), std::move(callback));
+                },
+                &status) == coroutine::ContinuationStatus::INTERRUPTED) {
+          return;
+        }
         if (status == cloud_provider::Status::OK) {
-          // Persist the new fingerprint.
-          FXL_DCHECK(!fingerprint_.empty());
-          ledger::DetachedPath fingerprint_path = GetFingerprintPath();
-          if (!files::WriteFileAt(fingerprint_path.root_fd(), fingerprint_path.path(),
-                                  fingerprint_.data(), fingerprint_.size())) {
-            FXL_LOG(ERROR) << "Failed to persist the fingerprint at: " << fingerprint_path.path()
-                           << ", sync upload will not work.";
+          ledger::Status s = fingerprint_manager_->SetDeviceFingerprintSynced(handler);
+          if (s != ledger::Status::OK) {
             return;
           }
         }
-        HandleDeviceSetResult(status);
-      });
+      } break;
+      case clocks::DeviceFingerprintManager::CloudUploadStatus::UPLOADED: {
+        if (coroutine::SyncCall(
+                handler,
+                [this](fit::function<void(cloud_provider::Status)> callback) {
+                  device_set_->CheckFingerprint(convert::ToArray(fingerprint_),
+                                                std::move(callback));
+                },
+                &status) == coroutine::ContinuationStatus::INTERRUPTED) {
+          return;
+        }
+      }
+    }
+    HandleDeviceSetResult(status);
+  });
 }
 
 void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
@@ -159,8 +154,9 @@ void UserSyncImpl::HandleDeviceSetResult(cloud_provider::Status status) {
       return;
     case cloud_provider::Status::NOT_FOUND:
       // |this| can be deleted within on_version_mismatch_() - don't
-      // access member variables afterwards.
-      on_version_mismatch_();
+      // access member variables afterwards. Also, make sure we are not executing within a
+      // coroutine.
+      task_runner_.PostTask(std::move(on_version_mismatch_));
       return;
     default:
       FXL_LOG(ERROR) << "Unexpected status returned from device set: " << fidl::ToUnderlying(status)

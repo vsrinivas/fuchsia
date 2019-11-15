@@ -18,6 +18,7 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
@@ -126,6 +127,7 @@ using ::testing::Pair;
 using ::testing::SizeIs;
 using ::testing::UnorderedElementsAre;
 using ::testing::UnorderedElementsAreArray;
+using ::testing::VariantWith;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit& commit) {
   std::vector<PageStorage::CommitIdAndBytes> result;
@@ -133,9 +135,11 @@ std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit
   return result;
 }
 
-testing::Matcher<const ClockEntry&> ClockEntryMatchesCommit(const Commit& commit) {
-  return AllOf(Field("commit_id", &ClockEntry::commit_id, commit.GetId()),
-               Field("generation", &ClockEntry::generation, commit.GetGeneration()));
+testing::Matcher<const DeviceClock&> DeviceClockMatchesCommit(const Commit& commit) {
+  return VariantWith<DeviceEntry>(
+      Field("head", &DeviceEntry::head,
+            AllOf(Field("commit_id", &ClockEntry::commit_id, commit.GetId()),
+                  Field("generation", &ClockEntry::generation, commit.GetGeneration()))));
 }
 
 // Makes an object identifier untracked.
@@ -365,7 +369,9 @@ class PageStorageTest : public StorageTest {
 
     bool called;
     Status status;
-    storage_->Init(callback::Capture(callback::SetWhenCalled(&called), &status));
+    clocks::DeviceIdManagerEmptyImpl device_id_manager;
+    storage_->Init(&device_id_manager,
+                   callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
@@ -409,9 +415,10 @@ class PageStorageTest : public StorageTest {
   }
 
   // Returns a random, tracked, non-inline object identifier.
-  // Since random identifiers do not correspond to actual stored objects, we do not need to untrack
-  // them to allow more garbage-collection opportunities (they wouldn't be collected anyway).
-  // Keeping them tracked is necessary to satisfy validity checks within PageStorage operations.
+  // Since random identifiers do not correspond to actual stored objects, we do not need to
+  // untrack them to allow more garbage-collection opportunities (they wouldn't be collected
+  // anyway). Keeping them tracked is necessary to satisfy validity checks within PageStorage
+  // operations.
   ObjectIdentifier RandomObjectIdentifier() {
     return storage::RandomObjectIdentifier(environment_.random(),
                                            storage_->GetObjectIdentifierFactory());
@@ -1286,9 +1293,9 @@ TEST_F(PageStorageTestNoGc, AddHugeObjectFromLocal) {
                    digests.insert(digest);
                  });
 
-    // Trigger deletion of *all* pieces from storage immediately before *any* of them is written to
-    // disk. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
-    // enough before writing them to disk.
+    // Trigger deletion of *all* pieces from storage immediately before *any* of them is written
+    // to disk. This is an attempt at finding bugs in the code that wouldn't hold pieces alive
+    // long enough before writing them to disk.
     leveldb_->set_on_execute([this, digests = std::move(digests)]() {
       for (const auto& digest : digests) {
         PageStorageImplAccessorForTest::DeleteObject(
@@ -1522,14 +1529,13 @@ TEST_F(PageStorageTestNoGc, DeleteObjectWithReferences) {
 
 // This test creates two commits, commit1 which associates "key" to some "Some data", and commit2
 // which associates "key" to a random piece.
-// It first attempts to delete the root piece of commit1 and the piece containing "Some data", which
-// is impossible because those pieces are referenced by commit1 and its root piece respectively.
-// It then marks the root piece of commit1 as synchronized.
-// This makes another attempt at the same deletions succeed: the root piece is now synchronized and
-// referenced by a non-head commit, and the piece containing "Some data" is not referenced by
-// anything (after the former deletion succeeds), making both of them garbage-collectable.
-// This test deletes objects manually, do not use automatic garbage-collection to keep
-// results predictable.
+// It first attempts to delete the root piece of commit1 and the piece containing "Some data",
+// which is impossible because those pieces are referenced by commit1 and its root piece
+// respectively. It then marks the root piece of commit1 as synchronized. This makes another
+// attempt at the same deletions succeed: the root piece is now synchronized and referenced by a
+// non-head commit, and the piece containing "Some data" is not referenced by anything (after the
+// former deletion succeeds), making both of them garbage-collectable. This test deletes objects
+// manually, do not use automatic garbage-collection to keep results predictable.
 TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     auto data = std::make_unique<ObjectData>(&fake_factory_, "Some data", InlineBehavior::PREVENT);
@@ -1588,8 +1594,8 @@ TEST_F(PageStorageTestNoGc, DeleteObjectAbortsWhenOnDiskReference) {
     EXPECT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
 
-    // Mark the commit as synced so that we do not need to keep its parent alive to compute a cloud
-    // diff (otherwise it will also keep a live reference to |root_piece_digest|).
+    // Mark the commit as synced so that we do not need to keep its parent alive to compute a
+    // cloud diff (otherwise it will also keep a live reference to |root_piece_digest|).
     storage_->MarkCommitSynced(commit2->GetId(),
                                callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
@@ -2041,9 +2047,9 @@ TEST_F(PageStorageTestNoGc, GetHugeObjectPartFromSync) {
                      sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
-  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved from
-  // cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
-  // enough before writing them to disk.
+  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved
+  // from cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive
+  // long enough before writing them to disk.
   sync.set_on_get_object([this, &digest_to_identifier](fit::closure callback) {
     callback();
     for (const auto& [digest, identifier] : digest_to_identifier) {
@@ -2378,9 +2384,9 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
         sync.AddObject(std::move(piece_identifier), piece->GetData().ToString());
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
-  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved from
-  // cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive long
-  // enough before writing them to disk.
+  // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved
+  // from cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive
+  // long enough before writing them to disk.
   sync.set_on_get_object([this, &digest_to_identifier](fit::closure callback) {
     callback();
     for (const auto& [digest, identifier] : digest_to_identifier) {
@@ -3774,8 +3780,8 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
 }
 
 TEST_F(PageStorageTest, ChooseDiffBases) {
-  // We have the following commit tree, with the uppercase commits synced and the lowercase commits
-  // unsynced.
+  // We have the following commit tree, with the uppercase commits synced and the lowercase
+  // commits unsynced.
   //
   //      (root)
   //     /  |  \
@@ -3868,7 +3874,8 @@ TEST_F(PageStorageTest, ChooseDiffBases) {
               UnorderedElementsAre(commit_A->GetId(), commit_B->GetId(), commit_D->GetId()));
 }
 
-// Checks that the RetrievedObjectType can vary for a given piece depending on why we're reading it.
+// Checks that the RetrievedObjectType can vary for a given piece depending on why we're reading
+// it.
 TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
   // Build a random, valid tree node.
   std::vector<Entry> entries;
@@ -3931,7 +3938,7 @@ TEST_F(PageStorageTest, UpdateClock) {
   // The clock should be empty;
   bool called;
   Status status;
-  std::map<DeviceId, ClockEntry> clock0;
+  Clock clock0;
   storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock0));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
@@ -3950,13 +3957,13 @@ TEST_F(PageStorageTest, UpdateClock) {
   EXPECT_EQ(status, Status::OK);
 
   // The clock should contain one element, and point to the current head commit.
-  std::map<DeviceId, ClockEntry> clock1;
+  Clock clock1;
   storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock1));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  EXPECT_THAT(clock1, ElementsAre(Pair(_, ClockEntryMatchesCommit(*commit_A))));
+  EXPECT_THAT(clock1, ElementsAre(Pair(_, DeviceClockMatchesCommit(*commit_A))));
 
   // It is updated after a new single head is present
 
@@ -3970,15 +3977,15 @@ TEST_F(PageStorageTest, UpdateClock) {
   EXPECT_EQ(status, Status::OK);
 
   // The clock should contain one element, and point to the current head commit.
-  std::map<DeviceId, ClockEntry> clock2;
+  Clock clock2;
   storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock2));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
   // The device ID should not have changed.
-  const DeviceId device_id = clock1.begin()->first;
-  EXPECT_THAT(clock2, ElementsAre(Pair(device_id, ClockEntryMatchesCommit(*commit_B))));
+  const clocks::DeviceId device_id = clock1.begin()->first;
+  EXPECT_THAT(clock2, ElementsAre(Pair(device_id, DeviceClockMatchesCommit(*commit_B))));
 
   // If there is a conflict, no clock update should occur.
   std::unique_ptr<Journal> journal1 = storage_->StartCommit(commit_B->Clone());
@@ -4001,7 +4008,7 @@ TEST_F(PageStorageTest, UpdateClock) {
   EXPECT_TRUE(called);
   EXPECT_EQ(status, Status::OK);
 
-  std::map<DeviceId, ClockEntry> clock3;
+  Clock clock3;
   storage_->GetClock(callback::Capture(callback::SetWhenCalled(&called), &status, &clock3));
   RunLoopUntilIdle();
   EXPECT_TRUE(called);

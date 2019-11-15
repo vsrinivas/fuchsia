@@ -10,6 +10,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/storage/fake/fake_db.h"
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
 #include "src/ledger/bin/storage/impl/commit_random_impl.h"
@@ -65,7 +66,9 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
 
     bool called;
     Status status;
-    storage_->Init(callback::Capture(callback::SetWhenCalled(&called), &status));
+    clocks::DeviceIdManagerEmptyImpl device_id_manager;
+    storage_->Init(&device_id_manager,
+                   callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);

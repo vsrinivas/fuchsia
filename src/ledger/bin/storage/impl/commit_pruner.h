@@ -28,9 +28,8 @@ class CommitPruner {
     virtual Status DeleteCommits(coroutine::CoroutineHandler* handler,
                                  std::vector<std::unique_ptr<const Commit>> commits) = 0;
 
-    // Updates the clock entry for this device.
-    virtual Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
-                                        const ClockEntry& entry) = 0;
+    // Sets the new clock.
+    virtual Status SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) = 0;
   };
   CommitPruner(ledger::Environment* environment, CommitPrunerDelegate* delegate,
                LiveCommitTracker* commit_tracker, CommitPruningPolicy policy);
@@ -40,6 +39,9 @@ class CommitPruner {
   // immediately. Otherwise, a cycle will start when the current cycle stops. Only one cycle may be
   // scheduled at a time.
   void SchedulePruning();
+
+  // Registers |self_id| as the device ID of this device, and |clock| as the current clock value.
+  void LoadClock(clocks::DeviceId self_id, Clock clock);
 
  private:
   // Finds the latest unique common ancestor among the live commits, as given by the
@@ -56,6 +58,11 @@ class CommitPruner {
   Status SynchronousPrune(coroutine::CoroutineHandler* handler);
 
   ledger::Environment* environment_;
+  // ID of this device for the page.
+  clocks::DeviceId self_id_;
+  // Full clock of the page, as known by this device.
+  Clock clock_;
+
   CommitPrunerDelegate* const delegate_;
   LiveCommitTracker* const commit_tracker_;
 

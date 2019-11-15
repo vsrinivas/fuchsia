@@ -14,6 +14,7 @@
 
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/app/ledger_repository_impl.h"
+#include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -65,11 +66,12 @@ class LedgerRepositoryFactoryImpl
       std::unique_ptr<LedgerRepositoryImpl>* repository);
   std::unique_ptr<sync_coordinator::UserSyncImpl> CreateUserSync(
       const RepositoryInformation& repository_information,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
-      SyncWatcherSet* watchers);
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider, SyncWatcherSet* watchers,
+      clocks::DeviceFingerprintManager* fingerprint_manager);
   std::unique_ptr<cloud_sync::UserSyncImpl> CreateCloudSync(
       const RepositoryInformation& repository_information,
-      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider);
+      fidl::InterfaceHandle<cloud_provider::CloudProvider> cloud_provider,
+      clocks::DeviceFingerprintManager* fingerprint_manager);
   std::unique_ptr<p2p_sync::UserCommunicator> CreateP2PSync(
       const RepositoryInformation& repository_information);
   void OnVersionMismatch(RepositoryInformation repository_information);

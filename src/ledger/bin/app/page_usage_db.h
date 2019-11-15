@@ -12,6 +12,8 @@
 
 #include "src/ledger/bin/app/page_utils.h"
 #include "src/ledger/bin/app/types.h"
+#include "src/ledger/bin/clocks/impl/device_id_manager_impl.h"
+#include "src/ledger/bin/clocks/public/types.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/public/db.h"

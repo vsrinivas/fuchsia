@@ -5,12 +5,16 @@
 #include "src/ledger/bin/cloud_sync/impl/user_sync_impl.h"
 
 #include <lib/gtest/test_loop_fixture.h>
+#include <unistd.h>
 
 #include <utility>
 
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/bin/clocks/public/device_fingerprint_manager.h"
+#include "src/ledger/bin/clocks/public/types.h"
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
+#include "src/ledger/bin/public/status.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/backoff/testing/test_backoff.h"
@@ -29,6 +33,29 @@ class TestSyncStateWatcher : public SyncStateWatcher {
   void Notify(SyncStateContainer /*sync_state*/) override {}
 };
 
+class TestDeviceFingerprintManager : public clocks::DeviceFingerprintManager {
+ public:
+  TestDeviceFingerprintManager() = default;
+  ~TestDeviceFingerprintManager() override = default;
+
+  ledger::Status GetDeviceFingerprint(coroutine::CoroutineHandler* /*handler*/,
+                                      clocks::DeviceFingerprint* device_fingerprint,
+                                      CloudUploadStatus* status) override {
+    *device_fingerprint = fingerprint_;
+    *status = sync_status_ ? CloudUploadStatus::UPLOADED : CloudUploadStatus::NOT_UPLOADED;
+    return ledger::Status::OK;
+  }
+
+  // Records that a device fingerprint has been synced with the cloud.
+  ledger::Status SetDeviceFingerprintSynced(coroutine::CoroutineHandler* /*handler*/) override {
+    sync_status_ = true;
+    return ledger::Status::OK;
+  }
+
+  clocks::DeviceFingerprint fingerprint_ = "unsynced_fingerprint";
+  bool sync_status_ = false;
+};
+
 class UserSyncImplTest : public ledger::TestWithEnvironment {
  public:
   UserSyncImplTest()
@@ -44,18 +71,17 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
       QuitLoop();
     });
 
-    user_sync_ =
-        std::make_unique<UserSyncImpl>(&environment_, std::move(user_config), std::move(backoff),
-                                       [this] { on_version_mismatch_calls_++; });
+    user_sync_ = std::make_unique<UserSyncImpl>(
+        &environment_, std::move(user_config), std::move(backoff),
+        [this] { on_version_mismatch_calls_++; }, &fingerprint_manager_);
     user_sync_->SetSyncWatcher(&sync_state_watcher_);
   }
   ~UserSyncImplTest() override = default;
 
  protected:
-  bool SetFingerprintFile(std::string content) {
-    ledger::DetachedPath fingerprint_path = user_sync_->GetFingerprintPath();
-    return files::WriteFileAt(fingerprint_path.root_fd(), fingerprint_path.path(), content.data(),
-                              content.size());
+  void SetFingerprintFile(std::string content) {
+    fingerprint_manager_.fingerprint_ = std::move(content);
+    fingerprint_manager_.sync_status_ = true;
   }
 
   scoped_tmpfs::ScopedTmpFS tmpfs_;
@@ -64,6 +90,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
   std::unique_ptr<UserSyncImpl> user_sync_;
   encryption::FakeEncryptionService encryption_service_;
   TestSyncStateWatcher sync_state_watcher_;
+  TestDeviceFingerprintManager fingerprint_manager_;
 
   int on_version_mismatch_calls_ = 0;
 
@@ -74,7 +101,7 @@ class UserSyncImplTest : public ledger::TestWithEnvironment {
 // Verifies that the mismatch callback is called if the fingerprint appears to
 // be erased from the cloud.
 TEST_F(UserSyncImplTest, CloudCheckErased) {
-  ASSERT_TRUE(SetFingerprintFile("some-value"));
+  SetFingerprintFile("some-value");
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::NOT_FOUND;
   EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
@@ -85,7 +112,7 @@ TEST_F(UserSyncImplTest, CloudCheckErased) {
 // Verifies that if the version checker reports that cloud is compatible, upload
 // is enabled in LedgerSync.
 TEST_F(UserSyncImplTest, CloudCheckOk) {
-  ASSERT_TRUE(SetFingerprintFile("some-value"));
+  SetFingerprintFile("some-value");
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
@@ -108,7 +135,7 @@ TEST_F(UserSyncImplTest, CloudCheckOk) {
 // cloud.
 TEST_F(UserSyncImplTest, CloudCheckSet) {
   auto fingerprint_path = user_sync_->GetFingerprintPath();
-  EXPECT_FALSE(files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
+  EXPECT_FALSE(fingerprint_manager_.sync_status_);
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   EXPECT_EQ(on_version_mismatch_calls_, 0);
   user_sync_->Start();
@@ -122,13 +149,13 @@ TEST_F(UserSyncImplTest, CloudCheckSet) {
   EXPECT_FALSE(cloud_provider_.device_set.set_fingerprint.empty());
 
   // Verify that the fingerprint file was created.
-  EXPECT_TRUE(files::IsFileAt(fingerprint_path.root_fd(), fingerprint_path.path()));
+  EXPECT_TRUE(fingerprint_manager_.sync_status_);
 }
 
 // Verifies that the cloud watcher for the fingerprint is set and triggers the
 // mismatch callback when cloud erase is detected.
 TEST_F(UserSyncImplTest, WatchErase) {
-  ASSERT_TRUE(SetFingerprintFile("some-value"));
+  SetFingerprintFile("some-value");
   cloud_provider_.device_set.status_to_return = cloud_provider::Status::OK;
   user_sync_->Start();
 
@@ -144,7 +171,7 @@ TEST_F(UserSyncImplTest, WatchErase) {
 
 // Verifies that setting the cloud watcher for is retried on network errors.
 TEST_F(UserSyncImplTest, WatchRetry) {
-  ASSERT_TRUE(SetFingerprintFile("some-value"));
+  SetFingerprintFile("some-value");
   cloud_provider_.device_set.set_watcher_status_to_return = cloud_provider::Status::NETWORK_ERROR;
   user_sync_->Start();
 

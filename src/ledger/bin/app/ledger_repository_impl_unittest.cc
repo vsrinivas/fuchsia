@@ -17,8 +17,14 @@
 #include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
+#include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/ledger_repository_factory_impl.h"
 #include "src/ledger/bin/app/serialization.h"
+#include "src/ledger/bin/app/types.h"
+#include "src/ledger/bin/clocks/impl/device_id_manager_impl.h"
+#include "src/ledger/bin/clocks/public/device_id_manager.h"
+#include "src/ledger/bin/clocks/public/types.h"
+#include "src/ledger/bin/clocks/testing/device_id_manager_empty_impl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/public/status.h"
@@ -176,6 +182,17 @@ class FakeUserSync : public sync_coordinator::UserSync {
   sync_coordinator::FakeLedgerSync* ledger_sync_ptr_;
 };
 
+class FailingDeviceIdManager : public clocks::DeviceIdManager {
+ public:
+  ledger::Status OnPageDeleted(coroutine::CoroutineHandler* handler) { return Status::INTERRUPTED; }
+
+  virtual ledger::Status GetNewDeviceId(coroutine::CoroutineHandler* handler,
+                                        clocks::DeviceId* device_id) {
+    *device_id = clocks::DeviceId{"fingerprint", 1};
+    return Status::OK;
+  }
+};
+
 class LedgerRepositoryImplTest : public TestWithEnvironment {
  public:
   LedgerRepositoryImplTest() = default;
@@ -183,10 +200,19 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   void SetUp() override {
     std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
         std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
-    ResetLedgerRepository(std::move(db_factory));
+    ResetLedgerRepository(std::move(db_factory), [this](DbViewFactory* dbview_factory) {
+      auto clock = std::make_unique<clocks::DeviceIdManagerImpl>(
+          &environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::CLOCKS));
+      EXPECT_TRUE(RunInCoroutine([&clock](coroutine::CoroutineHandler* handler) {
+        EXPECT_EQ(clock->Init(handler), Status::OK);
+      }));
+      return clock;
+    });
   }
 
-  void ResetLedgerRepository(std::unique_ptr<storage::DbFactory> db_factory) {
+  void ResetLedgerRepository(std::unique_ptr<storage::DbFactory> db_factory,
+                             std::function<std::unique_ptr<clocks::DeviceIdManager>(DbViewFactory*)>
+                                 device_id_manager_factory) {
     auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
     top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
@@ -195,9 +221,10 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
 
     Status status;
     std::unique_ptr<DbViewFactory> dbview_factory;
+    std::unique_ptr<clocks::DeviceIdManager> device_id_manager;
     std::unique_ptr<PageUsageDb> page_usage_db;
     DetachedPath detached_path = DetachedPath(tmpfs_.root_fd());
-    EXPECT_TRUE(RunInCoroutine([&, this](coroutine::CoroutineHandler* handler) {
+    EXPECT_TRUE(RunInCoroutine([&, this](coroutine::CoroutineHandler* handler) mutable {
       std::unique_ptr<storage::Db> leveldb;
       if (coroutine::SyncCall(
               handler,
@@ -212,6 +239,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
       }
       FXL_CHECK(status == Status::OK);
       dbview_factory = std::make_unique<DbViewFactory>(std::move(leveldb));
+      device_id_manager = device_id_manager_factory(dbview_factory.get());
       page_usage_db = std::make_unique<PageUsageDb>(
           &environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::PAGE_USAGE_DB));
     }));
@@ -221,12 +249,12 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
 
     auto user_sync = std::make_unique<FakeUserSync>();
     user_sync_ = user_sync.get();
-
+    device_id_manager_ptr_ = device_id_manager.get();
     repository_ = std::make_unique<LedgerRepositoryImpl>(
         detached_path.SubPath("ledgers"), &environment_, std::move(db_factory),
         std::move(dbview_factory), std::move(page_usage_db), nullptr, std::move(user_sync),
         std::move(fake_page_eviction_manager), std::move(background_sync_manager),
-        std::vector<PageUsageListener*>{disk_cleanup_manager_},
+        std::vector<PageUsageListener*>{disk_cleanup_manager_}, std::move(device_id_manager),
         attachment_node_.CreateChild(kInspectPathComponent));
   }
 
@@ -236,6 +264,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
   scoped_tmpfs::ScopedTmpFS tmpfs_;
   FakeDiskCleanupManager* disk_cleanup_manager_;
   FakeUserSync* user_sync_;
+  clocks::DeviceIdManager* device_id_manager_ptr_;
   // TODO(nathaniel): Because we use the ChildrenManager API, we need to do our
   // reads using FIDL, and because we want to use inspect_deprecated::ReadFromFidl for our
   // reads, we need to have these two objects (one parent, one child, both part
@@ -248,7 +277,7 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
 
  private:
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerRepositoryImplTest);
-};
+};  // namespace
 
 TEST_F(LedgerRepositoryImplTest, ConcurrentCalls) {
   // Ensure the repository is not empty.
@@ -514,7 +543,10 @@ TEST_F(LedgerRepositoryImplTest, AliveWithNoCallbacksSet) {
 // Verifies that the object is not destroyed until the initialization of PageUsageDb is finished.
 TEST_F(LedgerRepositoryImplTest, CloseWhileDbInitRunning) {
   std::unique_ptr<BlockingFakeDbFactory> db_factory = std::make_unique<BlockingFakeDbFactory>();
-  ResetLedgerRepository(std::move(db_factory));
+  ResetLedgerRepository(std::move(db_factory), [this](DbViewFactory* dbview_factory) {
+    return std::make_unique<clocks::DeviceIdManagerImpl>(
+        &environment_, dbview_factory->CreateDbView(RepositoryRowPrefix::CLOCKS));
+  });
 
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr1;
 
@@ -593,6 +625,100 @@ TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageWithOpenedPage) {
                                  convert::ExtendedStringView(id.id));
   RunLoopUntilIdle();
   EXPECT_EQ(user_sync_->GetSyncCallsCount(page_id), 1);
+}
+
+TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // Opens the Ledger and creates LedgerManager.
+  std::string ledger_name = "ledger";
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
+
+  // Opens the page, and get the clock device id.
+  first_ledger_ptr->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  RunLoopUntilIdle();
+
+  clocks::DeviceId device_id_1;
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    EXPECT_EQ(device_id_manager_ptr_->GetNewDeviceId(handler, &device_id_1), Status::OK);
+  }));
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  repository_->DeletePageStorage(ledger_name, page_id,
+                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
+
+  // The clock device ID should have changed.
+  clocks::DeviceId device_id_2;
+  EXPECT_TRUE(RunInCoroutine([&](coroutine::CoroutineHandler* handler) {
+    EXPECT_EQ(device_id_manager_ptr_->GetNewDeviceId(handler, &device_id_2), Status::OK);
+  }));
+
+  EXPECT_NE(device_id_1, device_id_2);
+
+  PagePredicateResult predicate;
+  repository_->PageIsClosedAndSynced(
+      ledger_name, page_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &predicate));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  // Page is deleted;
+  EXPECT_EQ(status, Status::PAGE_NOT_FOUND);
+}
+
+TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
+  std::unique_ptr<storage::fake::FakeDbFactory> db_factory =
+      std::make_unique<storage::fake::FakeDbFactory>(dispatcher());
+  ResetLedgerRepository(std::move(db_factory), [](DbViewFactory* /*dbview_factory*/) {
+    return std::make_unique<FailingDeviceIdManager>();
+  });
+  PagePtr page;
+  PageId id = RandomId(environment_);
+  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
+
+  repository_->BindRepository(ledger_repository_ptr.NewRequest());
+
+  // Opens the Ledger and creates LedgerManager.
+  std::string ledger_name = "ledger";
+  ledger::LedgerPtr first_ledger_ptr;
+  ledger_repository_ptr->GetLedger(convert::ToArray(ledger_name), first_ledger_ptr.NewRequest());
+
+  // Opens the page, and get the clock device id.
+  first_ledger_ptr->GetPage(fidl::MakeOptional(id), page.NewRequest());
+  // Make a commit so the page is not synced.
+  page->Put(convert::ToArray("foo"), convert::ToArray("bar"));
+  RunLoopUntilIdle();
+
+  page.Unbind();
+  RunLoopUntilIdle();
+
+  bool called;
+  Status status;
+  repository_->DeletePageStorage(ledger_name, page_id,
+                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::INTERRUPTED);
+
+  PagePredicateResult predicate;
+  repository_->PageIsClosedAndSynced(
+      ledger_name, page_id,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &predicate));
+  RunLoopUntilIdle();
+  EXPECT_TRUE(called);
+  EXPECT_EQ(status, Status::OK);
 }
 
 }  // namespace

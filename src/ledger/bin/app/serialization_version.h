@@ -11,7 +11,7 @@ namespace ledger {
 
 // The serialization version of anything Ledger stores on local storage
 // (directory structure, object/LevelDb serialization).
-inline constexpr fxl::StringView kSerializationVersion = "37";
+inline constexpr fxl::StringView kSerializationVersion = "38";
 
 }  // namespace ledger
 

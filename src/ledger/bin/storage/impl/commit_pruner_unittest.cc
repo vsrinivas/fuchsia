@@ -4,6 +4,7 @@
 
 #include "src/ledger/bin/storage/impl/commit_pruner.h"
 
+#include <utility>
 #include <vector>
 
 // gtest matchers are in gmock and we cannot include the specific header file
@@ -19,13 +20,27 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"
 
-using testing::_;
-using testing::ElementsAre;
-using testing::IsEmpty;
-using testing::SizeIs;
+using ::testing::_;
+using ::testing::AllOf;
+using ::testing::Contains;
+using ::testing::Field;
+using ::testing::IsEmpty;
+using ::testing::Pair;
+using ::testing::SizeIs;
+using ::testing::VariantWith;
 
 namespace storage {
 namespace {
+
+testing::Matcher<const Clock&> ClockMatchesCommit(
+    testing::Matcher<const clocks::DeviceId&> device_id, const Commit& commit) {
+  return Contains(
+      Pair(std::move(device_id),
+           VariantWith<DeviceEntry>(Field(
+               "head", &DeviceEntry::head,
+               AllOf(Field("commit_id", &ClockEntry::commit_id, commit.GetId()),
+                     Field("generation", &ClockEntry::generation, commit.GetGeneration()))))));
+}
 
 class FakeCommitTracker : public LiveCommitTracker {
  public:
@@ -42,7 +57,7 @@ class FakeCommitTracker : public LiveCommitTracker {
   }
 
   void SetLiveCommits(std::vector<const Commit*> current_live_commits) {
-    current_live_commits_ = current_live_commits;
+    current_live_commits_ = std::move(current_live_commits);
   }
 
  private:
@@ -90,13 +105,12 @@ class FakeCommitPrunerDelegate : public CommitPruner::CommitPrunerDelegate {
   std::vector<std::pair<std::vector<std::unique_ptr<const Commit>>, fit::function<void(Status)>>>
       delete_commit_calls_;
 
-  Status UpdateSelfClockEntry(coroutine::CoroutineHandler* handler,
-                              const ClockEntry& entry) override {
-    entries_.push_back(entry);
+  Status SetClock(coroutine::CoroutineHandler* handler, const Clock& clock) override {
+    clocks_.push_back(clock);
     return Status::OK;
   };
 
-  std::vector<ClockEntry> entries_;
+  std::vector<Clock> clocks_;
 
  private:
   std::map<CommitId, std::unique_ptr<const Commit>, convert::StringViewComparator> commits_;
@@ -256,6 +270,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
   std::unique_ptr<Commit> commit_1 =
       std::make_unique<FakeCommit>(environment_.random(), &factory, commit_id_0, 11);
   CommitId commit_id_1 = commit_1->GetId();
+  Commit* commit1_ptr = commit_1.get();
   storage.AddCommit(std::move(commit_1));
 
   std::unique_ptr<Commit> commit_2 =
@@ -282,7 +297,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
   EXPECT_THAT(storage.delete_commit_calls_, SizeIs(1));
   EXPECT_THAT(storage.delete_commit_calls_[0].first, SizeIs(1));
   EXPECT_EQ(storage.delete_commit_calls_[0].first[0]->GetId(), commit_id_0);
-  EXPECT_THAT(storage.entries_, ElementsAre(ClockEntry{commit_id_1, 11}));
+  EXPECT_THAT(*storage.clocks_.rbegin(), ClockMatchesCommit(_, *commit1_ptr));
 
   // Schedule a new pruning: if it runs, it means the first pruning completed.
   pruner.SchedulePruning();
@@ -293,7 +308,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca1) {
 
   // The two prunings completed.
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
-  EXPECT_THAT(storage.entries_, SizeIs(2));
+  EXPECT_THAT(storage.clocks_, SizeIs(2));
 }
 
 // Verify that only commits before the latest unique common ancestor are pruned. Here, we have the
@@ -351,7 +366,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
     actual_commit_ids.insert(commit->GetId());
   }
   EXPECT_EQ(actual_commit_ids, golden_commit_ids);
-  EXPECT_THAT(storage.entries_, ElementsAre(ClockEntry{commit_id_4, 13}));
+  EXPECT_THAT(*storage.clocks_.rbegin(), ClockMatchesCommit(_, *commit_4_ptr));
 
   // Schedule a new pruning: if it runs, it means the first pruning completed.
   pruner.SchedulePruning();
@@ -362,7 +377,7 @@ TEST_F(CommitPrunerTest, PruneBeforeLuca2) {
 
   // The two prunings completed.
   EXPECT_THAT(storage.delete_commit_calls_, IsEmpty());
-  EXPECT_THAT(storage.entries_, SizeIs(2));
+  EXPECT_THAT(storage.clocks_, SizeIs(2));
 }
 
 // Verify that we can queue two prunings, and that they will be executed sequentially.
@@ -421,7 +436,7 @@ TEST_F(CommitPrunerTest, PruningQueue) {
   EXPECT_THAT(storage.delete_commit_calls_, SizeIs(1));
   EXPECT_THAT(storage.delete_commit_calls_[0].first, SizeIs(1));
   EXPECT_THAT(storage.delete_commit_calls_[0].first[0]->GetId(), commit_id_0);
-  EXPECT_THAT(storage.entries_, ElementsAre(ClockEntry{commit_id_1, 11}));
+  EXPECT_THAT(*storage.clocks_.rbegin(), ClockMatchesCommit(_, *commit1_ptr));
 
   // Unreference commit1 and continue pruning.
   commit_tracker.SetLiveCommits({commit2_ptr, commit3_ptr});
@@ -432,7 +447,7 @@ TEST_F(CommitPrunerTest, PruningQueue) {
   EXPECT_THAT(storage.delete_commit_calls_, SizeIs(2));
   EXPECT_THAT(storage.delete_commit_calls_[1].first, SizeIs(1));
   EXPECT_THAT(storage.delete_commit_calls_[1].first[0]->GetId(), commit_id_1);
-  EXPECT_THAT(storage.entries_, ElementsAre(_, ClockEntry{commit_id_2, 12}));
+  EXPECT_THAT(*storage.clocks_.rbegin(), ClockMatchesCommit(_, *commit2_ptr));
 
   // Unreference commit2 and continue pruning.
   commit_tracker.SetLiveCommits({commit3_ptr});
@@ -441,7 +456,7 @@ TEST_F(CommitPrunerTest, PruningQueue) {
 
   // commit2 is not deleted because no pruning cycle is scheduled.
   EXPECT_THAT(storage.delete_commit_calls_, SizeIs(2));
-  EXPECT_THAT(storage.entries_, SizeIs(2));
+  EXPECT_THAT(storage.clocks_, SizeIs(2));
 }
 
 }  // namespace

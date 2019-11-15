@@ -146,22 +146,20 @@ Status PageDbEmptyImpl::MarkPageOnline(coroutine::CoroutineHandler* /*handlers*/
 }
 
 Status PageDbEmptyImpl::GetDeviceId(coroutine::CoroutineHandler* /*handler*/,
-                                    DeviceId* /*device_id*/) {
+                                    clocks::DeviceId* /*device_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::GetClock(coroutine::CoroutineHandler* /*handler*/,
-                                 std::map<DeviceId, ClockEntry>* /*clock*/) {
+Status PageDbEmptyImpl::GetClock(coroutine::CoroutineHandler* /*handler*/, Clock* /*clock*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
 Status PageDbEmptyImpl::SetDeviceId(coroutine::CoroutineHandler* /*handler*/,
-                                    DeviceIdView /*device_id*/) {
+                                    const clocks::DeviceId& /*device_id*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
-Status PageDbEmptyImpl::SetClockEntry(coroutine::CoroutineHandler* /*handler*/,
-                                      DeviceIdView /*device_id*/, const ClockEntry& /*entry*/) {
+Status PageDbEmptyImpl::SetClock(coroutine::CoroutineHandler* /*handler*/, const Clock& /*entry*/) {
   return Status::NOT_IMPLEMENTED;
 }
 
