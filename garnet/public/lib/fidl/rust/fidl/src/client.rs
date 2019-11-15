@@ -687,23 +687,28 @@ mod tests {
         fuchsia_zircon::DurationNum,
         futures::{join, FutureExt, StreamExt},
         futures_test::task::new_count_waker,
-        std::thread,
+        std::{sync::atomic::Ordering, thread},
         test_util::assert_matches,
     };
 
-    #[rustfmt::skip]
-    const SEND_EXPECTED: &[u8] = &[
-        0, 0, 0, 0, // 32 bit tx_id
-        0, 0, 0, // flags
-        MAGIC_NUMBER_INITIAL,
-        0, 0, 0, 0, // low bytes of 64 bit ordinal
-        SEND_ORDINAL_HIGH_BYTE, 0, 0, 0, // high bytes of 64 bit ordinal
-        SEND_DATA, // 8 bit data
-        0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
-    ];
     const SEND_ORDINAL_HIGH_BYTE: u8 = 42;
     const SEND_ORDINAL: u64 = 42 << 32;
     const SEND_DATA: u8 = 55;
+
+    #[rustfmt::skip]
+    fn expected_sent_bytes(tx_id_low_byte: u8) -> [u8; 24] {
+        let v1 = crate::encoding::ENCODE_UNIONS_USING_XUNION_FORMAT.load(Ordering::Relaxed);
+        let flags_low_byte = if v1 { 1 } else { 0 };
+        [
+            tx_id_low_byte, 0, 0, 0, // 32 bit tx_id
+            flags_low_byte, 0, 0, // flags
+            MAGIC_NUMBER_INITIAL,
+            0, 0, 0, 0, // low bytes of 64 bit ordinal
+            SEND_ORDINAL_HIGH_BYTE, 0, 0, 0, // high bytes of 64 bit ordinal
+            SEND_DATA, // 8 bit data
+            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
+        ]
+    }
 
     fn send_transaction(header: TransactionHeader, channel: &zx::Channel) {
         let (bytes, handles) = (&mut vec![], &mut vec![]);
@@ -727,7 +732,8 @@ mod tests {
         client.send(&mut SEND_DATA, SEND_ORDINAL).context("sending")?;
         let mut received = MessageBuf::new();
         server_end.read(&mut received).context("reading")?;
-        assert_eq!(SEND_EXPECTED, received.bytes());
+        let one_way_tx_id = 0;
+        assert_eq!(received.bytes(), expected_sent_bytes(one_way_tx_id));
         Ok(())
     }
 
@@ -765,7 +771,8 @@ mod tests {
         let receiver = async move {
             let mut buffer = MessageBuf::new();
             server.recv_msg(&mut buffer).await.expect("failed to recv msg");
-            assert_eq!(SEND_EXPECTED, buffer.bytes());
+            let one_way_tx_id = 0;
+            assert_eq!(buffer.bytes(), expected_sent_bytes(one_way_tx_id));
         };
 
         // add a timeout to receiver so if test is broken it doesn't take forever
@@ -781,17 +788,6 @@ mod tests {
 
     #[fasync::run_singlethreaded(test)]
     async fn client_with_response() {
-        #[rustfmt::skip]
-        const EXPECTED: &[u8] = &[
-            1, 0, 0, 0, // 32 bit tx_id
-            0, 0, 0, // flags
-            MAGIC_NUMBER_INITIAL,
-            0, 0, 0, 0, // low bytes of 64 bit ordinal
-            42, 0, 0, 0,  // high bytes of 64 bit ordinal
-            55, // 8 bit data
-            0, 0, 0, 0, 0, 0, 0, // 7 bytes of padding after our 1 byte of data
-        ];
-
         let (client_end, server_end) = zx::Channel::create().unwrap();
         let client_end = AsyncChannel::from_channel(client_end).unwrap();
         let client = Client::new(client_end);
@@ -800,12 +796,11 @@ mod tests {
         let mut buffer = MessageBuf::new();
         let receiver = async move {
             server.recv_msg(&mut buffer).await.expect("failed to recv msg");
-            assert_eq!(EXPECTED, buffer.bytes());
-            let id = 1; // internally, the first slot in a slab returns a `0`. We then add one
-                        // since FIDL txids start with `1`.
+            let two_way_tx_id = 1u8;
+            assert_eq!(buffer.bytes(), expected_sent_bytes(two_way_tx_id));
 
             let (bytes, handles) = (&mut vec![], &mut vec![]);
-            let header = TransactionHeader::new(id, 42);
+            let header = TransactionHeader::new(two_way_tx_id as u32, 42);
             encode_transaction(header, bytes, handles);
             server.write(bytes, handles).expect("Server channel write failed");
         };
@@ -815,8 +810,8 @@ mod tests {
             .on_timeout(300.millis().after_now(), || panic!("did not receiver message in time!"));
 
         let sender = client
-            .send_query::<u8, u8>(&mut 55, 42 << 32)
-            .map_ok(|x| assert_eq!(x, 55))
+            .send_query::<u8, u8>(&mut SEND_DATA, SEND_ORDINAL)
+            .map_ok(|x| assert_eq!(x, SEND_DATA))
             .unwrap_or_else(|e| panic!("fidl error: {:?}", e));
 
         // add a timeout to receiver so if test is broken it doesn't take forever
@@ -918,7 +913,12 @@ mod tests {
         // Send the event from the server
         let server = fasync::Channel::from_channel(server_end).unwrap();
         let (bytes, handles) = (&mut vec![], &mut vec![]);
-        let header = TransactionHeader::new_full(0, 5, &crate::encoding::Context { unions_use_xunion_format: false }, 0);
+        let header = TransactionHeader::new_full(
+            0,
+            5,
+            &crate::encoding::Context { unions_use_xunion_format: false },
+            0,
+        );
         encode_transaction(header, bytes, handles);
         server.write(bytes, handles).expect("Server channel write failed");
         drop(server);
