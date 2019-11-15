@@ -13,6 +13,7 @@ go_library("main") {
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/subcommands",
     "//tools/net/mdns",
+    "//tools/net/netboot",
   ]
 }
 

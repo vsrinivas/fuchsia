@@ -19,6 +19,7 @@ import (
 	"time"
 
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
 
 type mDNSResponse struct {
@@ -48,7 +49,7 @@ func (m *mDNSResponse) getReceiveIP() (net.IP, error) {
 	return nil, fmt.Errorf("no IPv4 unicast addresses found on iface %v", m.rxIface)
 }
 
-type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice, chan<- error)
+type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice)
 
 type mdnsInterface interface {
 	AddHandler(f func(net.Interface, net.Addr, mdns.Packet))
@@ -60,6 +61,12 @@ type mdnsInterface interface {
 }
 
 type newMDNSFunc func(address string) mdnsInterface
+
+type netbootClientInterface interface {
+	StartDiscover(chan<- *netboot.Target, string, bool) (func() error, error)
+}
+
+type newNetbootFunc func(timeout time.Duration) netbootClientInterface
 
 // Contains common command information for embedding in other dev_finder commands.
 type devFinderCmd struct {
@@ -88,28 +95,48 @@ type devFinderCmd struct {
 	// number is ignored (continues default behavior). Setting this to greater than
 	// 255 is an error.
 	ttl int
+	// If set to true, uses netboot protocol.
+	netboot bool
+	// If set to true, uses mdns protocol.
+	mdns bool
+	// If set to true, uses the netsvc address instead of the netstack
+	// address.
+	useNetsvcAddress bool
 
 	mdnsHandler mDNSHandler
 
 	// Only for testing.
-	newMDNSFunc newMDNSFunc
-	output      io.Writer
+	newMDNSFunc    newMDNSFunc
+	newNetbootFunc newNetbootFunc
+	output         io.Writer
 }
 
 type fuchsiaDevice struct {
-	addr   net.IP
+	addr net.IP
+	// domain is the nodename of the fuchsia target.
 	domain string
+	// zone is the IPv6 zone to connect to the target.
+	zone string
+	err  error
+}
+
+func (f *fuchsiaDevice) addrString() string {
+	addr := net.IPAddr{IP: f.addr, Zone: f.zone}
+	return addr.String()
 }
 
 func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.json, "json", false, "Outputs in JSON format.")
 	f.StringVar(&cmd.mdnsAddrs, "addr", "224.0.0.251,ff02::fb", "Comma separated list of addresses to issue mDNS queries to.")
 	f.StringVar(&cmd.mdnsPorts, "port", "5353", "Comma separated list of ports to issue mDNS queries to.")
-	f.IntVar(&cmd.timeout, "timeout", 2000, "The number of milliseconds before declaring a timeout.")
+	f.IntVar(&cmd.timeout, "timeout", 200, "The number of milliseconds before declaring a timeout.")
 	f.BoolVar(&cmd.localResolve, "local", false, "Returns the address of the interface to the host when doing service lookup/domain resolution.")
 	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", false, "Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 	f.IntVar(&cmd.ttl, "ttl", -1, "Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
+	f.BoolVar(&cmd.netboot, "netboot", true, "Determines whether to use netboot protocol")
+	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
+	f.BoolVar(&cmd.useNetsvcAddress, "netsvc-address", false, "Determines whether to use the Fuchsia netsvc address. Ignored if |netboot| is set to false.")
 }
 
 func (cmd *devFinderCmd) Output() io.Writer {
@@ -151,6 +178,13 @@ func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {
 	return m
 }
 
+func (cmd *devFinderCmd) newNetbootClient(timeout time.Duration) netbootClientInterface {
+	if cmd.newNetbootFunc != nil {
+		return cmd.newNetbootFunc(timeout)
+	}
+	return netboot.NewClient(timeout)
+}
+
 func sortDeviceMap(deviceMap map[string]*fuchsiaDevice) []*fuchsiaDevice {
 	keys := make([]string, 0)
 	for k := range deviceMap {
@@ -164,12 +198,12 @@ func sortDeviceMap(deviceMap map[string]*fuchsiaDevice) []*fuchsiaDevice {
 	return res
 }
 
-func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet) ([]*fuchsiaDevice, error) {
+func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet, f chan *fuchsiaDevice) error {
 	if cmd.mdnsHandler == nil {
-		return nil, fmt.Errorf("packet handler is nil")
+		return fmt.Errorf("packet handler is nil")
 	}
 	if cmd.timeout <= 0 {
-		return nil, fmt.Errorf("invalid timeout value: %v", cmd.timeout)
+		return fmt.Errorf("invalid timeout value: %v", cmd.timeout)
 	}
 
 	addrs := strings.Split(cmd.mdnsAddrs, ",")
@@ -177,62 +211,100 @@ func (cmd *devFinderCmd) sendMDNSPacket(ctx context.Context, packet mdns.Packet)
 	for _, s := range strings.Split(cmd.mdnsPorts, ",") {
 		p, err := strconv.ParseUint(s, 10, 16)
 		if err != nil {
-			return nil, fmt.Errorf("Could not parse port number %v: %v\n", s, err)
+			return fmt.Errorf("could not parse port number %v: %v\n", s, err)
 		}
 		ports = append(ports, int(p))
 	}
 
-	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
-	defer cancel()
-	errChan := make(chan error)
-	devChan := make(chan *fuchsiaDevice)
 	for _, addr := range addrs {
 		for _, p := range ports {
 			m := cmd.newMDNS(addr)
 			m.AddHandler(func(recv net.Interface, addr net.Addr, rxPacket mdns.Packet) {
 				response := mDNSResponse{recv, addr, rxPacket}
-				cmd.mdnsHandler(response, cmd.localResolve, devChan, errChan)
+				cmd.mdnsHandler(response, cmd.localResolve, f)
 			})
 			m.AddErrorHandler(func(err error) {
-				errChan <- err
+				f <- &fuchsiaDevice{err: err}
 			})
 			m.AddWarningHandler(func(addr net.Addr, err error) {
 				log.Printf("from: %v warn: %v\n", addr, err)
 			})
 			if err := m.Start(ctx, p); err != nil {
-				return nil, fmt.Errorf("starting mdns: %v", err)
+				return fmt.Errorf("starting mdns: %v", err)
 			}
 			m.Send(packet)
 		}
 	}
 
+	return nil
+}
+
+type deviceFinder interface {
+	list(context.Context, chan *fuchsiaDevice) error
+	resolve(context.Context, chan *fuchsiaDevice, ...string) error
+}
+
+func (cmd *devFinderCmd) deviceFinders() []deviceFinder {
+	res := make([]deviceFinder, 0)
+	if cmd.netboot {
+		res = append(res, &netbootFinder{deviceFinderBase{cmd: cmd}})
+	}
+	if cmd.mdns {
+		res = append(res, &mdnsFinder{deviceFinderBase{cmd: cmd}})
+	}
+	return res
+}
+
+// filterInboundDevices takes a context and a channel (which has already been passed to some setup
+// code that will be writing into it asynchronously), and reads inbound fuchsiaDevice objects
+// until a timeout is reached.
+//
+// This applies all base command filters.
+//
+// This function executes synchronously.
+func (cmd *devFinderCmd) filterInboundDevices(ctx context.Context, f <-chan *fuchsiaDevice, domains ...string) ([]*fuchsiaDevice, error) {
+	ctx, cancel := context.WithTimeout(ctx, time.Duration(cmd.timeout)*time.Millisecond)
+	defer cancel()
 	devices := make(map[string]*fuchsiaDevice)
+	resolveDomains := make(map[string]int)
+	for _, d := range domains {
+		resolveDomains[d] = 1
+	}
 	for {
 		select {
 		case <-ctx.Done():
-			if len(devices) == 0 {
-				return nil, fmt.Errorf("timeout")
+			devices := sortDeviceMap(devices)
+			if len(resolveDomains) == 0 {
+				return devices, nil
 			}
-			// Devices are returned in sorted order to ensure that results are
-			// deterministic despite using a hashmap (which is non-deterministically
-			// ordered).
-			return sortDeviceMap(devices), nil
-		case err := <-errChan:
-			return nil, err
-		case device := <-devChan:
-			// Creates a hashable string to remove duplicate devices.
-			//
-			// There should only be one of each domain on the network, but given how
-			// mcast is sent on each interface, multiple responses with different IP
-			// addresses can be returned for a single device in the case of a device
-			// running on the host in an emulator (this is a special case). Each
-			// IP would be point to the localhost in this case.
-			devices[fmt.Sprintf("%s", device.domain)] = device
+			res := make([]*fuchsiaDevice, 0)
+			for _, d := range devices {
+				if resolveDomains[d.domain] == 1 {
+					res = append(res, d)
+				}
+			}
+			return res, nil
+		case device := <-f:
+			if err := device.err; err != nil {
+				return nil, err
+			}
+			devices[device.domain] = device
 			if cmd.deviceLimit != 0 && len(devices) == cmd.deviceLimit {
 				return sortDeviceMap(devices), nil
 			}
 		}
 	}
+}
+
+func (cmd *devFinderCmd) outputNormal(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
+	for _, device := range filteredDevices {
+		if includeDomain {
+			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addrString(), device.domain)
+		} else {
+			fmt.Fprintf(cmd.Output(), "%v\n", device.addrString())
+		}
+	}
+	return nil
 }
 
 // jsonOutput represents the output in JSON format.
@@ -248,22 +320,11 @@ type jsonDevice struct {
 	Domain string `json:"domain,omitempty"`
 }
 
-func (cmd *devFinderCmd) outputNormal(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
-	for _, device := range filteredDevices {
-		if includeDomain {
-			fmt.Fprintf(cmd.Output(), "%v %v\n", device.addr, device.domain)
-		} else {
-			fmt.Fprintf(cmd.Output(), "%v\n", device.addr)
-		}
-	}
-	return nil
-}
-
 func (cmd *devFinderCmd) outputJSON(filteredDevices []*fuchsiaDevice, includeDomain bool) error {
 	jsonOut := jsonOutput{Devices: make([]jsonDevice, 0, len(filteredDevices))}
 
 	for _, device := range filteredDevices {
-		dev := jsonDevice{Addr: device.addr.String()}
+		dev := jsonDevice{Addr: device.addrString()}
 		if includeDomain {
 			dev.Domain = device.domain
 		}

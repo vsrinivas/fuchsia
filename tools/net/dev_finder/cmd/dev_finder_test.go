@@ -11,11 +11,23 @@ import (
 	"net"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/go-cmp/cmp"
 
 	"go.fuchsia.dev/fuchsia/tools/net/mdns"
+	"go.fuchsia.dev/fuchsia/tools/net/netboot"
 )
+
+type nbDiscoverFunc func(chan<- *netboot.Target, string, bool) (func() error, error)
+
+type fakeNetbootClient struct {
+	discover nbDiscoverFunc
+}
+
+func (m *fakeNetbootClient) StartDiscover(t chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+	return m.discover(t, nodename, fuchsia)
+}
 
 // fakeMDNS is a fake implementation of MDNS for testing.
 type fakeMDNS struct {
@@ -104,39 +116,66 @@ func (m *fakeMDNS) Send(packet mdns.Packet) error {
 }
 func (m *fakeMDNS) Start(context.Context, int) error { return nil }
 
-func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData bool, sendTooShortData bool) devFinderCmd {
+func newDevFinderCmd(handler mDNSHandler, answerDomains []string, sendEmptyData bool, sendTooShortData bool, nbDiscover nbDiscoverFunc) devFinderCmd {
 	return devFinderCmd{
 		mdnsHandler: handler,
 		mdnsAddrs:   "224.0.0.251",
 		mdnsPorts:   "5353",
 		timeout:     10,
+		netboot:     true,
+		mdns:        true,
 		newMDNSFunc: func(addr string) mdnsInterface {
-            return &fakeMDNS{
-                answer: &fakeAnswer{
-                    ip:      "192.168.0.42",
-                    domains: answerDomains,
-                },
-                sendEmptyData:    sendEmptyData,
-                sendTooShortData: sendTooShortData,
-            }
+			return &fakeMDNS{
+				answer: &fakeAnswer{
+					ip:      "192.168.0.42",
+					domains: answerDomains,
+				},
+				sendEmptyData:    sendEmptyData,
+				sendTooShortData: sendTooShortData,
+			}
+		},
+		newNetbootFunc: func(_ time.Duration) netbootClientInterface {
+			return &fakeNetbootClient{nbDiscover}
 		},
 	}
 }
 
 func compareFuchsiaDevices(d1, d2 *fuchsiaDevice) bool {
-	return cmp.Equal(d1.addr, d2.addr) && cmp.Equal(d1.domain, d2.domain)
+	return cmp.Equal(d1.addr, d2.addr) && cmp.Equal(d1.domain, d2.domain) && cmp.Equal(d1.zone, d2.zone)
 }
 
 //// Tests for the `list` command.
 
 func TestListDevices(t *testing.T) {
+	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+		t.Helper()
+		if !fuchsia {
+			t.Fatalf("fuchsia set to false")
+		}
+		nodenameWant := netboot.NodenameWildcard
+		if nodename != nodenameWant {
+			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
+		}
+		go func() {
+			target <- &netboot.Target{
+				TargetAddress: net.ParseIP("192.168.1.2").To4(),
+				Nodename:      "this-is-a-netboot-device",
+			}
+			target <- &netboot.Target{
+				TargetAddress: net.ParseIP("192.168.0.42").To4(),
+				Nodename:      "some.domain",
+			}
+		}()
+		return func() error { return nil }, nil
+
+	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
 			[]string{
 				"some.domain",
 				"another.domain",
-			}, false, false),
+			}, false, false, nbDiscover),
 	}
 
 	got, err := cmd.listDevices(context.Background())
@@ -152,6 +191,10 @@ func TestListDevices(t *testing.T) {
 			addr:   net.ParseIP("192.168.0.42").To4(),
 			domain: "some.domain",
 		},
+		{
+			addr:   net.ParseIP("192.168.1.2").To4(),
+			domain: "this-is-a-netboot-device",
+		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
@@ -159,13 +202,30 @@ func TestListDevices(t *testing.T) {
 }
 
 func TestListDevices_domainFilter(t *testing.T) {
+	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+		t.Helper()
+		if !fuchsia {
+			t.Fatalf("fuchsia set to false")
+		}
+		nodenameWant := netboot.NodenameWildcard
+		if nodename != nodenameWant {
+			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
+		}
+		go func() {
+			target <- &netboot.Target{
+				TargetAddress: net.ParseIP("192.168.1.2").To4(),
+				Nodename:      "this-is-some-netboot-device",
+			}
+		}()
+		return func() error { return nil }, nil
+	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
 			[]string{
 				"some.domain",
 				"another.domain",
-			}, false, false),
+			}, false, false, nbDiscover),
 		domainFilter: "some",
 	}
 
@@ -178,6 +238,10 @@ func TestListDevices_domainFilter(t *testing.T) {
 			addr:   net.ParseIP("192.168.0.42").To4(),
 			domain: "some.domain",
 		},
+		{
+			addr:   net.ParseIP("192.168.1.2").To4(),
+			domain: "this-is-some-netboot-device",
+		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {
 		t.Errorf("listDevices mismatch: (-want +got):\n%s", d)
@@ -185,6 +249,9 @@ func TestListDevices_domainFilter(t *testing.T) {
 }
 
 func TestListDevices_emptyData(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+		return func() error { return nil }, nil
+	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -193,7 +260,7 @@ func TestListDevices_emptyData(t *testing.T) {
 				"another.domain",
 			},
 			true, // sendEmptyData
-			false),
+			false, nbDiscover),
 	}
 
 	// Must not crash.
@@ -201,6 +268,9 @@ func TestListDevices_emptyData(t *testing.T) {
 }
 
 func TestListDevices_duplicateDevices(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+		return func() error { return nil }, nil
+	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -213,7 +283,8 @@ func TestListDevices_duplicateDevices(t *testing.T) {
 				"another.domain",
 			},
 			false,
-			false),
+			false,
+			nbDiscover),
 	}
 	got, err := cmd.listDevices(context.Background())
 	if err != nil {
@@ -235,6 +306,9 @@ func TestListDevices_duplicateDevices(t *testing.T) {
 }
 
 func TestListDevices_tooShortData(t *testing.T) {
+	nbDiscover := func(_ chan<- *netboot.Target, _ string, _ bool) (func() error, error) {
+		return func() error { return nil }, nil
+	}
 	cmd := listCmd{
 		devFinderCmd: newDevFinderCmd(
 			listMDNSHandler,
@@ -244,6 +318,7 @@ func TestListDevices_tooShortData(t *testing.T) {
 			},
 			false,
 			true, // sendTooShortData
+			nbDiscover,
 		),
 	}
 
@@ -254,13 +329,31 @@ func TestListDevices_tooShortData(t *testing.T) {
 //// Tests for the `resolve` command.
 
 func TestResolveDevices(t *testing.T) {
+	resolveNode := "some.domain"
+	nbDiscover := func(target chan<- *netboot.Target, nodename string, fuchsia bool) (func() error, error) {
+		t.Helper()
+		if !fuchsia {
+			t.Fatalf("fuchsia set to false")
+		}
+		nodenameWant := resolveNode
+		if nodename != nodenameWant {
+			t.Fatalf("nodename set incorrectly: want %q got %q", nodenameWant, nodename)
+		}
+		go func() {
+			target <- &netboot.Target{
+				TargetAddress: net.ParseIP("192.168.1.2").To4(),
+				Nodename:      "this-is-some-netboot-device",
+			}
+		}()
+		return func() error { return nil }, nil
+	}
 	cmd := resolveCmd{
 		devFinderCmd: newDevFinderCmd(
 			resolveMDNSHandler,
 			[]string{
 				"some.domain.local",
 				"another.domain.local",
-			}, false, false),
+			}, false, false, nbDiscover),
 	}
 
 	got, err := cmd.resolveDevices(context.Background(), "some.domain")
@@ -270,7 +363,7 @@ func TestResolveDevices(t *testing.T) {
 	want := []*fuchsiaDevice{
 		{
 			addr:   net.ParseIP("192.168.0.42").To4(),
-			domain: "some.domain.local",
+			domain: "some.domain",
 		},
 	}
 	if d := cmp.Diff(want, got, cmp.Comparer(compareFuchsiaDevices)); d != "" {

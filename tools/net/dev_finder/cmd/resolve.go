@@ -9,11 +9,8 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net"
 
 	"github.com/google/subcommands"
-
-	"go.fuchsia.dev/fuchsia/tools/net/mdns"
 )
 
 const (
@@ -40,54 +37,28 @@ func (cmd *resolveCmd) SetFlags(f *flag.FlagSet) {
 	cmd.SetCommonFlags(f)
 }
 
-func resolveMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchsiaDevice, errChan chan<- error) {
-	for _, a := range resp.rxPacket.Answers {
-		if a.Class == mdns.IN && a.Type == mdns.A &&
-			len(a.Data) == ipv4AddrLength {
-			if localResolve {
-				recvIP, err := resp.getReceiveIP()
-				if err != nil {
-					errChan <- err
-					return
-				}
-				devChan <- &fuchsiaDevice{recvIP, a.Domain}
-				continue
-			}
-			devChan <- &fuchsiaDevice{net.IP(a.Data), a.Domain}
-		}
-	}
-}
-
 func (cmd *resolveCmd) resolveDevices(ctx context.Context, domains ...string) ([]*fuchsiaDevice, error) {
 	if len(domains) == 0 {
 		return nil, errors.New("no domains supplied")
 	}
-
-	var outDevices []*fuchsiaDevice
-	for _, domain := range domains {
-		mDNSDomain := fmt.Sprintf("%s.local", domain)
-		devices, err := cmd.sendMDNSPacket(ctx, mdns.QuestionPacket(mDNSDomain))
-		if err != nil {
-			return nil, fmt.Errorf("sending/receiving mdns packets during resolve of domain '%s': %v", domain, err)
-		}
-		filteredDevices := make([]*fuchsiaDevice, 0)
-		for _, device := range devices {
-			if device.domain == mDNSDomain {
-				filteredDevices = append(filteredDevices, device)
-			}
-		}
-		if len(filteredDevices) == 0 {
-			return nil, fmt.Errorf("no devices with domain %v", domain)
-		}
-
-		for _, device := range filteredDevices {
-			outDevices = append(outDevices, device)
+	f := make(chan *fuchsiaDevice)
+	for _, finder := range cmd.deviceFinders() {
+		if err := finder.resolve(ctx, f, domains...); err != nil {
+			return nil, err
 		}
 	}
-	return outDevices, nil
+	devices, err := cmd.filterInboundDevices(ctx, f, domains...)
+	if err != nil {
+		return nil, err
+	}
+	if len(devices) == 0 {
+		return nil, fmt.Errorf("no devices found for domains: %v", domains)
+	}
+	return devices, err
 }
 
 func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
+	cmd.mdnsHandler = resolveMDNSHandler
 	outDevices, err := cmd.resolveDevices(ctx, domains...)
 	if err != nil {
 		return err
@@ -100,7 +71,6 @@ func (cmd *resolveCmd) execute(ctx context.Context, domains ...string) error {
 }
 
 func (cmd *resolveCmd) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	cmd.mdnsHandler = resolveMDNSHandler
 	if err := cmd.execute(ctx, f.Args()...); err != nil {
 		log.Print(err)
 		return subcommands.ExitFailure

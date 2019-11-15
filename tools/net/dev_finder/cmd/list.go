@@ -12,12 +12,6 @@ import (
 	"strings"
 
 	"github.com/google/subcommands"
-
-	"go.fuchsia.dev/fuchsia/tools/net/mdns"
-)
-
-const (
-	fuchsiaService = "_fuchsia._udp.local"
 )
 
 type listCmd struct {
@@ -47,60 +41,19 @@ func (cmd *listCmd) SetFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.fullInfo, "full", false, "Print device address and domain")
 }
 
-func listMDNSHandler(resp mDNSResponse, localResolve bool, devChan chan<- *fuchsiaDevice, errChan chan<- error) {
-	for _, a := range resp.rxPacket.Answers {
-		if a.Class == mdns.IN && a.Type == mdns.PTR {
-			// DX-1498: Some protection against malformed responses.
-			if len(a.Data) == 0 {
-				log.Print("Empty data in response. Ignoring...")
-				continue
-			}
-			nameLength := int(a.Data[0])
-			if len(a.Data) < nameLength+1 {
-				log.Printf("Too short data in response. Got %d bytes; expected %d", len(a.Data), nameLength+1)
-				continue
-			}
-
-			// This is a bit convoluted: the domain param is being used
-			// as a "service", and the Data field actually contains the
-			// domain of the device.
-			fuchsiaDomain := string(a.Data[1 : nameLength+1])
-			if localResolve {
-				recvIP, err := resp.getReceiveIP()
-				if err != nil {
-					errChan <- err
-					return
-				}
-				devChan <- &fuchsiaDevice{recvIP, fuchsiaDomain}
-				continue
-			}
-			if ip, err := addrToIP(resp.devAddr); err != nil {
-				errChan <- fmt.Errorf("could not find addr for %v: %v", resp.devAddr, err)
-			} else {
-				devChan <- &fuchsiaDevice{
-					addr:   ip,
-					domain: fuchsiaDomain,
-				}
-			}
+func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
+	f := make(chan *fuchsiaDevice)
+	for _, finder := range cmd.deviceFinders() {
+		if err := finder.list(ctx, f); err != nil {
+			return nil, err
 		}
 	}
-}
-
-func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
-	listPacket := mdns.Packet{
-		Header: mdns.Header{QDCount: 1},
-		Questions: []mdns.Question{
-			{
-				Domain:  fuchsiaService,
-				Type:    mdns.PTR,
-				Class:   mdns.IN,
-				Unicast: false,
-			},
-		},
-	}
-	devices, err := cmd.sendMDNSPacket(ctx, listPacket)
+	devices, err := cmd.filterInboundDevices(ctx, f)
 	if err != nil {
-		return nil, fmt.Errorf("sending/receiving mdns packets: %v", err)
+		return nil, err
+	}
+	if len(devices) == 0 {
+		return nil, fmt.Errorf("no devices found")
 	}
 	var filteredDevices []*fuchsiaDevice
 	for _, device := range devices {
@@ -115,6 +68,7 @@ func (cmd *listCmd) listDevices(ctx context.Context) ([]*fuchsiaDevice, error) {
 }
 
 func (cmd *listCmd) execute(ctx context.Context) error {
+	cmd.mdnsHandler = listMDNSHandler
 	filteredDevices, err := cmd.listDevices(ctx)
 	if err != nil {
 		return err
@@ -127,7 +81,6 @@ func (cmd *listCmd) execute(ctx context.Context) error {
 }
 
 func (cmd *listCmd) Execute(ctx context.Context, _ *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
-	cmd.mdnsHandler = listMDNSHandler
 	if err := cmd.execute(ctx); err != nil {
 		log.Print(err)
 		return subcommands.ExitFailure

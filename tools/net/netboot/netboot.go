@@ -118,6 +118,8 @@ type netbootQuery struct {
 	conn6 *ipv6.PacketConn
 	conn  *net.UDPConn
 	port  int // The port to write on.
+
+	isOpen bool
 }
 
 func newNetbootQuery(nodename string, cookie uint32, port int, fuchsia bool) (*netbootQuery, error) {
@@ -141,7 +143,8 @@ func newNetbootQuery(nodename string, cookie uint32, port int, fuchsia bool) (*n
 		fuchsia: fuchsia,
 		conn:    conn,
 		conn6:   conn6,
-		port:    port}, nil
+		port:    port,
+		isOpen:  true}, nil
 }
 
 func (n *netbootQuery) write() error {
@@ -212,8 +215,15 @@ func (n *netbootQuery) write() error {
 func (n *netbootQuery) read() (*Target, error) {
 	b := make([]byte, 4096)
 	_, cm, _, err := n.conn6.ReadFrom(b)
+	// If there was an error, as the connection was already valid at the time
+	// of creation, this means that some timeout somewhere else has closed
+	// before this function was called (this is going to be called in a loop
+	// in a goroutine in most cases). There is no way to determine if the
+	// connection is still open unless there is an attempt at reading on it
+	// unfortunately.
 	if err != nil {
-		return nil, fmt.Errorf("query read error: %v", err)
+		n.isOpen = false
+		return nil, nil
 	}
 	node, err := n.parse(b)
 	if err != nil {
@@ -226,6 +236,7 @@ func (n *netbootQuery) read() (*Target, error) {
 		// The netstack link-local address has 11th byte always set to 0xff, set
 		// this byte to transform netsvc address to netstack address if needed.
 		cm.Src[11] = 0xff
+		cm.Dst[11] = 0xff
 	}
 
 	var iface *net.Interface
@@ -368,6 +379,10 @@ func (n *Client) StartDiscover(t chan<- *Target, nodename string, fuchsia bool) 
 		}
 
 		for {
+			// Simple cleanup to avoid extra cycles.
+			if !q.isOpen {
+				return
+			}
 			target, err := q.read()
 			if err != nil {
 				t <- &Target{Error: err}
