@@ -47,7 +47,7 @@ static aml_sd_emmc_config_t config = {
     .min_freq = 400000,
     .max_freq = 100000000,
     .version_3 = false,
-    .prefs = 0,
+    .prefs = SDMMC_HOST_PREFS_DISABLE_HS400,
 };
 
 static const pbus_metadata_t emmc_metadata[] = {
