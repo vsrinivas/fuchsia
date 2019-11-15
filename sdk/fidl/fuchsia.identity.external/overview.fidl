@@ -1,0 +1,15 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Defines the protocols used to interface with non-Fuchsia forms of identity,
+/// such as OAuth and OpenID identity providers.
+///
+/// New identity providers or service providers may be added to the system by
+/// implementing the server side of one or more of these protocols, the core
+/// identity system will act as the client.
+///
+/// Clients wishing to acquire tokens should use the system token management
+/// protocols in `fuchsia.identity.tokens` instead of depending on this library
+/// directly.
+library fuchsia.identity.external;

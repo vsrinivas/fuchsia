@@ -9,6 +9,7 @@ fidl("fuchsia.identity.authentication") {
   sources = [
     "common.fidl",
     "mechanisms.fidl",
+    "overview.fidl",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.auth",

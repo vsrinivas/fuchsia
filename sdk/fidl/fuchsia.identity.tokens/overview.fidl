@@ -1,0 +1,11 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+/// Defines the data types and protocols used to request user authorization
+/// tokens and identity information from service providers and identity
+/// providers.
+///
+/// The actual interaction with these providers is through lower level protocols
+/// defined in `fuchsia.id.external`.
+library fuchsia.identity.tokens;

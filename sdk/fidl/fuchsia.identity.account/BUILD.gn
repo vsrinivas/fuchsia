@@ -10,6 +10,7 @@ fidl("fuchsia.identity.account") {
     "auth_state.fidl",
     "auth_target.fidl",
     "common.fidl",
+    "overview.fidl",
   ]
 
   public_deps = [

@@ -10,6 +10,7 @@ fidl("fuchsia.identity.tokens") {
 
   sources = [
     "common.fidl",
+    "overview.fidl",
     "token_types.fidl",
   ]
 }
