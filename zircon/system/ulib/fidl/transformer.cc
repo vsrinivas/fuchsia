@@ -197,41 +197,55 @@ struct Position {
 class SrcDst final {
  public:
   SrcDst(const uint8_t* src_bytes, const uint32_t src_num_bytes, uint8_t* dst_bytes,
-         uint32_t dst_num_bytes_capacity, uint32_t* out_dst_num_bytes)
+         uint32_t dst_num_bytes_capacity)
       : src_bytes_(src_bytes),
-        src_num_bytes_(src_num_bytes),
+        src_max_offset_(src_num_bytes),
         dst_bytes_(dst_bytes),
-        dst_num_bytes_capacity_(dst_num_bytes_capacity),
-        out_dst_num_bytes_(out_dst_num_bytes) {}
+        dst_max_offset_(dst_num_bytes_capacity) {}
   SrcDst(const SrcDst&) = delete;
 
-  ~SrcDst() { *out_dst_num_bytes_ = dst_max_offset_; }
-
+  // Reads |T| from |src_bytes|.
+  // This may update the max src read offset if needed.
   template <typename T>
-  const T* __attribute__((warn_unused_result)) Read(const Position& position) const {
-    uint32_t size = sizeof(T);
-    if (!(position.src_inline_offset + size <= src_num_bytes_)) {
+  const T* __attribute__((warn_unused_result)) Read(const Position& position) {
+    return Read<T>(position, sizeof(T));
+  }
+
+  // Reads |size| bytes from |src_bytes|, but only returns a pointer to |T|
+  // which may be smaller, i.e. |sizeof(T)| can be smaller than |size|.
+  // This may update the max src read offset if needed.
+  template <typename T>
+  const T* __attribute__((warn_unused_result)) Read(const Position& position, uint32_t size) {
+    assert(sizeof(T) <= size);
+    const auto status = src_max_offset_.Update(position.src_inline_offset + size);
+    if (status != ZX_OK) {
       return nullptr;
     }
 
     return reinterpret_cast<const T*>(src_bytes_ + position.src_inline_offset);
   }
 
+  // Copies |size| bytes from |src_bytes| to |dst_bytes|.
+  // This may update the max src read offset if needed.
+  // This may update the max dst written offset if needed.
   zx_status_t __attribute__((warn_unused_result)) Copy(const Position& position, uint32_t size) {
-    if (!(position.src_inline_offset + size <= src_num_bytes_)) {
-      return ZX_ERR_BAD_STATE;
+    const auto src_status = src_max_offset_.Update(position.src_inline_offset + size);
+    if (src_status != ZX_OK) {
+      return src_status;
+    }
+    const auto dst_status = dst_max_offset_.Update(position.dst_inline_offset + size);
+    if (dst_status != ZX_OK) {
+      return dst_status;
     }
 
-    const auto status = UpdateMaxOffset(position.dst_inline_offset + size);
-    if (status != ZX_OK) {
-      return status;
-    }
     memcpy(dst_bytes_ + position.dst_inline_offset, src_bytes_ + position.src_inline_offset, size);
     return ZX_OK;
   }
 
+  // Pads |size| bytes in |dst_bytes|.
+  // This may update the max dst written offset if needed.
   zx_status_t __attribute__((warn_unused_result)) Pad(const Position& position, uint32_t size) {
-    const auto status = UpdateMaxOffset(position.dst_inline_offset + size);
+    const auto status = dst_max_offset_.Update(position.dst_inline_offset + size);
     if (status != ZX_OK) {
       return status;
     }
@@ -239,10 +253,12 @@ class SrcDst final {
     return ZX_OK;
   }
 
+  // Writes |value| in |dst_bytes|.
+  // This may update the max dst written offset if needed.
   template <typename T>
   zx_status_t __attribute__((warn_unused_result)) Write(const Position& position, T value) {
     const auto size = static_cast<uint32_t>(sizeof(value));
-    const auto status = UpdateMaxOffset(position.dst_inline_offset + size);
+    const auto status = dst_max_offset_.Update(position.dst_inline_offset + size);
     if (status != ZX_OK) {
       return status;
     }
@@ -252,30 +268,34 @@ class SrcDst final {
   }
 
   const uint8_t* src_bytes() const { return src_bytes_; }
-  uint32_t src_num_bytes() const { return src_num_bytes_; }
+  uint32_t src_num_bytes() const { return src_max_offset_.capacity_; }
+  uint32_t src_max_offset_read() const { return src_max_offset_.max_offset_; }
 
   uint8_t* dst_bytes() const { return dst_bytes_; }
-  uint32_t dst_num_bytes_capacity() const { return dst_num_bytes_capacity_; }
-  uint32_t dst_max_offset() const { return dst_max_offset_; }
+  uint32_t dst_num_bytes_capacity() const { return dst_max_offset_.capacity_; }
+  uint32_t dst_max_offset_written() const { return dst_max_offset_.max_offset_; }
 
  private:
-  zx_status_t __attribute__((warn_unused_result)) UpdateMaxOffset(uint32_t dst_offset) {
-    if (dst_offset > dst_max_offset_) {
-      if (!(dst_offset <= dst_num_bytes_capacity_)) {
+  struct MaxOffset {
+    MaxOffset(uint32_t capacity) : capacity_(capacity) {}
+    const uint32_t capacity_;
+    uint32_t max_offset_ = 0;
+
+    zx_status_t __attribute__((warn_unused_result)) Update(uint32_t offset) {
+      if (offset > capacity_) {
         return ZX_ERR_BAD_STATE;
       }
-      dst_max_offset_ = dst_offset;
+      if (offset > max_offset_) {
+        max_offset_ = offset;
+      }
+      return ZX_OK;
     }
-    return ZX_OK;
-  }
+  };
 
   const uint8_t* src_bytes_;
-  const uint32_t src_num_bytes_;
+  MaxOffset src_max_offset_;
   uint8_t* dst_bytes_;
-  const uint32_t dst_num_bytes_capacity_;
-  uint32_t* out_dst_num_bytes_;
-
-  uint32_t dst_max_offset_ = 0;
+  MaxOffset dst_max_offset_;
 };
 
 // Debug related information, which is set both on construction, and as we
@@ -352,8 +372,8 @@ private:
     printf("}\n");
 
     printf("uint8_t dst_bytes[0x%02x] = {  // capacity = 0x%02x\n",
-          src_dst_.dst_max_offset(), src_dst_.dst_num_bytes_capacity());
-    print_bytes(src_dst_.dst_bytes(), src_dst_.dst_max_offset(), position_.dst_out_of_line_offset);
+          src_dst_.dst_max_offset_written(), src_dst_.dst_num_bytes_capacity());
+    print_bytes(src_dst_.dst_bytes(), src_dst_.dst_max_offset_written(), position_.dst_out_of_line_offset);
     printf("}\n");
 
     printf("=== END TRANSFORMER %s ===\n", failure_type.c_str());
@@ -1247,7 +1267,7 @@ class OldToV1 final : public TransformerBase {
     TRANSFORMER_ASSERT(src_coded_union.field_count == dst_coded_union.field_count, position);
 
     // Read: union tag.
-    const auto union_tag_ptr = src_dst->Read<const fidl_union_tag_t>(position);
+    const auto union_tag_ptr = src_dst->Read<const fidl_union_tag_t>(position, src_coded_union.size);
     if (!union_tag_ptr) {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union tag missing");
     }
@@ -1327,7 +1347,7 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
     return ZX_ERR_INVALID_ARGS;
   }
 
-  SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, dst_num_bytes_capacity, out_dst_num_bytes);
+  SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, dst_num_bytes_capacity);
   DebugInfo debug_info(transformation, type, src_dst, out_error_msg);
 
   const zx_status_t status = [&] {
@@ -1348,7 +1368,18 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
         return ZX_ERR_INVALID_ARGS;
     }
   }();
-  return status;
+
+  if (status != ZX_OK) {
+    return status;
+  }
+
+  if (FIDL_ALIGN(src_dst.src_max_offset_read()) != src_num_bytes) {
+    debug_info.RecordFailure(__LINE__, "did not read all provided bytes during transformation");
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  *out_dst_num_bytes = src_dst.dst_max_offset_written();
+  return ZX_OK;
 }
 
 #pragma GCC diagnostic pop  // "-Wimplicit-fallthrough"

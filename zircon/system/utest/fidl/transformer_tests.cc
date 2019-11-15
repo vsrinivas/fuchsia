@@ -4249,13 +4249,42 @@ bool fails_on_bad_transformation() {
   END_TEST;
 }
 
+bool fails_if_does_not_read_src_num_bytes() {
+  BEGIN_TEST;
+
+  const auto actual_src_bytes_size = static_cast<uint32_t>(sizeof(sandwich1_case1_old));
+  uint8_t src_bytes[sizeof(sandwich1_case1_old) + 1];
+  memcpy(src_bytes, sandwich1_case1_old, actual_src_bytes_size);
+  src_bytes[actual_src_bytes_size] = 0;
+
+  for (uint32_t adjust = 0; adjust <= 1; adjust++) {
+    uint8_t dst_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    uint32_t out_dst_num_bytes;
+    const auto status = fidl_transform(
+        FIDL_TRANSFORMATION_OLD_TO_V1, &example_Sandwich1Table,
+        src_bytes, actual_src_bytes_size + adjust,
+        dst_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &out_dst_num_bytes,
+        nullptr);
+    if (adjust == 1) {
+      ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+    } else {
+      ASSERT_EQ(status, ZX_OK);
+    }
+  }
+
+  END_TEST;
+}
+
 }  // namespace
 
 // The commented-out tests below currently don't pass.
 BEGIN_TEST_CASE(transformer)
 
 RUN_TEST(fails_on_bad_transformation)
+RUN_TEST(fails_if_does_not_read_src_num_bytes)
 
+// TODO(mkember): Overtime, we will move all the tests below into the GIDL
+// conformance suite.
 RUN_TEST(simpletablearraystruct)
 RUN_TEST(sandwich1)
 RUN_TEST(sandwich1_with_opt_union_present)
