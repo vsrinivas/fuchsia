@@ -8,6 +8,65 @@ namespace llcpp {
 namespace fuchsia {
 namespace exception {
 
+::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::ProcessLimbo_RemoveFilters_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::~ProcessLimbo_RemoveFilters_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~ProcessLimbo_RemoveFilters_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::MoveImpl_(ProcessLimbo_RemoveFilters_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
 ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::ProcessLimbo_ReleaseProcess_Result() {
   tag_ = Tag::Invalid;
 }
@@ -58,6 +117,65 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::SizeAndOff
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_err() {
+  if (which() != Tag::kErr) {
+    Destroy();
+    new (&err_) int32_t;
+  }
+  tag_ = Tag::kErr;
+  return err_;
+}
+
+
+::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::ProcessLimbo_AppendFilters_Result() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::~ProcessLimbo_AppendFilters_Result() {
+  Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::Destroy() {
+  switch (which()) {
+  case Tag::kResponse:
+    response_.~ProcessLimbo_AppendFilters_Response();
+    break;
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::MoveImpl_(ProcessLimbo_AppendFilters_Result&& other) {
+  switch (other.which()) {
+  case Tag::kResponse:
+    mutable_response() = std::move(other.mutable_response());
+    break;
+  case Tag::kErr:
+    mutable_err() = std::move(other.mutable_err());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result, response_) == 4);
+  static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result, err_) == 4);
+  static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result) == ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::PrimarySize);
+}
+
+
+::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_response() {
+  if (which() != Tag::kResponse) {
+    Destroy();
+    new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response;
+  }
+  tag_ = Tag::kResponse;
+  return response_;
+}
+
+int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_err() {
   if (which() != Tag::kErr) {
     Destroy();
     new (&err_) int32_t;
@@ -426,6 +544,27 @@ constexpr uint64_t kProcessLimbo_ReleaseProcess_GenOrdinal = 0x76911553fea22b87l
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_AppendFilters_Ordinal = 0x49c3fc8800000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_AppendFilters_GenOrdinal = 0x16a292988604df9alu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_RemoveFilters_Ordinal = 0xfe8829500000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_RemoveFilters_GenOrdinal = 0x1fae63a1df648aelu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_GetFilters_Ordinal = 0x4410733300000000lu;
+[[maybe_unused]]
+constexpr uint64_t kProcessLimbo_GetFilters_GenOrdinal = 0x11d2a683823e7de6lu;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboGetFiltersResponseTable;
 
 }  // namespace
 template <>
@@ -674,6 +813,201 @@ ProcessLimbo::UnownedResultOf::ReleaseProcess ProcessLimbo::Call::ReleaseProcess
   return ::fidl::Decode(std::move(_call_result.message));
 }
 
+template <>
+ProcessLimbo::ResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AppendFiltersRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  AppendFiltersRequest _request = {};
+  _request.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AppendFiltersRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      ProcessLimbo::InPlace::AppendFilters(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::AppendFilters ProcessLimbo::SyncClient::AppendFilters(::fidl::VectorView<::fidl::StringView> filters) {
+  return ResultOf::AppendFilters(zx::unowned_channel(this->channel_), std::move(filters));
+}
+
+ProcessLimbo::ResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+  return ResultOf::AppendFilters(std::move(_client_end), std::move(filters));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::AppendFilters_Impl<ProcessLimbo::AppendFiltersResponse>::AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < AppendFiltersRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<AppendFiltersResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  AppendFiltersRequest _request = {};
+  _request.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<AppendFiltersRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      ProcessLimbo::InPlace::AppendFilters(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::SyncClient::AppendFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AppendFilters(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::AppendFilters ProcessLimbo::Call::AppendFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::AppendFilters(std::move(_client_end), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::AppendFiltersResponse> ProcessLimbo::InPlace::AppendFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer) {
+  ProcessLimbo::SetTransactionHeaderFor::AppendFiltersRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::AppendFiltersResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<AppendFiltersRequest, AppendFiltersResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::AppendFiltersResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+ProcessLimbo::ResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveFiltersRequest, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr _write_bytes_boxed = std::make_unique<::fidl::internal::AlignedBuffer<_kWriteAllocSize>>();
+  auto& _write_bytes_array = *_write_bytes_boxed;
+  RemoveFiltersRequest _request = {};
+  _request.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_request, _write_bytes_array.view());
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<RemoveFiltersRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      ProcessLimbo::InPlace::RemoveFilters(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::RemoveFilters ProcessLimbo::SyncClient::RemoveFilters(::fidl::VectorView<::fidl::StringView> filters) {
+  return ResultOf::RemoveFilters(zx::unowned_channel(this->channel_), std::move(filters));
+}
+
+ProcessLimbo::ResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters) {
+  return ResultOf::RemoveFilters(std::move(_client_end), std::move(filters));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::RemoveFilters_Impl<ProcessLimbo::RemoveFiltersResponse>::RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  if (_request_buffer.capacity() < RemoveFiltersRequest::PrimarySize) {
+    Super::SetFailure(::fidl::DecodeResult<RemoveFiltersResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
+    return;
+  }
+  RemoveFiltersRequest _request = {};
+  _request.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    Super::SetFailure(std::move(_linearize_result));
+    return;
+  }
+  ::fidl::DecodedMessage<RemoveFiltersRequest> _decoded_request = std::move(_linearize_result.message);
+  Super::SetResult(
+      ProcessLimbo::InPlace::RemoveFilters(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::SyncClient::RemoveFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveFilters(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::RemoveFilters ProcessLimbo::Call::RemoveFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::RemoveFilters(std::move(_client_end), std::move(_request_buffer), std::move(filters), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::RemoveFiltersResponse> ProcessLimbo::InPlace::RemoveFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer) {
+  ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::RemoveFiltersResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<RemoveFiltersRequest, RemoveFiltersResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::RemoveFiltersResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
+ProcessLimbo::ResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFiltersRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetFiltersRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetFiltersRequest));
+  ::fidl::DecodedMessage<GetFiltersRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      ProcessLimbo::InPlace::GetFilters(std::move(_client_end), Super::response_buffer()));
+}
+
+ProcessLimbo::ResultOf::GetFilters ProcessLimbo::SyncClient::GetFilters() {
+  return ResultOf::GetFilters(zx::unowned_channel(this->channel_));
+}
+
+ProcessLimbo::ResultOf::GetFilters ProcessLimbo::Call::GetFilters(zx::unowned_channel _client_end) {
+  return ResultOf::GetFilters(std::move(_client_end));
+}
+
+template <>
+ProcessLimbo::UnownedResultOf::GetFilters_Impl<ProcessLimbo::GetFiltersResponse>::GetFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetFiltersRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetFiltersRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetFiltersRequest));
+  ::fidl::DecodedMessage<GetFiltersRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      ProcessLimbo::InPlace::GetFilters(std::move(_client_end), std::move(_response_buffer)));
+}
+
+ProcessLimbo::UnownedResultOf::GetFilters ProcessLimbo::SyncClient::GetFilters(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetFilters(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+ProcessLimbo::UnownedResultOf::GetFilters ProcessLimbo::Call::GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetFilters(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<ProcessLimbo::GetFiltersResponse> ProcessLimbo::InPlace::GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetFiltersRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetFiltersRequest> params(std::move(_request_buffer));
+  ProcessLimbo::SetTransactionHeaderFor::GetFiltersRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::GetFiltersResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetFiltersRequest, GetFiltersResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<ProcessLimbo::GetFiltersResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
 
 bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
   if (msg->num_bytes < sizeof(fidl_message_header_t)) {
@@ -736,6 +1070,44 @@ bool ProcessLimbo::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
       auto message = result.message.message();
       impl->ReleaseProcess(std::move(message->process_koid),
           Interface::ReleaseProcessCompleter::Sync(txn));
+      return true;
+    }
+    case kProcessLimbo_AppendFilters_Ordinal:
+    case kProcessLimbo_AppendFilters_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<AppendFiltersRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->AppendFilters(std::move(message->filters),
+          Interface::AppendFiltersCompleter::Sync(txn));
+      return true;
+    }
+    case kProcessLimbo_RemoveFilters_Ordinal:
+    case kProcessLimbo_RemoveFilters_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<RemoveFiltersRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->RemoveFilters(std::move(message->filters),
+          Interface::RemoveFiltersCompleter::Sync(txn));
+      return true;
+    }
+    case kProcessLimbo_GetFilters_Ordinal:
+    case kProcessLimbo_GetFilters_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetFiltersRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetFilters(
+          Interface::GetFiltersCompleter::Sync(txn));
       return true;
     }
     default: {
@@ -961,6 +1333,150 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::Decoded
 }
 
 
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AppendFiltersResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<AppendFiltersResponse*>(_write_bytes);
+  ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(
+      ::fidl::DecodedMessage<AppendFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AppendFiltersResponse::PrimarySize,
+              AppendFiltersResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AppendFiltersResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<AppendFiltersResponse>(std::move(_response_bytes)));
+}
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess() {
+  ProcessLimbo_AppendFilters_Response response;
+
+  Reply(ProcessLimbo_AppendFilters_Result::WithResponse(std::move(response)));
+}
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplyError(int32_t error) {
+  Reply(ProcessLimbo_AppendFilters_Result::WithErr(std::move(error)));
+}
+
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result) {
+  if (_buffer.capacity() < AppendFiltersResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<AppendFiltersResponse*>(_buffer.data());
+  ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(
+      ::fidl::DecodedMessage<AppendFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              AppendFiltersResponse::PrimarySize,
+              AppendFiltersResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(AppendFiltersResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<AppendFiltersResponse>(std::move(_buffer)));
+}
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  ProcessLimbo_AppendFilters_Response response;
+
+  Reply(std::move(_buffer), ProcessLimbo_AppendFilters_Result::WithResponse(std::move(response)));
+}
+
+void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::DecodedMessage<AppendFiltersResponse> params) {
+  ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<RemoveFiltersResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<RemoveFiltersResponse*>(_write_bytes);
+  ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(
+      ::fidl::DecodedMessage<RemoveFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RemoveFiltersResponse::PrimarySize,
+              RemoveFiltersResponse::PrimarySize)));
+  _response.result = std::move(result);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(RemoveFiltersResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveFiltersResponse>(std::move(_response_bytes)));
+}
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess() {
+  ProcessLimbo_RemoveFilters_Response response;
+
+  Reply(ProcessLimbo_RemoveFilters_Result::WithResponse(std::move(response)));
+}
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplyError(int32_t error) {
+  Reply(ProcessLimbo_RemoveFilters_Result::WithErr(std::move(error)));
+}
+
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result) {
+  if (_buffer.capacity() < RemoveFiltersResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<RemoveFiltersResponse*>(_buffer.data());
+  ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(
+      ::fidl::DecodedMessage<RemoveFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              RemoveFiltersResponse::PrimarySize,
+              RemoveFiltersResponse::PrimarySize)));
+  _response.result = std::move(result);
+  _buffer.set_actual(sizeof(RemoveFiltersResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<RemoveFiltersResponse>(std::move(_buffer)));
+}
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
+  ProcessLimbo_RemoveFilters_Response response;
+
+  Reply(std::move(_buffer), ProcessLimbo_RemoveFilters_Result::WithResponse(std::move(response)));
+}
+
+void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::DecodedMessage<RemoveFiltersResponse> params) {
+  ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void ProcessLimbo::Interface::GetFiltersCompleterBase::Reply(::fidl::VectorView<::fidl::StringView> filters) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetFiltersResponse, ::fidl::MessageDirection::kSending>();
+  std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
+  uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
+  GetFiltersResponse _response = {};
+  ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(
+      ::fidl::DecodedMessage<GetFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetFiltersResponse::PrimarySize,
+              GetFiltersResponse::PrimarySize)));
+  _response.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_response, ::fidl::BytePart(_write_bytes,
+                                                                          _kWriteAllocSize));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void ProcessLimbo::Interface::GetFiltersCompleterBase::Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::fidl::StringView> filters) {
+  if (_buffer.capacity() < GetFiltersResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  GetFiltersResponse _response = {};
+  ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(
+      ::fidl::DecodedMessage<GetFiltersResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetFiltersResponse::PrimarySize,
+              GetFiltersResponse::PrimarySize)));
+  _response.filters = std::move(filters);
+  auto _linearize_result = ::fidl::Linearize(&_response, std::move(_buffer));
+  if (_linearize_result.status != ZX_OK) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  CompleterBase::SendReply(std::move(_linearize_result.message));
+}
+
+void ProcessLimbo::Interface::GetFiltersCompleterBase::Reply(::fidl::DecodedMessage<GetFiltersResponse> params) {
+  ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 
 void ProcessLimbo::SetTransactionHeaderFor::WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_Ordinal);
@@ -988,6 +1504,27 @@ void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(const ::fidl::
 }
 void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_Ordinal);
+}
+
+void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_Ordinal);
+}
+void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_Ordinal);
+}
+
+void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_Ordinal);
+}
+void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_Ordinal);
+}
+
+void ProcessLimbo::SetTransactionHeaderFor::GetFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_Ordinal);
+}
+void ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_Ordinal);
 }
 
 }  // namespace exception

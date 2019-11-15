@@ -25,8 +25,12 @@ namespace llcpp {
 namespace fuchsia {
 namespace exception {
 
+struct ProcessLimbo_RemoveFilters_Response;
+struct ProcessLimbo_RemoveFilters_Result;
 struct ProcessLimbo_ReleaseProcess_Response;
 struct ProcessLimbo_ReleaseProcess_Result;
+struct ProcessLimbo_AppendFilters_Response;
+struct ProcessLimbo_AppendFilters_Result;
 enum class ExceptionType : uint32_t {
   GENERAL = 8u,
   FATAL_PAGE_FAULT = 264u,
@@ -256,6 +260,123 @@ class ProcessException::Builder {
   ::fidl::Array<fidl_envelope_t, 4> envelopes_ = {};
 };
 
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+
+struct ProcessLimbo_RemoveFilters_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+
+struct ProcessLimbo_RemoveFilters_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ProcessLimbo_RemoveFilters_Result();
+  ~ProcessLimbo_RemoveFilters_Result();
+
+  ProcessLimbo_RemoveFilters_Result(ProcessLimbo_RemoveFilters_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ProcessLimbo_RemoveFilters_Result& operator=(ProcessLimbo_RemoveFilters_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response&& val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static ProcessLimbo_RemoveFilters_Result WithErr(int32_t&& val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_RemoveFilters_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ProcessLimbo_RemoveFilters_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response response_;
+    int32_t err_;
+  };
+};
+
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_ReleaseProcess_ResponseTable;
 
@@ -372,6 +493,127 @@ struct ProcessLimbo_ReleaseProcess_Result {
     int32_t err_;
   };
 };
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+
+struct ProcessLimbo_AppendFilters_Response {
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResponseTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 1;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 0;
+
+  uint8_t __reserved = {};
+};
+
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+
+struct ProcessLimbo_AppendFilters_Result {
+  enum class Tag : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  ProcessLimbo_AppendFilters_Result();
+  ~ProcessLimbo_AppendFilters_Result();
+
+  ProcessLimbo_AppendFilters_Result(ProcessLimbo_AppendFilters_Result&& other) {
+    tag_ = Tag::Invalid;
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+  }
+
+  ProcessLimbo_AppendFilters_Result& operator=(ProcessLimbo_AppendFilters_Result&& other) {
+    if (this != &other) {
+      MoveImpl_(std::move(other));
+    }
+    return *this;
+  }
+
+  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+
+  bool is_response() const { return tag_ == Tag::kResponse; }
+
+  static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response&& val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_response(std::move(val));
+    return result;
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& mutable_response();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T& v) {
+    mutable_response() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T&& v) {
+    mutable_response() = std::move(v);
+  }
+
+  ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response const & response() const { return response_; }
+
+  bool is_err() const { return tag_ == Tag::kErr; }
+
+  static ProcessLimbo_AppendFilters_Result WithErr(int32_t&& val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_err(std::move(val));
+    return result;
+  }
+
+  int32_t& mutable_err();
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T& v) {
+    mutable_err() = v;
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T&& v) {
+    mutable_err() = std::move(v);
+  }
+
+  int32_t const & err() const { return err_; }
+
+  Tag which() const { return tag_; }
+
+  static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+  static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimbo_AppendFilters_ResultTable;
+  static constexpr uint32_t MaxNumHandles = 0;
+  static constexpr uint32_t PrimarySize = 8;
+  [[maybe_unused]]
+  static constexpr uint32_t MaxOutOfLine = 0;
+  static constexpr uint32_t AltPrimarySize = 24;
+  [[maybe_unused]]
+  static constexpr uint32_t AltMaxOutOfLine = 8;
+
+ private:
+  void Destroy();
+  void MoveImpl_(ProcessLimbo_AppendFilters_Result&& other);
+  static void SizeAndOffsetAssertionHelper();
+  Tag tag_;
+  union {
+    ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response response_;
+    int32_t err_;
+  };
+};
+
+constexpr uint64_t MAX_FILTER_LENGTH = 32u;
+
+constexpr uint64_t MAX_FILTERS_PER_CALL = 32u;
 
 // The maximum amount of exceptions that will be listed at any given time by a
 // call to |ListProcessesWaitingOnException|.
@@ -878,6 +1120,18 @@ extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessRequest
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessRequestTable;
 extern "C" const fidl_type_t fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboReleaseProcessResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetFiltersRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboGetFiltersRequestTable;
+extern "C" const fidl_type_t fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_exception_ProcessLimboGetFiltersResponseTable;
 
 // Protocol meant for clients interested in obtaining processes that are
 // suspended waiting for an exception handler (in limbo). This is the core
@@ -997,6 +1251,97 @@ class ProcessLimbo final {
     using ResponseType = ReleaseProcessResponse;
   };
 
+  struct AppendFiltersResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboAppendFiltersResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct AppendFiltersRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::VectorView<::fidl::StringView> filters;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboAppendFiltersRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 1536;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1536;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = AppendFiltersResponse;
+  };
+
+  struct RemoveFiltersResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRemoveFiltersResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 40;
+    static constexpr uint32_t AltMaxOutOfLine = 8;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = true;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  struct RemoveFiltersRequest final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::VectorView<::fidl::StringView> filters;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboRemoveFiltersRequestTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 1536;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1536;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kRequest;
+    using ResponseType = RemoveFiltersResponse;
+  };
+
+  struct GetFiltersResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    ::fidl::VectorView<::fidl::StringView> filters;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_exception_ProcessLimboGetFiltersResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 32;
+    static constexpr uint32_t MaxOutOfLine = 1536;
+    static constexpr uint32_t AltPrimarySize = 32;
+    static constexpr uint32_t AltMaxOutOfLine = 1536;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetFiltersRequest = ::fidl::AnyZeroArgMessage;
+
 
   // Collection of return types of FIDL calls in this interface.
   class ResultOf final {
@@ -1066,12 +1411,63 @@ class ProcessLimbo final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class AppendFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+      ~AppendFilters_Impl() = default;
+      AppendFilters_Impl(AppendFilters_Impl&& other) = default;
+      AppendFilters_Impl& operator=(AppendFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class RemoveFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+      ~RemoveFilters_Impl() = default;
+      RemoveFilters_Impl(RemoveFilters_Impl&& other) = default;
+      RemoveFilters_Impl& operator=(RemoveFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetFilters_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetFilters_Impl(zx::unowned_channel _client_end);
+      ~GetFilters_Impl() = default;
+      GetFilters_Impl(GetFilters_Impl&& other) = default;
+      GetFilters_Impl& operator=(GetFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
     using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
     using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
+    using AppendFilters = AppendFilters_Impl<AppendFiltersResponse>;
+    using RemoveFilters = RemoveFilters_Impl<RemoveFiltersResponse>;
+    using GetFilters = GetFilters_Impl<GetFiltersResponse>;
   };
 
   // Collection of return types of FIDL calls in this interface,
@@ -1143,12 +1539,63 @@ class ProcessLimbo final {
       using Super::operator->;
       using Super::operator*;
     };
+    template <typename ResponseType>
+    class AppendFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      AppendFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+      ~AppendFilters_Impl() = default;
+      AppendFilters_Impl(AppendFilters_Impl&& other) = default;
+      AppendFilters_Impl& operator=(AppendFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class RemoveFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      RemoveFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+      ~RemoveFilters_Impl() = default;
+      RemoveFilters_Impl(RemoveFilters_Impl&& other) = default;
+      RemoveFilters_Impl& operator=(RemoveFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
+    class GetFilters_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetFilters_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetFilters_Impl() = default;
+      GetFilters_Impl(GetFilters_Impl&& other) = default;
+      GetFilters_Impl& operator=(GetFilters_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
 
    public:
     using WatchActive = WatchActive_Impl<WatchActiveResponse>;
     using WatchProcessesWaitingOnException = WatchProcessesWaitingOnException_Impl<WatchProcessesWaitingOnExceptionResponse>;
     using RetrieveException = RetrieveException_Impl<RetrieveExceptionResponse>;
     using ReleaseProcess = ReleaseProcess_Impl<ReleaseProcessResponse>;
+    using AppendFilters = AppendFilters_Impl<AppendFiltersResponse>;
+    using RemoveFilters = RemoveFilters_Impl<RemoveFiltersResponse>;
+    using GetFilters = GetFilters_Impl<GetFiltersResponse>;
   };
 
   class SyncClient final {
@@ -1244,6 +1691,80 @@ class ProcessLimbo final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReleaseProcess ReleaseProcess(::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
+    // Adds filters to the limbo. Filters determine what processes the limbo
+    // will store when receiving an exception. Repeated filters will be
+    // ignored. Filters work by "filtering out" processes. It means that if a
+    // filter matches, that process won't get included.
+    //
+    // Filters work by substring matching. This means that a process name has
+    // to have the filter as a substring in order to match it. Example:
+    //
+    // Filter = "dev".
+    // Process = "process" won't match.
+    // Process = "devcoordinator" will match.
+    //
+    // Adding filters is transactional: either all of them go in, or none at
+    // all. The maximum amount of filters is determined by
+    // |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    // is returned.
+    //
+    // Changing filters have no effect on processes that are currently waiting
+    // on an exception, but rather which future processes that will remain in
+    // the limbo.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::AppendFilters AppendFilters(::fidl::VectorView<::fidl::StringView> filters);
+
+    // Adds filters to the limbo. Filters determine what processes the limbo
+    // will store when receiving an exception. Repeated filters will be
+    // ignored. Filters work by "filtering out" processes. It means that if a
+    // filter matches, that process won't get included.
+    //
+    // Filters work by substring matching. This means that a process name has
+    // to have the filter as a substring in order to match it. Example:
+    //
+    // Filter = "dev".
+    // Process = "process" won't match.
+    // Process = "devcoordinator" will match.
+    //
+    // Adding filters is transactional: either all of them go in, or none at
+    // all. The maximum amount of filters is determined by
+    // |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    // is returned.
+    //
+    // Changing filters have no effect on processes that are currently waiting
+    // on an exception, but rather which future processes that will remain in
+    // the limbo.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::AppendFilters AppendFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+
+    // Removes filters to the limbo. Any filters that are not currently present
+    // on the limbo will be ignored.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    ResultOf::RemoveFilters RemoveFilters(::fidl::VectorView<::fidl::StringView> filters);
+
+    // Removes filters to the limbo. Any filters that are not currently present
+    // on the limbo will be ignored.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::RemoveFilters RemoveFilters(::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+
+    // Returns filters that are currently active within the limbo. If the limbo
+    // is inactive, it will return an empty vector.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    ResultOf::GetFilters GetFilters();
+
+    // Returns filters that are currently active within the limbo. If the limbo
+    // is inactive, it will return an empty vector.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetFilters GetFilters(::fidl::BytePart _response_buffer);
+
    private:
     ::zx::channel channel_;
   };
@@ -1335,6 +1856,80 @@ class ProcessLimbo final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReleaseProcess ReleaseProcess(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t process_koid, ::fidl::BytePart _response_buffer);
 
+    // Adds filters to the limbo. Filters determine what processes the limbo
+    // will store when receiving an exception. Repeated filters will be
+    // ignored. Filters work by "filtering out" processes. It means that if a
+    // filter matches, that process won't get included.
+    //
+    // Filters work by substring matching. This means that a process name has
+    // to have the filter as a substring in order to match it. Example:
+    //
+    // Filter = "dev".
+    // Process = "process" won't match.
+    // Process = "devcoordinator" will match.
+    //
+    // Adding filters is transactional: either all of them go in, or none at
+    // all. The maximum amount of filters is determined by
+    // |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    // is returned.
+    //
+    // Changing filters have no effect on processes that are currently waiting
+    // on an exception, but rather which future processes that will remain in
+    // the limbo.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::AppendFilters AppendFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+
+    // Adds filters to the limbo. Filters determine what processes the limbo
+    // will store when receiving an exception. Repeated filters will be
+    // ignored. Filters work by "filtering out" processes. It means that if a
+    // filter matches, that process won't get included.
+    //
+    // Filters work by substring matching. This means that a process name has
+    // to have the filter as a substring in order to match it. Example:
+    //
+    // Filter = "dev".
+    // Process = "process" won't match.
+    // Process = "devcoordinator" will match.
+    //
+    // Adding filters is transactional: either all of them go in, or none at
+    // all. The maximum amount of filters is determined by
+    // |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    // is returned.
+    //
+    // Changing filters have no effect on processes that are currently waiting
+    // on an exception, but rather which future processes that will remain in
+    // the limbo.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::AppendFilters AppendFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+
+    // Removes filters to the limbo. Any filters that are not currently present
+    // on the limbo will be ignored.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Allocates 24 bytes of response buffer on the stack. Request is heap-allocated.
+    static ResultOf::RemoveFilters RemoveFilters(zx::unowned_channel _client_end, ::fidl::VectorView<::fidl::StringView> filters);
+
+    // Removes filters to the limbo. Any filters that are not currently present
+    // on the limbo will be ignored.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::RemoveFilters RemoveFilters(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::fidl::VectorView<::fidl::StringView> filters, ::fidl::BytePart _response_buffer);
+
+    // Returns filters that are currently active within the limbo. If the limbo
+    // is inactive, it will return an empty vector.
+    // Allocates 16 bytes of request buffer on the stack. Response is heap-allocated.
+    static ResultOf::GetFilters GetFilters(zx::unowned_channel _client_end);
+
+    // Returns filters that are currently active within the limbo. If the limbo
+    // is inactive, it will return an empty vector.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetFilters GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
   };
 
   // Messages are encoded and decoded in-place when these methods are used.
@@ -1379,6 +1974,40 @@ class ProcessLimbo final {
     // it "bubble up" beyond the scope of of this limbo, making it
     // unretrievable in the future from here.
     static ::fidl::DecodeResult<ReleaseProcessResponse> ReleaseProcess(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseProcessRequest> params, ::fidl::BytePart response_buffer);
+
+    // Adds filters to the limbo. Filters determine what processes the limbo
+    // will store when receiving an exception. Repeated filters will be
+    // ignored. Filters work by "filtering out" processes. It means that if a
+    // filter matches, that process won't get included.
+    //
+    // Filters work by substring matching. This means that a process name has
+    // to have the filter as a substring in order to match it. Example:
+    //
+    // Filter = "dev".
+    // Process = "process" won't match.
+    // Process = "devcoordinator" will match.
+    //
+    // Adding filters is transactional: either all of them go in, or none at
+    // all. The maximum amount of filters is determined by
+    // |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    // is returned.
+    //
+    // Changing filters have no effect on processes that are currently waiting
+    // on an exception, but rather which future processes that will remain in
+    // the limbo.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    static ::fidl::DecodeResult<AppendFiltersResponse> AppendFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AppendFiltersRequest> params, ::fidl::BytePart response_buffer);
+
+    // Removes filters to the limbo. Any filters that are not currently present
+    // on the limbo will be ignored.
+    //
+    // Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    static ::fidl::DecodeResult<RemoveFiltersResponse> RemoveFilters(zx::unowned_channel _client_end, ::fidl::DecodedMessage<RemoveFiltersRequest> params, ::fidl::BytePart response_buffer);
+
+    // Returns filters that are currently active within the limbo. If the limbo
+    // is inactive, it will return an empty vector.
+    static ::fidl::DecodeResult<GetFiltersResponse> GetFilters(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
   };
 
@@ -1455,6 +2084,54 @@ class ProcessLimbo final {
 
     virtual void ReleaseProcess(uint64_t process_koid, ReleaseProcessCompleter::Sync _completer) = 0;
 
+    class AppendFiltersCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<AppendFiltersResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using AppendFiltersCompleter = ::fidl::Completer<AppendFiltersCompleterBase>;
+
+    virtual void AppendFilters(::fidl::VectorView<::fidl::StringView> filters, AppendFiltersCompleter::Sync _completer) = 0;
+
+    class RemoveFiltersCompleterBase : public _Base {
+     public:
+      void Reply(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result);
+      void ReplySuccess();
+      void ReplyError(int32_t error);
+      void Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result);
+      void ReplySuccess(::fidl::BytePart _buffer);
+      void Reply(::fidl::DecodedMessage<RemoveFiltersResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using RemoveFiltersCompleter = ::fidl::Completer<RemoveFiltersCompleterBase>;
+
+    virtual void RemoveFilters(::fidl::VectorView<::fidl::StringView> filters, RemoveFiltersCompleter::Sync _completer) = 0;
+
+    class GetFiltersCompleterBase : public _Base {
+     public:
+      void Reply(::fidl::VectorView<::fidl::StringView> filters);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<::fidl::StringView> filters);
+      void Reply(::fidl::DecodedMessage<GetFiltersResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetFiltersCompleter = ::fidl::Completer<GetFiltersCompleterBase>;
+
+    virtual void GetFilters(GetFiltersCompleter::Sync _completer) = 0;
+
   };
 
   // Attempts to dispatch the incoming message to a handler function in the server implementation.
@@ -1488,6 +2165,12 @@ class ProcessLimbo final {
     static void RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg);
     static void ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg);
     static void ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg);
+    static void AppendFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersRequest>& _msg);
+    static void AppendFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersResponse>& _msg);
+    static void RemoveFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersRequest>& _msg);
+    static void RemoveFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersResponse>& _msg);
+    static void GetFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersRequest>& _msg);
+    static void GetFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersResponse>& _msg);
   };
 };
 
@@ -1498,6 +2181,16 @@ class ProcessLimbo final {
 namespace fidl {
 
 template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response) == ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result>);
+
+template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>);
 static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response, __reserved) == 0);
@@ -1506,6 +2199,16 @@ static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Re
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result>);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response, __reserved) == 0);
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response) == ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response::PrimarySize);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result> : public std::true_type {};
+static_assert(std::is_standard_layout_v<::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result>);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::exception::ExceptionInfo> : public std::true_type {};
@@ -1599,5 +2302,45 @@ struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessRe
 static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse)
     == ::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::ReleaseProcessResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersRequest)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersRequest, filters) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::AppendFiltersResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersRequest> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersRequest> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersRequest)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersRequest::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersRequest, filters) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::RemoveFiltersResponse, result) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::exception::ProcessLimbo::GetFiltersResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::exception::ProcessLimbo::GetFiltersResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::exception::ProcessLimbo::GetFiltersResponse)
+    == ::llcpp::fuchsia::exception::ProcessLimbo::GetFiltersResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::exception::ProcessLimbo::GetFiltersResponse, filters) == 16);
 
 }  // namespace fidl

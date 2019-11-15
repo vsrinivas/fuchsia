@@ -7,6 +7,7 @@
 #include <fuchsia/exception/cpp/fidl.h>
 
 #include <map>
+#include <set>
 
 #include "src/lib/fxl/memory/weak_ptr.h"
 
@@ -17,6 +18,8 @@ class ProcessLimboHandler;
 
 class ProcessLimboManager {
  public:
+  static constexpr size_t kMaxFilters = 32;
+
   ProcessLimboManager();
 
   fxl::WeakPtr<ProcessLimboManager> GetWeakPtr();
@@ -30,6 +33,15 @@ class ProcessLimboManager {
   bool active() const { return active_; }
 
   const std::map<zx_koid_t, ProcessException>& limbo() const { return limbo_; }
+
+  const std::set<std::string>& filters() const { return filters_; }
+
+  // Testing utilities.
+  void AppendFiltersForTesting(const std::vector<std::string>&);
+
+  void set_obtain_process_name_fn(fit::function<std::string(zx_handle_t)> fn) {
+    obtain_process_name_fn_ = std::move(fn);
+  }
 
  private:
   // Returns the list of process metadata for processes waiting on exceptions
@@ -49,6 +61,12 @@ class ProcessLimboManager {
   bool active_ = false;
 
   std::vector<fxl::WeakPtr<ProcessLimboHandler>> handlers_;
+
+  std::set<std::string> filters_;
+
+  // Testing won't have valid handles (mocking them is very involved), so we use this function to
+  // inject the way the manager will get the process name, permitting to test the filtering.
+  fit::function<std::string(zx_handle_t)> obtain_process_name_fn_;
 
   fxl::WeakPtrFactory<ProcessLimboManager> weak_factory_;
   friend class ProcessLimboHandler;
@@ -77,6 +95,12 @@ class ProcessLimboHandler : public ProcessLimbo {
   void RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback) override;
 
   void ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback) override;
+
+  void GetFilters(GetFiltersCallback) override;
+
+  void AppendFilters(std::vector<std::string> filters, AppendFiltersCallback) override;
+
+  void RemoveFilters(std::vector<std::string> filters, RemoveFiltersCallback) override;
 
  private:
   // WatchActive hanging get.

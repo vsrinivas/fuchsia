@@ -119,6 +119,21 @@ std::unique_ptr<ProcessLimboHandler> CreateHandler(ProcessLimboManager* limbo_ma
   return handler;
 }
 
+ProcessException GetFakeException(zx_koid_t process_koid = 1, zx_koid_t thread_koid = 1,
+                                  ExceptionType type = ExceptionType::FATAL_PAGE_FAULT) {
+  ExceptionInfo info;
+  info.process_koid = process_koid;
+  info.thread_koid = thread_koid;
+  info.type = type;
+
+  ProcessException exception;
+  exception.set_info(info);
+  exception.set_process(zx::process(process_koid));  // Invalid handle. Never rely on it.
+  exception.set_thread(zx::thread(thread_koid));     // Invalid handle. Never rely on it.
+
+  return exception;
+}
+
 // Tests -------------------------------------------------------------------------------------------
 
 TEST(ProcessLimboManager, ProcessLimboHandler) {
@@ -465,6 +480,123 @@ TEST(ProcessLimboManager, ManyHandlers) {
   EXPECT_TRUE(active_callbacks[0]);
   EXPECT_TRUE(active_callbacks[1]);
   EXPECT_TRUE(active_callbacks[2]);
+}
+
+TEST(ProcessLimboManager, Filters) {
+  ProcessLimboManager limbo_manager;
+
+  // Override how the manager gets the process name.
+  std::string name_to_return;
+  limbo_manager.set_obtain_process_name_fn(
+      [&name_to_return](zx_handle_t) -> std::string { return name_to_return; });
+
+  // No filters should add the exception.
+  name_to_return = "some-process";
+
+  constexpr zx_koid_t kProcessKoid1 = 1;
+  limbo_manager.AddToLimbo(GetFakeException(kProcessKoid1));
+
+  // It should've added the exception.
+  auto& limbo = limbo_manager.limbo();
+  ASSERT_EQ(limbo.size(), 1u);
+  ASSERT_TRUE(limbo.find(kProcessKoid1) != limbo.end());
+
+  // Adding a filter should filter out.
+  limbo_manager.AppendFiltersForTesting({"filter"});
+
+  constexpr zx_koid_t kProcessKoid2 = 2;
+  limbo_manager.AddToLimbo(GetFakeException(kProcessKoid2));
+
+  // No match, so the process should've been added.
+  ASSERT_EQ(limbo.size(), 2u);
+  EXPECT_TRUE(limbo.find(kProcessKoid1) != limbo.end());
+  EXPECT_TRUE(limbo.find(kProcessKoid2) != limbo.end());
+
+  // Adding a match should not append the process.
+  name_to_return = "some-filtered-process";
+  constexpr zx_koid_t kProcessKoid3 = 3;
+  limbo_manager.AddToLimbo(GetFakeException(kProcessKoid3));
+
+  ASSERT_EQ(limbo.size(), 2u);
+  EXPECT_TRUE(limbo.find(kProcessKoid1) != limbo.end());
+  EXPECT_TRUE(limbo.find(kProcessKoid2) != limbo.end());
+}
+
+TEST(ProcessLimboManager, FiltersGetSet) {
+  ProcessLimboManager limbo_manager;
+  auto handler = CreateHandler(&limbo_manager);
+
+  // We add some initial filters.
+  limbo_manager.AppendFiltersForTesting({"filter-1", "filter-2"});
+
+  // Get the initial watch.
+  {
+    bool called = false;
+    std::vector<std::string> filters;
+    handler->GetFilters([&called, &filters](std::vector<std::string> r) {
+      called = true;
+      filters = std::move(r);
+    });
+
+    ASSERT_TRUE(called);
+    ASSERT_EQ(filters.size(), 2u);
+    EXPECT_EQ(filters[0], "filter-1");
+    EXPECT_EQ(filters[1], "filter-2");
+  }
+
+  // Make the hanging get.
+  {
+    bool append_called = false;
+    ProcessLimbo_AppendFilters_Result append_result;
+    handler->AppendFilters({"filter-3", "filter-4"},
+                           [&append_called, &append_result](ProcessLimbo_AppendFilters_Result r) {
+                             append_called = true;
+                             append_result = std::move(r);
+                           });
+    ASSERT_TRUE(append_called);
+    ASSERT_FALSE(append_result.is_err()) << zx_status_get_string(append_result.err());
+
+    bool called = true;
+    std::vector<std::string> filters;
+    handler->GetFilters([&called, &filters](std::vector<std::string> r) {
+      called = true;
+      filters = std::move(r);
+    });
+
+    // The get should've been called.
+    ASSERT_TRUE(called);
+    ASSERT_EQ(filters.size(), 4u);
+    EXPECT_EQ(filters[0], "filter-1");
+    EXPECT_EQ(filters[1], "filter-2");
+    EXPECT_EQ(filters[2], "filter-3");
+    EXPECT_EQ(filters[3], "filter-4");
+  }
+
+  // Removing some filters should call the hanging get too.
+  {
+    bool remove_called = false;
+    ProcessLimbo_RemoveFilters_Result remove_result;
+    handler->RemoveFilters({"filter-1", "filter-3"},
+                           [&remove_called, &remove_result](ProcessLimbo_RemoveFilters_Result r) {
+                             remove_called = true;
+                             remove_result = std::move(r);
+                           });
+    ASSERT_TRUE(remove_called);
+    ASSERT_FALSE(remove_result.is_err()) << zx_status_get_string(remove_result.err());
+
+    bool called = true;
+    std::vector<std::string> filters;
+    handler->GetFilters([&called, &filters](std::vector<std::string> r) {
+      called = true;
+      filters = std::move(r);
+    });
+
+    // The get should've been called.
+    ASSERT_TRUE(called);
+    ASSERT_EQ(filters.size(), 2u);
+    EXPECT_EQ(filters[0], "filter-2");
+    EXPECT_EQ(filters[1], "filter-4");
+  }
 }
 
 }  // namespace

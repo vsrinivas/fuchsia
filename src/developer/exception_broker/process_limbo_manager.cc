@@ -3,6 +3,7 @@
 
 #include "src/developer/exception_broker/process_limbo_manager.h"
 
+#include "src/lib/fsl/handles/object_info.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
@@ -22,15 +23,60 @@ void PruneStaleHandlers(std::vector<fxl::WeakPtr<ProcessLimboHandler>>* handlers
   *handlers = std::move(new_handlers);
 }
 
+// This verification was getting repeated for every call.
+template <typename CallbackType>
+bool VerifyState(const fxl::WeakPtr<ProcessLimboManager> limbo_manager, CallbackType* cb) {
+  if (!limbo_manager) {
+    (*cb)(fit::error(ZX_ERR_UNAVAILABLE));
+    return false;
+  }
+  return true;
+}
+
+std::vector<std::string> CreateFilterVector(const std::set<std::string>& filter_set) {
+  std::vector<std::string> filters;
+  filters.reserve(filter_set.size());
+
+  for (auto& filter : filter_set) {
+    filters.emplace_back(filter);
+  }
+
+  return filters;
+}
+
 }  // namespace
 
-ProcessLimboManager::ProcessLimboManager() : weak_factory_(this) {}
+ProcessLimboManager::ProcessLimboManager() : weak_factory_(this) {
+  // Set the default function for getting process names.
+  obtain_process_name_fn_ = [](zx_handle_t handle) -> std::string {
+    return fsl::GetObjectName(handle);
+  };
+}
 
 fxl::WeakPtr<ProcessLimboManager> ProcessLimboManager::GetWeakPtr() {
   return weak_factory_.GetWeakPtr();
 }
 
 void ProcessLimboManager::AddToLimbo(ProcessException process_exception) {
+  // Check filters.
+  auto process_name = obtain_process_name_fn_(process_exception.process().get());
+
+  // Empty names will be stored within the limbo.
+  if (!process_name.empty() && !filters_.empty()) {
+    // Search for a partial match over the filters.
+    bool filter_found = false;
+    for (auto& filter : filters_) {
+      if (process_name.find(filter) != std::string::npos) {
+        filter_found = true;
+        break;
+      }
+    }
+
+    // If a matching filter was found, we will not store this process.
+    if (filter_found)
+      return;
+  }
+
   limbo_[process_exception.info().process_koid] = std::move(process_exception);
 
   // Notify the handlers of the new list of processes in limbo.
@@ -43,6 +89,12 @@ void ProcessLimboManager::AddToLimbo(ProcessException process_exception) {
 
 void ProcessLimboManager::AddHandler(fxl::WeakPtr<ProcessLimboHandler> handler) {
   handlers_.push_back(std::move(handler));
+}
+
+void ProcessLimboManager::AppendFiltersForTesting(const std::vector<std::string>& filters) {
+  for (auto& filter : filters) {
+    filters_.insert(filter);
+  }
 }
 
 std::vector<ProcessExceptionMetadata> ProcessLimboManager::ListProcessesInLimbo() {
@@ -178,10 +230,8 @@ void ProcessLimboHandler::WatchProcessesWaitingOnException(
 }
 
 void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExceptionCallback cb) {
-  if (!limbo_manager_) {
-    cb(fit::error(ZX_ERR_UNAVAILABLE));
+  if (!VerifyState(limbo_manager_, &cb))
     return;
-  }
 
   ProcessLimbo_RetrieveException_Result result;
 
@@ -199,10 +249,8 @@ void ProcessLimboHandler::RetrieveException(zx_koid_t process_koid, RetrieveExce
 }
 
 void ProcessLimboHandler::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessCallback cb) {
-  if (!limbo_manager_) {
-    cb(fit::error(ZX_ERR_UNAVAILABLE));
+  if (!VerifyState(limbo_manager_, &cb))
     return;
-  }
 
   auto& limbo = limbo_manager_->limbo_;
 
@@ -213,6 +261,46 @@ void ProcessLimboHandler::ReleaseProcess(zx_koid_t process_koid, ReleaseProcessC
 
   limbo.erase(it);
   return cb(fit::ok());
+}
+
+void ProcessLimboHandler::GetFilters(GetFiltersCallback cb) {
+  if (!limbo_manager_) {
+    cb({});
+    return;
+  }
+
+  cb(CreateFilterVector(limbo_manager_->filters_));
+}
+
+void ProcessLimboHandler::AppendFilters(std::vector<std::string> new_filters,
+                                        AppendFiltersCallback cb) {
+  if (!VerifyState(limbo_manager_, &cb))
+    return;
+
+  auto current_filters = limbo_manager_->filters_;
+
+  for (auto& filter : new_filters) {
+    current_filters.insert(filter);
+    if (current_filters.size() >= ProcessLimboManager::kMaxFilters) {
+      cb(fit::error(ZX_ERR_NO_RESOURCES));
+      return;
+    }
+  }
+
+  limbo_manager_->filters_ = std::move(current_filters);
+  cb(fit::ok());
+}
+
+void ProcessLimboHandler::RemoveFilters(std::vector<std::string> filters,
+                                        RemoveFiltersCallback cb) {
+  if (!VerifyState(limbo_manager_, &cb))
+    return;
+
+  for (auto& filter : filters) {
+    limbo_manager_->filters_.erase(filter);
+  }
+
+  cb(fit::ok());
 }
 
 }  // namespace exception

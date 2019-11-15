@@ -10,6 +10,9 @@ using zx;
 /// call to |ListProcessesWaitingOnException|.
 const uint64 MAX_EXCEPTIONS_PER_CALL = 32;
 
+const uint64 MAX_FILTER_LENGTH = 32;
+const uint64 MAX_FILTERS_PER_CALL = 32;
+
 /// Protocol meant for clients interested in obtaining processes that are
 /// suspended waiting for an exception handler (in limbo). This is the core
 /// feature that enables Just In Time (JIT) debugging.
@@ -51,6 +54,40 @@ protocol ProcessLimbo {
     /// it "bubble up" beyond the scope of of this limbo, making it
     /// unretrievable in the future from here.
     ReleaseProcess(zx.koid process_koid) -> () error zx.status;
+
+    /// Adds filters to the limbo. Filters determine what processes the limbo
+    /// will store when receiving an exception. Repeated filters will be
+    /// ignored. Filters work by "filtering out" processes. It means that if a
+    /// filter matches, that process won't get included.
+    ///
+    /// Filters work by substring matching. This means that a process name has
+    /// to have the filter as a substring in order to match it. Example:
+    ///
+    /// Filter = "dev".
+    /// Process = "process" won't match.
+    /// Process = "devcoordinator" will match.
+    ///
+    /// Adding filters is transactional: either all of them go in, or none at
+    /// all. The maximum amount of filters is determined by
+    /// |MAX_FILTERS_PER_CALL|. If the maximum is exceeded, ZX_ERR_NO_RESOURCES
+    /// is returned.
+    ///
+    /// Changing filters have no effect on processes that are currently waiting
+    /// on an exception, but rather which future processes that will remain in
+    /// the limbo.
+    ///
+    /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    AppendFilters(vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters) -> () error zx.status;
+
+    /// Removes filters to the limbo. Any filters that are not currently present
+    /// on the limbo will be ignored.
+    ///
+    /// Returns ZX_ERR_UNAVAILABLE if limbo is not active.
+    RemoveFilters(vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters) -> () error zx.status;
+
+    /// Returns filters that are currently active within the limbo. If the limbo
+    /// is inactive, it will return an empty vector.
+    GetFilters() -> (vector<string:MAX_FILTER_LENGTH>:MAX_FILTERS_PER_CALL filters);
 };
 
 /// Intended to be read only metadada associated with an exception waiting in

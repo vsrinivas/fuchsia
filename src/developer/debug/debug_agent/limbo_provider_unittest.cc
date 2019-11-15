@@ -105,6 +105,11 @@ class StubProcessLimbo : public fuchsia::exception::ProcessLimbo {
     return processes;
   }
 
+  // Not used for now.
+  void GetFilters(GetFiltersCallback) override {}
+  void AppendFilters(std::vector<std::string> filters, AppendFiltersCallback) override {}
+  void RemoveFilters(std::vector<std::string> filters, RemoveFiltersCallback) override {}
+
   const std::map<zx_koid_t, ProcessExceptionMetadata>& processes() const { return processes_; }
 
   // Boilerplate needed for getting a FIDL binding to work in unit tests.
