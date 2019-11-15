@@ -60,7 +60,9 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetTopFunction() {
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetTopInlineFunction() {
-  return MakeFunction("TopInline", true, AddressRanges(kTopInlineFunctionRange));
+  auto func = MakeFunction("TopInline", true, AddressRanges(kTopInlineFunctionRange));
+  func->set_call_line(kTopFileLine);
+  return func;
 }
 
 // static
@@ -70,12 +72,16 @@ fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleFunction() {
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline1Function() {
-  return MakeFunction("MiddleInline1", true, AddressRanges(kMiddleInline1FunctionRange));
+  auto func = MakeFunction("MiddleInline1", true, AddressRanges(kMiddleInline1FunctionRange));
+  func->set_call_line(kMiddleFileLine);
+  return func;
 }
 
 // static
 fxl::RefPtr<Function> InlineThreadControllerTest::GetMiddleInline2Function() {
-  return MakeFunction("MiddleInline2", true, AddressRanges(kMiddleInline2FunctionRange));
+  auto func = MakeFunction("MiddleInline2", true, AddressRanges(kMiddleInline2FunctionRange));
+  func->set_call_line(kMiddleInline1FileLine);
+  return func;
 }
 
 // static

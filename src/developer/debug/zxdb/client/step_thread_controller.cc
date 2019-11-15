@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
@@ -220,15 +221,15 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     if (TrySteppingIntoInline(StepIntoInline::kCommit))
       return kStopDone;
   } else {
-    // When an actual step (not synthetic) has resulted in landing at an
-    // ambiguous inline location, always consider the location to be the oldest
-    // frame to allow the user to step into the inline frames if desired.
+    // Just completed a true step. It may have landed at an ambiguous inline location. When
+    // line stepping from an outer frame into a newer inline, always go into exactly one frame. This
+    // corresponds to executing instructions on the line before the inline call, and then stopping
+    // at the first instruction of the inline call.
     //
-    // We don't want to select the same frame here that we were originally
-    // stepping in because we could have just stepped out of a frame to an
-    // inline function starting immediately after the call. We always want to at
-    // the oldest possible inline call.
+    // Need to reset the hide count before doing this because we just stepped *to* the ambiguous
+    // location and want to have our default to be to stay in the same (outermost) frame.
     stack.SetHideAmbiguousInlineFrameCount(stack.GetAmbiguousInlineFrameCount());
+    TrySteppingIntoInline(StepIntoInline::kCommit);
   }
   return kStopDone;
 }
@@ -256,14 +257,45 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
     return false;
   }
 
-  // Examine the closest hidden frame.
+  // Examine the inline frame to potentially unhide.
   const Frame* frame = stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count - 1);
   if (!frame->IsAmbiguousInlineLocation())
     return false;  // No inline or not ambiguous.
 
-  // Do the synthetic step into by unhiding an inline frame.
+  // For "step" to go into an inline function, the line of the inline call must be the same as the
+  // line the user was stepping from. This disambiguates these two cases:
+  //  1) Stepping on some code followed by an inline call on the same line (should step in).
+  //  2) Stepping on a line with no function calls, immediately followed by a different inline
+  //     function call on a subsequent line (don't step in).
+  // We could get the inline function definition and ask for its file/line. The previous stack
+  // frame's file/line will have the same location (the Stack fills this in based on the inline
+  // call source). Use the latter to help keep things in sync. This also makes testing easier since
+  // the tests don't have to fill in the inline call locations, on the stack.
+  const Frame* before_inline_frame = stack.FrameAtIndexIncludingHiddenInline(hidden_frame_count);
+  if (before_inline_frame->GetLocation().file_line() != file_line_)
+    return false;  // Different lines.
+
+  // Require that the the frame we might step into is newer than the frame we started stepping at.
+  // This handles the "step into inline" case.
+  //
+  // We don't want to do anything when the newer frame is the same level or older than the source.
+  // These states indicate that we stepped out of one or more inline frames, and immediately to the
+  // beginning of another (or else the location wouldn't be ambiguous). Stepping should leave us
+  // at the lower leve of the stack in that case.
+  //
+  // The Stack object can only get fingerprints for unhidden frames, so unhide it and put it
+  // back. Hiding/unhiding is inexpensive so don't worry about it.
+  size_t new_hide_count = hidden_frame_count - 1;
+  stack.SetHideAmbiguousInlineFrameCount(new_hide_count);
+  FrameFingerprint new_inline_fingerprint = stack.GetFrameFingerprint(0);
+  stack.SetHideAmbiguousInlineFrameCount(hidden_frame_count);
+
+  FXL_DCHECK(original_frame_fingerprint_.is_valid());  // Should have been filled in previously.
+  if (!FrameFingerprint::Newer(new_inline_fingerprint, original_frame_fingerprint_))
+    return false;  // Not newer.
+
+  // Inline frame should be stepped into.
   if (command == StepIntoInline::kCommit) {
-    size_t new_hide_count = hidden_frame_count - 1;
     stack.SetHideAmbiguousInlineFrameCount(new_hide_count);
     Log("Synthetically stepping into inline frame %s, new hide count = %zu.",
         FrameFunctionNameForLog(stack[0]).c_str(), new_hide_count);
