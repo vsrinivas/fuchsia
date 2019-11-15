@@ -3,6 +3,14 @@
 # found in the LICENSE file.
 
 zx_library("ffl") {
+  sdk = "source"
+  sdk_headers = [
+    "ffl/expression.h",
+    "ffl/fixed_format.h",
+    "ffl/fixed.h",
+    "ffl/saturating_arithmetic.h",
+    "ffl/utility.h",
+  ]
   sources = []
   host = true
   kernel = true
