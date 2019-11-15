@@ -12,7 +12,7 @@
         }
     },
     "program": {
-        "binary": "test/web_runner_integration_tests2"
+        "binary": "test/web_runner_integration_tests"
     },
     "sandbox": {
         "services": [

@@ -40,8 +40,7 @@ source_set("test_server") {
   ]
 }
 
-# TODO(fxb/40163): Remove the "2" suffix once we remove this test from topaz.
-executable("web_runner_integration_tests2") {
+executable("web_runner_integration_tests") {
   testonly = true
 
   sources = [
@@ -86,16 +85,15 @@ executable("web_runner_pixel_tests") {
   ]
 }
 
-# TODO(fxb/40163): Remove the "2" suffix once we remove this test from topaz.
-test_package("web_runner_tests2") {
+test_package("web_runner_tests") {
   deps = [
-    ":web_runner_integration_tests2",
+    ":web_runner_integration_tests",
     ":web_runner_pixel_tests",
   ]
 
   tests = [
     {
-      name = "web_runner_integration_tests2"
+      name = "web_runner_integration_tests"
       manifest = rebase_path("meta/web_runner_integration_tests.cmx")
 
       # FLK-148
