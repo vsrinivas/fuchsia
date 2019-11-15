@@ -11,7 +11,7 @@
 
 #include "lib/gtest/test_loop_fixture.h"
 #include "lib/sys/cpp/component_context.h"
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"

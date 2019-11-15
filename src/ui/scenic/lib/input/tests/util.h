@@ -15,7 +15,8 @@
 #include <string>
 
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
-#include "src/ui/scenic/lib/gfx/displays/display.h"
+#include "src/ui/scenic/lib/display/display.h"
+#include "src/ui/scenic/lib/gfx/engine/vsync_timing.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
@@ -104,7 +105,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<scenic_impl::gfx::Engine> engine_;
-  std::unique_ptr<scenic_impl::gfx::Display> display_;
+  std::shared_ptr<scenic_impl::gfx::Display> display_;
 
   scenic_impl::input::InputSystem* input_system_ = nullptr;
 };

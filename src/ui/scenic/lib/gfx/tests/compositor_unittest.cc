@@ -12,8 +12,8 @@
 
 #include "gtest/gtest.h"
 #include "src/ui/lib/escher/test/gtest_vulkan.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/display/tests/mock_display_controller.h"
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 #include "src/ui/scenic/lib/gfx/tests/vk_session_test.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"

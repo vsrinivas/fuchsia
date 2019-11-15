@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_H_
-#define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_
 
 #include <zircon/types.h>
 
@@ -13,7 +13,8 @@
 
 #include "lib/zx/event.h"
 #include "src/lib/fxl/macros.h"
-#include "src/ui/scenic/lib/gfx/displays/color_transform.h"
+#include "src/ui/scenic/lib/display/color_transform.h"
+#include "src/ui/scenic/lib/gfx/engine/vsync_timing.h"
 #include "zircon/pixelformat.h"
 
 namespace scenic_impl {
@@ -21,7 +22,7 @@ namespace gfx {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
-class Display {
+class Display : public VsyncTiming {
  public:
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
           std::vector<zx_pixel_format_t> pixel_formats);
@@ -32,11 +33,13 @@ class Display {
   // vsync signal.
   void OnVsync(zx::time timestamp);
 
+  // |VsyncTiming|
   // Obtain the time of the last Vsync, in nanoseconds.
-  zx::time GetLastVsyncTime() const { return last_vsync_time_; }
+  zx::time GetLastVsyncTime() const override { return last_vsync_time_; };
 
+  // |VsyncTiming|
   // Obtain the interval between Vsyncs, in nanoseconds.
-  zx::duration GetVsyncInterval() const { return vsync_interval_; };
+  zx::duration GetVsyncInterval() const override { return vsync_interval_; };
 
   // Claiming a display means that no other display renderer can use it.
   bool is_claimed() const { return claimed_; }
@@ -80,4 +83,4 @@ class Display {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_

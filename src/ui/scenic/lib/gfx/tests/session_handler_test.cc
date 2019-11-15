@@ -69,7 +69,7 @@ void SessionHandlerTest::InitializeEngine() {
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
 
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_manager_->default_display(),
+      display_manager_->default_display_shared(),
       std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
   engine_ = std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
                                      std::move(mock_release_fence_signaller), GetEscherWeakPtr());

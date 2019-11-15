@@ -17,8 +17,8 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
-#include "src/ui/scenic/lib/gfx/displays/display.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 

@@ -8,7 +8,7 @@
 #include <memory>
 
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/scenic/lib/gfx/displays/display.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
 namespace scenic_impl {

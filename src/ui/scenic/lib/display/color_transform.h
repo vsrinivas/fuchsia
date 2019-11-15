@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_DISPLAYS_COLOR_TRANSFORM_H_
-#define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_COLOR_TRANSFORM_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_COLOR_TRANSFORM_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_COLOR_TRANSFORM_H_
 
 #include <array>
 
@@ -17,4 +17,4 @@ struct ColorTransform {
   std::array<float, 3> postoffsets = {0, 0, 0};
 };
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_DISPLAYS_COLOR_TRANSFORM_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_COLOR_TRANSFORM_H_

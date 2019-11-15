@@ -18,18 +18,18 @@
 #include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_stats.h"
+#include "src/ui/scenic/lib/gfx/engine/vsync_timing.h"
 #include "src/ui/scenic/lib/gfx/id.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-class Display;
-
 // TODOs can be found in the frame scheduler epic: SCN-1202. Any new bugs filed concerning the frame
 // scheduler should be added to it as well.
 class DefaultFrameScheduler : public FrameScheduler {
  public:
-  explicit DefaultFrameScheduler(const Display* display, std::unique_ptr<FramePredictor> predictor,
+  explicit DefaultFrameScheduler(const std::shared_ptr<VsyncTiming> vsync_timing,
+                                 std::unique_ptr<FramePredictor> predictor,
                                  inspect_deprecated::Node inspect_node = inspect_deprecated::Node(),
                                  std::unique_ptr<cobalt::CobaltLogger> cobalt_logger = nullptr);
   ~DefaultFrameScheduler();
@@ -172,7 +172,7 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // References.
   async_dispatcher_t* const dispatcher_;
-  const Display* const display_;
+  std::shared_ptr<VsyncTiming> const vsync_timing_;
 
   fxl::WeakPtr<FrameRenderer> frame_renderer_;
 

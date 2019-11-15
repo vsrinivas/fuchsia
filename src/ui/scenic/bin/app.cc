@@ -51,7 +51,8 @@ class Dependency : public scenic_impl::System {
 
 namespace scenic_impl {
 
-DisplayInfoDelegate::DisplayInfoDelegate(gfx::Display* display_) : display_(display_) {
+DisplayInfoDelegate::DisplayInfoDelegate(std::shared_ptr<gfx::Display> display_)
+    : display_(display_) {
   FXL_CHECK(display_);
 }
 
@@ -97,7 +98,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
   FXL_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
-  fit::bridge<scenic_impl::gfx::Display*> display_bridge;
+  fit::bridge<std::shared_ptr<scenic_impl::gfx::Display>> display_bridge;
 
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
@@ -108,20 +109,23 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
 
   display_manager_.WaitForDefaultDisplayController(
       [this, completer = std::move(display_bridge.completer)]() mutable {
-        completer.complete_ok(display_manager_.default_display());
+        completer.complete_ok(display_manager_.default_display_shared());
       });
 
-  auto p = fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
-               .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
-                                           fit::result<scenic_impl::gfx::Display*>>& results) {
-                 InitializeServices(std::move(std::get<0>(results).value()),
-                                    std::move(std::get<1>(results).value()));
-               });
+  auto p =
+      fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
+          .and_then(
+              [this](std::tuple<fit::result<escher::EscherUniquePtr>,
+                                fit::result<std::shared_ptr<scenic_impl::gfx::Display>>>& results) {
+                InitializeServices(std::move(std::get<0>(results).value()),
+                                   std::move(std::get<1>(results).value()));
+              });
 
   executor_.schedule_task(std::move(p));
 }
 
-void App::InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display) {
+void App::InitializeServices(escher::EscherUniquePtr escher,
+                             std::shared_ptr<gfx::Display> display) {
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
     shutdown_manager_.Shutdown(LifecycleControllerImpl::kShutdownTimeout);

@@ -11,7 +11,7 @@
 #include <array>
 
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/ui/scenic/lib/gfx/displays/color_transform.h"
+#include "src/ui/scenic/lib/display/color_transform.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 
 namespace escher {

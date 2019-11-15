@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/scenic/lib/gfx/displays/display.h"
+#include "src/ui/scenic/lib/display/display.h"
 
+#include <lib/async/default.h>
+#include <lib/async/time.h>
 #include <zircon/syscalls.h>
 
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/util/time.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -17,7 +18,7 @@ namespace gfx {
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
                  std::vector<zx_pixel_format_t> pixel_formats)
     : vsync_interval_(kNsecsFor60fps),
-      last_vsync_time_(dispatcher_clock_now()),
+      last_vsync_time_(async_now(async_get_default_dispatcher())),
       display_id_(id),
       width_in_px_(width_in_px),
       height_in_px_(height_in_px),

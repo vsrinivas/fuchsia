@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain_factory.h"
 
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
 namespace scenic_impl {

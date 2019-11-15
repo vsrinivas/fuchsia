@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_MANAGER_H_
-#define SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_MANAGER_H_
+#ifndef SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_
+#define SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_
 
 #include "src/lib/fxl/macros.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 #include "src/ui/scenic/lib/display/display_controller_watcher.h"
-#include "src/ui/scenic/lib/gfx/displays/display.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -31,6 +31,9 @@ class DisplayManager {
   // May return null if there isn't one.
   Display* default_display() const { return default_display_.get(); }
 
+  // Only use this during Scenic initialization to pass a reference to FrameScheduler.
+  std::shared_ptr<Display> default_display_shared() const { return default_display_; }
+
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller() {
     return default_display_controller_;
   }
@@ -40,7 +43,7 @@ class DisplayManager {
   }
 
   // For testing.
-  void SetDefaultDisplayForTests(std::unique_ptr<Display> display) {
+  void SetDefaultDisplayForTests(std::shared_ptr<Display> display) {
     default_display_ = std::move(display);
   }
 
@@ -52,7 +55,7 @@ class DisplayManager {
   std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> default_display_controller_;
   std::shared_ptr<display::DisplayControllerListener> default_display_controller_listener_;
 
-  std::unique_ptr<Display> default_display_;
+  std::shared_ptr<Display> default_display_;
 
   display::DisplayControllerWatcher dc_watcher_;
   fit::closure display_available_cb_;
@@ -66,4 +69,4 @@ class DisplayManager {
 }  // namespace gfx
 }  // namespace scenic_impl
 
-#endif  // SRC_UI_SCENIC_LIB_GFX_DISPLAYS_DISPLAY_MANAGER_H_
+#endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_

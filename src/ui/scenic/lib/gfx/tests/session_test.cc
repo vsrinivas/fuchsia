@@ -15,11 +15,10 @@ namespace test {
 void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
 
-  display_ = std::make_unique<Display>(
+  display_ = std::make_shared<Display>(
       /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_.get(),
-      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+      display_, std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();

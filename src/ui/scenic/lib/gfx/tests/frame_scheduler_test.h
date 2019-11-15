@@ -23,7 +23,7 @@ class FrameSchedulerTest : public ErrorReportingTest {
 
   void SetupDefaultVsyncValues();
 
-  std::unique_ptr<FakeDisplay> fake_display_;
+  std::shared_ptr<FakeVsyncTiming> fake_vsync_timing_;
   std::unique_ptr<MockSessionUpdater> mock_updater_;
   std::unique_ptr<MockFrameRenderer> mock_renderer_;
 };

@@ -4,7 +4,7 @@
 
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"
 
-#include "src/ui/scenic/lib/gfx/displays/display.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
 namespace scenic_impl {

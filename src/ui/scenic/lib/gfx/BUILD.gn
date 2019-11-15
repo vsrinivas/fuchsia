@@ -227,7 +227,6 @@ source_set("gfx") {
   configs += [ ":swapchain" ]
 
   public_deps = [
-    ":display",
     ":frame_scheduler",
     ":gfx_always_optimized",
     ":snapshot_fbs",
@@ -242,6 +241,7 @@ source_set("gfx") {
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/vulkan",
+    "//src/ui/scenic/lib/display",
     "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
@@ -276,30 +276,12 @@ source_set("object_linker") {
   ]
 }
 
-source_set("display") {
+source_set("vsync_timing") {
   sources = [
-    "displays/color_transform.h",
-    "displays/display.cc",
-    "displays/display.h",
-    "displays/display_manager.cc",
-    "displays/display_manager.h",
-  ]
-  public_deps = [
-    "//src/lib/fsl",
-    "//zircon/system/fidl/fuchsia-hardware-display",
-    "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
+    "engine/vsync_timing.h",
   ]
   deps = [
-    ":util",
-
-    # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
-    # TODO(fxb/23686): Remove this when we externalize Displays.
-    "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/lib/fxl",
-    "//src/ui/scenic/lib/display",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
-    "//zircon/public/lib/trace",
+    "//zircon/public/lib/zx",
   ]
 }
 
@@ -328,10 +310,10 @@ source_set("frame_scheduler") {
     "id.h",
   ]
   deps = [
-    ":display",
     ":escher_maybe_with_glsl",
     ":frame_metrics_registry",
     ":util",
+    ":vsync_timing",
     "//sdk/fidl/fuchsia.images",
     "//sdk/fidl/fuchsia.scenic.scheduling",
     "//src/lib/fxl",

@@ -36,5 +36,6 @@ source_set("frame_scheduler_mocks") {
     ":util",
     "//src/lib/inspect_deprecated",
     "//src/ui/scenic/lib/gfx",
+    "//src/ui/scenic/lib/gfx:vsync_timing",
   ]
 }

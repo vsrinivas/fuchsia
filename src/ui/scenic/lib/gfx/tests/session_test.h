@@ -8,7 +8,7 @@
 #include <lib/fit/function.h>
 
 #include "lib/gtest/test_loop_fixture.h"
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
@@ -42,7 +42,6 @@ class SessionTest : public ErrorReportingTest {
   }
 
   Session* session() { return session_.get(); }
-  Display* display() { return display_.get(); }
 
  protected:
   // Creates a SessionContext with only a SessionManager and a
@@ -55,7 +54,7 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
-  std::unique_ptr<Display> display_;
+  std::shared_ptr<Display> display_;
   std::shared_ptr<FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
 };

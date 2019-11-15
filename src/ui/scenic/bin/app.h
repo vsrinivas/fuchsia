@@ -12,7 +12,7 @@
 
 #include "src/lib/fsl/io/device_watcher.h"
 #include "src/ui/lib/escher/escher.h"
-#include "src/ui/scenic/lib/gfx/displays/display_manager.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
@@ -23,7 +23,7 @@ namespace scenic_impl {
 
 class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
  public:
-  DisplayInfoDelegate(gfx::Display* display);
+  DisplayInfoDelegate(std::shared_ptr<gfx::Display> display);
 
   // TODO(fxb/23686): Remove this when we externalize Displays.
   // |Scenic::GetDisplayInfoDelegateDeprecated|
@@ -33,7 +33,7 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
  private:
-  gfx::Display* display_ = nullptr;
+  std::shared_ptr<gfx::Display> display_ = nullptr;
 };
 
 class App {
@@ -42,7 +42,7 @@ class App {
                inspect_deprecated::Node inspect_node, fit::closure quit_callback);
 
  private:
-  void InitializeServices(escher::EscherUniquePtr escher, gfx::Display* display);
+  void InitializeServices(escher::EscherUniquePtr escher, std::shared_ptr<gfx::Display> display);
 
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;

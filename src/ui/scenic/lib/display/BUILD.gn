@@ -4,10 +4,14 @@
 
 source_set("display") {
   sources = [
+    "display.cc",
+    "display.h",
     "display_controller_listener.cc",
     "display_controller_listener.h",
     "display_controller_watcher.cc",
     "display_controller_watcher.h",
+    "display_manager.cc",
+    "display_manager.h",
     "display_manager2.cc",
     "display_manager2.h",
   ]
@@ -24,6 +28,11 @@ source_set("display") {
     "//zircon/system/fidl/fuchsia-hardware-display:fuchsia-hardware-display_c",
   ]
   deps = [
+    # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
+    # TODO(fxb/23686): Remove this when we externalize Displays.
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//src/ui/scenic/lib/gfx:vsync_timing",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/trace",
   ]
 }

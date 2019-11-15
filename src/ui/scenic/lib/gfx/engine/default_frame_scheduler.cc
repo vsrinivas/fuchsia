@@ -12,7 +12,6 @@
 #include <trace/event.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/displays/display.h"
 #include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/util/collection_utils.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
@@ -20,17 +19,17 @@
 namespace scenic_impl {
 namespace gfx {
 
-DefaultFrameScheduler::DefaultFrameScheduler(const Display* display,
+DefaultFrameScheduler::DefaultFrameScheduler(std::shared_ptr<VsyncTiming> vsync_timing,
                                              std::unique_ptr<FramePredictor> predictor,
                                              inspect_deprecated::Node inspect_node,
                                              std::unique_ptr<cobalt::CobaltLogger> cobalt_logger)
     : dispatcher_(async_get_default_dispatcher()),
-      display_(display),
+      vsync_timing_(vsync_timing),
       frame_predictor_(std::move(predictor)),
       inspect_node_(std::move(inspect_node)),
       stats_(inspect_node_.CreateChild("Frame Stats"), std::move(cobalt_logger)),
       weak_factory_(this) {
-  FXL_DCHECK(display_);
+  FXL_DCHECK(vsync_timing_);
   FXL_DCHECK(frame_predictor_);
 
   outstanding_frames_.reserve(kMaxOutstandingFrames);
@@ -80,8 +79,8 @@ void DefaultFrameScheduler::SetRenderContinuously(bool render_continuously) {
 
 std::pair<zx::time, zx::time> DefaultFrameScheduler::ComputePresentationAndWakeupTimesForTargetTime(
     const zx::time requested_presentation_time) const {
-  const zx::time last_vsync_time = display_->GetLastVsyncTime();
-  const zx::duration vsync_interval = display_->GetVsyncInterval();
+  const zx::time last_vsync_time = vsync_timing_->GetLastVsyncTime();
+  const zx::duration vsync_interval = vsync_timing_->GetVsyncInterval();
   const zx::time now = zx::time(async_now(dispatcher_));
 
   PredictedTimes times =
@@ -238,10 +237,10 @@ DefaultFrameScheduler::GetFuturePresentationInfos(zx::duration requested_predict
 
   PredictionRequest request;
   request.now = zx::time(async_now(dispatcher_));
-  request.last_vsync_time = display_->GetLastVsyncTime();
+  request.last_vsync_time = vsync_timing_->GetLastVsyncTime();
 
   // We assume this value is constant, at least for the near future.
-  request.vsync_interval = display_->GetVsyncInterval();
+  request.vsync_interval = vsync_timing_->GetVsyncInterval();
 
   constexpr static const uint64_t kMaxPredictionCount = 8;
   uint64_t count = 0;
@@ -300,7 +299,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdatesResult DefaultFrameScheduler::
   }
 
   return update_manager_.ApplyUpdates(target_presentation_time, latched_time,
-                                      display_->GetVsyncInterval(), frame_number_);
+                                      vsync_timing_->GetVsyncInterval(), frame_number_);
 }
 
 void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
@@ -317,7 +316,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
   FXL_DCHECK(timings.finalized());
   const FrameTimings::Timestamps timestamps = timings.GetTimestamps();
-  stats_.RecordFrame(timestamps, display_->GetVsyncInterval());
+  stats_.RecordFrame(timestamps, vsync_timing_->GetVsyncInterval());
 
   if (timings.FrameWasDropped()) {
     TRACE_INSTANT("gfx", "FrameDropped", TRACE_SCOPE_PROCESS, "frame_number",
@@ -341,7 +340,7 @@ void DefaultFrameScheduler::OnFramePresented(const FrameTimings& timings) {
 
     auto presentation_info = fuchsia::images::PresentationInfo();
     presentation_info.presentation_time = timestamps.actual_presentation_time.get();
-    presentation_info.presentation_interval = display_->GetVsyncInterval().get();
+    presentation_info.presentation_interval = vsync_timing_->GetVsyncInterval().get();
 
     update_manager_.SignalPresentCallbacks(presentation_info);
   }
