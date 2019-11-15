@@ -2,10 +2,17 @@
 
 set -e
 
-### start overnet host-pipe to target device
+### start an overnet host-pipe to target device
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/../lib/vars.sh || exit $?
 fx-config-read
 
+
 onet="$FUCHSIA_BUILD_DIR/host-tools/onet"
+
+if ! echo 'conntest' | socat - /tmp/ascendd; then
+  fx-error "ascendd may not be running, overnet connection may fail"
+  fx-error "Run \`fx ascendd\` to start ascendd"
+fi
+
 socat EXEC:"$onet host-pipe" EXEC:"$FUCHSIA_DIR/scripts/fx shell onet host-pipe"

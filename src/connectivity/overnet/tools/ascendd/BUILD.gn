@@ -2,26 +2,38 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
+import("//build/host.gni")
 
-rustc_binary("bin") {
-  assert(!is_fuchsia)
+if (!is_fuchsia) {
+  import("//build/rust/rustc_binary.gni")
 
-  name = "ascendd"
-  edition = "2018"
+  rustc_binary("bin") {
+    name = "ascendd"
+    edition = "2018"
 
+    deps = [
+      "//garnet/public/lib/fidl/rust/fidl",
+      "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
+      "//src/connectivity/overnet/lib/core",
+      "//src/connectivity/overnet/lib/hoist",
+      "//src/connectivity/overnet/lib/salt_slab",
+      "//third_party/rust_crates:clap",
+      "//third_party/rust_crates:failure",
+      "//third_party/rust_crates:futures",
+      "//third_party/rust_crates:log",
+      "//third_party/rust_crates:tokio",
+    ]
+
+    non_rust_deps = [ "//third_party/boringssl" ]
+  }
+}
+
+install_host_tools("host") {
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//sdk/fidl/fuchsia.overnet.protocol:fuchsia.overnet.protocol-rustc",
-    "//src/connectivity/overnet/lib/core",
-    "//src/connectivity/overnet/lib/hoist",
-    "//src/connectivity/overnet/lib/salt_slab",
-    "//third_party/rust_crates:clap",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:tokio",
+    ":bin($host_toolchain)",
   ]
 
-  non_rust_deps = [ "//third_party/boringssl" ]
+  outputs = [
+    "ascendd",
+  ]
 }
