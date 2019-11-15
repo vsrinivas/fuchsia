@@ -428,6 +428,9 @@ group("default") {
     ":build_time_checks",
     "//build:tests",
     "//build/images:packages",
+    # TODO(41423): remove this once the "tests" image is used in
+    # zircon_images.gni.
+    "//build/unification/images",
     "//sdk",
   ]
   if (base_package_labels != [] || cache_package_labels != []) {
