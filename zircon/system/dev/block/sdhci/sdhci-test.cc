@@ -10,6 +10,7 @@
 
 #include <lib/fake-bti/bti.h>
 #include <lib/fake_ddk/fake_ddk.h>
+#include <lib/sync/completion.h>
 #include <mock/ddktl/protocol/sdhci.h>
 #include <zxtest/zxtest.h>
 
@@ -39,6 +40,8 @@ class TestSdhci : public Sdhci {
   }
 
   void* iobuf_virt() const { return iobuf_.virt(); }
+
+  void TriggerCardInterrupt() { card_interrupt_ = true; }
 
  protected:
   zx_status_t WaitForReset(const SoftwareReset mask) override {
@@ -74,6 +77,11 @@ class TestSdhci : public Sdhci {
         default:
           break;
       }
+
+      if (card_interrupt_.exchange(false)) {
+        status.set_card_interrupt(1).WriteTo(&regs_mmio_buffer_);
+        return ZX_OK;
+      }
     }
 
     return ZX_ERR_CANCELED;
@@ -84,6 +92,7 @@ class TestSdhci : public Sdhci {
   std::atomic<bool> run_thread_ = true;
   std::atomic<uint16_t> blocks_remaining_ = 0;
   std::atomic<uint16_t> current_block_ = 0;
+  std::atomic<bool> card_interrupt_ = false;
 };
 
 class SdhciTest : public zxtest::Test {
@@ -748,6 +757,33 @@ TEST_F(SdhciTest, DmaRequest32Bit) {
   EXPECT_EQ(descriptors[3].attr, 0b100'011);
   EXPECT_EQ(descriptors[3].address, PAGE_SIZE);
   EXPECT_EQ(descriptors[3].length, PAGE_SIZE);
+
+  dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
+}
+
+TEST_F(SdhciTest, SdioInBandInterrupt) {
+  mock_sdhci_.ExpectGetQuirks(0);
+  ASSERT_NO_FATAL_FAILURES(CreateDut());
+
+  mock_sdhci_.ExpectGetBaseClock(100'000'000);
+  EXPECT_OK(dut_->Init());
+
+  in_band_interrupt_protocol_ops_t callback_ops = {
+      .callback = [](void* ctx) -> void {
+        sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
+      },
+  };
+
+  sync_completion_t callback_called;
+  in_band_interrupt_protocol_t callback = {
+      .ops = &callback_ops,
+      .ctx = &callback_called,
+  };
+
+  EXPECT_OK(dut_->SdmmcRegisterInBandInterrupt(&callback));
+
+  dut_->TriggerCardInterrupt();
+  sync_completion_wait(&callback_called, ZX_TIME_INFINITE);
 
   dut_->DdkUnbindNew(ddk::UnbindTxn(fake_ddk::kFakeDevice));
 }

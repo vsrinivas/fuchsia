@@ -162,6 +162,8 @@ class Sdhci : public DeviceType, public ddk::SdmmcProtocol<Sdhci, ddk::base_prot
 
   // Base clock rate
   uint32_t base_clock_ = 0;
+
+  ddk::InBandInterruptProtocolClient interrupt_cb_;
 };
 
 }  // namespace sdhci

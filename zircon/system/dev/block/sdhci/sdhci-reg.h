@@ -173,6 +173,7 @@ class InterruptStatus : public hwreg::RegisterBase<InterruptStatus, uint32_t> {
   DEF_BIT(17, command_crc_error);
   DEF_BIT(16, command_timeout_error);
   DEF_BIT(15, error);
+  DEF_BIT(8, card_interrupt);
   DEF_BIT(5, buffer_read_ready);
   DEF_BIT(4, buffer_write_ready);
   DEF_BIT(1, transfer_complete);
@@ -199,7 +200,8 @@ class InterruptStatusEnable : public hwreg::RegisterBase<InterruptStatusEnable, 
   }
 
   auto& EnableNormalInterrupts() {
-    return set_buffer_read_ready(1)
+    return set_card_interrupt(1)
+        .set_buffer_read_ready(1)
         .set_buffer_write_ready(1)
         .set_transfer_complete(1)
         .set_command_complete(1);
@@ -217,6 +219,7 @@ class InterruptStatusEnable : public hwreg::RegisterBase<InterruptStatusEnable, 
   DEF_BIT(17, command_crc_error);
   DEF_BIT(16, command_timeout_error);
   DEF_BIT(15, error);
+  DEF_BIT(8, card_interrupt);
   DEF_BIT(5, buffer_read_ready);
   DEF_BIT(4, buffer_write_ready);
   DEF_BIT(1, transfer_complete);
@@ -245,7 +248,8 @@ class InterruptSignalEnable : public hwreg::RegisterBase<InterruptSignalEnable, 
   }
 
   auto& EnableNormalInterrupts() {
-    return set_buffer_read_ready(1)
+    return set_card_interrupt(1)
+        .set_buffer_read_ready(1)
         .set_buffer_write_ready(1)
         .set_transfer_complete(1)
         .set_command_complete(1);
@@ -263,6 +267,7 @@ class InterruptSignalEnable : public hwreg::RegisterBase<InterruptSignalEnable, 
   DEF_BIT(17, command_crc_error);
   DEF_BIT(16, command_timeout_error);
   DEF_BIT(15, error);
+  DEF_BIT(8, card_interrupt);
   DEF_BIT(5, buffer_read_ready);
   DEF_BIT(4, buffer_write_ready);
   DEF_BIT(1, transfer_complete);

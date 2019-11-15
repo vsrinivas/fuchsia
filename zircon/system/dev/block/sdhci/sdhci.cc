@@ -318,6 +318,9 @@ int Sdhci::IrqThread() {
     if (irq.transfer_complete()) {
       TransferCompleteLocked();
     }
+    if (irq.card_interrupt() && interrupt_cb_.is_valid()) {
+      interrupt_cb_.Callback();
+    }
     if (irq.ErrorInterrupt()) {
       if (driver_get_log_flags() & DDK_LOG_TRACE) {
         if (irq.adma_error()) {
@@ -818,7 +821,8 @@ zx_status_t Sdhci::SdmmcPerformTuning(uint32_t cmd_idx) {
 }
 
 zx_status_t Sdhci::SdmmcRegisterInBandInterrupt(const in_band_interrupt_protocol_t* interrupt_cb) {
-  return ZX_ERR_NOT_SUPPORTED;
+  interrupt_cb_ = ddk::InBandInterruptProtocolClient(interrupt_cb);
+  return ZX_OK;
 }
 
 void Sdhci::DdkUnbindNew(ddk::UnbindTxn txn) {
