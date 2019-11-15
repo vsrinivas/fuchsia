@@ -49,6 +49,7 @@ const string AUDIO_ENCODING_PCMALAW = "fuchsia.media.pcmalaw";
 const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
 const string AUDIO_ENCODING_SBC = "fuchsia.media.sbc";
 const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
+const string AUDIO_ENCODING_OPUS = "fuchsia.media.opus";
 
 /// Video encodings.
 const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
@@ -59,6 +60,21 @@ const string VIDEO_ENCODING_UNCOMPRESSED = "fuchsia.media.uncompressed_video";
 const string VIDEO_ENCODING_VP3 = "fuchsia.media.vp3";
 const string VIDEO_ENCODING_VP8 = "fuchsia.media.vp8";
 const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
+
+/// Describes the compression applied to a stream. This type can be used in conjunction with
+/// `AudioStreamType` or `VideoStreamType` to represent a medium-specific compressed type.
+struct Compression {
+    /// The type of compression applied to the stream. This is generally one of the *_ENCODING_*
+    /// values, though `AUDIO_ENCODING_LPCM` and `VIDEO_ENCODING_UNCOMPRESSED` must not be used,
+    /// because those encodings are regarded as uncompressed.
+    CompressionType type;
+
+    /// Type-specific, opaque ‘out-of-band’ parameters describing the compression of the stream.
+    bytes:8192? parameters;
+};
+
+/// An identifier for compression types.
+using CompressionType = string:256;
 
 // /////////////////////////////////////////////////////////////////////////////
 // Audio

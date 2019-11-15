@@ -18,6 +18,7 @@ fidl("fuchsia.media") {
   sources = [
     "audio.fidl",
     "audio_capturer.fidl",
+    "audio_consumer.fidl",
     "audio_core.fidl",
     "audio_device_enumerator.fidl",
     "audio_renderer.fidl",
