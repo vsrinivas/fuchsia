@@ -10,7 +10,8 @@
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.netstack.ResolverAdmin",
-            "fuchsia.overnet.Overnet"
+            "fuchsia.overnet.Overnet",
+            "fuchsia.overnet.ServicePublisher"
         ]
     }
 }
