@@ -200,9 +200,9 @@ PipelineManager::ConfigureStreamPipelineHelper(
   }
 
   auto output_node = output_node_result.value();
-  auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, output_node]() {
+  auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, info]() {
     FX_LOGS(INFO) << "Stream client disconnected";
-    OnClientStreamDisconnect(output_node);
+    OnClientStreamDisconnect(info);
   });
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to bind output stream";
@@ -255,6 +255,25 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     }
   }
   return ZX_OK;
+}
+
+void PipelineManager::OnClientStreamDisconnect(PipelineInfo* info) {
+  ZX_ASSERT(info != nullptr);
+  // TODO(braval): When we add support N > 1 substreams of FR and DS
+  // being present at the same time, we need to ensure to only
+  // bring down the relevant part of the graph and not the entire
+  // graph.
+  switch (info->node.input_stream_type) {
+    case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
+      full_resolution_stream_ = nullptr;
+      break;
+    }
+    case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
+      downscaled_resolution_stream_ = nullptr;
+      break;
+    }
+    default: { ZX_ASSERT_MSG(false, "Invalid input stream type\n"); }
+  }
 }
 
 }  // namespace camera

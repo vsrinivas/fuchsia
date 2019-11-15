@@ -263,7 +263,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     // Set streaming on
     graph_result.value()->client_stream()->Start();
 
-    result.value() = nullptr;
+    EXPECT_NO_FATAL_FAILURE(pipeline_manager_->OnClientStreamDisconnect(&info));
   }
 
   void TestGdcConfigLoading() {

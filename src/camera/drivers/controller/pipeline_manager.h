@@ -86,6 +86,8 @@ class PipelineManager {
   fuchsia_sysmem_ImageFormat_2 ConvertHlcppImageFormat2toCType(
       fuchsia::sysmem::ImageFormat_2* hlcpp_image_2);
 
+  void OnClientStreamDisconnect(PipelineInfo* info);
+
  private:
   // This will be going away once we move ISP code to using new
   // |fuchsia_sysmem_BufferCollectionInfo_2|
@@ -96,16 +98,6 @@ class PipelineManager {
 
   fit::result<std::unique_ptr<ProcessNode>, zx_status_t> ConfigureStreamPipelineHelper(
       PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
-
-  void OnClientStreamDisconnect(ProcessNode* output_node) {
-    // TODO(braval): We currently only support connecting one stream at a time.
-    // Keeping that in mind, this is a very trivial implementation of what needs
-    // to happen on client stream disconnect.
-    ZX_ASSERT(output_node != nullptr);
-    ZX_ASSERT(output_node->type() == NodeType::kOutputStream);
-    full_resolution_stream_ = nullptr;
-    downscaled_resolution_stream_ = nullptr;
-  }
 
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
