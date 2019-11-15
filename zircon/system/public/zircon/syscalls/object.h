@@ -45,7 +45,7 @@ typedef uint32_t zx_obj_props_t;
 
 // Return codes set when a task is killed.
 #define ZX_TASK_RETCODE_SYSCALL_KILL    ((int64_t) -1024)   // via zx_task_kill().
-#define ZX_TASK_RETCODE_OOM_KILL        ((int64_t) -1025)   // by the OMM killer.
+#define ZX_TASK_RETCODE_OOM_KILL        ((int64_t) -1025)   // by the OOM killer.
 #define ZX_TASK_RETCODE_POLICY_KILL     ((int64_t) -1026)   // by the Job policy.
 #define ZX_TASK_RETCODE_VDSO_KILL       ((int64_t) -1027)   // by the VDSO.
 #define ZX_TASK_RETCODE_EXCEPTION_KILL  ((int64_t) -1028)   // Exception not handled.
