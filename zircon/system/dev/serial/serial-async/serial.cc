@@ -83,9 +83,11 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
         static_cast<SerialDevice*>(dev)->loop_->Quit();
       });
 
-  if (fidl::AsyncBind(loop_->dispatcher(), std::move(req),
+  auto binding_ref =
+      fidl::AsyncBind(loop_->dispatcher(), std::move(req),
                       static_cast<llcpp::fuchsia::hardware::serial::NewDevice::Interface*>(this),
-                      std::move(nop), std::move(close_fn))) {
+                      std::move(nop), std::move(close_fn));
+  if (binding_ref.is_error()) {
     loop_.reset();
     return;
   }

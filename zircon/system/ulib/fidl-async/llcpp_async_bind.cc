@@ -4,7 +4,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fidl-async/cpp/async_bind.h>
+#include <lib/fidl-async/cpp/async_bind_internal.h>
 #include <lib/fidl-async/cpp/async_transaction.h>
 #include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
@@ -34,26 +34,28 @@ AsyncBinding::~AsyncBinding() {
   if (epitaph_ != ZX_OK) {
     fidl_epitaph_write(channel_.get(), epitaph_);
   }
-  ZX_ASSERT(on_channel_closing_fn_ == nullptr);
   if (on_channel_closed_fn_) {
     on_channel_closed_fn_(interface_);
   }
 }
 
-void AsyncBinding::OnChannelClosing() {
+void AsyncBinding::OnChannelClosing(zx_status_t epitaph) {
+  auto local_keep_alive = keep_alive_;  // Potential last reference dropped outside the object.
+  closing_ = true;
+  if (epitaph_ == ZX_OK) {
+    epitaph_ = epitaph;  // We use the first one set.
+  }
   if (on_channel_closing_fn_) {
     on_channel_closing_fn_(interface_);
     on_channel_closing_fn_ = nullptr;
   }
-  auto local_keep_alive = keep_alive_;  // Potential last reference dropped outside the object.
   keep_alive_ = nullptr;  // Binding can be destroyed now or when the last transaction is done.
 }
 
 void AsyncBinding::MessageHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    epitaph_ = status;  // May be overwriten, we use the last one set.
-    OnChannelClosing();
+    OnChannelClosing(status);
     return;
   }
 
@@ -73,56 +75,81 @@ void AsyncBinding::MessageHandler(async_dispatcher_t* dispatcher, async::WaitBas
         if (status == ZX_OK) {
           status = ZX_ERR_INTERNAL;
         }
-        epitaph_ = status;  // May be overwriten, we use the last one set.
-        OnChannelClosing();
+        OnChannelClosing(status);
         return;
       }
 
       auto hdr = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
-      AsyncTransaction txn(hdr->txid, keep_alive_);
-      txn.Dispatch(msg);  // txn ownership may be transferred out.
+      AsyncTransaction txn(hdr->txid, keep_alive_);  // txn takes a weak_ptr on keep_alive_.
+      txn.Dispatch(msg);                             // txn ownership may be transferred out.
     }
     callback_.Begin(dispatcher_);
   } else {
     ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    OnChannelClosing();
+    // No epitaph triggered by closing due to a PEER_CLOSED.
+    OnChannelClosing(ZX_OK);
   }
 }
 
-void AsyncBinding::Close(zx_status_t epitaph) {
-  async::PostTask(dispatcher_, [this, epitaph]() {
+void AsyncBinding::Close(zx_status_t epitaph, std::shared_ptr<AsyncBinding> binding) {
+  // std::shared_ptr<AsyncBinding> keeps binding alive while closing.
+  async::PostTask(dispatcher_, [this, binding, epitaph]() {
     ScopedToken t(domain_token());
     callback_.Cancel();
-    epitaph_ = epitaph;  // May be overwriten, we use the last one set.
-    OnChannelClosing();
+    OnChannelClosing(epitaph);
   });
 }
 
-void AsyncBinding::Release(std::shared_ptr<AsyncBinding> reference) {
-  async::PostTask(dispatcher_, [reference]() {});
+void AsyncBinding::Unbind() {
+  ScopedToken t(domain_token());  // Must be on the dispatcher thread.
+  callback_.Cancel();
+  if (epitaph_ == ZX_OK) {
+    epitaph_ = ZX_ERR_CANCELED;  // We use the first one set.
+  }
+  keep_alive_ = nullptr;  // We don't wait for in-flight transactions.
 }
 
-std::shared_ptr<AsyncBinding> AsyncBinding::CreateSelfManagedBinding(
+std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
     TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
     TypeErasedOnChannelCloseFn on_channel_closed_fn) {
-  auto ret = std::shared_ptr<AsyncBinding>(
-      new AsyncBinding(dispatcher, std::move(channel), impl, dispatch_fn,
-                       std::move(on_channel_closing_fn), std::move(on_channel_closed_fn)));
+  auto ret = std::shared_ptr<internal::AsyncBinding>(
+      new internal::AsyncBinding(dispatcher, std::move(channel), impl, dispatch_fn,
+                                 std::move(on_channel_closing_fn), std::move(on_channel_closed_fn)),
+      Deleter());
   ret->keep_alive_ = ret;  // We keep the binding alive until somebody decides to close the channel.
   return ret;
 }
 
-zx_status_t AsyncTypeErasedBind(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-                                TypeErasedDispatchFn dispatch_fn,
-                                TypeErasedOnChannelCloseFn on_channel_closing_fn,
-                                TypeErasedOnChannelCloseFn on_channel_closed_fn) {
-  auto binding = AsyncBinding::CreateSelfManagedBinding(
+fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(
+    async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
+    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
+    TypeErasedOnChannelCloseFn on_channel_closed_fn) {
+  auto internal_binding = internal::AsyncBinding::CreateSelfManagedBinding(
       dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_channel_closing_fn),
       std::move(on_channel_closed_fn));
-  return binding->BeginWait();
+  auto status = internal_binding->BeginWait();
+  if (status == ZX_OK) {
+    return fit::ok(fidl::BindingRef(internal_binding));
+  } else {
+    return fit::error(status);
+  }
 }
 
 }  // namespace internal
+
+void BindingRef::Unbind() {
+  ZX_ASSERT(binding_->deleter_ == nullptr);  // We unbind only once.
+  sync_completion_t deleter = {};
+  // We setup getting signaled once the binding is destroyed.
+  binding_->deleter_ = &deleter;
+  binding_->Unbind();
+  // Destroy the binding as soon as any transaction's temporary references are gone.
+  binding_ = nullptr;
+  // Wait for the binding object to get destroyed, potentially involving temporary strong
+  // references from outstanding transactions to be dropped as well.
+  auto status = sync_completion_wait(&deleter, ZX_TIME_INFINITE);
+  ZX_ASSERT(status == ZX_OK);
+}
 
 }  // namespace fidl

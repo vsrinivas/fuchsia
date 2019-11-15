@@ -22,17 +22,12 @@ namespace internal {
 // The channel is owned by |AsyncBinding|, not the transaction.
 class AsyncTransaction final : public Transaction {
  public:
-  explicit AsyncTransaction(zx_txid_t txid, std::shared_ptr<AsyncBinding> binding)
+  explicit AsyncTransaction(zx_txid_t txid, std::weak_ptr<AsyncBinding> binding)
       : Transaction(), txid_(txid), binding_(binding) {}
 
   AsyncTransaction(AsyncTransaction&& other) noexcept : Transaction(std::move(other)) {
     if (this != &other) {
       MoveImpl(std::move(other));
-    }
-  }
-  ~AsyncTransaction() {
-    if (binding_) {
-      binding_->Release(binding_);
     }
   }
 
@@ -59,11 +54,11 @@ class AsyncTransaction final : public Transaction {
     txid_ = other.txid_;
     other.txid_ = 0;
     binding_ = std::move(other.binding_);
-    other.binding_ = nullptr;
+    other.binding_ = std::weak_ptr<AsyncBinding>();
   }
 
   zx_txid_t txid_ = 0;
-  std::shared_ptr<AsyncBinding> binding_ = {};
+  std::weak_ptr<AsyncBinding> binding_ = {};
 };
 
 }  // namespace internal

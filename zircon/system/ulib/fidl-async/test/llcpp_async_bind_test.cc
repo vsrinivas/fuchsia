@@ -58,8 +58,8 @@ TEST(AsyncBindTestCase, SyncReply) {
   fidl::OnChannelCloseFn<SyncServer> on_closed = [&closed](SyncServer* server) {
     sync_completion_signal(&closed);
   };
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+                  std::move(on_closed));
 
   // Sync client call.
   auto result =
@@ -97,8 +97,8 @@ TEST(AsyncBindTestCase, AsyncReply) {
   fidl::OnChannelCloseFn<AsyncServer> on_closed = [&closed](AsyncServer* server) {
     sync_completion_signal(&closed);
   };
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+                  std::move(on_closed));
 
   // Sync client call.
   auto result =
@@ -146,8 +146,8 @@ TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
     sync_completion_signal(&closed);
   };
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+                  std::move(on_closed));
 
   // Sync client calls.
   sync_completion_t done;
@@ -217,22 +217,18 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
     sync_completion_signal(&closed);
   };
-  ASSERT_OK(fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+                  std::move(on_closed));
 
   // Sync client calls.
-  std::atomic<int> peer_closed_count = 0;
   std::vector<std::unique_ptr<async::Loop>> clients;
   for (uint32_t i = 0; i < kNumberOfAsyncs; ++i) {
     auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
-    async::PostTask(client->dispatcher(), [&local, &peer_closed_count, client = client.get()]() {
+    async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
       auto result = ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local},
                                                                     kExpectedReply);
       if (result.status() != ZX_OK && result.status() != ZX_ERR_PEER_CLOSED) {
         FAIL();
-      }
-      if (result.status() == ZX_ERR_PEER_CLOSED) {
-        peer_closed_count++;
       }
       client->Quit();
     });
@@ -242,7 +238,6 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   for (auto& i : clients) {
     i->JoinThreads();
   }
-  ASSERT_EQ(peer_closed_count.load(), 1);
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
@@ -254,7 +249,7 @@ TEST(AsyncBindTestCase, UniquePtrDestroyOnClientClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server)));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server));
   loop.RunUntilIdle();
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
@@ -273,7 +268,7 @@ TEST(AsyncBindTestCase, UniquePtrDestroyOnServerClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server)));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), std::move(server));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
@@ -294,8 +289,8 @@ TEST(AsyncBindTestCase, CallbackDestroyOnClientClose) {
   fidl::OnChannelCloseFn<Server> on_closing = [](Server* server) {};
   fidl::OnChannelCloseFn<Server> on_closed = [](Server* server) { delete server; };
 
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_closing),
+                  std::move(on_closed));
   loop.RunUntilIdle();
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
@@ -341,8 +336,8 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedClientTriggered) {
     sync_completion_signal(&closed);
   };
 
-  ASSERT_OK(fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                           std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
+                                 std::move(on_closing), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -372,9 +367,6 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedClientTriggered) {
   // Give some time to the server thread to potentially call close, it should not though.
   // This sleep is not needed to pass the test, it just allows the server to potentially fail.
   zx::nanosleep(zx::deadline_after(zx::msec(100)));
-
-  // Closed is not called yet.
-  ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Trigger finishing the only outstanding transaction.
   sync_completion_signal(&worker_done);
@@ -420,8 +412,8 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
     sync_completion_signal(&closed);
   };
 
-  ASSERT_OK(fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                           std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get(),
+                                 std::move(on_closing), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -508,8 +500,8 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
     sync_completion_signal(&closed);
   };
 
-  ASSERT_OK(fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                           std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
+                                 std::move(on_closing), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -521,7 +513,7 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
   async::PostTask(client1->dispatcher(), [&local]() {
     auto result =
         ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
-    if (result.status() != ZX_OK) {
+    if (result.status() != ZX_ERR_PEER_CLOSED) {
       FAIL();
     }
   });
@@ -544,9 +536,6 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
   // Wait for the closing callback to be called.
   ASSERT_OK(sync_completion_wait(&closing, ZX_TIME_INFINITE));
 
-  // Closed is not called yet.
-  ASSERT_FALSE(sync_completion_signaled(&closed));
-
   // Trigger finishing the client1 outstanding transaction.
   sync_completion_signal(&worker_done);
 
@@ -567,8 +556,8 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
   fidl::OnChannelCloseFn<Server> on_closing = [](Server* server) {};
   fidl::OnChannelCloseFn<Server> on_closed = [](Server* server) { delete server; };
 
-  ASSERT_OK(fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(),
-                            std::move(on_closing), std::move(on_closed)));
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_closing),
+                  std::move(on_closed));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
   auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
@@ -577,6 +566,83 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
   // Make sure the other end closed
   ASSERT_OK(local.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time{}, nullptr));
+}
+
+TEST(AsyncBindTestCase, ExplicitForceSyncUnbind) {
+  // Server launches a thread so we can make sync client calls.
+  sync_completion_t destroyed;
+  auto server = std::make_unique<Server>(&destroyed);
+  async::Loop main(&kAsyncLoopConfigNoAttachToCurrentThread);
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  auto binding_ref =
+      fidl::BindingRef::CreateAsyncBinding(main.dispatcher(), std::move(remote), std::move(server));
+
+  main.RunUntilIdle();
+  ASSERT_TRUE(binding_ref.is_ok());
+  binding_ref.value().Unbind();
+  ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
+}
+
+TEST(AsyncBindTestCase, ExplicitForceSyncUnbindWithPendingTransaction) {
+  struct WorkingServer : ::llcpp::fidl::test::simple::Simple::Interface {
+    explicit WorkingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
+        : worker_start_(worker_start), worker_done_(worker_done) {}
+    void Echo(int32_t request, EchoCompleter::Sync completer) override {
+      // Launches a thread so we can hold the transaction.
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync(), this,
+                                              worker = worker_.get()]() mutable {
+        sync_completion_signal(worker_start_);
+        sync_completion_wait(worker_done_, ZX_TIME_INFINITE);
+        completer.Reply(request);
+        worker->Quit();
+      });
+      ASSERT_OK(worker_->StartThread());
+    }
+    void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
+    sync_completion_t* worker_start_;
+    sync_completion_t* worker_done_;
+    std::unique_ptr<async::Loop> worker_;
+  };
+  sync_completion_t worker_start, worker_done;
+
+  // Launches a new thread for the server so we can wait on the worker.
+  auto server = std::make_unique<WorkingServer>(&worker_start, &worker_done);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_OK(loop.StartThread());
+
+  zx::channel local, remote;
+  ASSERT_OK(zx::channel::create(0, &local, &remote));
+
+  // Client launches a thread so we can hold the transaction in progress.
+  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
+    ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
+  });
+  ASSERT_OK(client->StartThread());
+
+  fidl::OnChannelCloseFn<WorkingServer> on_closing = [](WorkingServer* server) {};
+  fidl::OnChannelCloseFn<WorkingServer> on_closed = [](WorkingServer* server) {};
+
+  auto binding_ref =
+      fidl::BindingRef::CreateAsyncBinding(loop.dispatcher(), std::move(remote), server.get(),
+                                           std::move(on_closing), std::move(on_closed));
+  ASSERT_TRUE(binding_ref.is_ok());
+
+  // Wait until worker_start so we have an in-flight transaction.
+  ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
+
+  async::PostTask(loop.dispatcher(),
+                  [binding_ref = std::move(binding_ref), &worker_done]() mutable {
+                    binding_ref.value().Unbind();
+                    sync_completion_signal(&worker_done);
+                  });
+
+  // The server's worker_ destruction is not completed until its loop is destroyed so the test is
+  // blocked until worker_done is signalled inside the last post after we test ForceSyncUnbind.
 }
 
 }  // namespace
