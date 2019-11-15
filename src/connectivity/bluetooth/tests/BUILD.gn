@@ -12,8 +12,6 @@ test_package("tests") {
   deps = [
     "integration:bt-integration-tests",
     "//src/connectivity/bluetooth/core/bt-host:tests",
-    "//src/connectivity/bluetooth/hci/vendor/broadcom:tests",
-    "//src/connectivity/bluetooth/hci/vendor/mediatek:tests",
     "//src/connectivity/bluetooth/lib/fidl:tests",
   ]
 
@@ -29,14 +27,6 @@ test_package("tests") {
     },
     {
       name = "bt-lib-fidl-unittests"
-      environments = basic_envs
-    },
-    {
-      name = "bt-hci-broadcom-tests"
-      environments = basic_envs
-    },
-    {
-      name = "bt-hci-mediatek-tests"
       environments = basic_envs
     },
   ]

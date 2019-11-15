@@ -37,9 +37,9 @@ devices. On an x86 platform this hierarchy may look like the following:
 ### HCI
 
 Generic HCI transport functionality is provided by the `bt-transport` protocol.
-Bluetooth provides drivers that implement the HCI transport over
-[USB](/src/connectivity/bluetooth/hci/transport/usb/)
-and [UART](/src/connectivity/bluetooth/hci/transport/uart/).
+Zircon provides drivers that implement the HCI transport over
+[USB](/zircon/system/dev/bluetooth/bt-transport-usb)
+and [UART](/zircon/system/dev/bluetooth/bt-transport-uart/).
 The transport protocol abstracts the HCI control, ACL, and SCO
 channels (currently as Zircon [channels](/docs/concepts/objects/channel.md)).
 

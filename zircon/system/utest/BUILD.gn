@@ -50,6 +50,8 @@ if (current_cpu != "") {
       "$zx/system/dev/block/sdhci:sdhci-test",
       "$zx/system/dev/block/sdmmc:sdmmc-test",
       "$zx/system/dev/block/usb-mass-storage:tests",
+      "$zx/system/dev/bluetooth/bt-hci-broadcom:bt-hci-broadcom-test",
+      "$zx/system/dev/bluetooth/bt-hci-mediatek:bt-hci-mediatek-test",
       "$zx/system/dev/board/mt8167s_ref:mt8167s_ref-test",
       "$zx/system/dev/bus/pci:pci-driver",
       "$zx/system/dev/bus/pci:pci-unit",
