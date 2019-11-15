@@ -95,8 +95,8 @@ std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferC
            bool>
 ControllerStreamProvider::ConnectToStream(
     fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
-  static constexpr const uint32_t kConfigIndex = 0;
-  static constexpr const uint32_t kStreamConfigIndex = 0;
+  static constexpr const uint32_t kConfigIndex = 1;
+  static constexpr const uint32_t kStreamConfigIndex = 1;
   static constexpr const uint32_t kImageFormatIndex = 0;
 
   if (buffer_collection_.is_bound()) {
@@ -177,7 +177,5 @@ ControllerStreamProvider::ConnectToStream(
     return MakeErrorReturn(status);
   }
 
-  // The stream from controller is currently unrotated.
-  // TODO: once GDC is hooked up to do the rotation within the controller, set this to 'false'
-  return {ZX_OK, std::move(image_format), std::move(buffers_for_caller), true};
+  return {ZX_OK, std::move(image_format), std::move(buffers_for_caller), false};
 }
