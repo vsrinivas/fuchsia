@@ -73,17 +73,24 @@ func makeQuestion(nameStr string) dnsmessage.Question {
 	}
 }
 
-func check(rrs []dnsmessage.Resource, want int, name dnsmessage.Name, err error, function string, t *testing.T) {
+type checkParams struct {
+	funcName     string
+	gotResources []dnsmessage.Resource
+	wantLen      int
+	wantName     dnsmessage.Name
+}
+
+func check(t *testing.T, err error, params checkParams) {
 	t.Helper()
 	if err != nil {
-		t.Errorf("cache.%s failed with error: %v", function, err)
+		t.Errorf("After cache.%s, cache.lookup returned error: %v", params.funcName, err)
 	}
-	if len(rrs) != want {
-		t.Errorf("cache.%s failed. Got Resource length %d. Want %d.", function, len(rrs), want)
+	if len(params.gotResources) != params.wantLen {
+		t.Errorf("cache.%s failed. Got Resource length %d. Want %d.", params.funcName, len(params.gotResources), params.wantLen)
 	}
-	for _, rr := range rrs {
-		if rr.Header.Name != name {
-			t.Errorf("got cache.%s(...) = %v, want = %v", function, rr.Header.Name, name)
+	for _, rr := range params.gotResources {
+		if rr.Header.Name != params.wantName {
+			t.Errorf("got cache.%s(...) = %v, want = %v", params.funcName, rr.Header.Name, params.wantName)
 		}
 	}
 }
@@ -104,7 +111,12 @@ func TestLookup(t *testing.T) {
 	cache.insertAll(smallTestResources)
 	visited := make(map[dnsmessage.Name]struct{})
 	rrs, err := cache.lookup(exampleQuestion, visited, 0)
-	check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+	check(t, err, checkParams{
+		funcName:     lookup,
+		gotResources: rrs,
+		wantLen:      2,
+		wantName:     exampleQuestion.Name,
+	})
 }
 
 // Tests that entries are pruned when they expire, and not before.
@@ -113,7 +125,9 @@ func TestExpires(t *testing.T) {
 
 	// These records expire at 5 seconds.
 	testTime := time.Now()
-	testHookNow = func() time.Time { return testTime }
+	origTimeNow := timeNow
+	defer func() { timeNow = origTimeNow }()
+	timeNow = func() time.Time { return testTime }
 	cache.insertAll(smallTestResources)
 
 	// Still there after t=4 seconds.
@@ -122,7 +136,12 @@ func TestExpires(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, prune, t)
+		check(t, err, checkParams{
+			funcName:     prune,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	// Gone after t=6 seconds.
@@ -131,7 +150,89 @@ func TestExpires(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, 0, exampleQuestion.Name, err, prune, t)
+		check(t, err, checkParams{
+			funcName:     prune,
+			gotResources: rrs,
+			wantLen:      0,
+			wantName:     exampleQuestion.Name,
+		})
+	}
+}
+
+// Tests that a Resource Record with the name of an existing CNAMERecord is inserted and the existing CNAMERecord is overwritten.
+func TestInsertWithExistingCNAMEResource(t *testing.T) {
+	cache := newCache()
+	cache.insertAll(smallTestResources)
+	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(fooExample, example, 5)})
+	{
+		visited := make(map[dnsmessage.Name]struct{})
+		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
+	}
+
+	// Insert a CNAMEResource with the name of an existing CNAMEResource.
+	anotherExample := "anotherExample"
+	cache.insertAll([]dnsmessage.Resource{makeTypeAResource(anotherExample, 6, [4]byte{127, 0, 0, 3}), mustMakeCNAMEResource(fooExample, anotherExample, 5)})
+	{
+		visited := make(map[dnsmessage.Name]struct{})
+		name, err := dnsmessage.NewName(anotherExample)
+		if err != nil {
+			t.Fatalf("dnsmessage.NewName(%s) failed with error :%s", anotherExample, err)
+		}
+		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      1,
+			wantName:     name,
+		})
+	}
+
+	// Insert a TypeAResource with the name of an existing CNAMEResource.
+	cache.insertAll([]dnsmessage.Resource{makeTypeAResource(fooExample, 5, [4]byte{127, 0, 0, 4})})
+	{
+		visited := make(map[dnsmessage.Name]struct{})
+		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      1,
+			wantName:     fooExampleQuestion.Name,
+		})
+	}
+}
+
+// Tests that a CNAMEResource with the name of existing Resources Records is inserted and the existing Resource Records are overwritten.
+func TestInsertCNAMEResourceWithExistingTypeAResources(t *testing.T) {
+	cache := newCache()
+	cache.insertAll(smallTestResources)
+	{
+		visited := make(map[dnsmessage.Name]struct{})
+		rrs, err := cache.lookup(exampleQuestion, visited, 0)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
+	}
+
+	// Insert a CNAMEResource with the name of existing TypeAResource and TypeAResources are overwritten.
+	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(example, fooExample, 5)})
+	{
+		visited := make(map[dnsmessage.Name]struct{})
+		rrs, err := cache.lookup(exampleQuestion, visited, 0)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      0,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 }
 
@@ -140,7 +241,9 @@ func TestMaxEntries(t *testing.T) {
 	cache := newCache()
 
 	testTime := time.Now()
-	testHookNow = func() time.Time { return testTime }
+	origTimeNow := timeNow
+	defer func() { timeNow = origTimeNow }()
+	timeNow = func() time.Time { return testTime }
 
 	// One record that expires at 10 seconds.
 	cache.insertAll([]dnsmessage.Resource{
@@ -157,7 +260,12 @@ func TestMaxEntries(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, maxEntries, exampleQuestion.Name, err, insertAll, t)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      maxEntries,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 	// Cache is at capacity. Can't insert anymore.
 	cache.insertAll([]dnsmessage.Resource{
@@ -166,7 +274,12 @@ func TestMaxEntries(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-		check(rrs, 0, exampleQuestion.Name, err, insertAll, t)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      0,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	// Advance the clock so the 5 second entries expire. Insert should succeed.
@@ -177,7 +290,12 @@ func TestMaxEntries(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-		check(rrs, 1, fooExampleQuestion.Name, err, insertAll, t)
+		check(t, err, checkParams{
+			funcName:     insertAll,
+			gotResources: rrs,
+			wantLen:      1,
+			wantName:     fooExampleQuestion.Name,
+		})
 	}
 
 }
@@ -194,7 +312,12 @@ func TestCNAME(t *testing.T) {
 
 	visited := make(map[dnsmessage.Name]struct{})
 	rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-	check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+	check(t, err, checkParams{
+		funcName:     lookup,
+		gotResources: rrs,
+		wantLen:      2,
+		wantName:     exampleQuestion.Name,
+	})
 }
 
 // Tests that there is a loop in the CNAME aliases.
@@ -205,7 +328,12 @@ func TestCNAMELoop(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	// Form a loop of CNAME.
@@ -231,7 +359,12 @@ func TestCNAMELevel(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(makeQuestion(string(name)), visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 	// Add one more level of CNAME aliases.
 	cache.insertAll([]dnsmessage.Resource{mustMakeCNAMEResource(string(name-1), string(name), 5)})
@@ -251,7 +384,12 @@ func TestDupeCNAME(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	cache.insertAll([]dnsmessage.Resource{
@@ -260,7 +398,12 @@ func TestDupeCNAME(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	// Insert fooExample CNAME example again with different ttl.
@@ -270,7 +413,12 @@ func TestDupeCNAME(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(fooExampleQuestion, visited, 0)
-		check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+		check(t, err, checkParams{
+			funcName:     lookup,
+			gotResources: rrs,
+			wantLen:      2,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 }
 
@@ -281,7 +429,12 @@ func TestDupeAResource(t *testing.T) {
 	cache.insertAll(smallTestResources)
 	visited := make(map[dnsmessage.Name]struct{})
 	rrs, err := cache.lookup(exampleQuestion, visited, 0)
-	check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+	check(t, err, checkParams{
+		funcName:     lookup,
+		gotResources: rrs,
+		wantLen:      2,
+		wantName:     exampleQuestion.Name,
+	})
 }
 
 // Tests that we can insert and expire negative resources.
@@ -290,7 +443,10 @@ func TestNegative(t *testing.T) {
 
 	// The negative record expires at 12 seconds (taken from the SOA authority resource).
 	testTime := time.Now()
-	testHookNow = func() time.Time { return testTime }
+	origTimeNow := timeNow
+	defer func() { timeNow = origTimeNow }()
+	timeNow = func() time.Time { return testTime }
+
 	cache.insertNegative(exampleQuestion, dnsmessage.Message{
 		Questions:   []dnsmessage.Question{exampleQuestion},
 		Authorities: []dnsmessage.Resource{soaAuthority},
@@ -302,7 +458,12 @@ func TestNegative(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, 1, exampleQuestion.Name, err, prune, t)
+		check(t, err, checkParams{
+			funcName:     prune,
+			gotResources: rrs,
+			wantLen:      1,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 
 	// Gone after t=13 seconds.
@@ -311,7 +472,12 @@ func TestNegative(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		rrs, err := cache.lookup(exampleQuestion, visited, 0)
-		check(rrs, 0, exampleQuestion.Name, err, prune, t)
+		check(t, err, checkParams{
+			funcName:     prune,
+			gotResources: rrs,
+			wantLen:      0,
+			wantName:     exampleQuestion.Name,
+		})
 	}
 }
 
@@ -325,5 +491,10 @@ func TestNegativeUpdate(t *testing.T) {
 	cache.insertAll(smallTestResources)
 	visited := make(map[dnsmessage.Name]struct{})
 	rrs, err := cache.lookup(exampleQuestion, visited, 0)
-	check(rrs, 2, exampleQuestion.Name, err, lookup, t)
+	check(t, err, checkParams{
+		funcName:     lookup,
+		gotResources: rrs,
+		wantLen:      2,
+		wantName:     exampleQuestion.Name,
+	})
 }

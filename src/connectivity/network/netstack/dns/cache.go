@@ -28,7 +28,8 @@ const (
 var (
 	errCNAMELevel = errors.New("too many CNAME levels")
 	errCNAMELoop  = errors.New("loop in CNAME aliases")
-	testHookNow   = time.Now
+	// Stubbable in test.
+	timeNow = time.Now
 )
 
 // Single entry in the cache, like a TypeA resource holding an IPv4 address.
@@ -126,14 +127,29 @@ func findSOAMinTTL(auths []dnsmessage.Resource) uint32 {
 func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 	h := rr.Header
 	newEntry := cacheEntry{
-		ttd: testHookNow().Add(time.Duration(h.TTL) * time.Second),
+		ttd: timeNow().Add(time.Duration(h.TTL) * time.Second),
 		rr:  rr,
 	}
 
 	entries := cache.m[h.Name]
 	for i := range entries {
 		existing := &entries[i]
-		if h.Class != existing.rr.Header.Class || h.Type != existing.rr.Header.Type || h.Name != existing.rr.Header.Name {
+		// If a CNAME RR is present at a node, no other data should be present;
+		// this ensures that the data for a canonical name and its aliases cannot be different. (RFC 1034 Section 3.6.2)
+		// A CNAME record is not allowed to coexist with any other data. (RFC 1912 Section 2.4)
+		// The new record resource will overwrite the existing CNAMEResource.
+		if existing.rr.Header.Type == dnsmessage.TypeCNAME {
+			*existing = newEntry
+			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache overwrite: %v(%v expires %v)", h.Name, h.Type, existing.ttd)
+			return
+		}
+		if h.Type == dnsmessage.TypeCNAME {
+			cache.numEntries -= (len(entries) - 1)
+			cache.m[h.Name] = []cacheEntry{newEntry}
+			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache overwrite: %v(%v expires %v)", h.Name, h.Type, existing.ttd)
+			return
+		}
+		if h.Class != existing.rr.Header.Class || h.Type != existing.rr.Header.Type {
 			continue
 		}
 		if existing.rr.Body == nil {
@@ -150,16 +166,11 @@ func (cache *cacheInfo) insert(rr dnsmessage.Resource) {
 				if b2, ok := existing.rr.Body.(*dnsmessage.AAAAResource); !ok || b1.AAAA != b2.AAAA {
 					continue
 				}
-			case *dnsmessage.CNAMEResource:
-				if b2, ok := existing.rr.Body.(*dnsmessage.CNAMEResource); !ok || b1.CNAME != b2.CNAME {
-					continue
-				}
 			default:
 				panic(fmt.Sprintf("unknown type %T", b1))
 			}
-			if newEntry.ttd.After(existing.ttd) {
-				existing.ttd = newEntry.ttd
-			}
+			existing.ttd = newEntry.ttd
+			existing.rr.Header.TTL = h.TTL
 		}
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache update: %v(%v) expires %v", h.Name, h.Type, existing.ttd)
 		return
@@ -210,7 +221,7 @@ func (cache *cacheInfo) insertNegative(question dnsmessage.Question, msg dnsmess
 
 // Removes every expired/dangling entry from the cache.
 func (cache *cacheInfo) prune() {
-	now := testHookNow()
+	now := timeNow()
 	for name, entries := range cache.m {
 		removed := false
 		for i := 0; i < len(entries); {
