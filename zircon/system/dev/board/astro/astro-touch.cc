@@ -2,40 +2,29 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/focaltech/focaltech.h>
+#include <limits.h>
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
 #include <fbl/algorithm.h>
-#include <lib/focaltech/focaltech.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
-#include <limits.h>
-#include <unistd.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
 static const uint32_t device_id = FOCALTECH_DEVICE_FT3X27;
-static const pbus_metadata_t ft3x27_touch_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE, .data_buffer = &device_id, .data_size = sizeof(device_id)},
+static const device_metadata_t ft3x27_touch_metadata[] = {
+    {.type = DEVICE_METADATA_PRIVATE, .data = &device_id, .length = sizeof(device_id)},
 };
-
-const pbus_dev_t ft3x27_touch_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "ft3x27-touch";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_ASTRO;
-  dev.did = PDEV_DID_FOCALTOUCH;
-  dev.metadata_list = ft3x27_touch_metadata;
-  dev.metadata_count = fbl::count_of(ft3x27_touch_metadata);
-  return dev;
-}();
 
 // Composite binding rules for focaltech touch driver.
 static const zx_bind_inst_t root_match[] = {
@@ -122,12 +111,23 @@ zx_status_t Astro::TouchInit() {
       return status;
     }
   } else {
-    // platform device protocol is only needed to provide metadata to the
-    // driver.
-    // TODO(voydanoff) remove pdev after we have a better way to provide
-    // metadata to composite devices.
-    zx_status_t status = pbus_.CompositeDeviceAdd(&ft3x27_touch_dev, ft_components,
-                                                  countof(ft_components), UINT32_MAX);
+    const zx_device_prop_t props[] = {
+        {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+        {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_ASTRO},
+        {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
+    };
+
+    const composite_device_desc_t comp_desc = {
+        .props = props,
+        .props_count = countof(props),
+        .components = ft_components,
+        .components_count = countof(ft_components),
+        .coresident_device_index = UINT32_MAX,
+        .metadata_list = ft3x27_touch_metadata,
+        .metadata_count = fbl::count_of(ft3x27_touch_metadata),
+    };
+
+    zx_status_t status = DdkAddComposite("ft3x27-touch", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s(ft3x27): CompositeDeviceAdd failed: %d\n", __func__, status);
       return status;

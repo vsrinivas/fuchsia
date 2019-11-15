@@ -39,22 +39,30 @@ zx_status_t As370::PowerInit() {
 
   static const power_domain_t power_domains[] = {{kBuckSoC}};
 
-  static const pbus_metadata_t power_metadata[] = {
+  static const device_metadata_t power_metadata[] = {
       {
           .type = DEVICE_METADATA_POWER_DOMAINS,
-          .data_buffer = &power_domains,
-          .data_size = sizeof(power_domains),
+          .data = &power_domains,
+          .length = sizeof(power_domains),
       },
   };
 
-  pbus_dev_t power_dev = {};
-  power_dev.name = "power";
-  power_dev.vid = PDEV_VID_SYNAPTICS;
-  power_dev.did = PDEV_DID_AS370_POWER;
-  power_dev.metadata_list = power_metadata;
-  power_dev.metadata_count = countof(power_metadata);
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SYNAPTICS},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AS370_POWER},
+  };
 
-  status = pbus_.CompositeDeviceAdd(&power_dev, components, countof(components), UINT32_MAX);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = power_metadata,
+      .metadata_count = countof(power_metadata),
+  };
+
+  status = DdkAddComposite("power", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __FUNCTION__, status);
     return status;

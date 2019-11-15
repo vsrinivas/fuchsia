@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/focaltech/focaltech.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,7 +11,6 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
-#include <lib/focaltech/focaltech.h>
 #include <soc/mt8167/mt8167-hw.h>
 #include <soc/mt8167/mt8167-power.h>
 
@@ -24,16 +25,14 @@ zx_status_t Mt8167::TouchInit() {
 
   static constexpr uint32_t kDeviceId = FOCALTECH_DEVICE_FT6336;
 
-  static const pbus_metadata_t touch_metadata[] = {
-      {.type = DEVICE_METADATA_PRIVATE, .data_buffer = &kDeviceId, .data_size = sizeof(kDeviceId)},
+  static const device_metadata_t touch_metadata[] = {
+      {.type = DEVICE_METADATA_PRIVATE, .data = &kDeviceId, .length = sizeof(kDeviceId)},
   };
 
-  pbus_dev_t touch_dev = {};
-  touch_dev.name = "touch";
-  touch_dev.vid = PDEV_VID_GENERIC;
-  touch_dev.did = PDEV_DID_FOCALTOUCH;
-  touch_dev.metadata_list = touch_metadata;
-  touch_dev.metadata_count = countof(touch_metadata);
+  const zx_device_prop_t ft_props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
+  };
 
   // Composite binding rules for focaltech touch driver.
   constexpr zx_bind_inst_t root_match[] = {
@@ -70,11 +69,17 @@ zx_status_t Mt8167::TouchInit() {
       {fbl::count_of(gpio_reset_component), gpio_reset_component},
   };
 
-  // platform device protocol is only needed to provide metadata to the driver.
-  // TODO(voydanoff) remove pdev after we have a better way to provide metadata to composite
-  // devices.
-  zx_status_t status =
-      pbus_.CompositeDeviceAdd(&touch_dev, ft_components, fbl::count_of(ft_components), UINT32_MAX);
+  static const composite_device_desc_t ft_comp_desc = {
+      .props = ft_props,
+      .props_count = countof(ft_props),
+      .components = ft_components,
+      .components_count = countof(ft_components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = touch_metadata,
+      .metadata_count = countof(touch_metadata),
+  };
+
+  zx_status_t status = DdkAddComposite("touch", &ft_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: Failed to add touch device: %d\n", __FUNCTION__, status);
   }

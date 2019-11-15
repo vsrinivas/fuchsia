@@ -18,7 +18,6 @@
 
 namespace {
 enum {
-  kPdevComponent,
   kI2cComponent,
   kTouchGpioComponent,
   kComponentCount,

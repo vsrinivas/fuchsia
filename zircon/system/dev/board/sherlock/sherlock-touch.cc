@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/focaltech/focaltech.h>
+#include <limits.h>
+#include <unistd.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -9,11 +13,8 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/algorithm.h>
-#include <lib/focaltech/focaltech.h>
-#include <limits.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
-#include <unistd.h>
 
 #include "sherlock-gpios.h"
 #include "sherlock.h"
@@ -21,20 +22,15 @@
 namespace sherlock {
 
 static const uint32_t device_id = FOCALTECH_DEVICE_FT5726;
-static const pbus_metadata_t ft5726_touch_metadata[] = {
-    {.type = DEVICE_METADATA_PRIVATE, .data_buffer = &device_id, .data_size = sizeof(device_id)},
+static const device_metadata_t ft5726_touch_metadata[] = {
+    {.type = DEVICE_METADATA_PRIVATE, .data = &device_id, .length = sizeof(device_id)},
 };
 
-const pbus_dev_t ft5726_touch_dev = []() {
-  pbus_dev_t dev = {};
-  dev.name = "ft5726-touch";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_SHERLOCK;
-  dev.did = PDEV_DID_FOCALTOUCH;
-  dev.metadata_list = ft5726_touch_metadata;
-  dev.metadata_count = fbl::count_of(ft5726_touch_metadata);
-  return dev;
-}();
+static const zx_device_prop_t ft5726_props[] = {
+    {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+    {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SHERLOCK},
+    {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_FOCALTOUCH},
+};
 
 // Composite binding rules for focaltech touch driver.
 static const zx_bind_inst_t root_match[] = {
@@ -71,12 +67,18 @@ static constexpr device_component_t ft_components[] = {
     {fbl::count_of(gpio_reset_component), gpio_reset_component},
 };
 
+static const composite_device_desc_t ft_comp_desc = {
+    .props = ft5726_props,
+    .props_count = countof(ft5726_props),
+    .components = ft_components,
+    .components_count = countof(ft_components),
+    .coresident_device_index = UINT32_MAX,
+    .metadata_list = ft5726_touch_metadata,
+    .metadata_count = fbl::count_of(ft5726_touch_metadata),
+};
+
 zx_status_t Sherlock::TouchInit() {
-  // platform device protocol is only needed to provide metadata to the driver.
-  // TODO(voydanoff) remove pdev after we have a better way to provide metadata to composite
-  // devices.
-  zx_status_t status = pbus_.CompositeDeviceAdd(&ft5726_touch_dev, ft_components,
-                                                fbl::count_of(ft_components), UINT32_MAX);
+  zx_status_t status = DdkAddComposite("ft5726-touch", &ft_comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s(ft5726): DeviceAdd failed: %d\n", __func__, status);
     return status;

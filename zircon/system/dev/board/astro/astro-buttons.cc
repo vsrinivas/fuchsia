@@ -8,12 +8,11 @@
 #include <ddk/metadata.h>
 #include <ddk/metadata/buttons.h>
 #include <ddk/platform-defs.h>
-
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 
-#include "astro.h"
 #include "astro-gpios.h"
+#include "astro.h"
 
 namespace astro {
 
@@ -33,16 +32,16 @@ static const buttons_gpio_config_t gpios[] = {
 };
 // clang-format on
 
-static const pbus_metadata_t available_buttons_metadata[] = {
+static const device_metadata_t available_buttons_metadata[] = {
     {
         .type = DEVICE_METADATA_BUTTONS_BUTTONS,
-        .data_buffer = &buttons,
-        .data_size = sizeof(buttons),
+        .data = &buttons,
+        .length = sizeof(buttons),
     },
     {
         .type = DEVICE_METADATA_BUTTONS_GPIOS,
-        .data_buffer = &gpios,
-        .data_size = sizeof(gpios),
+        .data = &gpios,
+        .length = sizeof(gpios),
     }};
 
 static const zx_bind_inst_t root_match[] = {
@@ -88,14 +87,23 @@ static const device_component_t components[] = {
 };
 
 zx_status_t Astro::ButtonsInit() {
-  static pbus_dev_t dev;
-  dev.name = "astro-buttons";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_HID_BUTTONS;
-  dev.metadata_list = available_buttons_metadata;
-  dev.metadata_count = countof(available_buttons_metadata);
-  zx_status_t status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = available_buttons_metadata,
+      .metadata_count = countof(available_buttons_metadata),
+  };
+
+  zx_status_t status = DdkAddComposite("astro-buttons", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed: %d\n", __func__, status);
     return status;

@@ -73,27 +73,35 @@ zx_status_t Sherlock::ButtonsInit() {
         {BUTTONS_GPIO_TYPE_INTERRUPT, 0, {GPIO_NO_PULL}},
     };
   // clang-format on
-  static constexpr pbus_metadata_t available_buttons_metadata[] = {
+  static constexpr device_metadata_t available_buttons_metadata[] = {
       {
           .type = DEVICE_METADATA_BUTTONS_BUTTONS,
-          .data_buffer = &buttons,
-          .data_size = sizeof(buttons),
+          .data = &buttons,
+          .length = sizeof(buttons),
       },
       {
           .type = DEVICE_METADATA_BUTTONS_GPIOS,
-          .data_buffer = &gpios,
-          .data_size = sizeof(gpios),
+          .data = &gpios,
+          .length = sizeof(gpios),
       }};
-  pbus_dev_t sherlock_buttons_dev = {};
-  sherlock_buttons_dev.name = "sherlock-buttons";
-  sherlock_buttons_dev.vid = PDEV_VID_GENERIC;
-  sherlock_buttons_dev.pid = PDEV_PID_GENERIC;
-  sherlock_buttons_dev.did = PDEV_DID_HID_BUTTONS;
-  sherlock_buttons_dev.metadata_list = available_buttons_metadata;
-  sherlock_buttons_dev.metadata_count = countof(available_buttons_metadata);
 
-  auto status =
-      pbus_.CompositeDeviceAdd(&sherlock_buttons_dev, components, countof(components), UINT32_MAX);
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
+  };
+
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = components,
+      .components_count = countof(components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = available_buttons_metadata,
+      .metadata_count = countof(available_buttons_metadata),
+  };
+
+  zx_status_t status = DdkAddComposite("sherlock-buttons", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
     return status;

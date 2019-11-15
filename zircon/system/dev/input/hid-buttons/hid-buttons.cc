@@ -435,15 +435,15 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  // component 0 is platform device, only used for passing metadata.
   auto component_count = composite.GetComponentCount();
-  if (component_count != n_gpios + 1) {
-    zxlogf(ERROR, "%s Could not get composite protocol\n", __func__);
+  if (component_count != n_gpios) {
+    zxlogf(ERROR, "%s Could not get component count\n", __func__);
     return ZX_ERR_INTERNAL;
   }
   zx_device_t* components[component_count];
   composite.GetComponents(components, component_count, &actual);
   if (actual != component_count) {
+    zxlogf(ERROR, "%s Component count did not match\n", __func__);
     return ZX_ERR_INTERNAL;
   }
 
@@ -453,7 +453,7 @@ static zx_status_t hid_buttons_bind(void* ctx, zx_device_t* parent) {
     return ZX_ERR_NO_MEMORY;
   }
   for (uint32_t i = 0; i < n_gpios; ++i) {
-    status = device_get_protocol(components[i + 1], ZX_PROTOCOL_GPIO, &gpios[i].gpio);
+    status = device_get_protocol(components[i], ZX_PROTOCOL_GPIO, &gpios[i].gpio);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s Could not get protocol\n", __func__);
       return ZX_ERR_INTERNAL;

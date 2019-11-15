@@ -30,16 +30,16 @@ zx_status_t Mt8167::ButtonsInit() {
         {BUTTONS_GPIO_TYPE_MATRIX_OUTPUT, BUTTONS_GPIO_FLAG_INVERTED, {0}           },
     };
   // clang-format on
-  static constexpr pbus_metadata_t mt8167s_ref_metadata[] = {
+  static constexpr device_metadata_t mt8167s_ref_metadata[] = {
       {
           .type = DEVICE_METADATA_BUTTONS_BUTTONS,
-          .data_buffer = &mt8167s_ref_buttons,
-          .data_size = sizeof(mt8167s_ref_buttons),
+          .data = &mt8167s_ref_buttons,
+          .length = sizeof(mt8167s_ref_buttons),
       },
       {
           .type = DEVICE_METADATA_BUTTONS_GPIOS,
-          .data_buffer = &mt8167s_ref_gpios,
-          .data_size = sizeof(mt8167s_ref_gpios),
+          .data = &mt8167s_ref_gpios,
+          .length = sizeof(mt8167s_ref_gpios),
       }};
 
   static constexpr buttons_button_config_t cleo_buttons[] = {
@@ -50,30 +50,37 @@ zx_status_t Mt8167::ButtonsInit() {
       {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_PULL_UP}},
       {BUTTONS_GPIO_TYPE_INTERRUPT, BUTTONS_GPIO_FLAG_INVERTED, {GPIO_NO_PULL}},
   };
-  static constexpr pbus_metadata_t cleo_metadata[] = {
+  static constexpr device_metadata_t cleo_metadata[] = {
       {
           .type = DEVICE_METADATA_BUTTONS_BUTTONS,
-          .data_buffer = &cleo_buttons,
-          .data_size = sizeof(cleo_buttons),
+          .data = &cleo_buttons,
+          .length = sizeof(cleo_buttons),
       },
       {
           .type = DEVICE_METADATA_BUTTONS_GPIOS,
-          .data_buffer = &cleo_gpios,
-          .data_size = sizeof(cleo_gpios),
+          .data = &cleo_gpios,
+          .length = sizeof(cleo_gpios),
       },
   };
 
-  pbus_dev_t dev = {};
-  dev.name = "mt8167-buttons";
-  dev.vid = PDEV_VID_GENERIC;
-  dev.pid = PDEV_PID_GENERIC;
-  dev.did = PDEV_DID_HID_BUTTONS;
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_GENERIC},
+      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_GENERIC},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_HID_BUTTONS},
+  };
+
+  composite_device_desc_t comp_desc = {};
+
+  comp_desc.props = props;
+  comp_desc.props_count = countof(props);
+  comp_desc.coresident_device_index = UINT32_MAX;
+
   static const zx_bind_inst_t root_match[] = {
       BI_MATCH(),
   };
   if (board_info_.vid == PDEV_VID_MEDIATEK && board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-    dev.metadata_list = mt8167s_ref_metadata;
-    dev.metadata_count = countof(mt8167s_ref_metadata);
+    comp_desc.metadata_list = mt8167s_ref_metadata;
+    comp_desc.metadata_count = countof(mt8167s_ref_metadata);
     static const zx_bind_inst_t row0_match[] = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_KP_ROW0),
@@ -112,14 +119,18 @@ zx_status_t Mt8167::ButtonsInit() {
         {countof(col0_component), col0_component},
         {countof(col0_component), col1_component},
     };
-    auto status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
+
+    comp_desc.components = components;
+    comp_desc.components_count = countof(components);
+
+    zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
       return status;
     }
   } else if (board_info_.vid == PDEV_VID_GOOGLE && board_info_.pid == PDEV_PID_CLEO) {
-    dev.metadata_list = cleo_metadata;
-    dev.metadata_count = countof(cleo_metadata);
+    comp_desc.metadata_list = cleo_metadata;
+    comp_desc.metadata_count = countof(cleo_metadata);
     static const zx_bind_inst_t volume_up_match[] = {
         BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_GPIO),
         BI_MATCH_IF(EQ, BIND_GPIO_PIN, MT8167_GPIO_VOLUME_UP),
@@ -140,7 +151,10 @@ zx_status_t Mt8167::ButtonsInit() {
         {countof(volume_up_component), volume_up_component},
         {countof(mic_privacy_component), mic_privacy_component},
     };
-    auto status = pbus_.CompositeDeviceAdd(&dev, components, countof(components), UINT32_MAX);
+    comp_desc.components = components;
+    comp_desc.components_count = countof(components);
+
+    zx_status_t status = DdkAddComposite("mt8167-buttons", &comp_desc);
     if (status != ZX_OK) {
       zxlogf(ERROR, "%s: CompositeDeviceAdd failed %d\n", __func__, status);
       return status;

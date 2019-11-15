@@ -60,23 +60,30 @@ zx_status_t As370::TouchInit() {
       },
   };
 
-  static constexpr pbus_metadata_t as370_touch_metadata[] = {
+  static constexpr device_metadata_t as370_touch_metadata[] = {
       {
           .type = DEVICE_METADATA_PRIVATE,
-          .data_buffer = &as370_touch_buttons,
-          .data_size = sizeof(as370_touch_buttons),
+          .data = &as370_touch_buttons,
+          .length = sizeof(as370_touch_buttons),
       },
   };
 
-  pbus_dev_t touch_dev = {};
-  touch_dev.name = "as370-touch";
-  touch_dev.vid = PDEV_VID_SYNAPTICS;
-  touch_dev.did = PDEV_DID_AS370_TOUCH;
-  touch_dev.metadata_list = as370_touch_metadata;
-  touch_dev.metadata_count = countof(as370_touch_metadata);
+  constexpr zx_device_prop_t props[] = {
+      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SYNAPTICS},
+      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_AS370_TOUCH},
+  };
 
-  zx_status_t status = pbus_.CompositeDeviceAdd(&touch_dev, controller_components,
-                                                countof(controller_components), UINT32_MAX);
+  const composite_device_desc_t comp_desc = {
+      .props = props,
+      .props_count = countof(props),
+      .components = controller_components,
+      .components_count = countof(controller_components),
+      .coresident_device_index = UINT32_MAX,
+      .metadata_list = as370_touch_metadata,
+      .metadata_count = countof(as370_touch_metadata),
+  };
+
+  zx_status_t status = DdkAddComposite("as370-touch", &comp_desc);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s CompositeDeviceAdd failed %d\n", __FILE__, status);
     return status;

@@ -2,12 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "ft_device.h"
+
+#include <lib/device-protocol/i2c.h>
+#include <lib/focaltech/focaltech.h>
+#include <stdio.h>
+#include <string.h>
+#include <sys/types.h>
+#include <zircon/compiler.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/composite.h>
-#include <lib/device-protocol/i2c.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -15,27 +23,17 @@
 #include <fbl/ref_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
-#include <lib/focaltech/focaltech.h>
-#include <zircon/compiler.h>
-
-#include <stdio.h>
-#include <string.h>
-#include <sys/types.h>
-
-#include "ft_device.h"
 
 namespace ft {
 
 enum {
-  COMPONENT_PDEV,
   COMPONENT_I2C,
   COMPONENT_INT_GPIO,
   COMPONENT_RESET_GPIO,
   COMPONENT_COUNT,
 };
 
-FtDevice::FtDevice(zx_device_t* device) : ddk::Device<FtDevice,
-                                                      ddk::UnbindableNew>(device) {}
+FtDevice::FtDevice(zx_device_t* device) : ddk::Device<FtDevice, ddk::UnbindableNew>(device) {}
 
 void FtDevice::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
   rpt->x = static_cast<uint16_t>(((buf[0] & 0x0f) << 8) + buf[1]);
@@ -119,12 +117,9 @@ zx_status_t FtDevice::Init() {
     return status;
   }
 
-  // COMPONENT_PDEV is only used for metadata.
-  // TODO(voydanoff) remove COMPONENT_PDEV once we have a better way of passing metadata to
-  // composite devices.
   uint32_t device_id;
-  status = device_get_metadata(components[COMPONENT_PDEV], DEVICE_METADATA_PRIVATE, &device_id,
-                               sizeof(device_id), &actual);
+  status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
+                               &actual);
   if (status != ZX_OK || sizeof(device_id) != actual) {
     zxlogf(ERROR, "focaltouch: failed to read metadata\n");
     return status == ZX_OK ? ZX_ERR_INTERNAL : status;
