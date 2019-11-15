@@ -1109,7 +1109,7 @@ void ArmIspDevice::IspLoadSeq_settings_context() {
 
   ping::Top_BypassDs::Get()
       .ReadFrom(&isp_mmio_local_)
-      .set_bypass_ds_crop(1)
+      .set_bypass_ds_crop(0)
       .set_bypass_ds_scaler(1)
       .set_bypass_ds_gamma_rgb(1)
       .set_bypass_ds_sharpen(1)
@@ -2378,12 +2378,27 @@ void ArmIspDevice::IspLoadCustomSequence() {
       .set_value(1)
       .WriteTo(&isp_mmio_local_);
 
+  ping::DownScaled::Crop_EnableCrop::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(1)
+      .WriteTo(&isp_mmio_local_);
+
   ping::FullResolution::Crop_SizeX::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_value(2176)
       .WriteTo(&isp_mmio_local_);
 
   ping::FullResolution::Crop_SizeY::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(2720)
+      .WriteTo(&isp_mmio_local_);
+
+  ping::DownScaled::Crop_SizeX::Get()
+      .ReadFrom(&isp_mmio_local_)
+      .set_value(2176)
+      .WriteTo(&isp_mmio_local_);
+
+  ping::DownScaled::Crop_SizeY::Get()
       .ReadFrom(&isp_mmio_local_)
       .set_value(2720)
       .WriteTo(&isp_mmio_local_);

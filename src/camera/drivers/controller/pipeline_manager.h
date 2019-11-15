@@ -89,12 +89,26 @@ class PipelineManager {
       fuchsia::sysmem::BufferCollectionInfo_2* buffer_collection,
       fuchsia_sysmem_BufferCollectionInfo* old_buffer_collection);
 
+  fit::result<std::unique_ptr<ProcessNode>, zx_status_t> ConfigureStreamPipelineHelper(
+      PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
+
+  void OnClientStreamDisconnect(ProcessNode* output_node) {
+    // TODO(braval): We currently only support connecting one stream at a time.
+    // Keeping that in mind, this is a very trivial implementation of what needs
+    // to happen on client stream disconnect.
+    ZX_ASSERT(output_node != nullptr);
+    ZX_ASSERT(output_node->type() == NodeType::kOutputStream);
+    full_resolution_stream_ = nullptr;
+    downscaled_resolution_stream_ = nullptr;
+  }
+
   zx_device_t* device_;
   async_dispatcher_t* dispatcher_;
   ddk::IspProtocolClient isp_;
   __UNUSED ddk::GdcProtocolClient gdc_;
   ControllerMemoryAllocator memory_allocator_;
   std::unique_ptr<ProcessNode> full_resolution_stream_;
+  std::unique_ptr<ProcessNode> downscaled_resolution_stream_;
 };
 
 }  // namespace camera

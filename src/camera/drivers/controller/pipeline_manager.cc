@@ -60,8 +60,11 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
   uint8_t isp_stream_type;
   if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_FULL_RESOLUTION;
-  } else {
+  } else if (info->node.input_stream_type ==
+             fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION) {
     isp_stream_type = STREAM_TYPE_DOWNSCALED;
+  } else {
+    return fit::error(ZX_ERR_INVALID_ARGS);
   }
 
   auto result = GetBuffers(info->node, info);
@@ -94,7 +97,7 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
   // TODO(braval): create FR or DS depending on what stream is requested
   auto status = isp_.CreateOutputStream(
       &old_buffer_collection, reinterpret_cast<const frame_rate_t*>(&info->node.output_frame_rate),
-      STREAM_TYPE_FULL_RESOLUTION, processing_node->callback(), isp_stream_protocol->protocol());
+      isp_stream_type, processing_node->callback(), isp_stream_protocol->protocol());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create output stream on ISP";
     return fit::error(ZX_ERR_INTERNAL);
@@ -102,7 +105,6 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 
   // Update the input node with the ISP stream protocol
   processing_node->set_isp_stream_protocol(std::move(isp_stream_protocol));
-
   return fit::ok(std::move(processing_node));
 }
 
@@ -167,11 +169,40 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(PipelineInfo
       }
       break;
     }
-    default: {
-      return fit::error(ZX_ERR_NOT_SUPPORTED);
-    }
+    default: { return fit::error(ZX_ERR_NOT_SUPPORTED); }
   }
   return result;
+}
+
+fit::result<std::unique_ptr<ProcessNode>, zx_status_t>
+PipelineManager::ConfigureStreamPipelineHelper(
+    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+  // Configure Input node
+  auto input_result = CreateInputNode(info);
+  if (input_result.is_error()) {
+    FX_PLOGS(ERROR, input_result.error()) << "Failed to ConfigureInputNode";
+    return input_result;
+  }
+
+  auto input_processing_node = std::move(input_result.value());
+  ProcessNode* input_node = input_processing_node.get();
+
+  auto output_node_result = CreateGraph(info, input_node);
+  if (output_node_result.is_error()) {
+    FX_PLOGS(ERROR, output_node_result.error()) << "Failed to CreateGraph";
+    return fit::error(output_node_result.error());
+  }
+
+  auto output_node = output_node_result.value();
+  auto status = output_node->client_stream()->Attach(stream.TakeChannel(), [this, output_node]() {
+    FX_LOGS(INFO) << "Stream client disconnected";
+    OnClientStreamDisconnect(output_node);
+  });
+  if (status != ZX_OK) {
+    FX_PLOGS(ERROR, status) << "Failed to bind output stream";
+    return fit::error(status);
+  }
+  return fit::ok(std::move(input_processing_node));
 }
 
 zx_status_t PipelineManager::ConfigureStreamPipeline(
@@ -181,42 +212,41 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
     return ZX_ERR_INVALID_ARGS;
   }
   // Here at top level we check what type of input stream do we have to deal with
-  if (info->node.input_stream_type == fuchsia::camera2::CameraStreamType::FULL_RESOLUTION) {
-    if (full_resolution_stream_) {
-      // TODO(braval): If valid it means we need to modify existing graph
-      // TODO(braval): Check if same stream is requested, if so do not allow
-      // Currently we will only be not allowing since we only support ISP debug config.
-      FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
-      return ZX_ERR_ALREADY_BOUND;
+  switch (info->node.input_stream_type) {
+    case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
+      if (full_resolution_stream_) {
+        // TODO(braval): If valid it means we need to modify existing graph
+        // TODO(braval): Check if same stream is requested, if so do not allow
+        // Currently we will only be not allowing since we only support ISP debug config.
+        FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+        return ZX_ERR_ALREADY_BOUND;
+      }
+      auto result = ConfigureStreamPipelineHelper(info, stream);
+      if (result.is_error()) {
+        return result.error();
+      }
+      full_resolution_stream_ = std::move(result.value());
+      break;
     }
-
-    // Configure Input node
-    auto input_result = CreateInputNode(info);
-    if (input_result.is_error()) {
-      FX_PLOGS(ERROR, input_result.error()) << "Failed to ConfigureInputNode";
-      return input_result.error();
+    case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
+      if (downscaled_resolution_stream_) {
+        // TODO(braval): If valid it means we need to modify existing graph
+        // TODO(braval): Check if same stream is requested, if so do not allow
+        // Currently we will only be not allowing since we only support ISP debug config.
+        FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+        return ZX_ERR_ALREADY_BOUND;
+      }
+      auto result = ConfigureStreamPipelineHelper(info, stream);
+      if (result.is_error()) {
+        return result.error();
+      }
+      downscaled_resolution_stream_ = std::move(result.value());
+      break;
     }
-    full_resolution_stream_ = std::move(input_result.value());
-
-    auto graph_result = CreateGraph(info, full_resolution_stream_.get());
-    if (graph_result.is_error()) {
-      FX_PLOGS(ERROR, graph_result.error()) << "Failed to CreateGraph";
-      return graph_result.error();
+    default: {
+      FX_LOGS(ERROR) << "Invalid input stream type";
+      return ZX_ERR_INVALID_ARGS;
     }
-
-    auto status = graph_result.value()->client_stream()->Attach(stream.TakeChannel(), [this]() {
-      FX_LOGS(INFO) << "Stream client disconnected";
-      full_resolution_stream_ = nullptr;
-    });
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status) << "Failed to bind output stream";
-      return status;
-    }
-
-  } else {
-    // Currently only supporting ISP debug config which has only FR stream
-    FX_LOGS(ERROR) << "Invalid input stream type";
-    return ZX_ERR_INVALID_ARGS;
   }
   return ZX_OK;
 }
