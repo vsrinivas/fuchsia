@@ -45,6 +45,7 @@ zedboot_binary_patterns = [
   "bin/fsck*",
   "bin/gpt",
   "bin/killall",
+  "bin/ktrace",
   "bin/lsblk",
   "bin/lsdev",
   "bin/lsusb",

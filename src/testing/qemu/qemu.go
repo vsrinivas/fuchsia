@@ -206,7 +206,7 @@ func (d *Distribution) RunNonInteractive(
 	toRun string,
 	hostPathMinfsBinary string,
 	hostPathZbiBinary string,
-	params Params) (string, error) {
+	params Params) (string, string, error) {
 	// This mode is non-interactive and is intended specifically to test the case
 	// where the serial port has been disabled. The following modifications are
 	// made to the QEMU invocation compared with Create()/Start():
@@ -225,27 +225,33 @@ func (d *Distribution) RunNonInteractive(
 	// Make the temp files we need.
 	tmpFsFile, err := ioutil.TempFile(os.TempDir(), "*.fs")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer os.Remove(tmpFsFile.Name())
 
 	tmpRuncmds, err := ioutil.TempFile(os.TempDir(), "runcmds_*")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer os.Remove(tmpRuncmds.Name())
 
 	tmpZbi, err := ioutil.TempFile(os.TempDir(), "*.zbi")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer os.Remove(tmpZbi.Name())
 
 	tmpLog, err := ioutil.TempFile(os.TempDir(), "log.*.txt")
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer os.Remove(tmpLog.Name())
+
+	tmpErr, err := ioutil.TempFile(os.TempDir(), "err.*.txt")
+	if err != nil {
+		return "", "", err
+	}
+	defer os.Remove(tmpErr.Name())
 
 	// Write runcmds that mounts the results disk, runs the requested command, and
 	// shuts down.
@@ -253,7 +259,7 @@ func (d *Distribution) RunNonInteractive(
 waitfor class=block topo=/dev/sys/pci/00:06.0/virtio-block/block timeout=60000
 mount /dev/sys/pci/00:06.0/virtio-block/block /tmp/testdata-fs
 `)
-	tmpRuncmds.WriteString(toRun + " >/tmp/testdata-fs/log.txt\n")
+	tmpRuncmds.WriteString(toRun + " 2>/tmp/testdata-fs/err.txt >/tmp/testdata-fs/log.txt\n")
 	tmpRuncmds.WriteString(`umount /tmp/testdata-fs
 dm poweroff
 `)
@@ -262,7 +268,7 @@ dm poweroff
 	cmd := exec.Command(hostPathMinfsBinary, tmpFsFile.Name()+"@100M", "mkfs")
 	err = cmd.Run()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Create the new initrd that references the runcmds file.
@@ -272,7 +278,7 @@ dm poweroff
 		"-e", "runcmds="+tmpRuncmds.Name())
 	err = cmd.Run()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	// Build up the qemu command line from common arguments and the extra goop to
@@ -294,27 +300,38 @@ dm poweroff
 	i := &Instance{cmd: exec.Command(path, args...)}
 	err = i.Start()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 	defer i.Kill()
 
 	err = i.cmd.Wait()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
 	os.Remove(tmpLog.Name()) // `minfs` will refuse to overwrite a local file, so delete first.
 	cmd = exec.Command(hostPathMinfsBinary, tmpFsFile.Name(), "cp", "::/log.txt", tmpLog.Name())
 	err = cmd.Run()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
 
-	ret, err := ioutil.ReadFile(tmpLog.Name())
+	os.Remove(tmpErr.Name()) // `minfs` will refuse to overwrite a local file, so delete first.
+	cmd = exec.Command(hostPathMinfsBinary, tmpFsFile.Name(), "cp", "::/err.txt", tmpErr.Name())
+	err = cmd.Run()
 	if err != nil {
-		return "", err
+		return "", "", err
 	}
-	return string(ret), nil
+
+	retLog, err := ioutil.ReadFile(tmpLog.Name())
+	if err != nil {
+		return "", "", err
+	}
+	retErr, err := ioutil.ReadFile(tmpErr.Name())
+	if err != nil {
+		return "", "", err
+	}
+	return string(retLog), string(retErr), nil
 }
 
 // Start the QEMU instance.
@@ -394,6 +411,12 @@ func (i *Instance) WaitForLogMessageAssertNotSeen(msg string, notSeen string) {
 	}
 }
 
+// Reset display: ESC c
+// Reset screen mode: ESC [ ? 7 l
+// Move cursor home: ESC [ 2 J
+// All text attributes off: ESC [ 0 m
+const qemuClearPrefix = "\x1b\x63\x1b\x5b\x3f\x37\x6c\x1b\x5b\x32\x4a\x1b\x5b\x30\x6d"
+
 // Reads all messages from stdout of QEMU, and tests if msg appears. Returns
 // error if any. Prefer WaitForLogMessage() unless you're certain this is the
 // one you want.
@@ -403,8 +426,15 @@ func (i *Instance) CheckForLogMessage(msg string) error {
 		if err != nil {
 			panic(err)
 		}
-		// Save the QEMU output for test logging of stdout
-		fmt.Print(line)
+
+		// Drop the QEMU clearing preamble as it makes it difficult to see output
+		// when there's multiple qemu runs in a single binary.
+		toPrint := line
+		if strings.HasPrefix(toPrint, qemuClearPrefix) {
+			toPrint = toPrint[len(qemuClearPrefix):]
+		}
+		fmt.Print(toPrint)
+
 		if strings.Contains(line, msg) {
 			return nil
 		}
