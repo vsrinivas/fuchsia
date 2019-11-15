@@ -217,11 +217,15 @@ LineDetails ModuleSymbolsImpl::LineDetailsForAddress(const SymbolContext& symbol
     last_row_index++;
   }
 
-  // Resolve the file name.
+  // Resolve the file name. Skip for "line 0" entries which are compiled-generated code not
+  // associated with a line entry. Typically there will be a file if we ask, but that's leftover
+  // from the previous row in the table by the state machine and is not relevant.
   std::string file_name;
-  line_table->getFileNameByIndex(rows[first_row_index].File, "",
-                                 llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
-                                 file_name);
+  if (rows[first_row_index].Line) {
+    line_table->getFileNameByIndex(rows[first_row_index].File, "",
+                                   llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
+                                   file_name);
+  }
 
   LineDetails result(FileLine(file_name, unit->getCompilationDir(), rows[first_row_index].Line));
 
@@ -426,11 +430,16 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
     if (line_table->getFileLineInfoForAddress(
             relative_address, "", llvm::DILineInfoSpecifier::FileLineInfoKind::AbsoluteFilePath,
             line_info)) {
-      // Line info present.
-      return Location(
-          absolute_address,
-          FileLine(std::move(line_info.FileName), unit->getCompilationDir(), line_info.Line),
-          line_info.Column, symbol_context, std::move(lazy_function));
+      // Line info present. Only set the file name if there's a nonzero line number. "Line 0"
+      // entries which are compiled-generated code not associated with a line entry. Typically there
+      // will be a file if we ask, but that's leftover from the previous row in the table by the
+      // state machine and is not relevant.
+      std::string file_name;
+      if (line_info.Line)
+        file_name = std::move(line_info.FileName);
+      return Location(absolute_address,
+                      FileLine(std::move(file_name), unit->getCompilationDir(), line_info.Line),
+                      line_info.Column, symbol_context, std::move(lazy_function));
     }
   }
 

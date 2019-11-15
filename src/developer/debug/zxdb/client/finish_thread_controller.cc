@@ -6,11 +6,15 @@
 
 #include "src/developer/debug/zxdb/client/finish_physical_frame_thread_controller.h"
 #include "src/developer/debug/zxdb/client/frame.h"
+#include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/step_over_thread_controller.h"
+#include "src/developer/debug/zxdb/client/step_thread_controller.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/line_details.h"
 #include "src/developer/debug/zxdb/symbols/location.h"
+#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -36,6 +40,34 @@ FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_fin
 FinishThreadController::~FinishThreadController() = default;
 
 FinishThreadController::StopOp FinishThreadController::OnThreadStop(
+    debug_ipc::ExceptionType stop_type,
+    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
+  // "Line 0" stepping is the last phase. If that's set, that's all we need to do.
+  if (step_over_line_0_controller_)
+    return step_over_line_0_controller_->OnThreadStop(stop_type, hit_breakpoints);
+
+  if (StopOp op = OnThreadStopFrameStepping(stop_type, hit_breakpoints); op != kStopDone)
+    return op;
+
+  // Done stepping out of all frames. Now we need to check whether we landed at some "line 0"
+  // code (compiler generated without an associated line number) and step over that to get to the
+  // next source code following the call.
+  uint64_t ip = thread()->GetStack()[0]->GetAddress();
+  LineDetails line_details = thread()->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
+  if (!line_details.is_valid())
+    return kStopDone;  // No line information here, stop.
+
+  if (line_details.file_line().line() != 0)
+    return kStopDone;  // Landed at some normal code, stop.
+
+  // Step over the "line 0" code.
+  step_over_line_0_controller_ = std::make_unique<StepThreadController>(StepMode::kSourceLine);
+  step_over_line_0_controller_->InitWithThread(thread(), [](const Err&) {});
+  // Don't forward exception type or breakpoints to this since we already consumed them above.
+  return step_over_line_0_controller_->OnThreadStop(debug_ipc::ExceptionType::kNone, {});
+}
+
+FinishThreadController::StopOp FinishThreadController::OnThreadStopFrameStepping(
     debug_ipc::ExceptionType stop_type,
     const std::vector<fxl::WeakPtr<Breakpoint>>& input_hit_breakpoints) {
   // May need to get cleared before passing to sub-controllers.
@@ -65,14 +97,15 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
     hit_breakpoints.clear();
   }
 
-  if (step_over_controller_) {
+  if (step_over_inline_controller_) {
     // Have an existing step controller for an inline frame.
     Log("Dispatching to inline frame step over.");
-    if (auto op = step_over_controller_->OnThreadStop(stop_type, hit_breakpoints); op != kStopDone)
+    if (auto op = step_over_inline_controller_->OnThreadStop(stop_type, hit_breakpoints);
+        op != kStopDone)
       return op;
 
     // Current step controller said stop so it's done.
-    step_over_controller_.reset();
+    step_over_inline_controller_.reset();
 
     // As above, the exception and breakpoints have been "consumed" by the step over controller,
     // don't forward to the new one we're creating below.
@@ -95,7 +128,7 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStop(
   Log("Newer stack frame needs stepping out of.");
   if (!CreateInlineStepOverController([](const Err&) {}))
     return kStopDone;  // Something unexpected happened.
-  return step_over_controller_->OnThreadStop(stop_type, hit_breakpoints);
+  return step_over_inline_controller_->OnThreadStop(stop_type, hit_breakpoints);
 }
 
 void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(const Err&)> cb) {
@@ -147,9 +180,11 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
 }
 
 ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
+  if (step_over_line_0_controller_)
+    return step_over_line_0_controller_->GetContinueOp();
   if (finish_physical_controller_)
     return finish_physical_controller_->GetContinueOp();
-  return step_over_controller_->GetContinueOp();
+  return step_over_inline_controller_->GetContinueOp();
 }
 
 bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(const Err&)> cb) {
@@ -179,9 +214,9 @@ bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(c
   // the top of the stack.
   Log("Creating a new step over controller to get out of inline frame %s.",
       FrameFunctionNameForLog(stack[0]).c_str());
-  step_over_controller_ = std::make_unique<StepOverThreadController>(
+  step_over_inline_controller_ = std::make_unique<StepOverThreadController>(
       func->GetAbsoluteCodeRanges(location.symbol_context()));
-  step_over_controller_->InitWithThread(thread(), std::move(cb));
+  step_over_inline_controller_->InitWithThread(thread(), std::move(cb));
   return true;
 }
 

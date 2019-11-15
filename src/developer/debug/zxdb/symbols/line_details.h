@@ -34,6 +34,8 @@ class LineDetails {
 
   bool is_valid() const { return !entries_.empty(); }
 
+  // Some entries will have a 0 line number. This indicates the instruction is not associated with
+  // any source code. The file is not used in that case.
   const FileLine& file_line() const { return file_line_; }
 
   const std::vector<LineEntry>& entries() const { return entries_; }

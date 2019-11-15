@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
+#include "src/developer/debug/zxdb/symbols/line_details.h"
 
 namespace zxdb {
 
@@ -228,6 +229,64 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline2) {
   // stepping over OVER#2 which should continue.
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
+}
+
+// Tests that compiler generated ("line 0") code immediately following a function call is skipped
+// when finishing a frame.
+TEST_F(FinishThreadControllerTest, FinishToCompilerGenerated) {
+  // This finishes the top inline frame of the default stack because it's the most convenient
+  // thing to do.
+
+  // Full stack for the starting point.
+  auto stack = GetStack();
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+
+  // Finish the top frame. This should continue through the inline.
+  auto finish_controller = std::make_unique<FinishThreadController>(thread()->GetStack(), 0);
+  bool continued = false;
+  thread()->ContinueWith(std::move(finish_controller), [&continued](const Err& err) {
+    if (!err.has_error())
+      continued = true;
+  });
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+
+  // Set up line table information for the location immediately after the inline. It consists of
+  // a "line 0" region followed by a regular region.
+  const uint64_t kLine0Begin = kTopInlineFunctionRange.end();
+  const uint64_t kNormalLineBegin = kLine0Begin + 4;
+  module_symbols()->AddLineDetails(
+      kLine0Begin,
+      LineDetails(FileLine("", 0),
+                  {LineDetails::LineEntry(AddressRange(kLine0Begin, kNormalLineBegin))}));
+  FileLine normal_file_line("file.cc", 27);
+  module_symbols()->AddLineDetails(
+      kNormalLineBegin,
+      LineDetails(normal_file_line,
+                  {LineDetails::LineEntry(AddressRange(kNormalLineBegin, kNormalLineBegin + 4))}));
+
+  // Inject an exception at the end of the inline frame. The controller should continue from here.
+  stack = GetStack();
+  stack.erase(stack.begin());  // Remove inline frame to leave the "top" physical frame at the top.
+  Location old_top_location = stack[0]->GetLocation();
+  stack[0]->set_location(Location(kLine0Begin, FileLine("", 0), 0,
+                                  old_top_location.symbol_context(), old_top_location.symbol()));
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+  EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
+
+  // Now do an exception at the normal line region following it. The controller should stop.
+  stack = GetStack();
+  stack.erase(stack.begin());  // Remove inline frame to leave the "top" physical frame at the top.
+  old_top_location = stack[0]->GetLocation();
+  stack[0]->set_location(Location(kNormalLineBegin, normal_file_line, 0,
+                                  old_top_location.symbol_context(), old_top_location.symbol()));
+  InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
+                           debug_ipc::ExceptionType::kSingleStep,
+                           MockFrameVectorToFrameVector(std::move(stack)), true);
+  EXPECT_EQ(0, mock_remote_api()->GetAndResetResumeCount());  // Stopped.
 }
 
 }  // namespace zxdb
