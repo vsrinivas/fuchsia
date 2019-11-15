@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.sysmem.Allocator"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/virtual-console-test-display"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

@@ -105,7 +105,6 @@ group("ulib") {
     "mock-function",
     "pci",
     "perftest",
-    "port",
     "pretty",
     "ramdevice-client",
     "refcount",

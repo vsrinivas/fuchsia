@@ -29,7 +29,6 @@
 
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
-#include <port/port.h>
 #include <zxtest/zxtest.h>
 
 #include "vc.h"
@@ -297,7 +296,7 @@ zx_status_t vc_init_gfx(vc_gfx_t* gfx, zx_handle_t fb_vmo, int32_t width, int32_
 void vc_change_graphics(vc_gfx_t* graphics) {}
 
 class VcDisplayTest : public zxtest::Test {
-  void SetUp() override { vc_sysmem_connect(); }
+  void SetUp() override { ASSERT_TRUE(vc_sysmem_connect()); }
 
   void TearDown() override {
     if (loop_) {

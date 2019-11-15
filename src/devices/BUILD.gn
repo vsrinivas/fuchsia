@@ -34,6 +34,7 @@ generate_manifest("devices.bootfs") {
     "coordinator",
     "host",
     "host:driver",
+    "//src/bringup/virtcon:virtual-console",
     "//src/ui/drivers/hid-input-report",
   ]
 
@@ -43,6 +44,11 @@ generate_manifest("devices.bootfs") {
         rebase_path("$root_build_dir/coordinator", root_build_dir),
     "--entry=bin/devhost=" +
         rebase_path("$root_build_dir/device-host", root_build_dir),
+
+    # Inject Virtcon into the ZBI
+    # TODO(41410): Remove when unified build exists.
+    "--entry=bin/virtual-console=" +
+        rebase_path("$root_build_dir/virtual-console", root_build_dir),
 
     # Drivers for ZBI injection
     "--entry=driver/hid-input-report.so=" +

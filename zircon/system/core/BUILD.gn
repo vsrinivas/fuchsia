@@ -22,6 +22,5 @@ group("core") {
     "$zx/system/core/netsvc:device-name-provider",
     "$zx/system/core/pwrbtn-monitor",
     "$zx/system/core/svchost",
-    "$zx/system/core/virtcon:virtual-console",
   ]
 }

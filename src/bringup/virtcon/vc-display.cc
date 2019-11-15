@@ -27,7 +27,6 @@
 
 #include <ddk/protocol/display/controller.h>
 #include <fbl/unique_fd.h>
-#include <port/port.h>
 
 #include "vc.h"
 
@@ -557,7 +556,8 @@ void initialize_display_channel(zx::channel channel) {
 
   dc_ph.handle = dc_client->channel().get();
 }
-#endif  // BUILD_FOR_DISPLAY_TEST
+
+#else
 
 static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
@@ -618,6 +618,8 @@ static zx_status_t vc_dc_event(uint32_t evt, const char* name) {
   }
   return ZX_ERR_STOP;
 }
+
+#endif  // BUILD_FOR_DISPLAY_TEST
 
 static zx_status_t vc_dc_dir_event_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
 #if BUILD_FOR_DISPLAY_TEST

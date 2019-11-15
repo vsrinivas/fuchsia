@@ -36,7 +36,6 @@
 #include <fbl/string_piece.h>
 #include <fbl/unique_fd.h>
 #include <fs/handler.h>
-#include <port/port.h>
 
 #include "vc.h"
 

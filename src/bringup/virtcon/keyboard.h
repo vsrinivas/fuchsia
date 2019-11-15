@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_VIRTCON_KEYBOARD_H_
+#define SRC_BRINGUP_VIRTCON_KEYBOARD_H_
 
 #include <stdint.h>
 #include <zircon/types.h>
+
 #include "vc.h"
 
 #define MOD_LSHIFT (1 << 0)
@@ -25,3 +27,5 @@ typedef struct vc_input vc_input_t;
 zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd);
 
 bool vc_input_process(vc_input_t* vi, uint8_t report[8]);
+
+#endif  // SRC_BRINGUP_VIRTCON_KEYBOARD_H_

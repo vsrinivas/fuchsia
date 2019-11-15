@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/virtual-console-test-integration"
+    }
+}

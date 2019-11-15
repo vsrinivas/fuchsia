@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/bringup/virtcon/port/port.h"
+
 #include <lib/fdio/unsafe.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,8 +11,6 @@
 #include <unistd.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/port.h>
-
-#include <port/port.h>
 
 #if TRACE_PORT_API
 #define zprintf(fmt...) printf(fmt)

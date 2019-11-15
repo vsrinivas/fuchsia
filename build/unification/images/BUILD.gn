@@ -120,7 +120,6 @@ aggregate_manifest("legacy-image") {
     ":bin.unbind",
     ":bin.usb-fwloader",
     ":bin.usbctl",
-    ":bin.virtual-console",
     ":bin.vmaps",
     ":bin.vmos",
     ":bin.waitfor",
@@ -1021,9 +1020,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.vim-display-test-test",
     ":test.sys.virtio-test",
     ":test.sys.virtio-test-test",
-    ":test.sys.virtual-console-display-test-test",
-    ":test.sys.virtual-console-integration-test",
-    ":test.sys.virtual-console-test",
     ":test.sys.visalia-boot-shim-test",
     ":test.sys.vmo-test",
     ":test.sys.zbi-bootfs-test-test",
@@ -1464,9 +1460,6 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.vim-display-test-test",
     ":test.sys.virtio-test",
     ":test.sys.virtio-test-test",
-    ":test.sys.virtual-console-display-test-test",
-    ":test.sys.virtual-console-integration-test",
-    ":test.sys.virtual-console-test",
     ":test.sys.visalia-boot-shim-test",
     ":test.sys.vmo-test",
     ":test.sys.zbi-bootfs-test-test",
@@ -1517,6 +1510,5 @@ aggregate_manifest("migrated-aux") {
 }
 
 aggregate_manifest("migrated-tests") {
-  deps = [
-  ]
+  deps = []
 }

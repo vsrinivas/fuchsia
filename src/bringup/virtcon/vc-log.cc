@@ -6,8 +6,6 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/log.h>
 
-#include <port/port.h>
-
 #include "vc.h"
 
 static zx_koid_t proc_koid;

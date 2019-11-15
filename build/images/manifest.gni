@@ -29,8 +29,13 @@ zircon_boot_manifests_deps = []
 zircon_aux_manifests = []
 zircon_aux_manifests_deps = []
 
-foreach(flavor, [ "legacy-image", "migrated-image" ]) {
-  _image_flavor = {}
+foreach(flavor,
+        [
+          "legacy-image",
+          "migrated-image",
+        ]) {
+  _image_flavor = {
+  }
   _image_flavor = {
     target = "//build/unification/images:$flavor"
     gen_dir = get_label_info(target, "target_out_dir")
@@ -42,7 +47,8 @@ foreach(flavor, [ "legacy-image", "migrated-image" ]) {
 }
 
 foreach(flavor, bootsvc_flavors) {
-  legacy_bootsvc = {}
+  legacy_bootsvc = {
+  }
   legacy_bootsvc = {
     target = "//build/images/zircon:${flavor.name}"
     gen_dir = get_label_info(target, "target_gen_dir")
@@ -53,8 +59,13 @@ foreach(flavor, bootsvc_flavors) {
   zircon_boot_manifests_deps += [ legacy_bootsvc.target ]
 }
 
-foreach(flavor, [ "legacy-aux", "migrated-aux" ]) {
-  _aux_flavor = {}
+foreach(flavor,
+        [
+          "legacy-aux",
+          "migrated-aux",
+        ]) {
+  _aux_flavor = {
+  }
   _aux_flavor = {
     target = "//build/unification/images:$flavor"
     gen_dir = get_label_info(target, "target_out_dir")
@@ -261,6 +272,9 @@ template("generate_manifest") {
         # we will add our own.
         "--exclude=config/devmgr",
       ]
+
+      # Omit virtual-console from the Zircon manifest since it is built in //src.
+      response_file_contents += [ "--exclude=bin/virtual-console" ]
 
       if (defined(invoker.bootfs_allowlist) && invoker.bootfs_allowlist != []) {
         not_needed(invoker, [ "bootfs_zircon_groups" ])

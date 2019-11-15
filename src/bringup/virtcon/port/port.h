@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_VIRTCON_PORT_PORT_H_
+#define SRC_BRINGUP_VIRTCON_PORT_PORT_H_
 
 #include <zircon/compiler.h>
 #include <zircon/types.h>
@@ -63,3 +64,5 @@ zx_status_t port_fd_handler_init(port_fd_handler_t* fh, int fd, unsigned pollevt
 void port_fd_handler_done(port_fd_handler_t* fh);
 
 __END_CDECLS
+
+#endif  // SRC_BRINGUP_VIRTCON_PORT_PORT_H_

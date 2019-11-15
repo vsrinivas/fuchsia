@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "keyboard.h"
+
 #include <fcntl.h>
+#include <fuchsia/hardware/input/c/fidl.h>
+#include <lib/fzl/fdio.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#include <fuchsia/hardware/input/c/fidl.h>
-#include <hid/hid.h>
-#include <hid/usages.h>
-#include <lib/fzl/fdio.h>
 #include <zircon/syscalls.h>
-
-#include <port/port.h>
 
 #include <utility>
 
-#include "keyboard.h"
+#include <hid/hid.h>
+#include <hid/usages.h>
+
+#include "src/bringup/virtcon/port/port.h"
 
 #define LOW_REPEAT_KEY_FREQ 250000000
 #define HIGH_REPEAT_KEY_FREQ 50000000

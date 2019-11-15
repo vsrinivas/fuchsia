@@ -137,6 +137,12 @@ template("assemble_system") {
       "--entry=data/static_packages=" +
           rebase_path(pkgsvr_index[0], root_build_dir),
     ]
+
+    # Inject virtcon into the system image.
+    # TODO(41410): Remove when unified build exists.
+    deps += [ "//src/bringup/virtcon:virtual-console" ]
+    args += [ "--entry=bin/virtual-console=" +
+              rebase_path("$root_build_dir/virtual-console", root_build_dir) ]
   }
 
   system_manifest_outputs = get_target_outputs(":system_image.manifest")

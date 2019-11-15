@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_VIRTCON_VC_DISPLAY_H_
-#define ZIRCON_SYSTEM_CORE_VIRTCON_VC_DISPLAY_H_
+#ifndef SRC_BRINGUP_VIRTCON_VC_DISPLAY_H_
+#define SRC_BRINGUP_VIRTCON_VC_DISPLAY_H_
 
 #include <zircon/listnode.h>
 
@@ -63,4 +63,4 @@ llcpp::fuchsia::sysmem::Allocator::SyncClient* get_sysmem_allocator();
 
 #endif
 
-#endif  // ZIRCON_SYSTEM_CORE_VIRTCON_VC_DISPLAY_H_
+#endif  // SRC_BRINGUP_VIRTCON_VC_DISPLAY_H_

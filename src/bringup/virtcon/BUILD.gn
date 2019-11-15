@@ -1,0 +1,123 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+# This can't be a source_set() because the test compiles with a #define.
+common_sources = [
+  "keyboard-vt100.cc",
+  "keyboard.cc",
+  "textcon.cc",
+  "vc-device.cc",
+  "vc-gfx.cc",
+  "vc-input.cc",
+]
+
+group("common") {
+  visibility = [ ":*" ]
+  public_deps = [
+    "//src/bringup/virtcon/port",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/gfx",
+    "//zircon/public/lib/gfx-font-data",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/image-format-llcpp",
+    "//zircon/public/lib/statusor",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+    "//zircon/system/banjo/ddk.protocol.display.controller",
+    "//zircon/system/fidl/fuchsia-device-manager:c",
+    "//zircon/system/fidl/fuchsia-hardware-display:llcpp",
+    "//zircon/system/fidl/fuchsia-hardware-input:c",
+    "//zircon/system/fidl/fuchsia-hardware-pty:c",
+    "//zircon/system/fidl/fuchsia-io:c",
+    "//zircon/system/fidl/fuchsia-sysmem:llcpp",
+    "//zircon/system/fidl/fuchsia-virtualconsole:c",
+  ]
+}
+
+executable("virtual-console") {
+  sources = common_sources + [
+              "main.cc",
+              "vc-display.cc",
+              "vc-log.cc",
+            ]
+  deps = [
+    ":common",
+  ]
+}
+
+test("virtual-console-test-display") {
+  defines = [ "BUILD_FOR_DISPLAY_TEST" ]
+  sources = [
+    "vc-display-test.cc",
+    "vc-display.cc",
+  ]
+  deps = [
+    ":common",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fidl-async-cpp",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("virtual-console-test-text") {
+  testonly = true
+
+  defines = [ "BUILD_FOR_TEST" ]
+
+  sources = common_sources + [
+              "keyboard-test.cc",
+              "textcon-test.cc",
+            ]
+
+  deps = [
+    ":common",
+    "//zircon/public/lib/zxtest",
+  ]
+}
+
+test("virtual-console-test-integration") {
+  sources = [
+    "vc-integration-test.cc",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+    "//zircon/public/lib/zxtest",
+    "//zircon/system/fidl/fuchsia-virtualconsole:c",
+  ]
+}
+
+test_package("test") {
+  package_name = "virtual-console-test"
+  deps = [
+    ":virtual-console-test-display",
+    ":virtual-console-test-integration",
+    ":virtual-console-test-text",
+  ]
+  tests = [
+    {
+      name = "virtual-console-test-text"
+      environments = basic_envs
+    },
+    {
+      name = "virtual-console-test-integration"
+      environments = basic_envs
+    },
+    {
+      name = "virtual-console-test-display"
+      environments = basic_envs
+    },
+  ]
+}

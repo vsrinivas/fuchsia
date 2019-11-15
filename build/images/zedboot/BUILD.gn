@@ -79,6 +79,12 @@ generate_manifest("zedboot.manifest") {
       "--manifest=" + rebase_path(manifest, root_build_dir),
     ]
   }
+
+  # Inject virtcon into zedboot.
+  # TODO(41410): Remove when unified build exists.
+  deps += [ "//src/bringup/virtcon:virtual-console" ]
+  args += [ "--entry=bin/virtual-console=" +
+            rebase_path("$root_build_dir/virtual-console", root_build_dir) ]
 }
 manifest_outputs = get_target_outputs(":zedboot.manifest")
 manifest_file = manifest_outputs[0]

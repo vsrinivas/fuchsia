@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef SRC_BRINGUP_VIRTCON_TEXTCON_H_
+#define SRC_BRINGUP_VIRTCON_TEXTCON_H_
 
 #include <stddef.h>
 #include <stdint.h>
@@ -84,3 +85,5 @@ void tc_copy_lines(textcon_t* tc, int y_dest, int y_src, int line_count);
 static inline void tc_putc(textcon_t* tc, uint8_t c) { tc->putc(tc, c); }
 
 void tc_seth(textcon_t* tc, int h);
+
+#endif  // SRC_BRINGUP_VIRTCON_TEXTCON_H_

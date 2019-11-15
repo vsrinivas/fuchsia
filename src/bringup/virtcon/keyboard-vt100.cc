@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "keyboard-vt100.h"
+
 #include <hid/usages.h>
 
-#include "keyboard-vt100.h"
 #include "keyboard.h"
 
 uint32_t hid_key_to_vt100_code(uint8_t keycode, int modifiers, const keychar_t* keymap, char* buf,
