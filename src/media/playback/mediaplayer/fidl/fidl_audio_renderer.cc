@@ -6,8 +6,12 @@
 
 #include <lib/zx/clock.h>
 
+#include <trace/event.h>
+
 #include "lib/async/default.h"
 #include "lib/media/cpp/timeline_rate.h"
+#include "lib/trace-engine/types.h"
+#include "lib/trace/internal/event_common.h"
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/fidl/fidl_type_conversions.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
@@ -17,6 +21,7 @@ namespace {
 
 constexpr int64_t kDefaultMinLeadTime = ZX_MSEC(100);
 constexpr int64_t kTargetLeadTimeDeltaNs = ZX_MSEC(10);
+constexpr int64_t kNoPtsSlipOnStarveNs = ZX_MSEC(500);
 
 }  // namespace
 
@@ -163,6 +168,8 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
 
   int64_t now = zx::clock::get_monotonic().get();
 
+  TRACE_DURATION("mediaplayer:render", "PutInputPacket", "pts", packet->pts());
+
   if (packet->pts() == Packet::kNoPts) {
     if (!renderer_responding_) {
       // Discard this packet.
@@ -175,15 +182,30 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
     // TODO(dalesat): Remove this code when MTWN-243 is fixed.
     packet->SetPtsRate(pts_rate_);
 
-    int64_t min_pts = from_ns(current_timeline_function()(now) + min_lead_time_ns_);
-
-    if (next_pts_to_assign_ == Packet::kNoPts ||
-        (packet->discontinuity() && min_pts > next_pts_to_assign_)) {
-      // Set the packet's PTS to meet the deadline.
-      packet->SetPts(min_pts);
+    if (next_pts_to_assign_ == Packet::kNoPts || packet->discontinuity()) {
+      // No PTS has been established. Set the PTS so we get the target lead time, which is somewhat
+      // greater than minimum lead time.
+      int64_t new_pts = from_ns(current_timeline_function()(now) + target_lead_time_ns_);
+      TRACE_INSTANT("mediaplayer:render", "no_pts", TRACE_SCOPE_THREAD, "pts", new_pts);
+      packet->SetPts(new_pts);
     } else {
-      // Set the packet's PTS to immediately follow the previous packet.
-      packet->SetPts(next_pts_to_assign_);
+      int64_t min_pts = from_ns(current_timeline_function()(now) + min_lead_time_ns_);
+      if (next_pts_to_assign_ < min_pts) {
+        // Packet has arrived too late to be rendered. Slip the PTS into the future so we aren't
+        // starving anymore. If the overall arrival rate of packets is too low, this will happen
+        // repeatedly.
+        int64_t new_pts = from_ns(current_timeline_function()(now) + kNoPtsSlipOnStarveNs);
+        FX_LOGS(WARNING) << "Packets without timestamps arriving too infrequently, inserting "
+                         << to_ns(new_pts - next_pts_to_assign_) / ZX_MSEC(1) << "ms of silence.";
+
+        packet->SetPts(new_pts);
+
+        TRACE_INSTANT("mediaplayer:render", "missed", TRACE_SCOPE_THREAD, "pts",
+                      next_pts_to_assign_, "now", min_pts, "min", new_pts);
+      } else {
+        // Set the packet's PTS to immediately follow the previous packet.
+        packet->SetPts(next_pts_to_assign_);
+      }
     }
   }
 
@@ -193,6 +215,7 @@ void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {
   next_pts_to_assign_ = start_pts + packet->size() / bytes_per_frame_;
 
   last_supplied_pts_ns_ = to_ns(next_pts_to_assign_);
+
   if (last_departed_pts_ns_ == Packet::kNoPts) {
     last_departed_pts_ns_ = start_pts_ns;
   }
@@ -266,7 +289,7 @@ void FidlAudioRenderer::SetStreamType(const StreamType& stream_type) {
   audio_stream_type.channels = stream_type.audio()->channels();
   audio_stream_type.frames_per_second = stream_type.audio()->frames_per_second();
 
-  audio_renderer_->SetPcmStreamType(std::move(audio_stream_type));
+  audio_renderer_->SetPcmStreamType(audio_stream_type);
 
   // TODO: What about stream type changes?
 
@@ -310,7 +333,7 @@ void FidlAudioRenderer::SetTimelineFunction(media::TimelineFunction timeline_fun
   // TODO(dalesat): Remove this DCHECK when AudioRenderer supports other rates,
   // build an SRC into this class, or prohibit other rates entirely.
   FX_DCHECK(timeline_function.subject_delta() == 0 ||
-             (timeline_function.subject_delta() == 1 && timeline_function.reference_delta() == 1));
+            (timeline_function.subject_delta() == 1 && timeline_function.reference_delta() == 1));
 
   when_input_connection_ready_ = [this, timeline_function,
                                   callback = std::move(callback)]() mutable {

@@ -43,7 +43,7 @@ bool FfmpegDecoderBase::TransformPacket(const PacketPtr& input, bool new_input, 
   FX_DCHECK(input);
   FX_DCHECK(output);
 
-  TRACE_DURATION("motown", "DecodePacket", "type",
+  TRACE_DURATION("mediaplayer:decode", "DecodePacket", "type",
                  (av_codec_context_->codec_type == AVMEDIA_TYPE_VIDEO ? "video" : "audio"));
 
   *output = nullptr;

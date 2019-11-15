@@ -65,5 +65,7 @@ test("tests") {
     "//src/lib/fsl",
     "//src/lib/fxl/test:gtest_main",
     "//src/media/playback/mediaplayer/graph",
+    "//src/media/playback/mediaplayer/process",
+    "//zircon/public/lib/zx",
   ]
 }
