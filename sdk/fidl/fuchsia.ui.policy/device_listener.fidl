@@ -4,10 +4,19 @@
 
 library fuchsia.ui.policy;
 
+using fuchsia.ui.input;
+
 /// Service for exposing state and events of devices, such as media buttons.
 [Discoverable]
 protocol DeviceListenerRegistry {
     /// Registers a listener to receive media button related events, such as
     /// changes from volume buttons and mute switches.
     RegisterMediaButtonsListener(MediaButtonsListener listener);
+};
+
+/// A listener for media buttons events. `DeviceListenerRegistry.RegisterMediaButtonsListener`
+/// will consume this listener interface and call `OnMediaButtonsEvent` when the
+/// registered media buttons event occurs.
+protocol MediaButtonsListener {
+    OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
 };

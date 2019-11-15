@@ -99,8 +99,6 @@ class Presentation : fuchsia::ui::policy::Presentation,
       fidl::InterfaceHandle<fuchsia::ui::policy::KeyboardCaptureListenerHACK> listener) override;
   void CapturePointerEventsHACK(
       fidl::InterfaceHandle<fuchsia::ui::policy::PointerCaptureListenerHACK> listener) override;
-  void RegisterMediaButtonsListener(
-      fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener) override;
   void InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) override;
 
   // |fuchsia::accessibility::MagnificationHandler|

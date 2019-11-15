@@ -420,13 +420,6 @@ void Presentation::CapturePointerEventsHACK(
   captured_pointerbindings_.AddInterfacePtr(listener_handle.Bind());
 }
 
-// TODO(fxb/36217) Eventually pull this out from Presentation into something
-// else.
-void Presentation::RegisterMediaButtonsListener(
-    fidl::InterfaceHandle<fuchsia::ui::policy::MediaButtonsListener> listener_handle) {
-  media_buttons_handler_->RegisterListener(std::move(listener_handle));
-}
-
 void Presentation::InjectPointerEventHACK(fuchsia::ui::input::PointerEvent event) {
   fuchsia::ui::input::InputEvent input_event;
   input_event.set_pointer(std::move(event));

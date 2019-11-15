@@ -18,12 +18,6 @@ protocol PointerCaptureListenerHACK {
     OnPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
-/// `Presentation.RegisterMediaButtonsListener` will consume this listener interface
-/// and call `OnMediaButtonsEvent` when the registered media buttons event occurs.
-protocol MediaButtonsListener {
-    OnMediaButtonsEvent(fuchsia.ui.input.MediaButtonsEvent event);
-};
-
 /// Allows clients of Presenter.Present() to control a presentation.
 /// Experimental.
 [Discoverable]
@@ -42,9 +36,6 @@ protocol Presentation {
     // TODO: Figure out the feasibility of this feature and the best place to put
     // it. This call will be replaced by gesture disambiguation system in future.
     CapturePointerEventsHACK(PointerCaptureListenerHACK listener);
-
-    /// Registers a listener for media buttons events.
-    RegisterMediaButtonsListener(MediaButtonsListener listener);
 
     /// EXPERIMENTAL. Inject pointer events into input stream. This WILL go
     /// away. Used exclusively by Session Shells to test focus navigation.
