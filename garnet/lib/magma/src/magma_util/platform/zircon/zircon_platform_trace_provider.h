@@ -25,11 +25,12 @@ class ZirconPlatformTraceProvider : public PlatformTraceProvider {
   ZirconPlatformTraceProvider();
   ~ZirconPlatformTraceProvider() override;
 
-  bool Initialize() override;
+  bool Initialize(uint32_t channel) override;
+  bool IsInitialized() override { return bool(trace_provider_); }
 
  private:
   async::Loop loop_;
-  std::unique_ptr<trace::TraceProviderWithFdio> trace_provider_;
+  std::unique_ptr<trace::TraceProvider> trace_provider_;
 };
 
 #endif

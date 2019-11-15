@@ -12,9 +12,11 @@ namespace magma {
 
 class PlatformTraceProvider {
  public:
-  virtual ~PlatformTraceProvider() {}
+  virtual ~PlatformTraceProvider() = default;
 
-  virtual bool Initialize() = 0;
+  // Channel handle always consumed.
+  virtual bool Initialize(uint32_t channel) = 0;
+  virtual bool IsInitialized() = 0;
 
   // Returns null if tracing is not enabled.
   static PlatformTraceProvider* Get();

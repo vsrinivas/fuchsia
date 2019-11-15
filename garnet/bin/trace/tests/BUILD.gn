@@ -121,6 +121,7 @@ source_set("integration_test_utils") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace",
     "//zircon/public/lib/trace-reader",
   ]
@@ -130,6 +131,8 @@ source_set("integration_test_utils") {
 # This is done in order to ensure trace-engine-static is used.
 source_set("integration_test_utils_with_trace_with_static_engine") {
   testonly = true
+
+  defines = [ "USE_STATIC_ENGINE" ]
 
   sources = [
     "integration_test_utils.cc",
@@ -147,6 +150,7 @@ source_set("integration_test_utils_with_trace_with_static_engine") {
     "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fdio",
     "//zircon/public/lib/trace-reader",
     "//zircon/public/lib/trace-with-static-engine",
   ]

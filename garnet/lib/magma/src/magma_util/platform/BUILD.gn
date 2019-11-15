@@ -436,6 +436,33 @@ source_set("trace_provider") {
   ]
 }
 
+source_set("trace_provider_with_fdio_header") {
+  public_configs = [
+    ":platform_include_config",
+    ":tracing",
+  ]
+
+  sources = [
+    "platform_trace_provider_with_fdio.h",
+  ]
+
+  public_deps = [
+    ":trace",
+    ":trace_provider",
+    "zircon:trace",
+  ]
+}
+
+source_set("trace_provider_with_fdio") {
+  public_deps = [
+    ":trace_provider_with_fdio_header",
+  ]
+
+  deps = [
+    "zircon:trace_provider_with_fdio",
+  ]
+}
+
 source_set("sysmem_connection_header") {
   public_configs = [ "$magma_build_root:magma_src_include_config" ]
 

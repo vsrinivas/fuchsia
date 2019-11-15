@@ -14,6 +14,7 @@
 
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
+#include "platform_trace_provider.h"
 #endif
 
 #include "gtest/gtest.h"
@@ -451,6 +452,9 @@ class TestConnection {
     EXPECT_EQ(ZX_OK, fdio_service_connect("/svc/fuchsia.tracing.provider.Registry",
                                           server_endpoint.release()));
     EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_tracing(local_endpoint.release()));
+
+    if (magma::PlatformTraceProvider::Get())
+      EXPECT_TRUE(magma::PlatformTraceProvider::Get()->IsInitialized());
 #endif
   }
 
@@ -536,6 +540,11 @@ TEST(MagmaAbiImport, QueryReturnsBuffer) {
   test.QueryReturnsBufferImported();
 }
 
+TEST(MagmaAbiImport, TracingInit) {
+  TestConnection test(true);
+  test.TracingInit();
+}
+
 // Use the parameter to choose whether to use magma_device_import or an fd.
 class MagmaAbiOptionalImport : public ::testing::TestWithParam</*use_magma_device=*/bool> {};
 
@@ -615,11 +624,6 @@ TEST_P(MagmaAbiOptionalImport, SysmemLinearFormatModifier) {
 TEST_P(MagmaAbiOptionalImport, SysmemImport) {
   TestConnection test(GetParam());
   test.Sysmem(false, true);
-}
-
-TEST_P(MagmaAbiOptionalImport, TracingInit) {
-  TestConnection test(GetParam());
-  test.TracingInit();
 }
 
 TEST_P(MagmaAbiOptionalImport, FromC) {

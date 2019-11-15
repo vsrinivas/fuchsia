@@ -37,11 +37,13 @@ ZirconPlatformTraceProvider::~ZirconPlatformTraceProvider() {
   loop_.JoinThreads();
 }
 
-bool ZirconPlatformTraceProvider::Initialize() {
+bool ZirconPlatformTraceProvider::Initialize(uint32_t channel) {
+  zx::channel zx_channel(channel);
   zx_status_t status = loop_.StartThread();
   if (status != ZX_OK)
     return DRETF(false, "Failed to start async loop");
-  trace_provider_ = std::make_unique<trace::TraceProviderWithFdio>(loop_.dispatcher());
+  trace_provider_ =
+      std::make_unique<trace::TraceProvider>(std::move(zx_channel), loop_.dispatcher());
   return true;
 }
 

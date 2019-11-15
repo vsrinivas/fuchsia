@@ -30,6 +30,7 @@
 #include "magma_util/macros.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
+#include "platform_trace_provider_with_fdio.h"
 #include "sys_driver/magma_driver.h"
 
 #define GPU_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -480,7 +481,7 @@ zx_status_t Mt8167sGpu::Restart() {
 
 extern "C" zx_status_t mt8167s_gpu_bind(void* ctx, zx_device_t* parent) {
   if (magma::PlatformTraceProvider::Get())
-    magma::PlatformTraceProvider::Get()->Initialize();
+    magma::InitializeTraceProviderWithFdio(magma::PlatformTraceProvider::Get());
   auto dev = std::make_unique<Mt8167sGpu>(parent);
   auto status = dev->Bind();
   if (status == ZX_OK) {

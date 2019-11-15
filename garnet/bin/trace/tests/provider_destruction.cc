@@ -20,7 +20,7 @@
 const char kProviderName[] = "provider-destruction";
 
 static bool WriteEvents(async::Loop& loop) {
-  std::unique_ptr<trace::TraceProviderWithFdio> provider;
+  std::unique_ptr<trace::TraceProvider> provider;
   bool already_started;
   if (!tracing::test::CreateProviderSynchronously(loop, kProviderName, &provider,
                                                   &already_started)) {

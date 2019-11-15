@@ -125,6 +125,7 @@ source_set("connection_client") {
     "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
+    "..:trace",
     "//sdk/fidl/fuchsia.gpu.magma",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
   ]
@@ -174,6 +175,7 @@ source_set("sysmem_connection") {
   deps = [
     ":buffer",
     "..:sysmem_connection_header",
+    "..:trace",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem",
@@ -318,15 +320,36 @@ source_set("trace_provider") {
   ]
 
   if (magma_enable_tracing) {
-    deps += [
-      "$zircon_build_root/public/lib/async-cpp",
+    deps += [ "$zircon_build_root/public/lib/async-cpp" ]
+    public_deps += [
       "$zircon_build_root/public/lib/async-loop-cpp",
       "$zircon_build_root/public/lib/async-loop-default",
-      "$zircon_build_root/public/lib/trace-provider-with-static-engine",
-      "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
-      "$zircon_build_root/public/lib/trace-with-static-engine",
+      "//zircon/public/lib/trace-provider-with-static-engine",
     ]
   }
+  assert_no_deps = [ "//zircon/public/lib/fdio" ]
+}
+
+source_set("trace_provider_with_fdio") {
+  configs += [
+    "..:platform_include_config",
+    "..:tracing",
+  ]
+
+  sources = [
+    "zircon_platform_trace_provider_with_fdio.cc",
+  ]
+
+  deps = [
+    ":trace_provider",
+    "$magma_build_root/src/magma_util",
+    "..:trace_provider_with_fdio_header",
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
 }
 
 source_set("random") {

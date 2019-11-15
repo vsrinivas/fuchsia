@@ -2,10 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddk/binding.h>
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/protocol/intelgpucore.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -19,10 +15,16 @@
 #include <set>
 #include <thread>
 
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/intelgpucore.h>
+
 #include "magma_util/dlog.h"
 #include "msd_intel_pci_device.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
+#include "platform_trace_provider_with_fdio.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
@@ -180,7 +182,7 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device) {
     return DRET_MSG(ZX_ERR_INTERNAL, "MagmaDriver::Create failed");
 
   if (magma::PlatformTraceProvider::Get())
-    magma::PlatformTraceProvider::Get()->Initialize();
+    magma::InitializeTraceProviderWithFdio(magma::PlatformTraceProvider::Get());
 
 #if MAGMA_TEST_DRIVER
   DLOG("running magma indriver test");

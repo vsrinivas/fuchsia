@@ -18,6 +18,7 @@
 #include "magma_util/macros.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
+#include "platform_trace_provider_with_fdio.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
 
@@ -177,7 +178,7 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent) {
   gpu->parent_device = parent;
 
   if (magma::PlatformTraceProvider::Get())
-    magma::PlatformTraceProvider::Get()->Initialize();
+    magma::InitializeTraceProviderWithFdio(magma::PlatformTraceProvider::Get());
 
   gpu->magma_driver = MagmaDriver::Create();
 

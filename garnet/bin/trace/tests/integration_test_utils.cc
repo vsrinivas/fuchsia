@@ -7,6 +7,8 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
+#include <lib/fdio/directory.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
 
@@ -43,8 +45,78 @@ const char kEventNameMemberName[] = "name";
 // header-word(8) + ticks(8) + 3 arguments (= 3 * (8 + 8)) = 64
 constexpr size_t kRecordSize = 64;
 
+#if USE_STATIC_ENGINE
+static zx::channel GetProviderChannel() {
+  zx::channel local_endpoint, remote_endpoint;
+  zx_status_t status = zx::channel::create(0, &local_endpoint, &remote_endpoint);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to create channels " << status;
+    return zx::channel();
+  }
+  status =
+      fdio_service_connect("/svc/fuchsia.tracing.provider.Registry", remote_endpoint.release());
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to connect to provider " << status;
+    return zx::channel();
+  }
+  return local_endpoint;
+}
+
 bool CreateProviderSynchronously(async::Loop& loop, const char* name,
-                                 std::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
+                                 std::unique_ptr<trace::TraceProvider>* out_provider,
+                                 bool* out_already_started) {
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  zx::channel provider_channel = GetProviderChannel();
+  if (!provider_channel)
+    return false;
+
+  std::unique_ptr<trace::TraceProvider> provider;
+  bool already_started;
+  if (!trace::TraceProvider::CreateSynchronously(std::move(provider_channel), dispatcher, name,
+                                                 &provider, &already_started)) {
+    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    return false;
+  }
+
+  *out_provider = std::move(provider);
+  *out_already_started = already_started;
+  return true;
+}
+
+bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
+                                        std::unique_ptr<trace::TraceProvider>* out_provider) {
+  async_dispatcher_t* dispatcher = loop.dispatcher();
+
+  zx::channel provider_channel = GetProviderChannel();
+  if (!provider_channel)
+    return false;
+
+  std::unique_ptr<trace::TraceProvider> provider;
+  bool already_started;
+  if (!trace::TraceProvider::CreateSynchronously(std::move(provider_channel), dispatcher, name,
+                                                 &provider, &already_started)) {
+    FXL_LOG(ERROR) << "Failed to create provider " << name;
+    return false;
+  }
+
+  // The program may not be being run under tracing. If it is tracing should have already started.
+  if (already_started) {
+    // At this point we're registered with trace-manager, and we know tracing
+    // has started. But we haven't received the Start() request yet, which
+    // contains the trace buffer (as a vmo) and other things. So wait for it.
+    if (!WaitForTracingToStart(loop, kStartTimeout)) {
+      FXL_LOG(ERROR) << "Provider " << name << " timed out waiting for tracing to start";
+      return false;
+    }
+  }
+
+  *out_provider = std::move(provider);
+  return true;
+}
+#else
+bool CreateProviderSynchronously(async::Loop& loop, const char* name,
+                                 std::unique_ptr<trace::TraceProvider>* out_provider,
                                  bool* out_already_started) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
@@ -61,9 +133,8 @@ bool CreateProviderSynchronously(async::Loop& loop, const char* name,
   return true;
 }
 
-bool CreateProviderSynchronouslyAndWait(
-    async::Loop& loop, const char* name,
-    std::unique_ptr<trace::TraceProviderWithFdio>* out_provider) {
+bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
+                                        std::unique_ptr<trace::TraceProvider>* out_provider) {
   async_dispatcher_t* dispatcher = loop.dispatcher();
 
   std::unique_ptr<trace::TraceProviderWithFdio> provider;
@@ -88,6 +159,7 @@ bool CreateProviderSynchronouslyAndWait(
   *out_provider = std::move(provider);
   return true;
 }
+#endif
 
 void WriteTestEvents(size_t num_records) {
   for (size_t i = 0; i < num_records; ++i) {

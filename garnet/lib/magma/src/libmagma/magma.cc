@@ -18,6 +18,7 @@
 #include "platform_sysmem_connection.h"
 #include "platform_thread.h"
 #include "platform_trace.h"
+#include "platform_trace_provider.h"
 
 magma_status_t magma_device_import(uint32_t device_handle, magma_device_t* device) {
   auto platform_device_client = magma::PlatformDeviceClient::Create(device_handle);
@@ -644,8 +645,16 @@ magma_status_t magma_sysmem_get_buffer_handle_from_collection(magma_sysmem_conne
 }
 
 magma_status_t magma_initialize_tracing(magma_handle_t channel) {
-  // Throw away tracing handle, since it's not needed yet.
-  // TODO(fxb/13095): Use
-  auto tracing_handle = magma::PlatformHandle::Create(channel);
+  if (!channel)
+    return MAGMA_STATUS_INVALID_ARGS;
+  if (magma::PlatformTraceProvider::Get()) {
+    if (magma::PlatformTraceProvider::Get()->IsInitialized())
+      return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Shouldn't initialize tracing twice");
+    if (!magma::PlatformTraceProvider::Get()->Initialize(channel))
+      return DRET(MAGMA_STATUS_INTERNAL_ERROR);
+  } else {
+    // Close channel.
+    magma::PlatformHandle::Create(channel);
+  }
   return MAGMA_STATUS_OK;
 }

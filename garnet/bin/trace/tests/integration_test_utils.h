@@ -70,13 +70,12 @@ const IntegrationTest* LookupTest(const std::string& test_name);
 // The two are split out as the details of waiting depend on the loop being used (e.g., is it
 // running in a foreground thread or background thread?).
 bool CreateProviderSynchronously(async::Loop& loop, const char* name,
-                                 std::unique_ptr<trace::TraceProviderWithFdio>* out_provider,
+                                 std::unique_ptr<trace::TraceProvider>* out_provider,
                                  bool* out_already_started);
 
 // Simplified version that calls both |CreateProviderSynchronously(),WaitForTracingToStart()|.
-bool CreateProviderSynchronouslyAndWait(
-    async::Loop& loop, const char* name,
-    std::unique_ptr<trace::TraceProviderWithFdio>* out_provider);
+bool CreateProviderSynchronouslyAndWait(async::Loop& loop, const char* name,
+                                        std::unique_ptr<trace::TraceProvider>* out_provider);
 
 // Emit |num_iterations| records that |VerifyTestEvents()| knows how to test.
 void WriteTestEvents(size_t num_records);

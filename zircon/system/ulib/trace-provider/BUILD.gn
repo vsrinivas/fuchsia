@@ -142,9 +142,13 @@ trace_provider_library("trace-provider-with-static-engine") {
   public_deps = [
     "$zx/system/ulib/trace-engine:trace-engine-static.headers",
   ]
-  sources = trace_provider_fdio_sources
-  deps = trace_provider_fdio_connect_source_deps
+  sources = []
+  deps = []
   deps += [ "$zx/system/ulib/trace-engine:trace-engine-static" ]
+
+  # This is used by magma client drivers, so it can't depend on fdio (or other shared libraries
+  # besides libc).
+  assert_no_deps = [ "$zx/system/ulib/fdio" ]
 }
 
 # Version for the DDK.

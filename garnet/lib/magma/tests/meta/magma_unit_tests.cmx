@@ -14,7 +14,8 @@
             "isolated-temp"
         ],
         "services": [
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

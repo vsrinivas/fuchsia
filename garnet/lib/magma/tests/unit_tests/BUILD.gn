@@ -109,6 +109,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:thread",
     "$magma_build_root/src/magma_util/platform:trace",
     "$magma_build_root/src/magma_util/platform:trace_provider",
+    "$magma_build_root/src/magma_util/platform:trace_provider_with_fdio",
     "$magma_build_root/tests/mock:mmio",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
