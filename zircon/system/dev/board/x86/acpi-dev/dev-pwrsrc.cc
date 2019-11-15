@@ -111,7 +111,7 @@ static zx_status_t fuchsia_hardware_power_message_instance(void* ctx, fidl_msg_t
 }
 
 static zx_protocol_device_t acpi_pwrsrc_device_proto = []() {
-  zx_protocol_device_t ops;
+  zx_protocol_device_t ops = {};
   ops.version = DEVICE_OPS_VERSION;
   ops.release = acpi_pwrsrc_release;
   ops.message = fuchsia_hardware_power_message_instance;
@@ -147,23 +147,20 @@ zx_status_t pwrsrc_init(zx_device_t* parent, ACPI_HANDLE acpi_handle) {
   ACPI_STATUS acpi_status = AcpiInstallNotifyHandler(acpi_handle, ACPI_DEVICE_NOTIFY,
                                                      acpi_pwrsrc::acpi_pwrsrc_notify, dev);
 
-  call_PSR(dev);
-
   if (acpi_status != AE_OK) {
     zxlogf(ERROR, "acpi-pwrsrc: could not install notify handler\n");
     acpi_pwrsrc_release(dev);
     return acpi_to_zx_status(acpi_status);
   }
 
-  device_add_args_t args = [&]() {
-    device_add_args_t args;
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "acpi-pwrsrc";
-    args.ctx = dev;
-    args.ops = &acpi_pwrsrc::acpi_pwrsrc_device_proto;
-    args.proto_id = ZX_PROTOCOL_POWER;
-    return args;
-  }();
+  call_PSR(dev);
+
+  device_add_args_t args = {};
+  args.version = DEVICE_ADD_ARGS_VERSION;
+  args.name = "acpi-pwrsrc";
+  args.ctx = dev;
+  args.ops = &acpi_pwrsrc::acpi_pwrsrc_device_proto;
+  args.proto_id = ZX_PROTOCOL_POWER;
 
   status = device_add(parent, &args, &dev->zxdev);
   if (status != ZX_OK) {
