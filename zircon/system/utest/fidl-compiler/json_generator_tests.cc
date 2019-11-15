@@ -64,7 +64,7 @@ bool json_generator_test_struct() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 struct Simple {
@@ -209,7 +209,7 @@ bool json_generator_test_empty_struct() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 struct Empty {
@@ -643,7 +643,7 @@ bool json_generator_test_struct_default_value_enum_library_reference() {
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
 
-    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+    ASSERT_TRUE(checkJSONGenerator(std::move(library),
                                    R"JSON(
 {
   "version": "0.0.1",
@@ -764,7 +764,7 @@ bool json_generator_test_table() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 table Simple {
@@ -897,7 +897,7 @@ bool json_generator_test_union() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 struct Pizza {
@@ -1182,24 +1182,6 @@ union ExplicitPizzaOrPasta {
       },
       "members": [
         {
-          "xunion_ordinal": 3,
-          "reserved": true,
-          "location": {
-            "filename": "json.fidl",
-            "line": 18,
-            "column": 3
-          }
-        },
-        {
-          "xunion_ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "json.fidl",
-            "line": 19,
-            "column": 3
-          }
-        },
-        {
           "xunion_ordinal": 1,
           "reserved": false,
           "name": "pizza",
@@ -1217,6 +1199,24 @@ union ExplicitPizzaOrPasta {
           "max_out_of_line": 4294967295,
           "alignment": 8,
           "offset": 8
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 19,
+            "column": 3
+          }
+        },
+        {
+          "xunion_ordinal": 3,
+          "reserved": true,
+          "location": {
+            "filename": "json.fidl",
+            "line": 18,
+            "column": 3
+          }
         },
         {
           "xunion_ordinal": 4,
@@ -1299,7 +1299,7 @@ bool json_generator_test_xunion() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 xunion FlexibleFoo {
@@ -1706,7 +1706,7 @@ bool json_generator_test_request_flexible_envelope() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 xunion FlexibleFoo {
@@ -2227,7 +2227,7 @@ bool json_generator_test_inheritance() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 [FragileBase]
@@ -2587,7 +2587,7 @@ bool json_generator_test_inheritance_with_recursive_decl() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 [FragileBase]
@@ -2899,7 +2899,7 @@ bool json_generator_test_error() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 protocol Example {
@@ -3262,7 +3262,7 @@ bool json_generator_test_byte_and_bytes() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library example;
 
 struct ByteAndBytes {
@@ -3482,7 +3482,7 @@ bool json_generator_test_bits() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library fidl.test.json;
 
 experimental_flexible bits FlexibleBits : uint64 {
@@ -3643,7 +3643,7 @@ bool json_generator_constants() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library values;
 
 const uint8 UINT8 = 0b100;
@@ -4449,7 +4449,7 @@ struct Baz {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
-    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+    ASSERT_TRUE(checkJSONGenerator(std::move(library),
                                    R"JSON(
 {
   "version": "0.0.1",
@@ -4609,7 +4609,7 @@ protocol Top {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
-    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+    ASSERT_TRUE(checkJSONGenerator(std::move(library),
                                    R"JSON(
 {
   "version": "0.0.1",
@@ -4819,7 +4819,7 @@ protocol Top {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(middle_dep)));
-    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+    ASSERT_TRUE(checkJSONGenerator(std::move(library),
                                    R"JSON(
 {
   "version": "0.0.1",
@@ -5058,7 +5058,7 @@ xunion ExampleXUnion {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    EXPECT_TRUE(checkJSONGenerator(std::move(library),
+    ASSERT_TRUE(checkJSONGenerator(std::move(library),
                                    R"JSON(
 {
   "version": "0.0.1",
@@ -5713,7 +5713,7 @@ struct ExampleOfUseOfAliases {
 )FIDL",
                         &shared);
     ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
-    EXPECT_TRUE(checkJSONGenerator(std::move(library), R"JSON(
+    ASSERT_TRUE(checkJSONGenerator(std::move(library), R"JSON(
 {
   "version": "0.0.1",
   "name": "example",
@@ -6322,7 +6322,7 @@ bool json_generator_service() {
   BEGIN_TEST;
 
   for (int i = 0; i < kRepeatTestCount; i++) {
-    EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+    ASSERT_TRUE(checkJSONGenerator(R"FIDL(
 library example;
 
 protocol SomeProtocol {};

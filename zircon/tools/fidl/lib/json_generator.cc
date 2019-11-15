@@ -4,6 +4,8 @@
 
 #include "fidl/json_generator.h"
 
+#include <functional>
+
 #include "fidl/names.h"
 
 namespace fidl {
@@ -480,7 +482,27 @@ void JSONGenerator::Generate(const flat::Union& value) {
     GenerateObjectMember("location", NameLocation(value.name));
     if (value.attributes)
       GenerateObjectMember("maybe_attributes", value.attributes);
-    GenerateObjectMember("members", value.members);
+
+    // As part of the union-to-xunion migration, static unions now use an
+    // explicit syntax to specify their xunion_ordinal:
+    //
+    //     union Foo {
+    //         1: int bar;  // union tag 0, xunion ordinal 1
+    //         2: bool baz; // union tag 1, xunion ordinal 2
+    //     };
+    //
+    // This makes it look like the variants can be safely reordered, like table
+    // fields. However, since union tag indices come from the JSON members array
+    // -- which usually follows source order -- it would break ABI. We prevent
+    // this by sorting members by xunion_ordinal before emitting them.
+    std::vector<std::reference_wrapper<const flat::Union::Member>> sorted_members(
+        value.members.cbegin(), value.members.cend());
+    std::sort(sorted_members.begin(), sorted_members.end(),
+              [](const auto& member1, const auto& member2) {
+                return member1.get().xunion_ordinal->value < member2.get().xunion_ordinal->value;
+              });
+    GenerateObjectMember("members", sorted_members);
+
     auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
     GenerateObjectMember("size", deprecated_type_shape.InlineSize());
     GenerateObjectMember("max_out_of_line", deprecated_type_shape.MaxOutOfLine());
