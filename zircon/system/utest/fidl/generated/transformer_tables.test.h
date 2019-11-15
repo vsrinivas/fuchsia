@@ -86,6 +86,14 @@ extern const fidl_type_t example_OutOfLineSandwich1WithOptUnionTable;
 extern const fidl_type_t example_Regression8VectorOfOptUnionSize12Aligned4Table;
 extern const fidl_type_t example_Regression8OptUnionSize12Aligned4Table;
 extern const fidl_type_t example_Regression3Table;
+extern const fidl_type_t example_Regression10TableV3Table;
+extern const fidl_type_t example_Regression10V3Table;
+extern const fidl_type_t example_Regression10TableV2Table;
+extern const fidl_type_t example_UnionWithRegression10TableTable;
+extern const fidl_type_t example_Regression11Table;
+extern const fidl_type_t example_Regression10V2Table;
+extern const fidl_type_t example_Regression10TableV1Table;
+extern const fidl_type_t example_Regression10V1Table;
 extern const fidl_type_t example_Regression1Table;
 extern const fidl_type_t example_Regression2Table;
 extern const fidl_type_t example_LauncherInfoTable;
@@ -814,6 +822,55 @@ static const ::fidl::FidlStructField Fields19example_Regression3[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* example_Regression3AltTypePointerTable() __attribute__((unused));
 const fidl_type_t example_Regression3Table = fidl_type_t(::fidl::FidlCodedStruct(Fields19example_Regression3, 1u, 8u, "example/Regression3", example_Regression3AltTypePointerTable()));
 
+static const ::fidl::FidlTableField Fields27example_Regression10TableV3[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
+};
+const fidl_type_t example_Regression10TableV3Table = fidl_type_t(::fidl::FidlCodedTable(Fields27example_Regression10TableV3, 3u, "example/Regression10TableV3"));
+
+static const ::fidl::FidlStructField Fields22example_Regression10V3[] = {
+    ::fidl::FidlStructField(&example_Regression10TableV3Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V3AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression10V3Table = fidl_type_t(::fidl::FidlCodedStruct(Fields22example_Regression10V3, 1u, 16u, "example/Regression10V3", example_Regression10V3AltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields27example_Regression10TableV2[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,1u),
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,5u)
+};
+const fidl_type_t example_Regression10TableV2Table = fidl_type_t(::fidl::FidlCodedTable(Fields27example_Regression10TableV2, 2u, "example/Regression10TableV2"));
+
+static const ::fidl::FidlUnionField Fields34example_UnionWithRegression10Table[] = {
+    ::fidl::FidlUnionField(nullptr, 15u, 1u),
+    ::fidl::FidlUnionField(&example_Regression10TableV2Table, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionWithRegression10TableAltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_UnionWithRegression10TableTable = fidl_type_t(::fidl::FidlCodedUnion(Fields34example_UnionWithRegression10Table, 2u, 8u, 24u, "example/UnionWithRegression10Table", example_UnionWithRegression10TableAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields20example_Regression11[] = {
+    ::fidl::FidlStructField(&example_UnionWithRegression10TableTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression11AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression11Table = fidl_type_t(::fidl::FidlCodedStruct(Fields20example_Regression11, 1u, 24u, "example/Regression11", example_Regression11AltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields22example_Regression10V2[] = {
+    ::fidl::FidlStructField(&example_Regression10TableV2Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V2AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression10V2Table = fidl_type_t(::fidl::FidlCodedStruct(Fields22example_Regression10V2, 1u, 16u, "example/Regression10V2", example_Regression10V2AltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields27example_Regression10TableV1[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,1u)
+};
+const fidl_type_t example_Regression10TableV1Table = fidl_type_t(::fidl::FidlCodedTable(Fields27example_Regression10TableV1, 1u, "example/Regression10TableV1"));
+
+static const ::fidl::FidlStructField Fields22example_Regression10V1[] = {
+    ::fidl::FidlStructField(&example_Regression10TableV1Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V1AltTypePointerTable() __attribute__((unused));
+const fidl_type_t example_Regression10V1Table = fidl_type_t(::fidl::FidlCodedStruct(Fields22example_Regression10V1, 1u, 16u, "example/Regression10V1", example_Regression10V1AltTypePointerTable()));
+
 static const ::fidl::FidlStructField Fields19example_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 1u, 3u),
     ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -975,6 +1032,14 @@ extern const fidl_type_t v1_example_OutOfLineSandwich1WithOptUnionTable;
 extern const fidl_type_t v1_example_Regression8VectorOfOptUnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_Regression8OptUnionSize12Aligned4Table;
 extern const fidl_type_t v1_example_Regression3Table;
+extern const fidl_type_t v1_example_Regression10TableV3Table;
+extern const fidl_type_t v1_example_Regression10V3Table;
+extern const fidl_type_t v1_example_Regression10TableV2Table;
+extern const fidl_type_t v1_example_UnionWithRegression10TableTable;
+extern const fidl_type_t v1_example_Regression11Table;
+extern const fidl_type_t v1_example_Regression10V2Table;
+extern const fidl_type_t v1_example_Regression10TableV1Table;
+extern const fidl_type_t v1_example_Regression10V1Table;
 extern const fidl_type_t v1_example_Regression1Table;
 extern const fidl_type_t v1_example_Regression2Table;
 extern const fidl_type_t v1_example_LauncherInfoTable;
@@ -1703,6 +1768,55 @@ static const ::fidl::FidlStructField Fields22v1_example_Regression3[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression3AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_example_Regression3Table = fidl_type_t(::fidl::FidlCodedStruct(Fields22v1_example_Regression3, 1u, 8u, "example/Regression3", v1_example_Regression3AltTypePointerTable()));
 
+static const ::fidl::FidlTableField Fields30v1_example_Regression10TableV3[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,1u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,5u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table,6u)
+};
+const fidl_type_t v1_example_Regression10TableV3Table = fidl_type_t(::fidl::FidlCodedTable(Fields30v1_example_Regression10TableV3, 3u, "example/Regression10TableV3"));
+
+static const ::fidl::FidlStructField Fields25v1_example_Regression10V3[] = {
+    ::fidl::FidlStructField(&v1_example_Regression10TableV3Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V3AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression10V3Table = fidl_type_t(::fidl::FidlCodedStruct(Fields25v1_example_Regression10V3, 1u, 16u, "example/Regression10V3", v1_example_Regression10V3AltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields30v1_example_Regression10TableV2[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,1u),
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,5u)
+};
+const fidl_type_t v1_example_Regression10TableV2Table = fidl_type_t(::fidl::FidlCodedTable(Fields30v1_example_Regression10TableV2, 2u, "example/Regression10TableV2"));
+
+static const ::fidl::FidlUnionField Fields37v1_example_UnionWithRegression10Table[] = {
+    ::fidl::FidlUnionField(nullptr, 7u, 1u),
+    ::fidl::FidlUnionField(&v1_example_Regression10TableV2Table, 0u, 3u)
+};
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionWithRegression10TableAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_UnionWithRegression10TableTable = fidl_type_t(::fidl::FidlCodedUnion(Fields37v1_example_UnionWithRegression10Table, 2u, 8u, 24u, "example/UnionWithRegression10Table", v1_example_UnionWithRegression10TableAltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields23v1_example_Regression11[] = {
+    ::fidl::FidlStructField(&v1_example_UnionWithRegression10TableTable, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression11AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression11Table = fidl_type_t(::fidl::FidlCodedStruct(Fields23v1_example_Regression11, 1u, 24u, "example/Regression11", v1_example_Regression11AltTypePointerTable()));
+
+static const ::fidl::FidlStructField Fields25v1_example_Regression10V2[] = {
+    ::fidl::FidlStructField(&v1_example_Regression10TableV2Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V2AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression10V2Table = fidl_type_t(::fidl::FidlCodedStruct(Fields25v1_example_Regression10V2, 1u, 16u, "example/Regression10V2", v1_example_Regression10V2AltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields30v1_example_Regression10TableV1[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kUint64Table,1u)
+};
+const fidl_type_t v1_example_Regression10TableV1Table = fidl_type_t(::fidl::FidlCodedTable(Fields30v1_example_Regression10TableV1, 1u, "example/Regression10TableV1"));
+
+static const ::fidl::FidlStructField Fields25v1_example_Regression10V1[] = {
+    ::fidl::FidlStructField(&v1_example_Regression10TableV1Table, 0u, 0u)
+};
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V1AltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_example_Regression10V1Table = fidl_type_t(::fidl::FidlCodedStruct(Fields25v1_example_Regression10V1, 1u, 16u, "example/Regression10V1", v1_example_Regression10V1AltTypePointerTable()));
+
 static const ::fidl::FidlStructField Fields22v1_example_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 1u, 3u),
     ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -2268,6 +2382,50 @@ constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression1Alt
 }
 
 
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V1AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V1AltTypePointerTable() {
+  return &v1_example_Regression10V1Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V1AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V1AltTypePointerTable() {
+  return &example_Regression10V1Table.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V2AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V2AltTypePointerTable() {
+  return &v1_example_Regression10V2Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V2AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V2AltTypePointerTable() {
+  return &example_Regression10V2Table.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V3AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression10V3AltTypePointerTable() {
+  return &v1_example_Regression10V3Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V3AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression10V3AltTypePointerTable() {
+  return &example_Regression10V3Table.coded_struct;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression11AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* example_Regression11AltTypePointerTable() {
+  return &v1_example_Regression11Table.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression11AltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct* v1_example_Regression11AltTypePointerTable() {
+  return &example_Regression11Table.coded_struct;
+}
+
+
 constexpr static inline const ::fidl::FidlCodedStruct* example_Regression2AltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedStruct* example_Regression2AltTypePointerTable() {
   return &v1_example_Regression2Table.coded_struct;
@@ -2782,6 +2940,17 @@ constexpr static inline const ::fidl::FidlCodedUnion* example_UnionSize8Alignmen
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionSize8Alignment4AltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionSize8Alignment4AltTypePointerTable() {
   return &example_UnionSize8Alignment4Table.coded_union;
+}
+
+
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionWithRegression10TableAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* example_UnionWithRegression10TableAltTypePointerTable() {
+  return &v1_example_UnionWithRegression10TableTable.coded_union;
+}
+
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionWithRegression10TableAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedUnion* v1_example_UnionWithRegression10TableAltTypePointerTable() {
+  return &example_UnionWithRegression10TableTable.coded_union;
 }
 
 

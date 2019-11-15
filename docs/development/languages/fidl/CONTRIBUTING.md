@@ -278,7 +278,7 @@ Tab 2(shell)> runtests -t fidl-test
 
 Some of the C runtime tests can run on host:
 ```sh
-fx run-host-tests fidl-test
+fx build zircon && fx run-host-tests fidl-test
 ```
 This only includes a few tests, so be sure to check the output to see if it is
 running the test you care about.

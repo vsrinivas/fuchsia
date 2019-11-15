@@ -12,17 +12,18 @@
 #include <cstring>
 #include <string>
 
-// Disable warning about implicit fallthrough, since it's intentionally used a lot in this code, and
-// the switch()es end up being harder to read without it. Note that "#pragma GCC" works for both GCC
-// & Clang.
+// Disable warning about implicit fallthrough, since it's intentionally used a
+// lot in this code, and the switch()es end up being harder to read without it.
+// Note that "#pragma GCC" works for both GCC & Clang.
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wimplicit-fallthrough"
 
 namespace {
 
-// This is an array of 32-bit ordinals that's intended to help debugging. The array is normally
-// empty, but you can add an ordinal to this array in your local tree if you encounter a message
-// in-the-field that the transformer is having issues with.
+// This is an array of 32-bit ordinals that's intended to help debugging. The
+// array is normally empty, but you can add an ordinal to this array in your
+// local tree if you encounter a message in-the-field that the transformer is
+// having issues with.
 constexpr uint64_t kDebugOrdinals[] = {
     // 0x61f19458'00000000,  // example ordinal
 };
@@ -32,18 +33,26 @@ enum struct WireFormat {
   kV1,
 };
 
-// Call this macro instead of assert() when inside a TransformerBase method: it will print out
-// useful debugging information.
-#define TRANSFORMER_ASSERT(assertion, position)                                    \
-  TransformerAssert(static_cast<bool>(assertion), DebugInfo{                       \
-                                                      (#assertion),                \
-                                                      __LINE__,                    \
-                                                      From(),                      \
-                                                      top_level_type_,             \
-                                                      src_dst,                     \
-                                                      (position),                  \
-                                                      DebugInfo::LogLevel::kError, \
-                                                  })
+// Call this macro instead of assert() when inside a TransformerBase method: it
+// will print out useful debugging information. This macro inlines the code in
+// order to get precise line number information, and to know the assertion being
+// evaluated.
+#define TRANSFORMER_ASSERT(assertion, position)        \
+  {                                                    \
+    const auto ok = static_cast<bool>(assertion);      \
+    if (!ok) {                                         \
+      PrintDebugInfo(DebugInfo{                        \
+        (#assertion),                                  \
+        __LINE__,                                      \
+        From(),                                        \
+        top_level_type_,                               \
+        src_dst,                                       \
+        (position),                                    \
+        DebugInfo::LogLevel::kError,                   \
+      });                                              \
+    assert(assertion);                                 \
+    }                                                  \
+  }
 
 // Call this macro with a |message| and a |position| to have the transformer print out debugging
 // information immediately.
@@ -360,16 +369,6 @@ void PrintDebugInfo(const DebugInfo& debug_info) {
   printf("}\n");
 
   printf("=== END TRANSFORMER %s ===\n", failure_type);
-}
-
-void TransformerAssert(bool ok, const DebugInfo& debug_info) {
-  if (ok) {
-    return;
-  }
-
-  PrintDebugInfo(debug_info);
-
-  assert(false);
 }
 
 class TransformerBase {
@@ -775,18 +774,32 @@ class TransformerBase {
     }
 
     if (!known_type) {
-      // Unknown type, so we don't know what type of data the envelope contains.
+      // When we encounter an unknown type, the best we can do is to copy the
+      // envelope header (which includes the num_bytes and num_handles), and
+      // copy the envelope's data. While it's possible that transformation was
+      // needed, since we do not have the type, we cannot perform it.
+
+      const auto status_copy_hdr = src_dst->Copy(position, sizeof(fidl_envelope_t));
+      if (status_copy_hdr != ZX_OK) {
+        return TRANSFORMER_FAIL(status_copy_hdr, position,
+                                "unable to copy envelope header (unknown type)");
+      }
+
       const auto data_position =
           Position{position.src_out_of_line_offset,
                    position.src_out_of_line_offset + src_envelope->num_bytes,
                    position.dst_out_of_line_offset,
                    position.dst_out_of_line_offset + src_envelope->num_bytes};
-      const auto status = src_dst->Copy(data_position, src_envelope->num_bytes);
-      if (status != ZX_OK) {
-        return TRANSFORMER_FAIL(status, data_position, "unable to copy envelope (unknown type)");
+      const auto status_copy_data = src_dst->Copy(data_position, src_envelope->num_bytes);
+      if (status_copy_data != ZX_OK) {
+        return TRANSFORMER_FAIL(status_copy_data, data_position,
+                                "unable to copy envelope data (unknown type)");
       }
+
       out_traversal_result->src_out_of_line_size += src_envelope->num_bytes;
       out_traversal_result->dst_out_of_line_size += src_envelope->num_bytes;
+      out_traversal_result->handle_count += src_envelope->num_handles;
+
       return ZX_OK;
     }
 
@@ -890,17 +903,19 @@ class TransformerBase {
         position.dst_out_of_line_offset,
         position.dst_out_of_line_offset + envelopes_vector_size,
     };
+    const auto max_field_index = coded_table.field_count - 1;
     for (uint32_t ordinal = 1, field_index = 0; ordinal <= table->envelopes.count; ordinal++) {
       const fidl::FidlTableField& field = coded_table.fields[field_index];
 
-      const fidl_type_t* field_type = nullptr;
-      if (ordinal == field.ordinal) {
-        field_type = field.type;
-        field_index++;
+      const bool known_field = (ordinal == field.ordinal);
+      if (known_field) {
+        if (field_index < max_field_index)
+          field_index++;
       }
 
       TraversalResult envelope_traversal_result;
-      zx_status_t status = TransformEnvelope(true, field_type, current_envelope_position,
+      zx_status_t status = TransformEnvelope(known_field, known_field ? field.type : nullptr,
+                                             current_envelope_position,
                                              &envelope_traversal_result);
       if (status != ZX_OK) {
         return status;

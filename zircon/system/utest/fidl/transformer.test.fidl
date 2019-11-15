@@ -493,6 +493,53 @@ struct Result {
     Unions unions;
 };
 
+// At first, only one member.
+table Regression10TableV1 {
+    1: uint64 member1;
+};
+
+// Then, we add a second member in 5th position.
+table Regression10TableV2 {
+    1: uint64 member1;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: uint64 member2;
+};
+
+// Third, we add a third member in 6th position, and reserve the 7th.
+table Regression10TableV3 {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+    6: int64 z;
+    7: reserved;
+};
+
+struct Regression10V1 {
+    Regression10TableV1 table;
+};
+
+struct Regression10V2 {
+    Regression10TableV2 table;
+};
+
+struct Regression10V3 {
+    Regression10TableV3 table;
+};
+
+union UnionWithRegression10Table {
+    1: uint8 unused; // avoid tag 0
+    2: reserved;
+    3: Regression10TableV2 at_v2; // but consider the evolution v1, v2, v3, ...
+};
+
+struct Regression11 {
+    UnionWithRegression10Table table_of_table;
+};
+
 protocol FakeProtocol {
     // TODO(apang): Make this consistent.
     WrapSandwich4(Sandwich4 sandwich);
