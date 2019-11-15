@@ -44,25 +44,34 @@ protocol Ge2d {
     // |input_buffer_collection| : Pool of VMOs as input to the GE2D.
     // |output_buffer_collection| : Pool of VMOs as output to the GE2D.
     // [info] : Resize Info
-    // [image_format_table] : Image format table (all possible image formats).
-    // [image_format_index] : Initialize with this image format.
+    // [input_image_format] : Input Image format
+    // [output_image_format_table] : Output Image format
+    // [output_image_format_index] : Initialize with this output image format.
     // |callback| : This function is called when GDC is done processing the task.
     // @Returns: |task_index| : Task ID for this task.
+    //
+    // The resize task only supports dynamically changing the output resolution
+    // (not the input resolution). Since the input resolution never changes after
+    // Init, we just pass a single input ImageFormat.
     InitTaskResize(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                    zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                    ResizeInfo info,
-                   zircon.device.sysmem.ImageFormat_2 input_image_format,
+		   zircon.device.sysmem.ImageFormat_2 image_format,
                    vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
                    uint32 output_image_format_index,
                    ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
+    // The WaterMark task only supports changing the Input And Output resolution
+    // together. Moreover this operation changes both the input and output
+    // resolution, setting them to the same new resolution. Therefore we pass
+    // a single ImageFormat table, with a single ImageFormat table index, which
+    // applies to both input and output frames.
     InitTaskWaterMark(zircon.device.sysmem.BufferCollectionInfo_2 input_buffer_collection,
                       zircon.device.sysmem.BufferCollectionInfo_2 output_buffer_collection,
                       WaterMarkInfo info,
 		      handle<vmo> watermark_vmo,
-		      zircon.device.sysmem.ImageFormat_2 input_image_format,
-                      vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
-                      uint32 output_image_format_index,
+                      vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
+                      uint32 image_format_index,
                       ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
@@ -79,11 +88,15 @@ protocol Ge2d {
     // used again by GDC driver again later.
     ReleaseFrame(uint32 task_index, uint32 buffer_index);
 
-    // Set the output resolution. This call sets the resolution on all the canvas ids,
-    // for the specified task. This operation is queued to the worker thread to be
-    // performed in sequence. Once the output resolution for this Task has changed,
-    // callback using the HwAccelCallback, returning the new index of the Image Format.
+    // Set the output resolution. This call sets the resolution on all the output canvas
+    // ids, for the specified task. This operation is queued to the worker thread to be
+    // performed in sequence.
     SetOutputResolution(uint32 task_index, uint32 new_output_image_format_index) -> (zx.status s);
+
+    // Similar to SetOutputResolution, this call sets the input and output resolution on all
+    // input and output canvas ids.
+    SetInputAndOutputResolution(uint32 task_index,
+                                uint32 new_image_format_index) ->  (zx.status s);
 
     // Sets/Changes the crop rectangle (on a Resize Task). Typically called when
     // the camera controller is notified by Smart Framing to crop and resize.

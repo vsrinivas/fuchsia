@@ -43,12 +43,15 @@ zx_status_t GenericTask::GetInputBufferPhysSize(uint32_t input_buffer_index, uin
 
 zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
                                      const buffer_collection_info_2_t* output_buffer_collection,
-                                     const image_format_2_t* input_image_format,
+                                     const image_format_2_t* input_image_format_table_list,
+                                     size_t input_image_format_table_count,
+                                     uint32_t input_image_format_index,
                                      const image_format_2_t* output_image_format_table_list,
                                      size_t output_image_format_table_count,
                                      uint32_t output_image_format_index, const zx::bti& bti,
                                      const hw_accel_callback_t* callback) {
-  if (!IsBufferCollectionValid(input_buffer_collection, input_image_format) ||
+  if (!IsBufferCollectionValid(input_buffer_collection,
+                               &input_image_format_table_list[input_image_format_index]) ||
       !IsBufferCollectionValid(output_buffer_collection,
                                &output_image_format_table_list[output_image_format_index])) {
     return ZX_ERR_INVALID_ARGS;
@@ -66,6 +69,17 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
   }
   output_image_format_count_ = output_image_format_table_count;
   cur_output_image_format_index_ = output_image_format_index;
+
+  input_image_format_list_ = std::unique_ptr<image_format_2_t[]>(
+      new (&ac) image_format_2_t[input_image_format_table_count]);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+  for (uint32_t i = 0; i < input_image_format_table_count; i++) {
+    input_image_format_list_.get()[i] = input_image_format_table_list[i];
+  }
+  input_image_format_count_ = input_image_format_table_count;
+  cur_input_image_format_index_ = input_image_format_index;
 
   // Initialize the VMOPool and pin the output buffers
   zx::vmo output_vmos[output_buffer_collection->buffer_count];
@@ -120,7 +134,6 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
     }
   }
 
-  input_format_ = *input_image_format;
   callback_ = callback;
 
   return status;

@@ -72,10 +72,9 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
 zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
     const buffer_collection_info_2_t* input_buffer_collection,
     const buffer_collection_info_2_t* output_buffer_collection, const water_mark_info_t* info,
-    zx::vmo watermark_vmo, const image_format_2_t* input_image_format,
-    const image_format_2_t* output_image_format_table_list, size_t output_image_format_table_count,
-    uint32_t output_image_format_index, const hw_accel_callback_t* callback,
-    uint32_t* out_task_index) {
+    zx::vmo watermark_vmo, const image_format_2_t* image_format_table_list,
+    size_t image_format_table_count, uint32_t image_format_index,
+    const hw_accel_callback_t* callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -86,10 +85,10 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
     return ZX_ERR_NO_MEMORY;
   }
 
-  zx_status_t status = task->InitWatermark(
-      input_buffer_collection, output_buffer_collection, info, watermark_vmo, input_image_format,
-      output_image_format_table_list, output_image_format_table_count, output_image_format_index,
-      callback, bti_, canvas_);
+  zx_status_t status =
+      task->InitWatermark(input_buffer_collection, output_buffer_collection, info, watermark_vmo,
+                          image_format_table_list, image_format_table_count, image_format_index,
+                          callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -129,6 +128,10 @@ zx_status_t Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index,
     return ZX_ERR_INVALID_ARGS;
   }
 
+  if (task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_RESIZE) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   // Validate new image format index|.
   if (!task_entry->second->IsOutputFormatIndexValid(new_output_image_format_index)) {
     return ZX_ERR_INVALID_ARGS;
@@ -138,6 +141,36 @@ zx_status_t Ge2dDevice::Ge2dSetOutputResolution(uint32_t task_index,
   info.op = GE2D_OP_SETOUTPUTRES;
   info.task = task_entry->second.get();
   info.index = new_output_image_format_index;
+
+  // Put the task on queue.
+  fbl::AutoLock lock(&lock_);
+  processing_queue_.push_front(info);
+  frame_processing_signal_.Signal();
+  return ZX_OK;
+}
+
+zx_status_t Ge2dDevice::Ge2dSetInputAndOutputResolution(uint32_t task_index,
+                                                        uint32_t new_image_format_index) {
+  // Find the entry in hashmap.
+  auto task_entry = task_map_.find(task_index);
+  if (task_entry == task_map_.end()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (task_entry->second->Ge2dTaskType() != Ge2dTask::GE2D_WATERMARK) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Validate new image format index|.
+  if (!task_entry->second->IsInputFormatIndexValid(new_image_format_index) ||
+      !task_entry->second->IsOutputFormatIndexValid(new_image_format_index)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  TaskInfo info;
+  info.op = GE2D_OP_SETINPUTOUTPUTRES;
+  info.task = task_entry->second.get();
+  info.index = new_image_format_index;
 
   // Put the task on queue.
   fbl::AutoLock lock(&lock_);
@@ -179,6 +212,12 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     // This has to free and reallocate the output buffer canvas ids.
     task->Ge2dChangeOutputRes(info.index);
     // No callback is done after changing output res for GDC.
+    return;
+  } else if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
+    // This has to free and reallocate the input buffer canvas ids.
+    task->Ge2dChangeInputRes(info.index);
+    // This has to free and reallocate the output buffer canvas ids.
+    task->Ge2dChangeOutputRes(info.index);
     return;
   }
   auto input_buffer_index = info.index;

@@ -78,12 +78,20 @@ class GenericTask {
   }
 
   // Validates input buffer index.
+  bool IsInputFormatIndexValid(uint32_t input_format_index) const {
+    return input_format_index < input_image_format_count_;
+  }
+  // Validates output buffer index.
   bool IsOutputFormatIndexValid(uint32_t output_format_index) const {
     return output_format_index < output_image_format_count_;
   }
+  uint32_t input_format_index() { return cur_input_image_format_index_; }
   uint32_t output_format_index() { return cur_output_image_format_index_; }
+  void set_input_format_index(uint32_t new_index) { cur_input_image_format_index_ = new_index; }
   void set_output_format_index(uint32_t new_index) { cur_output_image_format_index_ = new_index; }
-  image_format_2_t input_format() { return input_format_; }
+  image_format_2_t input_format() {
+    return input_image_format_list_[cur_input_image_format_index_];
+  }
   image_format_2_t output_format() {
     return output_image_format_list_[cur_output_image_format_index_];
   }
@@ -94,7 +102,8 @@ class GenericTask {
   // Pins the input buffer collection.
   zx_status_t InitBuffers(const buffer_collection_info_2_t* input_buffer_collection,
                           const buffer_collection_info_2_t* output_buffer_collection,
-                          const image_format_2_t* input_image_format,
+                          const image_format_2_t* input_image_format_table_list,
+                          size_t input_image_format_table_count, uint32_t input_image_format_index,
                           const image_format_2_t* output_image_format_table_list,
                           size_t output_image_format_table_count,
                           uint32_t output_image_format_index, const zx::bti& bti,
@@ -103,10 +112,12 @@ class GenericTask {
 
  private:
   fbl::Mutex output_vmo_pool_lock_;
+  size_t input_image_format_count_;
+  std::unique_ptr<image_format_2_t[]> input_image_format_list_;
+  uint32_t cur_input_image_format_index_;
   size_t output_image_format_count_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   uint32_t cur_output_image_format_index_;
-  image_format_2_t input_format_;
   const hw_accel_callback_t* callback_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;

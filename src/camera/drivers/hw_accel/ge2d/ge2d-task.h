@@ -21,17 +21,29 @@ typedef struct image_canvas_id {
   uint8_t canvas_idx[2];
 } image_canvas_id_t;
 
-enum Ge2dTaskType { GE2D_RESIZE, GE2D_WATERMARK };
+typedef struct input_image_canvas_id {
+  image_canvas_id_t canvas_ids;
+  zx_handle_t vmo;
+} input_image_canvas_id_t;
 
 class Ge2dTask : public generictask::GenericTask {
  public:
+  enum Ge2dTaskType { GE2D_RESIZE, GE2D_WATERMARK };
+
+  // Note on Input and Output image formats :
+  // Resize task takes 1 input format and a table of output formats. The resize
+  // task only supports changing the Output Resolution.
+  // Watermark task takes 1 table of image formats. The Watermark task only
+  // supports changing the input and output resolution. Both are changed.
+
   // Static function to create a task object.
   // |input_buffer_collection|              : Input buffer collection.
   // |output_buffer_collection|             : Output buffer collection.
   // [info]                                 : Either Resize or Watermark Info.
-  // [image_format_table_list]              : List of image formats.
-  // [image_format_table_count]             : Size of image format table.
-  // [image_format_index]                   : Index of image format to initialize with.
+  // [input_image_format]                   : input image format.
+  // [output_image_format_table_list]       : List of output image formats.
+  // [output_image_format_table_count]      : Size of output image format table.
+  // [output_image_format_index]            : Index of output mage format to initialize with.
   // |callback|                             : Callback function to call for.
   // this task. |out|                       : Pointer to a task.
   // object returned to the caller.
@@ -45,14 +57,15 @@ class Ge2dTask : public generictask::GenericTask {
 
   image_format_2_t WatermarkFormat() { return wm_.wm_image_format; }
 
+  // We use the same image format list (and image format index) for both input and output
+  // for watermark tasks.
   zx_status_t InitWatermark(const buffer_collection_info_2_t* input_buffer_collection,
                             const buffer_collection_info_2_t* output_buffer_collection,
                             const water_mark_info_t* info, const zx::vmo& watermark_vmo,
-                            const image_format_2_t* input_image_format,
-                            const image_format_2_t* output_image_format_table_list,
-                            size_t output_image_format_table_count,
-                            uint32_t output_image_format_index, const hw_accel_callback_t* callback,
-                            const zx::bti& bti, amlogic_canvas_protocol_t canvas);
+                            const image_format_2_t* image_format_table_list,
+                            size_t image_format_table_count, uint32_t image_format_index,
+                            const hw_accel_callback_t* callback, const zx::bti& bti,
+                            amlogic_canvas_protocol_t canvas);
 
   image_canvas_id_t GetOutputCanvasIds(zx_handle_t vmo) {
     auto entry = buffer_map_.find(vmo);
@@ -61,16 +74,22 @@ class Ge2dTask : public generictask::GenericTask {
     return entry->second;
   }
 
-  image_canvas_id_t GetInputCanvasIds(uint32_t index) { return input_image_canvas_ids_[index]; }
+  image_canvas_id_t GetInputCanvasIds(uint32_t index) {
+    return input_image_canvas_ids_[index].canvas_ids;
+  }
 
   ~Ge2dTask() { FreeCanvasIds(); }
 
   void Ge2dChangeOutputRes(uint32_t new_output_buffer_index);
+  void Ge2dChangeInputRes(uint32_t new_input_buffer_index);
+
+  Ge2dTaskType Ge2dTaskType() { return task_type_; }
 
  private:
   zx_status_t Init(const buffer_collection_info_2_t* input_buffer_collection,
                    const buffer_collection_info_2_t* output_buffer_collection,
-                   const image_format_2_t* input_image_format,
+                   const image_format_2_t* input_image_format_table_list,
+                   size_t input_image_format_table_count, uint32_t input_image_format_index,
                    const image_format_2_t* output_image_format_table_list,
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
                    const hw_accel_callback_t* callback, const zx::bti& bti);
@@ -91,7 +110,7 @@ class Ge2dTask : public generictask::GenericTask {
                                    const image_format_2_t* output_image_format);
   void FreeCanvasIds();
 
-  Ge2dTaskType task_type_;
+  enum Ge2dTaskType task_type_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   struct watermark_info {
     fzl::PinnedVmo watermark_vmo_pinned_;
@@ -111,7 +130,7 @@ class Ge2dTask : public generictask::GenericTask {
   resize_info_t res_info_;
   std::unordered_map<zx_handle_t, image_canvas_id_t> buffer_map_;
   uint32_t num_input_canvas_ids_;
-  std::unique_ptr<image_canvas_id_t[]> input_image_canvas_ids_;
+  std::unique_ptr<input_image_canvas_id_t[]> input_image_canvas_ids_;
   amlogic_canvas_protocol_t canvas_ = {};
 };
 }  // namespace ge2d
