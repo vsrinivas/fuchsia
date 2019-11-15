@@ -97,6 +97,14 @@ impl FakeScheduler {
         Self { next_id: 0, now: 0 }
     }
 
+    pub fn set_time(&mut self, time: zx::Time) {
+        self.now = time.into_nanos();
+    }
+
+    pub fn increment_time(&mut self, duration: zx::Duration) {
+        self.set_time(zx::Time::from_nanos(self.now) + duration);
+    }
+
     pub fn as_scheduler(&mut self) -> Scheduler {
         Scheduler {
             cookie: self as *mut Self as *mut c_void,
