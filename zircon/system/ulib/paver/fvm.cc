@@ -159,11 +159,15 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
 
     // Write real data
     while (bytes_left > 0) {
-      size_t vmo_sz = 0;
       size_t actual;
-      zx_status_t status = reader->ReadData(&reinterpret_cast<uint8_t*>(mapper.start())[vmo_sz],
-                                            fbl::min(bytes_left, vmo_cap - vmo_sz), &actual);
-      vmo_sz += actual;
+      zx_status_t status = reader->ReadData(reinterpret_cast<uint8_t*>(mapper.start()),
+                                            fbl::min(bytes_left, vmo_cap), &actual);
+      if (status != ZX_OK) {
+        ERROR("Error reading partition data: %s\n", zx_status_get_string(status));
+        return status;
+      }
+
+      const size_t vmo_sz = actual;
       bytes_left -= actual;
 
       if (vmo_sz == 0) {
@@ -172,9 +176,6 @@ zx_status_t StreamFvmPartition(fvm::SparseReader* reader, PartitionInfo* part,
       } else if (vmo_sz % block_size != 0) {
         ERROR("Cannot write non-block size multiple: %zu\n", vmo_sz);
         return ZX_ERR_IO;
-      } else if (status != ZX_OK) {
-        ERROR("Error reading partition data\n");
-        return status;
       }
 
       uint64_t length = vmo_sz / block_size;
