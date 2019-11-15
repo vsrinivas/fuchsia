@@ -135,7 +135,6 @@ aggregate_manifest("legacy-image") {
     ":driver.aml-gpu",
     ":driver.aml-gxl-gpio",
     ":driver.aml-i2c",
-    ":driver.aml-pwm",
     ":driver.aml-rawnand",
     ":driver.aml-scpi-s912.mailbox",
     ":driver.aml-sd-emmc",
@@ -262,7 +261,6 @@ aggregate_manifest("legacy-image") {
     ":driver.platform-bus",
     ":driver.platform-bus.proxy",
     ":driver.power",
-    ":driver.pwm",
     ":driver.qcom-gpio",
     ":driver.qcom-pil",
     ":driver.qemu-arm64",
@@ -743,7 +741,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.alc5663-test",
     ":test.sys.aml-axg-gpio-test",
     ":test.sys.aml-canvas-test",
-    ":test.sys.aml-pwm-test",
     ":test.sys.aml-sd-emmc-test",
     ":test.sys.aml-securemem-test",
     ":test.sys.aml-thermal-s905d2g-test",
@@ -939,7 +936,6 @@ aggregate_manifest("legacy-aux") {
     ":test.sys.ps-test",
     ":test.sys.pty-test",
     ":test.sys.ptysvc-test-test",
-    ":test.sys.pwm-test",
     ":test.sys.qcom-gpio-test",
     ":test.sys.qsort-test",
     ":test.sys.race-tests-test",
@@ -1505,11 +1501,13 @@ aggregate_manifest("legacy-tests") {
 #    using idiomatic constructs - the edit should be a removal.
 
 aggregate_manifest("migrated-image") {
-  deps = []
+  deps = [
+  ]
 }
 
 aggregate_manifest("migrated-aux") {
-  deps = []
+  deps = [
+  ]
 }
 
 aggregate_manifest("migrated-tests") {

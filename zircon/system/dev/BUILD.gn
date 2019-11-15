@@ -30,7 +30,6 @@ group("dev") {
     "nand",
     "pci",
     "power",
-    "pwm",
     "rtc",
     "sample",
     "scpi",
