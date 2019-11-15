@@ -1215,6 +1215,8 @@ aggregate_manifest("legacy-tests") {
     ":test.sys.bma253-test",
     ":test.sys.bootfs-test-test",
     ":test.sys.bootsvc-unit-test",
+    ":test.sys.bt-hci-broadcom-test",
+    ":test.sys.bt-hci-mediatek-test",
     ":test.sys.cadence-hpnfc-test",
     ":test.sys.channel-fatal-test",
     ":test.sys.chromeos-disk-setup-test",
