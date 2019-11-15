@@ -3,6 +3,9 @@
         "binary": "test/msd_arm_mali_integration_tests"
     },
     "sandbox": {
+        "dev": [
+            "sys"
+        ],
         "features": [
             "vulkan",
             "isolated-temp"

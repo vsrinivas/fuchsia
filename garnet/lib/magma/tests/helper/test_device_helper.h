@@ -5,6 +5,7 @@
 #ifndef GARNET_LIB_MAGMA_TESTS_HELPER_TEST_DEVICE_HELPER_H_
 #define GARNET_LIB_MAGMA_TESTS_HELPER_TEST_DEVICE_HELPER_H_
 
+#include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
@@ -43,12 +44,64 @@ class TestDeviceBase {
     }
   }
 
-  zx::unowned_channel channel() {
-    return zx::unowned_channel(channel_);
+  // Get a channel to the parent device, so we can rebind the driver to it. This
+  // requires sandbox access to /dev/sys.
+  zx::channel GetParentDevice() {
+    char path[llcpp::fuchsia::device::MAX_DEVICE_PATH_LEN + 1];
+    auto res = llcpp::fuchsia::device::Controller::Call::GetTopologicalPath(channel());
+
+    EXPECT_EQ(ZX_OK, res.status());
+    EXPECT_TRUE(res->result.is_response());
+
+    auto& response = res->result.response();
+    EXPECT_LE(response.path.size(), llcpp::fuchsia::device::MAX_DEVICE_PATH_LEN);
+
+    memcpy(path, response.path.data(), response.path.size());
+    path[response.path.size()] = 0;
+    // Remove everything after the final slash.
+    *strrchr(path, '/') = 0;
+    printf("Parent device path: %s\n", path);
+    zx::channel local_channel, remote_channel;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_channel, &remote_channel));
+
+    EXPECT_EQ(ZX_OK, fdio_service_connect(path, remote_channel.release()));
+    return local_channel;
   }
-  magma_device_t device() const {
-    return device_;
+
+  void ShutdownDevice() {
+    auto res = llcpp::fuchsia::device::Controller::Call::ScheduleUnbind(channel());
+    EXPECT_EQ(ZX_OK, res.status());
+    EXPECT_TRUE(res->result.is_response());
   }
+
+  static void BindDriver(const zx::channel& parent_device, std::string path) {
+    // Rebinding the device immediately after unbinding it sometimes causes the new device to be
+    // created before the old one is released, which can cause problems since the old device can
+    // hold onto interrupts and other resources. Delay recreation to make that less likely.
+    // TODO(fxb/39852): Remove when the driver framework bug is fixed.
+    constexpr uint32_t kRecreateDelayMs = 100;
+    zx::nanosleep(zx::deadline_after(zx::msec(kRecreateDelayMs)));
+
+    constexpr uint32_t kMaxRetryCount = 5000;
+    uint32_t retry_count = 0;
+    while (true) {
+      ASSERT_TRUE(retry_count++ < kMaxRetryCount) << "Timed out rebinding driver";
+      // Don't use rebind because we need the recreate delay above. Also, the parent device may have
+      // other children that shouldn't be unbound.
+      auto res = llcpp::fuchsia::device::Controller::Call::Bind(zx::unowned_channel(parent_device),
+                                                                fidl::StringView(path));
+      ASSERT_EQ(ZX_OK, res.status());
+      if (res->result.is_err() && res->result.err() == ZX_ERR_ALREADY_BOUND) {
+        zx::nanosleep(zx::deadline_after(zx::msec(10)));
+        continue;
+      }
+      EXPECT_TRUE(res->result.is_response());
+      break;
+    }
+  }
+
+  zx::unowned_channel channel() { return zx::unowned_channel(channel_); }
+  magma_device_t device() const { return device_; }
   ~TestDeviceBase() {
     if (device_)
       magma_device_release(device_);

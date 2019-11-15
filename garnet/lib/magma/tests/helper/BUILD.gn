@@ -43,6 +43,7 @@ source_set("test_device_helper") {
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 
   sources = [

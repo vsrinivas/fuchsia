@@ -3,10 +3,12 @@
 // found in the LICENSE file.
 
 #include <fcntl.h>
+#include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/gpu/magma/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 
+#include <shared_mutex>
 #include <thread>
 
 #include "gtest/gtest.h"
@@ -52,6 +54,9 @@ constexpr uint32_t kMaxCount = 100;
 constexpr uint32_t kRestartCount = kMaxCount / 10;
 
 static std::atomic_uint complete_count;
+// This lock ensures the looper threads don't continue making new connections while we're attempting
+// to unbind, as open connections keep the driver from being released.
+static std::shared_mutex connection_create_mutex;
 
 static void looper_thread_entry() {
   std::unique_ptr<TestConnection> test(new TestConnection());
@@ -62,6 +67,8 @@ static void looper_thread_entry() {
     } else {
       // Wait rendering can't pass back a proper error yet
       EXPECT_TRUE(result == MAGMA_STATUS_CONNECTION_LOST || result == MAGMA_STATUS_INTERNAL_ERROR);
+      test.reset();
+      std::shared_lock lock(connection_create_mutex);
       test.reset(new TestConnection());
     }
   }
@@ -71,26 +78,22 @@ static void test_shutdown(uint32_t iters) {
   for (uint32_t i = 0; i < iters; i++) {
     complete_count = 0;
 
-    magma::TestDeviceBase test_base(MAGMA_VENDOR_ID_MALI);
-
-    {
-      uint64_t is_supported = 0;
-      zx_status_t status = fuchsia_gpu_magma_DeviceQuery(
-          test_base.channel()->get(), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
-      if (status != ZX_OK || !is_supported) {
-        printf("Test restart not supported: status %d is_supported %lu\n", status, is_supported);
-        return;
-      }
-    }
-
     std::thread looper(looper_thread_entry);
     std::thread looper2(looper_thread_entry);
     uint32_t count = kRestartCount;
     while (complete_count < kMaxCount) {
       if (complete_count > count) {
-        // Should replace this with a request to devmgr to restart the driver
-        EXPECT_EQ(ZX_OK, fuchsia_gpu_magma_DeviceTestRestart(test_base.channel()->get()));
+        auto test_base = std::make_unique<magma::TestDeviceBase>(MAGMA_VENDOR_ID_MALI);
+        zx::channel parent_device = test_base->GetParentDevice();
 
+        test_base->ShutdownDevice();
+        test_base.reset();
+
+        // Force looper thread connections to drain.
+        std::unique_lock lock(connection_create_mutex);
+
+        const char* kDriverPath = "/system/driver/" MSD_ARM_NAME;
+        magma::TestDeviceBase::BindDriver(parent_device, kDriverPath);
         count += kRestartCount;
       }
       std::this_thread::yield();
@@ -104,3 +107,5 @@ static void test_shutdown(uint32_t iters) {
 }  // namespace
 
 TEST(Shutdown, Test) { test_shutdown(1); }
+
+TEST(Shutdown, Stress) { test_shutdown(10); }

@@ -20,6 +20,12 @@ executable("msd_arm_mali_integration_tests") {
     "test_shutdown.cc",
   ]
 
+  if (magma_enable_developer_build) {
+    defines = [ "MSD_ARM_NAME=\"libmsd_arm_test.so\"" ]
+  } else {
+    defines = [ "MSD_ARM_NAME=\"libmsd_arm.so\"" ]
+  }
+
   public_deps = [
     "$zircon_build_root/public/lib/fdio",
     "//garnet/lib/magma/include:magma_abi",
@@ -30,6 +36,8 @@ executable("msd_arm_mali_integration_tests") {
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-device:fuchsia-device_llcpp",
   ]
 
   deps = [

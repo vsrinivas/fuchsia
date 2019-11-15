@@ -20,6 +20,12 @@ MagmaSystemConnection::~MagmaSystemConnection() {
     msd_connection_release_buffer(msd_connection(), iter->second.buffer->msd_buf());
     iter = buffer_map_.erase(iter);
   }
+
+  // Reset all MSD objects before calling ConnectionClosed() because the msd device might go away
+  // any time after ConnectionClosed() and we don't want any dangling dependencies.
+  semaphore_map_.clear();
+  context_map_.clear();
+  msd_connection_.reset();
   auto device = device_.lock();
   if (device) {
     device->ConnectionClosed(std::this_thread::get_id());
