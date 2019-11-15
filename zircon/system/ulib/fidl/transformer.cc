@@ -37,35 +37,14 @@ enum struct WireFormat {
 // will print out useful debugging information. This macro inlines the code in
 // order to get precise line number information, and to know the assertion being
 // evaluated.
-#define TRANSFORMER_ASSERT(assertion, position)        \
-  {                                                    \
-    const auto ok = static_cast<bool>(assertion);      \
-    if (!ok) {                                         \
-      PrintDebugInfo(DebugInfo{                        \
-        (#assertion),                                  \
-        __LINE__,                                      \
-        From(),                                        \
-        top_level_type_,                               \
-        src_dst,                                       \
-        (position),                                    \
-        DebugInfo::LogLevel::kError,                   \
-      });                                              \
-    assert(assertion);                                 \
-    }                                                  \
+#define TRANSFORMER_ASSERT(assertion, position)                       \
+  {                                                                   \
+    const auto ok = static_cast<bool>(assertion);                     \
+    if (!ok) {                                                        \
+      debug_info_->RecordFailure(__LINE__, (#assertion), (position)); \
+      assert(assertion);                                              \
+    }                                                                 \
   }
-
-// Call this macro with a |message| and a |position| to have the transformer print out debugging
-// information immediately.
-#define TRANSFORMER_DEBUG(message, position) \
-  PrintDebugInfo(DebugInfo{                  \
-      message,                               \
-      __LINE__,                              \
-      From(),                                \
-      top_level_type_,                       \
-      src_dst,                               \
-      position,                              \
-      DebugInfo::LogLevel::kDebug,           \
-  })
 
 // Call this macro instead of the TransformerBase::Fail() method. This is a simple wrapper to pass
 // the current __LINE__ number to Fail().
@@ -299,82 +278,120 @@ class SrcDst final {
   uint32_t dst_max_offset_ = 0;
 };
 
-// Information that's passed to the PrintDebugInfo() function that's useful for debugging
-// transformer failures.
-struct DebugInfo final {
-  const char* message = nullptr;
-  int line_number;
-  WireFormat from;
-  const fidl_type_t* top_level_type;
-  const SrcDst* src_dst;
-  Position position{0, 0, 0, 0};
+// Debug related information, which is set both on construction, and as we
+// transform. On destruction, this object writes any collected error message
+// if an |out_error_msg| is provided.
+class DebugInfo final {
+public:
+  DebugInfo(fidl_transformation_t transformation, const fidl_type_t* type, const SrcDst& src_dst,
+            const char** out_error_msg)
+    : transformation_(transformation), type_(type), src_dst_(src_dst),
+      out_error_msg_(out_error_msg) {}
+  DebugInfo(const DebugInfo&) = delete;
 
-  enum class LogLevel {
-    kDebug,
-    kError,
-  };
-  LogLevel log_level;
+  ~DebugInfo() {
+    if (has_failed_) {
+      Print("ERROR");
+    }
+    if (out_error_msg_) {
+      *out_error_msg_ = error_msg_;
+    }
+  }
+
+  void RecordFailure(int line_number, const char* error_msg) {
+    has_failed_ = true;
+    error_msg_ = error_msg;
+    line_number_ = line_number;
+  }
+
+  void RecordFailure(int line_number, const char* error_msg, const Position& position) {
+    RecordFailure(line_number, error_msg);
+    position_ = position;
+  }
+
+  void DebugPrint(int line_number, const char* error_msg, const Position& position) const {
+    DebugInfo dup(transformation_, type_, src_dst_, nullptr);
+    dup.RecordFailure(line_number, error_msg, position);
+    dup.Print("INFO");
+    // Avoid printing twice.
+    dup.has_failed_ = false;
+  }
+
+private:
+  void Print(const std::string& failure_type) const {
+    printf("=== TRANSFORMER %s ===\n", failure_type.c_str());
+
+    char type_desc[256] = {};
+    fidl_format_type_name(type_, type_desc, sizeof(type_desc));
+
+    printf("direction: %s\n", direction().c_str());
+    printf("transformer.cc:%d: %s\n", line_number_, error_msg_);
+    printf("top level type: %s\n", type_desc);
+    printf("position: %s\n", position_.ToString().c_str());
+
+    auto print_bytes = [&](const uint8_t* buffer, uint32_t size, uint32_t out_of_line_offset) {
+      for (uint32_t i = 0; i < size; i++) {
+        if (i == out_of_line_offset) {
+          printf("  // out-of-line\n");
+        }
+
+        if (i % 8 == 0) {
+          printf("  ");
+        }
+
+        printf("0x%02x, ", buffer[i]);
+
+        if (i % 8 == 7) {
+          printf("\n");
+        }
+      }
+    };
+
+    printf("uint8_t src_bytes[0x%02x] = {\n", src_dst_.src_num_bytes());
+    print_bytes(src_dst_.src_bytes(), src_dst_.src_num_bytes(), position_.src_out_of_line_offset);
+    printf("}\n");
+
+    printf("uint8_t dst_bytes[0x%02x] = {  // capacity = 0x%02x\n",
+          src_dst_.dst_max_offset(), src_dst_.dst_num_bytes_capacity());
+    print_bytes(src_dst_.dst_bytes(), src_dst_.dst_max_offset(), position_.dst_out_of_line_offset);
+    printf("}\n");
+
+    printf("=== END TRANSFORMER %s ===\n", failure_type.c_str());
+  }
+
+  std::string direction() const {
+    switch (transformation_) {
+      case FIDL_TRANSFORMATION_NONE:
+        return "none";
+      case FIDL_TRANSFORMATION_V1_TO_OLD:
+        return "v1 to old";
+      case FIDL_TRANSFORMATION_OLD_TO_V1:
+        return "old to v1";
+      default:
+        return "unknown";
+    }
+  }
+
+  // Set on construction, and duplicated.
+  const fidl_transformation_t transformation_;
+  const fidl_type_t* type_;
+  const SrcDst& src_dst_;
+
+  // Set on construction, never duplicated.
+  const char** out_error_msg_;
+
+  // Set post construction, never duplicated.
+  bool has_failed_ = false;
+  const char* error_msg_ = nullptr;
+  int line_number_ = -1;
+  Position position_{0, 0, 0, 0};
 };
 
-void PrintDebugInfo(const DebugInfo& debug_info) {
-  const char* const failure_type = [&] {
-    switch (debug_info.log_level) {
-      case DebugInfo::LogLevel::kDebug:
-        return "DEBUGGING";
-      case DebugInfo::LogLevel::kError:
-        return "ERROR";
-    }
-
-    __builtin_unreachable();
-  }();
-
-  printf("=== TRANSFORMER %s ===\n", failure_type);
-
-  auto top_level_type = debug_info.top_level_type;
-  char top_level_type_desc[256] = {};
-  fidl_format_type_name(top_level_type, top_level_type_desc, sizeof(top_level_type_desc));
-
-  printf("direction: %s\n", debug_info.from == WireFormat::kOld ? "old to V1" : "V1 to old");
-  printf("transformer.cc:%d: %s\n", debug_info.line_number, debug_info.message);
-  printf("top level type: %s\n", top_level_type_desc);
-  printf("position: %s\n", debug_info.position.ToString().c_str());
-
-  auto print_bytes = [&](const uint8_t* buffer, uint32_t size, uint32_t out_of_line_offset) {
-    for (uint32_t i = 0; i < size; i++) {
-      if (i == out_of_line_offset) {
-        printf("  // out-of-line\n");
-      }
-
-      if (i % 8 == 0) {
-        printf("  ");
-      }
-
-      printf("0x%02x, ", buffer[i]);
-
-      if (i % 8 == 7) {
-        printf("\n");
-      }
-    }
-  };
-
-  printf("uint8_t src_bytes[0x%02x] = {\n", debug_info.src_dst->src_num_bytes());
-  print_bytes(debug_info.src_dst->src_bytes(), debug_info.src_dst->src_num_bytes(),
-              debug_info.position.src_out_of_line_offset);
-  printf("}\n");
-
-  printf("uint8_t dst_bytes[0x%02x] = {  // capacity = 0x%02x\n",
-         debug_info.src_dst->dst_max_offset(), debug_info.src_dst->dst_num_bytes_capacity());
-  print_bytes(debug_info.src_dst->dst_bytes(), debug_info.src_dst->dst_max_offset(),
-              debug_info.position.dst_out_of_line_offset);
-  printf("}\n");
-
-  printf("=== END TRANSFORMER %s ===\n", failure_type);
-}
 
 class TransformerBase {
  public:
-  TransformerBase(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* out_debug_info)
-      : src_dst(src_dst), top_level_type_(top_level_type), out_debug_info_(out_debug_info) {}
+  TransformerBase(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
+      : src_dst(src_dst), debug_info_(debug_info), top_level_type_(top_level_type) {}
   virtual ~TransformerBase() = default;
 
   uint32_t InlineSize(const fidl_type_t* type, WireFormat wire_format, const Position& position) {
@@ -435,7 +452,7 @@ class TransformerBase {
       char buffer[16];
       snprintf(buffer, sizeof(buffer), "0x%016" PRIx64, debug_ordinal);
 
-      TRANSFORMER_DEBUG(buffer, position);
+      debug_info_->DebugPrint(__LINE__, buffer, position);
     }
   }
 
@@ -997,37 +1014,25 @@ class TransformerBase {
                                      const fidl::FidlCodedUnion& dst_coded_union,
                                      const Position& position, uint32_t dst_size,
                                      TraversalResult* out_traversal_result) = 0;
-
   inline zx_status_t Fail(zx_status_t status, const Position& position, const int line_number,
-                          const char* error_message) {
-    DebugInfo debug_info{
-        error_message,
-        line_number,
-        From(),
-        top_level_type_,
-        src_dst,
-        position,
-        DebugInfo::LogLevel::kError,
-    };
-
-    *out_debug_info_ = debug_info;
-
+                          const char* error_msg) {
+    debug_info_->RecordFailure(line_number, error_msg, position);
     return status;
   }
 
   SrcDst* src_dst;
+  DebugInfo* const debug_info_;
 
- protected:
+ private:
   const fidl_type_t* top_level_type_;
-  DebugInfo* const out_debug_info_;
 };
 
 // TODO(apang): Mark everything override
 
 class V1ToOld final : public TransformerBase {
  public:
-  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* out_debug_info)
-      : TransformerBase(src_dst, top_level_type, out_debug_info) {}
+  V1ToOld(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
+      : TransformerBase(src_dst, top_level_type, debug_info) {}
 
   WireFormat From() const { return WireFormat::kV1; }
   WireFormat To() const { return WireFormat::kOld; }
@@ -1188,8 +1193,8 @@ class V1ToOld final : public TransformerBase {
 
 class OldToV1 final : public TransformerBase {
  public:
-  OldToV1(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* out_debug_info)
-      : TransformerBase(src_dst, top_level_type, out_debug_info) {}
+  OldToV1(SrcDst* src_dst, const fidl_type_t* top_level_type, DebugInfo* debug_info)
+      : TransformerBase(src_dst, top_level_type, debug_info) {}
 
  private:
   // TODO(apang): Could CRTP this.
@@ -1323,8 +1328,8 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
   }
 
   SrcDst src_dst(src_bytes, src_num_bytes, dst_bytes, dst_num_bytes_capacity, out_dst_num_bytes);
+  DebugInfo debug_info(transformation, type, src_dst, out_error_msg);
 
-  DebugInfo debug_info;
   const zx_status_t status = [&] {
     switch (transformation) {
       case FIDL_TRANSFORMATION_NONE: {
@@ -1339,18 +1344,10 @@ zx_status_t fidl_transform(fidl_transformation_t transformation, const fidl_type
       case FIDL_TRANSFORMATION_OLD_TO_V1:
         return OldToV1(&src_dst, type, &debug_info).TransformTopLevelStruct();
       default:
-        debug_info.message = "unsupported transformation";
+        debug_info.RecordFailure(__LINE__, "unsupported transformation");
         return ZX_ERR_INVALID_ARGS;
     }
   }();
-
-  if (debug_info.message) {
-    PrintDebugInfo(debug_info);
-
-    if (out_error_msg)
-      *out_error_msg = debug_info.message;
-  }
-
   return status;
 }
 

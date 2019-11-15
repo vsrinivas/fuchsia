@@ -4231,10 +4231,31 @@ bool regression11_unknown_content() {
   END_TEST;
 }
 
+bool fails_on_bad_transformation() {
+  BEGIN_TEST;
+
+  uint8_t dst_bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+  uint32_t out_dst_num_bytes;
+  const char* error = nullptr;
+  const auto status = fidl_transform(
+      fidl_transformation_t(0x123456789), &example_Sandwich1Table,
+      sandwich1_case1_old, static_cast<uint32_t>(sizeof(sandwich1_case1_old)),
+      dst_bytes, ZX_CHANNEL_MAX_MSG_BYTES, &out_dst_num_bytes,
+      &error);
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_NONNULL(error);
+  ASSERT_STR_STR(error, "unsupported transformation");
+
+  END_TEST;
+}
+
 }  // namespace
 
 // The commented-out tests below currently don't pass.
 BEGIN_TEST_CASE(transformer)
+
+RUN_TEST(fails_on_bad_transformation)
+
 RUN_TEST(simpletablearraystruct)
 RUN_TEST(sandwich1)
 RUN_TEST(sandwich1_with_opt_union_present)
