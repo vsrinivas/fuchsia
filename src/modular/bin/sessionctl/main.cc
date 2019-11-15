@@ -112,8 +112,10 @@ restart_session
 next_session_shell
   Toggles to the next defined session shell.
 
-kill_basemgr
+DEPRECATED
+shutdown_basemgr
   Shutdown the running instance of basemgr.
+  Please use  `basemgr_launcher shutdown` instead.
 
 help
   Lists the available commands.)";

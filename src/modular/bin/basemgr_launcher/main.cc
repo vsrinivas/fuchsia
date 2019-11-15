@@ -22,6 +22,7 @@
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
+constexpr char kShutdownBasemgrCommandString[] = "shutdown";
 
 std::string FindBasemgrDebugService() {
   glob_t globbuf;
@@ -70,7 +71,14 @@ std::string GetUsage() {
 
   Usage:
 
-cat myconfig.json | fx shell basemgr_launcher)";
+cat myconfig.json | fx shell basemgr_launcher
+
+<command>
+shutdown
+  Usage: fx shell basemgr_launcher shutdown
+  Shutdown the running instance of basemgr.
+
+)";
 }
 
 /// Parses configurations from command line into a string. Uses default values if no configuration
@@ -105,12 +113,23 @@ int main(int argc, const char** argv) {
   std::string config_str = "";
   if (argc > 1) {
     const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
-    auto config = GetConfigFromArgs(std::move(command_line));
-    if (config.is_error()) {
-      std::cout << config.error().c_str() << std::endl;
-      return 1;
+    const auto& positional_args = command_line.positional_args();
+    const auto& cmd = positional_args.empty() ? "" : positional_args[0];
+
+    if (cmd.empty()) {
+      auto config = GetConfigFromArgs(std::move(command_line));
+      if (config.is_error()) {
+        std::cout << config.error().c_str() << std::endl;
+        return 1;
+      } else {
+        config_str = config.value();
+      }
+    } else if (cmd == kShutdownBasemgrCommandString) {
+      ShutdownBasemgr();
+      return 0;
     } else {
-      config_str = config.value();
+      std::cout << GetUsage() << std::endl;
+      return 0;
     }
   }
 

@@ -128,3 +128,27 @@ TEST_F(BasemgrLauncherTest, BadArgs) {
   RunLoopUntil([&] { return basemgr_launcher_terminated; });
   EXPECT_FALSE(intercepted);
 }
+
+TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
+  constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
+
+  // Launch and intercept basemgr.
+  RunBasemgrLauncher({});
+
+  // Get the exact service path, which includes a unique id, of the basemgr instance.
+  std::string service_path;
+  RunLoopUntil([&] {
+    files::Glob glob(kBasemgrHubPathForTests);
+    if (glob.size() == 1) {
+      service_path = *glob.begin();
+      return true;
+    }
+    return false;
+  });
+
+  RunBasemgrLauncher({"shutdown"});
+
+  // Check that the instance of basemgr no longer exists in the hub and it did not restart.
+  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
+  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
+}
