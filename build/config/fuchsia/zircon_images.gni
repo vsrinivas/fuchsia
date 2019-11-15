@@ -34,20 +34,29 @@ foreach(image, zircon_images) {
 #     - Type: list(string)
 #
 template("zircon_extras_manifest") {
+  assert(defined(invoker.manifest), "Parameter 'manifest' is required")
+  assert(invoker.manifest == "image" || invoker.manifest == "tests",
+      "Parameter 'manifest' can only be 'image' or 'tests'")
+
+  manifest_deps = [
+    "//build/unification/images:legacy-${invoker.manifest}",
+    "//build/unification/images:migrated-${invoker.manifest}",
+  ]
+  manifest_sources = []
+  foreach(dep, manifest_deps) {
+    out_dir = get_label_info(dep, "target_out_dir")
+    name = get_label_info(dep, "name")
+    manifest_sources += [ "$out_dir/$name.unification.manifest" ]
+  }
+
   action(target_name) {
     forward_variables_from(invoker,
                            [
                              "visibility",
                              "testonly",
                            ])
-    foreach(image, zircon_images) {
-      if (image.type == "manifest" &&
-          image.name == "legacy-${invoker.manifest}-$target_cpu") {
-        sources = [
-          "$zircon_root_build_dir/${image.path}",
-        ]
-      }
-    }
+    sources = manifest_sources
+    deps = manifest_deps
     outputs = [
       "$target_gen_dir/$target_name.manifest",
     ]
@@ -58,7 +67,7 @@ template("zircon_extras_manifest") {
     }
     foreach(manifest, sources) {
       args += [
-        "--cwd=" + rebase_path(get_path_info(manifest, "dir"), root_build_dir),
+        "--cwd=.",
         "--manifest=" + rebase_path(manifest, root_build_dir),
       ]
     }
