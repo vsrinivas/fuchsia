@@ -9,16 +9,6 @@ import("//build/cpp/verify_public_symbols.gni")
 import("//build/fidl/wireformat.gni")
 import("//build/sdk/sdk_atom.gni")
 
-declare_args() {
-  # Whether to set up //zircon/public/lib/* libraries as simple aliases to their
-  # counterparts under //zircon/system/ulib.
-  # This is disabled by default as non-source libraries under that configuration
-  # are getting compiled with GN build settings instead of ZN build settings,
-  # which could introduce subtle issues.
-  # TODO(3203): make aliasing the default behavior.
-  zircon_public_lib_aliases = false
-}
-
 # Define a library in //zircon/public/lib/$target_name/BUILD.gn.
 #
 # zircon_library() is invoked by files copied from template.gn based on
@@ -121,33 +111,9 @@ template("zircon_library") {
       zx_lib_dirs += rebase_path(invoker.lib_dirs, "", zircon_root_build_dir)
     }
   } else {
-    if (zircon_public_lib_aliases) {
-      # Forward to the version of the library under //zircon/system/ulib.
-      # Furthermore, use the static library version of the library to allow
-      # proper compilation of Rust binaries.
-      type = "group"
-      library_deps = []
-      library_public_deps = []
-      if (library == "async-cpp" || library == "async-default") {
-        library_public_deps += [ "//zircon/system/ulib/async:$library.static" ]
-      } else if (library == "async-loop-cpp" ||
-                 library == "async-loop-default") {
-        library_public_deps +=
-            [ "//zircon/system/ulib/async-loop:$library.static" ]
-      } else if (library == "trace-provider-with-fdio") {
-        library_public_deps +=
-            [ "//zircon/system/ulib/trace-provider:$library.static" ]
-      } else if (library == "fidl_base" || library == "fidl-llcpp") {
-        library_public_deps += [ "//zircon/system/ulib/fidl:$library.static" ]
-      } else {
-        library_public_deps += [ "${invoker.dir}:$library.static" ]
-      }
-      not_needed(invoker, [ "sources" ])
-    } else {
-      # A source library is always built for static linking only.
-      # The invoker (i.e. the JSON) specifies `sources`.
-      type = "static_library"
-    }
+    # A source library is always built for static linking only.
+    # The invoker (i.e. the JSON) specifies `sources`.
+    type = "static_library"
   }
 
   # A library() always an include/ directory dependents must use.
@@ -209,10 +175,7 @@ template("zircon_library") {
                              "publishable",
                              "source_dir",
                            ])
-    if (!zircon_public_lib_aliases || is_prebuilt) {
-      # This config is not necessary for aliases to source libraries.
-      public_configs = [ ":$library.config" ]
-    }
+    public_configs = [ ":$library.config" ]
     deps = library_deps
     public_deps = library_public_deps
     if (!is_fuchsia) {
