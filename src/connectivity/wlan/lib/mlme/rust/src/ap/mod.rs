@@ -68,7 +68,7 @@ impl fmt::Display for Rejection {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Self::Client(addr, e) => write!(f, "client {:02X?}: {:?}", addr, e),
-            _ => self.fmt(f),
+            _ => fmt::Debug::fmt(self, f),
         }
     }
 }
@@ -2527,5 +2527,10 @@ mod tests {
                 1, 2, 3,
             ][..]
         );
+    }
+
+    #[test]
+    fn display_rejection() {
+        assert_eq!(format!("{}", Rejection::BadDsBits), "BadDsBits");
     }
 }
