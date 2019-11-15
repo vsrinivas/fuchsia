@@ -79,18 +79,7 @@ typedef struct ktrace_state {
 
 static ktrace_state_t KTRACE_STATE;
 
-bool ktrace_enabled() {
-  // This is the same flag as DebuggingSyscallsEnabled() because there's no
-  // access mechanism for this data when zx_ktrace_* aren't enabled.
-  static bool enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
-  return enabled;
-}
-
 ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
-  if (!ktrace_enabled()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   ktrace_state_t* ks = &KTRACE_STATE;
 
   // Buffer size is limited by the marker if set,
@@ -127,10 +116,6 @@ ssize_t ktrace_read_user(void* ptr, uint32_t off, size_t len) {
 }
 
 zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
-  if (!ktrace_enabled()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
   ktrace_state_t* ks = &KTRACE_STATE;
 
   switch (action) {
@@ -197,18 +182,19 @@ zx_status_t ktrace_control(uint32_t action, uint32_t options, void* ptr) {
 }
 
 void ktrace_init(unsigned level) {
-  if (!ktrace_enabled()) {
-    // There's no utility in setting up ktrace if there's no syscalls to access it.
-    // See zircon/kernel/syscalls/debug.cc for the corresponding syscalls.
-    return;
-  }
 
   ktrace_state_t* ks = &KTRACE_STATE;
+
+  // There's no utility in setting up ktrace if there's no syscalls to access
+  // it. See zircon/kernel/syscalls/debug.cc for the corresponding syscalls.
+  // Note that because KTRACE_STATE grpmask starts at 0 and will not be changed,
+  // the other functions in this file need not check for enabled-ness manually.
+  bool syscalls_enabled = gCmdline.GetBool("kernel.enable-debugging-syscalls", false);
 
   uint32_t mb = gCmdline.GetUInt32("ktrace.bufsize", KTRACE_DEFAULT_BUFSIZE);
   uint32_t grpmask = gCmdline.GetUInt32("ktrace.grpmask", KTRACE_DEFAULT_GRPMASK);
 
-  if (mb == 0) {
+  if (mb == 0 || !syscalls_enabled) {
     dprintf(INFO, "ktrace: disabled\n");
     return;
   }
@@ -259,10 +245,6 @@ void ktrace_init(unsigned level) {
 }
 
 void ktrace_tiny(uint32_t tag, uint32_t arg) {
-  if (!ktrace_enabled()) {
-    return;
-  }
-
   ktrace_state_t* ks = &KTRACE_STATE;
   if (tag & atomic_load(&ks->grpmask)) {
     tag = (tag & 0xFFFFFFF0) | 2;
@@ -280,10 +262,6 @@ void ktrace_tiny(uint32_t tag, uint32_t arg) {
 }
 
 void* ktrace_open(uint32_t tag, uint64_t ts) {
-  if (!ktrace_enabled()) {
-    return nullptr;
-  }
-
   ktrace_state_t* ks = &KTRACE_STATE;
   if (!(tag & atomic_load(&ks->grpmask))) {
     return nullptr;
@@ -306,10 +284,6 @@ void* ktrace_open(uint32_t tag, uint64_t ts) {
 }
 
 void ktrace_name_etc(uint32_t tag, uint32_t id, uint32_t arg, const char* name, bool always) {
-  if (!ktrace_enabled()) {
-    return;
-  }
-
   ktrace_state_t* ks = &KTRACE_STATE;
   if ((tag & atomic_load(&ks->grpmask)) || always) {
     const uint32_t len = static_cast<uint32_t>(strnlen(name, ZX_MAX_NAME_LEN - 1));
