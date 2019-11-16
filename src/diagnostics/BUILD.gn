@@ -13,6 +13,7 @@ group("tests") {
   deps = [
     "archivist:tests",
     "inspect_validator:tests",
+    "inspect_validator/lib/cpp:tests",
     "inspect_validator/lib/rust:tests",
     "iquery:tests",
     "lib:tests",

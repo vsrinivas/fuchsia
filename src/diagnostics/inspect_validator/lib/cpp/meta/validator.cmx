@@ -1,0 +1,18 @@
+{
+    "program": {
+        "args": [
+            "--url",
+            "fuchsia-pkg://fuchsia.com/inspect_validator_test_cpp#meta/inspect_validator_cpp_puppet.cmx",
+            "--output",
+            "text"
+        ],
+        "binary": "test/validator"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

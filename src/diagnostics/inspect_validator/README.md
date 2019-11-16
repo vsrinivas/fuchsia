@@ -18,6 +18,8 @@ fx set core.chromebook-x64 --with '//topaz/bundles:buildbot' --with //src/diagno
 
 The Rust puppet is `--with //src/diagnostics/inspect_validator/lib/rust:tests`.
 
+The C++puppet is `--with //src/diagnostics/inspect_validator/lib/cpp:tests`.
+
 ## Running
 
 Inspect Validator will be run as part of CQ/CI. To run manually, see "Testing".
