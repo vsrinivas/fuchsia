@@ -138,6 +138,9 @@
 
 #![deny(missing_docs)]
 
+#[cfg(not(target_os = "fuchsia"))]
+extern crate argh_shared_for_host as argh_shared;
+
 use std::str::FromStr;
 
 pub use argh_derive::FromArgs;
