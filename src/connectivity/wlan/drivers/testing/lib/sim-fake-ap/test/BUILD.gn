@@ -38,10 +38,27 @@ executable("beacon_unittests") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
+executable("probe_unittests") {
+  output_name = "probe_unittests"
+
+  testonly = true
+
+  sources = [
+    "probe_unittests.cc",
+  ]
+
+  deps = [
+    "//src/connectivity/wlan/drivers/testing/lib/sim-env",
+    "//src/connectivity/wlan/drivers/testing/lib/sim-fake-ap",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+}
+
 unittest_package("wlan-sim-fake-ap-test") {
   deps = [
     ":assoc_unittests",
     ":beacon_unittests",
+    ":probe_unittests",
   ]
 
   tests = [
@@ -51,6 +68,10 @@ unittest_package("wlan-sim-fake-ap-test") {
     },
     {
       name = "beacon_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "probe_unittests"
       environments = basic_envs
     },
   ]

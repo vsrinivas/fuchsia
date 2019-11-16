@@ -76,15 +76,20 @@ class FakeAp : public StationIfc {
                   const common::MacAddr& bssid) override;
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {}
+  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override;
+  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
   void ReceiveNotification(void* payload) override;
 
  private:
   void ScheduleNextBeacon();
   void ScheduleAssocResp(uint16_t status, const common::MacAddr& dst);
+  void ScheduleProbeResp(const common::MacAddr& dst);
 
   // Event handlers
   void HandleBeaconNotification(uint64_t beacon_id);
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
+  void HandleProbeRespNotification(common::MacAddr dst);
 
   // The environment in which this fake AP is operating.
   Environment* environment_;
@@ -106,6 +111,8 @@ class FakeAp : public StationIfc {
 
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);
+  // Delay between an probe request and an probe response
+  zx::duration probe_resp_interval_ = zx::msec(1);
 
   std::list<common::MacAddr> clients_;
 };

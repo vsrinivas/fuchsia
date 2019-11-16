@@ -10,9 +10,8 @@ namespace wlan::simulation {
 
 bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
   // For now, require an exact match
-  return ((channel.primary == chan_.primary)
-          && (channel.cbw == chan_.cbw)
-          && (channel.secondary80 == chan_.secondary80));
+  return ((channel.primary == chan_.primary) && (channel.cbw == chan_.cbw) &&
+          (channel.secondary80 == chan_.secondary80));
 }
 
 void FakeAp::ScheduleNextBeacon() {
@@ -40,6 +39,12 @@ void FakeAp::ScheduleAssocResp(uint16_t status, const common::MacAddr& dst) {
   environment_->ScheduleNotification(this, assoc_resp_interval_, static_cast<void*>(handler));
 }
 
+void FakeAp::ScheduleProbeResp(const common::MacAddr& dst) {
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&FakeAp::HandleProbeRespNotification, this, dst);
+  environment_->ScheduleNotification(this, probe_resp_interval_, static_cast<void*>(handler));
+}
+
 void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
                         const common::MacAddr& bssid) {
   // Make sure we heard the message
@@ -65,6 +70,15 @@ void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& sr
   ScheduleAssocResp(WLAN_STATUS_CODE_SUCCESS, src);
 }
 
+void FakeAp::RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) {
+  // Make sure we heard the message
+  if (!CanReceiveChannel(channel)) {
+    return;
+  }
+
+  ScheduleProbeResp(src);
+}
+
 void FakeAp::HandleBeaconNotification(uint64_t beacon_id) {
   // Check the beacon index to verify that this was not an event that was scheduled for another
   // beacon.
@@ -79,6 +93,10 @@ void FakeAp::HandleBeaconNotification(uint64_t beacon_id) {
 
 void FakeAp::HandleAssocRespNotification(uint16_t status, common::MacAddr dst) {
   environment_->TxAssocResp(this, chan_, bssid_, dst, status);
+}
+
+void FakeAp::HandleProbeRespNotification(common::MacAddr dst) {
+  environment_->TxProbeResp(this, chan_, bssid_, dst, ssid_);
 }
 
 void FakeAp::ReceiveNotification(void* payload) {

@@ -50,6 +50,25 @@ void Environment::TxAssocResp(StationIfc* sender, const wlan_channel_t& channel,
   }
 }
 
+void Environment::TxProbeReq(StationIfc* sender, const wlan_channel_t& channel,
+                             const common::MacAddr& src) {
+  for (auto sta : stations_) {
+    if (sta != sender) {
+      sta->RxProbeReq(channel, src);
+    }
+  }
+}
+
+void Environment::TxProbeResp(StationIfc* sender, const wlan_channel_t& channel,
+                              const common::MacAddr& src, const common::MacAddr& dst,
+                              const wlan_ssid_t& ssid) {
+  for (auto sta : stations_) {
+    if (sta != sender) {
+      sta->RxProbeResp(channel, src, dst, ssid);
+    }
+  }
+}
+
 zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload) {
   // Disallow past events
   if (delay < zx::usec(0)) {

@@ -12,7 +12,7 @@
 namespace wlan::testing {
 
 constexpr wlan_channel_t kDefaultChannel = {
-  .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+    .primary = 9, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
 constexpr wlan_ssid_t kApSsid = {.len = 15, .ssid = "Fuchsia Fake AP"};
 const common::MacAddr kApBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbc});
 const common::MacAddr kClientMacAddr({0x11, 0x22, 0x33, 0x44, 0xee, 0xff});
@@ -31,11 +31,22 @@ class AssocTest : public ::testing::Test, public simulation::StationIfc {
   // StationIfc methods
   void Rx(void* pkt) override { GTEST_FAIL(); }
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
-                const common::MacAddr& bssid) override { GTEST_FAIL(); };
+                const common::MacAddr& bssid) override {
+    GTEST_FAIL();
+  };
   void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
-                  const common::MacAddr& bssid) override { GTEST_FAIL(); }
+                  const common::MacAddr& bssid) override {
+    GTEST_FAIL();
+  }
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override;
+  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
+    GTEST_FAIL();
+  }
+  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {
+    GTEST_FAIL();
+  }
   void ReceiveNotification(void* payload) override;
 };
 
@@ -69,7 +80,7 @@ void AssocTest::ReceiveNotification(void* payload) {
  */
 TEST_F(AssocTest, IgnoredRequests) {
   constexpr wlan_channel_t kWrongChannel = {
-    .primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
+      .primary = 10, .cbw = WLAN_CHANNEL_BANDWIDTH__20, .secondary80 = 0};
   static const common::MacAddr kWrongBssid({0x12, 0x34, 0x56, 0x78, 0x9a, 0xbd});
 
   // Schedule assoc req on different channel

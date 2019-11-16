@@ -44,18 +44,33 @@ class SimStation : public wlan::simulation::StationIfc {
     EXPECT_EQ(bssid, kDefaultBssid);
     beacon_seen_ = true;
   }
+
   void RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& src,
                   const common::MacAddr& bssid) override {
     checkChannel(channel);
     EXPECT_EQ(bssid, kDefaultBssid);
     assoc_req_seen_ = true;
   }
+
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {
     checkChannel(channel);
     EXPECT_EQ(status, kDefaultAssocStatus);
     assoc_resp_seen_ = true;
   }
+
+  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {
+    checkChannel(channel);
+    probe_req_seen_ = true;
+  }
+
+  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {
+    checkChannel(channel);
+    checkSsid(ssid);
+    probe_resp_seen_ = true;
+  }
+
   void ReceiveNotification(void* payload) override {}
 
   static uint8_t instance_count;
@@ -63,6 +78,8 @@ class SimStation : public wlan::simulation::StationIfc {
   bool beacon_seen_ = false;
   bool assoc_req_seen_ = false;
   bool assoc_resp_seen_ = false;
+  bool probe_req_seen_ = false;
+  bool probe_resp_seen_ = false;
 };
 
 uint8_t SimStation::instance_count = 0;
@@ -108,6 +125,21 @@ TEST_F(RxTest, AssocRespTest) {
   EXPECT_EQ(stations_[0].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[1].assoc_resp_seen_, true);
   EXPECT_EQ(stations_[2].assoc_resp_seen_, false);
+}
+
+TEST_F(RxTest, ProbeReqTest) {
+  env_.TxProbeReq(&stations_[1], kDefaultChannel, stations_[1].mac_addr_);
+  EXPECT_EQ(stations_[0].probe_req_seen_, true);
+  EXPECT_EQ(stations_[1].probe_req_seen_, false);
+  EXPECT_EQ(stations_[2].probe_req_seen_, true);
+}
+
+TEST_F(RxTest, ProbeRespTest) {
+  env_.TxProbeResp(&stations_[2], kDefaultChannel, stations_[2].mac_addr_, stations_[0].mac_addr_,
+                   kDefaultSsid);
+  EXPECT_EQ(stations_[0].probe_resp_seen_, true);
+  EXPECT_EQ(stations_[1].probe_resp_seen_, true);
+  EXPECT_EQ(stations_[2].probe_resp_seen_, false);
 }
 
 }  // namespace wlan::testing

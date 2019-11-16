@@ -30,6 +30,13 @@ class StationIfc {
   virtual void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                            const common::MacAddr& dst, uint16_t status) = 0;
 
+  // Receive a Probe request
+  virtual void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) = 0;
+
+  // Receive a Probe response
+  virtual void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                           const common::MacAddr& dst, const wlan_ssid_t& ssid) = 0;
+
   // Receive notification of a simulation event
   virtual void ReceiveNotification(void* payload) = 0;
 };

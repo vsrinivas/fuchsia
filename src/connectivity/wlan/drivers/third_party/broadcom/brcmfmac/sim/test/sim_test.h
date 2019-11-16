@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_SIM_TEST_H_
-#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_SIM_TEST_H_
+#ifndef SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_TEST_SIM_TEST_H_
+#define SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_TEST_SIM_TEST_H_
 
 #include <zircon/types.h>
 
@@ -77,6 +77,9 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
                   const common::MacAddr& bssid) override {}
   void RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status) override {}
+  void RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& src) override {}
+  void RxProbeResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, const wlan_ssid_t& ssid) override {}
   void ReceiveNotification(void* payload) override {}
 
   // Contrived pointer used as a stand-in for the (opaque) parent device
@@ -85,4 +88,4 @@ class SimTest : public ::testing::Test, public simulation::StationIfc {
 
 }  // namespace wlan::brcmfmac
 
-#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_TEST_SIM_TEST_H_
+#endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_SIM_TEST_SIM_TEST_H_

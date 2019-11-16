@@ -77,6 +77,13 @@ class Environment {
   void TxAssocResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, uint16_t status);
 
+  // Send a probe request.
+  void TxProbeReq(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src);
+
+  // Send a probe response.
+  void TxProbeResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
+                   const common::MacAddr& dst, const wlan_ssid_t& ssid);
+
   // Ask for a future notification, time is relative to current time.
   zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload);
 
