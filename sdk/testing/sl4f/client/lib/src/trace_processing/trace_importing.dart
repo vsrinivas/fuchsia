@@ -229,10 +229,13 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   // Sort the events by their timestamp.  We need to iterate through the
   // events in sorted order to compute things such as duration stacks and flow
   // sequences.
-  traceEvents.sort((a, b) => a['ts'].compareTo(b['ts']));
+  extendedTraceEvents.sort((a, b) => a['ts'].compareTo(b['ts']));
 
   int droppedFlowEventCounter = 0;
   int droppedAsyncEventCounter = 0;
+
+  // TODO(41309): Support nested async events.  In the meantime, just drop them.
+  int droppedNestedAsyncEventCounter = 0;
 
   // Process the raw trace events into our model's [Event] representation.
   for (final traceEvent in extendedTraceEvents) {
@@ -400,6 +403,9 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
       _fromJsonCommon(counterEvent, traceEvent);
       counterEvent.id = id;
       resultEvents.add(counterEvent);
+    } else if (phase == 'n') {
+      // TODO(41309): Support nested async events.  In the meantime, just drop them.
+      droppedNestedAsyncEventCounter++;
     } else {
       throw FormatException(
           'Encountered unknown phase $phase from $traceEvent');
@@ -424,6 +430,10 @@ Model _createModelFromJson(Map<String, dynamic> rootObject) {
   }
   if (droppedFlowEventCounter > 0) {
     print('Warning, dropped $droppedFlowEventCounter flow events');
+  }
+  if (droppedNestedAsyncEventCounter > 0) {
+    print(
+        'Warning, dropped $droppedNestedAsyncEventCounter nested async events');
   }
 
   final systemTraceEvents = rootObject['systemTraceEvents'];

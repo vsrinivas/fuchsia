@@ -6,7 +6,7 @@ import 'time_delta.dart';
 
 /// A [TimePoint] represents a point in time represented as an integer number
 /// of nanoseconds elapsed since an arbitrary point in the past.
-class TimePoint {
+class TimePoint implements Comparable<TimePoint> {
   int _ticks = 0;
 
   TimePoint();
@@ -16,14 +16,24 @@ class TimePoint {
 
   TimeDelta toEpochDelta() => TimeDelta.fromNanoseconds(_ticks);
 
+  TimePoint operator +(TimeDelta timeDelta) {
+    return TimePoint._timePoint(_ticks + timeDelta.toNanoseconds());
+  }
+
   TimeDelta operator -(TimePoint other) =>
       TimeDelta.fromNanoseconds(_ticks - other._ticks);
+
+  bool operator <(TimePoint other) => _ticks < other._ticks;
+  bool operator >(TimePoint other) => _ticks > other._ticks;
+  bool operator <=(TimePoint other) => _ticks <= other._ticks;
+  bool operator >=(TimePoint other) => _ticks >= other._ticks;
 
   @override
   bool operator ==(dynamic other) =>
       other is TimePoint && _ticks == other._ticks;
   @override
   int get hashCode => _ticks.hashCode;
+  @override
   int compareTo(TimePoint other) => _ticks.compareTo(other._ticks);
 
   TimePoint._timePoint(this._ticks);

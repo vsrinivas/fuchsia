@@ -7,10 +7,12 @@
 /// We use this instead of the standard Dart [Duration] class because
 /// [Duration] only supports microseconds, and we want to process trace data
 /// with timestamps that have nanosecond granularity.
-class TimeDelta {
+class TimeDelta implements Comparable<TimeDelta> {
   int _delta = 0;
 
   TimeDelta();
+
+  TimeDelta.zero() : this._timeDelta(0);
 
   TimeDelta.fromNanoseconds(num nanoseconds)
       : this._timeDelta(nanoseconds.toInt());
@@ -51,6 +53,7 @@ class TimeDelta {
       other is TimeDelta && _delta == other._delta;
   @override
   int get hashCode => _delta.hashCode;
+  @override
   int compareTo(TimeDelta other) => _delta.compareTo(other._delta);
 
   TimeDelta._timeDelta(this._delta);

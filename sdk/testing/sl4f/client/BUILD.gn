@@ -27,6 +27,11 @@ dart_library("client") {
     "src/ssh.dart",
     "src/storage.dart",
     "src/test.dart",
+    "src/trace_processing/metrics/common.dart",
+    "src/trace_processing/metrics/flutter_frame_stats.dart",
+    "src/trace_processing/metrics/scenic_frame_stats.dart",
+    "src/trace_processing/metrics_results.dart",
+    "src/trace_processing/metrics_spec.dart",
     "src/trace_processing/time_delta.dart",
     "src/trace_processing/time_point.dart",
     "src/trace_processing/trace_importing.dart",
@@ -61,6 +66,7 @@ dart_test("sl4f_client_tests") {
     "storage_test.dart",
     "test_test.dart",
     "trace_processing_test.dart",
+    "trace_processing_test_data.dart",
     "webdriver_test.dart",
   ]
 

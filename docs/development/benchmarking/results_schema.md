@@ -17,13 +17,14 @@ Fuchsia libraries for your language for emitting the JSON data:
 
 * [C/C++]
 * [Go]
+* [Dart]
 
 Note: If your benchmark is in a different language, please provide a reuseable
 library or file a bug against IN to request one.
 
 [C/C++]: /zircon/system/ulib/perftest
 [Go]: /garnet/go/src/benchmarking
-[Dart]: #
+[Dart]: /sdk/testing/sl4f/client/lib/src/trace_processing/metrics_results.dart
 [Rust]: /src/developer/fuchsia-criterion
 [trace-based benchmark]: trace_based_benchmarking.md
 

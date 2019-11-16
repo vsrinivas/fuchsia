@@ -6,147 +6,7 @@ import 'package:test/test.dart';
 
 import 'package:sl4f/trace_processing.dart';
 
-const String _testModelJsonString = '''
-{
-  "displayTimeUnit": "ns",
-  "traceEvents": [
-    {
-      "cat": "io",
-      "name": "AsyncReadWrite",
-      "ts": 697503138,
-      "id": 43,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "b"
-    },
-    {
-      "cat": "io",
-      "name": "Read",
-      "ts": 697503138.9531089,
-      "pid": 7009,
-      "tid": 7021,
-      "ph": "B"
-    },
-    {
-      "cat": "io",
-      "name": "ReadWriteFlow",
-      "ts": 697503139.9531089,
-      "pid": 7009,
-      "tid": 7021,
-      "ph": "s",
-      "id": 0
-    },
-    {
-      "cat": "io",
-      "name": "Write",
-      "ts": 697778328.2160872,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "B"
-    },
-    {
-      "cat": "io",
-      "name": "ReadWriteFlow",
-      "ts": 697779328.2160872,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "t",
-      "id": 0
-    },
-    {
-      "cat": "io",
-      "name": "Read",
-      "ts": 697868185.3588456,
-      "pid": 7010,
-      "tid": 7023,
-      "ph": "B"
-    },
-    {
-      "cat": "io",
-      "name": "ReadWriteFlow",
-      "ts": 697868050.2160872,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "f",
-      "bp": "e",
-      "id": 0
-    },
-    {
-      "cat": "io",
-      "name": "Read",
-      "ts": 697868571.6018075,
-      "pid": 7010,
-      "tid": 7023,
-      "ph": "E"
-    },
-    {
-      "cat": "io",
-      "name": "Write",
-      "ts": 697868582.5994568,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "E"
-    },
-    {
-      "cat": "io",
-      "name": "AsyncReadWrite",
-      "ts": 698607461,
-      "id": 43,
-      "pid": 7009,
-      "tid": 7022,
-      "ph": "e"
-    },
-    {
-      "cat": "io",
-      "name": "Read",
-      "ts": 698607461.7395687,
-      "pid": 7009,
-      "tid": 7021,
-      "ph": "E"
-    },
-    {
-      "cat": "log",
-      "name": "log",
-      "ph": "i",
-      "ts": 698607465.312,
-      "pid": 7009,
-      "tid": 7021,
-      "s": "g",
-      "args": {
-        "message": "[INFO:trace_manager.cc(66)] Stopping trace"
-      }
-    },
-    {
-      "cat": "system_metrics",
-      "name": "cpu_usage",
-      "ts": 698607465.375,
-      "pid": 7010,
-      "tid": 7023,
-      "ph": "C",
-      "args": {
-        "average_cpu_percentage": 0.89349317793,
-        "max_cpu_usage": 0.1234
-      }
-    }
-  ],
-  "systemTraceEvents": {
-    "type": "fuchsia",
-    "events": [
-      {
-        "ph": "p",
-        "pid": 7009,
-        "name": "root_presenter"
-      },
-      {
-        "ph": "t",
-        "pid": 7009,
-        "tid": 7022,
-        "name": "initial-thread"
-      }
-    ]
-  }
-}
-''';
+import 'trace_processing_test_data.dart';
 
 Model _getTestModel() {
   final readEvent = DurationEvent()
@@ -412,11 +272,107 @@ void _checkModelsEqual(Model a, Model b) {
   }
 }
 
+Matcher _closeTo(num value, {num delta = 1e-5}) => closeTo(value, delta);
+
 void main(List<String> args) {
   test('Create trace model', () async {
     final testModel = _getTestModel();
     final testModelFromJsonString =
-        createModelFromJsonString(_testModelJsonString);
+        createModelFromJsonString(testModelJsonString);
     _checkModelsEqual(testModel, testModelFromJsonString);
+  });
+
+  test('Filter events', () async {
+    final events = [
+      DurationEvent()
+        ..category = 'cat_a'
+        ..name = 'name_a',
+      DurationEvent()
+        ..category = 'cat_b'
+        ..name = 'name_b',
+    ];
+
+    final filtered = filterEvents(events, category: 'cat_a', name: 'name_a');
+    expect(filtered, equals([events.first]));
+
+    final filtered2 =
+        filterEvents(events, category: 'cat_c', name: 'name_c').toList();
+    expect(filtered2, equals([]));
+  });
+
+  test('Filter events typed', () async {
+    final events = [
+      DurationEvent()
+        ..category = 'cat_a'
+        ..name = 'name_a',
+      DurationEvent()
+        ..category = 'cat_b'
+        ..name = 'name_b',
+    ];
+
+    final filtered = filterEventsTyped<DurationEvent>(events,
+        category: 'cat_a', name: 'name_a');
+    expect(filtered, equals([events.first]));
+
+    final filtered2 = filterEventsTyped<DurationEvent>(events,
+        category: 'cat_c', name: 'name_c');
+    expect(filtered2, equals([]));
+
+    final filtered3 = filterEventsTyped<InstantEvent>(events,
+        category: 'cat_a', name: 'name_a');
+    expect(filtered3, equals([]));
+  });
+
+  test('Compute stats', () async {
+    expect(computeMean([1.0, 2.0, 3.0]), _closeTo(2.0));
+
+    expect(computeVariance([1.0, 2.0, 3.0]), _closeTo(0.6666666666666666));
+
+    expect(
+        computeStandardDeviation([1.0, 2.0, 3.0]), _closeTo(0.816496580927726));
+    expect(computePercentile([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], 25),
+        _closeTo(3.0));
+    expect(computePercentile([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], 50),
+        _closeTo(5.0));
+    expect(computePercentile([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0], 75),
+        _closeTo(7.0));
+    expect(
+        computePercentile(
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 25),
+        _closeTo(3.25));
+    expect(
+        computePercentile(
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 50),
+        _closeTo(5.5));
+    expect(
+        computePercentile(
+            [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0], 75),
+        _closeTo(7.75));
+
+    expect(computeMax([1.0, 2.0, 3.0]), _closeTo(3.0));
+    expect(computeMin([1.0, 2.0, 3.0]), _closeTo(1.0));
+
+    expect(differenceValues([1.0, 2.0, 3.0]), equals([1.0, 1.0]));
+  });
+
+  test('Flutter frame stats metric', () async {
+    final model = createModelFromJsonString(flutterAppTraceJsonString);
+    final metricsSpec = MetricsSpec(
+        name: 'flutter_frame_stats',
+        extraArgs: {'flutterAppName': 'flutter_app'});
+    final results = flutterFrameStatsMetricsProcessor(model, metricsSpec);
+
+    expect(results[0].values[0], _closeTo(57.65979623262868));
+    expect(computeMean(results[1].values), _closeTo(1.1693780864197532));
+    expect(computeMean(results[2].values), _closeTo(2.0420014880952384));
+  });
+
+  test('Scenic frame stats metric', () async {
+    final model = createModelFromJsonString(scenicTraceJsonString);
+    final metricsSpec = MetricsSpec(name: 'scenic_frame_stats');
+    final results = scenicFrameStatsMetricsProcessor(model, metricsSpec);
+
+    expect(results[0].values[0], _closeTo(51.194623115724056));
+    expect(computeMean(results[1].values), _closeTo(1.0750221759999996));
   });
 }
