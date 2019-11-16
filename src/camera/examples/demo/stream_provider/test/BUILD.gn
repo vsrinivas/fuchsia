@@ -19,5 +19,6 @@ executable("test") {
     "//src/lib/syslog/cpp",
     "//third_party/boringssl:crypto",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }

@@ -7,13 +7,14 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "stream_provider.h"
 
 class ManagerStreamProvider : public StreamProvider {
  public:
-  ManagerStreamProvider() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+  ManagerStreamProvider() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
   ~ManagerStreamProvider();
   static std::unique_ptr<StreamProvider> Create();
   virtual std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2,

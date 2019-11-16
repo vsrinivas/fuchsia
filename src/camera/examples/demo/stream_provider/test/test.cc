@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <stream_provider.h>
 
 #include <iostream>
@@ -26,7 +27,7 @@ std::string Hash(const void* data, size_t size) {
 
 class StreamProviderTest : public testing::TestWithParam<StreamProvider::Source> {
  protected:
-  StreamProviderTest() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  StreamProviderTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
 
   virtual void SetUp() override {
     auto source = GetParam();

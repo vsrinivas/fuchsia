@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <src/lib/syslog/cpp/logger.h>
 #include <src/lib/ui/base_view/view_provider_component.h>
@@ -12,7 +13,7 @@
 int main(int argc, const char** argv) {
   syslog::InitLogger({"camera_demo"});
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   // Chaos mode adds random delays between frame acquisition, presentation, and release.
   bool chaos = false;
