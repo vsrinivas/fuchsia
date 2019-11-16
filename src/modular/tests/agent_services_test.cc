@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/modular/testing/cpp/fidl.h>
+#include <fuchsia/testing/modular/cpp/fidl.h>
 
-#include "fuchsia/modular/session/cpp/fidl.h"
+#include <sdk/lib/modular/testing/cpp/fake_agent.h>
+
+#include "out/default/fidling/gen/src/modular/tests/fuchsia/testing/modular/cpp/fidl.h"
 #include "src/modular/lib/modular_test_harness/cpp/test_harness_fixture.h"
 
 namespace {
 
-const std::string kTestAgentUrl(
-    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx");
-const std::string kTestServiceName(fuchsia::modular::Clipboard::Name_);
+const std::string kTestAgentUrl("fuchsia-pkg://fuchsia.com/fake_agent#meta/fake_agent.cmx");
+const std::string kTestServiceName(fuchsia::testing::modular::TestProtocol::Name_);
 
 // Configuration for testing |ComponentContext| ConnectToAgentService().
 struct ConnectToAgentServiceTestConfig {
@@ -56,20 +59,10 @@ struct ConnectToAgentServiceTestConfig {
   }
 };
 
-// Expected test results.
-struct ConnectToAgentServiceExpect {
-  // If true, the test should connect to the test agent and the requested
-  // named service, send a test value, "peek" at the current value, and verify
-  // the value is the same.
-  bool got_peek_content = false;
-
-  // If set to an error code, the service channel should receive the given
-  // error.
-  zx_status_t service_status = ZX_OK;
-};
-
 class AgentServicesTest : public modular_testing::TestHarnessFixture {
  protected:
+  AgentServicesTest() : fake_agent_(modular_testing::FakeAgent::CreateWithDefaultOptions()) {}
+
   fuchsia::modular::ComponentContextPtr StartTestHarness(
       ConnectToAgentServiceTestConfig test_config) {
     fuchsia::modular::testing::TestHarnessSpec spec;
@@ -85,10 +78,27 @@ class AgentServicesTest : public modular_testing::TestHarnessFixture {
 
     spec.mutable_sessionmgr_config()->set_agent_service_index(std::move(agent_service_index));
 
+    fuchsia::modular::testing::InterceptSpec intercept_spec;
+    intercept_spec.set_component_url(kTestAgentUrl);
+    spec.mutable_components_to_intercept()->push_back(std::move(intercept_spec));
+
+    test_harness().events().OnNewComponent =
+        [this](fuchsia::sys::StartupInfo startup_info,
+               fidl::InterfaceHandle<fuchsia::modular::testing::InterceptedComponent> component) {
+          ASSERT_EQ(startup_info.launch_info.url, kTestAgentUrl);
+          fake_agent_->BuildInterceptOptions().launch_handler(std::move(startup_info),
+                                                              component.Bind());
+        };
+    fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>
+        service_handler =
+            [this](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+              if (fake_agent_service_handler_) {
+                fake_agent_service_handler_(std::move(request));
+              }
+            };
+    fake_agent_->AddAgentService(std::move(service_handler));
     test_harness()->Run(std::move(spec));
 
-    // Create a new story -- this should auto-start the story (because of
-    // test_session_shell's behaviour), and launch a new story shell.
     fuchsia::modular::ComponentContextPtr component_context;
     fuchsia::modular::testing::ModularService modular_service;
     modular_service.set_component_context(component_context.NewRequest());
@@ -97,52 +107,53 @@ class AgentServicesTest : public modular_testing::TestHarnessFixture {
     return component_context;
   }
 
-  // Called by test functions to test various input configurations.
+  // Called by test functions to invoke ConnectToAgentService with various input configurations.
+  //
   // |test_config| Input configurations and setup options.
-  // |expect| Expected results to compare to actual results for the test to
-  // confirm.
-  void ExecuteConnectToAgentServiceTest(ConnectToAgentServiceTestConfig test_config,
-                                        ConnectToAgentServiceExpect expect) {
-    const std::string kTestContent("Test clipboard content");
-
+  zx_status_t ExecuteConnectToAgentServiceTest(ConnectToAgentServiceTestConfig test_config) {
     fuchsia::modular::ComponentContextPtr component_context = StartTestHarness(test_config);
 
     // Client-side service pointer
-    fuchsia::modular::ClipboardPtr clipboard_service_ptr;
-    auto service_name = clipboard_service_ptr->Name_;
-    auto service_request = clipboard_service_ptr.NewRequest();
+    fuchsia::testing::modular::TestProtocolPtr service_ptr;
+    auto service_name = kTestServiceName;
+    auto service_request = service_ptr.NewRequest();
     zx_status_t service_status = ZX_OK;
-    clipboard_service_ptr.set_error_handler(
-        [&service_status](zx_status_t status) { service_status = status; });
+    bool service_terminated = false;
+    service_ptr.set_error_handler([&](zx_status_t status) {
+      service_terminated = true;
+      service_status = status;
+    });
 
-    // standard AgentController initialization
+    bool got_request = false;
+    fake_agent_service_handler_ =
+        [&](fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
+          got_request = true;
+        };
+
     fuchsia::modular::AgentControllerPtr agent_controller;
-    zx_status_t agent_controller_status = ZX_OK;
-    agent_controller.set_error_handler(
-        [&agent_controller_status](zx_status_t status) { agent_controller_status = status; });
-
     auto agent_service_request = test_config.MakeAgentServiceRequest(
         service_name, std::move(service_request), agent_controller.NewRequest());
     component_context->ConnectToAgentService(std::move(agent_service_request));
 
-    clipboard_service_ptr->Push(kTestContent);
-    bool got_peek_content = false;
-    clipboard_service_ptr->Peek([&](fidl::StringPtr content) {
-      ASSERT_TRUE(content.has_value());
-      got_peek_content = true;
-      EXPECT_EQ(content.value(), kTestContent);
-    });
+    RunLoopUntil([&] { return got_request || service_terminated; });
+    fake_agent_service_handler_ = nullptr;  // Callback references local variables.
 
-    RunLoopUntil([&] {
-      return got_peek_content || service_status != ZX_OK ||
-             (expect.service_status == ZX_OK && agent_controller_status != ZX_OK);
-      // The order of error callbacks is non-deterministic. If checking for a
-      // specific service error, wait for it.
-    });
+    // Speed up teardown of the test by eagerly terminating the fake agent.
+    fake_agent_->Exit(0);
 
-    EXPECT_EQ(got_peek_content, expect.got_peek_content);
-    EXPECT_EQ(service_status, expect.service_status);
+    // If we got the service request, then routing of the agent service request was successful, even
+    // though at this point we have already closed the service channel.
+    if (got_request) {
+      return ZX_OK;
+    } else {
+      EXPECT_NE(service_status, ZX_OK);
+    }
+    return service_status;
   }
+
+  std::unique_ptr<modular_testing::FakeAgent> fake_agent_;
+  fit::function<void(fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol>)>
+      fake_agent_service_handler_;
 };
 
 // Ensure Session Manager's ConnectToAgentService can successfully find an
@@ -157,10 +168,7 @@ TEST_F(AgentServicesTest, ValidAndSuccessfulOneEntry) {
       {kTestServiceName, kTestAgentUrl},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.got_peek_content = true;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Find agent and service successfully among multiple index entries.
@@ -178,10 +186,7 @@ TEST_F(AgentServicesTest, ValidAndSuccessfulMultipleEntries) {
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.got_peek_content = true;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Find service successfully, from a specific handler. The index specifies this
@@ -201,10 +206,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasService) {
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.got_peek_content = true;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Find service successfully, from a specific handler. The index does not
@@ -224,10 +226,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButNotInIndex) {
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.got_peek_content = true;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Find service successfully, from a specific handler. The index specifies
@@ -246,10 +245,7 @@ TEST_F(AgentServicesTest, SpecificHandlerProvidedHasServiceButIndexHasDifferentH
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.got_peek_content = true;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_OK, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Bad request
@@ -264,10 +260,7 @@ TEST_F(AgentServicesTest, NoServiceNameProvided) {
        "fuchsia-pkg://fuchsia.com/feedback_agent#meta/feedback_agent.cmx"},
   };
 
-  ConnectToAgentServiceExpect expect;
-  expect.service_status = ZX_ERR_PEER_CLOSED;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Bad request
@@ -277,10 +270,7 @@ TEST_F(AgentServicesTest, NoChannelProvided) {
   // test_config.provide_channel = true;
   test_config.provide_agent_controller = true;
 
-  ConnectToAgentServiceExpect expect;
-  expect.service_status = ZX_ERR_PEER_CLOSED;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Bad request
@@ -290,10 +280,7 @@ TEST_F(AgentServicesTest, NoAgentControllerProvided) {
   test_config.provide_channel = true;
   // test_config.provide_agent_controller = true;
 
-  ConnectToAgentServiceExpect expect;
-  expect.service_status = ZX_ERR_PEER_CLOSED;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_ERR_PEER_CLOSED, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 // Attempt to look up the agent based on the service name, but it is not in
@@ -304,10 +291,7 @@ TEST_F(AgentServicesTest, NoHandlerForService) {
   test_config.provide_channel = true;
   test_config.provide_agent_controller = true;
 
-  ConnectToAgentServiceExpect expect;
-  expect.service_status = ZX_ERR_NOT_FOUND;
-
-  ExecuteConnectToAgentServiceTest(test_config, expect);
+  EXPECT_EQ(ZX_ERR_NOT_FOUND, ExecuteConnectToAgentServiceTest(test_config));
 }
 
 }  // namespace

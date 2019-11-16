@@ -6,6 +6,7 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
@@ -33,9 +34,9 @@ namespace {
 
 using ::sys::testing::FakeLauncher;
 
-// The choice of "Clipboard" as the test service is arbitrary, but the
+// The choice of "TestProtocol" as the test service is arbitrary, but the
 // ConnectToAgentService() tests require an existing service type.
-const char* kTestAgentService = fuchsia::modular::Clipboard::Name_;
+const char* kTestAgentService = fuchsia::testing::modular::TestProtocol::Name_;
 constexpr char kTestAgentUrl[] = "file:///my_agent";
 
 // Configuration for testing |ComponentContext| ConnectToAgentService().
@@ -188,7 +189,7 @@ class AgentRunnerTest : public TestWithLedger {
   void execute_connect_to_agent_service_test(ConnectToAgentServiceTestConfig test_config,
                                              ConnectToAgentServiceExpect expect) {
     // Client-side service pointer
-    fuchsia::modular::ClipboardPtr service_ptr;
+    fuchsia::testing::modular::TestProtocolPtr service_ptr;
     auto service_name = service_ptr->Name_;
     auto service_request = service_ptr.NewRequest();
     zx_status_t service_status = ZX_OK;
@@ -205,10 +206,10 @@ class AgentRunnerTest : public TestWithLedger {
     // request
     auto services_ptr = std::make_unique<component::ServiceNamespace>();
     bool agent_got_service_request = false;
-    services_ptr->AddService<fuchsia::modular::Clipboard>(
+    services_ptr->AddService<fuchsia::testing::modular::TestProtocol>(
         [&agent_got_service_request,
          client_request_koid = get_object_koid(service_request.channel().get())](
-            fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+            fidl::InterfaceRequest<fuchsia::testing::modular::TestProtocol> request) {
           auto server_request_koid = get_object_koid(request.channel().get());
           EXPECT_EQ(server_request_koid, client_request_koid);
           agent_got_service_request = true;
