@@ -197,31 +197,41 @@ class Sl4f {
     }
   }
 
-  Future<void> _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
+  Future _dumpDiagnostic(String cmd, String dumpName, Dump dump) async {
     final proc = await ssh.start(cmd);
     unawaited(proc.stdin.close());
 
+    // Pipe stdout directly to the file sink (it gets closed when done).
     final sink = dump.openForWrite(dumpName, 'txt');
-    final dumpFuture = Future(() async {
-      await sink.addStream(proc.stdout);
-      await sink.flush();
-      await sink.close();
-    });
+    final dumpFuture = proc.stdout.pipe(sink);
 
-    final exitCode =
-        await proc.exitCode.timeout(_diagnosticTimeout, onTimeout: () {
-      _log.warning('$cmd; did not complete after $_diagnosticTimeout');
-      proc.kill();
-      return 0;
-    });
+    // Start decoding the stderr stream to ensure something consumes it,
+    // otherwise it could cause dart to hang waiting for it to be consumed.
+    final stderr = systemEncoding.decodeStream(proc.stderr);
 
-    if (exitCode != 0) {
-      _log
-        ..warning('$cmd; exit code: $exitCode')
-        ..warning(await systemEncoding.decodeStream(proc.stderr));
+    // Print something about the process in case it fails.
+    Future<void> exitCode() async {
+      final code = await proc.exitCode;
+      if (code != 0) {
+        _log
+          ..warning('$cmd; exit code: $code')
+          ..warning('stderr: ${await stderr}');
+      }
     }
 
-    await dumpFuture;
+    // Await for all three of the above at the same time, this ensures that the
+    // process outputs get consumed.
+    return Future.wait([
+      dumpFuture,
+      stderr,
+      // If the process takes too long we kill it. Note that because futures are
+      // not cancellable, the check in [exitCode] still executes.
+      exitCode(),
+    ]).timeout(_diagnosticTimeout, onTimeout: () {
+      _log.warning('$cmd; did not complete after $_diagnosticTimeout');
+      proc.kill(ProcessSignal.sigkill);
+      return [];
+    });
   }
 
   /// Sends an empty http request to the server to verify if it's listening on

@@ -66,10 +66,13 @@ void main() {
       FakeAsync().run((async) {
         final dump = MockDump();
         final ssh = MockSsh();
+        // ignore: close_sinks
+        final mockIOSink = MockIOSink();
         final sl4f = Sl4f('', ssh);
 
         when(dump.hasDumpDirectory).thenReturn(true);
-        when(dump.openForWrite(any, any)).thenAnswer((_) => MockIOSink());
+        when(dump.openForWrite(any, any)).thenAnswer((_) => mockIOSink);
+        when(mockIOSink.addStream(any)).thenAnswer((_) async => null);
         when(ssh.start(any)).thenAnswer((_) =>
             // Use sleep 60 (1 minute) to simulate a hanging process. The sleep
             // occurs in system time whereas our test executes in fake time
