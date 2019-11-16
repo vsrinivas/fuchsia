@@ -120,6 +120,21 @@ AudioRendererImpl::SnapshotCurrentTimelineFunction(int64_t reference_time) {
   return {std::make_pair(ref_clock_to_frac_frames_, ref_clock_to_frac_frames_gen_.get())};
 }
 
+zx_status_t AudioRendererImpl::InitializeDestLink(const fbl::RefPtr<AudioLink>& link) {
+  TRACE_DURATION("audio", "AudioRendererImpl::InitializeDestLink");
+  auto queue = fbl::MakeRefCounted<PacketQueue>(*format());
+  packet_queues_.insert({link.get(), queue});
+  link->set_stream(std::move(queue));
+  return ZX_OK;
+}
+
+void AudioRendererImpl::CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {
+  TRACE_DURATION("audio", "AudioRendererImpl::CleanupDestLink");
+  auto it = packet_queues_.find(link.get());
+  FX_CHECK(it != packet_queues_.end());
+  packet_queues_.erase(it);
+}
+
 void AudioRendererImpl::RecomputeMinLeadTime() {
   TRACE_DURATION("audio", "AudioRendererImpl::RecomputeMinLeadTime");
   zx::duration cur_lead_time;
@@ -163,11 +178,13 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
 bool AudioRendererImpl::IsOperating() {
   TRACE_DURATION("audio", "AudioRendererImpl::IsOperating");
 
-  return ForAnyDestLink([](auto& link) {
-    // If pending queue empty: this link is NOT operating; ask other links.
-    // Else: Link IS operating; final answer is YES; no need to ask others.
-    return !AsPacketSource(link).pending_queue_empty();
-  });
+  for (const auto& [_, packet_queue] : packet_queues_) {
+    // If the packet queue is not empty then this link _is_ operating.
+    if (!packet_queue->empty()) {
+      return true;
+    }
+  }
+  return false;
 }
 
 bool AudioRendererImpl::ValidateConfig() {
@@ -601,9 +618,9 @@ void AudioRendererImpl::SendPacket(fuchsia::media::StreamPacket packet,
   next_frac_frame_pts_ = packet_ref->end_pts();
 
   // Distribute our packet to all our dest links
-  ForEachDestLink([moved_packet = std::move(packet_ref)](auto& link) {
-    AsPacketSource(link).PushToPendingQueue(moved_packet);
-  });
+  for (auto& [_, packet_queue] : packet_queues_) {
+    packet_queue->PushPacket(packet_ref);
+  }
 
   // Things went well, cancel the cleanup hook.
   cleanup.cancel();
@@ -638,9 +655,9 @@ void AudioRendererImpl::DiscardAllPackets(DiscardAllPacketsCallback callback) {
   // Tell each link to flush. If link is currently processing pending data, it will take a reference
   // to the flush token and ensure a callback is queued at the proper time (after all pending
   // packet-complete callbacks are queued).
-  ForEachDestLink([moved_token = std::move(flush_token)](auto& link) {
-    AsPacketSource(link).FlushPendingQueue(moved_token);
-  });
+  for (auto& [_, packet_queue] : packet_queues_) {
+    packet_queue->Flush(flush_token);
+  }
 
   // Invalidate any internal state which gets reset after a flush. We set next_frac_frame_pts_
   // (ref_time specified in fractional PTS subframes, corresponding to when the next packet should

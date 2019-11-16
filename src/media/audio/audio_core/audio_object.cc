@@ -9,8 +9,6 @@
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/audio_device.h"
 #include "src/media/audio/audio_core/audio_link.h"
-#include "src/media/audio/audio_core/audio_link_packet_source.h"
-#include "src/media/audio/audio_core/audio_link_ring_buffer_source.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 
 namespace media::audio {
@@ -34,14 +32,8 @@ fbl::RefPtr<AudioLink> AudioObject::LinkObjects(const fbl::RefPtr<AudioObject>& 
   FX_DCHECK((source->type() != AudioObject::Type::Output) ||
             (dest->type() != AudioObject::Type::Output));
 
-  // Create a link of the appropriate type based on our source.
-  fbl::RefPtr<AudioLink> link;
-  if (source->type() == AudioObject::Type::AudioRenderer) {
-    FX_DCHECK(source->format_valid());
-    link = AudioLinkPacketSource::Create(source, dest, source->format());
-  } else {
-    link = AudioLinkRingBufferSource::Create(source, dest);
-  }
+  // Create the link.
+  fbl::RefPtr<AudioLink> link = fbl::MakeRefCounted<AudioLink>(source, dest);
 
   // Give source and destination a chance to initialize (or reject) the link.
   zx_status_t res;
@@ -81,6 +73,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
     std::lock_guard<std::mutex> slock(source->links_lock_);
     auto iter = source->dest_links_.find(link.get());
     if (iter != source->dest_links_.end()) {
+      source->CleanupDestLink(link);
       source->dest_links_.erase(iter);
     }
   }
@@ -91,6 +84,7 @@ void AudioObject::RemoveLink(const fbl::RefPtr<AudioLink>& link) {
     std::lock_guard<std::mutex> dlock(dest->links_lock_);
     auto iter = dest->source_links_.find(link.get());
     if (iter != dest->source_links_.end()) {
+      dest->CleanupSourceLink(link);
       dest->source_links_.erase(iter);
     }
   }
@@ -159,12 +153,6 @@ void AudioObject::UnlinkDestinations() {
   }
   UnlinkCleanup<AudioLink::Dest>(&old_links);
 }
-
-zx_status_t AudioObject::InitializeSourceLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
-
-zx_status_t AudioObject::InitializeDestLink(const fbl::RefPtr<AudioLink>&) { return ZX_OK; }
-
-void AudioObject::OnLinkAdded() {}
 
 template <typename TagType>
 void AudioObject::UnlinkCleanup(typename AudioLink::Set<TagType>* links) {

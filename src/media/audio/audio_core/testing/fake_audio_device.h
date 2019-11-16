@@ -23,6 +23,10 @@ class FakeAudioDevice : public AudioDevice {
   bool driver_stop_complete() { return driver_stop_complete_; }
   std::pair<bool, zx::time> driver_plug_state() { return {driver_plug_state_, driver_plug_time_}; }
 
+  // Expose these for the tests.
+  using AudioDevice::ForEachDestLink;
+  using AudioDevice::ForEachSourceLink;
+
   // |media::audio::AudioDevice|
   void ApplyGainLimits(fuchsia::media::AudioGainInfo* in_out_info, uint32_t set_flags) override {}
   void OnWakeup() override {}

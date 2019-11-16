@@ -4,6 +4,7 @@
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
 
 #include <lib/fzl/vmar-manager.h>
+#include <lib/zx/vmo.h>
 
 #include <gtest/gtest.h>
 
@@ -66,6 +67,19 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
     renderer_->SetPcmStreamType(stream_type);
   }
 
+  // Creates a new payload buffer of |size| bytes and registers it with the renderer with |id|.
+  //
+  // A handle to the new VMO is returned.
+  zx::vmo AddPayloadBuffer(uint32_t id, size_t size) {
+    zx::vmo vmo;
+    EXPECT_EQ(ZX_OK, zx::vmo::create(size, 0, &vmo));
+
+    zx::vmo duplicate;
+    EXPECT_EQ(ZX_OK, vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &duplicate));
+    renderer_->AddPayloadBuffer(id, std::move(duplicate));
+    return vmo;
+  }
+
   void TearDown() override {
     // Dropping the channel queues up a reference to the Renderer through its error handler, which
     // will not work since the rest of this class is destructed before the loop and its
@@ -119,6 +133,42 @@ TEST_F(AudioRendererImplTest, MinLeadTimePadding) {
   RunLoopUntilIdle();
   ASSERT_NE(lead_time_ns, kInvalidLeadTimeNs) << "No response received for GetMinLeadTime";
   EXPECT_EQ(lead_time_ns, kMinLeadTime.to_nsecs()) << "Incorrect GetMinLeadTime received";
+}
+
+TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
+  auto fake_output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+
+  route_graph_.AddRenderer(renderer_);
+  route_graph_.AddOutput(fake_output.get());
+
+  SetPcmStreamType();
+  AddPayloadBuffer(0, PAGE_SIZE);
+  fuchsia::media::StreamPacket packet;
+  packet.payload_buffer_id = 0;
+  packet.payload_offset = 0;
+  packet.payload_offset = 128;
+  renderer_->SendPacketNoReply(std::move(packet));
+
+  ASSERT_EQ(1u, fake_output->source_link_count());
+  fake_output->ForEachSourceLink([](auto& link) {
+    auto stream = link.stream();
+    ASSERT_TRUE(stream);
+
+    {  // Expect a packet.
+      bool was_flushed = false;
+      auto pkt = stream->LockPacket(&was_flushed);
+      EXPECT_TRUE(was_flushed);
+      ASSERT_TRUE(pkt);
+      EXPECT_EQ(0u, pkt->payload_buffer_id());
+      stream->UnlockPacket(true);
+    }
+    {  // No more packets
+      bool was_flushed = true;
+      auto pkt = stream->LockPacket(&was_flushed);
+      EXPECT_FALSE(was_flushed);
+      ASSERT_FALSE(pkt);
+    }
+  });
 }
 
 }  // namespace

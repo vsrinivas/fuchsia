@@ -93,25 +93,26 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   // Initialize(Source|Dest)Link
   //
-  // Called on the AudioCore's main message loop any time a source and a
-  // destination are being linked via AudioObject::LinkObjects. By default,
-  // these hooks do nothing, but AudioObject subclasses may use them to set the
-  // properties of a link (or reject the link) before the link gets added to the
-  // source and destination link sets.
+  // Called on the AudioCore's main message loop any time a source and a destination are being
+  // linked via AudioObject::LinkObjects. By default, these hooks do nothing, but AudioObject
+  // subclasses may use them to set the properties of a link (or reject the link) before the link
+  // gets added to the source and destination link sets.
   //
-  // For example, Sources like an AudioRenderer override InitializeDestLink in
-  // order to set the source gain and to make a copy of their pending packet
-  // queue. Destinations like an output override InitializeSourceLink in order
-  // to choose and initialize an appropriate resampling filter.
+  // For example, Sources like an AudioRenderer override InitializeDestLink in order to set the
+  // source gain and to make a copy of their pending packet queue. Destinations like an output
+  // override InitializeSourceLink in order to choose and initialize an appropriate resampling
+  // filter.
   //
-  // @return MediaResult::OK if initialization succeeded, or an appropriate
-  // error code otherwise.
-  virtual zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link);
-  virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link);
+  // Returns ZX_OK if initialization succeeded, or an appropriate error code otherwise.
+  virtual zx_status_t InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) { return ZX_OK; }
+  virtual zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) { return ZX_OK; }
+
+  virtual void CleanupSourceLink(const fbl::RefPtr<AudioLink>& link) {}
+  virtual void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {}
 
   // Called immediately after a new link is added to the object.
   // TODO(39961): Should become OnLinksChanged.
-  virtual void OnLinkAdded();
+  virtual void OnLinkAdded() {}
 
   std::mutex links_lock_;
 

@@ -24,17 +24,13 @@ std::optional<VolumeCurve> SelectVolumeCurve(std::optional<VolumeCurve> curve_a,
 
 }  // namespace
 
-AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
-                     fbl::RefPtr<AudioObject> dest)
-    : source_type_(source_type),
-      source_(std::move(source)),
+AudioLink::AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest)
+    : source_(std::move(source)),
       dest_(std::move(dest)),
       valid_(true),
       volume_curve_(SelectVolumeCurve(source_->GetVolumeCurve(), dest_->GetVolumeCurve())) {
   // Only outputs and AudioCapturers may be destinations.
   FX_DCHECK(dest_ != nullptr);
-  FX_DCHECK((dest_->type() == AudioObject::Type::Output) ||
-            (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
 const VolumeCurve& AudioLink::volume_curve() const {

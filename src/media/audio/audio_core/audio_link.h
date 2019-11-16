@@ -12,6 +12,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/audio_core/mixer/mixer.h"
+#include "src/media/audio/audio_core/stream.h"
 #include "src/media/audio/audio_core/volume_curve.h"
 
 namespace media::audio {
@@ -35,18 +36,16 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   struct KeyTraits;
 
  public:
+  static fbl::RefPtr<AudioLink> Create(fbl::RefPtr<AudioObject> source,
+                                       fbl::RefPtr<AudioObject> dest);
+
   using Source = AudioLinkSourceTag;
   using Dest = AudioLinkDestTag;
 
   template <typename TagType>
   using Set = fbl::TaggedWAVLTree<const AudioLink*, fbl::RefPtr<AudioLink>, TagType>;
 
-  enum class SourceType {
-    Packet,
-    RingBuffer,
-  };
-
-  virtual ~AudioLink() = default;
+  AudioLink(fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
 
   const fbl::RefPtr<AudioObject>& GetSource() const { return source_; }
   const fbl::RefPtr<AudioObject>& GetDest() const { return dest_; }
@@ -55,8 +54,8 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   // volume to gain. Both ends of a link cannot have mappings as this would be irreconcilable.
   const VolumeCurve& volume_curve() const;
   Gain& gain() { return mixer()->bookkeeping().gain; }
-
-  SourceType source_type() const { return source_type_; }
+  const fbl::RefPtr<Stream>& stream() const { return stream_; }
+  void set_stream(fbl::RefPtr<Stream> stream) { stream_ = std::move(stream); }
 
   // Sources invalidate links when they change format or go away.
   void Invalidate() { valid_.store(false); }
@@ -67,18 +66,16 @@ class AudioLink : public fbl::RefCounted<AudioLink>,
   void set_mixer(std::unique_ptr<Mixer> mixer) { mixer_ = std::move(mixer); }
 
  protected:
-  AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest);
-
   friend struct fbl::DefaultKeyedObjectTraits<const AudioLink*, AudioLink>;
   const AudioLink* GetKey() const { return this; }
 
  private:
-  const SourceType source_type_;
   fbl::RefPtr<AudioObject> source_;
   fbl::RefPtr<AudioObject> dest_;
   std::unique_ptr<Mixer> mixer_;
   std::atomic_bool valid_;
   const std::optional<VolumeCurve> volume_curve_;
+  fbl::RefPtr<Stream> stream_;
 };
 
 }  // namespace media::audio

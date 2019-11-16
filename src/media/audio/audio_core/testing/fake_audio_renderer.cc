@@ -6,7 +6,6 @@
 
 #include <lib/async/cpp/time.h>
 
-#include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_output.h"
 #include "src/media/audio/audio_core/mixer/constants.h"
 #include "src/media/audio/audio_core/packet.h"
@@ -69,9 +68,9 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
   auto packet_ref = fbl::MakeRefCounted<Packet>(
       vmo_ref_, dispatcher_, [] {}, packet, frame_count << kPtsFractionalBits, next_pts_);
   next_pts_ = packet_ref->end_pts();
-  ForEachDestLink([moved_packet = std::move(packet_ref)](auto& link) {
-    AsPacketSource(link).PushToPendingQueue(moved_packet);
-  });
+  for (auto& [_, packet_queue] : packet_queues_) {
+    packet_queue->PushPacket(packet_ref);
+  }
 }
 
 zx::duration FakeAudioRenderer::FindMinLeadTime() {
@@ -86,6 +85,19 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
   });
 
   return cur_lead_time;
+}
+
+zx_status_t FakeAudioRenderer::InitializeDestLink(const fbl::RefPtr<AudioLink>& link) {
+  auto queue = fbl::MakeRefCounted<PacketQueue>(*format());
+  packet_queues_.insert({link.get(), queue});
+  link->set_stream(std::move(queue));
+  return ZX_OK;
+}
+
+void FakeAudioRenderer::CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {
+  auto it = packet_queues_.find(link.get());
+  FX_CHECK(it != packet_queues_.end());
+  packet_queues_.erase(it);
 }
 
 }  // namespace media::audio::testing

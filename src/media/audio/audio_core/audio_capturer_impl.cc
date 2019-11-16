@@ -1010,9 +1010,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
   FX_DCHECK(source_link_refs_.size() == 0);
 
   ForEachSourceLink([src_link_refs = &source_link_refs_](auto& link) {
-    if (link.source_type() != AudioLink::SourceType::Packet) {
-      src_link_refs->emplace_back(fbl::RefPtr(&link));
-    }
+    src_link_refs->emplace_back(fbl::RefPtr(&link));
   });
 
   // No matter what happens here, make certain that we are not holding any link

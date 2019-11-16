@@ -8,9 +8,12 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/zx/time.h>
 
+#include <unordered_map>
+
 #include <fbl/ref_ptr.h>
 
 #include "src/media/audio/audio_core/audio_object.h"
+#include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/utils.h"
 
 namespace media::audio::testing {
@@ -35,6 +38,8 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
       int64_t reference_time) override {
     return {std::make_pair(timeline_func_, 1)};
   }
+  zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
+  void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
 
   // |fuchsia::media::AudioRenderer|
   void AddPayloadBuffer(uint32_t id, ::zx::vmo payload_buffer) override {}
@@ -68,6 +73,7 @@ class FakeAudioRenderer : public AudioObject, public fuchsia::media::AudioRender
   size_t buffer_offset_ = 0;
   TimelineFunction timeline_func_;
   uint32_t next_pts_ = 0;
+  std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
 };
 
 }  // namespace media::audio::testing

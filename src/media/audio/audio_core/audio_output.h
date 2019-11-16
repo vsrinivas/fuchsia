@@ -88,7 +88,7 @@ class AudioOutput : public AudioDevice {
  private:
   enum class TaskType { Mix, Trim };
 
-  void ForEachLink(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
+  void ForEachSource(TaskType task_type) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   void SetupMix(Mixer* mixer) FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
   bool ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixer,

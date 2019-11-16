@@ -16,9 +16,9 @@
 #include <mutex>
 #include <unordered_map>
 
-#include "src/media/audio/audio_core/audio_link_packet_source.h"
 #include "src/media/audio/audio_core/audio_object.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/audio_core/packet_queue.h"
 #include "src/media/audio/audio_core/route_graph.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/utils.h"
@@ -91,7 +91,6 @@ class AudioRendererImpl : public AudioObject,
 
   float stream_gain_db_ = 0.0;
   bool mute_ = false;
-  fbl::RefPtr<AudioLinkPacketSource> throttle_output_link_;
 
   // Minimum Lead Time state
   zx::duration min_lead_time_;
@@ -147,6 +146,8 @@ class AudioRendererImpl : public AudioObject,
   const fbl::RefPtr<Format>& format() const final { return format_; }
   std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
       int64_t reference_time) final;
+  zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
+  void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
 
   // |media::audio::StreamVolume|
   bool GetStreamMute() const final;
@@ -190,6 +191,8 @@ class AudioRendererImpl : public AudioObject,
 
   std::atomic<uint16_t> underflow_count_;
   std::atomic<uint16_t> partial_underflow_count_;
+
+  std::unordered_map<AudioLink*, fbl::RefPtr<PacketQueue>> packet_queues_;
 
   WavWriter<kEnableRendererWavWriters> wav_writer_;
 };

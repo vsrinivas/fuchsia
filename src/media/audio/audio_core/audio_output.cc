@@ -68,7 +68,7 @@ void AudioOutput::Process() {
 
         // Mix each renderer into the intermediate accumulator buffer, then reformat (and clip) into
         // the final output buffer.
-        ForEachLink(TaskType::Mix);
+        ForEachSource(TaskType::Mix);
         output_producer_->ProduceOutput(mix_buf_.get(), cur_mix_job_.buf, cur_mix_job_.buf_frames);
         mixed = true;
       } else {
@@ -88,7 +88,7 @@ void AudioOutput::Process() {
   // what is going on with the output hardware, we are not allowed to hold onto the queued data past
   // its presentation time.
   if (!mixed) {
-    ForEachLink(TaskType::Trim);
+    ForEachSource(TaskType::Trim);
   }
 
   // Figure out when we should wake up to do more work again. No matter how long our implementation
@@ -107,18 +107,13 @@ void AudioOutput::Process() {
 
 zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link) {
   TRACE_DURATION("audio", "AudioOutput::InitializeSourceLink");
-  // For now, refuse to link to anything but a packet source. This code does not currently know how
-  // to properly handle a ring-buffer source.
-  if (link->source_type() != AudioLink::SourceType::Packet) {
-    return ZX_ERR_INTERNAL;
-  }
 
   // If we have an output, pick a mixer based on the input and output formats. Otherwise, we only
   // need a NoOp mixer (for the time being).
-  auto& packet_link = static_cast<AudioLinkPacketSource&>(*link);
   std::unique_ptr<Mixer> mixer;
-  if (output_producer_) {
-    mixer = Mixer::Select(packet_link.format().stream_type(), *(output_producer_->format()));
+  auto stream = link->stream();
+  if (output_producer_ && stream) {
+    mixer = Mixer::Select(stream->format().stream_type(), *(output_producer_->format()));
   } else {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }
@@ -147,7 +142,7 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
             : fbl::clamp(cur_gain_state.gain_db, Gain::kMinGainDb, Gain::kMaxGainDb));
   }
 
-  packet_link.set_mixer(std::move(mixer));
+  link->set_mixer(std::move(mixer));
   return ZX_OK;
 }
 
@@ -163,19 +158,14 @@ void AudioOutput::SetupMixBuffer(uint32_t max_mix_frames) {
   mix_buf_ = std::make_unique<float[]>(mix_buf_frames_ * output_producer_->channels());
 }
 
-void AudioOutput::ForEachLink(TaskType task_type) {
-  TRACE_DURATION("audio", "AudioOutput::ForEachLink");
+void AudioOutput::ForEachSource(TaskType task_type) {
+  TRACE_DURATION("audio", "AudioOutput::ForEachSource");
   // Make a copy of our currently active set of links so that we don't have to hold onto mutex_ for
   // the entire mix operation.
   {
     std::lock_guard<std::mutex> links_lock(links_lock_);
     ZX_DEBUG_ASSERT(source_link_refs_.empty());
     for (auto& link : source_links_) {
-      // For now, skip ring-buffer source links. This code cannot mix them yet.
-      if (link.source_type() != AudioLink::SourceType::Packet) {
-        continue;
-      }
-
       source_link_refs_.emplace_back(fbl::RefPtr(&link));
     }
   }
@@ -194,16 +184,17 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       continue;
     }
 
-    FX_DCHECK(link->source_type() == AudioLink::SourceType::Packet);
-    FX_DCHECK(link->GetSource()->type() == AudioObject::Type::AudioRenderer);
-    auto packet_link = fbl::RefPtr<AudioLinkPacketSource>::Downcast(link);
-    auto source = link->GetSource();
+    auto stream = link->stream();
+    if (!stream) {
+      continue;
+    }
 
-    FX_DCHECK(packet_link->mixer() != nullptr);
-    auto mixer = packet_link->mixer();
+    auto mixer = link->mixer();
+    FX_DCHECK(mixer != nullptr);
     auto& info = mixer->bookkeeping();
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
+    auto source = link->GetSource();
     UpdateSourceTrans(source, &info);
 
     bool setup_done = false;
@@ -215,7 +206,7 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       // Try to grab the packet queue's front. If it has been flushed since the last time we grabbed
       // it, reset our mixer's internal filter state.
       bool was_flushed;
-      pkt_ref = packet_link->LockPendingQueueFront(&was_flushed);
+      pkt_ref = stream->LockPacket(&was_flushed);
       if (was_flushed) {
         mixer->Reset();
       }
@@ -254,15 +245,15 @@ void AudioOutput::ForEachLink(TaskType task_type) {
       }
       // We did consume this entire source packet, and we should keep mixing.
       pkt_ref = nullptr;
-      packet_link->UnlockPendingQueueFront(release_packet);
+      stream->UnlockPacket(release_packet);
     }
 
     // Unlock queue (completing packet if needed) and proceed to the next source.
     pkt_ref = nullptr;
-    packet_link->UnlockPendingQueueFront(release_packet);
+    stream->UnlockPacket(release_packet);
 
     // Note: there is no point in doing this for Trim tasks, but it doesn't hurt anything, and it's
-    // easier than adding another function to ForEachLink to run after each renderer is processed,
+    // easier than adding another function to ForEachSource to run after each renderer is processed,
     // just to set this flag.
     cur_mix_job_.accumulate = true;
   }
@@ -293,8 +284,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
   auto& info = mixer->bookkeeping();
 
   // If the renderer is currently paused, subject_delta (not just step_size) is zero. This packet
-  // may be relevant eventually, but currently it contributes nothing. Tell ForEachLink we are done,
-  // but hold the packet for now.
+  // may be relevant eventually, but currently it contributes nothing. Tell ForEachSource we are
+  // done, but hold the packet for now.
   if (!info.dest_frames_to_frac_source_frames.subject_delta()) {
     return false;
   }
@@ -467,8 +458,8 @@ bool AudioOutput::ProcessMix(const fbl::RefPtr<AudioObject>& source, Mixer* mixe
 
 void AudioOutput::SetupTrim(Mixer* mixer) {
   TRACE_DURATION("audio", "AudioOutput::SetupTrim");
-  // Compute the cutoff time used to decide whether to trim packets. ForEachLink has already updated
-  // our transformation, no need for us to do so here.
+  // Compute the cutoff time used to decide whether to trim packets. ForEachSource has already
+  // updated our transformation, no need for us to do so here.
   FX_DCHECK(mixer);
 
   auto now = async::Now(mix_domain().dispatcher());
