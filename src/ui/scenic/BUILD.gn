@@ -33,6 +33,7 @@ test_package("scenic_tests") {
     "lib/gfx/util/tests",
     "lib/input/tests",
     "lib/scenic/tests",
+    "lib/scheduling/tests",
   ]
 
   tests = [
@@ -70,6 +71,10 @@ test_package("scenic_tests") {
     },
     {
       name = "scenic_unittests"
+      environments = basic_envs
+    },
+    {
+      name = "scheduling_unittests"
       environments = basic_envs
     },
   ]

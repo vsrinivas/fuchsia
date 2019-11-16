@@ -7,6 +7,8 @@ import("//build/package.gni")
 source_set("util") {
   testonly = true
   sources = [
+    "mocks.cc",
+    "mocks.h",
     "util.cc",
     "util.h",
   ]
@@ -19,23 +21,8 @@ source_set("util") {
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated",
     "//src/ui/lib/glm_workaround",
+    "//src/ui/scenic/lib/gfx:gfx",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
-  ]
-}
-
-source_set("frame_scheduler_mocks") {
-  testonly = true
-  sources = [
-    "frame_scheduler_mocks.cc",
-    "frame_scheduler_mocks.h",
-    "mocks.cc",
-    "mocks.h",
-  ]
-  public_deps = [
-    ":util",
-    "//src/lib/inspect_deprecated",
-    "//src/ui/scenic/lib/gfx",
-    "//src/ui/scenic/lib/gfx:vsync_timing",
   ]
 }

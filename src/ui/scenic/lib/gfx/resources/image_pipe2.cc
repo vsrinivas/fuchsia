@@ -10,11 +10,11 @@
 #include <trace/event.h>
 
 #include "src/ui/lib/escher/flib/fence.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/util/time.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -357,7 +357,7 @@ ImagePipeUpdateResults ImagePipe2::Update(escher::ReleaseFenceSignaller* release
       next_release_fences.clear();
     }
 
-    results.callbacks.push(std::move(frames_.front().present_image_callback));
+    results.callbacks.push_back(std::move(frames_.front().present_image_callback));
     TRACE_FLOW_END("gfx", "image_pipe_present_image_to_update", next_image_id);
     frames_.pop();
     present_next_image = true;

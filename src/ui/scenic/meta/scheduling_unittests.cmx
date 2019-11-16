@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/scheduling_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

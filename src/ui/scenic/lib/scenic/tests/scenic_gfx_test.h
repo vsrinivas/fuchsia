@@ -9,6 +9,7 @@
 #include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace test {
@@ -22,7 +23,7 @@ class ScenicGfxTest : public ScenicTest {
  private:
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::shared_ptr<gfx::Display> display_;
-  std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<gfx::Engine> engine_;
 };
 

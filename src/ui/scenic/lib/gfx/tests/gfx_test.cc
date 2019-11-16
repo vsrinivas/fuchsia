@@ -4,8 +4,8 @@
 
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 
-#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/engine/windowed_frame_predictor.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/windowed_frame_predictor.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -26,10 +26,10 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
   auto signaller = std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
   display_ = std::make_shared<Display>(
       /*id*/ 0, /* width */ 0, /* height */ 0);
-  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_,
-      std::make_unique<WindowedFramePredictor>(gfx::DefaultFrameScheduler::kInitialRenderDuration,
-                                               gfx::DefaultFrameScheduler::kInitialUpdateDuration));
+  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
+      display_, std::make_unique<scheduling::WindowedFramePredictor>(
+                          scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+                          scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,
                                      std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());

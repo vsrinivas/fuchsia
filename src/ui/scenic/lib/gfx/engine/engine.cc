@@ -16,24 +16,24 @@
 
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/compositor.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
 #include "src/ui/scenic/lib/gfx/resources/protected_memory_visitor.h"
 #include "src/ui/scenic/lib/scenic/session.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/frame_timings.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 Engine::Engine(sys::ComponentContext* app_context,
-               const std::shared_ptr<FrameScheduler>& frame_scheduler,
+               const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
                escher::EscherWeakPtr weak_escher, inspect_deprecated::Node inspect_node)
     : escher_(std::move(weak_escher)),
       engine_renderer_(std::make_unique<EngineRenderer>(
@@ -54,7 +54,7 @@ Engine::Engine(sys::ComponentContext* app_context,
 }
 
 Engine::Engine(sys::ComponentContext* app_context,
-               const std::shared_ptr<FrameScheduler>& frame_scheduler,
+               const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
                std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
                escher::EscherWeakPtr weak_escher)
     : escher_(std::move(weak_escher)),
@@ -107,7 +107,8 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
   };
 }
 
-RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time presentation_time) {
+scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> timings,
+                                                  zx::time presentation_time) {
   uint64_t frame_number = timings->frame_number();
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
@@ -144,7 +145,7 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
   }
   if (hlas.empty()) {
     // No compositor has any renderable content.
-    return RenderFrameResult::kNoContentToRender;
+    return scheduling::RenderFrameResult::kNoContentToRender;
   }
 
   const bool uses_protected_memory = CheckForProtectedMemoryUse(hlas);
@@ -205,11 +206,11 @@ RenderFrameResult Engine::RenderFrame(const FrameTimingsPtr& timings, zx::time p
     // are displayed and others aren't?  This isn't currently an issue because
     // there is only one Compositor; see above.
     FXL_DCHECK(hlas.size() == 1);
-    return RenderFrameResult::kRenderFailed;
+    return scheduling::RenderFrameResult::kRenderFailed;
   }
 
   CleanupEscher();
-  return RenderFrameResult::kRenderSuccess;
+  return scheduling::RenderFrameResult::kRenderSuccess;
 }
 
 bool Engine::CheckForProtectedMemoryUse(const std::vector<HardwareLayerAssignment>& hlas) {

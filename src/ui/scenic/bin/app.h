@@ -14,8 +14,8 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 #include "src/ui/scenic/lib/shutdown/lifecycle_controller_impl.h"
 #include "src/ui/scenic/lib/shutdown/shutdown_manager.h"
 
@@ -52,7 +52,7 @@ class App {
   gfx::DisplayManager display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
-  std::shared_ptr<gfx::FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   std::optional<gfx::Engine> engine_;
   Scenic scenic_;

@@ -14,7 +14,7 @@
 #include "lib/zx/event.h"
 #include "src/lib/fxl/macros.h"
 #include "src/ui/scenic/lib/display/color_transform.h"
-#include "src/ui/scenic/lib/gfx/engine/vsync_timing.h"
+#include "src/ui/scenic/lib/scheduling/vsync_timing.h"
 #include "zircon/pixelformat.h"
 
 namespace scenic_impl {
@@ -22,7 +22,7 @@ namespace gfx {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
-class Display : public VsyncTiming {
+class Display : public scheduling::VsyncTiming {
  public:
   Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
           std::vector<zx_pixel_format_t> pixel_formats);

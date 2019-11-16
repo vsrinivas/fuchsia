@@ -4,14 +4,14 @@
 
 #include "src/ui/scenic/lib/gfx/engine/image_pipe_updater.h"
 
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
-#include "src/ui/scenic/lib/gfx/util/collection_utils.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-ImagePipeUpdater::ImagePipeUpdater(SessionId id, std::shared_ptr<FrameScheduler> frame_scheduler)
+ImagePipeUpdater::ImagePipeUpdater(SessionId id,
+                                   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler)
     : session_id_(id), frame_scheduler_(std::move(frame_scheduler)) {}
 
 ImagePipeUpdater::~ImagePipeUpdater() { scheduled_image_pipe_updates_ = {}; }
@@ -50,7 +50,9 @@ ImagePipeUpdater::ApplyScheduledUpdatesResult ImagePipeUpdater::ApplyScheduledUp
 
       // Collect callbacks to be returned by |Engine::UpdateSessions()| as part
       // of the |Session::UpdateResults| struct.
-      MoveAllItemsFromQueueToQueue(&image_pipe_update_results.callbacks, &result.callbacks);
+      std::move(image_pipe_update_results.callbacks.begin(),
+                image_pipe_update_results.callbacks.end(), std::back_inserter(result.callbacks));
+      image_pipe_update_results.callbacks.clear();
 
       // |ImagePipe| needs to be re-rendered if its most recent image is updated.
       result.needs_render = result.needs_render || image_pipe_update_results.image_updated;

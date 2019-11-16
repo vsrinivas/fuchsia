@@ -25,8 +25,9 @@ source_set("testing_deps") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fxl",
     "//src/ui/scenic/lib/gfx",
-    "//src/ui/scenic/lib/gfx/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/scenic",
+    "//src/ui/scenic/lib/scheduling:id",
+    "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//third_party/googletest:gtest",
   ]
   deps = [

@@ -22,7 +22,6 @@
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/view_tree.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_context.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
@@ -31,6 +30,7 @@
 #include "src/ui/scenic/lib/scenic/present2_info.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/util/error_reporter.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -51,9 +51,10 @@ class Session {
     bool success;
     bool all_fences_ready;
     bool needs_render;
-    std::queue<PresentCallback> present1_callbacks;
-    std::queue<Present2Info> present2_infos;
-    std::queue<PresentImageCallback> image_pipe_callbacks;
+
+    std::deque<PresentCallback> present1_callbacks;
+    std::deque<Present2Info> present2_infos;
+    std::deque<PresentImageCallback> image_pipe_callbacks;
   };
 
   Session(SessionId id, SessionContext context,

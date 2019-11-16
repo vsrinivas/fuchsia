@@ -23,7 +23,7 @@ using GfxSystemWeakPtr = fxl::WeakPtr<GfxSystem>;
 
 class GfxSystem : public System,
                   public Scenic::TakeScreenshotDelegateDeprecated,
-                  public SessionUpdater {
+                  public scheduling::SessionUpdater {
  public:
   static constexpr TypeId kTypeId = kGfx;
   static const char* kName;
@@ -39,12 +39,12 @@ class GfxSystem : public System,
   // |Scenic::TakeScreenshotDelegateDeprecated|
   void TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallback callback) override;
 
-  // |SessionUpdater|
+  // |scheduling::SessionUpdater|
   virtual UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
                                        zx::time target_presentation_time, zx::time latched_time,
                                        uint64_t trace_id) override;
 
-  // |SessionUpdater|
+  // |scheduling::SessionUpdater|
   virtual void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
 
   // For tests.

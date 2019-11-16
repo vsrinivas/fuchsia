@@ -5,8 +5,8 @@
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
-#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -17,8 +17,9 @@ void SessionTest::SetUp() {
 
   display_ = std::make_shared<Display>(
       /*id*/ 0, /* width */ 0, /* height */ 0);
-  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
-      display_, std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
+      display_,
+      std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
 
   session_context_ = CreateSessionContext();
   session_ = CreateSession();

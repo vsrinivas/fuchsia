@@ -17,10 +17,6 @@
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
 #include "src/ui/lib/escher/util/image_utils.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
-#include "src/ui/scenic/lib/display/display.h"
-#include "src/ui/scenic/lib/display/display_controller_listener.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
-#include "src/ui/scenic/lib/gfx/sysmem.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -368,13 +364,14 @@ DisplaySwapchain::~DisplaySwapchain() {
   for (size_t i = 0; i < frames_.size(); ++i) {
     const size_t idx = (i + next_frame_index_) % frames_.size();
     FrameRecord* record = frames_[idx].get();
-    if (record && !record->frame_timings->finalized()) {
+    if (record && record->frame_timings && !record->frame_timings->finalized()) {
       if (record->render_finished_wait->is_pending()) {
         // There has not been an OnFrameRendered signal. The wait will be
         // destroyed when this function returns, and will never trigger the
         // OnFrameRendered callback. Trigger it here to make the state consistent
         // in FrameTimings. Record infinite time to signal unknown render time.
-        record->frame_timings->OnFrameRendered(record->swapchain_index, FrameTimings::kTimeDropped);
+        record->frame_timings->OnFrameRendered(record->swapchain_index,
+                                               scheduling::FrameTimings::kTimeDropped);
       }
       record->frame_timings->OnFrameDropped(record->swapchain_index);
     }
@@ -403,7 +400,7 @@ DisplaySwapchain::~DisplaySwapchain() {
 }
 
 std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
-    const FrameTimingsPtr& frame_timings, size_t swapchain_index) {
+    fxl::WeakPtr<scheduling::FrameTimings> frame_timings, size_t swapchain_index) {
   FXL_DCHECK(frame_timings);
   FXL_CHECK(escher_);
   auto render_finished_escher_semaphore = escher::Semaphore::NewExportableSem(device_);
@@ -453,11 +450,12 @@ std::unique_ptr<DisplaySwapchain::FrameRecord> DisplaySwapchain::NewFrameRecord(
   return record;
 }
 
-bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
+bool DisplaySwapchain::DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
                                            size_t swapchain_index,
                                            const HardwareLayerAssignment& hla,
                                            DrawCallback draw_callback) {
   FXL_DCHECK(hla.swapchain == this);
+  FXL_DCHECK(frame_timings);
 
   // Find the next framebuffer to render into, and other corresponding data.
   auto& buffer = use_protected_memory_ ? protected_swapchain_buffers_[next_frame_index_]
@@ -470,7 +468,9 @@ bool DisplaySwapchain::DrawAndPresentFrame(const FrameTimingsPtr& frame_timings,
   // an error in the FrameScheduler logic (or somewhere similar), which should
   // not have scheduled another frame when there are no framebuffers available.
   if (frames_[next_frame_index_]) {
-    FXL_CHECK(frames_[next_frame_index_]->frame_timings->finalized());
+    if (auto timings = frames_[next_frame_index_]->frame_timings) {
+      FXL_CHECK(timings->finalized());
+    }
     if (frames_[next_frame_index_]->retired_event.wait_one(ZX_EVENT_SIGNALED, zx::time(),
                                                            nullptr) != ZX_OK) {
       FXL_LOG(WARNING) << "DisplaySwapchain::DrawAndPresentFrame rendering "
@@ -601,7 +601,7 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   FXL_DCHECK(frame_index < kSwapchainImageCount);
   auto& record = frames_[frame_index];
 
-  uint64_t frame_number = record->frame_timings->frame_number();
+  uint64_t frame_number = record->frame_timings ? record->frame_timings->frame_number() : 0u;
 
   TRACE_DURATION("gfx", "DisplaySwapchain::OnFrameRendered", "frame count", frame_number,
                  "frame index", frame_index);
@@ -611,8 +611,10 @@ void DisplaySwapchain::OnFrameRendered(size_t frame_index, zx::time render_finis
   TRACE_FLOW_BEGIN("gfx", "present_image", frame_index + 1);
 
   FXL_DCHECK(record);
-  record->frame_timings->OnFrameRendered(record->swapchain_index, render_finished_time);
-  // See ::OnVsync for comment about finalization.
+  if (record->frame_timings) {
+    record->frame_timings->OnFrameRendered(record->swapchain_index, render_finished_time);
+    // See ::OnVsync for comment about finalization.
+  }
 }
 
 void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
@@ -643,7 +645,7 @@ void DisplaySwapchain::OnVsync(uint64_t display_id, uint64_t timestamp,
     if (!record->presented) {
       record->presented = true;
 
-      if (match) {
+      if (match && record->frame_timings) {
         record->frame_timings->OnFramePresented(record->swapchain_index, zx::time(timestamp));
       } else {
         record->frame_timings->OnFrameDropped(record->swapchain_index);

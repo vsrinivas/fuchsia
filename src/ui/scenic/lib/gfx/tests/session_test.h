@@ -15,6 +15,7 @@
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -55,7 +56,7 @@ class SessionTest : public ErrorReportingTest {
   SessionContext session_context_;
 
   std::shared_ptr<Display> display_;
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
 };
 

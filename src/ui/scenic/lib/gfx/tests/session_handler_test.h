@@ -18,6 +18,7 @@
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -25,7 +26,7 @@ namespace test {
 
 // For testing SessionHandler without having to manually provide all the state
 // necessary for SessionHandler to run
-class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
+class SessionHandlerTest : public ErrorReportingTest, public scheduling::SessionUpdater {
  public:
   SessionHandlerTest();
 
@@ -53,18 +54,18 @@ class SessionHandlerTest : public ErrorReportingTest, public SessionUpdater {
 
   Session* session() { return session_handler()->session(); }
 
-  // |SessionUpdater|
+  // |scheduling::SessionUpdater|
   UpdateResults UpdateSessions(std::unordered_set<SessionId> sessions_to_update,
                                zx::time target_presentation_time, zx::time latched_time,
                                uint64_t trace_id) override;
-  // |SessionUpdater|
+  // |scheduling::SessionUpdater|
   void PrepareFrame(zx::time target_presentation_time, uint64_t trace_id) override;
 
   sys::testing::ComponentContextProvider app_context_;
   std::unique_ptr<Scenic> scenic_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<Engine> engine_;
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Sysmem> sysmem_;
   std::unique_ptr<DisplayManager> display_manager_;
   std::unique_ptr<scenic_impl::Session> scenic_session_;

@@ -16,12 +16,11 @@
 
 #include "src/ui/lib/escher/impl/command_buffer_sequencer.h"
 #include "src/ui/scenic/lib/display/display.h"
-#include "src/ui/scenic/lib/gfx/engine/vsync_timing.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/input/input_system.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace lib_ui_input_tests {
 

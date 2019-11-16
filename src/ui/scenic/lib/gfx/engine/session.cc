@@ -18,7 +18,6 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
@@ -27,6 +26,7 @@
 #include "src/ui/scenic/lib/gfx/util/time.h"
 #include "src/ui/scenic/lib/gfx/util/unwrap.h"
 #include "src/ui/scenic/lib/gfx/util/wrap.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -234,12 +234,12 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(CommandContext* comman
     // Collect Present1 callbacks to be returned by |Engine::UpdateSessions()| as part
     // of the |Session::UpdateResults| struct. Or, if it is a Present2, collect the |Present2Info|s.
     if (auto present_callback = std::get_if<PresentCallback>(&update.present_information)) {
-      update_results.present1_callbacks.push(std::move(*present_callback));
+      update_results.present1_callbacks.push_back(std::move(*present_callback));
     } else {
       auto present2_info = std::get_if<Present2Info>(&update.present_information);
       FXL_DCHECK(present2_info);
       present2_info->SetLatchedTime(latched_time);
-      update_results.present2_infos.push(std::move(*present2_info));
+      update_results.present2_infos.push_back(std::move(*present2_info));
     }
 
     update_results.needs_render = true;

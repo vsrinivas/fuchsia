@@ -35,6 +35,7 @@ source_set("scenic") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/trace",
   ]
 }

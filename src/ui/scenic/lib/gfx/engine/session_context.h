@@ -10,12 +10,12 @@
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
 
 class SessionManager;
-class FrameScheduler;
 class UpdateScheduler;
 class Sysmem;
 class DisplayManager;
@@ -40,7 +40,7 @@ struct SessionContext {
   // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.
   escher::RoundedRectFactory* escher_rounded_rect_factory = nullptr;
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
-  std::shared_ptr<FrameScheduler> frame_scheduler;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler;
   SceneGraphWeakPtr scene_graph;
   ResourceLinker* resource_linker = nullptr;
   ViewLinker* view_linker = nullptr;

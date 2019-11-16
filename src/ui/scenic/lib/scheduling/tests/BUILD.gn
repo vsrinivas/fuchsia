@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":fuzztests",
+    ":unittests",
+  ]
+}
+
+group("fuzztests") {
+  testonly = true
+  public_deps = [
+    "//src/ui/scenic/lib/scheduling/tests/fuzzers:frame_scheduling_fuzzers",
+  ]
+}
+
+executable("unittests") {
+  output_name = "scheduling_unittests"
+
+  testonly = true
+  sources = [
+    "default_frame_scheduler_unittest.cc",
+    "duration_predictor_unittest.cc",
+    "frame_predictor_unittest.cc",
+    "frame_scheduler_test.cc",
+    "frame_scheduler_test.h",
+    "frame_stats_unittest.cc",
+    "frame_timings_unittest.cc",
+  ]
+  deps = [
+    "//src/lib/cobalt/cpp/testing:mock_cobalt_logger",
+    "//src/lib/inspect_deprecated:reader",
+    "//src/lib/inspect_deprecated/testing",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
+    "//src/ui/scenic/lib/scheduling:id",
+    "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+  ]
+}

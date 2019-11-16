@@ -17,6 +17,7 @@
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/ui/scenic/lib/scenic/session.h"
 #include "src/ui/scenic/lib/scenic/system.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 
@@ -116,7 +117,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
 
-  size_t next_session_id_ = 1;
+  scheduling::SessionId next_session_id_ = 1;
 
   GetDisplayInfoDelegateDeprecated* display_delegate_ = nullptr;
   TakeScreenshotDelegateDeprecated* screenshot_delegate_ = nullptr;

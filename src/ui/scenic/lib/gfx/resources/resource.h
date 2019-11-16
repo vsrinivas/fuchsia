@@ -44,7 +44,7 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   // The session this Resource lives in and the id it was created with there.
   Session* session_DEPRECATED() const { return session_DEPRECATED_; }
   ResourceId id() const { return global_id_.resource_id; }
-  SessionId session_id() const { return global_id_.session_id; }
+  scheduling::SessionId session_id() const { return global_id_.session_id; }
   GlobalId global_id() const { return global_id_; }
 
   // TODO(SCN-1504): this blocks the removal of Session* from resource.

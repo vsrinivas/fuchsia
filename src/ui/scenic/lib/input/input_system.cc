@@ -543,7 +543,8 @@ void InputCommandDispatcher::DispatchCommand(const SendKeyboardInputCmd& command
 
 void InputCommandDispatcher::DispatchCommand(const SetHardKeyboardDeliveryCmd& command) {
   // Can't easily retrieve owning view's ViewRef KOID from just the Session or SessionId.
-  const SessionId session_id = command_dispatcher_context()->session_id();
+  const scheduling::SessionId session_id = command_dispatcher_context()->session_id();
+
   FXL_VLOG(2) << "Hard keyboard events, session_id=" << session_id
               << ", delivery_request=" << (command.delivery_request ? "on" : "off");
 

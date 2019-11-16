@@ -11,7 +11,6 @@
 #include <vector>
 
 #include "src/ui/lib/escher/geometry/types.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
 
 namespace scenic_impl::input {

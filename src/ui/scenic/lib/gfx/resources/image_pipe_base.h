@@ -17,7 +17,7 @@ namespace scenic_impl::gfx {
 
 struct ImagePipeUpdateResults {
   bool image_updated;
-  std::queue<PresentImageCallback> callbacks;
+  std::deque<PresentImageCallback> callbacks;
 };
 
 // Abstract superclass for ImagePipe and ImagePipe2.

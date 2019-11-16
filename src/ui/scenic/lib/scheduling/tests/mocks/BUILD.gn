@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("frame_scheduler_mocks") {
+  testonly = true
+  sources = [
+    "frame_scheduler_mocks.cc",
+    "frame_scheduler_mocks.h",
+  ]
+  deps = [
+    "//src/ui/scenic/lib/display/tests:mocks",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
+  ]
+  public_deps = [
+    "//src/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/gfx/tests/mocks:util",
+  ]
+}

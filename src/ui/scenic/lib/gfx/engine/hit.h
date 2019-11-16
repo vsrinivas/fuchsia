@@ -7,9 +7,9 @@
 
 #include "src/ui/lib/escher/geometry/types.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {

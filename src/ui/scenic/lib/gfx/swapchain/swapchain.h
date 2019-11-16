@@ -13,6 +13,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/ui/scenic/lib/display/color_transform.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
+#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
 namespace escher {
 class Image;
@@ -23,9 +24,6 @@ using SemaphorePtr = fxl::RefPtr<Semaphore>;
 
 namespace scenic_impl {
 namespace gfx {
-
-class FrameTimings;
-using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 
 // Swapchain is an interface used used to render into an escher::Image and
 // present the result (to a physical display or elsewhere).
@@ -44,8 +42,8 @@ class Swapchain {
   //   1. Invokes |draw_callback| to draw the frame.
   //   2. Eventually invokes FrameTimings::OnFrameFinishedRendering() and
   //      FrameTimings::OnFramePresented() on |frame_timings|.
-  virtual bool DrawAndPresentFrame(const FrameTimingsPtr& frame, size_t swapchain_index,
-                                   const HardwareLayerAssignment& hla,
+  virtual bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame,
+                                   size_t swapchain_index, const HardwareLayerAssignment& hla,
                                    DrawCallback draw_callback) = 0;
 
   // If a swapchain subclass implements this interface has a display,

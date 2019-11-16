@@ -17,16 +17,16 @@
 #include "src/ui/lib/escher/resources/resource_manager.h"
 #include "src/ui/lib/escher/resources/resource_recycler.h"
 #include "src/ui/lib/escher/vk/vulkan_device_queues.h"
+#include "src/ui/scenic/lib/display/display.h"
 #include "src/ui/scenic/lib/display/display_controller_listener.h"
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain.h"
+#include "src/ui/scenic/lib/gfx/sysmem.h"
+
 
 #include <vulkan/vulkan.hpp>
 
 namespace scenic_impl {
 namespace gfx {
-
-class Display;
-class Sysmem;
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
@@ -45,8 +45,9 @@ class DisplaySwapchain : public Swapchain {
   using OnVsyncCallback = fit::function<void(zx::time vsync_timestamp)>;
 
   // |Swapchain|
-  bool DrawAndPresentFrame(const FrameTimingsPtr& frame_timings, size_t swapchain_index,
-                           const HardwareLayerAssignment& hla, DrawCallback draw_callback) override;
+  bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                           size_t swapchain_index, const HardwareLayerAssignment& hla,
+                           DrawCallback draw_callback) override;
 
   // Register a callback to be called on each vsync.
   // Only allows a single listener at a time.
@@ -78,7 +79,7 @@ class DisplaySwapchain : public Swapchain {
   };
 
   struct FrameRecord {
-    FrameTimingsPtr frame_timings;
+    fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
     size_t swapchain_index;
 
     escher::SemaphorePtr render_finished_escher_semaphore;
@@ -92,7 +93,7 @@ class DisplaySwapchain : public Swapchain {
 
     bool presented = false;
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord(const FrameTimingsPtr& frame_timings,
+  std::unique_ptr<FrameRecord> NewFrameRecord(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
                                               size_t swapchain_index);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,

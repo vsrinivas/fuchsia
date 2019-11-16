@@ -15,7 +15,6 @@ executable("unittests") {
   testonly = true
   output_name = "gfx_util_unittests"
   sources = [
-    "collection_utils_unittest.cc",
     "validate_eventpair_unittest.cc",
   ]
   deps = [

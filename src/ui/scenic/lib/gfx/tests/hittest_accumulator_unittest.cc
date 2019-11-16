@@ -13,10 +13,10 @@
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_accumulator.h"
 #include "src/ui/scenic/lib/gfx/engine/hit_tester.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/shape_node.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/gfx/tests/session_test.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {

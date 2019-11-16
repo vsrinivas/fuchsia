@@ -6,8 +6,8 @@
 
 #include <lib/sys/cpp/testing/component_context_provider.h>
 
-#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
-#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -68,9 +68,9 @@ void SessionHandlerTest::InitializeEngine() {
   auto mock_release_fence_signaller =
       std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
 
-  frame_scheduler_ = std::make_shared<DefaultFrameScheduler>(
+  frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       display_manager_->default_display_shared(),
-      std::make_unique<ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
+      std::make_unique<scheduling::ConstantFramePredictor>(/* static_vsync_offset */ zx::msec(5)));
   engine_ = std::make_unique<Engine>(app_context_.context(), frame_scheduler_,
                                      std::move(mock_release_fence_signaller), GetEscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());
@@ -85,7 +85,7 @@ void SessionHandlerTest::InitializeScenicSession(SessionId session_id) {
 
 escher::EscherWeakPtr SessionHandlerTest::GetEscherWeakPtr() { return escher::EscherWeakPtr(); }
 
-SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
+scheduling::SessionUpdater::UpdateResults SessionHandlerTest::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time target_presentation_time,
     zx::time latched_time, uint64_t trace_id) {
   UpdateResults update_results;

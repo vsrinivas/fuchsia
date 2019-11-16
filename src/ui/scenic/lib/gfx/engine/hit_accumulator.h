@@ -14,7 +14,7 @@
 #include <vector>
 
 #include "src/ui/scenic/lib/gfx/engine/hit.h"
-#include "src/ui/scenic/lib/gfx/id.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {

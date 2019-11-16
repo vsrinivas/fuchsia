@@ -12,6 +12,7 @@
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 #include "src/ui/scenic/lib/scenic/tests/scenic_test.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -35,7 +36,7 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::shared_ptr<Display> display_;
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Engine> engine_;
 
   GfxSystemWeakPtr gfx_system_;

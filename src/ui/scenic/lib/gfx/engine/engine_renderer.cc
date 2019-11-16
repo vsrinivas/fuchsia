@@ -16,7 +16,6 @@
 #include "src/ui/lib/escher/scene/stage.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer_visitor.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
@@ -25,6 +24,7 @@
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
 #include "src/ui/scenic/lib/gfx/resources/renderers/renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/stereo_camera.h"
+#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 
 // TODO(SCN-1113): Move this someplace.  PoseBufferLatchingShader assumes this,
 // but we can't put it there because it lives in a Zircon-ignorant part of

@@ -31,7 +31,7 @@ source_set("display") {
     # TODO(SCN-1398): For displayOwned/NotOwnedSignal.
     # TODO(fxb/23686): Remove this when we externalize Displays.
     "//sdk/fidl/fuchsia.ui.scenic",
-    "//src/ui/scenic/lib/gfx:vsync_timing",
+    "//src/ui/scenic/lib/scheduling:vsync_timing",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
   ]

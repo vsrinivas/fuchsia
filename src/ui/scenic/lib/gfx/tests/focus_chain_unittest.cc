@@ -15,9 +15,9 @@
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/tests/gfx_test.h"
 #include "src/ui/scenic/lib/gfx/tests/mocks/util.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 // This test exercises the properties of a focus chain. The setup has multiple
 // Views arranged in a hierarchy, and also includes a FocusChainListener.  Each
@@ -209,34 +209,34 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
     auto pair_ab = scenic::ViewTokenPair::New();
     auto pair_bc = scenic::ViewTokenPair::New();
 
-    client_a->RunNow([test = this, state = client_a.get(),
-                      vh_ab = std::move(pair_ab.view_holder_token)](
-                         scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
-      const float kZero[3] = {0, 0, 0};
+    client_a->RunNow(
+        [test = this, state = client_a.get(), vh_ab = std::move(pair_ab.view_holder_token)](
+            scenic::Session* session, scenic::EntityNode* session_anchor) mutable {
+          const float kZero[3] = {0, 0, 0};
 
-      // Minimal scene.
-      scenic::Compositor compositor(session);
-      scenic::LayerStack layer_stack(session);
-      compositor.SetLayerStack(layer_stack);
+          // Minimal scene.
+          scenic::Compositor compositor(session);
+          scenic::LayerStack layer_stack(session);
+          compositor.SetLayerStack(layer_stack);
 
-      scenic::Layer layer(session);
-      layer.SetSize(9 /*px*/, 9 /*px*/);
-      layer_stack.AddLayer(layer);
-      scenic::Renderer renderer(session);
-      layer.SetRenderer(renderer);
-      state->scene = std::make_unique<scenic::Scene>(session);
-      scenic::Camera camera(*state->scene);
-      renderer.SetCamera(camera);
+          scenic::Layer layer(session);
+          layer.SetSize(9 /*px*/, 9 /*px*/);
+          layer_stack.AddLayer(layer);
+          scenic::Renderer renderer(session);
+          layer.SetRenderer(renderer);
+          state->scene = std::make_unique<scenic::Scene>(session);
+          scenic::Camera camera(*state->scene);
+          renderer.SetCamera(camera);
 
-      // Add local root node to the scene, and attach the ViewHolder to the root node.
-      state->scene->AddChild(*session_anchor);
-      state->holder_b =
-          std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
-      state->holder_b->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
-      session_anchor->Attach(*state->holder_b);
+          // Add local root node to the scene, and attach the ViewHolder to the root node.
+          state->scene->AddChild(*session_anchor);
+          state->holder_b =
+              std::make_unique<scenic::ViewHolder>(session, std::move(vh_ab), "view holder B");
+          state->holder_b->SetViewProperties(kZero, (float[3]){9, 9, 1}, kZero, kZero);
+          session_anchor->Attach(*state->holder_b);
 
-      test->RequestToPresent(session);
-    });
+          test->RequestToPresent(session);
+        });
 
     client_b->RunNow([test = this, state = client_b.get(), v_ab = std::move(pair_ab.view_token),
                       vh_bc = std::move(pair_bc.view_holder_token)](
@@ -290,7 +290,7 @@ struct ThreeNodeFocusChainTest : public FocusChainTest {
 //   |
 //   D
 // However, don't hesitate to craft a tree topology to best suit the test.
-struct FourNodeFocusChainTest: public FocusChainTest {
+struct FourNodeFocusChainTest : public FocusChainTest {
   struct RootClient : public SessionWrapper {
     RootClient(scenic_impl::Scenic* scenic) : SessionWrapper(scenic) {}
     std::unique_ptr<scenic::Scene> scene;
@@ -746,7 +746,6 @@ TEST_F(TwoNodeFocusChainTest, FocusTransferUpwardDenied) {
   EXPECT_EQ(status, ViewTree::FocusChangeStatus::kErrorRequestorNotRequestAncestor);
   EXPECT_EQ(CountReceivedFocusChains(), 2u);
   EXPECT_EQ(LastFocusChain()->focus_chain().size(), 2u);
-
 }
 
 // Tree topology:

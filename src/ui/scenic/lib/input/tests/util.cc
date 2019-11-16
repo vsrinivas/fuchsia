@@ -14,9 +14,9 @@
 #include <hid/hid.h>
 
 #include "src/lib/fxl/logging.h"
-#include "src/ui/scenic/lib/gfx/engine/constant_frame_predictor.h"
-#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/id.h"
+#include "src/ui/scenic/lib/scheduling/constant_frame_predictor.h"
+#include "src/ui/scenic/lib/scheduling/default_frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace lib_ui_input_tests {
 
@@ -38,14 +38,14 @@ using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::GlobalId;
 using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
-using scenic_impl::gfx::ConstantFramePredictor;
-using scenic_impl::gfx::DefaultFrameScheduler;
 using scenic_impl::gfx::Display;
 using scenic_impl::gfx::Engine;
 using scenic_impl::gfx::GfxSystem;
 using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;
 using scenic_impl::input::InputSystem;
 using scenic_impl::test::ScenicTest;
+using scheduling::ConstantFramePredictor;
+using scheduling::DefaultFrameScheduler;
 
 SessionWrapper::SessionWrapper(Scenic* scenic) {
   fuchsia::ui::scenic::SessionPtr session_ptr;

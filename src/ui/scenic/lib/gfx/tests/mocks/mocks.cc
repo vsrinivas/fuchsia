@@ -4,8 +4,6 @@
 
 #include "src/ui/scenic/lib/gfx/tests/mocks/mocks.h"
 
-#include "src/ui/scenic/lib/gfx/engine/default_frame_scheduler.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_predictor.h"
 #include "src/ui/scenic/lib/scenic/command_dispatcher.h"
 
 namespace scenic_impl {

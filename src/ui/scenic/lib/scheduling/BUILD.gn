@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/cobalt/metrics_registry.gni")
+
+metrics_registry("frame_metrics_registry") {
+  project_name = "frame_metrics"
+  namespace = "cobalt_registry"
+  generate_cc = true
+  generate_binarypb = false
+}
+
+source_set("frame_scheduler") {
+  sources = [
+    "constant_frame_predictor.cc",
+    "constant_frame_predictor.h",
+    "default_frame_scheduler.cc",
+    "default_frame_scheduler.h",
+    "duration_predictor.cc",
+    "duration_predictor.h",
+    "frame_predictor.cc",
+    "frame_predictor.h",
+    "frame_scheduler.h",
+    "frame_stats.cc",
+    "frame_stats.h",
+    "windowed_frame_predictor.cc",
+    "windowed_frame_predictor.h",
+  ]
+  deps = [
+    ":frame_metrics_registry",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.scenic.scheduling",
+    "//src/lib/fxl",
+    "//src/lib/inspect_deprecated",
+    "//src/ui/scenic/lib/scenic:present2_info",
+  ]
+  public_deps = [
+    ":id",
+    ":timings",
+    ":vsync_timing",
+    "//src/lib/cobalt/cpp:cobalt_logger",
+    "//third_party/cobalt/src/registry:buckets_config",
+    "//zircon/public/lib/trace",
+  ]
+}
+
+source_set("vsync_timing") {
+  sources = [
+    "vsync_timing.h",
+  ]
+  deps = [
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("timings") {
+  sources = [
+    "frame_timings.cc",
+    "frame_timings.h",
+  ]
+  public_deps = [
+    "//src/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("id") {
+  sources = [
+    "id.h",
+  ]
+}

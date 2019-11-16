@@ -24,17 +24,17 @@
 #include "src/ui/lib/escher/vk/image_factory.h"
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
-#include "src/ui/scenic/lib/gfx/engine/frame_scheduler.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/resource_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -42,8 +42,6 @@ namespace gfx {
 class Compositor;
 class Engine;
 using EngineWeakPtr = fxl::WeakPtr<Engine>;
-class FrameTimings;
-using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 class Session;
 class SessionHandler;
 class View;
@@ -54,14 +52,16 @@ using PresentationInfo = fuchsia::images::PresentationInfo;
 using OnPresentedCallback = fit::function<void(PresentationInfo)>;
 
 // Manages the interactions between the scene graph, renderers, and displays,
-// producing output when prompted through the FrameRenderer interface.
-class Engine : public FrameRenderer {
+// producing output when prompted through the scheduling::FrameRenderer interface.
+class Engine : public scheduling::FrameRenderer {
  public:
-  Engine(sys::ComponentContext* app_context, const std::shared_ptr<FrameScheduler>& frame_scheduler,
+  Engine(sys::ComponentContext* app_context,
+         const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
          escher::EscherWeakPtr escher, inspect_deprecated::Node inspect_node);
 
   // Only used for testing.
-  Engine(sys::ComponentContext* app_context, const std::shared_ptr<FrameScheduler>& frame_scheduler,
+  Engine(sys::ComponentContext* app_context,
+         const std::shared_ptr<scheduling::FrameScheduler>& frame_scheduler,
          std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller,
          escher::EscherWeakPtr escher);
 
@@ -103,10 +103,11 @@ class Engine : public FrameRenderer {
   void DumpScenes(std::ostream& output,
                   std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources) const;
 
-  // |FrameRenderer|
+  // |scheduling::FrameRenderer|
   //
   // Renders a new frame. Returns true if successful, false otherwise.
-  RenderFrameResult RenderFrame(const FrameTimingsPtr& frame, zx::time presentation_time) override;
+  scheduling::RenderFrameResult RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> frame,
+                                            zx::time presentation_time) override;
 
  private:
   // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.
@@ -154,7 +155,7 @@ class Engine : public FrameRenderer {
 
   // TODO(SCN-1502): This is a temporary solution until we can remove frame_scheduler from
   // ResourceContext. Do not add any additional dependencies on this object/pointer.
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 
   SceneGraph scene_graph_;
 

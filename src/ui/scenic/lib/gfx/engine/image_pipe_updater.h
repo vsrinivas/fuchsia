@@ -11,6 +11,7 @@
 
 #include "src/ui/scenic/lib/gfx/engine/gfx_command_applier.h"  // for CommandContext
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
+#include "src/ui/scenic/lib/scheduling/frame_scheduler.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -34,10 +35,10 @@ class ImagePipeUpdater {
   // Return type for ApplyScheduledUpdates.
   struct ApplyScheduledUpdatesResult {
     bool needs_render;
-    std::queue<PresentImageCallback> callbacks;
+    std::deque<PresentImageCallback> callbacks;
   };
 
-  ImagePipeUpdater(SessionId id, std::shared_ptr<FrameScheduler> frame_scheduler);
+  ImagePipeUpdater(SessionId id, std::shared_ptr<scheduling::FrameScheduler> frame_scheduler);
   ~ImagePipeUpdater();
 
   // Called by ImagePipe::PresentImage(). Stashes the arguments without applying them; they will
@@ -65,7 +66,7 @@ class ImagePipeUpdater {
       scheduled_image_pipe_updates_;
 
   SessionId session_id_;
-  std::shared_ptr<FrameScheduler> frame_scheduler_;
+  std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
 };
 
 }  // namespace gfx

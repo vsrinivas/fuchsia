@@ -22,7 +22,6 @@
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/dump_visitor.h"
 #include "src/ui/scenic/lib/gfx/screenshotter.h"
-#include "src/ui/scenic/lib/gfx/util/collection_utils.h"
 #include "src/ui/scenic/lib/scenic/scenic.h"
 
 namespace scenic_impl {
@@ -216,10 +215,10 @@ void GfxSystem::TakeScreenshot(fuchsia::ui::scenic::Scenic::TakeScreenshotCallba
 
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
-SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
+scheduling::SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
     std::unordered_set<SessionId> sessions_to_update, zx::time target_presentation_time,
     zx::time latched_time, uint64_t trace_id) {
-  SessionUpdater::UpdateResults update_results;
+  scheduling::SessionUpdater::UpdateResults update_results;
 
   if (!command_context_) {
     command_context_ = std::make_optional<CommandContext>(
@@ -265,11 +264,16 @@ SessionUpdater::UpdateResults GfxSystem::UpdateSessions(
         // callbacks.
       }
       //  Collect the callbacks to be passed back in the |UpdateResults|.
-      MoveAllItemsFromQueueToQueue(&apply_results.present1_callbacks,
-                                   &update_results.present1_callbacks);
-      MoveAllItemsFromQueueToQueue(&apply_results.present2_infos, &update_results.present2_infos);
-      MoveAllItemsFromQueueToQueue(&apply_results.image_pipe_callbacks,
-                                   &update_results.present1_callbacks);
+      std::move(apply_results.present1_callbacks.begin(), apply_results.present1_callbacks.end(),
+                std::back_inserter(update_results.present1_callbacks));
+      apply_results.present1_callbacks.clear();
+      std::move(apply_results.image_pipe_callbacks.begin(),
+                apply_results.image_pipe_callbacks.end(),
+                std::back_inserter(update_results.present1_callbacks));
+      apply_results.image_pipe_callbacks.clear();
+      std::move(apply_results.present2_infos.begin(), apply_results.present2_infos.end(),
+                std::back_inserter(update_results.present2_infos));
+      apply_results.present2_infos.clear();
     }
 
     if (apply_results.needs_render) {

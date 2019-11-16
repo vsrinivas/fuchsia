@@ -3,7 +3,6 @@
 # found in the LICENSE file.
 
 import("//src/ui/lib/escher/build_args.gni")
-import("//third_party/cobalt/metrics_registry.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
 
 declare_args() {
@@ -11,13 +10,6 @@ declare_args() {
 
   # Draws the current frame number in the top-left corner.
   scenic_display_frame_number = false
-}
-
-metrics_registry("frame_metrics_registry") {
-  project_name = "frame_metrics"
-  namespace = "cobalt_registry"
-  generate_cc = true
-  generate_binarypb = false
 }
 
 config("common_include_dirs") {
@@ -227,7 +219,6 @@ source_set("gfx") {
   configs += [ ":swapchain" ]
 
   public_deps = [
-    ":frame_scheduler",
     ":gfx_always_optimized",
     ":snapshot_fbs",
     ":util",
@@ -245,16 +236,20 @@ source_set("gfx") {
     "//src/ui/scenic/lib/gfx:validate_eventpair",
     "//src/ui/scenic/lib/scenic",
     "//src/ui/scenic/lib/scenic/util",
+    "//src/ui/scenic/lib/scheduling:frame_scheduler",
     "//zircon/public/lib/fit",
   ]
 
   deps = [
+    ":ids",
     ":object_linker",
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/inspect_deprecated",
     "//src/ui/lib/escher/util:check_vulkan_support",
     "//src/ui/scenic/lib/display",
-    "//src/ui/scenic/lib/scenic:present2_info",
+
+    # TODO(24590) Remove timings dependency when display_swapchain is pulled out.
+    "//src/ui/scenic/lib/scheduling:timings",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
     "//zircon/public/lib/trace",
@@ -276,63 +271,20 @@ source_set("object_linker") {
   ]
 }
 
-source_set("vsync_timing") {
+source_set("ids") {
   sources = [
-    "engine/vsync_timing.h",
-  ]
-  deps = [
-    "//zircon/public/lib/zx",
-  ]
-}
-
-source_set("frame_scheduler") {
-  sources = [
-    # TODO(SCN-1398): Move files out of engine/.
-    "engine/constant_frame_predictor.cc",
-    "engine/constant_frame_predictor.h",
-    "engine/default_frame_scheduler.cc",
-    "engine/default_frame_scheduler.h",
-    "engine/duration_predictor.cc",
-    "engine/duration_predictor.h",
-    "engine/frame_predictor.cc",
-    "engine/frame_predictor.h",
-    "engine/frame_scheduler.h",
-    "engine/frame_stats.cc",
-    "engine/frame_stats.h",
-    "engine/frame_timings.cc",
-    "engine/frame_timings.h",
-    "engine/windowed_frame_predictor.cc",
-    "engine/windowed_frame_predictor.h",
-
     # TODO(SCN-1398): IDs don't belong here, but this will work until we factor
-    # out another source_set that needs IDs but not frame_scheduler.
+    # out another system that needs ids outside of gfx.
     "id.cc",
     "id.h",
   ]
-  deps = [
-    ":escher_maybe_with_glsl",
-    ":frame_metrics_registry",
-    ":util",
-    ":vsync_timing",
-    "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.scenic.scheduling",
-    "//src/lib/fxl",
-    "//src/lib/inspect_deprecated",
-    "//src/ui/scenic/lib/scenic:present2_info",
-
-    # TODO(SCN-1398): FrameTimings inherits from escher::Reffable.
-  ]
-
   public_deps = [
-    "//src/lib/cobalt/cpp:cobalt_logger",
-    "//third_party/cobalt/src/registry:buckets_config",
-    "//zircon/public/lib/trace",
+    "//src/ui/scenic/lib/scheduling:id",
   ]
 }
 
 source_set("util") {
   sources = [
-    "util/collection_utils.h",
     "util/time.h",
     "util/unwrap.h",
     "util/wrap.h",

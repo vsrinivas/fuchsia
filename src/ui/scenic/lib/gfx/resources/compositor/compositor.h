@@ -19,14 +19,12 @@ namespace gfx {
 
 class Compositor;
 class SceneGraph;
-class FrameTimings;
 class Layer;
 class LayerStack;
 class Scene;
 class Swapchain;
 using CompositorPtr = fxl::RefPtr<Compositor>;
 using CompositorWeakPtr = fxl::WeakPtr<Compositor>;
-using FrameTimingsPtr = fxl::RefPtr<FrameTimings>;
 using LayerStackPtr = fxl::RefPtr<LayerStack>;
 using SceneGraphWeakPtr = fxl::WeakPtr<SceneGraph>;
 

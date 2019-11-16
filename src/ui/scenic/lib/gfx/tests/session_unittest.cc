@@ -233,7 +233,7 @@ TEST_F(SessionTest, Present2Updates_AreScheduledInOrder) {
     EXPECT_EQ(elem.present_received_time(), expected_present_received_time);
     EXPECT_EQ(elem.latched_time(), latched_time.get());
 
-    update_result.present2_infos.pop();
+    update_result.present2_infos.pop_front();
     ++expected_present_received_time;
   }
 
@@ -269,7 +269,7 @@ TEST_F(SessionTest, PresentsInFlightAreDecrementedCorrectly) {
   size_t updated_count = 0;
   while (!update_result.present1_callbacks.empty() && updated_count < 2) {
     update_result.present1_callbacks.front()(presentation_info);
-    update_result.present1_callbacks.pop();
+    update_result.present1_callbacks.pop_front();
 
     ++updated_count;
   }

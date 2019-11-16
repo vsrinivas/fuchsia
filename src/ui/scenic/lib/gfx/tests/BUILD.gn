@@ -9,17 +9,9 @@ group("tests") {
   testonly = true
   public_deps = [
     ":apptests",
-    ":fuzztests",
     ":pixeltests",
     ":unittests",
     ":viewstate_apptests",
-  ]
-}
-
-group("fuzztests") {
-  testonly = true
-  public_deps = [
-    "//src/ui/scenic/lib/gfx/tests/fuzzers:gfx_fuzzers",
   ]
 }
 
@@ -41,8 +33,6 @@ source_set("testing_deps") {
   sources = [
     "error_reporting_test.cc",
     "error_reporting_test.h",
-    "frame_scheduler_test.cc",
-    "frame_scheduler_test.h",
     "gfx_test.cc",
     "gfx_test.h",
     "session_handler_test.cc",
@@ -72,10 +62,10 @@ source_set("testing_deps") {
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/display/tests:mocks",
     "//src/ui/scenic/lib/gfx",
-    "//src/ui/scenic/lib/gfx/tests/mocks:frame_scheduler_mocks",
     "//src/ui/scenic/lib/gfx/tests/mocks:util",
     "//src/ui/scenic/lib/scenic/tests:testing_deps",
     "//src/ui/scenic/lib/scenic/util",
+    "//src/ui/scenic/lib/scheduling/tests/mocks:frame_scheduler_mocks",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/zx",
   ]
@@ -167,14 +157,9 @@ executable("unittests") {
   sources = [
     "camera_unittest.cc",
     "compositor_unittest.cc",
-    "default_frame_scheduler_unittest.cc",
     "dump_visitor_unittest.cc",
-    "duration_predictor_unittest.cc",
     "escher_vulkan_smoke_test.cc",
     "focus_chain_unittest.cc",
-    "frame_predictor_unittest.cc",
-    "frame_stats_unittest.cc",
-    "frame_timings_unittest.cc",
     "gfx_command_applier_unittest.cc",
     "hardware_layer_assignment_unittest.cc",
     "hittest_accumulator_unittest.cc",
@@ -210,6 +195,7 @@ executable("unittests") {
     "//src/lib/fsl",
     "//src/ui/lib/glm_workaround",
     "//src/ui/scenic/lib/gfx:object_linker",
+    "//src/ui/scenic/lib/scheduling:id",
     "//third_party/googletest:gmock",
   ]
   include_dirs = [ "//src/ui/lib/escher" ]

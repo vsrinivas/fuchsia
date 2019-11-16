@@ -16,10 +16,10 @@
 #include <unordered_set>
 
 #include "src/ui/scenic/lib/gfx/gfx_system.h"
-#include "src/ui/scenic/lib/gfx/id.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 #include "src/ui/scenic/lib/input/view_stack.h"
 #include "src/ui/scenic/lib/scenic/system.h"
+#include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
 namespace input {
@@ -51,7 +51,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
            accessibility_pointer_event_listener_.is_bound();
   }
 
-  std::map<SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
+  std::map<scheduling::SessionId, EventReporterWeakPtr>& hard_keyboard_requested() {
     return hard_keyboard_requested_;
   }
 
@@ -72,7 +72,7 @@ class InputSystem : public System, public fuchsia::ui::policy::accessibility::Po
   // this set remembers which sessions have opted in.  We need this map because
   // each InputCommandDispatcher works independently.
   // NOTE: This flow will be replaced by a direct dispatch from a "Root Presenter" to IME Service.
-  std::map<SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
+  std::map<scheduling::SessionId, EventReporterWeakPtr> hard_keyboard_requested_;
 
   fidl::BindingSet<fuchsia::ui::policy::accessibility::PointerEventRegistry>
       accessibility_pointer_event_registry_;

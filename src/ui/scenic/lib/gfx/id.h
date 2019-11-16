@@ -8,9 +8,11 @@
 #include <cstdint>
 #include <ostream>
 
+#include "src/ui/scenic/lib/scheduling/id.h"
+
 namespace scenic_impl {
 
-using SessionId = uint64_t;
+using SessionId = scheduling::SessionId;
 using ResourceId = uint32_t;
 
 struct GlobalId {
