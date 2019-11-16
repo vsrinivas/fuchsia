@@ -3,7 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef FFL_FIXED_FORMAT_H_
+#define FFL_FIXED_FORMAT_H_
 
 #include <algorithm>
 #include <cstddef>
@@ -32,16 +33,33 @@ struct Value<FixedFormat<Integer, FractionalBits>> {
   const Intermediate value;
 };
 
+// Predicate to determine whether the given integer type and number of
+// fractional bits is valid.
+template <typename Integer, size_t FractionalBits>
+static constexpr bool FormatIsValid = (std::is_signed_v<Integer> &&
+                                       FractionalBits < sizeof(Integer) * 8) ||
+                                      (std::is_unsigned_v<Integer> &&
+                                       FractionalBits <= sizeof(Integer) * 8);
+
 // Type representing the format of a fixed-point value in terms of the
 // underlying integer type and fractional precision. Provides key constants and
 // operations for fixed-point computation and format manipulation.
 template <typename Integer_, size_t FractionalBits_>
 struct FixedFormat {
+  static_assert(std::is_integral_v<Integer_>,
+                "The Integer template parameter must be an integral type!");
+  static_assert(FormatIsValid<Integer_, FractionalBits_>,
+                "The number of fractional bits must fit within the positive bits!");
+
   // The underlying integral type of the fixed-point values in this format.
   using Integer = Integer_;
 
   // The intermediate integral type used by computations in this format.
   using Intermediate = typename IntermediateType<Integer>::Type;
+
+  // Indicates whether the underlying integer is singed or unsigned.
+  static constexpr bool IsSigned = std::is_signed_v<Integer>;
+  static constexpr bool IsUnsigned = std::is_unsigned_v<Integer>;
 
   // Numeric constants for fixed-point computations.
   static constexpr size_t Bits = sizeof(Integer) * 8;
@@ -50,10 +68,14 @@ struct FixedFormat {
   static constexpr size_t IntegralBits = Bits - FractionalBits;
   static constexpr size_t Power = 1 << FractionalBits;
 
+  // Indicates whether positive one can only be represented fractionally.
+  static constexpr bool ApproximateUnit =
+      (IsSigned && FractionalBits == Bits - 1) || FractionalBits == Bits;
+
   static constexpr Integer One = 1;  // Typed constant used in shifts below.
   static constexpr Integer FractionalMask = Power - 1;
   static constexpr Integer IntegralMask = ~FractionalMask;
-  static constexpr Integer SignBit = std::is_signed_v<Integer> ? One << (Bits - 1) : 0;
+  static constexpr Integer SignBit = IsSigned ? One << (Bits - 1) : 0;
   static constexpr Integer BinaryPoint = FractionalBits > 0 ? One << (FractionalBits - 1) : 0;
   static constexpr Integer OnesPlace = One << FractionalBits;
 
@@ -62,20 +84,13 @@ struct FixedFormat {
   static constexpr Integer IntegralMin = static_cast<Integer>(Min / Power);
   static constexpr Integer IntegralMax = static_cast<Integer>(Max / Power);
 
-  // Assert that the template arguments are valid.
-  static_assert(std::is_integral_v<Integer>,
-                "The Integer template parameter must be an integral type!");
-  static_assert((std::is_signed_v<Integer> && FractionalBits < Bits) ||
-                    (!std::is_signed_v<Integer> && FractionalBits <= Bits),
-                "The number of fractional bits must fit within the positive bits!");
-
   // Trivially converts from Integer to Intermediate type.
   static constexpr Intermediate ToIntermediate(Intermediate value) { return value; }
 
   // Saturates an intermediate value to the valid range of the base type.
-  static constexpr Integer Saturate(Intermediate value) {
-    const Intermediate clamped = std::clamp(value, Intermediate{Min}, Intermediate{Max});
-    return static_cast<Integer>(clamped);
+  template <typename I, typename = std::enable_if_t<std::is_integral_v<I>>>
+  static constexpr Integer Saturate(I value) {
+    return ClampCast<Integer>(value);
   }
   static constexpr Integer Saturate(Value<FixedFormat> value) { return Saturate(value.value); }
 
@@ -121,15 +136,17 @@ struct FixedFormat {
   //
   template <size_t Place>
   static constexpr Intermediate Round(Intermediate value, Bit<Place>) {
+    using Unsigned = std::make_unsigned_t<Intermediate>;
+
     // Bit of the significant figure to round to and mask of the significant
     // bits after rounding.
-    const Intermediate PlaceBit = 1 << Place;
-    const Intermediate PlaceMask = ~(PlaceBit - 1);
+    const Unsigned PlaceBit = Unsigned{1} << Place;
+    const Unsigned PlaceMask = ~(PlaceBit - 1);
 
     // Bit representing one half of the significant figure to round to
     // and mask of the bits below it, if any.
-    const Intermediate HalfBit = 1 << (Place - 1);
-    const Intermediate HalfMask = Place > 1 ? HalfBit - 1 : 0;
+    const Unsigned HalfBit = Unsigned{1} << (Place - 1);
+    const Unsigned HalfMask = Place > 1 ? HalfBit - 1 : 0;
 
     // Shift representing where to add the odd bit when rounding to even.
     const size_t PlaceShift = Place > 1 ? 2 : 1;
@@ -137,19 +154,25 @@ struct FixedFormat {
     // Compute a mask and bit to conditionally convert |value| to positive.
     // When |value| is negative then |mask| = -1 and |one| = 1, otherwise
     // both are zero. This optimizes out when |value| is unsigned.
-    const Intermediate mask = static_cast<Intermediate>(-(value < 0));
-    const Intermediate one = mask & 1;
+    const Unsigned mask = static_cast<Unsigned>(-(value < 0));
+    const Unsigned one = mask & 1;
 
     // Compute the absolute value of |value| using two's complement. This
     // optimizes out when |value| is unsigned.
-    const auto absolute = static_cast<Intermediate>((value ^ mask) + one);
+    const auto absolute = (static_cast<Unsigned>(value) ^ mask) + one;
 
     // Round half to even.
-    const Intermediate odd_bit = (absolute & PlaceBit) >> PlaceShift;
-    const auto rounded = static_cast<Intermediate>((absolute + HalfMask + odd_bit) & PlaceMask);
+    const Unsigned odd_bit = (absolute & PlaceBit) >> PlaceShift;
+    Intermediate rounded = 0;
+    // All values are positive, catch positive overflow and saturate.
+    if (__builtin_add_overflow(absolute, HalfMask + odd_bit, &rounded)) {
+      rounded = std::numeric_limits<Intermediate>::max();
+    } else {
+      rounded &= PlaceMask;
+    }
 
     // Restore original sign. This optimizes out when |value| is unsigned.
-    return static_cast<Intermediate>((rounded ^ mask) + one);
+    return static_cast<Intermediate>((static_cast<Unsigned>(rounded) ^ mask) + one);
   }
 
   // Rounding to the 0th bit is a no-op.
@@ -164,20 +187,24 @@ struct FixedFormat {
   // as necessary.
   template <typename SourceFormat>
   static constexpr Value<FixedFormat> Convert(Value<SourceFormat> value) {
-    using IntermediateFormat =
-        std::conditional_t<SourceFormat::Bits >= Bits, SourceFormat, FixedFormat>;
+    using LargestFormat =
+        std::conditional_t<(SourceFormat::Bits > Bits), SourceFormat, FixedFormat>;
+    using LargestInteger = MatchSignedOrUnsigned<Integer, typename LargestFormat::Integer>;
+    using IntermediateFormat = FixedFormat<LargestInteger, SourceFormat::FractionalBits>;
     using ValueType = typename IntermediateFormat::Intermediate;
+
+    const ValueType clamped_value = IntermediateFormat::Saturate(value.value);
 
     if constexpr (SourceFormat::FractionalBits >= FractionalBits) {
       const size_t delta = SourceFormat::FractionalBits - FractionalBits;
       const ValueType power = ValueType{1} << delta;
       const ValueType converted_value =
-          IntermediateFormat::Round(value.value, ToPlace<delta>) / power;
+          IntermediateFormat::Round(clamped_value, ToPlace<delta>) / power;
       return Value<FixedFormat>{static_cast<Intermediate>(converted_value)};
     } else {
       const size_t delta = FractionalBits - SourceFormat::FractionalBits;
       const ValueType power = ValueType{1} << delta;
-      const ValueType converted_value = static_cast<ValueType>(value.value * power);
+      const ValueType converted_value = static_cast<ValueType>(clamped_value * power);
       return Value<FixedFormat>{static_cast<Intermediate>(converted_value)};
     }
   }
@@ -187,3 +214,5 @@ struct FixedFormat {
 };
 
 }  // namespace ffl
+
+#endif  // FFL_FIXED_FORMAT_H_

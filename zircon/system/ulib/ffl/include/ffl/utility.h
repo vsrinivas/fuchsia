@@ -3,10 +3,13 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef FFL_UTILITY_H_
+#define FFL_UTILITY_H_
 
 #include <cstddef>
 #include <cstdint>
+#include <limits>
+#include <type_traits>
 
 namespace ffl {
 
@@ -64,4 +67,61 @@ struct IntermediateType<int64_t> {
   using Type = int64_t;
 };
 
+// Changes the signedness of Integer to match the signedness of Reference,
+// preserving the original size of Integer.
+template <typename Reference, typename Integer>
+using MatchSignedOrUnsigned =
+    std::conditional_t<std::is_signed_v<Reference>, std::make_signed_t<Integer>,
+                       std::make_unsigned_t<Integer>>;
+
+// Clamps the given Integer value to the range of Result. Optimized for all
+// combinations of sizes and signedness.
+template <typename Result, typename Integer,
+          typename = std::enable_if_t<std::is_integral_v<Result> && std::is_integral_v<Integer>>>
+constexpr Result ClampCast(Integer value) {
+  constexpr auto kMin = std::numeric_limits<Result>::min();
+  constexpr auto kMax = std::numeric_limits<Result>::max();
+
+  if constexpr (std::is_unsigned_v<Result> && std::is_signed_v<Integer>) {
+    if (value <= 0) {
+      return 0;
+    }
+    if constexpr (sizeof(Result) < sizeof(Integer)) {
+      if (value > static_cast<Integer>(kMax)) {
+        return kMax;
+      }
+    }
+    return static_cast<Result>(value);
+  } else if (std::is_unsigned_v<Result> && std::is_unsigned_v<Integer>) {
+    if constexpr (sizeof(Result) < sizeof(Integer)) {
+      if (value > kMax) {
+        return kMax;
+      }
+    }
+    return static_cast<Result>(value);
+  } else if (std::is_signed_v<Result> && std::is_unsigned_v<Integer>) {
+    if constexpr (sizeof(Result) <= sizeof(Integer)) {
+      if (value > static_cast<Integer>(kMax)) {
+        return kMax;
+      }
+    }
+    return static_cast<Result>(value);
+  } else if (std::is_signed_v<Result> && std::is_signed_v<Integer>) {
+    if constexpr (sizeof(Result) < sizeof(Integer)) {
+      if (value < kMin) {
+        return kMin;
+      } else if (value > kMax) {
+        return kMax;
+      }
+    }
+    return static_cast<Result>(value);
+  }
+
+  // Silence warnings when compiling with GCC.
+  static_cast<void>(kMin);
+  static_cast<void>(kMax);
+}
+
 }  // namespace ffl
+
+#endif  // FFL_UTILITY_H_

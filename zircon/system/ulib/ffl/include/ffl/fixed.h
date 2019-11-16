@@ -3,7 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef FFL_FIXED_H_
+#define FFL_FIXED_H_
 
 //
 // Fuchsia Fixed-point Library (FFL):
@@ -12,6 +13,7 @@
 // defined rounding.
 //
 
+#include <cstddef>
 #include <type_traits>
 
 #include <ffl/expression.h>
@@ -43,6 +45,12 @@ class Fixed {
   // on the fixed-point representation of this type.
   using Format = FixedFormat<Integer, FractionalBits>;
 
+  // Returns the minimum value of this fixed point format.
+  static constexpr Fixed Min() { return ValueExpression<Integer, FractionalBits>{Format::Min}; }
+
+  // Returns the maximum value of this fixed point format.
+  static constexpr Fixed Max() { return ValueExpression<Integer, FractionalBits>{Format::Max}; }
+
   // Fixed is default constructible without a default value, which is the same
   // as for plain integer types. This is permitted in constexpr contexts as
   // long as the underling integer member |value_| is initialized before use.
@@ -56,12 +64,19 @@ class Fixed {
   // within the integer precision defined by Format::IntegerBits.
   explicit constexpr Fixed(Integer value) : Fixed{ToExpression<Integer>{value}} {}
 
-  // Implicit conversion from an intermediate expression. The value is rounded
-  // and saturated to fit within the precision and resolution of this type, if
-  // necessary.
+  // Implicit conversion from an intermediate expression. The value is converted
+  // to the precision and resolution of this type, if necessary.
   template <Operation Op, typename... Args>
   constexpr Fixed(Expression<Op, Args...> expression)
       : value_{Format::Saturate(Format::Convert(expression.Evaluate(Format{})))} {}
+
+  // Explicit conversion from another fixed point type. The value is converted
+  // to the precision and resolution of this type, if necessary.
+  template <typename OtherInteger, size_t OtherFractionalBits,
+            typename = std::enable_if_t<!std::is_same_v<Integer, OtherInteger> ||
+                                        FractionalBits != OtherFractionalBits>>
+  explicit constexpr Fixed(const Fixed<OtherInteger, OtherFractionalBits>& other)
+      : Fixed{ToExpression<Fixed<OtherInteger, OtherFractionalBits>>{other}} {}
 
   // Assignment from an intermediate expression. The value is rounded and
   // saturated to fit within the precision and resolution of this type, if
@@ -276,3 +291,5 @@ inline constexpr auto operator/(Left left, Right right) {
 }
 
 }  // namespace ffl
+
+#endif  // FFL_FIXED_H_

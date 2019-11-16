@@ -3,7 +3,8 @@
 // Use of this source code is governed by a MIT-style
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
-#pragma once
+#ifndef FFL_EXPRESSION_H_
+#define FFL_EXPRESSION_H_
 
 #include <cstddef>
 #include <cstdint>
@@ -11,6 +12,7 @@
 #include <utility>
 
 #include <ffl/fixed_format.h>
+#include <ffl/saturating_arithmetic.h>
 
 namespace ffl {
 
@@ -27,6 +29,123 @@ enum class Operation {
   Division,
   Negation,
   Resolution,
+};
+
+// Traits type that determines the promoted result format, given an operation
+// and input formats.
+template <Operation, typename, typename, typename = void>
+struct PromoteFormat;
+
+template <typename SourceFormat, typename TargetFormat>
+struct PromoteFormat<Operation::Value, SourceFormat, TargetFormat> {
+ private:
+  using SourceInteger = typename SourceFormat::Integer;
+  using TargetInteger = typename TargetFormat::Integer;
+
+  using LargestInteger =
+      std::conditional_t<SourceFormat::Bits >= TargetFormat::Bits, SourceInteger, TargetInteger>;
+
+ public:
+  static constexpr bool IsSigned = std::is_signed_v<TargetInteger>;
+
+  static constexpr size_t FractionalBits = TargetFormat::FractionalBits;
+
+  using Integer = std::conditional_t<IsSigned, std::make_signed_t<LargestInteger>,
+                                     std::make_unsigned_t<LargestInteger>>;
+
+  using Format = FixedFormat<Integer, FractionalBits>;
+};
+
+template <typename LeftFormat, typename RightFormat>
+struct PromoteFormat<Operation::Addition, LeftFormat, RightFormat> {
+ private:
+  using LeftInteger = typename LeftFormat::Integer;
+  using RightInteger = typename RightFormat::Integer;
+
+  using LargestInteger =
+      std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, LeftInteger, RightInteger>;
+
+ public:
+  static constexpr bool IsSigned =
+      std::is_signed_v<decltype(std::declval<LeftInteger>() + std::declval<RightInteger>())>;
+
+  static constexpr size_t FractionalBits =
+      std::min(LeftFormat::FractionalBits, RightFormat::FractionalBits);
+
+  using Integer = std::conditional_t<IsSigned, std::make_signed_t<LargestInteger>,
+                                     std::make_unsigned_t<LargestInteger>>;
+
+  using Format = FixedFormat<Integer, FractionalBits>;
+};
+
+template <typename LeftFormat, typename RightFormat>
+struct PromoteFormat<Operation::Subtraction, LeftFormat, RightFormat> {
+ private:
+  using LeftInteger = typename LeftFormat::Integer;
+  using RightInteger = typename RightFormat::Integer;
+
+  using LargestInteger =
+      std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, LeftInteger, RightInteger>;
+
+ public:
+  static constexpr bool IsSigned =
+      std::is_signed_v<decltype(std::declval<LeftInteger>() - std::declval<RightInteger>())>;
+
+  static constexpr size_t FractionalBits =
+      std::min(LeftFormat::FractionalBits, RightFormat::FractionalBits);
+
+  using Integer = std::conditional_t<IsSigned, std::make_signed_t<LargestInteger>,
+                                     std::make_unsigned_t<LargestInteger>>;
+
+  using Format = FixedFormat<Integer, FractionalBits>;
+};
+
+template <typename LeftFormat, typename RightFormat>
+struct PromoteFormat<Operation::Multiplication, LeftFormat, RightFormat> {
+ private:
+  using LeftInteger = typename LeftFormat::Intermediate;
+  using RightInteger = typename RightFormat::Intermediate;
+
+  using LargestInteger =
+      std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, LeftInteger, RightInteger>;
+
+ public:
+  static constexpr bool IsSigned =
+      std::is_signed_v<decltype(std::declval<LeftInteger>() * std::declval<RightInteger>())>;
+
+  static constexpr size_t FractionalBits = LeftFormat::FractionalBits + RightFormat::FractionalBits;
+
+  using Integer = std::conditional_t<IsSigned, std::make_signed_t<LargestInteger>,
+                                     std::make_unsigned_t<LargestInteger>>;
+
+  using Format = FixedFormat<Integer, FractionalBits>;
+};
+
+template <typename LeftFormat, typename RightFormat, typename TargetFormat>
+struct PromoteFormat<Operation::Division, LeftFormat, RightFormat, TargetFormat> {
+ private:
+  using LeftInteger = typename LeftFormat::Integer;
+  using RightInteger = typename RightFormat::Integer;
+
+  using LargestFormat =
+      std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, LeftFormat, RightFormat>;
+
+  using LargestInteger =
+      std::conditional_t<LargestFormat::Bits >= TargetFormat::Bits,
+                         typename LargestFormat::Intermediate, typename TargetFormat::Intermediate>;
+
+ public:
+  static constexpr bool IsSigned =
+      std::is_signed_v<decltype(std::declval<LeftInteger>() / std::declval<RightInteger>())>;
+
+  static constexpr size_t FractionalBits =
+      TargetFormat::FractionalBits + RightFormat::FractionalBits;
+
+  using Integer = std::conditional_t<IsSigned, std::make_signed_t<LargestInteger>,
+                                     std::make_unsigned_t<LargestInteger>>;
+
+  using NumeratorFormat = FixedFormat<Integer, FractionalBits>;
+  using QuotientFormat = FixedFormat<Integer, TargetFormat::FractionalBits>;
 };
 
 // Type representing a node in an expression tree. Specializations implement the
@@ -86,9 +205,11 @@ struct Expression<Operation::Negation, Expression<Op, Args...>> {
   }
 
  private:
-  template <typename Format>
-  static constexpr auto Perform(Value<Format> value) {
-    return Value<Format>{-value.value};
+  template <typename TargetFormat>
+  static constexpr auto Perform(Value<TargetFormat> value) {
+    using Intermediate = typename TargetFormat::Intermediate;
+    const Intermediate result = -value.value;
+    return Value<TargetFormat>{result};
   }
 };
 
@@ -130,22 +251,15 @@ struct Expression<Operation::Addition, Expression<LeftOp, LeftArgs...>,
  private:
   template <typename LeftFormat, typename RightFormat>
   static constexpr auto Perform(Value<LeftFormat> left, Value<RightFormat> right) {
-    // Select the intermediate precision based on the argument format with
-    // the largest precision.
-    using Integer = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
-                                       typename LeftFormat::Integer, typename RightFormat::Integer>;
-    // Select the intermediate resolution based on the argument format with
-    // the least resolution.
-    const size_t FractionalBits = std::min(LeftFormat::FractionalBits, RightFormat::FractionalBits);
-
-    using IntermediateFormat = FixedFormat<Integer, FractionalBits>;
+    using Promote = PromoteFormat<Operation::Addition, LeftFormat, RightFormat>;
+    using IntermediateFormat = typename Promote::Format;
     using Intermediate = typename IntermediateFormat::Intermediate;
 
     const auto left_value = IntermediateFormat::Convert(left);
     const auto right_value = IntermediateFormat::Convert(right);
-    const auto value = static_cast<Intermediate>(left_value.value + right_value.value);
 
-    return Value<IntermediateFormat>{value};
+    return Value<IntermediateFormat>{
+        SaturateAddAs<Intermediate>(left_value.value, right_value.value)};
   }
 };
 
@@ -170,22 +284,15 @@ struct Expression<Operation::Subtraction, Expression<LeftOp, LeftArgs...>,
  private:
   template <typename LeftFormat, typename RightFormat>
   static constexpr auto Perform(Value<LeftFormat> left, Value<RightFormat> right) {
-    // Select the intermediate precision based on the argument format with
-    // the largest precision.
-    using Integer = std::conditional_t<LeftFormat::Bits >= RightFormat::Bits,
-                                       typename LeftFormat::Integer, typename RightFormat::Integer>;
-    // Select the intermediate resolution based on the argument format with
-    // the least resolution.
-    const size_t FractionalBits = std::min(LeftFormat::FractionalBits, RightFormat::FractionalBits);
-
-    using IntermediateFormat = FixedFormat<Integer, FractionalBits>;
+    using Promote = PromoteFormat<Operation::Subtraction, LeftFormat, RightFormat>;
+    using IntermediateFormat = typename Promote::Format;
     using Intermediate = typename IntermediateFormat::Intermediate;
 
     const auto left_value = IntermediateFormat::Convert(left);
     const auto right_value = IntermediateFormat::Convert(right);
-    const auto value = static_cast<Intermediate>(left_value.value - right_value.value);
 
-    return Value<IntermediateFormat>{value};
+    return Value<IntermediateFormat>{
+        SaturateSubtractAs<Intermediate>(left_value.value, right_value.value)};
   }
 };
 
@@ -210,24 +317,11 @@ struct Expression<Operation::Multiplication, Expression<LeftOp, LeftArgs...>,
  private:
   template <typename LeftFormat, typename RightFormat>
   static constexpr auto Perform(Value<LeftFormat> left, Value<RightFormat> right) {
-    // Select the intermediate precision based on the argument format with
-    // the largest precision. The intermediate format precision is
-    // guaranteed to be sufficient for multiplication with itself or
-    // smaller, unless the type is already maximally wide. It is up to the
-    // user to ensure that multiplication does not exceed the maximum
-    // supported precision.
-    using Integer =
-        std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, typename LeftFormat::Intermediate,
-                           typename RightFormat::Intermediate>;
-    const size_t FractionalBits = LeftFormat::FractionalBits + RightFormat::FractionalBits;
-    using IntermediateFormat = FixedFormat<Integer, FractionalBits>;
+    using Promote = PromoteFormat<Operation::Multiplication, LeftFormat, RightFormat>;
+    using IntermediateFormat = typename Promote::Format;
     using Intermediate = typename IntermediateFormat::Intermediate;
 
-    const Integer left_value = left.value;
-    const Integer right_value = right.value;
-    const auto value = static_cast<Intermediate>(left_value * right_value);
-
-    return Value<IntermediateFormat>{value};
+    return Value<IntermediateFormat>{SaturateMultiplyAs<Intermediate>(left.value, right.value)};
   }
 };
 
@@ -251,22 +345,11 @@ struct Expression<Operation::Division, Expression<LeftOp, LeftArgs...>,
  private:
   template <typename TargetFormat, typename LeftFormat, typename RightFormat>
   static constexpr auto Perform(TargetFormat, Value<LeftFormat> left, Value<RightFormat> right) {
-    // Select the intermediate precision based on the format with the
-    // largest precision. The intermediate format precision is guaranteed
-    // to be sufficient for division with itself or smaller, unless the type
-    // is already maximally wide. It is up to the user to ensure that
-    // division does not exceed the maximum supported precision.
-    using LeftOrRightFormat =
-        std::conditional_t<LeftFormat::Bits >= RightFormat::Bits, LeftFormat, RightFormat>;
-    using Intermediate = std::conditional_t<LeftOrRightFormat::Bits >= TargetFormat::Bits,
-                                            typename LeftOrRightFormat::Intermediate,
-                                            typename TargetFormat::Intermediate>;
-    const size_t FractionalBits = TargetFormat::FractionalBits + RightFormat::FractionalBits;
-    using IntermediateFormat = FixedFormat<Intermediate, FractionalBits>;
-    using QuotientFormat = FixedFormat<Intermediate, TargetFormat::FractionalBits>;
+    using Promote = PromoteFormat<Operation::Division, LeftFormat, RightFormat, TargetFormat>;
+    using NumeratorFormat = typename Promote::NumeratorFormat;
+    using QuotientFormat = typename Promote::QuotientFormat;
 
-    const auto left_value = IntermediateFormat::Convert(left).value;
-    return Value<QuotientFormat>{left_value / right.value};
+    return Value<QuotientFormat>{NumeratorFormat::Convert(left).value / right.value};
   }
 };
 
@@ -324,7 +407,7 @@ struct ComparisonTraits<Fixed<LeftInteger, LeftFractionalBits>,
   }
 
   static constexpr auto Right(Fixed<RightInteger, RightFractionalBits> value) {
-    if constexpr (LeftFractionalBits > RightFractionalBits) {
+    if constexpr (LeftFractionalBits >= RightFractionalBits) {
       return value;
     } else {
       using Format = typename Fixed<LeftInteger, LeftFractionalBits>::Format;
@@ -347,7 +430,7 @@ struct ComparisonTraits<Fixed<Integer, FractionalBits>, Expression<Op, Args...>>
 // evaluated and converted to the same format as Fixed before comparison.
 template <typename Integer, size_t FractionalBits, Operation Op, typename... Args>
 struct ComparisonTraits<Expression<Op, Args...>, Fixed<Integer, FractionalBits>> : std::true_type {
-  static constexpr auto Right(Expression<Op, Args...> expression) {
+  static constexpr auto Left(Expression<Op, Args...> expression) {
     return Fixed<Integer, FractionalBits>{expression};
   }
   static constexpr auto Right(Fixed<Integer, FractionalBits> value) { return value; }
@@ -426,3 +509,5 @@ using EnableIfBinaryExpression =
                      Return>;
 
 }  // namespace ffl
+
+#endif  // FFL_EXPRESSION_H_

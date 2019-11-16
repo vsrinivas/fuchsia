@@ -2,12 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+group("test") {
+  testonly = true
+  deps = [
+    ":ffl",
+  ]
+}
+
 zx_test("ffl") {
   sources = [
     "ffl_tests.cc",
   ]
   deps = [
     "$zx/system/ulib/ffl",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zxtest",
   ]
+
+  if (is_fuchsia) {
+    deps += [
+      "$zx/system/ulib/fdio",
+    ]
+  }
 }
