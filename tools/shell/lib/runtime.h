@@ -41,13 +41,19 @@ class Context {
 
   // Initialize Fuchsia-isms: zx_internal, fdio, etc.
   // fidl_path is the directory to look for the FIDL IR.
-  bool InitBuiltins(const std::string& fidl_path);
+  // boot_js_path is the directory to look for builtin JS (like ls and friends).
+  bool InitBuiltins(const std::string& fidl_path, const std::string& boot_js_path);
+
+  // Loads JS from the given lib.
+  // If js_path is empty, it will load it from a predefined module  of that name.
+  // If js_path is non-empty, it will load it from a similarly named JS file relative to js_path.
+  // For example, if you pass "ns", it will load "$path/ns.js". This can obviously be made better
+  // (e.g., support subdirectories, handle missing files), but we don't need that yet.
+  bool Export(const std::string&, const std::string& js_path = "");
 
  private:
   JSContext* ctx_;
   bool is_valid_;
-
-  bool Export(const std::string&);
 };
 
 }  // namespace shell

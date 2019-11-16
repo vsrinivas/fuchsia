@@ -23,7 +23,7 @@ class Object {
     this._handle = handle;
   }
 
- /**
+  /**
    * The zx_object_wait_async() call.
    * @param {int32} flags The set of signals
    * @param {callback} callback The code to invoke when you are done waiting.
@@ -39,6 +39,13 @@ class Object {
     zx_internal.handleClose(this._handle);
   }
 
+  /**
+   * Duplicates the underlying handle: do not call on zx.Object, only on a subclass.
+   */
+  duplicate(rights) {
+    // Fix this if you can figure out how to get a new object of the type of this.
+    throw "Cannot call duplicate on pure object";
+  }
 }
 
 /**
@@ -81,10 +88,15 @@ class Channel extends Object {
   read() {
     return zx_internal.channelRead(this._handle);
   }
+
+  duplicate(rights) {
+    return new zx.Channel(zx_internal.duplicate(this._handle, rights));
+  }
 }
 
 const ZX_CHANNEL_READABLE = zx_internal.ZX_CHANNEL_READABLE;
 const ZX_CHANNEL_PEER_CLOSED = zx_internal.ZX_CHANNEL_PEER_CLOSED;
+const ZX_RIGHT_SAME_RIGHTS = zx_internal.ZX_RIGHT_SAME_RIGHTS;
 
 global['zx'] = {
   Object,
@@ -92,5 +104,6 @@ global['zx'] = {
 
   ZX_CHANNEL_READABLE,
   ZX_CHANNEL_PEER_CLOSED,
+  ZX_RIGHT_SAME_RIGHTS,
 }
 })(globalThis);

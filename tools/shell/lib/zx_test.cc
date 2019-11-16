@@ -20,7 +20,7 @@ class ZxTest : public JsTest {
 
 // Sanity check test to make sure Hello World works.
 TEST_F(ZxTest, BasicChannelOps) {
-  InitBuiltins("");
+  InitBuiltins("", "");
   std::string test_string = R"(
 const TEST_VAL = 42;
 let ch = zx.Channel.create();

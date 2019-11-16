@@ -20,12 +20,21 @@ const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>
       element.  This should be fixed, which requires turning the shell
       into a component.)";
 
+const char kBootJsLibPathHelp[] = R"(  --boot-js-lib-path=<path>
+  -j <path>
+      Automatically load builtin JS files from the given path.  Defaults to
+      /pkgfs/packages/josh/0/data/lib, and only takes a single path
+      element.  This should be fixed, which requires turning the shell
+      into a component.)";
+
 cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions* options,
                                  std::vector<std::string>* params) {
   cmdline::ArgsParser<CommandLineOptions> parser;
 
   parser.AddSwitch("command-string", 'c', kCommandStringHelp, &CommandLineOptions::command_string);
   parser.AddSwitch("fidl-ir-path", 'f', kFidlIrPathHelp, &CommandLineOptions::fidl_ir_path);
+  parser.AddSwitch("boot-js-lib-path", 'j', kBootJsLibPathHelp,
+                   &CommandLineOptions::boot_js_lib_path);
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {
@@ -35,6 +44,9 @@ cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions
   // TODO(jeremymanson): This is a bad default.
   if (options->fidl_ir_path.empty()) {
     options->fidl_ir_path.push_back("/pkgfs/packages/josh/0/data/fidling");
+  }
+  if (options->boot_js_lib_path.empty()) {
+    options->boot_js_lib_path.push_back("/pkgfs/packages/josh/0/data/lib");
   }
 
   return cmdline::Status::Ok();

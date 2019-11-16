@@ -264,10 +264,12 @@ class ProtocolClient {
     }
 
     // Not sure if we are being passed a channel or an existing protocol client to dup.
-    if ('_impl' in channel == false) {
+    if (channel instanceof zx.Channel) {
       this._impl = new ProtocolClientImpl(this._decl, channel);
-    } else {
+    } else if ('_impl' in channel) {
       this._impl = channel._impl;
+    } else {
+      throw "Illegal argument passed as channel to ProtocolClient constructor";
     }
 
     // Populate the ProtocolClient object with methods corresponding to the protocol methods.
@@ -300,6 +302,27 @@ class ProtocolClient {
     protocolClient._impl._close();
   }
 };
+
+// Something fidl_codec should do: when we improve the JSON output for it, this should be
+// less necessary.
+function parseFidlcatHandle(handleStr) {
+  var regex = /[A-Z_]*:([0-9a-f]+)\(.*\)/gi;
+  return parseInt(handleStr.replace(regex, '$1'), 16);
+}
+
+function convertResponseHandles(methodDecl, message) {
+  for (let i = 0; i < methodDecl.maybe_response.length; i++) {
+    if (methodDecl.maybe_response[i].type.kind == 'identifier') {
+      // TODO: Look up identifier and recurse.
+      continue;
+    }
+    if (methodDecl.maybe_response[i].type.kind == 'request') {
+      const handleValue = parseFidlcatHandle(message[methodDecl.maybe_response[i].name]);
+      message[methodDecl.maybe_response[i].name] = zx.Channel.fromValue(handleValue);
+    }
+  }
+  return message;
+}
 
 /**
  * The implementation class for the ProtocolClient.
@@ -337,7 +360,7 @@ class ProtocolClientImpl {
    * @returns a promise that will be resolved / rejected when the event is triggered.
    */
   _setEventProcessor(method, fn) {
-    this._channel.wait(
+    this._channel.waitAsync(
         zx.ZX_CHANNEL_READABLE | zx.ZX_CHANNEL_PEER_CLOSED, () => this._readable(method));
     return new Promise((resolve, reject) => {
       this._eventProcessors.set(method.ordinal, (args) => {
@@ -362,7 +385,7 @@ class ProtocolClientImpl {
         let txid = 0;
         if (method.has_response) {
           this._channel.waitAsync(
-              zx.ZX_CHANNEL_READABLE | zx.ZX_CHANNEL_PEER_CLOSED, () => this._readable());
+              zx.ZX_CHANNEL_READABLE | zx.ZX_CHANNEL_PEER_CLOSED, () => this._readable(method));
           txid = this._nextTxId();
         }
         const encoder = new MessageEncoder(txid, method.ordinal);
@@ -386,8 +409,9 @@ class ProtocolClientImpl {
    * Handles the response from a protocol method.  It looks up what methods
    * we're expecting a response from and tries to correlate it with the txid
    * received.
+   * @param method is the FIDL IR for the method.
    */
-  _readable() {
+  _readable(method) {
     const [bytes, handles] = this._channel.read();
     const header = new MessageHeader(bytes);
 
@@ -408,15 +432,14 @@ class ProtocolClientImpl {
     }
     // TODO(jeremymanson): Make sure strings in decoded response are escaped properly
     const responseString = internalLibrary.decodeResponse(bytes, handles);
-    // TODO(jeremymanson): Note that this doesn't do anything about handles.  More to come.
-    resolve(JSON.parse(responseString));
+    const response = convertResponseHandles(method, JSON.parse(responseString));
+    resolve(response);
   }
 
   _close() {
     this._channel.close();
   }
 }
-
 
 /**
  * Enough of a message encoder to tide us over until fidl_codec supports message encoding.
@@ -578,16 +601,16 @@ class MessageEncoder {
 /**
  * A convenience class that allows a user to say something like:
  *
- * client = new Request(fidling.fuchsia.io/Directory).getProtocolClient();
+ * client = new Request(fidling.fuchsia.io.Directory).getProtocolClient();
  *
  * And use client appropriately.
  */
 class Request {
   constructor(protocolIr) {
     this._protocolIr = protocolIr;
-    const handles = zx.Channel.create();
-    this._serverEndpoint = handles[1];
-    this._clientEndpoint = handles[0];
+    const channels = zx.Channel.create();
+    this._serverEndpoint = channels[1];
+    this._clientEndpoint = channels[0];
   }
 
   /**
@@ -598,9 +621,9 @@ class Request {
   }
 
   /**
-   * Returns a handle to the server endpoint for this request.
+   * Returns a zx.Channel representing the server endpoint for this request.
    */
-  getHandleForServer() {
+  getChannelForServer() {
     return this._serverEndpoint;
   }
 };

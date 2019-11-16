@@ -30,8 +30,9 @@ class JsTest : public ::testing::Test {
 
   // Initializes shell-specific modules, including fidl, zx, and fdio.
   // |fidl_path| points to where you look for FIDL JSON IR.
-  void InitBuiltins(const std::string& fidl_path) {
-    if (!ctx_->InitBuiltins(fidl_path)) {
+  // |js_lib_path| points to where you look for system JS libs.
+  void InitBuiltins(const std::string& fidl_path, const std::string& js_lib_path) {
+    if (!ctx_->InitBuiltins(fidl_path, js_lib_path)) {
       ctx_->DumpError();
       FAIL();
     }

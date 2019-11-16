@@ -48,11 +48,26 @@ compiled_js("zx") {
   ]
 }
 
+action("js_libs") {
+  script = "generate_js_libs.sh"
+  sources = [
+    "ns.js",
+    "util.js",
+  ]
+  generated_output = "$target_gen_dir/libs.manifest"
+  outputs = [
+    "$generated_output",
+  ]
+  args = [ rebase_path("$generated_output", root_build_dir) ] +
+         rebase_path(sources, root_build_dir)
+}
+
 source_set("tests") {
   testonly = true
   sources = [
     "fidl_test.cc",
     "js_testing_utils.h",
+    "ns_test.cc",
     "zx_test.cc",
   ]
   deps = [
@@ -60,6 +75,8 @@ source_set("tests") {
     "//sdk/lib/fidl/cpp/test",
     "//src/lib/fidl_codec:json_for_test",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/memfs",
   ]
 }

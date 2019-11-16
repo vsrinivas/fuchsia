@@ -32,8 +32,9 @@ TEST(Console, Sanity) {
   command += "file = std.open('" + filename + "', 'rw+');";
   command += "file.puts('" + expected + "');";
   command += "file.flush();";
-  constexpr int kNumArgs = 3;
-  std::array<const char*, kNumArgs> argv = {"test_program", "-c", command.c_str()};
+  constexpr int kNumArgs = 7;
+  std::array<const char*, kNumArgs> argv = {"test_program",      "-j", "/pkg/data/lib/", "-f",
+                                            "/pkg/data/fidling", "-c", command.c_str()};
   ASSERT_EQ(0, shell::ConsoleMain(kNumArgs, argv.data()));
 
   std::ifstream in(filename.c_str());

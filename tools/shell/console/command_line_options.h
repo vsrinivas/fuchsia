@@ -16,6 +16,7 @@ namespace shell {
 struct CommandLineOptions {
   std::optional<std::string> command_string;
   std::vector<std::string> fidl_ir_path;
+  std::vector<std::string> boot_js_lib_path;
 };
 
 // Parses the given command line into options and params.

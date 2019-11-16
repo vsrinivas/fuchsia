@@ -72,7 +72,7 @@ class FidlTest : public JsTest {
 
 // Sanity check test to make sure Hello World works.
 TEST_F(FidlTest, SimpleFrobinator) {
-  InitBuiltins("");
+  InitBuiltins("", "");
 
   // Load up some FIDL to call.
   fidl_codec_test::FidlcodecExamples examples;

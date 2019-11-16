@@ -18,10 +18,14 @@ namespace shell {
 Runtime::Runtime() {
   rt_ = JS_NewRuntime();
   is_valid_ = (rt_ == nullptr);
+
+  // The correct loader for ES6 modules.  Not sure why this has to be done by hand.
+  JS_SetModuleLoaderFunc(rt_, nullptr, js_module_loader, nullptr);
 }
 
 Runtime::~Runtime() {
   if (is_valid_) {
+    js_std_free_handlers(rt_);
     JS_FreeRuntime(rt_);
   }
 }
@@ -36,23 +40,39 @@ Context::~Context() {
   }
 }
 
-bool Context::Export(const std::string& lib) {
-  std::string init_str = "import * as " + lib + " from '" + lib +
+bool Context::Export(const std::string& lib, const std::string& js_path) {
+  std::string path;
+  int flags = JS_EVAL_TYPE_MODULE;
+  if (!js_path.empty()) {
+    path = js_path;
+    if (path[path.length() - 1] != '/') {
+      path.append("/");
+    }
+    path.append(lib);
+    path.append(".js");
+  } else {
+    path = lib;
+    flags |= JS_EVAL_FLAG_COMPILE_ONLY;
+  }
+  std::string init_str = "import * as " + lib + " from '" + path +
                          "';\n"
                          "globalThis." +
                          lib + " = " + lib + ";\n";
-  JSValue init_compile = JS_Eval(ctx_, init_str.c_str(), init_str.length(), "<input>",
-                                 JS_EVAL_TYPE_MODULE | JS_EVAL_FLAG_COMPILE_ONLY);
+
+  JSValue init_compile = JS_Eval(ctx_, init_str.c_str(), init_str.length(), "<input>", flags);
 
   if (JS_IsException(init_compile)) {
     return false;
   }
 
-  js_module_set_import_meta(ctx_, init_compile, 1, 1);
-  JSValue init_run = JS_EvalFunction(ctx_, init_compile);
+  if (js_path.empty()) {
+    js_module_set_import_meta(ctx_, init_compile, 1, 1);
+    JSValue init_run = JS_EvalFunction(ctx_, init_compile);
 
-  if (JS_IsException(init_run)) {
-    return false;
+    if (JS_IsException(init_run)) {
+      js_std_dump_error(ctx_);
+      return false;
+    }
   }
 
   return true;
@@ -80,7 +100,7 @@ extern "C" const uint32_t qjsc_fdio_size;
 extern "C" const uint8_t qjsc_zx[];
 extern "C" const uint32_t qjsc_zx_size;
 
-bool Context::InitBuiltins(const std::string& fidl_path) {
+bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot_js_path) {
   if (fdio::FdioModuleInit(ctx_, "fdio") == nullptr) {
     return false;
   }
@@ -96,7 +116,15 @@ bool Context::InitBuiltins(const std::string& fidl_path) {
   if (zx::ZxModuleInit(ctx_, "zx_internal") == nullptr) {
     return false;
   }
+
   js_std_eval_binary(ctx_, qjsc_zx, qjsc_zx_size, 0);
+
+  if (!boot_js_path.empty()) {
+    if (!Export("ns", boot_js_path)) {
+      return false;
+    }
+  }
+
   return true;
 }
 

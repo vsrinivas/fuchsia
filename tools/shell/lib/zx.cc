@@ -61,7 +61,7 @@ JSValue HandleCreate(JSContext *ctx, zx_handle_t handle, zx_obj_type_t type) {
   return obj;
 }
 
-static JSValue HandleClose(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+JSValue HandleClose(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
   if (argc != 1) {
     return JS_ThrowSyntaxError(ctx, "Wrong number of arguments to zx.close(), was %d, expected 1",
                                argc);
@@ -71,6 +71,7 @@ static JSValue HandleClose(JSContext *ctx, JSValueConst this_val, int argc, JSVa
   if (!h) {
     return JS_EXCEPTION;
   }
+  stop_waiting_for_zx_handle(JS_GetRuntime(ctx), h, -1);
   zx_handle_close(h->handle);
   h->handle = ZX_HANDLE_INVALID;
   return JS_UNDEFINED;
@@ -213,10 +214,32 @@ JSValue ChannelWrite(JSContext *ctx, JSValueConst this_val, int argc, JSValueCon
   return ZxStatusToError(ctx, status);
 }
 
+JSValue Duplicate(JSContext *ctx, JSValueConst this_val, int argc, JSValueConst *argv) {
+  if (argc != 2) {
+    return JS_ThrowSyntaxError(ctx, "Wrong number of arguments to zx.write(), was %d, expected 2",
+                               argc);
+  }
+  JSFuchsiaHandle *h =
+      reinterpret_cast<JSFuchsiaHandle *>(JS_GetOpaque2(ctx, argv[0], handle_class_id_));
+  if (!h) {
+    return JS_EXCEPTION;
+  }
+  uint32_t right_mask;
+  if (JS_ToUint32(ctx, &right_mask, argv[1])) {
+    return JS_EXCEPTION;
+  }
+  zx_handle_t out;
+  zx_status_t status = zx_handle_duplicate(h->handle, right_mask, &out);
+  if (status != ZX_OK) {
+    return ZxStatusToError(ctx, status);
+  }
+  return HandleCreate(ctx, out, h->type);
+}
+
 #define FLAG(x) JS_PROP_INT32_DEF(#x, x, JS_PROP_CONFIGURABLE)
 #define FLAG_64(x) JS_PROP_INT64_DEF(#x, x, JS_PROP_CONFIGURABLE)
 
-static const JSCFunctionListEntry funcs_[] = {
+const JSCFunctionListEntry funcs_[] = {
     /* Fuchsia handle operations */
     JS_CFUNC_DEF("channelCreate", 0, ChannelCreate), JS_CFUNC_DEF("channelRead", 0, ChannelRead),
     JS_CFUNC_DEF("channelWrite", 0, ChannelWrite), JS_CFUNC_DEF("handleClose", 0, HandleClose),
