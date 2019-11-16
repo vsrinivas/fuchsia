@@ -4,7 +4,7 @@
 
 //! Tests for the asynchronous files.
 
-use super::{read_only, read_only_static, read_write, write_only};
+use super::{read_only, read_only_const, read_only_static, read_write, write_only};
 
 // Macros are exported into the root of the crate.
 use crate::{
@@ -63,6 +63,27 @@ fn read_only_static_read() {
     run_server_client(OPEN_RIGHT_READABLE, read_only_static(b"Read only test"), |proxy| {
         async move {
             assert_read!(proxy, "Read only test");
+            assert_close!(proxy);
+        }
+    });
+}
+
+#[test]
+fn read_only_static_takes_a_const_string() {
+    run_server_client(OPEN_RIGHT_READABLE, read_only_static("Read only str"), |proxy| {
+        async move {
+            assert_read!(proxy, "Read only str");
+            assert_close!(proxy);
+        }
+    });
+}
+
+#[test]
+fn read_only_const_read() {
+    let bytes = String::from("Run-time value").into_bytes();
+    run_server_client(OPEN_RIGHT_READABLE, read_only_const(bytes), |proxy| {
+        async move {
+            assert_read!(proxy, "Run-time value");
             assert_close!(proxy);
         }
     });

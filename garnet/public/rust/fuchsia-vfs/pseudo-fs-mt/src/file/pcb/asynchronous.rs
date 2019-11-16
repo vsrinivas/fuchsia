@@ -75,9 +75,10 @@ where
     AsyncPseudoFile::new(Some(init_buffer), 0, None)
 }
 
-/// Creates a new read-only `AsyncPseudoFile` which serves static content.
-pub fn read_only_static(
-    bytes: &'static [u8],
+/// Creates a new read-only `AsyncPseudoFile` which serves static content.  Also see
+/// `read_only_const` which allows you to pass the ownership to the file itself.
+pub fn read_only_static<Bytes>(
+    bytes: Bytes,
 ) -> Arc<
     AsyncPseudoFile<
         impl (Fn() -> future::Ready<Result<Vec<u8>, Status>>) + Send + Sync + 'static,
@@ -85,8 +86,31 @@ pub fn read_only_static(
         fn(Vec<u8>) -> StubUpdateRes,
         StubUpdateRes,
     >,
-> {
-    read_only(move || future::ready(Ok(bytes.to_vec())))
+>
+where
+    Bytes: AsRef<[u8]> + Send + Sync,
+{
+    read_only(move || future::ready(Ok(bytes.as_ref().to_vec())))
+}
+
+/// Create a new read-only `AsyncPseudoFile` which servers a constant content.  The difference with
+/// `read_only_static` is that this function takes a run time values that it will own, while
+/// `read_only_static` requires a reference to something with a static lifetime.
+pub fn read_only_const<Bytes>(
+    bytes: Bytes,
+) -> Arc<
+    AsyncPseudoFile<
+        impl (Fn() -> future::Ready<Result<Vec<u8>, Status>>) + Send + Sync + 'static,
+        future::Ready<Result<Vec<u8>, Status>>,
+        fn(Vec<u8>) -> StubUpdateRes,
+        StubUpdateRes,
+    >,
+>
+where
+    Bytes: Into<Box<[u8]>>,
+{
+    let bytes = Arc::new(bytes.into().into_vec());
+    read_only(move || future::ready(Ok(bytes.as_ref().clone())))
 }
 
 /// This is a "stub" type used by [`write_only`] constructor, when it needs to generate type for
