@@ -270,12 +270,12 @@ static const device_component_part_t mipicsi_component[] = {
     {countof(mipicsi_match), mipicsi_match},
 };
 static const device_component_t imx227_sensor_components[] = {
+    {countof(mipicsi_component), mipicsi_component},
     {countof(i2c_component), i2c_component},
     {countof(gpio_vana_component), gpio_vana_component},
     {countof(gpio_vdig_component), gpio_vdig_component},
     {countof(gpio_reset_component), gpio_reset_component},
     {countof(clk_sensor_component), clk_sensor_component},
-    {countof(mipicsi_component), mipicsi_component},
 };
 
 // Composite device binding rules for Camera Controller
@@ -365,6 +365,16 @@ static const pbus_dev_t mipi_dev = []() {
   return dev;
 }();
 
+// Binding rules for Sensor Driver
+const pbus_dev_t sensor_dev = []() {
+  pbus_dev_t dev = {};
+  dev.name = "imx227-sensor";
+  dev.vid = PDEV_VID_SONY;
+  dev.pid = PDEV_PID_SONY_IMX227;
+  dev.did = PDEV_DID_CAMERA_SENSOR;
+  return dev;
+}();
+
 }  // namespace
 
 // Refer to camera design document for driver
@@ -380,23 +390,8 @@ zx_status_t Sherlock::CameraInit() {
     return status;
   }
 
-  constexpr zx_device_prop_t sensor_props[] = {
-      {BIND_PLATFORM_DEV_VID, 0, PDEV_VID_SONY},
-      {BIND_PLATFORM_DEV_PID, 0, PDEV_PID_SONY_IMX227},
-      {BIND_PLATFORM_DEV_DID, 0, PDEV_DID_CAMERA_SENSOR},
-  };
-
-  const composite_device_desc_t sensor_comp_desc = {
-      .props = sensor_props,
-      .props_count = countof(sensor_props),
-      .components = imx227_sensor_components,
-      .components_count = countof(imx227_sensor_components),
-      .coresident_device_index = UINT32_MAX,
-      .metadata_list = nullptr,
-      .metadata_count = 0,
-  };
-
-  status = DdkAddComposite("imx227-sensor", &sensor_comp_desc);
+  status = pbus_.CompositeDeviceAdd(&sensor_dev, imx227_sensor_components,
+                                    countof(imx227_sensor_components), 1);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: IMX227 DeviceAdd failed %d\n", __func__, status);
     return status;

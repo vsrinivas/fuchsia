@@ -58,12 +58,13 @@ class Imx227Device : public DeviceType,
                      public ddk::CameraSensorProtocol<Imx227Device, ddk::base_protocol> {
  public:
   enum {
+    COMPONENT_PDEV,
+    COMPONENT_MIPICSI,
     COMPONENT_I2C,
     COMPONENT_GPIO_VANA,
     COMPONENT_GPIO_VDIG,
     COMPONENT_GPIO_CAM_RST,
     COMPONENT_CLK24,
-    COMPONENT_MIPICSI,
     COMPONENT_COUNT,
   };
 
