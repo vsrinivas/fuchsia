@@ -533,14 +533,16 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
           registers::AsRegisters(slot).FaultAddress().ReadFrom(register_io_.get()).reg_value();
       bool kill_context = true;
       if (irq_status.bf_flags().get() & (1 << slot)) {
-        magma::log(magma::LOG_WARNING, "Bus fault at address 0x%lx on slot %d\n", address, slot);
+        magma::log(magma::LOG_WARNING, "Bus fault at address 0x%lx on slot %d, client id: %ld\n",
+                   address, slot, connection->client_id());
       } else {
         if (connection->PageInMemory(address)) {
           DLOG("Paged in address %lx\n", address);
           kill_context = false;
         } else {
-          magma::log(magma::LOG_WARNING, "Failed to page in address 0x%lx on slot %d\n", address,
-                     slot);
+          magma::log(magma::LOG_WARNING,
+                     "Failed to page in address 0x%lx on slot %d, client id: %ld\n", address, slot,
+                     connection->client_id());
         }
       }
       if (kill_context) {

@@ -393,7 +393,8 @@ bool MsdArmConnection::PageInMemory(uint64_t address) {
   if (address >= mapping.gpu_va() + mapping.size())
     return false;
   if (!(mapping.flags() & MAGMA_GPU_MAP_FLAG_GROWABLE))
-    return DRETF(false, "Buffer mapping not growable");
+    return DRETF(false, "Buffer mapping not growable, gpu VA 0x%lx, size 0x%lx, flags: 0x%lx",
+                 mapping.gpu_va(), mapping.size(), mapping.flags());
   auto buffer = mapping.buffer().lock();
   DASSERT(buffer);
 
