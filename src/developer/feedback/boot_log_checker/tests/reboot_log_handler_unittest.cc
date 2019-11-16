@@ -14,10 +14,10 @@
 #include <memory>
 
 #include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
-#include "src/developer/feedback/boot_log_checker/tests/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"

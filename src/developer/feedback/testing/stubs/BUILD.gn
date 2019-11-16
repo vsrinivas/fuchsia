@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("stub_cobalt_logger_factory") {
+  testonly = true
+
+  sources = [
+    "stub_cobalt_logger_factory.cc",
+    "stub_cobalt_logger_factory.h",
+  ]
+
+  deps = [
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+    "//zircon/system/fidl/fuchsia-cobalt",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}

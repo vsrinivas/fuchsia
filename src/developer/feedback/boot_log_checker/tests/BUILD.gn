@@ -29,8 +29,6 @@ executable("reboot_log_handler_unittest") {
 
   sources = [
     "reboot_log_handler_unittest.cc",
-    "stub_cobalt_logger_factory.cc",
-    "stub_cobalt_logger_factory.h",
     "stub_crash_reporter.cc",
     "stub_crash_reporter.h",
     "stub_network_reachability_provider.h",
@@ -43,8 +41,8 @@ executable("reboot_log_handler_unittest") {
     "//src/developer/feedback/boot_log_checker:metrics_registry",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/lib/files",
-    "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",

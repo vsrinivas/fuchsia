@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/boot_log_checker/tests/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 
 #include <zircon/errors.h>
 
