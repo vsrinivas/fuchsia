@@ -288,7 +288,7 @@ void brcmf_rx_frame(brcmf_pub* drvr, brcmf_netbuf* rxp, bool handle_event);
 void brcmf_rx_event(brcmf_pub* drvr, brcmf_netbuf* rxp);
 
 /* Indication from bus module regarding presence/insertion of dongle. */
-zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* settings);
+zx_status_t brcmf_attach(brcmf_pub* drvr);
 /* Indication from bus module regarding removal/absence of dongle */
 void brcmf_detach(brcmf_pub* drvr);
 /* Indication from bus module that dongle should be reset */

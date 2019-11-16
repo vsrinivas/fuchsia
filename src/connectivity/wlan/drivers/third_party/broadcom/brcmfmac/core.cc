@@ -658,13 +658,12 @@ void brcmf_remove_interface(struct brcmf_if* ifp, bool rtnl_locked) {
   brcmf_del_if(ifp->drvr, ifp->bsscfgidx, rtnl_locked);
 }
 
-zx_status_t brcmf_attach(brcmf_pub* drvr, brcmf_bus* bus_if, brcmf_mp_device* settings) {
+zx_status_t brcmf_attach(brcmf_pub* drvr) {
   BRCMF_DBG(TRACE, "Enter\n");
 
-  /* Link to bus module */
-  drvr->hdrlen = 0;
-  drvr->bus_if = bus_if;
-  drvr->settings = settings;
+  if (!drvr->bus_if || !drvr->settings) {
+    return ZX_ERR_BAD_STATE;
+  }
 
   /* attach firmware event handler */
   brcmf_fweh_attach(drvr);

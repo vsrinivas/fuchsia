@@ -3837,7 +3837,9 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
   bus->tx_hdrlen = SDPCM_HWHDR_LEN + SDPCM_SWHDR_LEN;
 
   /* Attach to the common layer, reserve hdr space */
-  ret = brcmf_attach(bus->sdiodev->drvr, bus->sdiodev->bus_if, bus->sdiodev->settings);
+  bus->sdiodev->drvr->bus_if = bus->sdiodev->bus_if;
+  bus->sdiodev->drvr->settings = bus->sdiodev->settings;
+  ret = brcmf_attach(bus->sdiodev->drvr);
   if (ret != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
     goto fail;

@@ -109,7 +109,9 @@ zx_status_t brcmf_sim_register(brcmf_pub* drvr, std::unique_ptr<brcmf_bus>* out_
   }
 
   bus_if->ops = &brcmf_sim_bus_ops;
-  status = brcmf_attach(drvr, bus_if.get(), simdev->settings.get());
+  drvr->bus_if = bus_if.get();
+  drvr->settings = simdev->settings.get();
+  status = brcmf_attach(drvr);
   if (status != ZX_OK) {
     BRCMF_ERR("brcmf_attach failed\n");
     return status;
