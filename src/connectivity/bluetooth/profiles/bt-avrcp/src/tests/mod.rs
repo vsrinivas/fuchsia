@@ -5,6 +5,7 @@
 use {
     bt_avctp::{AvcCommand, AvcPeer, AvcResponseType},
     failure::{format_err, Error},
+    fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::{create_endpoints, Proxy, RequestStream, ServiceMarker},
     fidl_fuchsia_bluetooth_avrcp::{self as fidl_avrcp, *},
     fidl_fuchsia_bluetooth_avrcp_test::*,
@@ -77,8 +78,10 @@ impl ProfileService for MockProfileService {
 // 5. Issues a SetAbsoluteVolume command on the controller FIDL
 // 6. Issues a GetElementAttributes command, encodes multiple packets, and handles continuations
 // 7. Issues a GetPlayStatus command on the controller FIDL.
-// 8. Register event notification for position change callbacks and mock responses.
-// 9. Waits until we have a response to all commands from our mock remote service return expected
+// 8. Issues a GetPlayerApplicationSettings command on the controller FIDL.
+// 9. Issues a SetPlayerApplicationSettings command on the controller FIDL.
+// 10. Register event notification for position change callbacks and mock responses.
+// 11. Waits until we have a response to all commands from our mock remote service return expected
 //    values and we have received enough position change events.
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(), Error> {
@@ -207,6 +210,20 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     pin_mut!(get_play_status_fut);
     expected_commands += 1;
 
+    let attribute_ids = vec![fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer];
+    let get_player_application_settings_fut =
+        controller_proxy.get_player_application_settings(&mut attribute_ids.into_iter()).fuse();
+    pin_mut!(get_player_application_settings_fut);
+    expected_commands += 1;
+
+    let mut settings = fidl_avrcp::PlayerApplicationSettings::new_empty();
+    settings.scan_mode = Some(fidl_avrcp::ScanMode::GroupScan);
+    settings.shuffle_mode = Some(fidl_avrcp::ShuffleMode::Off);
+    let set_player_application_settings_fut =
+        controller_proxy.set_player_application_settings(settings).fuse();
+    pin_mut!(set_player_application_settings_fut);
+    expected_commands += 1;
+
     let mut additional_packets: Vec<Vec<u8>> = vec![];
 
     // set controller event filter to ones we support.
@@ -308,8 +325,7 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                         .expect("volume error")
                         .encode_packet()
                         .expect("unable to encode volume response packet");
-                    let _ = avc_command
-                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                    let _ = avc_command.send_response(AvcResponseType::Accepted, &response[..]);
                 }
                 PduId::GetCapabilities => {
                     let get_capabilities_command =
@@ -335,6 +351,28 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                             .expect("unable to encode response");
                     let _ = avc_command
                         .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
+                PduId::GetCurrentPlayerApplicationSettingValue => {
+                    let _get_player_application_settings_command =
+                        GetCurrentPlayerApplicationSettingValueCommand::decode(body)
+                            .expect("GetPlayerApplicationSettings: unable to packet body");
+                    let response = GetCurrentPlayerApplicationSettingValueResponse::new(vec![(
+                        player_application_settings::PlayerApplicationSettingAttributeId::Equalizer,
+                        0x01,
+                    )])
+                    .encode_packet()
+                    .expect("Unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
+                PduId::SetPlayerApplicationSettingValue => {
+                    let _set_player_application_settings_command =
+                        SetPlayerApplicationSettingValueCommand::decode(body)
+                            .expect("SetPlayerApplicationSettings: unable to packet body");
+                    let response = SetPlayerApplicationSettingValueResponse::new()
+                        .encode_packet()
+                        .expect("Unable to encode response");
+                    let _ = avc_command.send_response(AvcResponseType::Accepted, &response[..]);
                 }
                 _ => {
                     // not entirely correct but just get it off our back for now.
@@ -410,6 +448,23 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                 assert_eq!(play_status.playback_status, Some(fidl_avrcp::PlaybackStatus::Stopped).into());
                 assert_eq!(play_status.song_length, Some(100));
                 assert_eq!(play_status.song_position, None);
+            }
+            res = get_player_application_settings_fut => {
+                expected_commands -= 1;
+                let settings = res?.expect("unable to parse get player application settings");
+                assert!(settings.equalizer.is_some());
+                assert!(settings.custom_settings.is_none());
+                assert!(settings.scan_mode.is_none());
+                assert!(settings.repeat_status_mode.is_none());
+                assert!(settings.shuffle_mode.is_none());
+                let eq = settings.equalizer.unwrap();
+                assert_eq!(fidl_avrcp::Equalizer::Off, eq);
+            }
+            res = set_player_application_settings_fut => {
+                expected_commands -= 1;
+                let set_settings = res?.expect("unable to parse set player application settings");
+                assert_eq!(set_settings.scan_mode, Some(fidl_avrcp::ScanMode::GroupScan));
+                assert_eq!(set_settings.shuffle_mode, Some(fidl_avrcp::ShuffleMode::Off));
             }
             event = event_stream.select_next_some() => {
                 match event? {

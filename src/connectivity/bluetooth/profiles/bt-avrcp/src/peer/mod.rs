@@ -122,7 +122,7 @@ impl<'a> PeerManager<'a> {
                             })?;
                         Ok((peer_id, socket))
                     }
-                        .boxed(),
+                    .boxed(),
                 );
             }
             _ => return,

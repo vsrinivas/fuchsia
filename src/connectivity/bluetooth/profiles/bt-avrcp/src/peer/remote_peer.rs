@@ -111,14 +111,17 @@ impl RemotePeer {
                 let result = stream.next().await.ok_or(Error::CommandFailed)?;
                 let response: AvcCommandResponse = result.map_err(|e| Error::AvctpError(e))?;
                 fx_vlog!(tag: "avrcp", 1, "vendor response {:#?}", response);
-                match response.response_type() {
-                    AvcResponseType::Interim => continue,
-                    AvcResponseType::NotImplemented => return Err(Error::CommandNotSupported),
-                    AvcResponseType::Rejected => return Err(Error::CommandFailed),
-                    AvcResponseType::InTransition => return Err(Error::UnexpectedResponse),
-                    AvcResponseType::Changed => return Err(Error::UnexpectedResponse),
-                    AvcResponseType::Accepted => return Err(Error::UnexpectedResponse),
-                    AvcResponseType::ImplementedStable => break response.1,
+                match (response.response_type(), command.command_type()) {
+                    (AvcResponseType::Interim, _) => continue,
+                    (AvcResponseType::NotImplemented, _) => return Err(Error::CommandNotSupported),
+                    (AvcResponseType::Rejected, _) => return Err(Error::CommandFailed),
+                    (AvcResponseType::InTransition, _) => return Err(Error::UnexpectedResponse),
+                    (AvcResponseType::Changed, _) => return Err(Error::UnexpectedResponse),
+                    (AvcResponseType::Accepted, AvcCommandType::Control) => break response.1,
+                    (AvcResponseType::ImplementedStable, AvcCommandType::Status) => {
+                        break response.1
+                    }
+                    _ => return Err(Error::UnexpectedResponse),
                 }
             };
 

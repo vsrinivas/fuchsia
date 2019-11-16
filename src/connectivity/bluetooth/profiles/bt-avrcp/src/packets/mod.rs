@@ -13,13 +13,14 @@ mod get_capabilities;
 mod get_element_attributes;
 pub mod get_play_status;
 mod notification;
+pub mod player_application_settings;
 mod rejected;
 mod set_absolute_volume;
 
 pub use {
     self::continuation::*, self::get_capabilities::*, self::get_element_attributes::*,
-    self::get_play_status::*, self::notification::*, self::rejected::*,
-    self::set_absolute_volume::*,
+    self::get_play_status::*, self::notification::*, self::player_application_settings::*,
+    self::rejected::*, self::set_absolute_volume::*,
 };
 
 /// The error types for packet parsing.
@@ -50,7 +51,7 @@ pub enum Error {
     __Nonexhaustive,
 }
 
-type PacketResult<T> = result::Result<T, Error>;
+pub type PacketResult<T> = result::Result<T, Error>;
 
 pub_decodable_enum! {
     /// Common charset IDs from the MIB Enum we may see in AVRCP. See:
@@ -159,6 +160,57 @@ impl From<PlaybackStatus> for fidl_avrcp::PlaybackStatus {
             PlaybackStatus::FwdSeek => fidl_avrcp::PlaybackStatus::FwdSeek,
             PlaybackStatus::RevSeek => fidl_avrcp::PlaybackStatus::RevSeek,
             PlaybackStatus::Error => fidl_avrcp::PlaybackStatus::Error,
+        }
+    }
+}
+
+pub_decodable_enum! {
+    PlayerApplicationSettingAttributeId<u8, Error> {
+        Equalizer => 0x01,
+        RepeatStatusMode => 0x02,
+        ShuffleMode => 0x03,
+        ScanMode => 0x04,
+    }
+}
+
+impl From<fidl_avrcp::PlayerApplicationSettingAttributeId> for PlayerApplicationSettingAttributeId {
+    fn from(
+        src: fidl_avrcp::PlayerApplicationSettingAttributeId,
+    ) -> PlayerApplicationSettingAttributeId {
+        match src {
+            fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer => {
+                PlayerApplicationSettingAttributeId::Equalizer
+            }
+            fidl_avrcp::PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+                PlayerApplicationSettingAttributeId::RepeatStatusMode
+            }
+            fidl_avrcp::PlayerApplicationSettingAttributeId::ShuffleMode => {
+                PlayerApplicationSettingAttributeId::ShuffleMode
+            }
+            fidl_avrcp::PlayerApplicationSettingAttributeId::ScanMode => {
+                PlayerApplicationSettingAttributeId::ScanMode
+            }
+        }
+    }
+}
+
+impl From<PlayerApplicationSettingAttributeId> for fidl_avrcp::PlayerApplicationSettingAttributeId {
+    fn from(
+        src: PlayerApplicationSettingAttributeId,
+    ) -> fidl_avrcp::PlayerApplicationSettingAttributeId {
+        match src {
+            PlayerApplicationSettingAttributeId::Equalizer => {
+                fidl_avrcp::PlayerApplicationSettingAttributeId::Equalizer
+            }
+            PlayerApplicationSettingAttributeId::RepeatStatusMode => {
+                fidl_avrcp::PlayerApplicationSettingAttributeId::RepeatStatusMode
+            }
+            PlayerApplicationSettingAttributeId::ShuffleMode => {
+                fidl_avrcp::PlayerApplicationSettingAttributeId::ShuffleMode
+            }
+            PlayerApplicationSettingAttributeId::ScanMode => {
+                fidl_avrcp::PlayerApplicationSettingAttributeId::ScanMode
+            }
         }
     }
 }

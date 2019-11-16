@@ -74,14 +74,27 @@ impl AvrcpClientController {
 
     async fn handle_fidl_request(&mut self, request: ControllerRequest) -> Result<(), Error> {
         match request {
-            ControllerRequest::GetPlayerApplicationSettings { attribute_ids: _, responder } => {
-                responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
+            ControllerRequest::GetPlayerApplicationSettings { attribute_ids, responder } => {
+                responder.send(
+                    &mut self
+                        .controller
+                        .get_player_application_settings(
+                            attribute_ids.into_iter().map(|x| x.into()).collect(),
+                        )
+                        .await
+                        .map(|res| res.into())
+                        .map_err(ControllerError::from),
+                )?;
             }
-            ControllerRequest::SetPlayerApplicationSettings {
-                requested_settings: _,
-                responder,
-            } => {
-                responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
+            ControllerRequest::SetPlayerApplicationSettings { requested_settings, responder } => {
+                responder.send(
+                    &mut self
+                        .controller
+                        .set_player_application_settings(requested_settings.into())
+                        .await
+                        .map(|res| res.into())
+                        .map_err(ControllerError::from),
+                )?;
             }
             ControllerRequest::GetMediaAttributes { responder } => {
                 responder.send(
