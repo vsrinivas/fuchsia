@@ -30,7 +30,8 @@ pub mod tree_builder;
 #[doc(hidden)]
 pub mod pseudo_directory;
 
-/// Builds a pseudo directory using a simple DSL, potentially containing files and nested pseudo directories.
+/// Builds a pseudo directory using a simple DSL, potentially containing files and nested pseudo
+/// directories.
 ///
 /// A directory is described using a sequence of rules of the following form:
 ///
@@ -38,8 +39,10 @@ pub mod pseudo_directory;
 ///
 /// separated by commas, with an optional trailing comma.
 ///
-/// It generates a nested pseudo directory, using [`directory::simple()`] then adding all the
-/// specified entries in it, by calling [`directory::Simple::add_entry`].
+/// It generates a nested pseudo directory, using [`directory::immutable::simple()`] then adding
+/// all the specified entries in it, by calling [`directory::Simple::add_entry`].
+///
+/// See [`mut_pseudo_directory!`] if you want the directory to be modifiable by the clients.
 ///
 /// Note: Names specified as literals (both `str` and `[u8]`) are compared during compilation time,
 /// so you should get a nice error message, if you specify the same entry name twice.  As entry
@@ -97,6 +100,13 @@ pub mod pseudo_directory;
 /// ```
 #[proc_macro_hack(support_nested)]
 pub use fuchsia_vfs_pseudo_fs_mt_macros::pseudo_directory;
+
+/// This macro is identical to [`pseudo_directory!`], except that it constructs instances of
+/// [`directory::mutable::simple()`], allowing the clients connected over the FIDL connection to
+/// modify this directory.  Clients operations are still checked against specific connection
+/// permissions as specified in the `io.fidl` protocol.
+#[proc_macro_hack(support_nested)]
+pub use fuchsia_vfs_pseudo_fs_mt_macros::mut_pseudo_directory;
 
 // This allows the pseudo_directory! macro to use absolute paths within this crate to refer to the
 // helper functions. External crates that use pseudo_directory! will rely on the pseudo_directory

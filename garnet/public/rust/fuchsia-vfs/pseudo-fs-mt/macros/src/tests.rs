@@ -6,34 +6,44 @@ use super::pseudo_directory_impl;
 
 use {indoc::indoc, proc_macro2::TokenStream, std::str::FromStr};
 
-// rustfmt is aligning all the strings, making them even harder to read.  TODO For some reason this
-// does not seem to work, and I need explicit `#[rustfmt::skip]` on every test.
-#[rustfmt::skip::macros(check_pseudo_directory_impl)]
-// Rustfmt is messing up indentation inside the `assert!` macro.
-#[rustfmt::skip]
-macro_rules! check_pseudo_directory_impl {
-    ($input:expr, $expected:expr) => {{
-        let input = TokenStream::from_str($input).unwrap();
-        let output = pseudo_directory_impl(input);
-        let expected = $expected;
+fn check_pseudo_directory_impl(input: &str, expected_immutable: &str) {
+    let input = TokenStream::from_str(input).unwrap();
+    {
+        let output = pseudo_directory_impl(false, input.clone());
         assert!(
-            output.to_string() == expected,
-            "Generated code does not match the expected one.\n\
+            output.to_string() == expected_immutable,
+            "Generated code for the immutable case does not match the expected one.\n\
              Expected:\n\
              {}
              Actual:\n\
              {}
             ",
-            expected,
+            expected_immutable,
             output
         );
-    }};
+    }
+    {
+        let output = pseudo_directory_impl(true, input);
+        let expected_mutable = expected_immutable.replace(" immutable ", " mutable ");
+        assert!(
+            output.to_string() == expected_mutable,
+            "Generated code for the mutable case does not match the expected one.\n\
+             Expected:\n\
+             {}
+             Actual:\n\
+             {}
+            ",
+            expected_mutable,
+            output
+        );
+    }
 }
 
 #[test]
+// Rustfmt is messing up indentation of the manually formatted code.
 #[rustfmt::skip]
 fn empty() {
-    check_pseudo_directory_impl!(
+    check_pseudo_directory_impl(
         "",
         "{ \
              use :: fuchsia_vfs_pseudo_fs_mt :: directory :: entry_container :: DirectlyMutable ; \
@@ -46,7 +56,7 @@ fn empty() {
 #[test]
 #[rustfmt::skip]
 fn one_entry() {
-    check_pseudo_directory_impl!(
+    check_pseudo_directory_impl(
         indoc!(
             r#"
             "name" => read_only_static("content"),
@@ -66,7 +76,7 @@ fn one_entry() {
 #[test]
 #[rustfmt::skip]
 fn two_entries() {
-    check_pseudo_directory_impl!(
+    check_pseudo_directory_impl(
         indoc!(
             r#"
             "first" => read_only_static("A"),
@@ -90,7 +100,7 @@ fn two_entries() {
 #[test]
 #[rustfmt::skip]
 fn assign_to() {
-    check_pseudo_directory_impl!(
+    check_pseudo_directory_impl(
         indoc!(
             r#"
             my_dir ->
@@ -115,7 +125,7 @@ fn assign_to() {
 #[test]
 #[rustfmt::skip]
 fn entry_has_name_from_ref() {
-    check_pseudo_directory_impl!(
+    check_pseudo_directory_impl(
         indoc!(
             r#"
             test_name => read_only_static("content"),
