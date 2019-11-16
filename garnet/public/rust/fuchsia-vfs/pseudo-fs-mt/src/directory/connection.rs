@@ -10,7 +10,7 @@ use crate::{
             POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
         },
         entry::DirectoryEntry,
-        entry_container::{self, AsyncReadDirents},
+        entry_container::{self, AsyncReadDirents, Observable},
         read_dirents,
     },
     execution_scope::ExecutionScope,
@@ -19,9 +19,14 @@ use crate::{
 
 use {
     failure::Error,
-    fidl::endpoints::ServerEnd,
+    fidl::{endpoints::ServerEnd, Handle},
     fidl_fuchsia_io::{
-        DirectoryMarker, DirectoryObject, DirectoryRequest, DirectoryRequestStream, NodeAttributes,
+        DirectoryCloseResponder, DirectoryControlHandle, DirectoryDescribeResponder,
+        DirectoryGetAttrResponder, DirectoryGetTokenResponder, DirectoryLinkResponder,
+        DirectoryMarker, DirectoryNodeGetFlagsResponder, DirectoryNodeSetFlagsResponder,
+        DirectoryObject, DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
+        DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
+        DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
         NodeInfo, NodeMarker, OutOfLineUnion, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE,
     },
     fuchsia_async::Channel,
@@ -29,41 +34,119 @@ use {
         sys::{ZX_ERR_INVALID_ARGS, ZX_ERR_NOT_SUPPORTED, ZX_OK},
         Status,
     },
-    futures::stream::StreamExt,
+    futures::{future::BoxFuture, stream::StreamExt},
     std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
 };
 
-pub trait ConnectionClient<TraversalPosition>:
+/// Initializes a directory connection, checking the flags and sending `OnOpen` event if
+/// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
+/// an error, sends an appropriate `OnOpen` event (if requested) over the `server_end`
+/// connection.
+pub(super) fn create_connection<Connection, TraversalPosition>(
+    scope: ExecutionScope,
+    directory: Arc<Connection::Directory>,
+    flags: u32,
+    mode: u32,
+    server_end: ServerEnd<NodeMarker>,
+) where
+    Connection: DerivedConnection<TraversalPosition> + 'static,
+    TraversalPosition: Default + Send + Sync + 'static,
+{
+    let flags = match new_connection_validate_flags(flags, mode) {
+        Ok(updated) => updated,
+        Err(status) => {
+            send_on_open_with_error(flags, server_end, status);
+            return;
+        }
+    };
+
+    let (requests, control_handle) =
+        match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+            .into_stream_and_control_handle()
+        {
+            Ok((requests, control_handle)) => (requests, control_handle),
+            Err(_) => {
+                // As we report all errors on `server_end`, if we failed to send an error over
+                // this connection, there is nowhere to send the error tothe error to.
+                return;
+            }
+        };
+
+    if flags & OPEN_FLAG_DESCRIBE != 0 {
+        let mut info = NodeInfo::Directory(DirectoryObject);
+        match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info))) {
+            Ok(()) => (),
+            Err(_) => return,
+        }
+    }
+
+    let connection = Connection::new(scope.clone(), directory, flags);
+
+    let task = handle_requests::<Connection, TraversalPosition>(requests, connection);
+    // If we failed to send the task to the executor, it is probably shut down or is in the
+    // process of shutting down (this is the only error state currently).  So there is nothing
+    // for us to do, but to ignore the request.  Connection will be closed when the connection
+    // object is dropped.
+    let _ = scope.spawn(Box::pin(task));
+}
+
+/// Return type for [`BaseConnection::handle_request`] and [`DerivedConnection::handle_request`].
+pub enum ConnectionState {
+    /// Connection is still alive.
+    Alive,
+    /// Connection have received Node::Close message and should be closed.
+    Closed,
+}
+
+/// This is an API a derived directory connection needs to implement, in order for the
+/// `BaseConnection` to be able to interact with it.
+pub trait DerivedConnection<TraversalPosition>: Send + Sync
+where
+    TraversalPosition: Default + Send + Sync + 'static,
+{
+    type Directory: BaseConnectionClient<TraversalPosition> + ?Sized;
+
+    fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self;
+
+    fn handle_request(
+        &mut self,
+        request: DirectoryRequest,
+    ) -> BoxFuture<Result<ConnectionState, Error>>;
+}
+
+/// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to
+/// interact with it.
+pub trait BaseConnectionClient<TraversalPosition>:
     DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync
 where
     TraversalPosition: Default + Send + Sync + 'static,
 {
 }
 
-impl<TraversalPosition, T> ConnectionClient<TraversalPosition> for T
+impl<TraversalPosition, T> BaseConnectionClient<TraversalPosition> for T
 where
     TraversalPosition: Default + Send + Sync + 'static,
-    T: DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync,
+    T: DirectoryEntry + entry_container::Observable<TraversalPosition> + Send + Sync + 'static,
 {
 }
 
-/// Represents a FIDL connection to a directory.  A single directory may contain multiple
-/// connections.  An instances of the DirectoryConnection will also hold any state that is
-/// "per-connection".  Currently that would be the access flags and the seek position.
-pub struct DirectoryConnection<TraversalPosition>
+/// Handles functionality shared between mutable and immutable FIDL connections to a directory.  A
+/// single directory may contain multiple connections.  Instances of the `BaseConnection`
+/// will also hold any state that is "per-connection".  Currently that would be the access flags
+/// and the seek position.
+pub(super) struct BaseConnection<Connection, TraversalPosition>
 where
+    Connection: DerivedConnection<TraversalPosition> + 'static,
     TraversalPosition: Default + Send + Sync + 'static,
 {
     /// Execution scope this connection and any async operations and connections it creates will
     /// use.
-    scope: ExecutionScope,
+    pub(super) scope: ExecutionScope,
 
-    directory: Arc<dyn ConnectionClient<TraversalPosition>>,
-
-    requests: DirectoryRequestStream,
+    pub(super) directory: Arc<Connection::Directory>,
 
     /// Flags set on this connection when it was opened or cloned.
-    flags: u32,
+    pub(super) flags: u32,
 
     /// Seek position for this connection to the directory.  We just store the element that was
     /// returned last by ReadDirents for this connection.  Next call will look for the next element
@@ -82,115 +165,206 @@ where
     seek: TraversalPosition,
 }
 
-/// Return type for [`DirectoryConnection::handle_request()`].
-enum ConnectionState {
-    Alive,
-    Closed,
-}
-
-impl<TraversalPosition> DirectoryConnection<TraversalPosition>
-where
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
-    /// necessary.  Returns a [`DirectoryConnection`] object as a [`StreamFuture`], or in case of
-    /// an error, sends an appropriate `OnOpen` event (if requested) and returns `None`.
-    pub fn create_connection(
-        scope: ExecutionScope,
-        directory: Arc<dyn ConnectionClient<TraversalPosition>>,
+/// Subset of the [`DirectoryRequest`] protocol that is handled by the
+/// [`BaseConnection::handle_request`] method.
+pub(super) enum BaseDirectoryRequest {
+    Clone {
+        flags: u32,
+        object: ServerEnd<NodeMarker>,
+        #[allow(unused)]
+        control_handle: DirectoryControlHandle,
+    },
+    Close {
+        responder: DirectoryCloseResponder,
+    },
+    Describe {
+        responder: DirectoryDescribeResponder,
+    },
+    Sync {
+        responder: DirectorySyncResponder,
+    },
+    GetAttr {
+        responder: DirectoryGetAttrResponder,
+    },
+    SetAttr {
+        #[allow(unused)]
+        flags: u32,
+        #[allow(unused)]
+        attributes: NodeAttributes,
+        responder: DirectorySetAttrResponder,
+    },
+    GetFlags {
+        responder: DirectoryNodeGetFlagsResponder,
+    },
+    SetFlags {
+        #[allow(unused)]
+        flags: u32,
+        responder: DirectoryNodeSetFlagsResponder,
+    },
+    Open {
         flags: u32,
         mode: u32,
-        server_end: ServerEnd<NodeMarker>,
-    ) {
-        let flags = match new_connection_validate_flags(flags, mode) {
-            Ok(updated) => updated,
-            Err(status) => {
-                send_on_open_with_error(flags, server_end, status);
-                return;
+        path: String,
+        object: ServerEnd<NodeMarker>,
+        #[allow(unused)]
+        control_handle: DirectoryControlHandle,
+    },
+    ReadDirents {
+        max_bytes: u64,
+        responder: DirectoryReadDirentsResponder,
+    },
+    Rewind {
+        responder: DirectoryRewindResponder,
+    },
+    Link {
+        src: String,
+        dst_parent_token: Handle,
+        dst: String,
+        responder: DirectoryLinkResponder,
+    },
+    Watch {
+        mask: u32,
+        options: u32,
+        watcher: fidl::Channel,
+        responder: DirectoryWatchResponder,
+    },
+}
+
+pub(super) enum DerivedDirectoryRequest {
+    Unlink {
+        #[allow(unused)]
+        path: String,
+        responder: DirectoryUnlinkResponder,
+    },
+    GetToken {
+        responder: DirectoryGetTokenResponder,
+    },
+    Rename {
+        #[allow(unused)]
+        src: String,
+        #[allow(unused)]
+        dst_parent_token: Handle,
+        #[allow(unused)]
+        dst: String,
+        responder: DirectoryRenameResponder,
+    },
+}
+
+pub(super) enum DirectoryRequestType {
+    Base(BaseDirectoryRequest),
+    Derived(DerivedDirectoryRequest),
+}
+
+impl From<DirectoryRequest> for DirectoryRequestType {
+    fn from(request: DirectoryRequest) -> Self {
+        use {BaseDirectoryRequest::*, DerivedDirectoryRequest::*, DirectoryRequestType::*};
+
+        match request {
+            DirectoryRequest::Clone { flags, object, control_handle } => {
+                Base(Clone { flags, object, control_handle })
             }
-        };
-
-        let (requests, control_handle) =
-            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
-                .into_stream_and_control_handle()
-            {
-                Ok((requests, control_handle)) => (requests, control_handle),
-                Err(_) => {
-                    // As we report all errors on `server_end`, if we failed to send an error over
-                    // this connection, there is nowhere to send the error tothe error to.
-                    return;
-                }
-            };
-
-        if flags & OPEN_FLAG_DESCRIBE != 0 {
-            let mut info = NodeInfo::Directory(DirectoryObject);
-            match control_handle
-                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
-            {
-                Ok(()) => (),
-                Err(_) => return,
+            DirectoryRequest::Close { responder } => Base(Close { responder }),
+            DirectoryRequest::Describe { responder } => Base(Describe { responder }),
+            DirectoryRequest::Sync { responder } => Base(Sync { responder }),
+            DirectoryRequest::GetAttr { responder } => Base(GetAttr { responder }),
+            DirectoryRequest::SetAttr { flags, attributes, responder } => {
+                Base(SetAttr { flags, attributes, responder })
+            }
+            DirectoryRequest::NodeGetFlags { responder } => Base(GetFlags { responder }),
+            DirectoryRequest::NodeSetFlags { flags, responder } => {
+                Base(SetFlags { flags, responder })
+            }
+            DirectoryRequest::Open { flags, mode, path, object, control_handle } => {
+                Base(Open { flags, mode, path, object, control_handle })
+            }
+            DirectoryRequest::Unlink { path, responder } => Derived(Unlink { path, responder }),
+            DirectoryRequest::ReadDirents { max_bytes, responder } => {
+                Base(ReadDirents { max_bytes, responder })
+            }
+            DirectoryRequest::Rewind { responder } => Base(Rewind { responder }),
+            DirectoryRequest::GetToken { responder } => Derived(GetToken { responder }),
+            DirectoryRequest::Rename { src, dst_parent_token, dst, responder } => {
+                Derived(Rename { src, dst_parent_token, dst, responder })
+            }
+            DirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
+                Base(Link { src, dst_parent_token, dst, responder })
+            }
+            DirectoryRequest::Watch { mask, options, watcher, responder } => {
+                Base(Watch { mask, options, watcher, responder })
             }
         }
-
-        let handle_requests = DirectoryConnection::<TraversalPosition> {
-            scope: scope.clone(),
-            directory,
-            requests,
-            flags,
-            seek: Default::default(),
-        }
-        .handle_requests();
-        // If we failed to send the task to the executor, it is probably shut down or is in the
-        // process of shutting down (this is the only error state currently).  So there is nothing
-        // for us to do, but to ignore the request.  Connection will be closed when the connection
-        // object is dropped.
-        let _ = scope.spawn(Box::pin(handle_requests));
     }
+}
 
-    #[must_use = "handle_requests() returns an async task that needs to be run"]
-    async fn handle_requests(mut self) {
-        while let Some(request_or_err) = self.requests.next().await {
-            match request_or_err {
+#[must_use = "handle_requests() returns an async task that needs to be run"]
+async fn handle_requests<Connection, TraversalPosition>(
+    mut requests: DirectoryRequestStream,
+    mut connection: Connection,
+) where
+    Connection: DerivedConnection<TraversalPosition>,
+    TraversalPosition: Default + Send + Sync + 'static,
+{
+    while let Some(request_or_err) = requests.next().await {
+        match request_or_err {
+            Err(_) => {
+                // FIDL level error, such as invalid message format and alike.  Close the
+                // connection on any unexpected error.
+                // TODO: Send an epitaph.
+                break;
+            }
+            Ok(request) => match connection.handle_request(request).await {
+                Ok(ConnectionState::Alive) => (),
+                Ok(ConnectionState::Closed) => break,
                 Err(_) => {
-                    // FIDL level error, such as invalid message format and alike.  Close the
-                    // connection on any unexpected error.
+                    // Protocol level error.  Close the connection on any unexpected error.
                     // TODO: Send an epitaph.
                     break;
                 }
-                Ok(request) => match self.handle_request(request).await {
-                    Ok(ConnectionState::Alive) => (),
-                    Ok(ConnectionState::Closed) => break,
-                    Err(_) => {
-                        // Protocol level error.  Close the connection on any unexpected error.
-                        // TODO: Send an epitaph.
-                        break;
-                    }
-                },
-            }
+            },
         }
+    }
+}
+
+impl<Connection, TraversalPosition> BaseConnection<Connection, TraversalPosition>
+where
+    Connection: DerivedConnection<TraversalPosition>,
+    TraversalPosition: Default + Send + Sync + 'static,
+{
+    /// Constructs an instance of `BaseConnection` - to be used by derived connections, when they
+    /// need to create a nested `BaseConnection` "sub-object".  But when implementing
+    /// `create_connection`, derived connections should use the [`create_connection`] call.
+    pub(super) fn new(
+        scope: ExecutionScope,
+        directory: Arc<Connection::Directory>,
+        flags: u32,
+    ) -> Self {
+        BaseConnection { scope, directory, flags, seek: Default::default() }
     }
 
     /// Handle a [`DirectoryRequest`].  This function is responsible for handing all the basic
-    /// direcotry operations.
+    /// directory operations.
     // TODO(fxb/37419): Remove default handling after methods landed.
     #[allow(unreachable_patterns)]
-    async fn handle_request(&mut self, req: DirectoryRequest) -> Result<ConnectionState, Error> {
-        match req {
-            DirectoryRequest::Clone { flags, object, control_handle: _ } => {
+    pub(super) async fn handle_request(
+        &mut self,
+        request: BaseDirectoryRequest,
+    ) -> Result<ConnectionState, Error> {
+        match request {
+            BaseDirectoryRequest::Clone { flags, object, control_handle: _ } => {
                 self.handle_clone(flags, 0, object);
             }
-            DirectoryRequest::Close { responder } => {
+            BaseDirectoryRequest::Close { responder } => {
                 responder.send(ZX_OK)?;
                 return Ok(ConnectionState::Closed);
             }
-            DirectoryRequest::Describe { responder } => {
+            BaseDirectoryRequest::Describe { responder } => {
                 let mut info = NodeInfo::Directory(DirectoryObject);
                 responder.send(&mut info)?;
             }
-            DirectoryRequest::Sync { responder } => {
+            BaseDirectoryRequest::Sync { responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::GetAttr { responder } => {
+            BaseDirectoryRequest::GetAttr { responder } => {
                 let mut attrs = NodeAttributes {
                     mode: MODE_TYPE_DIRECTORY | POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
                     id: INO_UNKNOWN,
@@ -202,44 +376,43 @@ where
                 };
                 responder.send(ZX_OK, &mut attrs)?;
             }
-            DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
+            BaseDirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
                 // modified through this call is OPEN_FLAG_APPEND, and it is not supported by a
                 // Simple directory.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
-                self.handle_open(flags, mode, path, object);
+            BaseDirectoryRequest::GetFlags { responder } => {
+                responder.send(ZX_OK, self.flags)?;
             }
-            DirectoryRequest::Unlink { path: _, responder } => {
+            BaseDirectoryRequest::SetFlags { flags: _, responder } => {
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            DirectoryRequest::ReadDirents { max_bytes, responder } => {
+            BaseDirectoryRequest::Open { flags, mode, path, object, control_handle: _ } => {
+                self.handle_open(flags, mode, path, object);
+            }
+            BaseDirectoryRequest::ReadDirents { max_bytes, responder } => {
                 self.handle_read_dirents(max_bytes, |status, entries| {
                     responder.send(status.into_raw(), entries)
                 })
                 .await?;
             }
-            DirectoryRequest::Rewind { responder } => {
+            BaseDirectoryRequest::Rewind { responder } => {
                 self.seek = Default::default();
                 responder.send(ZX_OK)?;
             }
-            DirectoryRequest::GetToken { responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED, None)?;
+            BaseDirectoryRequest::Link { src, dst_parent_token, dst, responder } => {
+                self.handle_link(src, dst_parent_token, dst, |status| {
+                    responder.send(status.into_raw())
+                })
+                .await?;
             }
-            DirectoryRequest::Rename { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DirectoryRequest::Link { src: _, dst_parent_token: _, dst: _, responder } => {
-                responder.send(ZX_ERR_NOT_SUPPORTED)?;
-            }
-            DirectoryRequest::Watch { mask, options, watcher, responder } => {
+            BaseDirectoryRequest::Watch { mask, options, watcher, responder } => {
                 if options != 0 {
                     responder.send(ZX_ERR_INVALID_ARGS)?;
                 } else {
                     let channel = Channel::from_channel(watcher)?;
-                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))
-                        .await?;
+                    self.handle_watch(mask, channel, |status| responder.send(status.into_raw()))?;
                 }
             }
             _ => {}
@@ -256,7 +429,7 @@ where
             }
         };
 
-        Self::create_connection(
+        create_connection::<Connection, TraversalPosition>(
             self.scope.clone(),
             self.directory.clone(),
             flags,
@@ -348,7 +521,20 @@ where
         }
     }
 
-    async fn handle_watch<R>(
+    async fn handle_link<R>(
+        &self,
+        _src: String,
+        _dst_parent_token: Handle,
+        _dst: String,
+        responder: R,
+    ) -> Result<(), fidl::Error>
+    where
+        R: FnOnce(Status) -> Result<(), fidl::Error>,
+    {
+        responder(Status::NOT_SUPPORTED)
+    }
+
+    fn handle_watch<R>(
         &mut self,
         mask: u32,
         channel: Channel,

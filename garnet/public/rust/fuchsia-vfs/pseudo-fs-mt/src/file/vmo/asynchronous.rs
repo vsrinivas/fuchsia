@@ -35,7 +35,12 @@ use {
     fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_FILE, INO_UNKNOWN},
     fuchsia_zircon::{Status, Vmo},
     futures::lock::{Mutex, MutexLockFuture},
-    std::{future::Future, pin::Pin, sync::Arc, task::{Context, Poll}},
+    std::{
+        future::Future,
+        pin::Pin,
+        sync::Arc,
+        task::{Context, Poll},
+    },
 };
 
 /// `init_vmo` callback returns an instance of this struct to describe the VMO it has generated, as

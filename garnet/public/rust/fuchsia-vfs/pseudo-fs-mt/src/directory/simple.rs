@@ -8,10 +8,11 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::DirectoryConnection,
+        connection::{create_connection, DerivedConnection},
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncReadDirents},
+        immutable::connection::{ImmutableConnection, ImmutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -29,16 +30,45 @@ use {
     fuchsia_zircon::Status,
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
-    std::{collections::BTreeMap, iter, sync::Arc},
+    std::{collections::BTreeMap, iter, marker::PhantomData, sync::Arc},
 };
 
-/// An implementation of a "simple" pseudo directory.  This directory holds a "static" set of
-/// entries, allowing the server to add or remove entries via the [`add_entry`] and
-/// [`remove_entry`] methods.  Compare to the [`directory::lazy::Lazy`] directory, where the
-/// entries are "dynamic" in a sense that a specific listing (and, potentially, the entries
-/// themselves) are generated only when requested.
-pub struct Simple {
+/// An implementation of a "simple" pseudo directory.  This directory holds a set of entries,
+/// allowing the server to add or remove entries via the [`add_entry`] and
+/// [`remove_entry`] methods, and, depending on the connection been used (see
+/// [`directory::immutable::connection::ImmutableConnection`] or
+/// [`directory::mutable::connection::MutableConnection`])
+/// it may also allow the clients to modify the entries as well.  This is a common implemmentation
+/// for [`directory::immutable::simple`] and [`directory::mutable::simple`].
+pub struct Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
     inner: Mutex<Inner>,
+
+    // I wish this field would not be here.  A directory instance already knows the type of the
+    // connections that connect to it - it is in the `Connection` type.  So we should just be able
+    // to use that.  But, unfortunately, I could not write `DirectoryEntry::open()` implementation.
+    // The compiler is confused when it needs to convert `self` into an `Arc<dyn
+    // ImmutableConnectionClient>` or `Arc<dyn MutableConnectionClient>`.  I have tried a few
+    // tricks to add the necessary constraints, but I was not able to write it correctly.
+    // Essentially the constraint should be something like this:
+    //
+    //     impl<Connection> DirectoryEntry for Simple<Connection>
+    //     where
+    //         Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+    //         Arc<Self>: IsConvertableTo<
+    //             Type = Arc<
+    //                 <Connection as DerivedConnection<AlphabeticalTraversal>>::Directory
+    //             >
+    //         >
+    //
+    // The problem is that I do not know how to write this `IsConvertableTo` trait.  Compiler seems
+    // to be following some special rules when you say `A as Arc<B>` (when `A` is an `Arc`), as it
+    // allows subtyping, but I do not know how to express the same constraint.
+    mutable: bool,
+
+    _connection: PhantomData<Connection>,
 }
 
 struct Inner {
@@ -47,18 +77,23 @@ struct Inner {
     watchers: Watchers,
 }
 
-/// When in a "simple" directory is traversed, entries are returned in an alphanumeric order.
-type SimpleDirectoryConnection = DirectoryConnection<AlphabeticalTraversal>;
-
-impl Simple {
-    pub(super) fn new() -> Arc<Self> {
+impl<Connection> Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
+    pub(super) fn new(mutable: bool) -> Arc<Self> {
         Arc::new(Simple {
             inner: Mutex::new(Inner { entries: BTreeMap::new(), watchers: Watchers::new() }),
+            mutable,
+            _connection: PhantomData,
         })
     }
 }
 
-impl DirectoryEntry for Simple {
+impl<Connection> DirectoryEntry for Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
     fn open(
         self: Arc<Self>,
         scope: ExecutionScope,
@@ -75,9 +110,21 @@ impl DirectoryEntry for Simple {
             let name = match path.next() {
                 Some(name) => name,
                 None => {
-                    SimpleDirectoryConnection::create_connection(
-                        scope, self, flags, mode, server_end,
-                    );
+                    // See comment above `Simple::mutable` as to why this selection is necessary.
+                    if self.mutable {
+                        panic!("Not implemented");
+                    } else {
+                        create_connection::<
+                            ImmutableConnection<AlphabeticalTraversal>,
+                            AlphabeticalTraversal,
+                        >(
+                            scope,
+                            self as Arc<dyn ImmutableConnectionClient<AlphabeticalTraversal>>,
+                            flags,
+                            mode,
+                            server_end,
+                        );
+                    }
                     return;
                 }
             };
@@ -106,7 +153,10 @@ impl DirectoryEntry for Simple {
     }
 }
 
-impl entry_container::DirectlyMutable for Simple {
+impl<Connection> entry_container::DirectlyMutable for Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
     fn add_entry_impl(
         self: Arc<Self>,
         name: String,
@@ -146,7 +196,10 @@ impl entry_container::DirectlyMutable for Simple {
     }
 }
 
-impl entry_container::Observable<AlphabeticalTraversal> for Simple {
+impl<Connection> entry_container::Observable<AlphabeticalTraversal> for Simple<Connection>
+where
+    Connection: DerivedConnection<AlphabeticalTraversal> + 'static,
+{
     fn read_dirents(
         self: Arc<Self>,
         pos: AlphabeticalTraversal,

@@ -12,10 +12,11 @@ mod watchers_task;
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::DirectoryConnection,
+        connection::create_connection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncReadDirents},
+        immutable::connection::ImmutableConnection,
     },
     execution_scope::ExecutionScope,
     path::Path,
@@ -279,7 +280,7 @@ where
         let name = match path.next() {
             Some(name) => name.to_string(),
             None => {
-                DirectoryConnection::<TraversalPosition>::create_connection(
+                create_connection::<ImmutableConnection<TraversalPosition>, TraversalPosition>(
                     scope, self, flags, mode, server_end,
                 );
                 return;

@@ -7,7 +7,9 @@
 //! directories.
 
 pub mod simple;
-pub use simple::simple;
+pub use simple::{simple, Simple};
 
 pub mod lazy;
-pub use lazy::lazy;
+pub use lazy::{lazy, Lazy};
+
+pub mod connection;

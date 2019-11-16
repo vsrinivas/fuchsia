@@ -8,7 +8,7 @@
 //! tree structure to be defined at compile time, while this helper allows the tree structure to be
 //! dynamic.
 
-use crate::directory::{self, entry::DirectoryEntry, entry_container::DirectlyMutable, immutable};
+use crate::directory::{entry::DirectoryEntry, entry_container::DirectlyMutable, immutable};
 
 use {
     failure::Fail,
@@ -257,7 +257,7 @@ impl TreeBuilder {
     /// Consumes the builder, producing a tree with all the nodes provided to [`add_entry()`] at
     /// their respective locations.  The tree itself is built using [`directory::simple::Simple`]
     /// nodes, and the top level is a directory.
-    pub fn build(self) -> Arc<directory::simple::Simple> {
+    pub fn build(self) -> Arc<immutable::Simple> {
         match self {
             TreeBuilder::Directory(mut entries) => {
                 let res = immutable::simple();
