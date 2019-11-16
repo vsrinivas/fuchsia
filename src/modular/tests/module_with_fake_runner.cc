@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 
 #include <sdk/lib/sys/cpp/component_context.h>
 
@@ -30,7 +31,7 @@ class ModuleWithFakeRunner {
 }  // namespace
 
 int main(int /*argc*/, const char** /*argv*/) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
   modular::ModuleDriver<ModuleWithFakeRunner> driver(context.get(), [&loop] { loop.Quit(); });
   loop.Run();

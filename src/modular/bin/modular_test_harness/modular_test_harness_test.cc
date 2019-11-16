@@ -71,7 +71,7 @@ TEST_F(ModularTestHarnessDestructionTest, DISABLED_CleanTeardown) {
 
   // Service our FakeSessionShell on a different thread -- this will allow our FakeSessionShell to
   // respond to Lifecycle/Terminate() while TestHarnessLauncher blocks this thread.
-  async::Loop session_shell_loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop session_shell_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   session_shell_loop.StartThread();
   {
     modular_testing::TestHarnessLauncher launcher(

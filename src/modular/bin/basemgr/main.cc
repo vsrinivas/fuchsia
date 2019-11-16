@@ -188,7 +188,7 @@ class LifecycleImpl : public fuchsia::modular::Lifecycle {
 };
 
 int main(int argc, const char** argv) {
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   fuchsia::modular::session::ModularConfig modular_config;
 
   if (argc == 1) {

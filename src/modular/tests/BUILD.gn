@@ -347,6 +347,7 @@ executable("module_with_fake_runner_bin") {
     "//src/modular/lib/app_driver/cpp:module_driver",
     "//src/modular/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
   ]
 }
 
