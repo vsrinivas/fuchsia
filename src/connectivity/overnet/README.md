@@ -1,26 +1,61 @@
-Overlay Network
-===============
+# Overnet - Fuchsia Overlay Network
 
-This library contains the core protocol and logic for the Fuchsia overlay
-network. This is a mesh network that sits atop other network protocol stacks
-and allows message routing.
+Overnet is a suite of protocols, libraries and binaries that provide routed
+and structured overlay networking to Fuchsia.
 
-Build and Runtime Environment Considerations
---------------------------------------------
+Overnet provides a mesh network that sits atop other protocols, such as
+traditional networking stacks and provides message routing.
 
-The library is intended to be used both within Fuchsia, and outside Fuchsia on
-existing operating systems and within other projects.
+The Overnet implementation is intended to be portable - that is it can be
+built on a wide variety of operating systems and provides cross-system
+connectivity.
 
-This library should depend on only the C++ runtime library at runtime, and
-additionally google test and google mock for test code, and no more.
+## Getting Started
 
-This library is expected to be _wrapped_ by other binaries and libraries to
-produce a full system. This expectation allows us to set down the rule that
-**no OS interactions are to occur within this library**. Instead, interfaces
-should be phrased such that relevant OS interactions can be injected by more
-specific code.
+Users wishing to establish a host-target Overnet network are best serviced
+using the `fx overnet` tool. The process is as follows:
 
-To verify this library works outside of Fuchsia:
-```sh
-ninja -C out/x64 host_x64/overnet_unittests && out/x64/host_x64/overnet_unittests
-```
+- Start `fx ascendd`. Ascendd provides the host "Overnet node".
+- Start `fx overnet`. This creates a host-pipe connection between the host
+  `ascendd` and the current `fx` target device.
+- Run an Overnet program, for example: `fx onet list-peers`.
+
+## Tools and Libraries
+
+In the subtree, users will find the following items:
+
+### Examples
+
+There are two examples available:
+
+- **echo** a simple echo server and client.
+- **interface_passing** an example demonstrating sub-protocol routing (handle passing).
+
+### Libraries
+
+**core** is the central implementation of Overnet providing facilities for
+programs operating either/both as server or client. The implementation
+defines the protocols for routing, secure transport, service discovery and
+many other features.
+
+**hoist** provides a set of portability shims that when used enable a single
+code base to be usable in both a Fuchsia environment, as well as a Unix style
+environment (wherever the underlying IO reactor primitives operate). Hoist
+abstracts over service connections.
+
+### Overnetstack
+
+Overnetstack is a Fuchsia component that hosts Overnet service routing on a
+Fuchsia device. It also implements node and service discovery via mDNS.
+
+### Tools
+
+**ascendd** The ascend daemon is a *host* (Unix/POSIX) program that provides
+Overnet node capabilities on a non-Fuchsia system. It binds to a Unix socket
+that Overnet client programs can use to establish Overnet connections, and
+both export and consume Overnet services.
+
+**onet** The onet tool is a debugging tool for Overnet that performs a variety
+*of functions, such as enumerating an Overnet network. It also provides a
+*connection proxying facility that can be used in concert with **ascendd** to
+*establish a connection between ascendd and a Fuchsia target device.

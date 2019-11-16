@@ -8,7 +8,7 @@ group("tools") {
     "//garnet/packages/products:devtools",
     "//garnet/packages/tools:all",
     "//src/connectivity/network/netdump",
-    "//src/connectivity/overnet/tools/onet:host",
+    "//src/connectivity/overnet/tools",
     "//src/developer/debug/zxdb:zxdb_host",
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
