@@ -83,6 +83,91 @@ pub trait DirectlyMutable: Send + Sync {
         self: Arc<Self>,
         name: String,
     ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status>;
+
+    /// Very similar to [`add_entry_impl`] with the only exception that the target is overwritten
+    /// even if it already exists.  The target is discarded, if it exists.
+    fn link(self: Arc<Self>, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status>;
+
+    /// Renaming needs to be atomic, even accross two distinct directories.  So we need a special
+    /// API to handle that.
+    ///
+    /// As two distinc directories may mean two mutexes to lock, using it correctly is non-trivial.
+    /// In order to avoid a deadlock, we need to decide on a global ordering for the locks.
+    /// `rename_from` and [`rename_to`] are used depending on the relative order of the two
+    /// directories involved in the operation.
+    ///
+    /// This method is `unsafe`, as `rename_from` and [`rename_to`] should only be called by the
+    /// [`rename_helper`], which will establish the global order and will call proper method.  It
+    /// should reduce the chances one will use this API incorrectly.
+    ///
+    /// Implementations are expected to lock this directory, check that the entry exists and pass a
+    /// reference to the entry to the `to` callback.  Only if the `to` callback succeed, should the
+    /// entry be removed from the current directory.  This will garantee atomic rename from the
+    /// standpoint of the client.
+    unsafe fn rename_from(
+        self: Arc<Self>,
+        src: String,
+        to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
+    ) -> Result<(), Status>;
+
+    /// Renaming needs to be atomic, even accross two distinct directories.  So we need a special
+    /// API to handle that.
+    ///
+    /// See [`rename_from`] comment for an explanation.
+    ///
+    /// Implementations are expected to lock this dirctory, check if they can accept an entry named
+    /// `dst` (in case there might be any restrictions), then call the `from` callback to obtain a
+    /// new entry which must be added into the current directory with no errors.
+    unsafe fn rename_to(
+        self: Arc<Self>,
+        dst: String,
+        from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
+    ) -> Result<(), Status>;
+
+    /// In case an entry is renamed within the same directory only one lock needs to be obtained.
+    /// This is a companion method to the [`rename_from`]/[`rename_to`] pair.  [`rename_helper`]
+    /// will use this method to avoid locking the same directory mutex twice.
+    ///
+    /// It should only be used by the [`rename_helper`].
+    fn rename_within(self: Arc<Self>, src: String, dst: String) -> Result<(), Status>;
+}
+
+pub fn rename_helper(
+    src_parent: Arc<dyn DirectlyMutable>,
+    src: String,
+    dst_parent: Arc<dyn DirectlyMutable>,
+    dst: String,
+) -> Result<(), Status> {
+    // We need to lock directories using the same global order, otherwise we risk a deadlock.  We
+    // will use directory objects memory location to establish global order for the locks.  It
+    // introduces additional complexity, but, hopefully, avoids this subtle deadlocking issue.
+    //
+    // We will lock first object with the smaller memory address.
+
+    let src_order = src_parent.as_ref() as *const dyn DirectlyMutable as *const usize as usize;
+    let dst_order = dst_parent.as_ref() as *const dyn DirectlyMutable as *const usize as usize;
+
+    if src_order < dst_order {
+        // `unsafe` here indicates that we have checked the global order for the locks for
+        // `src_parent` and `dst_parent` and we are calling `rename_from` as `src_parent` has a
+        // smaller memory address than the `dst_parent`.
+        unsafe { src_parent.rename_from(src, Box::new(move |entry| dst_parent.link(dst, entry))) }
+    } else if src_order == dst_order {
+        src_parent.rename_within(src, dst)
+    } else {
+        // `unsafe` here indicates that we have checked the global order for the locks for
+        // `src_parent` and `dst_parent` and we are calling `rename_to` as `dst_parent` has a
+        // smaller memory address than the `src_parent`.
+        unsafe {
+            dst_parent.rename_to(
+                dst,
+                Box::new(move || match src_parent.remove_entry_impl(src)? {
+                    None => Err(Status::NOT_FOUND),
+                    Some(entry) => Ok(entry),
+                }),
+            )
+        }
+    }
 }
 
 /// All directories that allow inspection of their entries implement this trait.

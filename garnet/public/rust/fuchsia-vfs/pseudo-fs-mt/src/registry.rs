@@ -15,9 +15,18 @@ use {
     std::sync::Arc,
 };
 
-pub trait TokenRegistryClient: DirectoryEntry + DirectlyMutable + Send + Sync {}
+pub trait TokenRegistryClient: DirectoryEntry + DirectlyMutable + Send + Sync {
+    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn DirectlyMutable>;
+}
 
-impl<T> TokenRegistryClient for T where T: DirectoryEntry + DirectlyMutable + Send + Sync {}
+impl<T> TokenRegistryClient for T
+where
+    T: DirectoryEntry + DirectlyMutable + Send + Sync + 'static,
+{
+    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn DirectlyMutable> {
+        self as Arc<dyn DirectlyMutable>
+    }
+}
 
 pub const DEFAULT_TOKEN_RIGHTS: Rights = Rights::BASIC;
 

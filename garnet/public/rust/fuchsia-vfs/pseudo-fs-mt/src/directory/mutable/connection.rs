@@ -43,6 +43,8 @@ where
         self: Arc<Self>,
     ) -> Arc<dyn BaseConnectionClient<TraversalPosition>>;
 
+    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable>;
+
     fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient>;
 }
 
@@ -55,6 +57,10 @@ where
         self: Arc<Self>,
     ) -> Arc<dyn BaseConnectionClient<TraversalPosition>> {
         self as Arc<dyn BaseConnectionClient<TraversalPosition>>
+    }
+
+    fn into_directly_mutable(self: Arc<Self>) -> Arc<dyn entry_container::DirectlyMutable> {
+        self as Arc<dyn entry_container::DirectlyMutable>
     }
 
     fn into_token_registry_client(self: Arc<Self>) -> Arc<dyn TokenRegistryClient> {
@@ -252,14 +258,37 @@ where
 
     fn handle_rename<R>(
         &self,
-        _src: String,
-        _dst_parent_token: Handle,
-        _dst: String,
+        src: String,
+        dst_parent_token: Handle,
+        dst: String,
         responder: R,
     ) -> Result<(), fidl::Error>
     where
         R: FnOnce(Status) -> Result<(), fidl::Error>,
     {
-        responder(Status::NOT_SUPPORTED)
+        if self.base.flags & OPEN_RIGHT_WRITABLE == 0 {
+            return responder(Status::ACCESS_DENIED);
+        }
+
+        let token_registry = match self.base.scope.token_registry() {
+            None => return responder(Status::NOT_SUPPORTED),
+            Some(registry) => registry,
+        };
+
+        let dst_parent = match token_registry.get_container(dst_parent_token) {
+            Err(status) => return responder(status),
+            Ok(None) => return responder(Status::NOT_FOUND),
+            Ok(Some(entry)) => entry,
+        };
+
+        match entry_container::rename_helper(
+            self.base.directory.clone().into_directly_mutable(),
+            src,
+            dst_parent.into_directly_mutable(),
+            dst,
+        ) {
+            Ok(()) => responder(Status::OK),
+            Err(status) => responder(status),
+        }
     }
 }

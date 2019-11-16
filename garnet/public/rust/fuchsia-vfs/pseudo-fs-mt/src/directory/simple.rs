@@ -33,7 +33,13 @@ use {
     fuchsia_zircon::Status,
     parking_lot::Mutex,
     static_assertions::assert_eq_size,
-    std::{collections::BTreeMap, iter, marker::PhantomData, sync::Arc},
+    std::{
+        collections::{btree_map, BTreeMap},
+        iter,
+        marker::PhantomData,
+        ops::DerefMut,
+        sync::Arc,
+    },
 };
 
 /// An implementation of a "simple" pseudo directory.  This directory holds a set of entries,
@@ -224,6 +230,102 @@ where
         this.watchers.send_event(&mut SingleNameEventProducer::removed(&name));
 
         Ok(this.entries.remove(&name))
+    }
+
+    fn link(self: Arc<Self>, name: String, entry: Arc<dyn DirectoryEntry>) -> Result<(), Status> {
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        this.watchers.send_event(&mut SingleNameEventProducer::added(&name));
+
+        let _ = this.entries.insert(name, entry);
+        Ok(())
+    }
+
+    unsafe fn rename_from(
+        self: Arc<Self>,
+        src: String,
+        to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
+    ) -> Result<(), Status> {
+        if src.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        let Inner { entries, watchers, .. } = this.deref_mut();
+
+        let map_entry = match entries.entry(src.clone()) {
+            btree_map::Entry::Vacant(_) => return Err(Status::NOT_FOUND),
+            btree_map::Entry::Occupied(map_entry) => map_entry,
+        };
+
+        to(map_entry.get().clone())?;
+
+        watchers.send_event(&mut SingleNameEventProducer::removed(&src));
+
+        let _ = map_entry.remove();
+        Ok(())
+    }
+
+    unsafe fn rename_to(
+        self: Arc<Self>,
+        dst: String,
+        from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
+    ) -> Result<(), Status> {
+        if dst.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        let entry = from()?;
+
+        this.watchers.send_event(&mut SingleNameEventProducer::added(&dst));
+
+        let _ = this.entries.insert(dst, entry);
+        Ok(())
+    }
+
+    fn rename_within(self: Arc<Self>, src: String, dst: String) -> Result<(), Status> {
+        if src.len() as u64 >= MAX_FILENAME || dst.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        let mut this = self.inner.lock();
+
+        // I assume we should send these events even even when `src == dst`.  In practice, a
+        // particular client may not be aware that the names match, but may still rely on the fact
+        // that the events occur.
+        //
+        // Watcher protocol expects to produce messages that list only one type of event.  So
+        // we will send two independent event messages, each with one name.
+        this.watchers.send_event(&mut SingleNameEventProducer::removed(&src));
+        this.watchers.send_event(&mut SingleNameEventProducer::added(&dst));
+
+        // We acquire the lock first, as in case `src != dst`, we want to make sure that the
+        // recipients of these events can not see the directory in the state before the update.  I
+        // assume that `src == dst` is unlikely case, and for the sake of reduction of code
+        // duplication we can lock and then immediately unlock.
+        //
+        // It also provides sequencing for the watchers, as they will always receive `removed`
+        // followed by `added`, and there will be no interleaving event in-between.  I think it is
+        // not super important, as the watchers should probably be prepared to deal with all kinds
+        // of sequences anyways.
+        if src == dst {
+            return Ok(());
+        }
+
+        let entry = match this.entries.remove(&src) {
+            None => return Err(Status::NOT_FOUND),
+            Some(entry) => entry,
+        };
+
+        let _ = this.entries.insert(dst, entry);
+        Ok(())
     }
 }
 

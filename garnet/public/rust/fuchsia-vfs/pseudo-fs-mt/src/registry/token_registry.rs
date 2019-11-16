@@ -319,14 +319,42 @@ mod tests {
                 _name: String,
                 _entry: Arc<dyn DirectoryEntry>,
             ) -> Result<(), Status> {
-                Ok(())
+                panic!("Not implemented")
             }
 
             fn remove_entry_impl(
                 self: Arc<Self>,
                 _name: String,
             ) -> Result<Option<Arc<dyn DirectoryEntry>>, Status> {
-                Ok(None)
+                panic!("Not implemented")
+            }
+
+            fn link(
+                self: Arc<Self>,
+                _name: String,
+                _entry: Arc<dyn DirectoryEntry>,
+            ) -> Result<(), Status> {
+                panic!("Not implemented")
+            }
+
+            unsafe fn rename_from(
+                self: Arc<Self>,
+                _src: String,
+                _to: Box<dyn FnOnce(Arc<dyn DirectoryEntry>) -> Result<(), Status>>,
+            ) -> Result<(), Status> {
+                panic!("Not implemented")
+            }
+
+            unsafe fn rename_to(
+                self: Arc<Self>,
+                _dst: String,
+                _from: Box<dyn FnOnce() -> Result<Arc<dyn DirectoryEntry>, Status>>,
+            ) -> Result<(), Status> {
+                panic!("Not implemented")
+            }
+
+            fn rename_within(self: Arc<Self>, _src: String, _dst: String) -> Result<(), Status> {
+                panic!("Not implemented")
             }
         }
     }

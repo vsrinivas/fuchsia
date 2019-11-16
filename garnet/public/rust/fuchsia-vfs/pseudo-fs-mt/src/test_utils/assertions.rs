@@ -688,3 +688,61 @@ macro_rules! assert_unlink_err {
         assert_eq!(Status::from_raw(status), $expected_status);
     }};
 }
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_get_token {
+    ($proxy:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let (status, o_token) = $proxy.get_token().await.expect("get_token failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+        match o_token {
+            None => panic!("`get_token` returned Status::OK, but no token"),
+            Some(token) => token,
+        }
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_get_token_err {
+    ($proxy:expr, $expected_status:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let (status, token) = $proxy.get_token().await.expect("get_token failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+        assert!(
+            token.is_none(),
+            "`get_token` returned a token along with an error code.\n\
+             token: {:?}",
+            token
+        );
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_rename {
+    ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.rename($src, $dst_parent_token, $dst).await.expect("rename failed");
+
+        assert_eq!(Status::from_raw(status), Status::OK);
+    }};
+}
+
+// See comment at the top of the file for why this is a macro.
+#[macro_export]
+macro_rules! assert_rename_err {
+    ($proxy:expr, $src:expr, $dst_parent_token:expr, $dst:expr, $expected_status:expr) => {{
+        use $crate::test_utils::assertions::reexport::Status;
+
+        let status = $proxy.rename($src, $dst_parent_token, $dst).await.expect("rename failed");
+
+        assert_eq!(Status::from_raw(status), $expected_status);
+    }};
+}
