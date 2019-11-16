@@ -9,6 +9,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -321,7 +322,7 @@ class VcDisplayTest : public zxtest::Test {
     zx::channel client_end, server_end;
     zx::channel::create(0u, &server_end, &client_end);
     initialize_display_channel(std::move(client_end));
-    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     loop_->StartThread();
 
     server_end_ = zx::unowned_channel(server_end);

@@ -65,6 +65,7 @@ test("virtual-console-test-display") {
   deps = [
     ":common",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fidl-async-cpp",
     "//zircon/public/lib/zxtest",
   ]
