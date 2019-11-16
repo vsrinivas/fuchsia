@@ -6,16 +6,29 @@
 //! the client has on the FIDL connection.
 
 use crate::{
-    directory::connection::{
-        BaseConnection, BaseConnectionClient, ConnectionState, DerivedConnection,
-        DerivedDirectoryRequest, DirectoryRequestType,
+    common::send_on_open_with_error,
+    directory::{
+        common::new_connection_validate_flags,
+        connection::{
+            handle_requests, BaseConnection, BaseConnectionClient, ConnectionState,
+            DerivedConnection, DerivedDirectoryRequest, DirectoryRequestType,
+        },
+        entry::DirectoryEntry,
     },
     execution_scope::ExecutionScope,
+    path::Path,
 };
 
 use {
-    failure::Error, fidl_fuchsia_io::DirectoryRequest, fuchsia_zircon::sys::ZX_ERR_NOT_SUPPORTED,
-    futures::future::BoxFuture, std::sync::Arc,
+    failure::Error,
+    fidl::endpoints::ServerEnd,
+    fidl_fuchsia_io::{
+        DirectoryMarker, DirectoryObject, DirectoryRequest, NodeInfo, NodeMarker, OutOfLineUnion,
+        OPEN_FLAG_CREATE, OPEN_FLAG_DESCRIBE,
+    },
+    fuchsia_zircon::{sys::ZX_ERR_NOT_SUPPORTED, Status},
+    futures::future::BoxFuture,
+    std::sync::Arc,
 };
 
 pub trait ImmutableConnectionClient<TraversalPosition>:
@@ -49,6 +62,68 @@ where
     fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self {
         ImmutableConnection {
             base: BaseConnection::<Self, TraversalPosition>::new(scope, directory, flags),
+        }
+    }
+
+    fn create_connection(
+        scope: ExecutionScope,
+        directory: Arc<Self::Directory>,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    ) {
+        let flags = match new_connection_validate_flags(flags, mode) {
+            Ok(updated) => updated,
+            Err(status) => {
+                send_on_open_with_error(flags, server_end, status);
+                return;
+            }
+        };
+
+        let (requests, control_handle) =
+            match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
+                .into_stream_and_control_handle()
+            {
+                Ok((requests, control_handle)) => (requests, control_handle),
+                Err(_) => {
+                    // As we report all errors on `server_end`, if we failed to send an error over
+                    // this connection, there is nowhere to send the error tothe error to.
+                    return;
+                }
+            };
+
+        if flags & OPEN_FLAG_DESCRIBE != 0 {
+            let mut info = NodeInfo::Directory(DirectoryObject);
+            match control_handle
+                .send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info)))
+            {
+                Ok(()) => (),
+                Err(_) => return,
+            }
+        }
+
+        let connection = Self::new(scope.clone(), directory, flags);
+
+        let task = handle_requests::<Self, TraversalPosition>(requests, connection);
+        // If we failed to send the task to the executor, it is probably shut down or is in the
+        // process of shutting down (this is the only error state currently).  So there is nothing
+        // for us to do, but to ignore the request.  Connection will be closed when the connection
+        // object is dropped.
+        let _ = scope.spawn(Box::pin(task));
+    }
+
+    fn entry_not_found(
+        _scope: ExecutionScope,
+        _parent: Arc<dyn DirectoryEntry>,
+        flags: u32,
+        _mode: u32,
+        _name: &str,
+        _path: &Path,
+    ) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        if flags & OPEN_FLAG_CREATE == 0 {
+            Err(Status::NOT_FOUND)
+        } else {
+            Err(Status::NOT_SUPPORTED)
         }
     }
 

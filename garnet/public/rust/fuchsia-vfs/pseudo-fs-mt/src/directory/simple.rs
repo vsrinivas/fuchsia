@@ -8,11 +8,12 @@
 use crate::{
     common::send_on_open_with_error,
     directory::{
-        connection::{create_connection, DerivedConnection},
+        connection::DerivedConnection,
         dirents_sink,
         entry::{DirectoryEntry, EntryInfo},
         entry_container::{self, AsyncReadDirents},
         immutable::connection::{ImmutableConnection, ImmutableConnectionClient},
+        mutable::connection::{MutableConnection, MutableConnectionClient},
         traversal_position::AlphabeticalTraversal,
         watchers::{
             event_producers::{SingleNameEventProducer, StaticVecEventProducer},
@@ -25,7 +26,9 @@ use crate::{
 
 use {
     fidl::endpoints::ServerEnd,
-    fidl_fuchsia_io::{NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME},
+    fidl_fuchsia_io::{
+        NodeMarker, DIRENT_TYPE_DIRECTORY, INO_UNKNOWN, MAX_FILENAME, OPEN_FLAG_CREATE_IF_ABSENT,
+    },
     fuchsia_async::Channel,
     fuchsia_zircon::Status,
     parking_lot::Mutex,
@@ -88,6 +91,40 @@ where
             _connection: PhantomData,
         })
     }
+
+    fn get_entry(
+        self: Arc<Self>,
+        scope: ExecutionScope,
+        flags: u32,
+        mode: u32,
+        name: &str,
+        path: &Path,
+    ) -> Result<Arc<dyn DirectoryEntry>, Status> {
+        let mut this = self.inner.lock();
+
+        match this.entries.get(name) {
+            Some(entry) => {
+                if flags & OPEN_FLAG_CREATE_IF_ABSENT != 0 {
+                    return Err(Status::ALREADY_EXISTS);
+                }
+
+                Ok(entry.clone())
+            }
+            None => {
+                let entry = Connection::entry_not_found(
+                    scope.clone(),
+                    self.clone(),
+                    flags,
+                    mode,
+                    name,
+                    path,
+                )?;
+
+                let _ = this.entries.insert(name.to_string(), entry.clone());
+                Ok(entry)
+            }
+        }
+    }
 }
 
 impl<Connection> DirectoryEntry for Simple<Connection>
@@ -102,46 +139,40 @@ where
         mut path: Path,
         server_end: ServerEnd<NodeMarker>,
     ) {
+        let (name, path_ref) = match path.next_with_ref() {
+            (path_ref, Some(name)) => (name, path_ref),
+            (_, None) => {
+                // See comment above `Simple::mutable` as to why this selection is necessary.
+                if self.mutable {
+                    MutableConnection::<AlphabeticalTraversal>::create_connection(
+                        scope,
+                        self as Arc<dyn MutableConnectionClient<AlphabeticalTraversal>>,
+                        flags,
+                        mode,
+                        server_end,
+                    );
+                } else {
+                    ImmutableConnection::<AlphabeticalTraversal>::create_connection(
+                        scope,
+                        self as Arc<dyn ImmutableConnectionClient<AlphabeticalTraversal>>,
+                        flags,
+                        mode,
+                        server_end,
+                    );
+                }
+                return;
+            }
+        };
+
         // Do not hold the mutex more than necessary.  Plus, [`parking_lot::Mutex`] is not
         // re-entrant.  So we need to make sure to release the lock before we call `open()` is it
         // may turn out to be a recursive call, in case the directory contains itself directly or
-        // through a number of other directories.
-        let entry = {
-            let name = match path.next() {
-                Some(name) => name,
-                None => {
-                    // See comment above `Simple::mutable` as to why this selection is necessary.
-                    if self.mutable {
-                        panic!("Not implemented");
-                    } else {
-                        create_connection::<
-                            ImmutableConnection<AlphabeticalTraversal>,
-                            AlphabeticalTraversal,
-                        >(
-                            scope,
-                            self as Arc<dyn ImmutableConnectionClient<AlphabeticalTraversal>>,
-                            flags,
-                            mode,
-                            server_end,
-                        );
-                    }
-                    return;
-                }
-            };
-
-            let this = self.inner.lock();
-            let entry = match this.entries.get(name) {
-                Some(entry) => entry,
-                None => {
-                    send_on_open_with_error(flags, server_end, Status::NOT_FOUND);
-                    return;
-                }
-            };
-
-            entry.clone()
-        };
-
-        entry.open(scope, flags, mode, path, server_end);
+        // through a number of other directories.  `get_entry` is responsible for locking `self`
+        // and it will unlock it before returning.
+        match self.get_entry(scope.clone(), flags, mode, name, path_ref) {
+            Err(status) => send_on_open_with_error(flags, server_end, status),
+            Ok(entry) => entry.open(scope, flags, mode, path, server_end),
+        }
     }
 
     fn entry_info(&self) -> EntryInfo {

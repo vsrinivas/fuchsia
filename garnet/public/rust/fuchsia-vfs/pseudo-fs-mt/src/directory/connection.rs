@@ -5,10 +5,7 @@
 use crate::{
     common::{inherit_rights_for_clone, send_on_open_with_error},
     directory::{
-        common::{
-            check_child_connection_flags, new_connection_validate_flags,
-            POSIX_DIRECTORY_PROTECTION_ATTRIBUTES,
-        },
+        common::{check_child_connection_flags, POSIX_DIRECTORY_PROTECTION_ATTRIBUTES},
         entry::DirectoryEntry,
         entry_container::{self, AsyncReadDirents, Observable},
         read_dirents,
@@ -23,11 +20,11 @@ use {
     fidl_fuchsia_io::{
         DirectoryCloseResponder, DirectoryControlHandle, DirectoryDescribeResponder,
         DirectoryGetAttrResponder, DirectoryGetTokenResponder, DirectoryLinkResponder,
-        DirectoryMarker, DirectoryNodeGetFlagsResponder, DirectoryNodeSetFlagsResponder,
-        DirectoryObject, DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
+        DirectoryNodeGetFlagsResponder, DirectoryNodeSetFlagsResponder, DirectoryObject,
+        DirectoryReadDirentsResponder, DirectoryRenameResponder, DirectoryRequest,
         DirectoryRequestStream, DirectoryRewindResponder, DirectorySetAttrResponder,
         DirectorySyncResponder, DirectoryUnlinkResponder, DirectoryWatchResponder, NodeAttributes,
-        NodeInfo, NodeMarker, OutOfLineUnion, INO_UNKNOWN, MODE_TYPE_DIRECTORY, OPEN_FLAG_DESCRIBE,
+        NodeInfo, NodeMarker, INO_UNKNOWN, MODE_TYPE_DIRECTORY,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -37,58 +34,6 @@ use {
     futures::{future::BoxFuture, stream::StreamExt},
     std::{default::Default, iter, iter::ExactSizeIterator, mem::replace, sync::Arc},
 };
-
-/// Initializes a directory connection, checking the flags and sending `OnOpen` event if
-/// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
-/// an error, sends an appropriate `OnOpen` event (if requested) over the `server_end`
-/// connection.
-pub(super) fn create_connection<Connection, TraversalPosition>(
-    scope: ExecutionScope,
-    directory: Arc<Connection::Directory>,
-    flags: u32,
-    mode: u32,
-    server_end: ServerEnd<NodeMarker>,
-) where
-    Connection: DerivedConnection<TraversalPosition> + 'static,
-    TraversalPosition: Default + Send + Sync + 'static,
-{
-    let flags = match new_connection_validate_flags(flags, mode) {
-        Ok(updated) => updated,
-        Err(status) => {
-            send_on_open_with_error(flags, server_end, status);
-            return;
-        }
-    };
-
-    let (requests, control_handle) =
-        match ServerEnd::<DirectoryMarker>::new(server_end.into_channel())
-            .into_stream_and_control_handle()
-        {
-            Ok((requests, control_handle)) => (requests, control_handle),
-            Err(_) => {
-                // As we report all errors on `server_end`, if we failed to send an error over
-                // this connection, there is nowhere to send the error tothe error to.
-                return;
-            }
-        };
-
-    if flags & OPEN_FLAG_DESCRIBE != 0 {
-        let mut info = NodeInfo::Directory(DirectoryObject);
-        match control_handle.send_on_open_(Status::OK.into_raw(), Some(OutOfLineUnion(&mut info))) {
-            Ok(()) => (),
-            Err(_) => return,
-        }
-    }
-
-    let connection = Connection::new(scope.clone(), directory, flags);
-
-    let task = handle_requests::<Connection, TraversalPosition>(requests, connection);
-    // If we failed to send the task to the executor, it is probably shut down or is in the
-    // process of shutting down (this is the only error state currently).  So there is nothing
-    // for us to do, but to ignore the request.  Connection will be closed when the connection
-    // object is dropped.
-    let _ = scope.spawn(Box::pin(task));
-}
 
 /// Return type for [`BaseConnection::handle_request`] and [`DerivedConnection::handle_request`].
 pub enum ConnectionState {
@@ -107,6 +52,27 @@ where
     type Directory: BaseConnectionClient<TraversalPosition> + ?Sized;
 
     fn new(scope: ExecutionScope, directory: Arc<Self::Directory>, flags: u32) -> Self;
+
+    /// Initializes a directory connection, checking the flags and sending `OnOpen` event if
+    /// necessary.  Then either runs this connection inside of the specified `scope` or, in case of
+    /// an error, sends an appropriate `OnOpen` event (if requested) over the `server_end`
+    /// connection.
+    fn create_connection(
+        scope: ExecutionScope,
+        directory: Arc<Self::Directory>,
+        flags: u32,
+        mode: u32,
+        server_end: ServerEnd<NodeMarker>,
+    );
+
+    fn entry_not_found(
+        scope: ExecutionScope,
+        parent: Arc<dyn DirectoryEntry>,
+        flags: u32,
+        mode: u32,
+        name: &str,
+        path: &Path,
+    ) -> Result<Arc<dyn DirectoryEntry>, Status>;
 
     fn handle_request(
         &mut self,
@@ -232,7 +198,6 @@ pub(super) enum BaseDirectoryRequest {
 
 pub(super) enum DerivedDirectoryRequest {
     Unlink {
-        #[allow(unused)]
         path: String,
         responder: DirectoryUnlinkResponder,
     },
@@ -240,11 +205,8 @@ pub(super) enum DerivedDirectoryRequest {
         responder: DirectoryGetTokenResponder,
     },
     Rename {
-        #[allow(unused)]
         src: String,
-        #[allow(unused)]
         dst_parent_token: Handle,
-        #[allow(unused)]
         dst: String,
         responder: DirectoryRenameResponder,
     },
@@ -297,7 +259,7 @@ impl From<DirectoryRequest> for DirectoryRequestType {
 }
 
 #[must_use = "handle_requests() returns an async task that needs to be run"]
-async fn handle_requests<Connection, TraversalPosition>(
+pub(super) async fn handle_requests<Connection, TraversalPosition>(
     mut requests: DirectoryRequestStream,
     mut connection: Connection,
 ) where
@@ -429,7 +391,7 @@ where
             }
         };
 
-        create_connection::<Connection, TraversalPosition>(
+        Connection::create_connection(
             self.scope.clone(),
             self.directory.clone(),
             flags,
