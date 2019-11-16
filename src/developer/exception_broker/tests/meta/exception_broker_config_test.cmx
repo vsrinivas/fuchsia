@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/exception_broker_config_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

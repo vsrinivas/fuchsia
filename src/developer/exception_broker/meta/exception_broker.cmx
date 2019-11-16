@@ -3,6 +3,9 @@
         "binary": "bin/exception_broker"
     },
     "sandbox": {
+        "features": [
+            "config-data"
+        ],
         "services": [
             "fuchsia.feedback.CrashReporter",
             "fuchsia.logger.LogSink"

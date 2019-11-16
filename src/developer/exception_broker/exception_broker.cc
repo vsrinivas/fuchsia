@@ -9,14 +9,32 @@
 #include <third_party/crashpad/util/file/string_file.h>
 
 #include "src/developer/exception_broker/crash_report_generation.h"
+#include "src/lib/files/directory.h"
+#include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace fuchsia {
 namespace exception {
 
+namespace {
+
+constexpr char kEnableJitdConfigPath[] = "/config/data/enable_jitd_on_startup.json";
+
+}  // namespace
+
 std::unique_ptr<ExceptionBroker> ExceptionBroker::Create(
-    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services) {
-  return std::unique_ptr<ExceptionBroker>(new ExceptionBroker(services));
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    const char* override_filepath) {
+  auto broker = std::unique_ptr<ExceptionBroker>(new ExceptionBroker(services));
+
+  // Check if JITD should be enabled at startup. For now existence means it's activated.
+  if (!override_filepath)
+    override_filepath = kEnableJitdConfigPath;
+
+  if (files::IsFile(override_filepath))
+    broker->limbo_manager().SetActive(true);
+
+  return broker;
 }
 
 ExceptionBroker::ExceptionBroker(std::shared_ptr<sys::ServiceDirectory> services)

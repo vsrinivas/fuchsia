@@ -1,6 +1,7 @@
 # Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be found in the LICENSE file.
 
+import("//build/config.gni")
 import("//build/package.gni")
 
 source_set("lib") {
@@ -58,5 +59,17 @@ package("exception_broker") {
       path = "meta/exception_broker.cmx"
       dest = "exception_broker.cmx"
     },
+  ]
+}
+
+config_data("enable_jitd_on_startup") {
+  for_pkg = "exception_broker"
+
+  sources = [
+    "configs/jitd_on_startup.json",
+  ]
+
+  outputs = [
+    "enable_jitd_on_startup.json",
   ]
 }

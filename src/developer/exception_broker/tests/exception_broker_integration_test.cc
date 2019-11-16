@@ -74,10 +74,6 @@ TEST(ExceptionBrokerIntegrationTest, GetProcessesOnExceptionSmokeTest) {
   zx_status_t status = limbo->WatchProcessesWaitingOnException(&result);
   ASSERT_EQ(status, ZX_OK) << zx_status_get_string(status);
 
-  // Should return unavailable (not active by default).
-  ASSERT_TRUE(result.is_err());
-  EXPECT_EQ(result.err(), ZX_ERR_UNAVAILABLE);
-
   // Kill the job so that the exception that will be freed here doesn't bubble out of the test
   // environment.
   pe.job.kill();

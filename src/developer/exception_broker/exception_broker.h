@@ -22,8 +22,11 @@ namespace exception {
 
 class ExceptionBroker : public Handler {
  public:
+  // If |override_filepath| is defined, it will attempt to locate that file instead of the default
+  // config one. See exception_broker.cc for the prod filepath.
   static std::unique_ptr<ExceptionBroker> Create(async_dispatcher_t* dispatcher,
-                                                 std::shared_ptr<sys::ServiceDirectory> services);
+                                                 std::shared_ptr<sys::ServiceDirectory> services,
+                                                 const char* override_filepath = nullptr);
 
   // fuchsia.exception.Handler implementation.
 

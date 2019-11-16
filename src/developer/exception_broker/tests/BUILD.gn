@@ -16,6 +16,25 @@ group("tests") {
   ]
 }
 
+test_package("exception_broker_config_tests") {
+  tests = [
+    {
+      name = "exception_broker_config_test"
+    },
+  ]
+
+  deps = [
+    ":exception_broker_config_test",
+  ]
+
+  resources = [
+    {
+      path = "configs/test_enable_jitd_on_startup.json"
+      dest = "enable_jitd_on_startup.json"
+    },
+  ]
+}
+
 test_package("exception_broker_tests") {
   tests = [
     {
@@ -23,6 +42,9 @@ test_package("exception_broker_tests") {
     },
     {
       name = "exception_broker_integration_test"
+    },
+    {
+      name = "exception_broker_config_test"
     },
   ]
 
@@ -35,8 +57,16 @@ test_package("exception_broker_tests") {
 
   deps = [
     ":crasher",
+    ":exception_broker_config_test",
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
+  ]
+
+  resources = [
+    {
+      path = "configs/test_enable_jitd_on_startup.json"
+      dest = "enable_jitd_on_startup.json"
+    },
   ]
 }
 
@@ -89,6 +119,23 @@ executable("exception_broker_integration_test") {
 
   deps = [
     ":test_lib",
+    "//src/developer/exception_broker:lib",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("exception_broker_config_test") {
+  testonly = true
+
+  sources = [
+    "exception_broker_config_test.cc",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/exception_broker:lib",
     "//src/lib/fsl",
     "//src/lib/fxl",
