@@ -42,6 +42,8 @@ class FakeCameraDevice : public fuchsia::hardware::camera::Device {
     return (info[0].related_koid == info[1].koid) && (info[1].related_koid == info[0].koid);
   }
 
+  bool HasConnection() { return server_side_.is_valid(); }
+
  private:
   void GetChannel(zx::channel c) override {}
   void GetChannel2(zx::channel c) override { server_side_ = std::move(c); }
@@ -94,6 +96,8 @@ TEST_F(CameraDeviceCreationTest, DetectExistingDevices) {
   ASSERT_EQ(ZX_OK, plug_detector.Start(tracker.GetHandler()));
   RunLoopUntil([&tracker] { return tracker.size() >= 2; });
   EXPECT_EQ(2u, tracker.size());
+  RunLoopUntil([&camera0] { return camera0.HasConnection(); });
+  RunLoopUntil([&camera1] { return camera1.HasConnection(); });
   EXPECT_TRUE(tracker.HasMatchingChannel(camera0));
   EXPECT_TRUE(tracker.HasMatchingChannel(camera1));
 
@@ -112,6 +116,7 @@ TEST_F(CameraDeviceCreationTest, DetectHotplugDevices) {
   auto d1 = AddDevice(&camera0);
   RunLoopUntil([&tracker] { return tracker.size() >= 1u; });
   ASSERT_EQ(1u, tracker.size());
+  RunLoopUntil([&camera0] { return camera0.HasConnection(); });
   EXPECT_TRUE(tracker.HasMatchingChannel(camera0));
 
   plug_detector.Stop();
