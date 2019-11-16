@@ -8,7 +8,7 @@ toc:
 - title: "Flutter (UI toolkit)"
   path: //flutter.io/
   status: external
-- title: "Magma (GPU driver)"
+- title: "Magma (Vulkan driver)"
   section:
   - include: /docs/concepts/graphics/magma/_toc.yaml
 - title: "Scenic (Graphics engine)"
