@@ -24,7 +24,7 @@ pub enum Error {
 /// Describes the type of capability provided by the component manager which
 /// could either be a realm-scoped framework capability, or a builtin-capability.
 /// Each capability type has a corresponding `CapabilityPath` in the component
-/// manaager's namespace. Note that this path may not be unique as capabilities can
+/// manager's namespace. Note that this path may not be unique as capabilities can
 /// compose.
 #[derive(Debug, Clone)]
 pub enum ComponentManagerCapability {
