@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/mock-sysmem/mock-buffer-collection.h>
 
@@ -74,7 +75,7 @@ TEST(VimDisplay, ImportVmo) {
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
   MockBufferCollection collection;
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   image_t image = {};
   image.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
