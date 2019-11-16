@@ -6,6 +6,7 @@
 
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fake-bti/bti.h>
 #include <lib/fidl-async/cpp/bind.h>
 
@@ -75,7 +76,7 @@ class FakeGpuBackend : public virtio::FakeBackend {
 
 class VirtioGpuTest : public zxtest::Test {
  public:
-  VirtioGpuTest() : loop_(&kAsyncLoopConfigAttachToThread) {}
+  VirtioGpuTest() : loop_(&kAsyncLoopConfigAttachToCurrentThread) {}
   void SetUp() override {
     zx::bti bti;
     fake_bti_create(bti.reset_and_get_address());
