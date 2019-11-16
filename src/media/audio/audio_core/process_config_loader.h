@@ -5,6 +5,8 @@
 #ifndef SRC_MEDIA_AUDIO_AUDIO_CORE_PROCESS_CONFIG_LOADER_H_
 #define SRC_MEDIA_AUDIO_AUDIO_CORE_PROCESS_CONFIG_LOADER_H_
 
+#include <lib/fit/result.h>
+
 #include <optional>
 
 #include "src/media/audio/audio_core/process_config.h"
@@ -19,6 +21,9 @@ class ProcessConfigLoader {
   //
   // Returns the ProcessConfig if the file was present, or std::nullopt if the file was not present.
   static std::optional<ProcessConfig> LoadProcessConfig(const char* filename);
+
+  // Parses a ProcessConfig from a given string, according audio_core_config_schema.jsx.
+  static fit::result<ProcessConfig, std::string> ParseProcessConfig(const std::string& config);
 };
 
 }  // namespace media::audio

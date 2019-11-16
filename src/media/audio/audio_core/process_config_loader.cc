@@ -4,6 +4,7 @@
 
 #include "src/media/audio/audio_core/process_config_loader.h"
 
+#include <sstream>
 #include <string_view>
 
 #include <rapidjson/document.h>
@@ -223,11 +224,24 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
     return std::nullopt;
   }
 
+  auto result = ParseProcessConfig(buffer);
+  if (result.is_error()) {
+    FX_LOGS(FATAL) << "Failed to parse " << filename << "; error: " << result.error();
+  }
+
+  return result.take_value();
+}
+
+fit::result<ProcessConfig, std::string> ProcessConfigLoader::ParseProcessConfig(
+    const std::string& config) {
   rapidjson::Document doc;
-  const rapidjson::ParseResult parse_res = doc.ParseInsitu(buffer.data());
+  std::string parse_buffer = config;
+  const rapidjson::ParseResult parse_res = doc.ParseInsitu(parse_buffer.data());
   if (parse_res.IsError()) {
-    FX_LOGS(FATAL) << "Parse error (" << rapidjson::GetParseError_En(parse_res.Code())
-                   << ") when reading " << filename << ":" << parse_res.Offset();
+    std::stringstream error;
+    error << "Parse error (" << rapidjson::GetParseError_En(parse_res.Code())
+          << "): " << parse_res.Offset();
+    return fit::error(error.str());
   }
 
   const auto schema = LoadProcessConfigSchema();
@@ -236,13 +250,16 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
     rapidjson::StringBuffer error_buf;
     rapidjson::PrettyWriter<rapidjson::StringBuffer> writer(error_buf);
     validator.GetError().Accept(writer);
-    FX_LOGS(FATAL) << "Schema validation error (" << error_buf.GetString() << ") when reading "
-                   << filename;
+    std::stringstream error;
+    error << "Schema validation error (" << error_buf.GetString() << ")";
+    return fit::error(error.str());
   }
 
   auto curve_result = ParseVolumeCurveFromJsonObject(doc[kJsonKeyVolumeCurve]);
   if (!curve_result.is_ok()) {
-    FX_LOGS(FATAL) << "Invalid volume curve; error: " << curve_result.take_error();
+    std::stringstream error;
+    error << "Invalid volume curve; error: " << curve_result.take_error();
+    return fit::error(error.str());
   }
 
   auto config_builder = ProcessConfig::Builder();
@@ -259,7 +276,7 @@ std::optional<ProcessConfig> ProcessConfigLoader::LoadProcessConfig(const char* 
     ParseRoutingPolicyFromJsonObject(routing_policy_it->value, &config_builder);
   }
 
-  return {config_builder.Build()};
+  return fit::ok(config_builder.Build());
 }
 
 }  // namespace media::audio
