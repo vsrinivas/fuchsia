@@ -331,7 +331,7 @@ impl ReaderServer {
         property_selectors: &Vec<Regex>,
     ) -> Result<NodeHierarchy, Error> {
         // TODO: read lazy nodes as well.
-        let root_node = PartialNodeHierarchy::try_from(inspect_snapshot)?.hierarchy;
+        let root_node: NodeHierarchy = PartialNodeHierarchy::try_from(inspect_snapshot)?.into();
         let mut new_root = NodeHierarchy::new_root();
         for (node_path, property) in root_node.property_iter() {
             let mut formatted_node_path =

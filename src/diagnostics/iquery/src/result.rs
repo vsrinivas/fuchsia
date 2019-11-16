@@ -57,12 +57,12 @@ impl IqueryResult {
         // TODO: read lazy nodes as well.
         match node_info {
             NodeInfo::Vmofile(vmofile) => {
-                self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.hierarchy);
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.into());
                 Ok(())
             }
             NodeInfo::File(_) => {
                 let bytes = io_util::read_file_bytes(&proxy).await?;
-                self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.hierarchy);
+                self.hierarchy = Some(PartialNodeHierarchy::try_from(bytes)?.into());
                 Ok(())
             }
             _ => Err(format_err!("Unknown inspect file at {}", self.location.path.display())),

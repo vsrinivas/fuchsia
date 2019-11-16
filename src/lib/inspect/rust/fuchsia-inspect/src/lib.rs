@@ -26,7 +26,7 @@ use {
 };
 
 #[cfg(test)]
-use {crate::format::block::Block, failure::bail};
+use crate::format::block::Block;
 
 pub mod component;
 pub mod format;
@@ -170,31 +170,6 @@ impl Inspector {
     /// Get the root of the VMO object.
     pub fn root(&self) -> &Node {
         &self.root_node
-    }
-
-    /// Gets all the lazy tree names associated to this inspector.
-    #[cfg(test)]
-    pub(in crate) fn tree_names(&self) -> Vec<String> {
-        self.state()
-            .map(|state| {
-                let state = state.lock();
-                state.callbacks.keys().map(|k| k.to_string()).collect::<Vec<String>>()
-            })
-            .unwrap_or(vec![])
-    }
-
-    /// Calls the lazy node callback with the given `name` or fails if the name doesn't exist.
-    #[cfg(test)]
-    pub(in crate) async fn load_tree(&self, name: impl Into<String>) -> Result<Self, Error> {
-        let name = name.into();
-        let result = self.state().and_then(|state| {
-            let state = state.lock();
-            state.callbacks.get(&name).map(|cb| cb())
-        });
-        match result {
-            Some(cb_result) => cb_result.await,
-            None => bail!("failed to load tree name = {:?}", name),
-        }
     }
 
     fn state(&self) -> Option<Arc<Mutex<State>>> {

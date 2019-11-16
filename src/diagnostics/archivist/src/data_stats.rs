@@ -179,7 +179,10 @@ mod tests {
         fidl::endpoints::create_proxy,
         fidl_fuchsia_io::DirectoryMarker,
         fuchsia_async as fasync,
-        fuchsia_inspect::{assert_inspect_tree, reader::PartialNodeHierarchy},
+        fuchsia_inspect::{
+            assert_inspect_tree,
+            reader::{NodeHierarchy, PartialNodeHierarchy},
+        },
         futures::TryStreamExt,
         io_util,
         std::{convert::TryFrom, fs::File, io::prelude::*},
@@ -209,8 +212,8 @@ mod tests {
         let val = get_data_directory_stats("test_data".to_string(), tempdir.path().join("data"))
             .await
             .expect("get data");
-        let partial = PartialNodeHierarchy::try_from(val).expect("data is not an inspect file");
-        assert_inspect_tree!(partial.hierarchy,
+        let hierarchy = PartialNodeHierarchy::try_from(val).expect("data is not an inspect file");
+        assert_inspect_tree!(hierarchy,
         root: {
             stats: contains {
                 error: "Query failed"
@@ -274,8 +277,9 @@ mod tests {
         .expect("failed to open storage inspect file");
 
         let bytes = io_util::read_file_bytes(&f).await.expect("failed to read file");
-        let partial = PartialNodeHierarchy::try_from(bytes).expect("file is not an inspect file");
-        assert_inspect_tree!(partial.hierarchy,
+        let hierarchy: NodeHierarchy =
+            PartialNodeHierarchy::try_from(bytes).expect("file is not an inspect file").into();
+        assert_inspect_tree!(hierarchy,
         root: {
             stats: contains {
                 error: "Query failed"

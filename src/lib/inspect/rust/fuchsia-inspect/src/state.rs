@@ -270,7 +270,7 @@ impl State {
         format!("{}-{}", prefix, id)
     }
 
-    fn allocate_link(
+    pub(in crate) fn allocate_link(
         &mut self,
         name: &str,
         content: &str,
@@ -965,8 +965,8 @@ mod tests {
         let callback = state.callbacks.get("link-name-0").unwrap();
         match callback().await {
             Ok(inspector) => {
-                let partial = PartialNodeHierarchy::try_from(&*inspector.vmo.unwrap()).unwrap();
-                assert_inspect_tree!(partial.hierarchy, root: {
+                let hierarchy = PartialNodeHierarchy::try_from(&*inspector.vmo.unwrap()).unwrap();
+                assert_inspect_tree!(hierarchy, root: {
                     a: 1u64,
                 });
             }

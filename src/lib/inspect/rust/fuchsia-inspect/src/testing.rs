@@ -4,7 +4,7 @@
 
 use {
     super::{
-        reader::{NodeHierarchy, Property},
+        reader::{NodeHierarchy, PartialNodeHierarchy, Property},
         Inspector,
     },
     failure::{bail, Error},
@@ -156,6 +156,26 @@ pub trait NodeHierarchyGetter {
 impl NodeHierarchyGetter for NodeHierarchy {
     fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
         Cow::Borrowed(self)
+    }
+}
+
+impl NodeHierarchyGetter for PartialNodeHierarchy {
+    fn get_node_hierarchy(&self) -> Cow<NodeHierarchy> {
+        let hierarchy: NodeHierarchy = self.clone().into();
+        if !hierarchy.missing.is_empty() {
+            panic!(
+                "Missing links: {:?}",
+                hierarchy
+                    .missing
+                    .iter()
+                    .map(|missing| {
+                        format!("(name:{:?}, reason:{:?})", missing.name, missing.reason)
+                    })
+                    .collect::<Vec<_>>()
+                    .join(", ")
+            );
+        }
+        Cow::Owned(hierarchy)
     }
 }
 
@@ -340,7 +360,10 @@ impl PropertyAssertion for AnyProperty {
 mod tests {
     use {
         super::*,
-        crate::reader::{ArrayFormat, ArrayValue},
+        crate::{
+            reader::{ArrayFormat, ArrayValue, LinkValue},
+            LinkNodeDisposition,
+        },
     };
 
     #[test]
@@ -584,6 +607,27 @@ mod tests {
     fn test_matching_with_inspector() {
         let inspector = Inspector::new();
         assert_inspect_tree!(inspector, root: {});
+    }
+
+    #[test]
+    fn test_matching_with_partial() {
+        let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
+        let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
+        assert_inspect_tree!(partial, root: {
+            sub: "sub_value",
+        });
+    }
+
+    #[test]
+    #[should_panic]
+    fn test_missing_values_with_partial() {
+        let mut partial = PartialNodeHierarchy::new("root", vec![], vec![]);
+        partial.links = vec![LinkValue {
+            name: "missing-link".to_string(),
+            content: "missing-link-404".to_string(),
+            disposition: LinkNodeDisposition::Child,
+        }];
+        assert_inspect_tree!(partial, root: {});
     }
 
     fn simple_tree() -> NodeHierarchy {

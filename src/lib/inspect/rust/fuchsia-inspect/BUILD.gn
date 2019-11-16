@@ -19,6 +19,7 @@ rustc_library("fuchsia-inspect") {
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/mapped-vmo",
     "//src/lib/shared-buffer",
+    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:bitfield",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:derivative",

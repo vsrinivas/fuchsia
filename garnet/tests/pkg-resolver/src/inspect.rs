@@ -65,10 +65,10 @@ async fn test_initial_inspect_state() {
     // Obtain VMO and convert into node heirarchy
     let vmo_file = File::open(path).expect("file exists");
     let vmo = fdio::get_vmo_copy_from_file(&vmo_file).expect("vmo exists");
-    let partial = PartialNodeHierarchy::try_from(&vmo).expect("create hierarchy from vmo");
+    let hierarchy = PartialNodeHierarchy::try_from(&vmo).expect("create hierarchy from vmo");
 
     assert_inspect_tree!(
-       partial.hierarchy,
+       hierarchy,
         root: {
             rewrite_manager: {
                 dynamic_rules: {},

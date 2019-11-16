@@ -5,7 +5,7 @@
 #![cfg(test)]
 
 use {
-    crate::Inspector,
+    crate::{reader::ReadableTree, Inspector},
     failure::{Error, ResultExt},
     fidl_fuchsia_inspect::{
         TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
@@ -37,12 +37,12 @@ pub fn spawn_tree_server(inspector: Inspector, mut stream: TreeRequestStream) {
                         responder.send(content)?;
                     }
                     TreeRequest::ListChildrenNames { tree_iterator, .. } => {
-                        let values = inspector.tree_names();
+                        let values = inspector.tree_names().await?;
                         let request_stream = tree_iterator.into_stream()?;
                         spawn_tree_name_iterator_server(values, request_stream)
                     }
                     TreeRequest::OpenChild { child_name, tree, .. } => {
-                        if let Ok(inspector) = inspector.load_tree(child_name).await {
+                        if let Ok(inspector) = inspector.read_tree(&child_name).await {
                             spawn_tree_server(inspector, tree.into_stream()?)
                         }
                     }
@@ -87,7 +87,11 @@ fn spawn_tree_name_iterator_server(values: Vec<String>, mut stream: TreeNameIter
 mod tests {
     use {
         super::*,
-        crate::{constants, reader::PartialNodeHierarchy, Inspector},
+        crate::{
+            constants,
+            reader::{NodeHierarchy, PartialNodeHierarchy},
+            Inspector,
+        },
         fidl_fuchsia_inspect::{
             TreeMarker, TreeNameIteratorMarker, TreeNameIteratorProxy, TreeProxy,
         },
@@ -99,8 +103,8 @@ mod tests {
     async fn get_contents() -> Result<(), Error> {
         let tree = spawn_server()?;
         let tree_content = tree.get_content().await?;
-        let partial = parse_content(tree_content)?;
-        assert_inspect_tree!(partial.hierarchy, root: {
+        let hierarchy = parse_content(tree_content)?;
+        assert_inspect_tree!(hierarchy, root: {
             a: 1i64,
         });
         Ok(())
@@ -122,8 +126,8 @@ mod tests {
         let (child_tree, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
         tree.open_child("lazy-0", server_end)?;
         let tree_content = child_tree.get_content().await?;
-        let partial = parse_content(tree_content)?;
-        assert_inspect_tree!(partial.hierarchy, root: {
+        let hierarchy = parse_content(tree_content)?;
+        assert_inspect_tree!(hierarchy, root: {
             b: 2u64,
         });
         let (name_iterator, server_end) =
@@ -134,8 +138,8 @@ mod tests {
         let (child_tree_2, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
         child_tree.open_child("lazy-vals-0", server_end)?;
         let tree_content = child_tree_2.get_content().await?;
-        let partial = parse_content(tree_content)?;
-        assert_inspect_tree!(partial.hierarchy, root: {
+        let hierarchy = parse_content(tree_content)?;
+        assert_inspect_tree!(hierarchy, root: {
             c: 3.0,
         });
         let (name_iterator, server_end) =
@@ -158,11 +162,11 @@ mod tests {
         Ok(())
     }
 
-    fn parse_content(tree_content: TreeContent) -> Result<PartialNodeHierarchy, Error> {
+    fn parse_content(tree_content: TreeContent) -> Result<NodeHierarchy, Error> {
         let buffer = tree_content.buffer.unwrap();
         assert_eq!(buffer.size, constants::DEFAULT_VMO_SIZE_BYTES as u64);
         assert_eq!(tree_content.state, Some(TreeState::InUse));
-        PartialNodeHierarchy::try_from(&buffer.vmo)
+        Ok(PartialNodeHierarchy::try_from(&buffer.vmo)?.into())
     }
 
     fn spawn_server() -> Result<TreeProxy, Error> {
