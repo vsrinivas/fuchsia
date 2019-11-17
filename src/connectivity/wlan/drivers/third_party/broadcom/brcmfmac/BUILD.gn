@@ -18,11 +18,12 @@ import("//build/package.gni")
 # By default, targets are only visible here and to subdirectories.
 visibility = [ "./*" ]
 
-# The brcmfmac driver can be built with support for different system buses (SDIO and
+# The brcmfmac driver can be built with support for different system buses (PCIE, SDIO and
 # simulated-firmware), and different configurations will require different support.  To facilitate
 # consolidating all the potentially messy conditional compilation in one place, "binding.cc" is
 # conditionally compiled based on the values of the preprocessor #defines:
 #
+# * CONFIG_BRCMFMAC_PCIE
 # * CONFIG_BRCMFMAC_SDIO
 # * CONFIG_BRCMFMAC_SIM
 # * CONFIG_BRCMFMAC_DRIVER_TEST
@@ -30,6 +31,7 @@ visibility = [ "./*" ]
 # These #defines are applied as public_configs entries on the targets:
 # respectively:
 #
+# * pcie/pcie
 # * sdio/sdio
 # * sim/sim
 #
@@ -177,6 +179,11 @@ source_set("driver_sources") {
   if (target_cpu == "arm64") {
     public_deps += [ "sdio" ]
   }
+
+  # Assume for now that x64 boards use the PCIE interface.
+  if (target_cpu == "x64") {
+    public_deps += [ "pcie" ]
+  }
 }
 
 # Driver module for the brcmfmac driver.
@@ -203,6 +210,10 @@ driver_module("test_driver_module") {
   deps = [
     ":core",
     ":driver_sources",
+
+    # All driver test targets are linked into the driver test.  The appropriate test will be
+    # executed at runtime.
+    "pcie:pcie_driver_test",
   ]
   defines = [ "CONFIG_BRCMFMAC_DRIVER_TEST=1" ]
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]

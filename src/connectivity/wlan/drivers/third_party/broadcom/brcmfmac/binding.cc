@@ -24,15 +24,32 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/brcm_hw_ids.h"
 
+#if CONFIG_BRCMFMAC_PCIE
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"  // nogncheck
+#endif  // CONFIG_BRCMFMAC_PCIE
 #if CONFIG_BRCMFMAC_SDIO
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/sdio/sdio_device.h"  // nogncheck
 #endif  // CONFIG_BRCMFMAC_SDIO
+#if CONFIG_BRCMFMAC_DRIVER_TEST
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_driver_test.h"  // nogncheck
+#endif  // CONFIG_BRCMFMAC_DRIVER_TEST
 
 static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
     .version = DRIVER_OPS_VERSION,
     .bind =
         [](void* ctx, zx_device_t* device) {
           zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+#if CONFIG_BRCMFMAC_PCIE
+          {
+            ::wlan::brcmfmac::PcieDevice* pcie_device = nullptr;
+            if ((status = ::wlan::brcmfmac::PcieDevice::Create(device, &pcie_device)) == ZX_OK) {
+              return ZX_OK;
+            }
+            if (status != ZX_ERR_NOT_SUPPORTED) {
+              return status;
+            }
+          }
+#endif  // CONFIG_BRCMFMAC_PCIE
 #if CONFIG_BRCMFMAC_SDIO
           if ((status = ::wlan::brcmfmac::SdioDevice::Create(device)) == ZX_OK) {
             return ZX_OK;
@@ -47,6 +64,7 @@ static constexpr zx_driver_ops_t brcmfmac_driver_ops = {
     .run_unit_tests =
         [](void* ctx, zx_device_t* parent, zx_handle_t channel) {
           bool retval = true;
+          retval &= (::wlan::brcmfmac::RunPcieDriverTest(parent) == ZX_OK);
           return retval;
         },
 #endif  // CONFIG_BRCMFMAC_DRIVER_TESTS

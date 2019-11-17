@@ -26,7 +26,7 @@
 #include "netbuf.h"
 
 // HW/SW bus in use
-enum brcmf_bus_type { BRCMF_BUS_TYPE_SDIO, BRCMF_BUS_TYPE_SIM };
+enum brcmf_bus_type { BRCMF_BUS_TYPE_SDIO, BRCMF_BUS_TYPE_PCIE, BRCMF_BUS_TYPE_SIM };
 
 /* The level of bus communication with the dongle */
 enum brcmf_bus_state {
@@ -101,6 +101,14 @@ struct brcmf_bus_stats {
   std::atomic<int> pktcow_failed;
 };
 
+namespace wlan {
+namespace brcmfmac {
+
+class PcieBus;
+
+}  // namespace brcmfmac
+}  // namespace wlan
+
 /**
  * struct brcmf_bus - interface structure between common and bus layer
  *
@@ -117,9 +125,9 @@ struct brcmf_bus_stats {
  */
 struct brcmf_bus {
   union {
+    ::wlan::brcmfmac::PcieBus* pcie;
     struct brcmf_sdio_dev* sdio;
     struct brcmf_usbdev* usb;
-    struct brcmf_pciedev* pcie;
     struct brcmf_simdev* sim;
   } bus_priv;
   enum brcmf_bus_state state;

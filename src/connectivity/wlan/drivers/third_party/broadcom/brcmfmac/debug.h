@@ -96,9 +96,10 @@ class Debug {
     kCONN = 1 << 15,
     kBCDC = 1 << 16,
     kSDIO = 1 << 17,
-    kFWCON = 1 << 18,
-    kSIM = 1 << 19,
-    kWLANIF = 1 << 20,
+    kPCIE = 1 << 18,
+    kFWCON = 1 << 19,
+    kSIM = 1 << 20,
+    kWLANIF = 1 << 21,
     kALL = ~0u,
   };
 
