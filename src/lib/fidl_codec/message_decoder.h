@@ -83,6 +83,7 @@ class MessageDecoder {
                  uint32_t num_handles, std::ostream& error_stream);
   MessageDecoder(MessageDecoder* container, uint64_t offset, uint64_t num_bytes_remaining,
                  uint64_t num_handles_remaining);
+
   uint32_t absolute_offset() const { return absolute_offset_; }
 
   uint32_t num_bytes() const { return num_bytes_; }

@@ -1586,4 +1586,13 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
   delete[] handle_infos;
 }
 
+// Checks that MessageDecoder::DecodeValue doesn't core dump with a null type.
+TEST_F(WireParserTest, DecodeNullTypeValue) {
+  std::stringstream error_stream;
+  fidl_message_header_t header;
+  MessageDecoder decoder(reinterpret_cast<uint8_t*>(&header), sizeof(header), nullptr, 0,
+                         error_stream);
+  decoder.DecodeValue(nullptr);
+}
+
 }  // namespace fidl_codec

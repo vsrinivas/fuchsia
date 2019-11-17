@@ -279,6 +279,7 @@ class Table {
  public:
   friend class Library;
 
+  Table(Library* enclosing_library, const rapidjson::Value& value);
   ~Table();
 
   Library* enclosing_library() const { return enclosing_library_; }
@@ -293,8 +294,6 @@ class Table {
   const std::vector<const TableMember*>& members() const { return members_; }
 
  private:
-  Table(Library* enclosing_library, const rapidjson::Value& value);
-
   // Decode all the values from the JSON definition.
   void DecodeTypes();
 

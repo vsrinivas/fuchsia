@@ -217,6 +217,10 @@ class Object : public NullableValue {
   const std::map<std::string, std::unique_ptr<Value>>& fields() const { return fields_; }
   const Struct& struct_definition() const { return struct_definition_; }
 
+  void AddField(const std::string& field_name, std::unique_ptr<Value> value) {
+    fields_.emplace(std::make_pair(field_name, std::move(value)));
+  }
+
   int DisplaySize(int remaining_size) const override;
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
@@ -271,6 +275,10 @@ class TableValue : public NullableValue {
   TableValue(const Type* type, const Table& table_definition, uint64_t envelope_count);
 
   const std::vector<NullableField>& envelopes() const { return envelopes_; }
+
+  void AddField(const std::string& field_name, std::unique_ptr<NullableValue> value) {
+    envelopes_.emplace_back(field_name, std::move(value));
+  }
 
   int DisplaySize(int remaining_size) const override;
 

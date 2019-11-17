@@ -63,7 +63,7 @@ class JsonVisitor : public Visitor {
   void VisitTableValue(const TableValue* node) override {
     result_->SetObject();
     for (const auto& field : node->envelopes()) {
-      if (!field.value()->is_null()) {
+      if ((field.value() != nullptr) && !field.value()->is_null()) {
         rapidjson::Value key;
         key.SetString(field.name().c_str(), *allocator_);
         result_->AddMember(key, rapidjson::Value(), *allocator_);

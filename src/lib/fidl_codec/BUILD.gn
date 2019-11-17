@@ -47,6 +47,7 @@ executable("fidl_codec_test_bin") {
   sources = [
     "library_loader_test.cc",
     "message_decoder_test.cc",
+    "wire_object_test.cc",
     "wire_parser_test.cc",
   ]
 

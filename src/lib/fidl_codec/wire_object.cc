@@ -74,7 +74,7 @@ void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
                            const fidl_message_header_t* /*header*/,
                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                            int /*max_line_size*/) const {
-  if (size_ == 0) {
+  if ((size_ == 0) || (data() == nullptr)) {
     return;
   }
   size_t buffer_size = size_ * 3;
@@ -344,7 +344,7 @@ TableValue::TableValue(const Type* type, const Table& table_definition, uint64_t
 int TableValue::DisplaySize(int remaining_size) const {
   int size = 0;
   for (const auto& field : envelopes_) {
-    if (!field.value()->is_null()) {
+    if ((field.value() != nullptr) && !field.value()->is_null()) {
       // Two characters for the separator ("{ " or ", ") and three characters
       // for equal (" = ").
       constexpr int kExtraSize = 5;
@@ -392,7 +392,7 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
   } else if (DisplaySize(remaining_size) + static_cast<int>(line_header.size()) <= remaining_size) {
     const char* separator = "{ ";
     for (const auto& field : envelopes_) {
-      if (!field.value()->is_null()) {
+      if ((field.value() != nullptr) && !field.value()->is_null()) {
         os << separator << field.name();
         separator = ", ";
         if (field.value()->type() != nullptr) {
@@ -408,7 +408,7 @@ void TableValue::PrettyPrint(std::ostream& os, const Colors& colors,
   } else {
     os << "{\n";
     for (const auto& field : envelopes_) {
-      if (!field.value()->is_null()) {
+      if ((field.value() != nullptr) && !field.value()->is_null()) {
         int size = (tabs + 1) * kTabSize + static_cast<int>(field.name().size()) + 3;
         os << line_header << std::string((tabs + 1) * kTabSize, ' ') << field.name();
         if (field.value()->type() != nullptr) {

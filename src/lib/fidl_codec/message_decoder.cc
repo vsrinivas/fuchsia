@@ -228,6 +228,9 @@ std::unique_ptr<Object> MessageDecoder::DecodeMessage(const Struct& message_form
 }
 
 std::unique_ptr<Value> MessageDecoder::DecodeValue(const Type* type) {
+  if (type == nullptr) {
+    return nullptr;
+  }
   // Set the offset for the next object (just after this one).
   SkipObject(type->InlineSize(this));
   // Decode the envelope.
