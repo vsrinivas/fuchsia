@@ -248,8 +248,8 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
 
   fzl::UnownedFdioCaller caller(partition_fd.get());
   constexpr char kFvmDriverLib[] = "/boot/driver/fvm.so";
-  auto resp = ::llcpp::fuchsia::device::Controller::Call::Bind(caller.channel(),
-                                                               fidl::StringView(kFvmDriverLib));
+  auto resp = ::llcpp::fuchsia::device::Controller::Call::Rebind(caller.channel(),
+                                                                 fidl::StringView(kFvmDriverLib));
   status = resp.status();
   if (status == ZX_OK) {
     if (resp->result.is_err()) {
@@ -257,7 +257,7 @@ fbl::unique_fd TryBindToFvmDriver(const fbl::unique_fd& devfs_root,
     }
   }
   if (status != ZX_OK) {
-    ERROR("Could not bind fvm driver\n");
+    ERROR("Could not rebind fvm driver, Error %d\n", status);
     return fbl::unique_fd();
   }
 
@@ -343,13 +343,6 @@ fbl::unique_fd FvmPartitionFormat(const fbl::unique_fd& devfs_root, fbl::unique_
                                                header.slice_size);
     if (status != ZX_OK) {
       ERROR("Failed to initialize fvm: %s\n", zx_status_get_string(status));
-      return fbl::unique_fd();
-    }
-
-    auto result = block::Block::Call::RebindDevice(partition_connection.channel());
-    status = result.ok() ? result.value().status : result.status();
-    if (status != ZX_OK) {
-      ERROR("Could not rebind partition: %s\n", zx_status_get_string(status));
       return fbl::unique_fd();
     }
   }
