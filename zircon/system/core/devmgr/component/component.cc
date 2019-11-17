@@ -564,33 +564,6 @@ zx_status_t Component::RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t
   }
 }
 
-zx_status_t Component::RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                                  uint32_t* out_resp_size, zx::handle* req_handles,
-                                  uint32_t req_handle_count, zx::handle* resp_handles,
-                                  uint32_t* resp_handle_count) {
-  if (!mipicsi_.is_valid()) {
-    return ZX_ERR_NOT_SUPPORTED;
-  }
-
-  auto* req = reinterpret_cast<const MipiCsiProxyRequest*>(req_buf);
-  if (req_size < sizeof(*req)) {
-    zxlogf(ERROR, "%s received %u, expecting %zu\n", __func__, req_size, sizeof(*req));
-    return ZX_ERR_INTERNAL;
-  }
-  auto* resp = reinterpret_cast<ProxyResponse*>(resp_buf);
-  *out_resp_size = sizeof(*resp);
-
-  switch (req->op) {
-    case MipiCsiOp::INIT:
-      return mipicsi_.Init(&req->mipi_info, &req->adap_info);
-    case MipiCsiOp::DEINIT:
-      return mipicsi_.DeInit();
-    default:
-      zxlogf(ERROR, "%s: unknown MIPI_CSI op %u\n", __func__, static_cast<uint32_t>(req->op));
-      return ZX_ERR_INTERNAL;
-  }
-}
-
 zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                                 uint32_t* out_resp_size, zx::handle* req_handles,
                                 uint32_t req_handle_count, zx::handle* resp_handles,
@@ -662,8 +635,7 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
     }
     case CodecOp::SET_BRIDGED_MODE: {
       auto* req = reinterpret_cast<const CodecSetBridgedProxyRequest*>(req_buf);
-      codec_.SetBridgedMode(
-          req->enable_bridged_mode, [](void* cookie) {}, nullptr);
+      codec_.SetBridgedMode(req->enable_bridged_mode, [](void* cookie) {}, nullptr);
       return ZX_OK;
     }
     case CodecOp::GET_DAI_FORMATS: {
@@ -691,14 +663,13 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
       dai_format_t format = req->format;  // Copy format and edit any pointers next.
       format.channels_to_use_list = req->channels_to_use;
 
-      codec_.SetDaiFormat(
-          &format,
-          [](void* cookie, zx_status_t status) {
-            auto* out = reinterpret_cast<AsyncOut*>(cookie);
-            out->status = status;
-            sync_completion_signal(&out->completion);
-          },
-          &out);
+      codec_.SetDaiFormat(&format,
+                          [](void* cookie, zx_status_t status) {
+                            auto* out = reinterpret_cast<AsyncOut*>(cookie);
+                            out->status = status;
+                            sync_completion_signal(&out->completion);
+                          },
+                          &out);
       auto status = sync_completion_wait(&out.completion, zx::sec(kTimeoutSecs).get());
       if (status == ZX_OK) {
         status = out.status;
@@ -747,8 +718,7 @@ zx_status_t Component::RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8
     }
     case CodecOp::SET_GAIN_STATE: {
       auto* req = reinterpret_cast<const CodecGainStateProxyRequest*>(req_buf);
-      codec_.SetGainState(
-          &req->state, [](void* cookie) {}, nullptr);
+      codec_.SetGainState(&req->state, [](void* cookie) {}, nullptr);
       return ZX_OK;
     }
     case CodecOp::GET_PLUG_STATE: {
@@ -863,10 +833,6 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
     case ZX_PROTOCOL_USB_MODE_SWITCH:
       status = RpcUms(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
                       resp_handles, &resp_handle_count);
-      break;
-    case ZX_PROTOCOL_MIPI_CSI:
-      status = RpcMipiCsi(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,
-                          resp_handles, &resp_handle_count);
       break;
     case ZX_PROTOCOL_CODEC:
       status = RpcCodec(req_buf, actual, resp_buf, &resp_len, req_handles, req_handle_count,

@@ -67,19 +67,6 @@ struct rpc_pdev_metadata_rsp_t {
   uint8_t metadata[PROXY_MAX_METADATA_SIZE];
 };
 
-// ZX_PROTOCOL_MIPI_CSI proxy support.
-enum class MipiCsiOp {
-  INIT,
-  DEINIT,
-};
-
-struct MipiCsiProxyRequest {
-  ProxyRequest header;
-  MipiCsiOp op;
-  mipi_info_t mipi_info;
-  mipi_adap_info_t adap_info;
-};
-
 // ZX_PROTOCOL_CODEC proxy support.
 enum class CodecOp {
   RESET,

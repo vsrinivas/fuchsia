@@ -19,7 +19,6 @@
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/mipicsi.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/spi.h>
@@ -42,7 +41,6 @@ class Component : public ComponentBase {
         eth_board_(parent),
         gpio_(parent),
         i2c_(parent),
-        mipicsi_(parent),
         codec_(parent),
         pdev_(parent),
         power_(parent),
@@ -109,10 +107,6 @@ class Component : public ComponentBase {
   zx_status_t RpcUms(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                      uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                      zx::handle* resp_handles, uint32_t* resp_handle_count);
-  zx_status_t RpcMipiCsi(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
-                         uint32_t* out_resp_size, zx::handle* req_handles,
-                         uint32_t req_handle_count, zx::handle* resp_handles,
-                         uint32_t* resp_handle_count);
   zx_status_t RpcCodec(const uint8_t* req_buf, uint32_t req_size, uint8_t* resp_buf,
                        uint32_t* out_resp_size, zx::handle* req_handles, uint32_t req_handle_count,
                        zx::handle* resp_handles, uint32_t* resp_handle_count);
@@ -129,7 +123,6 @@ class Component : public ComponentBase {
   ddk::EthBoardProtocolClient eth_board_;
   ddk::GpioProtocolClient gpio_;
   ddk::I2cProtocolClient i2c_;
-  ddk::MipiCsiProtocolClient mipicsi_;
   ddk::CodecProtocolClient codec_;
   ddk::PDevProtocolClient pdev_;
   ddk::PowerProtocolClient power_;

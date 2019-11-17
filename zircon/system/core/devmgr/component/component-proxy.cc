@@ -47,9 +47,6 @@ zx_status_t ComponentProxy::DdkGetProtocol(uint32_t proto_id, void* out) {
     case ZX_PROTOCOL_I2C:
       proto->ops = &i2c_protocol_ops_;
       return ZX_OK;
-    case ZX_PROTOCOL_MIPI_CSI:
-      proto->ops = &mipi_csi_protocol_ops_;
-      return ZX_OK;
     case ZX_PROTOCOL_CODEC:
       proto->ops = &codec_protocol_ops_;
       return ZX_OK;
@@ -288,27 +285,6 @@ zx_status_t ComponentProxy::EthBoardResetPhy() {
   ProxyResponse resp = {};
   req.header.proto_id = ZX_PROTOCOL_ETH_BOARD;
   req.op = EthBoardOp::RESET_PHY;
-
-  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-}
-
-zx_status_t ComponentProxy::MipiCsiInit(const mipi_info_t* mipi_info,
-                                        const mipi_adap_info_t* adap_info) {
-  MipiCsiProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_MIPI_CSI;
-  req.op = MipiCsiOp::INIT;
-  req.mipi_info = *mipi_info;
-  req.adap_info = *adap_info;
-
-  return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
-}
-
-zx_status_t ComponentProxy::MipiCsiDeInit() {
-  MipiCsiProxyRequest req = {};
-  ProxyResponse resp = {};
-  req.header.proto_id = ZX_PROTOCOL_MIPI_CSI;
-  req.op = MipiCsiOp::DEINIT;
 
   return Rpc(&req.header, sizeof(req), &resp, sizeof(resp));
 }

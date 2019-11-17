@@ -18,7 +18,6 @@
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/i2c.h>
-#include <ddktl/protocol/mipicsi.h>
 #include <ddktl/protocol/platform/device.h>
 #include <ddktl/protocol/power.h>
 #include <ddktl/protocol/spi.h>
@@ -40,7 +39,6 @@ class ComponentProxy : public ComponentProxyBase,
                        public ddk::EthBoardProtocol<ComponentProxy>,
                        public ddk::GpioProtocol<ComponentProxy>,
                        public ddk::I2cProtocol<ComponentProxy>,
-                       public ddk::MipiCsiProtocol<ComponentProxy>,
                        public ddk::CodecProtocol<ComponentProxy>,
                        public ddk::PDevProtocol<ComponentProxy>,
                        public ddk::PowerProtocol<ComponentProxy>,
@@ -122,9 +120,6 @@ class ComponentProxy : public ComponentProxyBase,
   zx_status_t SysmemRegisterSecureMem(zx::channel tee_connection);
   zx_status_t SysmemUnregisterSecureMem();
   zx_status_t TeeConnect(zx::channel tee_device_request, zx::channel service_provider);
-
-  zx_status_t MipiCsiInit(const mipi_info_t* mipi_info, const mipi_adap_info_t* adap_info);
-  zx_status_t MipiCsiDeInit();
 
   void CodecReset(codec_reset_callback callback, void* cookie);
   void CodecGetInfo(codec_get_info_callback callback, void* cookie);
