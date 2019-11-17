@@ -46,6 +46,9 @@ class TestMsdArmDevice {
               strstr(dump_string.c_str(), "Job slot 2 status 0x0 head 0x0 tail 0x0 config 0x0"));
     EXPECT_NE(nullptr,
               strstr(dump_string.c_str(), "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
+    EXPECT_NE(nullptr,
+              strstr(dump_string.c_str(),
+                     "Fault source_id 0, access type \"unknown\", exception type: \"Unknown\""));
   }
 
   void MockDump() {

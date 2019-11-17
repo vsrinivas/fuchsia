@@ -746,6 +746,53 @@ void MsdArmDevice::DumpToString(std::string& dump_string, bool on_device_thread)
   FormatDump(dump_state, dump_string);
 }
 
+static const char* ExceptionTypeToString(uint32_t exception_code) {
+  switch (exception_code) {
+    case 0xc0:
+    case 0xc1:
+    case 0xc2:
+    case 0xc3:
+      return "Translation fault";
+    case 0xc8:
+      return "Permission fault";
+    case 0xd0:
+    case 0xd1:
+    case 0xd2:
+    case 0xd3:
+      return "Translation bus fault";
+    case 0xd8:
+      return "Access flag issue";
+    default:
+      return "Unknown";
+  }
+}
+static std::string InterpretMmuFaultStatus(uint32_t status) {
+  const char* access_type;
+  constexpr uint32_t kAccessTypeShift = 8;
+  constexpr uint32_t kSourceIdShift = 16;
+  constexpr uint32_t kAccessTypeBits = 3;
+  constexpr uint32_t kExceptionTypeMask = 0xff;
+  switch ((status >> kAccessTypeShift) & kAccessTypeBits) {
+    case 1:
+      access_type = "execute";
+      break;
+    case 2:
+      access_type = "read";
+      break;
+    case 3:
+      access_type = "write";
+      break;
+    default:
+      access_type = "unknown";
+      break;
+  }
+  uint32_t source_id = status >> kSourceIdShift;
+  const char* exception_type = ExceptionTypeToString(status & kExceptionTypeMask);
+  return fbl::StringPrintf("  Fault source_id %d, access type \"%s\", exception type: \"%s\"\n",
+                           source_id, access_type, exception_type)
+      .c_str();
+}
+
 void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string) {
   dump_string.append("Core power states\n");
   for (auto& state : dump_state.power_states) {
@@ -774,6 +821,7 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string) {
     dump_string += fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n",
                                      i, status->status, status->fault_status, status->fault_address)
                        .c_str();
+    dump_string += InterpretMmuFaultStatus(status->fault_status);
   }
 }
 
