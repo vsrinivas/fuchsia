@@ -178,6 +178,12 @@ zx_status_t RetrieveBootImage(zx::vmo* out_vmo, ItemMap* out_map, FactoryItemMap
     ZX_DEBUG_ASSERT(header.type != ZBI_TYPE_CMDLINE);
   }
 
+  if (discard_end > discard_begin) {
+    // We are at the end of the last element and it should be discarded.
+    // We should discard until the end of the page.
+    discard_end = fbl::round_up(discard_end, static_cast<uint32_t>(PAGE_SIZE));
+  }
+
   DiscardItem(&vmo, discard_begin, discard_end);
   *out_vmo = std::move(vmo);
   *out_map = std::move(map);
