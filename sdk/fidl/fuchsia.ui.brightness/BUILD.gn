@@ -8,5 +8,6 @@ fidl("fuchsia.ui.brightness") {
   sources = [
     "brightness.fidl",
     "color_adjustment.fidl",
+    "color_tint.fidl",
   ]
 }

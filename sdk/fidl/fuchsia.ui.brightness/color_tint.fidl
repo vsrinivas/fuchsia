@@ -1,0 +1,50 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.brightness;
+
+using kelvin = float32;
+
+[Discoverable]
+protocol ColorTint {
+    // Given a light sensor reading returns tint values and brightness settings.
+    CalculateColorTint(SensorInfo request) -> (TargetColorTint reply);
+};
+
+// Values for a generic sensor.
+// Not all entries may be given by a particular sensor.
+table SensorInfo {
+    // Reg, green, blue and clear are values relative to each other,
+    // given by the sensor. They have no units.
+    1: float32 red;
+    2: float32 green;
+    3: float32 blue;
+    4: float32 clear;
+    // The color temperature is measured in degrees Kelvin.
+    5: kelvin color_temperature;
+    // The lux is the measured brightness that the sensor is seeing. This will
+    // be a calibrated value for each type of sensor
+    // and each device it is built into.
+    6: float32 lux;
+};
+
+// Values for adjusting the screen based on the given sensor information.
+// Not all entries may be populated by a particular algorithm.
+// Either the RGB values or the color temperature may be used to
+// tint the screen, they are interchangeable.
+table TargetColorTint {
+    // Red, green and blue are numbers between 0.0 to 1.0 inclusive.
+    // They are used as multipliers for all the RGB values on the screen.
+    1: float32 red;
+    2: float32 green;
+    3: float32 blue;
+    // The lux is the derived lux from the R, G, B and clear sensor readings.
+    4: float32 lux;
+    // The derived color temperature matching the red, green and blue values.
+    5: kelvin color_temperature;
+    // Brightness in range 0.0 - 1.0 inclusive if color tinting is used.
+    6: float32 brightness_with_color_match;
+    // Brightness in range 0.0 - 1.0 inclusive if color tinting is not used.
+    7: float32 brightness_without_color_match;
+};
