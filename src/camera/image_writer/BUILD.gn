@@ -21,3 +21,46 @@ source_set("image_writer") {
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
+
+source_set("hsv_color_source") {
+  sources = [
+    "color_source.cc",
+    "hsv_generator.cc",
+  ]
+
+  public = [
+    "color_source.h",
+    "hsv_generator.h",
+  ]
+
+  deps = [
+    ":image_format_rgba",
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem",
+  ]
+}
+
+source_set("image_format_rgba") {
+  sources = [
+    "image_format_rgba.cc",
+  ]
+
+  public = [
+    "image_format_rgba.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem",
+  ]
+}

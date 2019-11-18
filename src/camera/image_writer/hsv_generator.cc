@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/virtual_camera/hsv_generator.h"
+#include "src/camera/image_writer/hsv_generator.h"
 
 #include <lib/image-format/image_format.h>
 #include <zircon/assert.h>
@@ -13,8 +13,8 @@
 
 #include <src/lib/syslog/cpp/logger.h>
 
-#include "src/camera/drivers/virtual_camera/color_source.h"
-#include "src/camera/drivers/virtual_camera/image_format_rgba.h"
+#include "src/camera/image_writer/color_source.h"
+#include "src/camera/image_writer/image_format_rgba.h"
 
 namespace camera {
 

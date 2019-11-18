@@ -28,12 +28,12 @@ source_set("virtual_camera_source") {
   ]
 
   deps = [
-    ":hsv_color_source",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/media/cpp",
+    "//src/camera/image_writer:hsv_color_source",
     "//src/devices:driver",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
@@ -49,30 +49,6 @@ source_set("virtual_camera_source") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
-  ]
-}
-
-source_set("hsv_color_source") {
-  sources = [
-    "color_source.cc",
-    "hsv_generator.cc",
-    "image_format_rgba.cc",
-  ]
-
-  public = [
-    "color_source.h",
-    "hsv_generator.h",
-    "image_format_rgba.h",
-  ]
-
-  deps = [
-    "//sdk/lib/fidl/cpp",
-    "//src/lib/syslog/cpp",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/fzl",
-    "//zircon/public/lib/image-format",
-    "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/image_format_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

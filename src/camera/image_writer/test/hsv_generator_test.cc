@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/virtual_camera/hsv_generator.h"
+#include "src/camera/image_writer/hsv_generator.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/image-format/image_format.h>
@@ -11,7 +11,7 @@
 #include <src/lib/syslog/cpp/logger.h>
 
 #include "gtest/gtest.h"
-#include "src/camera/drivers/virtual_camera/image_format_rgba.h"
+#include "src/camera/image_writer/image_format_rgba.h"
 
 namespace camera {
 namespace {
@@ -39,65 +39,6 @@ fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
       .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC601_PAL},
   };
   return ret;
-}
-
-bool ComparePacked(fuchsia::sysmem::PixelFormatType format1, uint32_t value1,
-                   fuchsia::sysmem::PixelFormatType format2, uint32_t value2) {
-  Rgba unpacked1 = RgbaUnpack(format1, value1);
-  Rgba unpacked2 = RgbaUnpack(format2, value2);
-  // Since the formats may have different resolutions, mask the unpacked values
-  // so we only compare bits that both values share.
-  Rgba min_mask = BitWidthToByteMask(Min(BitWidth(format1), BitWidth(format2)));
-  return (unpacked1 & min_mask) == (unpacked2 & min_mask);
-}
-
-std::vector<uint8_t> GetTestArray(uint8_t resolution) {
-  if (resolution < 8) {
-    size_t num_values = 1 << resolution;
-    std::vector<uint8_t> ret(num_values);
-    for (size_t i = 0; i < num_values; ++i) {
-      ret[i] = i << (8 - resolution);
-    }
-    return ret;
-  }
-  // for resolution == 8, only use every 7th number, but include 255
-  std::vector<uint8_t> ret;
-  for (size_t i = 0; i < 256; i += 7) {
-    ret.push_back(i);
-  }
-  ret.push_back(255);
-  return ret;
-}
-
-std::array<std::vector<uint8_t>, 9> testing_arrays = {
-    GetTestArray(0), GetTestArray(1), GetTestArray(2), GetTestArray(3), GetTestArray(4),
-    GetTestArray(5), GetTestArray(6), GetTestArray(7), GetTestArray(8),
-};
-
-TEST(HsvGenerator, RGBAColorConversionForAllFormats) {
-  auto testing_formats = GetSupportedFormats();
-  for (size_t i = 0; i < testing_formats.size(); ++i) {
-    auto format1 = testing_formats[i];
-    for (size_t j = i; j < testing_formats.size(); ++j) {
-      auto format2 = testing_formats[j];
-      auto min_resolution = RgbaMinRes(format1, format2);
-      for (uint8_t r : testing_arrays[min_resolution.r]) {
-        for (uint8_t g : testing_arrays[min_resolution.g]) {
-          for (uint8_t b : testing_arrays[min_resolution.b]) {
-            for (uint8_t a : testing_arrays[min_resolution.a]) {
-              Rgba color{r, g, b, a};
-              auto packed1 = RgbaPack(format1, color);
-              auto packed2 = RgbaPack(format2, color);
-              ASSERT_TRUE(ComparePacked(format1, packed1, format2, packed2))
-                  << "Format " << ToString(format1) << " did not match format " << ToString(format2)
-                  << "  At R: " << (int)r << " G: " << (int)g << " B: " << (int)b
-                  << " A: " << (int)a << "  packed1: " << packed1 << "  packed2: " << packed2;
-            }
-          }
-        }
-      }
-    }
-  }
 }
 
 fzl::OwnedVmoMapper GenerateImage(const fuchsia::sysmem::ImageFormat_2 format, uint64_t index) {
@@ -134,7 +75,7 @@ TEST(HsvGeneratorTest, ImageChanges) {
 
 // Test that the first rgb pixel is the same between formats
 // This is just a sample format conversion.  Extensive format conversion is done
-// in the RGBColorConversion test, above.
+// in the RGBColorConversion test in image_format_test.
 TEST(HsvGeneratorTest, FormatsAreSameColor) {
   auto format1 =
       MakeImageFormat(kTestImageWidth, kTestImageHeight, fuchsia::sysmem::PixelFormatType::BGRA32);

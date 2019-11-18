@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/camera/drivers/virtual_camera/image_format_rgba.h"
+#include "src/camera/image_writer/image_format_rgba.h"
 
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/image-format/image_format.h>
 
 #include <fbl/algorithm.h>
 #include <src/lib/syslog/cpp/logger.h>
-
-#include "src/camera/drivers/virtual_camera/hsv_generator.h"
 
 namespace camera {
 
@@ -67,13 +65,6 @@ const std::map<fuchsia::sysmem::PixelFormatType, RgbaPixelFormatInfo> kPixelForm
 RgbaPixelFormatInfo GetPixelInfo(const fuchsia::sysmem::PixelFormatType &format) {
   ZX_ASSERT(kPixelFormatInfo.count(format));
   return kPixelFormatInfo.find(format)->second;
-}
-
-Rgba RgbaMinRes(fuchsia::sysmem::PixelFormatType format1,
-                fuchsia::sysmem::PixelFormatType format2) {
-  auto pixel_info1 = GetPixelInfo(format1);
-  auto pixel_info2 = GetPixelInfo(format2);
-  return Min(pixel_info1.bit_width, pixel_info2.bit_width);
 }
 
 Rgba RgbaUnpack(fuchsia::sysmem::PixelFormatType format, uint32_t packed) {

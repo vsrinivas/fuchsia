@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_IMAGE_FORMAT_RGBA_H_
-#define SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_IMAGE_FORMAT_RGBA_H_
+#ifndef SRC_CAMERA_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_
+#define SRC_CAMERA_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <fuchsia/sysmem/cpp/fidl.h>
@@ -49,8 +49,6 @@ Rgba RgbaUnpack(fuchsia::sysmem::PixelFormatType format, uint32_t packed);
 // position.
 uint32_t RgbaPack(fuchsia::sysmem::PixelFormatType format, Rgba in);
 
-bool ComparePacked(fuchsia::sysmem::PixelFormatType format1, uint32_t value1,
-                   fuchsia::sysmem::PixelFormatType format2, uint32_t value2);
 std::string ToString(const fuchsia::sysmem::PixelFormatType& type);
 
 // Get the width in bits of each of the components of an RGBA format.
@@ -65,4 +63,4 @@ fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(const fuchsia::sysmem::PixelFor
 fuchsia_sysmem_ImageFormat_2 ConvertImageFormatToC(const fuchsia::sysmem::ImageFormat_2& format);
 }  // namespace camera
 
-#endif  // SRC_CAMERA_DRIVERS_VIRTUAL_CAMERA_IMAGE_FORMAT_RGBA_H_
+#endif  // SRC_CAMERA_IMAGE_WRITER_IMAGE_FORMAT_RGBA_H_

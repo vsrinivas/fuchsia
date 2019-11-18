@@ -16,7 +16,7 @@
 #include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/eventpair.h>
 
-#include "color_source.h"
+#include "src/camera/image_writer/color_source.h"
 
 namespace camera {
 
