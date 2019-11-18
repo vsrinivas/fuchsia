@@ -37,9 +37,9 @@ template <typename DType>
 class DestConverter<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_t>>> {
  public:
   static inline constexpr DType Convert(float sample) {
-    return std::clamp<int32_t>(round(sample * kFloatToInt8) + kOffsetInt8ToUint8,
-                               std::numeric_limits<uint8_t>::min(),
-                               std::numeric_limits<uint8_t>::max());
+    return std::clamp<int32_t>(round(sample * kFloatToInt8), std::numeric_limits<int8_t>::min(),
+                               std::numeric_limits<int8_t>::max()) +
+           kOffsetInt8ToUint8;
   }
 };
 
