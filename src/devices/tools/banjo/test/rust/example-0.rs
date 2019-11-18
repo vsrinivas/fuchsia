@@ -12,13 +12,13 @@ use fuchsia_zircon as zircon;
 
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Foo {
     pub b: Bar,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Bar {
     pub f: *mut Foo,
 }

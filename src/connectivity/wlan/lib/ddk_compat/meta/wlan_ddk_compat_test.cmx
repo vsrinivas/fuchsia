@@ -1,5 +1,0 @@
-{
-    "program": {
-        "binary": "test/wlan_ddk_compat_test"
-    }
-}

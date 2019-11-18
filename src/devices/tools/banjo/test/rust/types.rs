@@ -14,20 +14,20 @@ pub const ARRAYS_SIZE: u32 = 32;
 pub const VECTORS_SIZE: u32 = 32;
 pub const STRINGS_SIZE: u32 = 32;
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct this_is_a_struct {
     pub s: *mut std::ffi::c_void /* String */,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct interfaces {
     pub nonnullable_interface: this_is_an_interface,
     pub nullable_interface: this_is_an_interface,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct primitive_types {
     pub b: bool,
     pub i8: i8,
@@ -43,7 +43,7 @@ pub struct primitive_types {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct default_values {
     pub b1: bool,
     pub b2: bool,
@@ -100,7 +100,7 @@ pub struct arrays {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct vectors {
     pub b_0: bool,
     pub i8_0: i8,
@@ -225,7 +225,7 @@ pub struct vectors {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct handles {
     pub handle_handle: zircon::sys::zx_handle_t,
     pub process_handle: zircon::sys::zx_handle_t,
@@ -280,7 +280,7 @@ pub struct handles {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct strings {
     pub s: *mut std::ffi::c_void /* String */,
     pub nullable_s: *mut std::ffi::c_void /* String */,
@@ -291,21 +291,21 @@ pub struct strings {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct structs {
     pub s: this_is_a_struct,
     pub nullable_s: *mut this_is_a_struct,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub struct unions {
     pub s: this_is_a_union,
     pub nullable_u: *mut this_is_a_union,
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct interfaces {
     pub i: this_is_an_interface,
     pub nullable_i: this_is_an_interface,
@@ -390,6 +390,13 @@ pub union this_is_a_union {
     pub s: *mut std::ffi::c_void /* String */,
 }
 
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for this_is_a_union {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<this_is_a_union>")
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union union_types {
@@ -419,5 +426,12 @@ pub union union_types {
     pub str: *mut std::ffi::c_void /* String */,
     pub s: this_is_a_struct,
     pub u: this_is_a_union,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for union_types {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<union_types>")
+    }
 }
 

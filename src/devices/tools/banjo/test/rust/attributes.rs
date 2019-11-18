@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct none_struct {
     pub foo: i32,
     pub bar: i32,
@@ -20,7 +20,7 @@ pub struct none_struct {
 }
 
 #[repr(packed)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct packed_struct {
     pub foo: i32,
     pub bar: i32,
@@ -36,11 +36,25 @@ pub union none_union {
     pub baz: i32,
 }
 
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for none_union {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<none_union>")
+    }
+}
+
 #[repr(packed)]
 #[derive(Copy, Clone)]
 pub union packed_union {
     pub foo: i32,
     pub bar: i32,
     pub baz: i32,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for packed_union {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<packed_union>")
+    }
 }
 

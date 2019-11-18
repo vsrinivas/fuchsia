@@ -28,6 +28,13 @@ pub union primitive_types {
     pub h: zircon::sys::zx_handle_t,
 }
 
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for primitive_types {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<primitive_types>")
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union arrays {
@@ -57,10 +64,24 @@ pub union arrays {
     pub wr_h: [zircon::sys::zx_handle_t; 1 as usize],
 }
 
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for arrays {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<arrays>")
+    }
+}
+
 #[repr(C)]
 #[derive(Copy, Clone)]
 pub union Packet {
     pub i32: u32,
     pub u32: u32,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for Packet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<Packet>")
+    }
 }
 

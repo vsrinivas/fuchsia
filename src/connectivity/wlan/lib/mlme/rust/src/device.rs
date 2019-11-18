@@ -4,10 +4,10 @@
 
 use {
     crate::{buffer::OutBuf, error::Error, key},
+    banjo_ddk_protocol_wlan_info::*,
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
-    wlan_ddk_compat::ddk_protocol_wlan_info,
 };
 
 pub struct TxFlags(u32);
@@ -31,18 +31,16 @@ pub struct Device {
     /// if no SME channel is available.
     get_sme_channel: unsafe extern "C" fn(device: *mut c_void) -> u32,
     /// Returns the currently set WLAN channel.
-    get_wlan_channel: extern "C" fn(device: *mut c_void) -> ddk_protocol_wlan_info::WlanChannel,
+    get_wlan_channel: extern "C" fn(device: *mut c_void) -> WlanChannel,
     /// Request the PHY to change its channel. If successful, get_wlan_channel will return the
     /// chosen channel.
-    set_wlan_channel:
-        extern "C" fn(device: *mut c_void, channel: ddk_protocol_wlan_info::WlanChannel) -> i32,
+    set_wlan_channel: extern "C" fn(device: *mut c_void, channel: WlanChannel) -> i32,
     /// Set a key on the device.
     /// |key| is mutable because the underlying API does not take a const wlan_key_config_t.
     set_key: extern "C" fn(device: *mut c_void, key: *mut key::KeyConfig) -> i32,
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
-    configure_bss:
-        extern "C" fn(device: *mut c_void, cfg: *mut ddk_protocol_wlan_info::WlanBssConfig) -> i32,
+    configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32,
 }
 
 impl Device {
@@ -76,7 +74,7 @@ impl Device {
         }
     }
 
-    pub fn set_channel(&self, chan: ddk_protocol_wlan_info::WlanChannel) -> Result<(), zx::Status> {
+    pub fn set_channel(&self, chan: WlanChannel) -> Result<(), zx::Status> {
         let status = (self.set_wlan_channel)(self.device, chan);
         zx::ok(status)
     }
@@ -86,18 +84,12 @@ impl Device {
         zx::ok(status)
     }
 
-    pub fn channel(&self) -> ddk_protocol_wlan_info::WlanChannel {
+    pub fn channel(&self) -> WlanChannel {
         (self.get_wlan_channel)(self.device)
     }
 
-    pub fn configure_bss(
-        &self,
-        mut cfg: ddk_protocol_wlan_info::WlanBssConfig,
-    ) -> Result<(), zx::Status> {
-        let status = (self.configure_bss)(
-            self.device,
-            &mut cfg as *mut ddk_protocol_wlan_info::WlanBssConfig,
-        );
+    pub fn configure_bss(&self, mut cfg: WlanBssConfig) -> Result<(), zx::Status> {
+        let status = (self.configure_bss)(self.device, &mut cfg as *mut WlanBssConfig);
         zx::ok(status)
     }
 }
@@ -107,9 +99,9 @@ pub struct FakeDevice {
     pub eth_queue: Vec<Vec<u8>>,
     pub wlan_queue: Vec<(Vec<u8>, u32)>,
     pub sme_sap: (zx::Channel, zx::Channel),
-    pub wlan_channel: ddk_protocol_wlan_info::WlanChannel,
+    pub wlan_channel: WlanChannel,
     pub keys: Vec<key::KeyConfig>,
-    pub bss_cfg: Option<ddk_protocol_wlan_info::WlanBssConfig>,
+    pub bss_cfg: Option<WlanBssConfig>,
 }
 
 #[cfg(test)]
@@ -120,9 +112,9 @@ impl FakeDevice {
             eth_queue: vec![],
             wlan_queue: vec![],
             sme_sap,
-            wlan_channel: ddk_protocol_wlan_info::WlanChannel {
+            wlan_channel: WlanChannel {
                 primary: 0,
-                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                cbw: WlanChannelBandwidth::_20,
                 secondary80: 0,
             },
             keys: vec![],
@@ -162,14 +154,11 @@ impl FakeDevice {
         unsafe { (*(device as *mut Self)).sme_sap.0.as_handle_ref().raw_handle() }
     }
 
-    pub extern "C" fn get_wlan_channel(device: *mut c_void) -> ddk_protocol_wlan_info::WlanChannel {
+    pub extern "C" fn get_wlan_channel(device: *mut c_void) -> WlanChannel {
         unsafe { (*(device as *const Self)).wlan_channel }
     }
 
-    pub extern "C" fn set_wlan_channel(
-        device: *mut c_void,
-        wlan_channel: ddk_protocol_wlan_info::WlanChannel,
-    ) -> i32 {
+    pub extern "C" fn set_wlan_channel(device: *mut c_void, wlan_channel: WlanChannel) -> i32 {
         unsafe {
             (*(device as *mut Self)).wlan_channel = wlan_channel;
         }
@@ -183,10 +172,7 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
-    pub extern "C" fn configure_bss(
-        device: *mut c_void,
-        cfg: *mut ddk_protocol_wlan_info::WlanBssConfig,
-    ) -> i32 {
+    pub extern "C" fn configure_bss(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32 {
         unsafe {
             (*(device as *mut Self)).bss_cfg.replace((*cfg).clone());
         }
@@ -322,29 +308,21 @@ mod tests {
     fn get_set_channel() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.set_channel(ddk_protocol_wlan_info::WlanChannel {
+        dev.set_channel(WlanChannel {
             primary: 2,
-            cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
+            cbw: WlanChannelBandwidth::_80P80,
             secondary80: 4,
         })
         .expect("set_channel failed?");
         // Check the internal state.
         assert_eq!(
             fake_device.wlan_channel,
-            ddk_protocol_wlan_info::WlanChannel {
-                primary: 2,
-                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
-                secondary80: 4,
-            }
+            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::_80P80, secondary80: 4 }
         );
         // Check the external view of the internal state.
         assert_eq!(
             dev.channel(),
-            ddk_protocol_wlan_info::WlanChannel {
-                primary: 2,
-                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_80P80,
-                secondary80: 4,
-            }
+            WlanChannel { primary: 2, cbw: WlanChannelBandwidth::_80P80, secondary80: 4 }
         );
     }
 
@@ -372,9 +350,9 @@ mod tests {
     fn configure_bss() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.configure_bss(ddk_protocol_wlan_info::WlanBssConfig {
+        dev.configure_bss(WlanBssConfig {
             bssid: [1, 2, 3, 4, 5, 6],
-            bss_type: ddk_protocol_wlan_info::WlanBssType::Personal,
+            bss_type: WlanBssType::PERSONAL,
             remote: true,
         })
         .expect("error setting key");

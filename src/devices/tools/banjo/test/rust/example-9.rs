@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 pub const FAVORITE_ECHO: EchoMe = zero;
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EchoMore {
     pub first: u32,
     pub second: u64,

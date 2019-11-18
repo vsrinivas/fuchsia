@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct primitive_types {
     pub b: bool,
     pub i8: i8,
@@ -27,7 +27,7 @@ pub struct primitive_types {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct strings {
     pub rd_str: [u8; RD_STR_LEN as usize],
     pub wr_str: [u8; WR_STR_LEN as usize],
@@ -89,7 +89,7 @@ pub struct arrays {
 }
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
     pub x: i32,
     pub y: i32,

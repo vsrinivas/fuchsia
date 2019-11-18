@@ -48,7 +48,6 @@ group("tests") {
     "//src/connectivity/wlan/drivers/wlanif/test:wlanif_unittest",
     "//src/connectivity/wlan/lib/bitfield/wlan-bitfield-tests",
     "//src/connectivity/wlan/lib/common/rust:wlan-common-tests",
-    "//src/connectivity/wlan/lib/ddk_compat:wlan-ddk-compat-tests",
     "//src/connectivity/wlan/lib/eapol:eapol-tests",
     "//src/connectivity/wlan/lib/inspect:wlan-inspect-tests",
     "//src/connectivity/wlan/lib/mlme/cpp/tests:wlan_tests",

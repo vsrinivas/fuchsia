@@ -19,10 +19,10 @@ rustc_library("wlan-mlme") {
     "//sdk/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//sdk/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//src/connectivity/wlan/lib/common/rust:wlan-common",
-    "//src/connectivity/wlan/lib/ddk_compat:wlan-ddk-compat",
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
+    "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
   ]
 }
 

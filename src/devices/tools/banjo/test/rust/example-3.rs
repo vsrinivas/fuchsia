@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct Point {
     pub x: i64,
     pub y: i64,

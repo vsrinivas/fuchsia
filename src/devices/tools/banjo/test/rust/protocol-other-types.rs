@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 pub const STRINGS_SIZE: u32 = 32;
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ThisIsAStruct {
     pub s: *mut std::ffi::c_void /* String */,
 }
@@ -30,5 +30,12 @@ impl ThisIsAnEnum {
 #[derive(Copy, Clone)]
 pub union ThisIsAUnion {
     pub s: *mut std::ffi::c_void /* String */,
+}
+
+// unions can't autoderive debug, but it's useful for their parent types to
+impl std::fmt::Debug for ThisIsAUnion {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<ThisIsAUnion>")
+    }
 }
 

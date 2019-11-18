@@ -14,6 +14,7 @@ use {
         timer::{EventId, Scheduler, Timer},
         write_eth_frame,
     },
+    banjo_ddk_protocol_wlan_info::{WlanBssConfig, WlanBssType, WlanChannel, WlanChannelBandwidth},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, log},
     std::{collections::HashMap, fmt},
@@ -25,7 +26,6 @@ use {
         },
         sequence::SequenceManager,
     },
-    wlan_ddk_compat::ddk_protocol_wlan_info,
     zerocopy::ByteSlice,
 };
 
@@ -710,20 +710,20 @@ impl Ap {
 
         self.ctx
             .device
-            .configure_bss(ddk_protocol_wlan_info::WlanBssConfig {
+            .configure_bss(WlanBssConfig {
                 bssid: self.ctx.bssid.0,
-                bss_type: ddk_protocol_wlan_info::WlanBssType::Infrastructure,
+                bss_type: WlanBssType::INFRASTRUCTURE,
                 remote: false,
             })
             .map_err(|s| Error::Status(format!("falied to configure BSS"), s))?;
 
         self.ctx
             .device
-            .set_channel(ddk_protocol_wlan_info::WlanChannel {
+            .set_channel(WlanChannel {
                 primary: req.channel,
 
                 // TODO(40917): Correctly support this.
-                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                cbw: WlanChannelBandwidth::_20,
                 secondary80: 0,
             })
             .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
@@ -2117,18 +2117,18 @@ mod tests {
         assert!(ap.bss.is_some());
         assert_eq!(
             fake_device.bss_cfg,
-            Some(ddk_protocol_wlan_info::WlanBssConfig {
+            Some(WlanBssConfig {
                 bssid: BSSID.0,
-                bss_type: ddk_protocol_wlan_info::WlanBssType::Infrastructure,
+                bss_type: WlanBssType::INFRASTRUCTURE,
                 remote: false,
             })
         );
         assert_eq!(
             fake_device.wlan_channel,
-            ddk_protocol_wlan_info::WlanChannel {
+            WlanChannel {
                 primary: 2,
                 // TODO(40917): Correctly support this.
-                cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
+                cbw: WlanChannelBandwidth::_20,
                 secondary80: 0,
             }
         );
@@ -2190,9 +2190,7 @@ mod tests {
         );
         ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
 
-        ap.handle_mlme_stop_req(fidl_mlme::StopRequest {
-            ssid: b"coolnet".to_vec(),
-        })
+        ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
             .expect("expected Ap::handle_mlme_stop_request OK");
         assert!(ap.bss.is_none());
     }

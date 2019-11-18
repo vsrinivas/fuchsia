@@ -12,7 +12,7 @@ use fuchsia_zircon as zircon;
 
 
 #[repr(C)]
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct foo {
     pub u8_0: u8,
     pub u64_0: u64,

@@ -8,11 +8,11 @@ use {
         device::Device,
         timer::{EventId, Timer},
     },
+    banjo_ddk_protocol_wlan_info::*,
     fuchsia_zircon::{self as zx, DurationNum},
     log::error,
     std::collections::VecDeque,
     std::marker::PhantomData,
-    wlan_ddk_compat::ddk_protocol_wlan_info,
 };
 
 pub type RequestId = u64;
@@ -54,7 +54,7 @@ impl<CL: ChannelListener> ChannelScheduler<CL> {
     /// desired time to switch channel.
     pub fn schedule_immediate(
         &mut self,
-        channel: ddk_protocol_wlan_info::WlanChannel,
+        channel: WlanChannel,
         duration: zx::Duration,
         listener: &mut CL,
     ) -> RequestId {
@@ -77,7 +77,7 @@ impl<CL: ChannelListener> ChannelScheduler<CL> {
     /// scheduled request, in which case it will be retried at a later time.
     pub fn queue_channels(
         &mut self,
-        channels: Vec<ddk_protocol_wlan_info::WlanChannel>,
+        channels: Vec<WlanChannel>,
         duration: zx::Duration,
         listener: &mut CL,
     ) -> RequestId {
@@ -178,21 +178,11 @@ pub trait ChannelListener {
     /// Triggered by ChannelScheduler before switching to a requested channel.
     /// Note that if existing channel is the same as the new channel, this event is still emitted,
     /// primarily so client can be notified that request is about to be served.
-    fn on_pre_switch_channel(
-        &mut self,
-        from: ddk_protocol_wlan_info::WlanChannel,
-        to: ddk_protocol_wlan_info::WlanChannel,
-        request_id: RequestId,
-    );
+    fn on_pre_switch_channel(&mut self, from: WlanChannel, to: WlanChannel, request_id: RequestId);
     /// Triggered by ChannelScheduler before switching to a requested channel.
     /// Note that if existing channel is the same as the new channel, this event is still emitted,
     /// primarily so client can be notified that request has started.
-    fn on_post_switch_channel(
-        &mut self,
-        from: ddk_protocol_wlan_info::WlanChannel,
-        to: ddk_protocol_wlan_info::WlanChannel,
-        request_id: RequestId,
-    );
+    fn on_post_switch_channel(&mut self, from: WlanChannel, to: WlanChannel, request_id: RequestId);
     /// Triggered when request is fully serviced, or the request is interrupted but will not
     /// be retried anymore.
     fn on_req_complete(&mut self, request_id: RequestId);
@@ -223,7 +213,7 @@ impl ChannelQueue {
         self.queue.push_back(req)
     }
 
-    fn front(&self) -> Option<(ddk_protocol_wlan_info::WlanChannel, ChannelRequestMeta)> {
+    fn front(&self) -> Option<(WlanChannel, ChannelRequestMeta)> {
         self.queue.front().map(|req| match req {
             ChannelRequest::Single { channel, meta } => (*channel, *meta),
             ChannelRequest::List { channels, current_idx, meta } => (channels[*current_idx], *meta),
@@ -265,15 +255,8 @@ struct ChannelRequestMeta {
 
 #[derive(Debug, Clone)]
 enum ChannelRequest {
-    Single {
-        channel: ddk_protocol_wlan_info::WlanChannel,
-        meta: ChannelRequestMeta,
-    },
-    List {
-        channels: Vec<ddk_protocol_wlan_info::WlanChannel>,
-        current_idx: usize,
-        meta: ChannelRequestMeta,
-    },
+    Single { channel: WlanChannel, meta: ChannelRequestMeta },
+    List { channels: Vec<WlanChannel>, current_idx: usize, meta: ChannelRequestMeta },
 }
 
 impl ChannelRequest {
@@ -292,26 +275,14 @@ mod tests {
         wlan_common::assert_variant,
     };
 
-    const IMMEDIATE_CHANNEL: ddk_protocol_wlan_info::WlanChannel =
-        ddk_protocol_wlan_info::WlanChannel {
-            primary: 11,
-            cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_40,
-            secondary80: 0,
-        };
+    const IMMEDIATE_CHANNEL: WlanChannel =
+        WlanChannel { primary: 11, cbw: WlanChannelBandwidth::_40, secondary80: 0 };
 
-    const QUEUE_CHANNEL_1: ddk_protocol_wlan_info::WlanChannel =
-        ddk_protocol_wlan_info::WlanChannel {
-            primary: 5,
-            cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
-            secondary80: 0,
-        };
+    const QUEUE_CHANNEL_1: WlanChannel =
+        WlanChannel { primary: 5, cbw: WlanChannelBandwidth::_20, secondary80: 0 };
 
-    const QUEUE_CHANNEL_2: ddk_protocol_wlan_info::WlanChannel =
-        ddk_protocol_wlan_info::WlanChannel {
-            primary: 6,
-            cbw: ddk_protocol_wlan_info::WlanChannelBandwidth::_20,
-            secondary80: 0,
-        };
+    const QUEUE_CHANNEL_2: WlanChannel =
+        WlanChannel { primary: 6, cbw: WlanChannelBandwidth::_20, secondary80: 0 };
 
     #[test]
     fn test_schedule_immediate_on_empty_queue() {
@@ -544,24 +515,16 @@ mod tests {
 
     #[derive(Debug, PartialEq)]
     enum LEvent {
-        PreSwitch {
-            from: ddk_protocol_wlan_info::WlanChannel,
-            to: ddk_protocol_wlan_info::WlanChannel,
-            req_id: RequestId,
-        },
-        PostSwitch {
-            from: ddk_protocol_wlan_info::WlanChannel,
-            to: ddk_protocol_wlan_info::WlanChannel,
-            req_id: RequestId,
-        },
+        PreSwitch { from: WlanChannel, to: WlanChannel, req_id: RequestId },
+        PostSwitch { from: WlanChannel, to: WlanChannel, req_id: RequestId },
         ReqComplete(RequestId),
     }
 
     impl ChannelListener for MockListener {
         fn on_pre_switch_channel(
             &mut self,
-            from: ddk_protocol_wlan_info::WlanChannel,
-            to: ddk_protocol_wlan_info::WlanChannel,
+            from: WlanChannel,
+            to: WlanChannel,
             request_id: RequestId,
         ) {
             self.events.push(LEvent::PreSwitch { from, to, req_id: request_id });
@@ -569,8 +532,8 @@ mod tests {
 
         fn on_post_switch_channel(
             &mut self,
-            from: ddk_protocol_wlan_info::WlanChannel,
-            to: ddk_protocol_wlan_info::WlanChannel,
+            from: WlanChannel,
+            to: WlanChannel,
             request_id: RequestId,
         ) {
             self.events.push(LEvent::PostSwitch { from, to, req_id: request_id });

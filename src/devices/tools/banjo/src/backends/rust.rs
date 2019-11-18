@@ -4,8 +4,8 @@
 
 use {
     crate::ast::{self, BanjoAst, Constant},
-    crate::backends::Backend,
     crate::backends::util::to_c_name,
+    crate::backends::Backend,
     failure::{format_err, Error},
     std::io,
 };
@@ -19,6 +19,98 @@ pub struct RustBackend<'a, W: io::Write> {
 impl<'a, W: io::Write> RustBackend<'a, W> {
     pub fn new(w: &'a mut W) -> Self {
         RustBackend { w }
+    }
+}
+
+fn can_derive_partialeq(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
+    match ty {
+        ast::Ty::Bool
+        | ast::Ty::Int8
+        | ast::Ty::Int16
+        | ast::Ty::Int32
+        | ast::Ty::Int64
+        | ast::Ty::UInt8
+        | ast::Ty::UInt16
+        | ast::Ty::UInt32
+        | ast::Ty::UInt64
+        | ast::Ty::Float32
+        | ast::Ty::Float64
+        | ast::Ty::USize
+        | ast::Ty::Protocol
+        | ast::Ty::Voidptr
+        | ast::Ty::Enum { .. } => {
+            return true;
+        }
+        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_partialeq(ast, ty),
+        ast::Ty::Str { size: _, .. } => {
+            return true;
+        }
+        ast::Ty::Union { .. } => {
+            return false;
+        }
+        ast::Ty::Struct => {
+            unreachable!();
+        }
+        ast::Ty::Array { ty, size } => {
+            // rust can derive less than 32
+            // return 33 which is larger if it's an ident. TODO(bwb) lookup ident value
+            if size.0.parse::<u32>().unwrap_or(33) <= 32 {
+                can_derive_partialeq(&ast, ty)
+            } else {
+                false
+            }
+        }
+        ast::Ty::Identifier { id, .. } => match ast.id_to_decl(id).unwrap() {
+            ast::Decl::Union { .. } => return false,
+            _ => return true,
+        },
+        ast::Ty::Handle { .. } => true,
+    }
+}
+
+// This is not the same as partialeq because we derive opaque Debugs for unions
+fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
+    match ty {
+        ast::Ty::Bool
+        | ast::Ty::Int8
+        | ast::Ty::Int16
+        | ast::Ty::Int32
+        | ast::Ty::Int64
+        | ast::Ty::UInt8
+        | ast::Ty::UInt16
+        | ast::Ty::UInt32
+        | ast::Ty::UInt64
+        | ast::Ty::Float32
+        | ast::Ty::Float64
+        | ast::Ty::USize
+        | ast::Ty::Protocol
+        | ast::Ty::Voidptr
+        | ast::Ty::Enum { .. } => {
+            return true;
+        }
+        ast::Ty::Vector { ref ty, size: _, nullable: _ } => can_derive_debug(ast, ty),
+        ast::Ty::Str { size: _, .. } => {
+            return true;
+        }
+        ast::Ty::Union { .. } => {
+            return false; /* technically yes, but done in a custom derive */
+        }
+        ast::Ty::Struct => {
+            unreachable!();
+        }
+        ast::Ty::Array { ty, size } => {
+            // rust can derive less than 32
+            // return 33 which is larger if it's an ident. TODO(bwb) lookup ident value
+            if size.0.parse::<u32>().unwrap_or(33) <= 32 {
+                can_derive_debug(&ast, ty)
+            } else {
+                false
+            }
+        }
+        ast::Ty::Identifier { id, .. } => match ast.id_to_decl(id).unwrap() {
+            _ => return true,
+        },
+        ast::Ty::Handle { .. } => true,
     }
 }
 
@@ -38,17 +130,17 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::USize => Ok(String::from("usize")),
         ast::Ty::Array { ty, size } => {
             let Constant(ref size) = size;
-            Ok(format!("[{ty}; {size} as usize]", ty = to_rust_type(&ast, ty)?, size = size.as_str().to_uppercase()))
-        },
+            Ok(format!(
+                "[{ty}; {size} as usize]",
+                ty = to_rust_type(&ast, ty)?,
+                size = size.as_str().to_uppercase()
+            ))
+        }
         ast::Ty::Voidptr => Ok(String::from("*mut std::ffi::c_void /* Voidptr */ ")),
         ast::Ty::Enum { .. } => Ok(String::from("*mut std::ffi::c_void /* Enum not right*/")),
-        ast::Ty::Str { size, .. } => {
-            match size {
-                Some(Constant(c)) => {
-                    Ok(format!("[u8; {size} as usize]", size = c.to_uppercase()))
-                },
-                None => Ok(String::from("*mut std::ffi::c_void /* String */"))
-            }
+        ast::Ty::Str { size, .. } => match size {
+            Some(Constant(c)) => Ok(format!("[u8; {size} as usize]", size = c.to_uppercase())),
+            None => Ok(String::from("*mut std::ffi::c_void /* String */")),
         },
         ast::Ty::Vector { ref ty, size: _, nullable: _ } => to_rust_type(ast, ty),
         ast::Ty::Identifier { id, reference } => {
@@ -109,7 +201,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 accum.push_str(
                     format!(
                         include_str!("templates/rust/enum.rs"),
-                        ty =ty,
+                        ty = ty,
                         name = name.name(),
                         enum_decls = enum_defines.join("\n")
                     )
@@ -141,12 +233,21 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         for decl in namespace {
             if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
                 let mut field_str = Vec::new();
-                let alignment = if attributes.0.contains(&ast::Attr{key : "Packed".to_string(), val: None}) {
-                    "packed"
-                } else {
-                    "C"
-                };
+                let alignment =
+                    if attributes.0.contains(&ast::Attr { key: "Packed".to_string(), val: None }) {
+                        "packed"
+                    } else {
+                        "C"
+                    };
+                let mut partial_eq = true;
+                let mut debug = true;
                 for field in fields {
+                    if !can_derive_debug(ast, &field.ty) {
+                        debug = false;
+                    }
+                    if !can_derive_partialeq(ast, &field.ty) {
+                        partial_eq = false;
+                    }
                     field_str.push(format!(
                         "    pub {c_name}: {ty},",
                         c_name = field.ident.name(),
@@ -155,6 +256,8 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
                 }
                 accum.push(format!(
                     include_str!("templates/rust/struct.rs"),
+                    debug = if debug { ", Debug" } else { "" },
+                    partial_eq = if partial_eq { ", PartialEq" } else { "" },
                     name = name.name(),
                     struct_fields = field_str.join("\n"),
                     alignment = alignment,
@@ -169,11 +272,12 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         for decl in namespace {
             if let ast::Decl::Union { ref name, ref fields, ref attributes } = *decl {
                 let mut field_str = Vec::new();
-                let alignment = if attributes.0.contains(&ast::Attr{key : "Packed".to_string(), val: None}) {
-                    "packed"
-                } else {
-                    "C"
-                };
+                let alignment =
+                    if attributes.0.contains(&ast::Attr { key: "Packed".to_string(), val: None }) {
+                        "packed"
+                    } else {
+                        "C"
+                    };
                 for field in fields {
                     field_str.push(format!(
                         "    pub {c_name}: {ty},",
