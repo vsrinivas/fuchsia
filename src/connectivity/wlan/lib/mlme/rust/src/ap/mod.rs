@@ -14,7 +14,7 @@ use {
         timer::{EventId, Scheduler, Timer},
         write_eth_frame,
     },
-    banjo_ddk_protocol_wlan_info::{WlanBssConfig, WlanBssType, WlanChannel, WlanChannelBandwidth},
+    banjo_ddk_protocol_wlan_info::{WlanChannel, WlanChannelBandwidth},
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     log::{error, info, log},
     std::{collections::HashMap, fmt},
@@ -709,15 +709,6 @@ impl Ap {
         }
 
         self.bss.replace(InfraBss::new(req.ssid.clone(), req.rsne.is_some()));
-
-        self.ctx
-            .device
-            .configure_bss(WlanBssConfig {
-                bssid: self.ctx.bssid.0,
-                bss_type: WlanBssType::INFRASTRUCTURE,
-                remote: false,
-            })
-            .map_err(|s| Error::Status(format!("falied to configure BSS"), s))?;
 
         self.ctx
             .device
@@ -2149,14 +2140,6 @@ mod tests {
         .expect("expected Ap::handle_mlme_start_request OK");
 
         assert!(ap.bss.is_some());
-        assert_eq!(
-            fake_device.bss_cfg,
-            Some(WlanBssConfig {
-                bssid: BSSID.0,
-                bss_type: WlanBssType::INFRASTRUCTURE,
-                remote: false,
-            })
-        );
         assert_eq!(
             fake_device.wlan_channel,
             WlanChannel {
