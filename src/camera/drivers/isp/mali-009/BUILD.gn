@@ -24,6 +24,7 @@ source_set("stream_server") {
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fidl-utils",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",

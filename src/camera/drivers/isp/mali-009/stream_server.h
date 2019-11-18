@@ -7,6 +7,7 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <zircon/types.h>
 
 #include <list>
@@ -24,7 +25,7 @@ namespace camera {
 // the function of the stream. The OnFrameAvailable event is forwarded to clients.
 class StreamServer {
  public:
-  StreamServer() : loop_(&kAsyncLoopConfigNoAttachToThread) {}
+  StreamServer() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
   // Create a server and return writable buffer handles.
   static zx_status_t Create(zx::bti* bti, std::unique_ptr<StreamServer>* server_out,
