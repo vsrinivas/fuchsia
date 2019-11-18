@@ -38,7 +38,9 @@ pub enum Rejection {
     /// The frame was for another BSS.
     OtherBss,
 
-    /// The to_ds bit was false, or the from_ds bit was true.
+    /// For data frames: The To DS bit was false, or the From DS bit was true.
+    /// For management frames: The To DS bit was set and the frame was not a QMF (QoS Management
+    /// frame) management frame, or the reserved From DS bit was set.
     BadDsBits,
 
     /// No source address was found.
@@ -199,12 +201,6 @@ impl InfraBss {
     ) -> Result<(), Rejection> {
         let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
 
-        if !*&{ mgmt_hdr.frame_ctrl }.to_ds() || *&{ mgmt_hdr.frame_ctrl }.from_ds() {
-            // Frame was not sent to a distribution system (e.g. an AP), or was received from
-            // another distribution system.
-            return Err(Rejection::BadDsBits);
-        }
-
         let to_bss = mgmt_hdr.addr1 == ctx.bssid.0 && mgmt_hdr.addr3 == ctx.bssid.0;
 
         // IEEE Std 802.11-2016, 11.1.4.3.4: Probe requests may be sent either directly to us or to
@@ -222,6 +218,12 @@ impl InfraBss {
         if !to_bss {
             // Frame is not for this BSS.
             return Err(Rejection::OtherBss);
+        }
+
+        if *&{ mgmt_hdr.frame_ctrl }.to_ds() || *&{ mgmt_hdr.frame_ctrl }.from_ds() {
+            // IEEE Std 802.11-2016, 9.2.4.1.4 and Table 9-4: The To DS bit is only set for QMF
+            // (QoS Management frame) management frames, and the From DS bit is reserved.
+            return Err(Rejection::BadDsBits);
         }
 
         let client_addr = mgmt_hdr.addr2;
@@ -272,8 +274,8 @@ impl InfraBss {
         }
 
         if !*&{ fixed_fields.frame_ctrl }.to_ds() || *&{ fixed_fields.frame_ctrl }.from_ds() {
-            // Frame was not sent to a distribution system (e.g. an AP), or was received from
-            // another distribution system.
+            // IEEE Std 802.11-2016, 9.2.4.1.4 and Table 9-3: Frame was not sent to a distribution
+            // system (e.g. an AP), or was received from another distribution system.
             return Err(Rejection::BadDsBits);
         }
 
@@ -1386,8 +1388,7 @@ mod tests {
             mac::MgmtHdr {
                 frame_ctrl: mac::FrameControl(0)
                     .with_frame_type(mac::FrameType::MGMT)
-                    .with_mgmt_subtype(mac::MgmtSubtype::AUTH)
-                    .with_to_ds(true),
+                    .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
                 duration: 0,
                 addr1: BSSID.0,
                 addr2: CLIENT_ADDR,
@@ -1418,7 +1419,7 @@ mod tests {
     }
 
     #[test]
-    fn bss_handle_mgmt_frame_bad_ds_bits() {
+    fn bss_handle_mgmt_frame_bad_ds_bits_to_ds() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
@@ -1431,7 +1432,42 @@ mod tests {
                     frame_ctrl: mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
                         .with_mgmt_subtype(mac::MgmtSubtype::AUTH)
-                        .with_to_ds(false),
+                        .with_to_ds(true),
+                    duration: 0,
+                    addr1: BSSID.0,
+                    addr2: CLIENT_ADDR,
+                    addr3: BSSID.0,
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    // Auth body
+                    0, 0, // Auth Algorithm Number
+                    1, 0, // Auth Txn Seq Number
+                    0, 0, // Status code
+                ][..],
+            )
+            .expect_err("expected error"),
+            Rejection::BadDsBits
+        );
+
+        assert_eq!(bss.clients.contains_key(&CLIENT_ADDR), false);
+    }
+
+    #[test]
+    fn bss_handle_mgmt_frame_bad_ds_bits_from_ds() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+
+        assert_variant!(
+            bss.handle_mgmt_frame(
+                &mut ctx,
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0)
+                        .with_frame_type(mac::FrameType::MGMT)
+                        .with_mgmt_subtype(mac::MgmtSubtype::AUTH)
+                        .with_from_ds(true),
                     duration: 0,
                     addr1: BSSID.0,
                     addr2: CLIENT_ADDR,
@@ -1465,8 +1501,7 @@ mod tests {
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
-                        .with_mgmt_subtype(mac::MgmtSubtype::DISASSOC)
-                        .with_to_ds(true),
+                        .with_mgmt_subtype(mac::MgmtSubtype::DISASSOC),
                     duration: 0,
                     addr1: BSSID.0,
                     addr2: CLIENT_ADDR,
@@ -1498,8 +1533,7 @@ mod tests {
                 mac::MgmtHdr {
                     frame_ctrl: mac::FrameControl(0)
                         .with_frame_type(mac::FrameType::MGMT)
-                        .with_mgmt_subtype(mac::MgmtSubtype::AUTH)
-                        .with_to_ds(true),
+                        .with_mgmt_subtype(mac::MgmtSubtype::AUTH),
                     duration: 0,
                     addr1: BSSID.0,
                     addr2: CLIENT_ADDR,
@@ -2018,7 +2052,7 @@ mod tests {
         ap.handle_mac_frame(
             &[
                 // Mgmt header
-                0b10110000, 0b00000001, // Frame Control
+                0b10110000, 0b00000000, // Frame Control
                 0, 0, // Duration
                 2, 2, 2, 2, 2, 2, // addr1
                 1, 1, 1, 1, 1, 1, // addr2
