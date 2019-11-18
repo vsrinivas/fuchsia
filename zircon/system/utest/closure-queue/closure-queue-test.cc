@@ -20,7 +20,7 @@ class ClosureQueueTest : public zxtest::Test {
 };
 
 ClosureQueueTest::ClosureQueueTest()
-    : loop_(&kAsyncLoopConfigAttachToThread), queue_(loop_.dispatcher(), thrd_current()) {
+    : loop_(&kAsyncLoopConfigAttachToCurrentThread), queue_(loop_.dispatcher(), thrd_current()) {
   // nothing else to do here
 }
 
