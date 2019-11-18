@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/bridge.h>
@@ -150,7 +151,7 @@ class FakeNetstack : public fuchsia::netstack::Netstack {
            CompareMacAddress>
       completers_ __TA_GUARDED(mutex_);
 
-  async::Loop loop_{&kAsyncLoopConfigNoAttachToThread};
+  async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_
