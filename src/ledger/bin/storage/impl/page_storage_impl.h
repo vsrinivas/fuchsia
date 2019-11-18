@@ -247,7 +247,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                                 std::vector<std::unique_ptr<const Commit>>* unsynced_commits);
 
   FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSynced(coroutine::CoroutineHandler* handler,
-                                                            const CommitId& commit_id);
+                                                            const Commit& commit);
 
   FXL_WARN_UNUSED_RESULT Status SynchronousMarkCommitSyncedInBatch(
       coroutine::CoroutineHandler* handler, PageDb::Batch* batch, const CommitId& commit_id);

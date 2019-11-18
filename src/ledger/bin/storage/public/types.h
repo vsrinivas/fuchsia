@@ -239,6 +239,13 @@ enum class GarbageCollectionPolicy {
   // Do not use this policy if you care about performance; mostly useful to find garbage-collection
   // bugs in tests.
   EAGER_LIVE_REFERENCES,
+  // Object garbage collection is scheduled as soon as:
+  // - a commit is pruned or marked as synced AND
+  // - the live reference count for the commit's root object reaches zero.
+  // Scheduling starts from the root node of the given commit, and if its deletion is successful,
+  // recursively continues to all referenced pieces. Compared to |EAGER_LIVE_REFERENCES| this policy
+  // will not try to delete any locally created objects that were never referenced by any commit.
+  EAGER_ROOT_NODES,
 };
 
 enum class DiffCompatibilityPolicy {

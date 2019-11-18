@@ -13,6 +13,7 @@ namespace {
 constexpr fxl::StringView kGcPolicyFlag = "gc_policy";
 constexpr fxl::StringView kNeverPolicy = "never";
 constexpr fxl::StringView kEagerPolicy = "eager";
+constexpr fxl::StringView kRootNodesPolicy = "root_nodes";
 
 }  // namespace
 
@@ -26,6 +27,8 @@ storage::GarbageCollectionPolicy GarbageCollectionPolicyFromFlags(
     return storage::GarbageCollectionPolicy::NEVER;
   } else if (policy == kEagerPolicy) {
     return storage::GarbageCollectionPolicy::EAGER_LIVE_REFERENCES;
+  } else if (policy == kRootNodesPolicy) {
+    return storage::GarbageCollectionPolicy::EAGER_ROOT_NODES;
   } else {
     FXL_LOG(FATAL) << "Invalid --" << kGcPolicyFlag << " value: " << policy;
     // The above line will kill the process, this return is just a sane default to make the compiler
@@ -43,6 +46,9 @@ void AppendGarbageCollectionPolicyFlags(storage::GarbageCollectionPolicy policy,
       break;
     case storage::GarbageCollectionPolicy::EAGER_LIVE_REFERENCES:
       flag = kEagerPolicy;
+      break;
+    case storage::GarbageCollectionPolicy::EAGER_ROOT_NODES:
+      flag = kRootNodesPolicy;
       break;
   }
   if (!launch_info->arguments.has_value()) {

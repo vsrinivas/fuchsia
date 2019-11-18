@@ -112,5 +112,6 @@ fuzzer("encoding_fuzzer") {
     ":lib",
     "//src/ledger/bin/storage/impl:object_identifier_lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/bin/testing:lib",
   ]
 }

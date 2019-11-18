@@ -48,8 +48,22 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
     FXL_DCHECK(map_entry_->second.expired());
 
     tracker_->tokens_.erase(map_entry_);
-    if (tracker_->on_untracked_object_) {
-      tracker_->on_untracked_object_(object_digest);
+    // Check if we need to notify the on_untracked_object_ callback.
+    if (!tracker_->on_untracked_object_) {
+      return;
+    }
+    switch (tracker_->notification_policy_) {
+      case NotificationPolicy::NEVER:
+        break;
+      case NotificationPolicy::ALWAYS:
+        tracker_->on_untracked_object_(object_digest);
+        break;
+      case NotificationPolicy::ON_MARKED_OBJECTS_ONLY:
+        auto it = tracker_->to_notify_.find(object_digest);
+        if (it != tracker_->to_notify_.end()) {
+          tracker_->to_notify_.erase(it);
+          tracker_->on_untracked_object_(object_digest);
+        }
     }
   }
 
@@ -60,7 +74,8 @@ class ObjectIdentifierFactoryImpl::TokenImpl : public ObjectIdentifier::Token {
   std::map<ObjectDigest, std::weak_ptr<ObjectIdentifier::Token>>::iterator map_entry_;
 };
 
-ObjectIdentifierFactoryImpl::ObjectIdentifierFactoryImpl() : weak_factory_(this) {}
+ObjectIdentifierFactoryImpl::ObjectIdentifierFactoryImpl(NotificationPolicy notification_policy)
+    : notification_policy_(notification_policy), weak_factory_(this) {}
 
 ObjectIdentifierFactoryImpl::~ObjectIdentifierFactoryImpl() {
   if (!tokens_.empty()) {
@@ -99,6 +114,18 @@ int ObjectIdentifierFactoryImpl::size() const { return tokens_.size(); }
 void ObjectIdentifierFactoryImpl::SetUntrackedCallback(
     fit::function<void(const ObjectDigest&)> callback) {
   on_untracked_object_ = std::move(callback);
+}
+
+void ObjectIdentifierFactoryImpl::NotifyOnUntracked(ObjectDigest object_digest) {
+  if (notification_policy_ != NotificationPolicy::ON_MARKED_OBJECTS_ONLY) {
+    return;
+  }
+  if (on_untracked_object_ && tokens_.find(object_digest) == tokens_.end()) {
+    // There are no live references to this object, call the callback directly.
+    on_untracked_object_(object_digest);
+  } else {
+    to_notify_.insert(std::move(object_digest));
+  }
 }
 
 bool ObjectIdentifierFactoryImpl::TrackDeletion(const ObjectDigest& object_digest) {

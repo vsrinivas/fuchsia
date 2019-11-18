@@ -743,6 +743,12 @@ class PageStorageTestNoGc : public PageStorageTest {
   PageStorageTestNoGc() : PageStorageTest(GarbageCollectionPolicy::NEVER) {}
 };
 
+// A PageStorage test with EAGER_ROOT_NODES garbage-collection policy.
+class PageStorageTestEagerRootNodesGC : public PageStorageTest {
+ public:
+  PageStorageTestEagerRootNodesGC() : PageStorageTest(GarbageCollectionPolicy::EAGER_ROOT_NODES) {}
+};
+
 TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit id that doesn't exist and see the error.
   bool called;
@@ -4052,7 +4058,7 @@ TEST_F(PageStorageTest, GetGenerationAndMissingParents) {
   EXPECT_THAT(missing, ElementsAre(missing_parent->GetId()));
 }
 
-TEST_F(PageStorageTest, EagerGarbageCollection) {
+TEST_F(PageStorageTest, EagerLiveReferencesGarbageCollection) {
   RunInCoroutine([this](CoroutineHandler* handler) {
     ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
 
@@ -4081,6 +4087,75 @@ TEST_F(PageStorageTest, EagerGarbageCollection) {
     // Check that it has been collected.
     RetrackIdentifier(&object_identifier);
     ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+  });
+}
+
+TEST_F(PageStorageTestEagerRootNodesGC, EagerRootNodesGarbageCollection) {
+  ResetStorage(CommitPruningPolicy::LOCAL_IMMEDIATE);
+
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
+
+    bool called;
+    Status status;
+    ObjectIdentifier object_identifier;
+    storage_->AddObjectFromLocal(
+        ObjectType::BLOB, data.ToDataSource(), {},
+        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+    EXPECT_EQ(object_identifier, data.object_identifier);
+
+    // The object is available.
+    std::unique_ptr<const Piece> piece;
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+
+    // Create 3 commits: The first one contains the object we just created. The other two are
+    // necessary so that the first one is pruned and its root identifier has no references.
+
+    // Commit 1: Add the object in a commit.
+    std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
+    journal->Put("key", object_identifier, KeyPriority::EAGER);
+    std::unique_ptr<const Commit> commit = TryCommitJournal(std::move(journal), Status::OK);
+    EXPECT_TRUE(commit);
+    ObjectIdentifier root_identifier = commit->GetRootIdentifier();
+
+    // Both the value object and the root node are available.
+    ASSERT_EQ(ReadObject(handler, object_identifier, &piece), Status::OK);
+    ASSERT_EQ(ReadObject(handler, root_identifier, &piece), Status::OK);
+
+    // Commit 2: Add another object.
+    ObjectData more_data = MakeObject("Some more data", InlineBehavior::PREVENT);
+    ObjectIdentifier object_identifier2;
+    storage_->AddObjectFromLocal(
+        ObjectType::BLOB, more_data.ToDataSource(), {},
+        callback::Capture(callback::SetWhenCalled(&called), &status, &object_identifier2));
+    RunLoopUntilIdle();
+    journal = storage_->StartCommit(std::move(commit));
+    journal->Put("key", object_identifier2, KeyPriority::EAGER);
+    commit = TryCommitJournal(std::move(journal), Status::OK);
+    EXPECT_TRUE(commit);
+
+    // Commit 3: Remove all contents.
+    journal = storage_->StartCommit(std::move(commit));
+    journal->Clear();
+    commit = TryCommitJournal(std::move(journal), Status::OK);
+    EXPECT_TRUE(commit);
+
+    // Release the references to the objects.
+    UntrackIdentifier(&object_identifier);
+    UntrackIdentifier(&root_identifier);
+    piece.reset();
+
+    // Give some time for the object to be collected.
+    RunLoopUntilIdle();
+
+    // Check that it has been collected.
+    RetrackIdentifier(&object_identifier);
+    EXPECT_EQ(ReadObject(handler, object_identifier, &piece), Status::INTERNAL_NOT_FOUND);
+    RetrackIdentifier(&root_identifier);
+    EXPECT_EQ(ReadObject(handler, root_identifier, &piece), Status::INTERNAL_NOT_FOUND);
   });
 }
 

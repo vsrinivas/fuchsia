@@ -93,6 +93,18 @@ int64_t GetObjectPartLength(int64_t max_size, int64_t object_size, int64_t start
   return start > object_size ? 0 : std::min(adjusted_max_size, object_size - start);
 }
 
+ObjectIdentifierFactoryImpl::NotificationPolicy ToObjectIdentifierPolicy(
+    GarbageCollectionPolicy policy) {
+  switch (policy) {
+    case GarbageCollectionPolicy::NEVER:
+      return ObjectIdentifierFactoryImpl::NotificationPolicy::NEVER;
+    case GarbageCollectionPolicy::EAGER_LIVE_REFERENCES:
+      return ObjectIdentifierFactoryImpl::NotificationPolicy::ALWAYS;
+    case GarbageCollectionPolicy::EAGER_ROOT_NODES:
+      return ObjectIdentifierFactoryImpl::NotificationPolicy::ON_MARKED_OBJECTS_ONLY;
+  }
+}
+
 }  // namespace
 
 PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
@@ -110,6 +122,7 @@ PageStorageImpl::PageStorageImpl(ledger::Environment* environment,
     : environment_(environment),
       encryption_service_(encryption_service),
       page_id_(std::move(page_id)),
+      object_identifier_factory_(ToObjectIdentifierPolicy(environment_->gc_policy())),
       commit_factory_(&object_identifier_factory_),
       db_(std::move(page_db)),
       commit_pruner_(environment, this, &commit_factory_, policy),
@@ -358,7 +371,13 @@ void PageStorageImpl::MarkCommitSynced(const CommitId& commit_id,
   coroutine_manager_.StartCoroutine(
       std::move(callback),
       [this, commit_id](CoroutineHandler* handler, fit::function<void(Status)> callback) {
-        callback(SynchronousMarkCommitSynced(handler, commit_id));
+        std::unique_ptr<const Commit> commit;
+        Status status = SynchronousGetCommit(handler, commit_id, &commit);
+        if (status != Status::OK) {
+          callback(status);
+          return;
+        }
+        callback(SynchronousMarkCommitSynced(handler, *commit));
       });
 }
 
@@ -876,6 +895,7 @@ Status PageStorageImpl::DeleteCommits(coroutine::CoroutineHandler* handler,
   RETURN_ON_ERROR(batch->Execute(handler));
   for (const std::unique_ptr<const Commit>& commit : commits) {
     commit_factory_.RemoveCommitDependencies(commit->GetId());
+    object_identifier_factory_.NotifyOnUntracked(commit->GetRootIdentifier().object_digest());
   }
   return Status::OK;
 }
@@ -1371,12 +1391,10 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler,
   }
   commit_pruner_.LoadClock(std::move(device_id), std::move(clock));
 
-  if (environment_->gc_policy() == GarbageCollectionPolicy::EAGER_LIVE_REFERENCES) {
-    object_identifier_factory_.SetUntrackedCallback(
-        callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](const ObjectDigest& object_digest) {
-          ScheduleObjectGarbageCollection(object_digest);
-        }));
-  }
+  object_identifier_factory_.SetUntrackedCallback(
+      callback::MakeScoped(weak_factory_.GetWeakPtr(), [this](const ObjectDigest& object_digest) {
+        ScheduleObjectGarbageCollection(object_digest);
+      }));
 
   // Cache whether this page is online or not.
   return db_->IsPageOnline(handler, &page_is_online_);
@@ -1439,11 +1457,13 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
   for (auto& id_and_bytes : ids_and_bytes) {
     CommitId id = std::move(id_and_bytes.id);
     std::string storage_bytes = std::move(id_and_bytes.bytes);
-    Status status = ContainsCommit(handler, id);
+
+    std::unique_ptr<const Commit> commit;
+    Status status = SynchronousGetCommit(handler, id, &commit);
     if (status == Status::OK) {
       // We only mark cloud-sourced commits as synced.
       if (source == ChangeSource::CLOUD) {
-        RETURN_ON_ERROR(SynchronousMarkCommitSynced(handler, id));
+        RETURN_ON_ERROR(SynchronousMarkCommitSynced(handler, *commit));
       }
       continue;
     }
@@ -1452,7 +1472,6 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
       return status;
     }
 
-    std::unique_ptr<const Commit> commit;
     status = commit_factory_.FromStorageBytes(id, std::move(storage_bytes), &commit);
     if (status != Status::OK) {
       FXL_LOG(ERROR) << "Unable to add commit. Id: " << convert::ToHex(id);
@@ -1570,13 +1589,14 @@ Status PageStorageImpl::SynchronousGetUnsyncedCommits(
 }
 
 Status PageStorageImpl::SynchronousMarkCommitSynced(CoroutineHandler* handler,
-                                                    const CommitId& commit_id) {
+                                                    const Commit& commit) {
   std::unique_ptr<PageDb::Batch> batch;
   RETURN_ON_ERROR(db_->StartBatch(handler, &batch));
-  RETURN_ON_ERROR(SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit_id));
+  RETURN_ON_ERROR(SynchronousMarkCommitSyncedInBatch(handler, batch.get(), commit.GetId()));
   Status status = batch->Execute(handler);
-  if (status == Status::OK && commit_id != kFirstPageCommitId) {
-    commit_factory_.RemoveCommitDependencies(commit_id);
+  if (status == Status::OK && commit.GetId() != kFirstPageCommitId) {
+    commit_factory_.RemoveCommitDependencies(commit.GetId());
+    object_identifier_factory_.NotifyOnUntracked(commit.GetRootIdentifier().object_digest());
   }
   return status;
 }
@@ -1610,7 +1630,10 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
 
   std::map<CommitId, std::unique_ptr<const Commit>> heads_to_add;
   std::vector<CommitId> removed_heads;
-  std::vector<CommitId> synced_commits;
+  // Contains the ids of the synced commits along with the ObjectIdentifier of their root.
+  std::vector<std::pair<CommitId, ObjectIdentifier>> synced_commits;
+  // Contains the ids of the unsynced commits along with their dependent ObjectIdentifiers, i.e.
+  // those of their root node, and of the root node of their base parent.
   std::vector<std::pair<CommitId, std::vector<ObjectIdentifier>>> unsynced_commits;
   std::map<const CommitId*, const Commit*, StringPointerComparator> id_to_commit_map;
 
@@ -1627,7 +1650,7 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
         // Synced commits will need to be removed from the commit factory once the batch is executed
         // successfully.
         if (commit->GetId() != kFirstPageCommitId) {
-          synced_commits.push_back(commit->GetId());
+          synced_commits.push_back({commit->GetId(), commit->GetRootIdentifier()});
         }
       }
       // The commit is already here. We can safely skip it.
@@ -1716,8 +1739,9 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
   FXL_DCHECK(synced_commits.empty() || unsynced_commits.empty());
 
   // Remove all synced commits from the commit_factory_.
-  for (CommitId synced_commit_id : synced_commits) {
+  for (const auto& [synced_commit_id, root_identifier] : synced_commits) {
     commit_factory_.RemoveCommitDependencies(synced_commit_id);
+    object_identifier_factory_.NotifyOnUntracked(root_identifier.object_digest());
   }
   // Add all unsynced commits to the commit_factory_.
   for (const auto& [unsynced_commit_id, identifiers] : unsynced_commits) {
