@@ -572,13 +572,24 @@ impl RemoteClient {
         match self.state.as_ref() {
             State::Deauthenticated | State::Authenticating => {
                 ctx.send_deauth_frame(self.addr, reason_code)
+                    .map_err(ClientRejection::WlanSendError)?;
+                ctx.send_mlme_deauth_ind(
+                    self.addr,
+                    // Safe: fidl_mlme::ReasonCode has a 1:1 mapping with ReasonCode.
+                    fidl_mlme::ReasonCode::from_primitive(reason_code.0).unwrap(),
+                )
+                .map_err(ClientRejection::SmeSendError)?;
             }
-            State::Authenticated => ctx.send_disassoc_frame(self.addr, reason_code),
+            State::Authenticated => {
+                ctx.send_disassoc_frame(self.addr, reason_code)
+                    .map_err(ClientRejection::WlanSendError)?;
+                ctx.send_mlme_disassoc_ind(self.addr, reason_code.0)
+                    .map_err(ClientRejection::SmeSendError)?;
+            }
             State::Associated { .. } => {
                 panic!("all frames should be permitted for an associated client")
             }
-        }
-        .map_err(ClientRejection::WlanSendError)?;
+        };
 
         return Err(ClientRejection::NotPermitted);
     }
@@ -1338,7 +1349,7 @@ mod tests {
                 .handle_data_frame(
                     &mut ctx,
                     mac::FixedDataHdrFields {
-                        frame_ctrl: mac::FrameControl(0),
+                        frame_ctrl: mac::FrameControl(0b000000010_00001000),
                         duration: 0,
                         addr1: CLIENT_ADDR,
                         addr2: AP_ADDR.0.clone(),
@@ -1359,6 +1370,17 @@ mod tests {
             ClientRejection::NotPermitted
         );
 
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame,
+            },
+        );
+
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             fake_device.wlan_queue[0].0,
@@ -1370,8 +1392,70 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
-                // Disassoc header:
-                6, 0, // reason code
+                // Deauth header:
+                7, 0, // reason code
+            ][..]
+        );
+    }
+
+    #[test]
+    fn handle_data_frame_not_permitted_disassoc() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Authenticated);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        assert_variant!(
+            r_sta
+                .handle_data_frame(
+                    &mut ctx,
+                    mac::FixedDataHdrFields {
+                        frame_ctrl: mac::FrameControl(0b000000010_00001000),
+                        duration: 0,
+                        addr1: CLIENT_ADDR,
+                        addr2: AP_ADDR.0.clone(),
+                        addr3: CLIENT_ADDR2,
+                        seq_ctrl: mac::SequenceControl(10),
+                    },
+                    None,
+                    None,
+                    &[
+                        7, 7, 7, // DSAP, SSAP & control
+                        8, 8, 8, // OUI
+                        9, 10, // eth type
+                        // Trailing bytes
+                        11, 11, 11,
+                    ][..],
+                )
+                .expect_err("expected err"),
+            ClientRejection::NotPermitted
+        );
+
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::DisassociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::DisassociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::InvalidClass3Frame as u16,
+            },
+        );
+
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        assert_eq!(
+            fake_device.wlan_queue[0].0,
+            &[
+                // Mgmt header
+                0b10100000, 0b00000000, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Deauth header:
+                7, 0, // reason code
             ][..]
         );
     }
@@ -1391,7 +1475,7 @@ mod tests {
             .handle_data_frame(
                 &mut ctx,
                 mac::FixedDataHdrFields {
-                    frame_ctrl: mac::FrameControl(0),
+                    frame_ctrl: mac::FrameControl(0b000000010_00001000),
                     duration: 0,
                     addr1: CLIENT_ADDR,
                     addr2: AP_ADDR.0.clone(),
@@ -1454,7 +1538,7 @@ mod tests {
             .handle_data_frame(
                 &mut ctx,
                 mac::FixedDataHdrFields {
-                    frame_ctrl: mac::FrameControl(0),
+                    frame_ctrl: mac::FrameControl(0b000000010_00001000),
                     duration: 0,
                     addr1: CLIENT_ADDR,
                     addr2: AP_ADDR.0.clone(),
@@ -1536,6 +1620,17 @@ mod tests {
             ClientRejection::NotPermitted
         );
 
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::DeauthenticateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::DeauthenticateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                reason_code: fidl_mlme::ReasonCode::InvalidClass2Frame,
+            },
+        );
+
         assert_eq!(fake_device.wlan_queue.len(), 1);
         assert_eq!(
             fake_device.wlan_queue[0].0,
@@ -1547,7 +1642,7 @@ mod tests {
                 2, 2, 2, 2, 2, 2, // addr2
                 2, 2, 2, 2, 2, 2, // addr3
                 0x10, 0, // Sequence Control
-                // Disassoc header:
+                // Deauth header:
                 6, 0, // reason code
             ][..]
         );
