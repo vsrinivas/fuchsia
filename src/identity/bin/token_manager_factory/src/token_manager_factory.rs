@@ -41,7 +41,7 @@ pub struct TokenManagerFactory {
     auth_provider_configs: Mutex<Vec<AuthProviderConfig>>,
 
     /// An object capable of launching and opening connections on components implementing the
-    /// AuthProviderFactory interface. This is populated on the first call that provides auth
+    /// AuthProvider interface. This is populated on the first call that provides auth
     /// provider configuration.
     auth_provider_supplier: Mutex<Option<AuthProviderSupplier>>,
 
@@ -101,11 +101,19 @@ impl TokenManagerFactory {
                     .context("Error creating request stream")?;
 
                 let token_manager_clone = Arc::clone(&token_manager);
-                token_manager.task_group().spawn(|cancel| async move {
-                    token_manager_clone
-                        .handle_requests_from_stream(&context, stream, cancel).await
-                    .unwrap_or_else(|e| warn!("Error handling TokenManager channel {:?}", e))
-                }).await?;
+                token_manager
+                    .task_group()
+                    .spawn(|cancel| {
+                        async move {
+                            token_manager_clone
+                                .handle_requests_from_stream(&context, stream, cancel)
+                                .await
+                                .unwrap_or_else(|e| {
+                                    warn!("Error handling TokenManager channel {:?}", e)
+                                })
+                        }
+                    })
+                    .await?;
                 Ok(())
             }
         }

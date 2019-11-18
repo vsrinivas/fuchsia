@@ -5,28 +5,15 @@
 use crate::{ResultExt as TokenManagerResultExt, TokenManagerError};
 use failure::{format_err, ResultExt};
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{
-    AuthProviderConfig, AuthProviderFactoryMarker, AuthProviderFactoryProxy, AuthProviderMarker,
-    AuthProviderStatus, Status,
-};
+use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker, Status};
 use fuchsia_component::client::{launch, launcher, App};
 use fuchsia_zircon as zx;
 use log::info;
 use parking_lot::Mutex;
 use std::sync::Arc;
 
-/// The information necessary to retain an open connection to the `AuthProviderFactory` interface
-/// of a launched component.
-struct ConnectionState {
-    // Note: The app must remain in scope for the connection to be retained, but never needs to be
-    // read.
-    _app: App,
-    factory_proxy: Arc<AuthProviderFactoryProxy>,
-}
-
-/// A type capable of launching a particular component implementing the `AuthProviderFactory`
-/// interface and acquiring `AuthProvider` connections from that component. Launching is
-/// performed on demand.
+/// A type capable of launching and connecting to a component that implements the
+/// `AuthProvider` protocol. Launching is performed on demand.
 ///
 /// Note: This type is not used by TokenManager directly, but is helpful for clients needing to
 /// implement the `AuthProviderSupplier` trait.
@@ -36,7 +23,7 @@ pub struct AuthProviderConnection {
     /// Optional params to be passed to the component at launch.
     params: Option<Vec<String>>,
     /// The state needed to retain a connection, once one has been created.
-    connection_state: Mutex<Option<ConnectionState>>,
+    connection_state: Mutex<Option<Arc<App>>>,
 }
 
 impl AuthProviderConnection {
@@ -63,14 +50,14 @@ impl AuthProviderConnection {
         &self.component_url
     }
 
-    /// Returns an `AuthProviderFactoryProxy` for opening new `AuthProvider` connections. If
-    /// a component has previously been launched this is used, otherwise a fresh component is
-    /// launched and its proxy is stored for future use.
-    fn get_factory_proxy(&self) -> Result<Arc<AuthProviderFactoryProxy>, TokenManagerError> {
+    /// Returns an `App` for opening new `AuthProvider` connections. If a
+    /// component has previously been launched this is used, otherwise a fresh
+    /// component is launched and its proxy is stored for future use.
+    fn get_app(&self) -> Result<Arc<App>, TokenManagerError> {
         // If a factory proxy has already been created return it.
         let mut connection_state_lock = self.connection_state.lock();
         if let Some(connection_state) = &*connection_state_lock {
-            return Ok(Arc::clone(&connection_state.factory_proxy));
+            return Ok(Arc::clone(&connection_state));
         }
 
         // Launch the auth provider and connect to its factory interface.
@@ -79,18 +66,11 @@ impl AuthProviderConnection {
             .context("Failed to start launcher")
             .token_manager_status(Status::UnknownError)?;
         let app = launch(&launcher, self.component_url.clone(), self.params.clone())
-            .context("Failed to launch AuthProviderFactory")
+            .context("Failed to launch AuthProvider")
             .token_manager_status(Status::AuthProviderServiceUnavailable)?;
-        let factory_proxy = Arc::new(
-            app.connect_to_service::<AuthProviderFactoryMarker>()
-                .context("Failed to connect to AuthProviderFactory")
-                .token_manager_status(Status::AuthProviderServiceUnavailable)?,
-        );
-        connection_state_lock.get_or_insert(ConnectionState {
-            _app: app,
-            factory_proxy: Arc::clone(&factory_proxy),
-        });
-        Ok(factory_proxy)
+        let app_arc = Arc::new(app);
+        connection_state_lock.get_or_insert(Arc::clone(&app_arc));
+        Ok(app_arc)
     }
 
     /// Connects the supplied `ServerEnd` to the `AuthProvider`. If a component has previously been
@@ -99,15 +79,11 @@ impl AuthProviderConnection {
         &self,
         server_end: ServerEnd<AuthProviderMarker>,
     ) -> Result<(), TokenManagerError> {
-        let factory_proxy = self.get_factory_proxy()?;
-
-        match factory_proxy.get_auth_provider(server_end).await {
-            Ok(AuthProviderStatus::Ok) => Ok(()),
-            Ok(status) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                .with_cause(format_err!("Error getting auth provider: {:?}", status))),
-            Err(err) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                .with_cause(format_err!("GetAuthProvider method failed with {:?}", err))),
-        }
+        let app = self.get_app()?;
+        app.pass_to_service::<AuthProviderMarker>(server_end.into_channel()).map_err(|err| {
+            TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("GetAuthProvider method failed with {:?}", err))
+        })
     }
 
     /// Returns a `ClientEnd` for communicating with the `AuthProvider`. If a component has

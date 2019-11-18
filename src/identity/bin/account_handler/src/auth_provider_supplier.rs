@@ -9,8 +9,7 @@ use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
 use futures::future::{ready as fready, FutureObj};
 use token_manager::TokenManagerError;
 
-/// A type capable of acquiring `AuthProvider` connections from components implementing the
-/// `AuthProviderFactory` interface.
+/// A type capable of acquiring `AuthProvider` connections from components that implement it.
 ///
 /// The functionality is delegated to the component that launched the AccountHandler, through
 /// methods it implements on the `AccountHandlerContext` interface.

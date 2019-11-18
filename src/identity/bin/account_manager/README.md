@@ -27,11 +27,10 @@ fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
   definitions from this crate
 * */identity/lib/token_manager* - Account Manager uses the AuthProviderConnection
   struct to lazily launch and maintain connections to components implementing
-  the fuchsia.auth.AuthProviderFactory FIDL protocol
+  the fuchsia.auth.AuthProvider FIDL protocol
 * *Auth Providers* - Account Manager launches instances of components that
-  implement the fuchsia.auth.AuthProviderFactory FIDL protocol. A single
-  component is launched for each configured AuthProvider, serving all Fuchsia
-  accounts
+  implement the fuchsia.auth.AuthProvider FIDL protocol. A single component is
+  launched for each configured AuthProvider, serving all Fuchsia accounts
 * *Overnet* If prototype account transfer is enabled, Overnet is used as the
   mechanism by which the source and target devices communicate.
 

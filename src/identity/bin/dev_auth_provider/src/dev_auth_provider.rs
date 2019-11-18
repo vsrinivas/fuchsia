@@ -3,13 +3,12 @@
 // found in the LICENSE file.
 
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::ServerEnd;
 use fidl::Error;
 use fidl_fuchsia_auth::{
     AuthProviderGetAppAccessTokenFromAssertionJwtResponder, AuthProviderGetAppAccessTokenResponder,
     AuthProviderGetAppFirebaseTokenResponder, AuthProviderGetAppIdTokenResponder,
     AuthProviderGetPersistentCredentialFromAttestationJwtResponder,
-    AuthProviderGetPersistentCredentialResponder, AuthProviderMarker, AuthProviderRequest,
+    AuthProviderGetPersistentCredentialResponder, AuthProviderRequest, AuthProviderRequestStream,
     AuthProviderRevokeAppOrPersistentCredentialResponder, AuthProviderStatus, UserProfileInfo,
 };
 use fuchsia_async as fasync;
@@ -43,17 +42,12 @@ impl AuthProvider {
     /// Spawn a new task of handling request from the
     /// `AuthProviderRequestStream` by calling the `handle_request` method.
     /// Create a warning on error.
-    pub fn spawn(server_end: ServerEnd<AuthProviderMarker>) {
-        match server_end.into_stream() {
-            Err(err) => {
-                warn!("Error creating AuthProvider request stream {:?}", err);
-            }
-            Ok(request_stream) => fasync::spawn(
-                request_stream
-                    .try_for_each(|r| future::ready(Self::handle_request(r)))
-                    .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
-            ),
-        };
+    pub fn spawn(request_stream: AuthProviderRequestStream) {
+        fasync::spawn(
+            request_stream
+                .try_for_each(|r| future::ready(Self::handle_request(r)))
+                .unwrap_or_else(|e| warn!("Error running AuthProvider{:?}", e)),
+        );
     }
 
     /// Handle single `AuthProviderRequest` by calling the corresponding method
@@ -196,16 +190,13 @@ impl AuthProvider {
 mod tests {
 
     use super::*;
-    use fidl_fuchsia_auth::AuthProviderProxy;
-    use fuchsia_zircon as zx;
+    use fidl::endpoints::create_proxy_and_stream;
+    use fidl_fuchsia_auth::{AuthProviderMarker, AuthProviderProxy};
 
     fn get_auth_provider_connection_proxy() -> AuthProviderProxy {
-        let (server_chan, client_chan) = zx::Channel::create().expect("Channel creation failed.");
-        let client_chan =
-            fasync::Channel::from_channel(client_chan).expect("Channel client creation failed.");
-        let server_end = ServerEnd::<AuthProviderMarker>::new(server_chan);
-        AuthProvider::spawn(server_end);
-        AuthProviderProxy::new(client_chan)
+        let (proxy, stream) = create_proxy_and_stream::<AuthProviderMarker>().unwrap();
+        AuthProvider::spawn(stream);
+        proxy
     }
 
     #[fasync::run_until_stalled(test)]

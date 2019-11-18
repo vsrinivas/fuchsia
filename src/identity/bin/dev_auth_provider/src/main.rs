@@ -3,9 +3,8 @@
 // found in the LICENSE file.
 
 mod dev_auth_provider;
-mod dev_auth_provider_factory;
 
-use crate::dev_auth_provider_factory::AuthProviderFactory;
+use crate::dev_auth_provider::AuthProvider;
 use failure::{Error, ResultExt};
 use fuchsia_async as fasync;
 use fuchsia_component::server::ServiceFs;
@@ -19,7 +18,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let mut fs = ServiceFs::new();
-    fs.dir("svc").add_fidl_service(AuthProviderFactory::spawn);
+    fs.dir("svc").add_fidl_service(AuthProvider::spawn);
     fs.take_and_serve_directory_handle()?;
 
     executor.run_singlethreaded(fs.collect::<()>());

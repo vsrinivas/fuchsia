@@ -14,8 +14,8 @@ use token_manager::AuthProviderConnection;
 
 /// A type that can respond to`AccountHandlerContext` requests from the AccountHandler components
 /// that we launch. These requests provide contextual and service information to the
-/// AccountHandlers, such as connections to components implementing the `AuthProviderFactory`
-/// interface.
+/// AccountHandlers, such as connections to components implementing the `AuthProvider`
+/// protocol.
 pub struct AccountHandlerContext {
     /// A map from auth_provider_type to an `AuthProviderConnection` used to launch the associated
     /// component.

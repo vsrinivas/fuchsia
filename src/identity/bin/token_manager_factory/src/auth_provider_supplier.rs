@@ -10,9 +10,9 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use token_manager::{AuthProviderConnection, TokenManagerError};
 
-/// A type capable of launching components implementing the `AuthProviderFactory` interface and
-/// acquiring `AuthProvider` connections from them component. Launching is performed on demand
-/// and components are reused across calls.
+/// A type capable of launching and connecting to components that implement the
+/// `AuthProvider` protocol. Launching is performed on demand and components are
+/// reused across calls.
 #[derive(Clone)]
 pub struct AuthProviderSupplier {
     /// A map from auth_provider_type to a `AuthProviderConnection` used to launch the associated

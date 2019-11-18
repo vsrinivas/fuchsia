@@ -18,8 +18,8 @@ required for some fallback cases.
   library to perform its authentication token management and implement the
   fuchsia.auth.TokenManager FIDL protocol
 * *Auth Providers* - Token Manager Factory launches instances of components that
-  implement the fuchsia.auth.AuthProviderFactory FIDL protocol. A single
-  component is launched for each configured AuthProvider, serving all users
+  implement the fuchsia.auth.AuthProvider FIDL protocol. A single component is
+  launched for each configured AuthProvider, serving all users
 
 
 ## Design
