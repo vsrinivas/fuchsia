@@ -42,7 +42,7 @@ class SimHardware : simulation::StationIfc {
   void EnableRx() { rx_enabled_ = true; }
   void DisableRx() { rx_enabled_ = false; }
 
-  void SetChannel(uint8_t channel) { channel_ = channel; }
+  void SetChannel(wlan_channel_t channel) { channel_ = channel; }
 
   void GetRevInfo(brcmf_rev_info_le* rev_info);
 
@@ -63,7 +63,7 @@ class SimHardware : simulation::StationIfc {
 
  private:
   bool rx_enabled_ = false;
-  uint8_t channel_;
+  wlan_channel_t channel_;
   simulation::Environment* env_;
   EventHandlers event_handlers_;
 };

@@ -441,9 +441,10 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
   scan_state_.channel_index = 0;
 
   // Start scan
-  brcmu_chan chan = {.chspec = scan_state_.opts->channels[scan_state_.channel_index++]};
-  d11_inf_.decchspec(&chan);
-  hw_.SetChannel(chan.chnum);
+  uint16_t chanspec = scan_state_.opts->channels[scan_state_.channel_index++];
+  wlan_channel_t channel;
+  chanspec_to_channel(&d11_inf_, chanspec, &channel);
+  hw_.SetChannel(channel);
   hw_.EnableRx();
   std::function<void()>* callback = new std::function<void()>;
   *callback = std::bind(&SimFirmware::ScanNextChannel, this);
@@ -470,9 +471,10 @@ void SimFirmware::ScanNextChannel() {
         scan_state_.opts = nullptr;
       } else {
         // Scan next channel
-        brcmu_chan chan = {.chspec = scan_state_.opts->channels[scan_state_.channel_index++]};
-        d11_inf_.decchspec(&chan);
-        hw_.SetChannel(chan.chnum);
+        uint16_t chanspec = scan_state_.opts->channels[scan_state_.channel_index++];
+        wlan_channel_t channel;
+        chanspec_to_channel(&d11_inf_, chanspec, &channel);
+        hw_.SetChannel(channel);
         std::function<void()>* callback = new std::function<void()>;
         *callback = std::bind(&SimFirmware::ScanNextChannel, this);
         hw_.RequestCallback(callback, scan_state_.opts->dwell_time);

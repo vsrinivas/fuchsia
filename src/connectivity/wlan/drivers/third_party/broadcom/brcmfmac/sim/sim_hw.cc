@@ -29,7 +29,8 @@ void SimHardware::SetCallbacks(const EventHandlers& handlers) { event_handlers_ 
 
 void SimHardware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                            const common::MacAddr& bssid) {
-  if (rx_enabled_ && (channel_ == channel.primary)) {
+  if (rx_enabled_ && (channel_.primary == channel.primary) && (channel_.cbw == channel.cbw) &&
+      (channel_.secondary80 == channel.secondary80)) {
     // Pass beacons to firmware if they are on the channel we are tuned to.
     event_handlers_.rx_beacon_handler(channel, ssid, bssid);
   }
