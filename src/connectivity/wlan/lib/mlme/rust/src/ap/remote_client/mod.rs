@@ -8,8 +8,7 @@ use {
         error::Error,
         timer::EventId,
     },
-    fidl_fuchsia_wlan_mlme as fidl_mlme,
-    fuchsia_zircon::{self as zx, DurationNum},
+    fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     wlan_common::{
         mac::{self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode},
         TimeUnit,
@@ -20,7 +19,8 @@ use {
 
 /// dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3): This attribute indicates
 /// that the number of 1000 TUs that pass before an AP disassociates an inactive non-AP STA. This
-/// value is transmitted in the Association Response and Reassociation Response frames.
+/// value is transmitted via the BSS Max Idle Period element (IEEE Std 802.11-2016, 9.4.2.79) in
+/// Association Response and Reassociation Response frames, which contains a 16-bit integer.
 const BSS_MAX_IDLE_PERIOD: u16 = 90;
 
 /// The MLME state machine. The actual state machine transitions are managed and validated in the
@@ -160,10 +160,11 @@ impl RemoteClient {
     fn schedule_bss_idle_timeout(&self, ctx: &mut Context) -> EventId {
         self.schedule_after(
             ctx,
-            zx::Duration::from(
-                // dot11BssMaxIdlePeriod is measured in increments of 1000 TUs.
-                (BSS_MAX_IDLE_PERIOD as i64 * i64::from(TimeUnit::from(1000))).micros(),
-            ),
+            // dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3) is measured in
+            // increments of 1000 TUs, with a range from 1-65535. We therefore need do this
+            // conversion to zx::Duration in a 64-bit number space to avoid any overflow that might
+            // occur, as 65535 * 1000 > 2^sizeof(TimeUnit).
+            zx::Duration::from(TimeUnit::from(1000)) * (BSS_MAX_IDLE_PERIOD as i64),
             ClientEvent::BssIdleTimeout,
         )
     }
@@ -847,11 +848,19 @@ mod tests {
                 &[0, 4, 1, 2, 3, 4][..],
             )
             .expect("expected OK");
+
         assert_variant!(r_sta.state.as_ref(), State::Associated {
             eapol_controlled_port: Some(fidl_mlme::ControlledPortState::Closed),
-            active_timeout_event_id: Some(_),
             ..
         });
+
+        let active_timeout_event_id = match r_sta.state.as_ref() {
+            State::Associated {
+                active_timeout_event_id: Some(active_timeout_event_id), ..
+            } => active_timeout_event_id,
+            _ => panic!("no active timeout?"),
+        };
+
         assert_eq!(fake_device.wlan_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
@@ -868,6 +877,11 @@ mod tests {
             1, 0, // AID
             0, 4, 1, 2, 3, 4 // SSID
         ][..]);
+        assert_eq!(
+            *fake_scheduler.deadlines.get(active_timeout_event_id).unwrap(),
+            1000 /* TUs */ * 1024 /* us per TU */ * 1000 /* ns per us */ *
+            (BSS_MAX_IDLE_PERIOD as i64),
+        );
     }
 
     #[test]

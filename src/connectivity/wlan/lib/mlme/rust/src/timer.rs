@@ -76,25 +76,30 @@ impl<E> Timer<E> {
 #[cfg(test)]
 pub struct FakeScheduler {
     pub next_id: u64,
+    pub deadlines: HashMap<EventId, i64>,
     now: i64,
 }
 
 #[cfg(test)]
 impl FakeScheduler {
-    pub extern "C" fn schedule(cookie: *mut c_void, _deadline: i64) -> EventId {
-        unsafe {
-            (*(cookie as *mut Self)).next_id += 1;
-            EventId((*(cookie as *mut Self)).next_id)
-        }
+    pub extern "C" fn schedule(cookie: *mut c_void, deadline: i64) -> EventId {
+        let scheduler = unsafe { &mut *(cookie as *mut Self) };
+        scheduler.next_id += 1;
+        let event_id = EventId(scheduler.next_id);
+        scheduler.deadlines.insert(event_id, deadline);
+        event_id
     }
-    pub extern "C" fn cancel(_cookie: *mut c_void, _id: EventId) {}
+    pub extern "C" fn cancel(cookie: *mut c_void, id: EventId) {
+        let scheduler = unsafe { &mut *(cookie as *mut Self) };
+        scheduler.deadlines.remove(&id);
+    }
 
     pub extern "C" fn now(cookie: *mut c_void) -> i64 {
         unsafe { (*(cookie as *mut Self)).now }
     }
 
     pub fn new() -> Self {
-        Self { next_id: 0, now: 0 }
+        Self { next_id: 0, deadlines: HashMap::new(), now: 0 }
     }
 
     pub fn set_time(&mut self, time: zx::Time) {
