@@ -347,6 +347,7 @@ mod tests {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                auth_content: None,
             }
         );
     }
@@ -383,6 +384,7 @@ mod tests {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Success,
+                auth_content: None,
             }
         );
     }
@@ -419,6 +421,7 @@ mod tests {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                auth_content: None,
             }
         );
     }
@@ -445,6 +448,7 @@ mod tests {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::AuthFailureTimeout,
+                auth_content: None,
             }
         );
     }
@@ -474,6 +478,7 @@ mod tests {
                 peer_sta_address: BSSID.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                auth_content: None,
             }
         );
     }

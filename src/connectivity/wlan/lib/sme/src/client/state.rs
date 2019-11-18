@@ -163,6 +163,7 @@ impl State {
                                     peer_sta_address: cmd.bss.bssid.clone(),
                                     auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                                     auth_failure_timeout: DEFAULT_AUTH_FAILURE_TIMEOUT,
+                                    auth_content: None,
                                 },
                             ));
                         }
@@ -1306,6 +1307,7 @@ mod tests {
                 peer_sta_address: connect_command_one().0.bss.bssid,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
+                auth_content: None,
             },
         };
         let state = state.on_mlme_event(auth_conf, &mut h.context);

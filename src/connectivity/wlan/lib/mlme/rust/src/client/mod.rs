@@ -416,6 +416,7 @@ impl Client {
                 peer_sta_address: self.bssid.0,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code,
+                auth_content: None,
             })
         });
         if let Err(e) = result {
