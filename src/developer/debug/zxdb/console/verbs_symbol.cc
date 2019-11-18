@@ -9,6 +9,7 @@
 #include <set>
 #include <vector>
 
+#include "llvm/Demangle/Demangle.h"
 #include "src/developer/debug/shared/regex.h"
 #include "src/developer/debug/zxdb/client/frame.h"
 #include "src/developer/debug/zxdb/client/process.h"
@@ -29,8 +30,11 @@
 #include "src/developer/debug/zxdb/expr/eval_context.h"
 #include "src/developer/debug/zxdb/expr/expr_parser.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
+#include "src/developer/debug/zxdb/expr/find_name.h"
+#include "src/developer/debug/zxdb/expr/found_name.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/index.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
@@ -59,56 +63,91 @@ constexpr int kDumpIndexSwitch = 3;
 void DumpVariableLocation(const SymbolContext& symbol_context, const VariableLocation& loc,
                           OutputBuffer* out) {
   if (loc.is_null()) {
-    out->Append("DWARF location: <no location info>\n");
+    out->Append("  DWARF location: <no location info>\n");
     return;
   }
 
-  out->Append("DWARF location (address range + DWARF expression bytes):\n");
+  out->Append("  DWARF location (address range + DWARF expression bytes):\n");
   for (const auto& entry : loc.locations()) {
     // Address range.
     if (entry.begin == 0 && entry.end == 0) {
-      out->Append("  <always valid>:");
+      out->Append("    <always valid>:");
     } else {
       out->Append(fxl::StringPrintf(
-          "  [0x%" PRIx64 ", 0x%" PRIx64 "):", symbol_context.RelativeToAbsolute(entry.begin),
+          "    [0x%" PRIx64 ", 0x%" PRIx64 "):", symbol_context.RelativeToAbsolute(entry.begin),
           symbol_context.RelativeToAbsolute(entry.end)));
     }
 
-    // Dump the raw DWARF expression bytes. In the future we can decode if
-    // necessary (check LLVM's "dwarfdump" utility which can do this).
+    // Dump the raw DWARF expression bytes. In the future we can decode if necessary (check LLVM's
+    // "dwarfdump" utility which can do this).
     for (uint8_t byte : entry.expression)
       out->Append(fxl::StringPrintf(" 0x%02x", byte));
     out->Append("\n");
   }
 }
 
-std::string GetTypeDescription(const LazySymbol& lazy_type) {
-  if (const Type* type = lazy_type.Get()->AsType())
-    return type->GetFullName();
-  return "<bad type>";
+// Appends a type description for another synbol dump section.
+void DumpTypeDescription(const LazySymbol& lazy_type, OutputBuffer* out) {
+  out->Append("  Type: ");
+  if (const Type* type = lazy_type.Get()->AsType()) {
+    // Use GetFullName() instead of GetIdentifier() because modified types like pointers don't
+    // map onto identifiers.
+    out->Append(type->GetFullName());
+  } else {
+    out->Append(Syntax::kError, "[Bad type]");
+  }
+  out->Append("\n");
 }
 
 void DumpVariableInfo(const SymbolContext& symbol_context, const Variable* variable,
                       OutputBuffer* out) {
-  out->Append("Variable: ");
+  out->Append(Syntax::kHeading, "Variable: ");
   out->Append(Syntax::kVariable, variable->GetAssignedName());
   out->Append("\n");
-  out->Append(fxl::StringPrintf("Type: %s\n", GetTypeDescription(variable->type()).c_str()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n", static_cast<unsigned>(variable->tag())));
+  DumpTypeDescription(variable->type(), out);
+  out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(variable->tag())));
   DumpVariableLocation(symbol_context, variable->location(), out);
 }
 
 void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
-  out->Append("Data member: " + data_member->GetFullName() + "\n");
+  out->Append(Syntax::kHeading, "Data member: ");
+  out->Append(Syntax::kVariable, data_member->GetFullName() + "\n");
+
   const Symbol* parent = data_member->parent().Get();
-  out->Append("Contained in: " + parent->GetFullName() + "\n");
-  out->Append(fxl::StringPrintf("Type: %s\n", GetTypeDescription(data_member->type()).c_str()));
+  out->Append("  Contained in: ");
+  out->Append(FormatIdentifier(parent->GetIdentifier(), FormatIdentifierOptions()));
+  out->Append("\n");
+
+  DumpTypeDescription(data_member->type(), out);
+  out->Append(fxl::StringPrintf("  Offset within container: %" PRIu32 "\n",
+                                data_member->member_location()));
   out->Append(
-      fxl::StringPrintf("Offset within container: %" PRIu32 "\n", data_member->member_location()));
-  out->Append(fxl::StringPrintf("DWARF tag: 0x02%x\n", static_cast<unsigned>(data_member->tag())));
+      fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(data_member->tag())));
 }
 
-// auth ------------------------------------------------------------------------
+void DumpTypeInfo(const Type* type, OutputBuffer* out) {
+  out->Append(Syntax::kHeading, "Type: ");
+  out->Append(FormatIdentifier(type->GetIdentifier(), FormatIdentifierOptions()));
+  out->Append("\n");
+
+  out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(type->tag())));
+}
+
+void DumpFunctionInfo(const Function* function, OutputBuffer* out) {
+  out->Append(Syntax::kHeading, "Function: ");
+
+  FormatFunctionNameOptions opts;
+  opts.name.bold_last = true;
+  opts.params = FormatFunctionNameOptions::kParamTypes;
+
+  out->Append(FormatFunctionName(function, opts));
+  out->Append("\n");
+
+  // TODO(bug 41540) When the symbol context can be plumbed through to here, output the absolute
+  // codee rangese.
+}
+
+// auth --------------------------------------------------------------------------------------------
 
 const char kAuthShortHelp[] = "auth: Authenticate with a symbol server.";
 const char kAuthHelp[] =
@@ -160,7 +199,7 @@ Err DoAuth(ConsoleContext* context, const Command& cmd) {
   return Err();  // Will complete asynchronously.
 }
 
-// list ------------------------------------------------------------------------
+// list --------------------------------------------------------------------------------------------
 
 const char kListShortHelp[] = "list / l: List source code.";
 const char kListHelp[] =
@@ -200,8 +239,8 @@ Examples
       List 20 lines around the beginning of the given symbol.
 )";
 
-// Expands the input file name to a fully qualified one if it is unique. If
-// it's ambiguous, return an error.
+// Expands the input file name to a fully qualified one if it is unique. If it's ambiguous, return
+// an error.
 Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input, FileLine* output) {
   auto matches = target_symbols->FindFileMatches(input.file());
   if (matches.empty()) {
@@ -222,9 +261,8 @@ Err CanonicalizeFile(const TargetSymbols* target_symbols, const FileLine& input,
   return Err(msg);
 }
 
-// target_symbols is required but process_symbols may be null if the process
-// is not running. In that case, if a running process is required to resolve
-// the input, an error will be thrown.
+// target_symbols is required but process_symbols may be null if the process is not running. In that
+// case, if a running process is required to resolve the input, an error will be thrown.
 Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols* process_symbols,
                       const Frame* frame, const std::string& arg, FileLine* file_line) {
   // One arg = normal location (ParseInputLocation can handle null frames).
@@ -254,16 +292,16 @@ Err ParseListLocation(const TargetSymbols* target_symbols, const ProcessSymbols*
       err.has_error())
     return err;
 
-  // Inlined functions might resolve to many locations, but only one file/line,
-  // or there could be multiple file name matches. Find the unique ones.
+  // Inlined functions might resolve to many locations, but only one file/line, or there could be
+  // multiple file name matches. Find the unique ones.
   std::set<FileLine> matches;
   for (const auto& location : locations) {
     if (location.file_line().is_valid())
       matches.insert(location.file_line());
   }
 
-  // Check for no matches after extracting file/line info in case some matches
-  // lacked file/line information.
+  // Check for no matches after extracting file/line info in case some matches lacked file/line
+  // information.
   if (matches.empty()) {
     if (!locations.empty())
       return Err("The match(es) for this had no line information.");
@@ -302,8 +340,7 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
-  // Decode the location. With no argument it uses the frame, with an argument
-  // no frame is required.
+  // Decode the location. With no argument it uses the frame, with an argument no frame is required.
   FileLine file_line;
   if (cmd.args().empty()) {
     if (!cmd.frame()) {
@@ -311,8 +348,8 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
     }
     file_line = cmd.frame()->GetLocation().file_line();
   } else if (cmd.args().size() == 1) {
-    // Look up some location, depending on the type of input, a running process
-    // may or may not be required.
+    // Look up some location, depending on the type of input, a running process may or may not be
+    // required.
     const ProcessSymbols* process_symbols = nullptr;
     if (cmd.target()->GetProcess())
       process_symbols = cmd.target()->GetProcess()->GetSymbols();
@@ -352,9 +389,9 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
     opts.last_line = file_line.line() + kAfterContext;
   }
 
-  // When there is a current frame (it's executing), mark the current
-  // frame's location so the user can see where things are. This may be
-  // different than the symbol looked up which will be highlighted.
+  // When there is a current frame (it's executing), mark the current frame's location so the user
+  // can see where things are. This may be different than the symbol looked up which will be
+  // highlighted.
   if (cmd.frame()) {
     const FileLine& active_file_line = cmd.frame()->GetLocation().file_line();
     if (active_file_line.file() == file_line.file())
@@ -371,65 +408,144 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// sym-info --------------------------------------------------------------------
+// sym-info ----------------------------------------------------------------------------------------
 
 const char kSymInfoShortHelp[] = "sym-info: Print information about a symbol.";
 const char kSymInfoHelp[] =
-    R"(sym-info
+    R"(sym-info <name>
 
   Displays information about a given named symbol.
 
-  Currently this only shows information for variables (as that might appear in
-  an expression).
-
-  It should be expanded in the future to support global variables and functions
-  as well.
+  It will also show the demangled name if the input is a mangled symbol.
 
 Example
 
   sym-info i
   thread 1 frame 4 sym-info i
 )";
+
 Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
-  if (cmd.args().size() != 1u) {
-    return Err(
-        "sym-info expects exactly one argument that's the name of the "
-        "symbol to look up.");
+  if (cmd.args().empty())
+    return Err("sym-info expects the name of the symbol to look up.");
+
+  // Type names can have spaces in them, so concatenate all args.
+  std::string ident_string = cmd.args()[0];
+  for (size_t i = 1; i < cmd.args().size(); i++) {
+    ident_string += " ";
+    ident_string += cmd.args()[i];
   }
 
   ParsedIdentifier identifier;
-  Err err = ExprParser::ParseIdentifier(cmd.args()[0], &identifier);
+  Err err = ExprParser::ParseIdentifier(ident_string, &identifier);
   if (err.has_error())
     return err;
 
-  if (cmd.frame()) {
-    const Location& location = cmd.frame()->GetLocation();
-    fxl::RefPtr<EvalContext> eval_context = cmd.frame()->GetEvalContext();
-    eval_context->GetNamedValue(identifier,
-                                [location](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
-                                  // Expression evaluation could fail but there still could be a
-                                  // symbol.
-                                  OutputBuffer out;
-                                  if (!symbol) {
-                                    FXL_DCHECK(value.has_error());
-                                    out.Append(value.err());
-                                  } else if (auto variable = symbol->AsVariable()) {
-                                    DumpVariableInfo(location.symbol_context(), variable, &out);
-                                  } else if (auto data_member = symbol->AsDataMember()) {
-                                    DumpDataMemberInfo(data_member, &out);
-                                  } else {
-                                    out.Append("TODO: support this command for non-Variables.");
-                                  }
-                                  Console::get()->Output(out);
-                                });
-    return Err();  // Will complete asynchronously.
+  // See if it looks mangled.
+  OutputBuffer out;
+  std::string full_input = identifier.GetFullNameNoQual();
+  // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
+  // allocation problem.
+  int demangle_status = llvm::demangle_unknown_error;
+  char* demangled_buf =
+      llvm::itaniumDemangle(full_input.c_str(), nullptr, nullptr, &demangle_status);
+  if (demangle_status == llvm::demangle_success && full_input != demangled_buf) {
+    out.Append(Syntax::kHeading, "Demangled name: ");
+
+    // Output the demangled name as a colored identifier if possible.
+    ParsedIdentifier demangled_identifier;
+    err = ExprParser::ParseIdentifier(demangled_buf, &demangled_identifier);
+    if (err.has_error()) {
+      out.Append(demangled_buf);
+    } else {
+      out.Append(FormatIdentifier(demangled_identifier, FormatIdentifierOptions()));
+
+      // Use the demangled name to do the lookup.
+      //
+      // TODO(brettw) this might need to be revisited if the index supports lookup by mangled name.
+      //
+      // TODO(brettw) generally function lookup from this point will fail because our looker-upper
+      // doesn't support function parameters, but the denamgled output will include the parameter
+      // types or at leask "()".
+      identifier = std::move(demangled_identifier);
+    }
+    out.Append("\n\n");
+  }
+  if (demangled_buf)
+    free(demangled_buf);
+
+  FindNameContext find_context;
+  if (cmd.target()->GetProcess()) {
+    // The symbol context parameter is used to prioritize symbols from the current module but since
+    // we query everything, it doesn't matter. FindNameContext will handle a null frame pointer and
+    // just skip local variables in that case.
+    find_context = FindNameContext(cmd.target()->GetProcess()->GetSymbols(),
+                                   SymbolContext::ForRelativeAddresses(),
+                                   cmd.frame()->GetLocation().symbol().Get()->AsCodeBlock());
+  } else {
+    // Non-running process. Can do some lookup for some things.
+    find_context = FindNameContext(cmd.target()->GetSymbols());
   }
 
-  return Err(fxl::StringPrintf("No symbol \"%s\" found in the current context.",
-                               identifier.GetFullName().c_str()));
+  FindNameOptions find_opts(FindNameOptions::kAllKinds);
+
+  std::vector<FoundName> found_items;
+  FindName(find_context, find_opts, identifier, &found_items);
+
+  // Symbol context for the current frame.
+  // TODO(bug 41540) this should be deleted as described below.
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  if (cmd.frame())
+    symbol_context = cmd.frame()->GetLocation().symbol_context();
+
+  bool found_item = false;
+  for (const FoundName& found : found_items) {
+    switch (found.kind()) {
+      case FoundName::kNone:
+        break;
+      case FoundName::kVariable:
+        // This uses the symbol context from the current frame's location. This usually works as
+        // all local variables will necessarily be from the current module. DumpVariableInfo
+        // only needs the symbol context for showing valid code ranges, which globals from other
+        // modules won't have.
+        //
+        // TODO(bug 41540) look up the proper symbol context for the variable symbol object. As
+        // described above this won't change most things, but we might start needing the symbol
+        // context for more stuff, and it's currently very brittle.
+        DumpVariableInfo(symbol_context, found.variable(), &out);
+        found_item = true;
+        break;
+      case FoundName::kMemberVariable:
+        DumpDataMemberInfo(found.member().data_member(), &out);
+        found_item = true;
+        break;
+      case FoundName::kNamespace:
+        // Probably useless to display info on a namespace.
+        break;
+      case FoundName::kTemplate:
+        // TODO(brettw) it would be nice to list all template specializations here.
+        break;
+      case FoundName::kType:
+        DumpTypeInfo(found.type().get(), &out);
+        found_item = true;
+        break;
+      case FoundName::kFunction:
+        DumpFunctionInfo(found.function().get(), &out);
+        found_item = true;
+        break;
+    }
+  }
+
+  if (!found_item) {
+    out.Append("No symbol \"");
+    out.Append(FormatIdentifier(identifier, FormatIdentifierOptions()));
+    out.Append("\" found in the current context.\n");
+  }
+  if (!out.empty())
+    Console::get()->Output(out);
+  return Err();
 }
 
-// sym-stat --------------------------------------------------------------------
+// sym-stat ----------------------------------------------------------------------------------------
 
 const char kSymStatShortHelp[] = "sym-stat: Print process symbol status.";
 const char kSymStatHelp[] =
@@ -569,7 +685,7 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
-// sym-near --------------------------------------------------------------------
+// sym-near ----------------------------------------------------------------------------------------
 
 const char kSymNearShortHelp[] = "sym-near / sn: Print symbol for an address.";
 const char kSymNearHelp[] =
@@ -607,9 +723,8 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
           return;
         }
         if (!weak_process) {
-          // Process has been destroyed during evaluation. Normally a message
-          // will be printed when that happens so we can skip reporting the
-          // error.
+          // Process has been destroyed during evaluation. Normally a message will be printed when
+          // that happens so we can skip reporting the error.
           return;
         }
 
