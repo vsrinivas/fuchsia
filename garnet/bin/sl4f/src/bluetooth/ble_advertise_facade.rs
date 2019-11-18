@@ -3,32 +3,30 @@
 // found in the LICENSE file.
 
 use failure::{bail, Error, ResultExt};
-use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, PeripheralMarker, PeripheralProxy};
+use fidl::endpoints::{create_endpoints, ClientEnd};
+use fidl_fuchsia_bluetooth_le::{
+    AdvertisingHandleMarker, AdvertisingParameters, PeripheralMarker, PeripheralProxy,
+};
 use fuchsia_component as app;
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
 
 // Sl4f-Constants and Ble advertising related functionality
-use crate::bluetooth::constants::DEFAULT_BLE_ADV_INTERVAL_MS;
-use crate::bluetooth::types::BleAdvertiseResponse;
-
 use crate::common_utils::error::Sl4fError;
 
 #[derive(Debug)]
 struct InnerBleAdvertiseFacade {
     /// Advertisement ID of device, only one advertisement at a time.
-    // TODO(NET-1290): Potentially scale up to a list/set of adv_id's for concurrent advertisement
-    // tests.
-    adv_id: Option<String>,
+    // TODO(NET-1290): Potentially scale up to storing multiple AdvertisingHandles. We may want to
+    // generate unique identifiers for each advertisement and to allow RPC clients to manage them.
+    adv_handle: Option<ClientEnd<AdvertisingHandleMarker>>,
 
     ///PeripheralProxy used for Bluetooth Connections
     peripheral: Option<PeripheralProxy>,
 }
 
 /// Starts and stops device BLE advertisement(s).
-//
 /// Note this object is shared among all threads created by server.
-//
 #[derive(Debug)]
 pub struct BleAdvertiseFacade {
     inner: RwLock<InnerBleAdvertiseFacade>,
@@ -37,24 +35,28 @@ pub struct BleAdvertiseFacade {
 impl BleAdvertiseFacade {
     pub fn new() -> BleAdvertiseFacade {
         BleAdvertiseFacade {
-            inner: RwLock::new(InnerBleAdvertiseFacade { adv_id: None, peripheral: None }),
+            inner: RwLock::new(InnerBleAdvertiseFacade { adv_handle: None, peripheral: None }),
         }
     }
 
-    // Set the advertisement ID if none exists already
-    pub fn set_adv_id(&self, adv_id: Option<String>) {
-        self.inner.write().adv_id = adv_id.clone();
-        fx_log_info!(tag: "set_adv_id", "Advertisement ID set to: {:?}", adv_id)
-    }
-
-    pub fn get_adv_id(&self) -> BleAdvertiseResponse {
-        BleAdvertiseResponse::new(self.inner.read().adv_id.clone())
+    // Store a new advertising handle.
+    fn set_adv_handle(&self, adv_handle: Option<ClientEnd<AdvertisingHandleMarker>>) {
+        if adv_handle.is_some() {
+            fx_log_info!(tag: "set_adv_handle", "Assigned new advertising handle");
+        } else {
+            fx_log_info!(tag: "set_adv_handle", "Cleared advertising handle");
+        }
+        self.inner.write().adv_handle = adv_handle;
     }
 
     pub fn print(&self) {
+        let adv_status = match &self.inner.read().adv_handle {
+            Some(_) => "Valid",
+            None => "None",
+        };
         fx_log_info!(tag: "print",
-            "BleAdvertiseFacade: Adv_id: {:?}, Peripheral: {:?}",
-            self.get_adv_id(),
+            "BleAdvertiseFacade: Adv Status: {}, Peripheral: {:?}",
+            adv_status,
             self.get_peripheral_proxy(),
         );
     }
@@ -81,48 +83,21 @@ impl BleAdvertiseFacade {
         self.inner.write().peripheral = new_peripheral
     }
 
-    pub async fn start_adv(
-        &self,
-        adv_data: Option<AdvertisingDataDeprecated>,
-        interval: Option<u32>,
-        connectable: bool,
-    ) -> Result<(), Error> {
-        // Default interval (ms) to 1 second
-        let intv: u32 = interval.unwrap_or(DEFAULT_BLE_ADV_INTERVAL_MS);
-
-        let mut ad = match adv_data {
-            Some(ad) => ad,
-            None => AdvertisingDataDeprecated {
-                name: None,
-                tx_power_level: None,
-                appearance: None,
-                service_uuids: None,
-                service_data: None,
-                manufacturer_specific_data: None,
-                solicited_service_uuids: None,
-                uris: None,
-            },
-        };
-
+    pub async fn start_adv(&self, parameters: AdvertisingParameters) -> Result<(), Error> {
         // Create peripheral proxy if necessary
         self.set_peripheral_proxy();
         let periph = &self.inner.read().peripheral.clone();
         match &periph {
             Some(p) => {
-                let (status, adv_id) =
-                    p.start_advertising_deprecated(&mut ad, None, connectable, intv, false).await?;
-                match status.error {
-                    None => {
-                        fx_log_info!(tag: "start_adv", "Started advertising id: {:?}", adv_id);
-                        self.set_adv_id(adv_id.clone());
-                        Ok(())
-                    }
-                    Some(e) => {
-                        let err = Sl4fError::from(*e);
-                        fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
-                        Err(err.into())
-                    }
+                let (handle, handle_remote) = create_endpoints::<AdvertisingHandleMarker>()?;
+                let result = p.start_advertising(parameters, handle_remote).await?;
+                if let Err(err) = result {
+                    fx_log_err!(tag: "start_adv", "Failed to start adveritising: {:?}", err);
+                    return Err(Sl4fError::new(&format!("{:?}", err)).into());
                 }
+                fx_log_info!(tag: "start_adv", "Started advertising");
+                self.set_adv_handle(Some(handle));
+                Ok(())
             }
             None => {
                 fx_log_err!(tag: "start_adv", "No peripheral created.");
@@ -131,29 +106,17 @@ impl BleAdvertiseFacade {
         }
     }
 
-    pub async fn stop_adv(&self, adv_id: String) -> Result<(), Error> {
-        fx_log_info!(tag: "stop_adv", "stop_adv with adv_id: {:?}", adv_id);
-
-        let periph = &self.inner.read().peripheral.clone();
-        match &periph {
-            Some(p) => {
-                p.stop_advertising_deprecated(&adv_id).await?;
-                self.set_adv_id(None);
-                Ok(())
-            }
-            None => {
-                fx_log_err!(tag: "stop_adv", "No peripheral proxy created!");
-                bail!("No peripheral proxy created.")
-            }
-        }
+    pub fn stop_adv(&self) {
+        fx_log_info!(tag: "stop_adv", "Stop advertising");
+        self.set_adv_handle(None);
     }
 
     pub fn get_peripheral_proxy(&self) -> Option<PeripheralProxy> {
         self.inner.read().peripheral.clone()
     }
 
-    pub fn cleanup_adv_id(&self) {
-        self.inner.write().adv_id = None
+    pub fn cleanup_advertisements(&self) {
+        self.set_adv_handle(None);
     }
 
     // Close peripheral proxy
@@ -163,7 +126,7 @@ impl BleAdvertiseFacade {
 
     // Close both central and peripheral proxies
     pub fn cleanup(&self) {
-        self.cleanup_adv_id();
+        self.cleanup_advertisements();
         self.cleanup_peripheral_proxy();
     }
 }

@@ -4,7 +4,7 @@
 
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
-use fidl_fuchsia_bluetooth_le::{AdvertisingDataDeprecated, ScanFilter};
+use fidl_fuchsia_bluetooth_le::{AdvertisingData, AdvertisingParameters, ScanFilter};
 use fuchsia_syslog::macros::*;
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
@@ -18,7 +18,8 @@ use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 use crate::bluetooth::types::{
-    BleConnectPeripheralResponse, BluetoothMethod, GattcDiscoverCharacteristicResponse,
+    BleAdvertiseResponse, BleConnectPeripheralResponse, BluetoothMethod,
+    GattcDiscoverCharacteristicResponse,
 };
 
 use crate::common_utils::common::{
@@ -30,42 +31,37 @@ use crate::common_utils::common::macros::parse_arg;
 
 // Takes a serde_json::Value and converts it to arguments required for
 // a FIDL ble_advertise command
-fn ble_advertise_args_to_fidl(
-    args_raw: Value,
-) -> Result<(Option<AdvertisingDataDeprecated>, Option<u32>, bool), Error> {
+fn ble_advertise_args_to_fidl(args_raw: Value) -> Result<AdvertisingParameters, Error> {
     let adv_data_raw = match args_raw.get("advertising_data") {
         Some(adr) => adr.clone(),
         None => bail!("Advertising data missing."),
-    };
-
-    let interval_raw = match args_raw.get("interval_ms") {
-        Some(ir) => ir.clone(),
-        None => bail!("Interval_ms missing."),
     };
 
     let conn_raw = args_raw.get("connectable").ok_or(format_err!("Connectable missing"))?;
 
     // Unpack the name for advertising data, as well as interval of advertising
     let name: Option<String> = adv_data_raw["name"].as_str().map(String::from);
-    let interval: Option<u32> = interval_raw.as_u64().map(|i| i as u32);
     let connectable: bool = conn_raw.as_bool().unwrap_or(false);
 
     // TODO(NET-1026): Is there a better way to unpack the args into an AdvData
     // struct? Unfortunately, can't derive deserialize for AdvData
-    let ad = Some(AdvertisingDataDeprecated {
-        name: name,
-        tx_power_level: None,
-        appearance: None,
-        service_uuids: None,
-        service_data: None,
-        manufacturer_specific_data: None,
-        solicited_service_uuids: None,
-        uris: None,
-    });
+    let parameters = AdvertisingParameters {
+        data: Some(AdvertisingData {
+            name,
+            appearance: None,
+            tx_power_level: None,
+            service_uuids: None,
+            service_data: None,
+            manufacturer_data: None,
+            uris: None,
+        }),
+        scan_response: None,
+        mode_hint: None,
+        connectable: Some(connectable),
+    };
 
-    fx_log_info!(tag: "ble_advertise_args_to_fidl", "AdvData: {:?}", ad);
-
-    Ok((ad, interval, connectable))
+    fx_log_info!(tag: "ble_advertise_args_to_fidl", "advertising parameters: {:?}", parameters);
+    Ok(parameters)
 }
 
 // Takes a serde_json::Value and converts it to arguments required for a FIDL
@@ -91,21 +87,6 @@ fn ble_scan_to_fidl(args_raw: Value) -> Result<Option<ScanFilter>, Error> {
     Ok(filter)
 }
 
-// Takes a serde_json::Value and converts it to arguments required for a FIDL
-// stop_advertising command. For stop advertise, no arguments are sent, rather
-// uses current advertisement id (if it exists)
-fn ble_stop_advertise_args_to_fidl(
-    _args_raw: Value,
-    facade: &BleAdvertiseFacade,
-) -> Result<String, Error> {
-    let adv_id = facade.get_adv_id().clone();
-
-    match adv_id.name {
-        Some(aid) => Ok(aid.to_string()),
-        None => bail!("No advertisement id outstanding."),
-    }
-}
-
 fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String), Error> {
     let id = parse_arg!(args_raw, as_u64, "id")?;
     let primary = parse_arg!(args_raw, as_bool, "primary")?;
@@ -129,16 +110,19 @@ pub async fn ble_advertise_method_to_fidl(
     args: Value,
     facade: Arc<BleAdvertiseFacade>,
 ) -> Result<Value, Error> {
+    // TODO(armansito): Once the facade supports multi-advertising it should generate and
+    // return a unique ID for each instance. For now we return this dummy ID for the
+    // singleton advertisement.
+    let id = to_value(BleAdvertiseResponse::new(Some("singleton-instance".to_string())))?;
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::BleAdvertise => {
-            let (ad, interval, connectable) = ble_advertise_args_to_fidl(args)?;
-            facade.start_adv(ad, interval, connectable).await?;
-            Ok(to_value(facade.get_adv_id())?)
+            let params = ble_advertise_args_to_fidl(args)?;
+            facade.start_adv(params).await?;
+            Ok(id)
         }
         BluetoothMethod::BleStopAdvertise => {
-            let advertisement_id = ble_stop_advertise_args_to_fidl(args, &facade)?;
-            facade.stop_adv(advertisement_id).await?;
-            Ok(to_value(facade.get_adv_id())?)
+            facade.stop_adv();
+            Ok(id)
         }
         _ => bail!("Invalid BleAdvertise FIDL method: {:?}", method_name),
     }
