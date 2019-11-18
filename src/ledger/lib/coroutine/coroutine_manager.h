@@ -11,6 +11,8 @@
 #include <list>
 #include <queue>
 #include <stack>
+#include <tuple>
+#include <type_traits>
 
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/destruction_sentinel.h"
@@ -43,11 +45,11 @@ class CoroutineManager {
   // unregistered from the manager object and |callback| is called with the same
   // arguments unless the manager is shutting down. It is an error to exit the
   // coroutine without calling |runnable|'s callback.
-  template <typename Callback, typename Runnable>
+  template <
+      typename Callback, typename Runnable,
+      std::enable_if_t<
+          std::negation<typename std::is_invocable<Runnable, CoroutineHandler*>>::value, int> = 0>
   void StartCoroutine(Callback callback, Runnable runnable) {
-    if (disabled_) {
-      return;
-    }
     StartOrEnqueueCoroutine([this, callback = std::move(callback),
                              runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
       bool callback_called = false;
@@ -75,13 +77,38 @@ class CoroutineManager {
   // Starts a managed coroutine. This coroutine will be automatically
   // interrupted if this |CoroutineManager| object is destroyed.
   //
+  // |callback| must be a callable object
+  // |runnable| must be a callable object with the following signature:
+  //   std::tuple<Args...>(CoroutineHandler*)
+  // which can be simplified to:
+  //    Arg(CoroutineHandler*)
+  // when callback takes a single argument.
+  // When |runnable| returns, the coroutine is unregistered from the manager
+  // object and |callback| is called with the return value of |runnable| unless
+  // the manager is shutting down.
+  template <typename Callback, typename Runnable,
+            std::enable_if_t<std::is_invocable<Runnable, CoroutineHandler*>::value, int> = 0>
+  void StartCoroutine(Callback callback, Runnable runnable) {
+    StartOrEnqueueCoroutine([this, callback = std::move(callback),
+                             runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
+      auto iter = handlers_.insert(handlers_.cend(), handler);
+      auto result = runnable(handler);
+      // `runnable` is not allowed to delete the coroutine manager that executes it, so
+      // handlers_ is safe to access.
+      handlers_.erase(iter);
+      if (!disabled_) {
+        std::apply(callback, TupleAdapter<decltype(result)>::Build(std::move(result)));
+      }
+    });
+  }
+
+  // Starts a managed coroutine. This coroutine will be automatically
+  // interrupted if this |CoroutineManager| object is destroyed.
+  //
   // |runnable| must be a callable object with the following signature:
   //   void(CoroutineHandler*)
   template <typename Runnable>
   void StartCoroutine(Runnable runnable) {
-    if (disabled_) {
-      return;
-    }
     StartOrEnqueueCoroutine(
         [this, runnable = std::move(runnable)](CoroutineHandler* handler) mutable {
           auto iter = handlers_.insert(handlers_.cend(), handler);
@@ -108,6 +135,9 @@ class CoroutineManager {
   // concurrently running tasks.
   // - otherwise, enqueue it to be run once a task completes.
   void StartOrEnqueueCoroutine(fit::function<void(CoroutineHandler*)> to_run) {
+    if (disabled_) {
+      return;
+    }
     pending_tasks_.push(std::move(to_run));
     if (max_coroutines_ == 0 || handlers_.size() < max_coroutines_) {
       service_->StartCoroutine([this](CoroutineHandler* handler) { RunPending(handler); });
@@ -140,6 +170,20 @@ class CoroutineManager {
   }
 
  private:
+  // Tuple Adapter allows to convert a single return value into a 1 element
+  // tuple to pass to std::apply.
+  template <typename T>
+  class TupleAdapter {
+   public:
+    static std::tuple<T> Build(T&& arg) { return std::make_tuple(std::forward<T>(arg)); }
+  };
+
+  template <typename... T>
+  class TupleAdapter<std::tuple<T...>> {
+   public:
+    static std::tuple<T...> Build(std::tuple<T...> arg) { return arg; }
+  };
+
   // Maximum number of tasks to execute concurrently. If 0, unlimited.
   const size_t max_coroutines_;
   // Set to true when this manager is being destructed.

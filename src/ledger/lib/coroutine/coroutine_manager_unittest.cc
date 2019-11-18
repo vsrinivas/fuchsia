@@ -404,5 +404,32 @@ TEST(CoroutineManagerTest, MultipleCoroutinesInterrupted) {
   EXPECT_TRUE(called_2);
 }
 
+TEST_P(CoroutineManagerTest, UseSynchronousCoroutineHandlerWithOneArgument) {
+  CoroutineServiceImpl coroutine_service;
+  CoroutineManager manager(&coroutine_service, GetParam());
+
+  bool called = false;
+  int value;
+  manager.StartCoroutine(callback::Capture(callback::SetWhenCalled(&called), &value),
+                         [](CoroutineHandler* current_handler) { return 1; });
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(value, 1);
+}
+
+TEST_P(CoroutineManagerTest, UseSynchronousCoroutineHandlerWithTwoArguments) {
+  CoroutineServiceImpl coroutine_service;
+  CoroutineManager manager(&coroutine_service, GetParam());
+
+  bool called = false;
+  int value1, value2;
+  manager.StartCoroutine(callback::Capture(callback::SetWhenCalled(&called), &value1, &value2),
+                         [](CoroutineHandler* current_handler) { return std::make_tuple(1, 2); });
+
+  EXPECT_TRUE(called);
+  EXPECT_EQ(value1, 1);
+  EXPECT_EQ(value2, 2);
+}
+
 }  // namespace
 }  // namespace coroutine

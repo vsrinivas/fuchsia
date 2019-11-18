@@ -101,14 +101,13 @@ void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage:
                                            fit::function<void(Status, PageWasEvicted)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(), condition](
-          coroutine::CoroutineHandler* handler,
-          fit::function<void(Status, PageWasEvicted)> callback) mutable {
+      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
+       condition](coroutine::CoroutineHandler* handler) mutable {
         ExpiringToken token = token_manager_.CreateToken();
         PageWasEvicted was_evicted;
         Status status =
             SynchronousTryEvictPage(handler, ledger_name, page_id, condition, &was_evicted);
-        callback(status, was_evicted);
+        return std::make_tuple(status, was_evicted);
       });
 }
 

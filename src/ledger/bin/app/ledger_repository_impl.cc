@@ -157,28 +157,23 @@ void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
   }
   FXL_DCHECK(ledger_manager);
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, page_id, ledger_manager](coroutine::CoroutineHandler* handler,
-                                                           fit::function<void(Status)> callback) {
+      std::move(callback), [this, page_id, ledger_manager](coroutine::CoroutineHandler* handler) {
         // We need to increase the DeviceId counter each time a page is created then destroyed.
         // There is no correctness issue with increasing this counter too much. Thus, we increase
         // the counter each time a page is evicted/deleted locally. We have to do it before the page
         // is actually deleted otherwise we risk being interrupted in the middle and not actually
         // increase the counter.
-        Status status = device_id_manager_->OnPageDeleted(handler);
-        if (status != Status::OK) {
-          callback(status);
-          return;
-        }
+        RETURN_ON_ERROR(device_id_manager_->OnPageDeleted(handler));
+        Status status;
         if (coroutine::SyncCall(
                 handler,
                 [ledger_manager, page_id](fit::function<void(Status)> sync_callback) {
                   ledger_manager->DeletePageStorage(page_id, std::move(sync_callback));
                 },
                 &status) != coroutine::ContinuationStatus::OK) {
-          callback(Status::INTERRUPTED);
-          return;
+          return Status::INTERRUPTED;
         }
-        callback(status);
+        return status;
       });
 }
 
