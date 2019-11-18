@@ -14,6 +14,8 @@
 
 namespace fidl {
 
+const fidl_type_t get_alt_type(const fidl_type_t* type);
+
 // A FIDL message.
 //
 // A FIDL message has two parts: the bytes and the handles. The bytes are
