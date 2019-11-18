@@ -101,6 +101,21 @@ bool Watchpoint::Installed(zx_koid_t thread_koid) const {
   return installed_threads_.count(thread_koid) > 0;
 }
 
+bool Watchpoint::MatchesException(zx_koid_t thread_koid, uint64_t watchpoint_address, int slot) {
+  for (auto& [tid, installation] : installed_threads_) {
+    if (tid != thread_koid)
+      continue;
+
+    if (installation.slot != slot)
+      continue;
+
+    if (installation.installed_range.InRange(watchpoint_address))
+      return true;
+  }
+
+  return false;
+}
+
 // ProcessBreakpoint Implementation ----------------------------------------------------------------
 
 void Watchpoint::ExecuteStepOver(DebuggedThread* thread) {

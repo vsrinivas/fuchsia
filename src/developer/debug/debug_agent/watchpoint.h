@@ -25,6 +25,8 @@ class Watchpoint : public ProcessBreakpoint {
   debug_ipc::BreakpointType Type() const override { return debug_ipc::BreakpointType::kWatchpoint; }
   bool Installed(zx_koid_t thread_koid) const override;
 
+  bool MatchesException(zx_koid_t thread_koid, uint64_t watchpoint_address, int slot);
+
   zx_status_t Update() override;
 
   // Public ProcessBreakpoint overrides. See ProcessBreakpoint for more details.
