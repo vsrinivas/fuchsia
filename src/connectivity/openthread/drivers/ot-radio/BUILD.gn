@@ -16,6 +16,7 @@ driver_module("ot-radio") {
   deps = [
     "//src/devices:driver",
     "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
     "//zircon/public/lib/driver-unit-test",

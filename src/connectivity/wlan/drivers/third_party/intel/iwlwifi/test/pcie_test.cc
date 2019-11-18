@@ -301,7 +301,7 @@ class TxTest : public PcieTest {
     base_params_.max_tfd_queue_size = 256;
     trans_pcie_->tfd_size = sizeof(struct iwl_tfh_tfd);
 
-    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToThread, &trans_->loop));
+    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
     ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
   }
 
@@ -475,7 +475,7 @@ TEST_F(TxTest, SyncHostCommandEmpty) {
 class StuckTimerTest : public PcieTest {
  public:
   StuckTimerTest() {
-    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToThread, &trans_->loop));
+    ASSERT_OK(async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &trans_->loop));
     ASSERT_OK(async_loop_start_thread(trans_->loop, "iwlwifi-test-worker", NULL));
 
     mtx_init(&txq_.lock, mtx_plain);

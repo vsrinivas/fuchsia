@@ -4,6 +4,7 @@
 
 #include "ot_radio.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/driver-unit-test/utils.h>
 #include <stdio.h>
@@ -44,7 +45,7 @@ enum {
 
 OtRadioDevice::OtRadioDevice(zx_device_t* device)
     : ddk::Device<OtRadioDevice, ddk::UnbindableNew>(device),
-      loop_(&kAsyncLoopConfigNoAttachToThread) {}
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
 
 zx_status_t OtRadioDevice::StartLoopThread() {
   zxlogf(TRACE, "Start loop thread\n");

@@ -1104,7 +1104,7 @@ static zx_status_t iwl_pci_bind(void* ctx, zx_device_t* dev) {
     return status;
   }
 
-  status = async_loop_create(&kAsyncLoopConfigNoAttachToThread, &iwl_trans->loop);
+  status = async_loop_create(&kAsyncLoopConfigNoAttachToCurrentThread, &iwl_trans->loop);
   if (status != ZX_OK) {
     IWL_ERR(iwl_trans, "Failed to create async loop: %s\n", zx_status_get_string(status));
     goto fail_remove_device;

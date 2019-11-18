@@ -6,6 +6,7 @@
 
 #include <fuchsia/net/ppp/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl/llcpp/vector_view.h>
 #include <lib/fit/function.h>
 #include <lib/fit/result.h>
@@ -133,7 +134,7 @@ class SerialPpp final : public DeviceType, public ddk::EmptyProtocol<ZX_PROTOCOL
   std::atomic_bool enabled_ = false;
 
   std::thread rx_thread_;
-  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop_ = async::Loop(&kAsyncLoopConfigNoAttachToCurrentThread);
 
   fit::callback<void(fit::result<Frame, zx_status_t>)> ipv4_callback_;
   fit::callback<void(fit::result<Frame, zx_status_t>)> ipv6_callback_;
