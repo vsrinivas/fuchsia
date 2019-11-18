@@ -74,4 +74,10 @@ func TestGetSourceLink(t *testing.T) {
 	if expected != actual {
 		t.Fatalf("In TestNewSourceMap, expected \n%s but got \n%s", expected, actual)
 	}
+
+	expected = ""
+	actual = sourceMap.GetSourceLink("/home/user/fuchsia/out/default.zircon/args.gn", 5)
+	if expected != actual {
+		t.Fatalf("In TestNewSourceMap, expected \n%s but got \n%s", expected, actual)
+	}
 }

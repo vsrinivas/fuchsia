@@ -53,7 +53,7 @@ func (s SourceMap) GetSourceLink(file string, line int) string {
 			break
 		}
 		project = filepath.Dir(project)
-		if project == "." {
+		if project == "." || project == "/" || project == "" {
 			return ""
 		}
 	}
