@@ -77,13 +77,13 @@ class RouteGraph {
 
   // Adds an |AudioCapturer| to the route graph which will receive the output mixed for the most
   // recently added output device.
-  void AddLoopbackCapturer(fbl::RefPtr<AudioObject> capturer);
+  void AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer);
 
   // Sets the routing profile with which the route graph selects |AudioOutput|s for the
   // loopback |AudioCapturer|.
-  void SetLoopbackCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile);
+  void SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capturer, RoutingProfile profile);
 
-  void RemoveLoopbackCapturer(AudioObject* capturer);
+  void RemoveLoopbackCapturer(AudioObject* loopback_capturer);
 
  private:
   struct RoutableOwnedObject {
