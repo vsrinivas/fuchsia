@@ -728,6 +728,35 @@ static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint16_t>());
 static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint32_t>());
 static_assert(TestSaturatingFixedPointArithmeticVaryRightHand<uint64_t>());
 
+static_assert(Fixed<int, 0>{1} > Fixed<int, 1>::FromRaw(0));
+static_assert(Fixed<int, 0>{1} > Fixed<int, 1>::FromRaw(1));
+static_assert(Fixed<int, 0>{1} > Fixed<int, 2>::FromRaw(1));
+static_assert(Fixed<int, 0>{1} > Fixed<int, 2>::FromRaw(2));
+
+static_assert(Fixed<int, 1>::FromRaw(0) < Fixed<int, 0>{1});
+static_assert(Fixed<int, 1>::FromRaw(1) < Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(1) < Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(2) < Fixed<int, 0>{1});
+
+// Round half-to-even.
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(3));
+static_assert(Fixed<int, 2>::FromRaw(3) == Fixed<int, 0>{1});
+
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(4));
+static_assert(Fixed<int, 0>{1} == Fixed<int, 2>::FromRaw(5));
+
+static_assert(Fixed<int, 2>::FromRaw(4) == Fixed<int, 0>{1});
+static_assert(Fixed<int, 2>::FromRaw(5) == Fixed<int, 0>{1});
+
+#if 0 || TEST_DOES_NOT_COMPILE
+static_assert(Fixed<int, 2>{1} == Fixed<unsigned, 2>{1});
+static_assert(Fixed<unsigned, 2>{1} == Fixed<int, 2>{1});
+#endif
+
+// Test explicit conversion to like signs.
+static_assert(Fixed<int, 2>{Fixed<unsigned, 2>{1}} == Fixed<int, 2>{1});
+static_assert(Fixed<int, 2>{1} == Fixed<int, 2>{Fixed<unsigned, 2>{1}});
+
 static_assert(1 == Fixed<int, 0>{1}.Ceiling());
 static_assert(1 == Fixed<int, 1>{FromRatio(1, 2)}.Ceiling());
 static_assert(1 == Fixed<int, 2>{FromRatio(1, 2)}.Ceiling());

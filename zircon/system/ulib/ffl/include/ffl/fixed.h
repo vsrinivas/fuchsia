@@ -45,11 +45,16 @@ class Fixed {
   // on the fixed-point representation of this type.
   using Format = FixedFormat<Integer, FractionalBits>;
 
+  // Returns the given raw integer as a fixed-point value in this format.
+  static constexpr Fixed FromRaw(Integer value) {
+    return ValueExpression<Integer, FractionalBits>{value};
+  }
+
   // Returns the minimum value of this fixed point format.
-  static constexpr Fixed Min() { return ValueExpression<Integer, FractionalBits>{Format::Min}; }
+  static constexpr Fixed Min() { return FromRaw(Format::Min); }
 
   // Returns the maximum value of this fixed point format.
-  static constexpr Fixed Max() { return ValueExpression<Integer, FractionalBits>{Format::Max}; }
+  static constexpr Fixed Max() { return FromRaw(Format::Max); }
 
   // Fixed is default constructible without a default value, which is the same
   // as for plain integer types. This is permitted in constexpr contexts as

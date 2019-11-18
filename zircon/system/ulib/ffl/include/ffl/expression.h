@@ -395,14 +395,16 @@ struct ComparisonTraits : std::false_type {};
 // the format with the least resolution before comparison.
 template <typename LeftInteger, size_t LeftFractionalBits, typename RightInteger,
           size_t RightFractionalBits>
-struct ComparisonTraits<Fixed<LeftInteger, LeftFractionalBits>,
-                        Fixed<RightInteger, RightFractionalBits>> : std::true_type {
+struct ComparisonTraits<
+    Fixed<LeftInteger, LeftFractionalBits>, Fixed<RightInteger, RightFractionalBits>,
+    std::enable_if_t<std::is_signed_v<LeftInteger> == std::is_signed_v<RightInteger>>>
+    : std::true_type {
   static constexpr auto Left(Fixed<LeftInteger, LeftFractionalBits> value) {
     if constexpr (LeftFractionalBits <= RightFractionalBits) {
       return value;
     } else {
-      using Format = typename Fixed<RightInteger, RightFractionalBits>::Format;
-      return Format::Convert(value.value());
+      using TargetType = Fixed<RightInteger, RightFractionalBits>;
+      return TargetType{TargetType::Format::Convert(value.value())};
     }
   }
 
@@ -410,8 +412,8 @@ struct ComparisonTraits<Fixed<LeftInteger, LeftFractionalBits>,
     if constexpr (LeftFractionalBits >= RightFractionalBits) {
       return value;
     } else {
-      using Format = typename Fixed<LeftInteger, LeftFractionalBits>::Format;
-      return Format::Convert(value.value());
+      using TargetType = Fixed<LeftInteger, LeftFractionalBits>;
+      return TargetType{TargetType::Format::Convert(value.value())};
     }
   }
 };
