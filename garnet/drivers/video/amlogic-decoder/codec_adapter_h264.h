@@ -5,6 +5,7 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_CODEC_ADAPTER_H264_H_
 
+#include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/media/codec_impl/codec_adapter.h>
@@ -26,8 +27,9 @@ class CodecAdapterH264 : public CodecAdapter {
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
   zx::unowned_bti CoreCodecBti() override;
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
-                     bool is_secure_output) override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  void CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
       const fuchsia::media::FormatDetails& per_stream_override_format_details) override;
@@ -85,14 +87,20 @@ class CodecAdapterH264 : public CodecAdapter {
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();
 
+  bool IsPortSecureRequired(CodecPort port);
+  bool IsPortSecurePermitted(CodecPort port);
+  bool IsPortSecure(CodecPort port);
+  bool IsOutputSecure();
+
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
+
+  fuchsia::mediacodec::SecureMemoryMode secure_memory_mode_[kPortCount] = {};
 
   fuchsia::media::FormatDetails initial_input_format_details_;
   fuchsia::media::FormatDetails latest_input_format_details_;
 
-  fuchsia::sysmem::SingleBufferSettings input_buffer_settings_;
-  bool is_secure_output_ = false;
+  std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting

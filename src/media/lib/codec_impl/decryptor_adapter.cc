@@ -70,7 +70,15 @@ constexpr uint32_t kOutputDefaultPerPacketBufferBytes = kOutputPerPacketBufferBy
 DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                                    bool secure_mode)
     : CodecAdapter(lock, codec_adapter_events),
-      secure_mode_(secure_mode),
+      input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+  ZX_DEBUG_ASSERT(codec_adapter_events);
+  // TODO(dustingreen): This constructor is deprecated.  For now, secure_mode is ignored, since the
+  // call to CoreCodecSetSecureMemoryMode() would override anyway.
+  (void)secure_mode;
+}
+
+DecryptorAdapter::DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
+    : CodecAdapter(lock, codec_adapter_events),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
@@ -85,13 +93,31 @@ bool DecryptorAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) {
 bool DecryptorAdapter::IsCoreCodecHwBased() { return false; }
 
 void DecryptorAdapter::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
       "DecryptorAdapter::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
     events_->onCoreCodecFailCodec(
         "In DecryptorAdapter::CoreCodecInit(), StartThread() failed (input)");
     return;
+  }
+}
+
+void DecryptorAdapter::CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  if (port == kInputPort) {
+    if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF) {
+      events_->onCoreCodecFailCodec("Decryptors don't do secure input.");
+      return;
+    }
+    // Ignore OFF for input; that's what the code assumes elsewhere.
+  } else {
+    ZX_DEBUG_ASSERT(port == kOutputPort);
+    if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF &&
+        secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::ON) {
+      events_->onCoreCodecFailCodec("Unexpected output SecureMemoryMode (maybe DYNAMIC?)");
+    }
+    secure_mode_ = (secure_memory_mode == fuchsia::mediacodec::SecureMemoryMode::ON);
   }
 }
 

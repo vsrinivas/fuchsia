@@ -71,6 +71,18 @@ CodecAdapter::~CodecAdapter() {
   // nothing to do here
 }
 
+void CodecAdapter::CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF) {
+    events_->onCoreCodecFailCodec(
+        "In CodecAdapter::CoreCodecSetSecureMemoryMode(), secure_memory_mode != OFF");
+    return;
+  }
+  // CodecImpl will enforce that BufferCollection constraints and BufferCollectionInfo_2 are
+  // consistent with OFF.
+  return;
+}
+
 std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
 CodecAdapter::CoreCodecBuildNewInputConstraints() {
   auto constraints = std::make_unique<fuchsia::media::StreamBufferConstraints>();

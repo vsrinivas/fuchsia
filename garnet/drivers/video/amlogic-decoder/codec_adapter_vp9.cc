@@ -123,7 +123,7 @@ bool CodecAdapterVp9::IsCoreCodecMappedBufferUseful(CodecPort port) {
 bool CodecAdapterVp9::IsCoreCodecHwBased() { return true; }
 
 void CodecAdapterVp9::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterVp9::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {

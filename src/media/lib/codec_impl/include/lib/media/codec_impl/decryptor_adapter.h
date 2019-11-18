@@ -20,8 +20,10 @@
 
 class DecryptorAdapter : public CodecAdapter {
  public:
+  // TODO(dustingreen): Switch to constructor without secure_mode (soft transition).
   explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
                             bool secure_mode);
+  explicit DecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events);
   ~DecryptorAdapter() = default;
 
   // CodecAdapter implementations
@@ -29,8 +31,9 @@ class DecryptorAdapter : public CodecAdapter {
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
   bool IsCoreCodecHwBased() override;
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
-                     bool is_secure_output) override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  void CoreCodecSetSecureMemoryMode(
+      CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;

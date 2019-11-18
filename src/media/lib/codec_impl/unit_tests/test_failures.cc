@@ -47,6 +47,9 @@ auto CreateValidInputBufferCollectionConstraints() {
   fuchsia::sysmem::BufferCollectionConstraints result;
   result.usage.cpu = fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften;
   result.min_buffer_count_for_camping = kInputMinBufferCountForCamping;
+  // Must specify true here, as enforced by CodecImpl.  Leaving all
+  // buffer_memory_constraints fields default is fine.
+  result.has_buffer_memory_constraints = true;
   return result;
 }
 
@@ -174,7 +177,10 @@ class TestAllocator : public fuchsia::sysmem::testing::Allocator_TestBase {
     collection_.Bind(std::move(buffer_collection_request));
   }
 
-  void NotImplemented_(const std::string& name) override {}
+  void NotImplemented_(const std::string& name) override {
+    // Unexpected.
+    ZX_PANIC("NotImplemented_(): %s\n", name.c_str());
+  }
 
   TestBufferCollection& collection() { return collection_; }
 

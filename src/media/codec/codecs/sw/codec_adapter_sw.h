@@ -54,8 +54,7 @@ class CodecAdapterSW : public CodecAdapter {
 
   bool IsCoreCodecHwBased() override { return false; }
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
-                     bool is_secure_output) override {
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override {
     if (!initial_input_format_details.has_format_details_version_ordinal()) {
       events_->onCoreCodecFailCodec(
           "CoreCodecInit(): Initial input format details missing version "

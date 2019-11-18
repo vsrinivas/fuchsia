@@ -219,8 +219,11 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
   PostToStreamControl([this] {
     // This is allowed to take a little while if necessary, using the current
     // StreamControl thread, which is not shared with any other CodecImpl.
-    CoreCodecInit(*initial_input_format_details_, IsSecureOutput());
+    CoreCodecInit(*initial_input_format_details_);
     is_core_codec_init_called_ = true;
+
+    CoreCodecSetSecureMemoryMode(kOutputPort, PortSecureMemoryMode(kOutputPort));
+    CoreCodecSetSecureMemoryMode(kInputPort, PortSecureMemoryMode(kInputPort));
 
     // We touch FIDL stuff only from the fidl_thread().  While it would
     // be more efficient to post once to bind and send up to two messages below,
@@ -1346,32 +1349,53 @@ void CodecImpl::EnsureUnbindCompleted() {
   shared_fidl_queue_.StopAndClear();
 }
 
-bool CodecImpl::IsSecureOutput() {
+fuchsia::mediacodec::SecureMemoryMode CodecImpl::OutputSecureMemoryMode() {
   if (!IsDecoder() && !IsDecryptor()) {
-    return false;
+    return fuchsia::mediacodec::SecureMemoryMode::OFF;
   }
   if (IsDecoder()) {
     if (!decoder_params().has_secure_output_mode()) {
-      return false;
+      return fuchsia::mediacodec::SecureMemoryMode::OFF;
     }
-    return decoder_params().secure_output_mode() == fuchsia::mediacodec::SecureMemoryMode::ON;
+    return decoder_params().secure_output_mode();
   } else {
     ZX_DEBUG_ASSERT(IsDecryptor());
     if (!decryptor_params().has_require_secure_mode()) {
-      return false;
+      return fuchsia::mediacodec::SecureMemoryMode::OFF;
     }
-    return decryptor_params().require_secure_mode();
+    return decryptor_params().require_secure_mode() ?
+        fuchsia::mediacodec::SecureMemoryMode::ON :
+        fuchsia::mediacodec::SecureMemoryMode::OFF;
   }
 }
 
-bool CodecImpl::IsSecureInput() {
+fuchsia::mediacodec::SecureMemoryMode CodecImpl::InputSecureMemoryMode() {
   if (!IsDecoder()) {
-    return false;
+    return fuchsia::mediacodec::SecureMemoryMode::OFF;
   }
   if (!decoder_params().has_secure_input_mode()) {
-    return false;
+    return fuchsia::mediacodec::SecureMemoryMode::OFF;
   }
-  return decoder_params().secure_input_mode() == fuchsia::mediacodec::SecureMemoryMode::ON;
+  return decoder_params().secure_input_mode();
+}
+
+fuchsia::mediacodec::SecureMemoryMode CodecImpl::PortSecureMemoryMode(CodecPort port) {
+  if (port == kOutputPort) {
+    return OutputSecureMemoryMode();
+  } else {
+    ZX_DEBUG_ASSERT(port == kInputPort);
+    return InputSecureMemoryMode();
+  }
+}
+
+bool CodecImpl::IsPortSecureRequired(CodecPort port) {
+  // Return false for DYNAMIC, if/when we add that.
+  return PortSecureMemoryMode(port) == fuchsia::mediacodec::SecureMemoryMode::ON;
+}
+
+bool CodecImpl::IsPortSecurePermitted(CodecPort port) {
+  // Return true for DYNAMIC, if/when we add that.
+  return PortSecureMemoryMode(port) != fuchsia::mediacodec::SecureMemoryMode::OFF;
 }
 
 bool CodecImpl::IsStreamActiveLocked() {
@@ -1728,10 +1752,6 @@ void CodecImpl::OnBufferCollectionInfoInternal(
   ZX_DEBUG_ASSERT(buffer_count == buffer_collection_info.buffers.size() ||
                   !buffer_collection_info.buffers[buffer_count].vmo.is_valid());
 
-  if (port == kOutputPort && IsSecureOutput()) {
-    ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_secure);
-  }
-
   // Let's move the VMO handles out first, so that the BufferCollectionInfo_2 we
   // send to the core codec doesn't have the VMO handles.  We want the core
   // codec to get its VMO handles via the CodecBuffer*(s) we'll provide shortly
@@ -1761,17 +1781,17 @@ void CodecImpl::OnBufferCollectionInfoInternal(
     port_settings_[port]->SetBufferCollectionInfo(std::move(buffer_collection_info));
   }
 
-  ZX_DEBUG_ASSERT(!fake_map_range_[port]);
-  // TODO(35200): Later we'll enforce that if this bool is true, is_secure() must also be
-  // true.  At that point we won't need this bool any more.
-  bool fake_secure;
-  if (port == kOutputPort) {
-    fake_secure = IsSecureOutput();
-  } else {
-    ZX_DEBUG_ASSERT(port == kInputPort);
-    fake_secure = IsSecureInput();
+  if (IsPortSecureRequired(port) && !port_settings_[port]->is_secure()) {
+    Fail("IsPortSecureRequired(port) && !port_settings_[port]->is_secure() - port: %d", port);
+    return;
   }
-  if (port_settings_[port]->is_secure() || fake_secure) {
+  if (!IsPortSecurePermitted(port) && port_settings_[port]->is_secure()) {
+    Fail("!IsPortSecurePermitted(port) && port_settings_[port]->is_secure() - port: %d", port);
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(!fake_map_range_[port]);
+  if (port_settings_[port]->is_secure()) {
     if (IsCoreCodecMappedBufferUseful(port)) {
       zx_status_t status =
           FakeMapRange::Create(port_settings_[port]->vmo_usable_size(), &fake_map_range_[port]);
@@ -1780,8 +1800,6 @@ void CodecImpl::OnBufferCollectionInfoInternal(
         return;
       }
     }
-    // TODO(35200): Make real, and stop logging this.
-    LOGF("### TEMP FAKE SECURE ### - port: %d", port);
   }
 
   // We convert the buffer_collection_info into AddInputBuffer_StreamControl()
@@ -2761,6 +2779,9 @@ void CodecImpl::MidStreamOutputConstraintsChange(uint64_t stream_lifetime_ordina
   VLOGF("Done with mid-stream format change.\n");
 }
 
+// TODO(dustingreen): Consider whether we ever intend to plumb anything coming from the core codec
+// from a different proc.  If not (probably this is the case), we can change several of the checks
+// in here to ZX_DEBUG_ASSERT() instead.
 bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     CodecPort port, const fuchsia::media::StreamBufferPartialSettings& partial_settings,
     fuchsia::sysmem::BufferCollectionConstraints* buffer_collection_constraints) {
@@ -2774,7 +2795,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
         FailLocked("Core codec set disallowed CPU usage bits (input port).");
         return false;
       }
-      if (!IsSecureInput()) {
+      if (!IsPortSecureRequired(kInputPort)) {
         usage.cpu |= fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageReadOften;
       } else {
         usage.cpu = 0;
@@ -2784,7 +2805,11 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
         FailLocked("Core codec set disallowed CPU usage bit(s) (output port).");
         return false;
       }
-      usage.cpu |= fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften;
+      if (!IsPortSecureRequired(kOutputPort)) {
+        usage.cpu |= fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageWriteOften;
+      } else {
+        usage.cpu = 0;
+      }
     }
   } else {
     if (usage.cpu) {
@@ -2881,12 +2906,58 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
       return false;
     }
     if (buffer_collection_constraints->max_buffer_count != 1) {
-      FailLocked("CoreCodec must specify max_buffer_count 1 when single_buffer_mode");
+      FailLocked("Core codec must specify max_buffer_count 1 when single_buffer_mode");
       return false;
     }
   }
 
-  // The rest of the constraints are entirely up to the core codec.
+  if (!buffer_collection_constraints->has_buffer_memory_constraints) {
+    // Leaving all fields set to their defaults is fine if that's really true, but this encourages
+    // CodecAdapter implementations to set fields in here.
+    FailLocked("Core codec must set has_buffer_memory_constraints");
+    return false;
+  }
+  fuchsia::sysmem::BufferMemoryConstraints& buffer_memory_constraints =
+      buffer_collection_constraints->buffer_memory_constraints;
+
+  // Sysmem will fail the BufferCollection if the core codec provides constraints that are
+  // inconsistent, but we need to check here that the core codec is being consistent with
+  // SecureMemoryMode, since sysmem doesn't know about SecureMemoryMode.  Essentially
+  // SecureMemoryMode translates into secure_required and secure_permitted in sysmem.  The former
+  // is just a bool.  The latter is indicated by listing at least one secure heap.
+
+  // secure_required consistency check
+  //
+  // CoreCodecSetSecureMemoryMode() informed the core codec of the mode previously.
+  if (!!IsPortSecureRequired(port) != !!buffer_memory_constraints.secure_required) {
+    FailLocked("Core codec secure_required inconsistent with SecureMemoryMode");
+    return false;
+  }
+
+  // secure_permitted consistency check
+  //
+  // If secure is permitted, then the core codec must support at least one non-SYSTEM_RAM heap, as
+  // specifying support for a secure heap is how sysmem knows secure_permitted.  We can't directly
+  // tell that the non-RAM heap is secure, so this is an approximate check.  In any case
+  // secure_required by any sysmem participant will be enforced by sysmem with respect to specific
+  // heaps and whether they're secure.  The approximate-ness is ok since this only comes from
+  // in-proc, so the check is just for trying to notice if the core codec is filling out
+  // inconsistent constraints in a way that sysmem wouldn't otherwise notice.
+  bool is_non_ram_heap_found = false;
+  for (uint32_t iter = 0; iter < buffer_memory_constraints.heap_permitted_count; ++iter) {
+    if (buffer_memory_constraints.heap_permitted[iter] != fuchsia::sysmem::HeapType::SYSTEM_RAM) {
+      is_non_ram_heap_found = true;
+      break;
+    }
+  }
+  if (IsPortSecurePermitted(port) && !is_non_ram_heap_found) {
+    FailLocked("Core codec must specify at least one non-RAM heap when secure_required");
+    return false;
+  }
+
+  // The rest of the constraints are entirely up to the core codec, and it's up to the core codec
+  // to specify self-consistent constraints.  Sysmem will perform additional consistency checks on
+  // the constraints.
 
   return true;
 }
@@ -3017,7 +3088,11 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // official way, especially if doing so would print a timestamp automatically
   // and/or provide filtering goodness etc.
   const char* message = is_fatal ? "devhost will fail" : "Codec channel will close async";
+
+  // TODO(dustingreen): probably use zxlogf() instead.
   FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
+  // Output this way also, so we can see the output from unit tests.
+  fprintf(stderr, "%s -- %s\n", buffer.get(), message);
 
   // TODO(dustingreen): Send string in buffer via epitaph, when possible.  First
   // we should switch to events so we'll only have the Codec channel not the
@@ -3167,7 +3242,7 @@ void CodecImpl::onCoreCodecFailStream(fuchsia::media::StreamError error) {
     // This failure is async, in the sense that the client may still be sending
     // input data, and the core codec is expected to just hold onto those
     // packets until the client has moved on from this stream.
-    printf("onStreamFailed() - stream_lifetime_ordinal_: %lu\n", stream_lifetime_ordinal_);
+    fprintf(stderr, "onStreamFailed() - stream_lifetime_ordinal_: %lu\n", stream_lifetime_ordinal_);
     if (!is_on_stream_failed_enabled_) {
       FailLocked(
           "onStreamFailed() with a client that didn't send "
@@ -3700,10 +3775,15 @@ bool CodecImpl::PortSettings::is_secure() {
 // methods instead of virtual methods.
 //
 
-void CodecImpl::CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
-                              bool is_secure_output) {
+void CodecImpl::CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  codec_adapter_->CoreCodecInit(initial_input_format_details, is_secure_output);
+  codec_adapter_->CoreCodecInit(initial_input_format_details);
+}
+
+void CodecImpl::CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
+  codec_adapter_->CoreCodecSetSecureMemoryMode(port, secure_memory_mode);
 }
 
 fuchsia::sysmem::BufferCollectionConstraints CodecImpl::CoreCodecGetBufferCollectionConstraints(

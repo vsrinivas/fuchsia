@@ -33,9 +33,12 @@ constexpr uint64_t kBufferLifetimeOrdinal = 1;
 constexpr uint64_t kStreamLifetimeOrdinal = 1;
 constexpr uint32_t kInputPacketSize = 8 * 1024;
 
-auto CreateDecryptorParams() {
+auto CreateDecryptorParams(bool is_secure) {
   fuchsia::media::drm::DecryptorParams params;
   params.mutable_input_details()->set_format_details_version_ordinal(0);
+  if (is_secure) {
+    params.set_require_secure_mode(is_secure);
+  }
   return params;
 }
 
@@ -91,9 +94,8 @@ const std::map<std::string, std::string> kServices = {
 
 class FakeDecryptorAdapter : public DecryptorAdapter {
  public:
-  explicit FakeDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events,
-                                bool secure_mode)
-      : DecryptorAdapter(lock, codec_adapter_events, secure_mode) {}
+  explicit FakeDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
+      : DecryptorAdapter(lock, codec_adapter_events) {}
 
   void set_has_keys(bool has_keys) { has_keys_ = has_keys; }
   bool has_keys() const { return has_keys_; }
@@ -117,7 +119,7 @@ class FakeDecryptorAdapter : public DecryptorAdapter {
 class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
  public:
   explicit ClearTextDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events, false) {}
+      : FakeDecryptorAdapter(lock, codec_adapter_events) {}
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
@@ -145,7 +147,7 @@ class ClearTextDecryptorAdapter : public FakeDecryptorAdapter {
 class FakeSecureDecryptorAdapter : public FakeDecryptorAdapter {
  public:
   explicit FakeSecureDecryptorAdapter(std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
-      : FakeDecryptorAdapter(lock, codec_adapter_events, true) {}
+      : FakeDecryptorAdapter(lock, codec_adapter_events) {}
 
   std::optional<fuchsia::media::StreamError> Decrypt(const EncryptionParams& params,
                                                      const InputBuffer& input,
@@ -208,13 +210,13 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
     }
   }
 
-  void ConnectDecryptor() {
+  void ConnectDecryptor(bool is_secure) {
     fidl::InterfaceHandle<fuchsia::sysmem::Allocator> allocator;
 
     environment_->ConnectToService(allocator.NewRequest());
     codec_impl_ =
         std::make_unique<CodecImpl>(std::move(allocator), nullptr, dispatcher(), thrd_current(),
-                                    CreateDecryptorParams(), decryptor_.NewRequest());
+                                    CreateDecryptorParams(is_secure), decryptor_.NewRequest());
     auto adapter = std::make_unique<DecryptorAdapterT>(codec_impl_->lock(), codec_impl_.get());
     // Grab a non-owning reference to the adapter for test manipulation.
     decryptor_adapter_ = adapter.get();
@@ -462,7 +464,7 @@ class DecryptorAdapterTest : public sys::testing::TestWithEnvironment {
 class ClearDecryptorAdapterTest : public DecryptorAdapterTest<ClearTextDecryptorAdapter> {};
 
 TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
-  ConnectDecryptor();
+  ConnectDecryptor(false);
   decryptor_adapter_->set_has_keys(true);
 
   RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
@@ -491,7 +493,7 @@ TEST_F(ClearDecryptorAdapterTest, ClearTextDecrypt) {
 }
 
 TEST_F(ClearDecryptorAdapterTest, NoKeys) {
-  ConnectDecryptor();
+  ConnectDecryptor(false);
   decryptor_adapter_->set_has_keys(false);
   decryptor_->EnableOnStreamFailed();
 
@@ -516,7 +518,7 @@ TEST_F(ClearDecryptorAdapterTest, NoKeys) {
 }
 
 TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
-  ConnectDecryptor();
+  ConnectDecryptor(false);
   decryptor_adapter_->set_has_keys(true);
   decryptor_adapter_->set_use_mapped_output(false);
 
@@ -544,7 +546,7 @@ TEST_F(ClearDecryptorAdapterTest, UnmappedOutputBuffers) {
 class SecureDecryptorAdapterTest : public DecryptorAdapterTest<FakeSecureDecryptorAdapter> {};
 
 TEST_F(SecureDecryptorAdapterTest, FailsToAcquireSecureBuffers) {
-  ConnectDecryptor();
+  ConnectDecryptor(true);
 
   RunLoopUntil([this]() { return input_buffer_info_.has_value(); });
 

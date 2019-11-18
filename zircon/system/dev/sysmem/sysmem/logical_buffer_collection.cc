@@ -623,6 +623,9 @@ bool LogicalBufferCollection::CombineConstraints() {
 // zero heaps, otherwise the default is the normal RAM heap.  Also fix the comment on heaps field
 // in FIDL file.  Probably implement in "CheckSanitize".
 //
+// TODO(dustingreen): Consider rejecting secure_required + any non-secure heaps, including the
+// potentially-implicit SYSTEM_RAM heap.
+//
 // TODO(dustingreen): From a particular participant, CPU usage without
 // IsCpuAccessibleHeapPermitted() should fail.
 //

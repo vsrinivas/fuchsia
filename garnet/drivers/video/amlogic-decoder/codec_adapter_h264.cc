@@ -105,6 +105,8 @@ CodecAdapterH264::CodecAdapterH264(std::mutex& lock, CodecAdapterEvents* codec_a
       input_processing_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(device_);
   ZX_DEBUG_ASSERT(video_);
+  ZX_DEBUG_ASSERT(secure_memory_mode_[kInputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
+  ZX_DEBUG_ASSERT(secure_memory_mode_[kOutputPort] == fuchsia::mediacodec::SecureMemoryMode::OFF);
 }
 
 CodecAdapterH264::~CodecAdapterH264() {
@@ -137,8 +139,7 @@ bool CodecAdapterH264::IsCoreCodecHwBased() { return true; }
 zx::unowned_bti CodecAdapterH264::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
 void CodecAdapterH264::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
-  is_secure_output_ = is_secure_output;
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterH264::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -152,6 +153,11 @@ void CodecAdapterH264::CoreCodecInit(
 
   // TODO(dustingreen): We do most of the setup in CoreCodecStartStream()
   // currently, but we should do more here and less there.
+}
+
+void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  secure_memory_mode_[port] = secure_memory_mode;
 }
 
 // TODO(dustingreen): A lot of the stuff created in this method should be able
@@ -170,7 +176,10 @@ void CodecAdapterH264::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder = std::make_unique<H264Decoder>(video_, /*is_secure=*/is_secure_output_);
+  // The output port is the one we really care about for is_secure of the
+  // decoder, since the HW can read from secure or non-secure even when in
+  // secure mode, but can only write to secure memory when in secure mode.
+  auto decoder = std::make_unique<H264Decoder>(video_, IsOutputSecure());
   decoder->SetFrameReadyNotifier([this](std::shared_ptr<VideoFrame> frame) {
     // The Codec interface requires that emitted frames are cache clean
     // at least for now.  We invalidate without skipping over stride-width
@@ -228,8 +237,7 @@ void CodecAdapterH264::CoreCodecStartStream() {
   {  // scope lock
     std::lock_guard<std::mutex> lock(*video_->video_decoder_lock());
     video_->SetDefaultInstance(std::move(decoder), false);
-    status = video_->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
-                                            /*is_secure=*/is_secure_output_);
+    status = video_->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE, IsOutputSecure());
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("InitializeStreamBuffer() failed");
       return;
@@ -432,6 +440,7 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     all_output_packets_.clear();
     free_output_packets_.clear();
   }
+  buffer_settings_[port].reset();
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
@@ -590,20 +599,27 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
   result.buffer_memory_constraints.max_size_bytes = per_packet_buffer_bytes_max;
   // amlogic requires physically contiguous on both input and output
   result.buffer_memory_constraints.physically_contiguous_required = true;
-  result.buffer_memory_constraints.secure_required = false;
-  result.buffer_memory_constraints.cpu_domain_supported = true;
-  result.buffer_memory_constraints.ram_domain_supported = port == kOutputPort;
+  result.buffer_memory_constraints.secure_required = IsPortSecureRequired(port);
+  result.buffer_memory_constraints.cpu_domain_supported = !IsPortSecureRequired(port);
+  result.buffer_memory_constraints.ram_domain_supported =
+      !IsPortSecureRequired(port) && (port == kOutputPort);
+
+  if (IsPortSecurePermitted(port)) {
+    result.buffer_memory_constraints.inaccessible_domain_supported = true;
+    fuchsia::sysmem::HeapType secure_heap = (port == kInputPort) ?
+        fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC :
+        fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
+    result.buffer_memory_constraints.heap_permitted[
+        result.buffer_memory_constraints.heap_permitted_count++] = secure_heap;
+  }
+
+  if (!IsPortSecureRequired(port)) {
+    result.buffer_memory_constraints.heap_permitted[
+        result.buffer_memory_constraints.heap_permitted_count++] =
+            fuchsia::sysmem::HeapType::SYSTEM_RAM;
+  }
 
   if (port == kOutputPort) {
-    if (is_secure_output_) {
-      result.buffer_memory_constraints.secure_required = true;
-      result.buffer_memory_constraints.cpu_domain_supported = false;
-      result.buffer_memory_constraints.ram_domain_supported = false;
-      result.buffer_memory_constraints.inaccessible_domain_supported = true;
-      result.buffer_memory_constraints.heap_permitted_count = 1;
-      result.buffer_memory_constraints.heap_permitted[0] =
-          fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
-    }
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints = result.image_format_constraints[0];
     image_constraints.pixel_format.type = fuchsia::sysmem::PixelFormatType::NV12;
@@ -667,16 +683,6 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
     image_constraints.required_min_coded_height = height_;
     image_constraints.required_max_coded_height = height_;
   } else {
-    if (is_secure_output_) {
-      // non-protected inputs are still supported with secure outputs.
-      result.buffer_memory_constraints.secure_required = false;
-      result.buffer_memory_constraints.cpu_domain_supported = true;
-      result.buffer_memory_constraints.inaccessible_domain_supported = true;
-      result.buffer_memory_constraints.heap_permitted_count = 2;
-      result.buffer_memory_constraints.heap_permitted[0] = fuchsia::sysmem::HeapType::SYSTEM_RAM;
-      result.buffer_memory_constraints.heap_permitted[1] =
-          fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC;
-    }
     ZX_DEBUG_ASSERT(result.image_format_constraints_count == 0);
   }
 
@@ -692,14 +698,14 @@ CodecAdapterH264::CoreCodecGetBufferCollectionConstraints(
 void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
   ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
-  if (port == kInputPort) {
-    // struct copy
-    input_buffer_settings_ = buffer_collection_info.settings;
-  } else if (port == kOutputPort) {
+  if (port == kOutputPort) {
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
   }
+  buffer_settings_[port].emplace(buffer_collection_info.settings);
+  ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
+  ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
 }
 
 fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(
@@ -1313,4 +1319,25 @@ CodecPacket* CodecAdapterH264::GetFreePacket() {
   uint32_t free_index = free_output_packets_.back();
   free_output_packets_.pop_back();
   return all_output_packets_[free_index];
+}
+
+bool CodecAdapterH264::IsPortSecureRequired(CodecPort port) {
+  return secure_memory_mode_[port] == fuchsia::mediacodec::SecureMemoryMode::ON;
+}
+
+bool CodecAdapterH264::IsPortSecurePermitted(CodecPort port) {
+  return secure_memory_mode_[port] != fuchsia::mediacodec::SecureMemoryMode::OFF;
+}
+
+bool CodecAdapterH264::IsPortSecure(CodecPort port) {
+  ZX_DEBUG_ASSERT(buffer_settings_[port]);
+  return buffer_settings_[port]->buffer_settings.is_secure;
+}
+
+bool CodecAdapterH264::IsOutputSecure() {
+  // We need to know whether output is secure or not before we start accepting input, which means
+  // we need to know before output buffers are allocated, which means we can't rely on the result
+  // of sysmem BufferCollection allocation is_secure for output.
+  ZX_DEBUG_ASSERT(IsPortSecurePermitted(kOutputPort) == IsPortSecureRequired(kOutputPort));
+  return IsPortSecureRequired(kOutputPort);
 }

@@ -59,7 +59,7 @@ bool FakeCodecAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) { return tr
 bool FakeCodecAdapter::IsCoreCodecHwBased() { return false; }
 
 void FakeCodecAdapter::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   // nothing to do here
 }
 
@@ -89,10 +89,14 @@ FakeCodecAdapter::CoreCodecGetBufferCollectionConstraints(
   ZX_DEBUG_ASSERT(result.min_buffer_count == 0);
   // 0 is treated as 0xFFFFFFFF.
   ZX_DEBUG_ASSERT(result.max_buffer_count == 0);
+  result.has_buffer_memory_constraints = true;
   if (port == kInputPort) {
-    ZX_DEBUG_ASSERT(!result.has_buffer_memory_constraints);
+    // Despite the defaults being fine for the fake, CodecImpl wants this bool
+    // set to true.  All real CodecAdapter implementations will likely want to
+    // have some constraints on buffer size - or if they don't, they can also
+    // just set has_buffer_memory_constraints true with defaults for all fields.
+    ZX_DEBUG_ASSERT(result.has_buffer_memory_constraints);
   } else {
-    result.has_buffer_memory_constraints = true;
     result.buffer_memory_constraints.min_size_bytes = kPerPacketBufferBytesMin;
     ZX_DEBUG_ASSERT(result.buffer_memory_constraints.cpu_domain_supported);
   }

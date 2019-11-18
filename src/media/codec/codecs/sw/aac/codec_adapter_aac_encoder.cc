@@ -34,7 +34,7 @@ bool CodecAdapterAacEncoder::IsCoreCodecMappedBufferUseful(CodecPort port) { ret
 bool CodecAdapterAacEncoder::IsCoreCodecHwBased() { return false; }
 
 void CodecAdapterAacEncoder::CoreCodecInit(
-    const fuchsia::media::FormatDetails& initial_input_format_details, bool is_secure_output) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   ZX_DEBUG_ASSERT(!output_sink_);
 
   thrd_t input_processing_thread;

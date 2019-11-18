@@ -462,8 +462,11 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // TODO(35200): This isn't fully hooked up yet, so doesn't actually yet
   // indicate whether buffers are secure.  Enforce that
   // port_settings_[X].is_secure() is consistent with these.
-  bool IsSecureOutput();
-  bool IsSecureInput();
+  fuchsia::mediacodec::SecureMemoryMode OutputSecureMemoryMode();
+  fuchsia::mediacodec::SecureMemoryMode InputSecureMemoryMode();
+  fuchsia::mediacodec::SecureMemoryMode PortSecureMemoryMode(CodecPort port);
+  bool IsPortSecureRequired(CodecPort port);
+  bool IsPortSecurePermitted(CodecPort port);
 
   // The CodecAdapter is owned by the CodecImpl, and is listed near the top of
   // the local variables in CodecImpl so that it gets deleted near the end of
@@ -949,8 +952,10 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   __WARN_UNUSED_RESULT zx::unowned_bti CoreCodecBti() override;
 
-  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details,
-                     bool is_secure_output) override;
+  void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+
+  void CoreCodecSetSecureMemoryMode(
+      CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
 
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
