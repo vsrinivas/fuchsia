@@ -4,6 +4,7 @@
 
 #include <fuchsia/cobalt/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async-loop/loop.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl-async/cpp/bind.h>
@@ -220,7 +221,7 @@ class LoggerServiceFixture : public zxtest::Test {
  public:
   void SetUp() final {
     // Initialize the service loop.
-    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
 
     checker_.project_name = kProjectName;
     checker_.stage = static_cast<decltype(checker_.stage)>(kReleaseStage);
