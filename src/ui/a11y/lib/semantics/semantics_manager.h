@@ -15,6 +15,7 @@
 #include "src/ui/a11y/lib/semantics/semantic_tree.h"
 
 namespace a11y {
+
 class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsManager {
  public:
   // On initialization, this class exposes the services defined in
@@ -58,7 +59,7 @@ class SemanticsManager : public fuchsia::accessibility::semantics::SemanticsMana
   std::string LogSemanticTreeForView(const fuchsia::ui::views::ViewRef& view_ref);
 
  private:
-  // |fushsia::accessibility::semantics::SemanticsManager|:
+  // |fuchsia::accessibility::semantics::SemanticsManager|:
   void RegisterViewForSemantics(
       fuchsia::ui::views::ViewRef view_ref,
       fidl::InterfaceHandle<fuchsia::accessibility::semantics::SemanticListener> handle,

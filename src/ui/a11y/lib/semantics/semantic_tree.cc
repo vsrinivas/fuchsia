@@ -74,10 +74,12 @@ bool SemanticTree::IsSameKoid(const zx_koid_t koid) { return koid == GetKoid(vie
 
 void SemanticTree::CommitUpdates(CommitUpdatesCallback callback) {
   if (!ApplyCommit()) {
-    callback();
+    callback();  // Notifies that the commit was processed before closing the channel.
     // Call Semantics Manager to close the channel for current tree.
     FX_LOGS(ERROR) << "Closing Semantic Tree Channel for View(KOID):" << GetKoid(view_ref_);
     close_channel_callback_(GetKoid(view_ref_));
+  } else {
+    callback();
   }
 }
 

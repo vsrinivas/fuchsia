@@ -259,7 +259,7 @@ TEST_F(SemanticTreeTest, CommitUpdatesAppliesPendingDeletion) {
   semantic_tree.CommitUpdates(std::move(commit_updates_callback));
 
   EXPECT_EQ(semantic_tree.LogSemanticTree(), kSemanticTreeOddDeletedNode);
-  EXPECT_FALSE(commit_updates_callback_called);
+  EXPECT_TRUE(commit_updates_callback_called);
   EXPECT_FALSE(close_channel_callback_called);
 }
 
@@ -292,7 +292,7 @@ TEST_F(SemanticTreeTest, CommitUpdatesAppliesPendingUpdates) {
   semantic_tree.CommitUpdates(std::move(commit_updates_callback));
 
   EXPECT_EQ(semantic_tree.LogSemanticTree(), kSemanticTreeOddUpdatedNode);
-  EXPECT_FALSE(commit_updates_callback_called);
+  EXPECT_TRUE(commit_updates_callback_called);
   EXPECT_FALSE(close_channel_callback_called);
 }
 
@@ -368,8 +368,9 @@ TEST_F(SemanticTreeTest, CommitUpdatesClearsTreeIfCycleFound) {
 
   EXPECT_EQ(semantic_tree.LogSemanticTree(), kRootNodeNotFound);
 
-  // Commit updates callback only called if ApplyCommit() returns false, and ApplyCommit() returns
-  // false if tree is malformed.
+  // |commit_updates_callback| is always called to signal that the commit was
+  // processed. If the tree was not well formed, |close_channel_callback| is
+  // invoked to raise an error.
   EXPECT_TRUE(commit_updates_callback_called);
   EXPECT_TRUE(close_channel_callback_called);
 }
@@ -411,8 +412,6 @@ TEST_F(SemanticTreeTest, CommitUpdatesClearsTreeIfNonexistentChildIdFound) {
 
   EXPECT_EQ(semantic_tree.LogSemanticTree(), kRootNodeNotFound);
 
-  // Commit updates callback only called if ApplyCommit() returns false, and ApplyCommit() returns
-  // false if tree is malformed.
   EXPECT_TRUE(commit_updates_callback_called);
   EXPECT_TRUE(close_channel_callback_called);
 }
@@ -452,8 +451,6 @@ TEST_F(SemanticTreeTest, CommitUpdatesClearsTreeIfTreeContainsUnreachableNodes) 
 
   EXPECT_EQ(semantic_tree.LogSemanticTree(), kRootNodeNotFound);
 
-  // Commit updates callback only called if ApplyCommit() returns false, and ApplyCommit() returns
-  // false if tree is malformed.
   EXPECT_TRUE(commit_updates_callback_called);
   EXPECT_TRUE(close_channel_callback_called);
 }
