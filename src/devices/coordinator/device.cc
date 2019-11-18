@@ -430,9 +430,12 @@ void Device::HandleRpc(fbl::RefPtr<Device>&& dev, async_dispatcher_t* dispatcher
     return;
   }
   if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-    log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(),
-        dev->name().data());
-    dev->coordinator->RemoveDevice(dev, true);
+    // If the device is already dead, we are detecting an expected disconnect from the devhost.
+    if (dev->state() != Device::State::kDead) {
+      log(ERROR, "devcoordinator: device %p name='%s' disconnected!\n", dev.get(),
+          dev->name().data());
+      dev->coordinator->RemoveDevice(dev, true);
+    }
     // Do not start waiting again on this device's channel again
     return;
   }

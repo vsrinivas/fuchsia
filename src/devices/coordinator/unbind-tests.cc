@@ -276,6 +276,29 @@ TEST_F(UnbindTestCase, UnbindWhileRemovingProxy) {
   ASSERT_NULL(coordinator_.sys_device()->GetActiveUnbind());
   ASSERT_NULL(coordinator_.sys_device()->GetActiveRemove());
 }
+
+// If this test fails, you will likely see log errors when removing devices.
+TEST_F(UnbindTestCase, NumRemovals) {
+  size_t child_index;
+  ASSERT_NO_FATAL_FAILURES(
+      AddDevice(platform_bus(), "child", 0 /* protocol id */, "", &child_index));
+
+  auto* child_device = device(child_index);
+
+  ASSERT_NO_FATAL_FAILURES(coordinator_.ScheduleRemove(child_device->device));
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_NO_FATAL_FAILURES(CheckRemoveReceivedAndReply(child_device->controller_remote));
+  coordinator_loop()->RunUntilIdle();
+
+  // Make sure the coordinator device does not detect the devhost's remote channel closing,
+  // otherwise it will try to remove an already dead device and we will get a log error.
+  child_device->coordinator_remote.reset();
+  coordinator_loop()->RunUntilIdle();
+
+  ASSERT_EQ(child_device->device->num_removal_attempts(), 1);
+}
+
 TEST_F(UnbindTestCase, AddDuringParentUnbind) {
   size_t parent_index;
   ASSERT_NO_FATAL_FAILURES(
