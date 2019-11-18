@@ -90,7 +90,7 @@ TEST_F(LoggerTest, LogMessage) {
   std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
   ASSERT_NO_FATAL_FAILURES(
-      DecodeMessage(local_, fuchsia_driver_test_LoggerLogMessageOrdinal,
+      DecodeMessage(local_, fuchsia_driver_test_LoggerLogMessageGenOrdinal,
                     &fuchsia_driver_test_LoggerLogMessageRequestTable, &data_buf, &data_size),
       "could not decode message");
   ASSERT_GE(data_size, sizeof(fuchsia_driver_test_LoggerLogMessageRequest));
@@ -106,7 +106,7 @@ void ValidateReceivedTestCase(const zx::channel& log_ch,
   std::unique_ptr<uint8_t[]> data_buf;
   uint32_t data_size;
   ASSERT_NO_FATAL_FAILURES(
-      DecodeMessage(log_ch, fuchsia_driver_test_LoggerLogTestCaseOrdinal,
+      DecodeMessage(log_ch, fuchsia_driver_test_LoggerLogTestCaseGenOrdinal,
                     &fuchsia_driver_test_LoggerLogTestCaseRequestTable, &data_buf, &data_size),
       "could not decode message");
   ASSERT_GE(data_size, sizeof(fuchsia_driver_test_LoggerLogTestCaseRequest));

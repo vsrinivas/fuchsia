@@ -161,10 +161,10 @@ void Ftl::Interface::FormatCompleterBase::Reply(::fidl::DecodedMessage<FormatRes
 
 
 void Ftl::SetTransactionHeaderFor::FormatRequest(const ::fidl::DecodedMessage<Ftl::FormatRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFtl_Format_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFtl_Format_GenOrdinal);
 }
 void Ftl::SetTransactionHeaderFor::FormatResponse(const ::fidl::DecodedMessage<Ftl::FormatResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFtl_Format_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kFtl_Format_GenOrdinal);
 }
 
 namespace {
@@ -939,45 +939,45 @@ void Block::Interface::RebindDeviceCompleterBase::Reply(::fidl::DecodedMessage<R
 
 
 void Block::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Block::GetInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetInfo_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Block::GetInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetInfo_GenOrdinal);
 }
 
 void Block::SetTransactionHeaderFor::GetStatsRequest(const ::fidl::DecodedMessage<Block::GetStatsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetStats_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetStats_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::GetStatsResponse(const ::fidl::DecodedMessage<Block::GetStatsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetStats_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetStats_GenOrdinal);
 }
 
 void Block::SetTransactionHeaderFor::GetFifoRequest(const ::fidl::DecodedMessage<Block::GetFifoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetFifo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetFifo_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::GetFifoResponse(const ::fidl::DecodedMessage<Block::GetFifoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetFifo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_GetFifo_GenOrdinal);
 }
 
 void Block::SetTransactionHeaderFor::AttachVmoRequest(const ::fidl::DecodedMessage<Block::AttachVmoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_AttachVmo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_AttachVmo_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::AttachVmoResponse(const ::fidl::DecodedMessage<Block::AttachVmoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_AttachVmo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_AttachVmo_GenOrdinal);
 }
 
 void Block::SetTransactionHeaderFor::CloseFifoRequest(const ::fidl::DecodedMessage<Block::CloseFifoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_CloseFifo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_CloseFifo_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::CloseFifoResponse(const ::fidl::DecodedMessage<Block::CloseFifoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_CloseFifo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_CloseFifo_GenOrdinal);
 }
 
 void Block::SetTransactionHeaderFor::RebindDeviceRequest(const ::fidl::DecodedMessage<Block::RebindDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_RebindDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_RebindDevice_GenOrdinal);
 }
 void Block::SetTransactionHeaderFor::RebindDeviceResponse(const ::fidl::DecodedMessage<Block::RebindDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_RebindDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBlock_RebindDevice_GenOrdinal);
 }
 
 }  // namespace block

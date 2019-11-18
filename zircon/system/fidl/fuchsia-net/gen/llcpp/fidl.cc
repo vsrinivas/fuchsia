@@ -163,7 +163,7 @@ zx_status_t Connectivity::SendOnNetworkReachableEvent(::zx::unowned_channel _cha
 
 
 void Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(const ::fidl::DecodedMessage<Connectivity::OnNetworkReachableResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kConnectivity_OnNetworkReachable_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kConnectivity_OnNetworkReachable_GenOrdinal);
 }
 
 ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::NameLookup_LookupHostname_Result() {
@@ -700,17 +700,17 @@ void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMe
 
 
 void NameLookup::SetTransactionHeaderFor::LookupIpRequest(const ::fidl::DecodedMessage<NameLookup::LookupIpRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_GenOrdinal);
 }
 void NameLookup::SetTransactionHeaderFor::LookupIpResponse(const ::fidl::DecodedMessage<NameLookup::LookupIpResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupIp_GenOrdinal);
 }
 
 void NameLookup::SetTransactionHeaderFor::LookupHostnameRequest(const ::fidl::DecodedMessage<NameLookup::LookupHostnameRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_GenOrdinal);
 }
 void NameLookup::SetTransactionHeaderFor::LookupHostnameResponse(const ::fidl::DecodedMessage<NameLookup::LookupHostnameResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNameLookup_LookupHostname_GenOrdinal);
 }
 
 }  // namespace net

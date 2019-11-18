@@ -66,7 +66,7 @@ zx_status_t ReadMessage(zx_handle_t h, FidlDispatchFunction dispatch) {
 zx_status_t CloseMessage(FidlDispatchFunction dispatch) {
   fuchsia_io_NodeCloseRequest request;
   memset(&request, 0, sizeof(request));
-  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseOrdinal);
+  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseGenOrdinal);
   fidl_msg_t msg = {
       .bytes = &request,
       .handles = NULL,

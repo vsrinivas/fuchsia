@@ -521,31 +521,31 @@ void SkipBlock::Interface::WriteBytesCompleterBase::Reply(::fidl::DecodedMessage
 
 
 void SkipBlock::SetTransactionHeaderFor::GetPartitionInfoRequest(const ::fidl::DecodedMessage<SkipBlock::GetPartitionInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_GetPartitionInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_GetPartitionInfo_GenOrdinal);
 }
 void SkipBlock::SetTransactionHeaderFor::GetPartitionInfoResponse(const ::fidl::DecodedMessage<SkipBlock::GetPartitionInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_GetPartitionInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_GetPartitionInfo_GenOrdinal);
 }
 
 void SkipBlock::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<SkipBlock::ReadRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Read_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Read_GenOrdinal);
 }
 void SkipBlock::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<SkipBlock::ReadResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Read_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Read_GenOrdinal);
 }
 
 void SkipBlock::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<SkipBlock::WriteRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Write_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Write_GenOrdinal);
 }
 void SkipBlock::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<SkipBlock::WriteResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Write_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_Write_GenOrdinal);
 }
 
 void SkipBlock::SetTransactionHeaderFor::WriteBytesRequest(const ::fidl::DecodedMessage<SkipBlock::WriteBytesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_WriteBytes_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_WriteBytes_GenOrdinal);
 }
 void SkipBlock::SetTransactionHeaderFor::WriteBytesResponse(const ::fidl::DecodedMessage<SkipBlock::WriteBytesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_WriteBytes_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSkipBlock_WriteBytes_GenOrdinal);
 }
 
 }  // namespace skipblock

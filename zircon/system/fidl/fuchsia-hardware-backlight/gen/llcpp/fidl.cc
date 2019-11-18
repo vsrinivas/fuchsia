@@ -995,38 +995,38 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::Dec
 
 
 void Device::SetTransactionHeaderFor::GetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::GetStateNormalizedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::GetStateNormalizedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateNormalized_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetStateNormalizedRequest(const ::fidl::DecodedMessage<Device::SetStateNormalizedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetStateNormalizedResponse(const ::fidl::DecodedMessage<Device::SetStateNormalizedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateNormalized_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::GetStateAbsoluteRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::GetStateAbsoluteResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateAbsolute_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetStateAbsoluteRequest(const ::fidl::DecodedMessage<Device::SetStateAbsoluteRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetStateAbsoluteResponse(const ::fidl::DecodedMessage<Device::SetStateAbsoluteResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateAbsolute_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessRequest(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetMaxAbsoluteBrightnessResponse(const ::fidl::DecodedMessage<Device::GetMaxAbsoluteBrightnessResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetMaxAbsoluteBrightness_GenOrdinal);
 }
 
 }  // namespace backlight

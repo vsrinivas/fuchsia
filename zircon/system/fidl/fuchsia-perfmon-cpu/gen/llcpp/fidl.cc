@@ -1247,66 +1247,66 @@ void Controller::Interface::StopCompleterBase::Reply() {
 
 
 void Controller::SetTransactionHeaderFor::GetPropertiesRequest(const ::fidl::DecodedMessage<Controller::GetPropertiesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetProperties_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetProperties_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetPropertiesResponse(const ::fidl::DecodedMessage<Controller::GetPropertiesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetProperties_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetProperties_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::InitializeRequest(const ::fidl::DecodedMessage<Controller::InitializeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::InitializeResponse(const ::fidl::DecodedMessage<Controller::InitializeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Initialize_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::TerminateRequest(const ::fidl::DecodedMessage<Controller::TerminateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::TerminateResponse(const ::fidl::DecodedMessage<Controller::TerminateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Terminate_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetAllocationRequest(const ::fidl::DecodedMessage<Controller::GetAllocationRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetAllocationResponse(const ::fidl::DecodedMessage<Controller::GetAllocationResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetAllocation_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::StageConfigRequest(const ::fidl::DecodedMessage<Controller::StageConfigRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StageConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StageConfig_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::StageConfigResponse(const ::fidl::DecodedMessage<Controller::StageConfigResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StageConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_StageConfig_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetConfigRequest(const ::fidl::DecodedMessage<Controller::GetConfigRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetConfig_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetConfigResponse(const ::fidl::DecodedMessage<Controller::GetConfigResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetConfig_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetBufferHandleRequest(const ::fidl::DecodedMessage<Controller::GetBufferHandleRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferHandle_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferHandle_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetBufferHandleResponse(const ::fidl::DecodedMessage<Controller::GetBufferHandleResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferHandle_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetBufferHandle_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::StartRequest(const ::fidl::DecodedMessage<Controller::StartRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::StartResponse(const ::fidl::DecodedMessage<Controller::StartResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Start_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::StopRequest(const ::fidl::DecodedMessage<Controller::StopRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::StopResponse(const ::fidl::DecodedMessage<Controller::StopResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_Stop_GenOrdinal);
 }
 
 }  // namespace cpu

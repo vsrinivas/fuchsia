@@ -64,7 +64,7 @@ _fuchsia_debugdata_DebugDataPublish(zx_handle_t channel, const char* data_sink_d
   // TODO(38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.ordinal = fuchsia_debugdata_DebugDataPublishOrdinal;
+  request->hdr.ordinal = fuchsia_debugdata_DebugDataPublishGenOrdinal;
   request->data_sink.data = (char*)FIDL_ALLOC_PRESENT;
   request->data_sink.size = data_sink_size;
   request->data = FIDL_HANDLE_PRESENT;
@@ -91,7 +91,7 @@ _fuchsia_debugdata_DebugDataLoadConfig(zx_handle_t channel, const char* config_n
   // TODO(38643) use fidl_init_txn_header once it is inline
   memset(&request->hdr, 0, sizeof(request->hdr));
   request->hdr.magic_number = kFidlWireFormatMagicNumberInitial;
-  request->hdr.ordinal = fuchsia_debugdata_DebugDataLoadConfigOrdinal;
+  request->hdr.ordinal = fuchsia_debugdata_DebugDataLoadConfigGenOrdinal;
   request->config_name.data = (char*)FIDL_ALLOC_PRESENT;
   request->config_name.size = config_name_size;
   memcpy(&wr_bytes[sizeof(*request)], config_name_data, config_name_size);

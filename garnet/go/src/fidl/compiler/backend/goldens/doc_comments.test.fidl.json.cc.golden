@@ -328,7 +328,7 @@ zx_status_t Interface_Proxy::Dispatch_(::fidl::Message message) {
 
 
 void Interface_Proxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
   controller_->Send(&test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder), nullptr);
 }
 
@@ -380,7 +380,7 @@ zx_status_t Interface_Stub::Dispatch_(
   return status;
 }
 void Interface_Stub::OnEvent() {
-  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_Ordinal);
+  ::fidl::Encoder _encoder(internal::kInterface_OnEvent_GenOrdinal);
   sender_()->Send(&test_name_InterfaceOnEventEventTable, Interface_ResponseEncoder::OnEvent(&_encoder));
 }
 
@@ -390,7 +390,7 @@ Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
 Interface_SyncProxy::~Interface_SyncProxy() = default;
 
 zx_status_t Interface_SyncProxy::Method() {
-  ::fidl::Encoder _encoder(internal::kInterface_Method_Ordinal);
+  ::fidl::Encoder _encoder(internal::kInterface_Method_GenOrdinal);
   return proxy_.Send(&test_name_InterfaceMethodRequestTable, Interface_RequestEncoder::Method(&_encoder));
 }
 

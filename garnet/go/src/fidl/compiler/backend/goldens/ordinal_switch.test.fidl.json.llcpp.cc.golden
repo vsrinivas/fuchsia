@@ -299,19 +299,19 @@ zx_status_t SwitchingOrdinals::SendEventOnlyGeneratedOrdinalEvent(::zx::unowned_
 
 
 void SwitchingOrdinals::SetTransactionHeaderFor::OrdinalFiveRequest(const ::fidl::DecodedMessage<SwitchingOrdinals::OrdinalFiveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_OrdinalFive_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_OrdinalFive_GenOrdinal);
 }
 
 void SwitchingOrdinals::SetTransactionHeaderFor::OnlyGeneratedOrdinalRequest(const ::fidl::DecodedMessage<SwitchingOrdinals::OnlyGeneratedOrdinalRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_OnlyGeneratedOrdinal_GenOrdinal);
 }
 
 void SwitchingOrdinals::SetTransactionHeaderFor::EventOrdinalFifteenResponse(const ::fidl::DecodedMessage<SwitchingOrdinals::EventOrdinalFifteenResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_EventOrdinalFifteen_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_EventOrdinalFifteen_GenOrdinal);
 }
 
 void SwitchingOrdinals::SetTransactionHeaderFor::EventOnlyGeneratedOrdinalResponse(const ::fidl::DecodedMessage<SwitchingOrdinals::EventOnlyGeneratedOrdinalResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSwitchingOrdinals_EventOnlyGeneratedOrdinal_GenOrdinal);
 }
 
 }  // namespace name

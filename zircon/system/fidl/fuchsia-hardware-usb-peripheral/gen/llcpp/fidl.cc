@@ -182,14 +182,14 @@ void Events::Interface::FunctionRegisteredCompleterBase::Reply() {
 
 
 void Events::SetTransactionHeaderFor::FunctionRegisteredRequest(const ::fidl::DecodedMessage<Events::FunctionRegisteredRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionRegistered_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionRegistered_GenOrdinal);
 }
 void Events::SetTransactionHeaderFor::FunctionRegisteredResponse(const ::fidl::DecodedMessage<Events::FunctionRegisteredResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionRegistered_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionRegistered_GenOrdinal);
 }
 
 void Events::SetTransactionHeaderFor::FunctionsClearedRequest(const ::fidl::DecodedMessage<Events::FunctionsClearedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionsCleared_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kEvents_FunctionsCleared_GenOrdinal);
 }
 
 ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::Device_SetConfiguration_Result() {
@@ -583,21 +583,21 @@ void Device::Interface::ClearFunctionsCompleterBase::Reply() {
 
 
 void Device::SetTransactionHeaderFor::SetConfigurationRequest(const ::fidl::DecodedMessage<Device::SetConfigurationRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfiguration_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfiguration_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetConfigurationResponse(const ::fidl::DecodedMessage<Device::SetConfigurationResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfiguration_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfiguration_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::ClearFunctionsRequest(const ::fidl::DecodedMessage<Device::ClearFunctionsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ClearFunctions_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ClearFunctions_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::ClearFunctionsResponse(const ::fidl::DecodedMessage<Device::ClearFunctionsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ClearFunctions_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_ClearFunctions_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetStateChangeListenerRequest(const ::fidl::DecodedMessage<Device::SetStateChangeListenerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateChangeListener_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetStateChangeListener_GenOrdinal);
 }
 
 }  // namespace peripheral

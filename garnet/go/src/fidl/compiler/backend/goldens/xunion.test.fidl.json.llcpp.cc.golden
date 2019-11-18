@@ -343,17 +343,17 @@ void TestProtocol::Interface::FlexibleXUnionHenceResponseMustBeHeapAllocatedComp
 
 
 void TestProtocol::SetTransactionHeaderFor::StrictXUnionHenceResponseMayBeStackAllocatedRequest(const ::fidl::DecodedMessage<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
 }
 void TestProtocol::SetTransactionHeaderFor::StrictXUnionHenceResponseMayBeStackAllocatedResponse(const ::fidl::DecodedMessage<TestProtocol::StrictXUnionHenceResponseMayBeStackAllocatedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
 }
 
 void TestProtocol::SetTransactionHeaderFor::FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest(const ::fidl::DecodedMessage<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
 }
 void TestProtocol::SetTransactionHeaderFor::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse(const ::fidl::DecodedMessage<TestProtocol::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
 }
 
 auto ::llcpp::test::name::NewerSimpleUnion::which() const -> Tag {

@@ -21,7 +21,7 @@ type FirstProtocolInterface _bindings.ChannelProxy
 
 func (p *FirstProtocolInterface) MethodOnFirst() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(FirstProtocolMethodOnFirstOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(FirstProtocolMethodOnFirstGenOrdinal, req_)
 	return err
 }
 
@@ -86,7 +86,7 @@ type SecondProtocolInterface _bindings.ChannelProxy
 
 func (p *SecondProtocolInterface) MethodOnSecond() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(SecondProtocolMethodOnSecondOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(SecondProtocolMethodOnSecondGenOrdinal, req_)
 	return err
 }
 

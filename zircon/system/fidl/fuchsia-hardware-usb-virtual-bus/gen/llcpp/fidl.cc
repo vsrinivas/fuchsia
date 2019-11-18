@@ -511,31 +511,31 @@ void Bus::Interface::DisconnectCompleterBase::Reply(::fidl::DecodedMessage<Disco
 
 
 void Bus::SetTransactionHeaderFor::EnableRequest(const ::fidl::DecodedMessage<Bus::EnableRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Enable_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Enable_GenOrdinal);
 }
 void Bus::SetTransactionHeaderFor::EnableResponse(const ::fidl::DecodedMessage<Bus::EnableResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Enable_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Enable_GenOrdinal);
 }
 
 void Bus::SetTransactionHeaderFor::DisableRequest(const ::fidl::DecodedMessage<Bus::DisableRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disable_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disable_GenOrdinal);
 }
 void Bus::SetTransactionHeaderFor::DisableResponse(const ::fidl::DecodedMessage<Bus::DisableResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disable_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disable_GenOrdinal);
 }
 
 void Bus::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<Bus::ConnectRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Connect_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Connect_GenOrdinal);
 }
 void Bus::SetTransactionHeaderFor::ConnectResponse(const ::fidl::DecodedMessage<Bus::ConnectResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Connect_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Connect_GenOrdinal);
 }
 
 void Bus::SetTransactionHeaderFor::DisconnectRequest(const ::fidl::DecodedMessage<Bus::DisconnectRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disconnect_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disconnect_GenOrdinal);
 }
 void Bus::SetTransactionHeaderFor::DisconnectResponse(const ::fidl::DecodedMessage<Bus::DisconnectResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disconnect_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBus_Disconnect_GenOrdinal);
 }
 
 }  // namespace bus

@@ -403,7 +403,7 @@ zx_status_t DevfsConnection::ReadMessage(FidlDispatchFunction dispatch) {
 zx_status_t DevfsConnection::CloseMessage(FidlDispatchFunction dispatch) {
   fuchsia_io_NodeCloseRequest request;
   memset(&request, 0, sizeof(request));
-  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseOrdinal);
+  fidl_init_txn_header(&request.hdr, 0, fuchsia_io_NodeCloseGenOrdinal);
   fidl_msg_t msg = {
       .bytes = &request,
       .handles = NULL,

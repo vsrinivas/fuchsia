@@ -58,7 +58,7 @@ zx_status_t SecondProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 
 void SecondProtocol_Proxy::MethodOnSecond() {
-  ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_Ordinal);
+  ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_GenOrdinal);
   controller_->Send(&test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder), nullptr);
 }
 
@@ -116,7 +116,7 @@ SecondProtocol_SyncProxy::SecondProtocol_SyncProxy(::zx::channel channel)
 SecondProtocol_SyncProxy::~SecondProtocol_SyncProxy() = default;
 
 zx_status_t SecondProtocol_SyncProxy::MethodOnSecond() {
-  ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_Ordinal);
+  ::fidl::Encoder _encoder(internal::kSecondProtocol_MethodOnSecond_GenOrdinal);
   return proxy_.Send(&test_name_SecondProtocolMethodOnSecondRequestTable, SecondProtocol_RequestEncoder::MethodOnSecond(&_encoder));
 }
 
@@ -174,7 +174,7 @@ zx_status_t FirstProtocol_Proxy::Dispatch_(::fidl::Message message) {
 
 
 void FirstProtocol_Proxy::MethodOnFirst() {
-  ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_Ordinal);
+  ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_GenOrdinal);
   controller_->Send(&test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder), nullptr);
 }
 
@@ -232,7 +232,7 @@ FirstProtocol_SyncProxy::FirstProtocol_SyncProxy(::zx::channel channel)
 FirstProtocol_SyncProxy::~FirstProtocol_SyncProxy() = default;
 
 zx_status_t FirstProtocol_SyncProxy::MethodOnFirst() {
-  ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_Ordinal);
+  ::fidl::Encoder _encoder(internal::kFirstProtocol_MethodOnFirst_GenOrdinal);
   return proxy_.Send(&test_name_FirstProtocolMethodOnFirstRequestTable, FirstProtocol_RequestEncoder::MethodOnFirst(&_encoder));
 }
 

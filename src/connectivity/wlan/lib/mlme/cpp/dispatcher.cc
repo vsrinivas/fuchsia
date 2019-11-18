@@ -303,14 +303,14 @@ zx_status_t Dispatcher::HandleQueryDeviceInfo(zx_txid_t txid) {
   }
 
   return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_Ordinal, txid);
+                        fuchsia::wlan::mlme::internal::kMLME_QueryDeviceInfo_GenOrdinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMlmeStats(uint64_t ordinal) const {
   debugfn();
   wlan_mlme::StatsQueryResponse resp = GetStatsToFidl();
   return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_StatsQueryResp_Ordinal);
+                        fuchsia::wlan::mlme::internal::kMLME_StatsQueryResp_GenOrdinal);
 }
 
 zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid) const {
@@ -322,7 +322,7 @@ zx_status_t Dispatcher::HandleMinstrelPeerList(uint64_t ordinal, zx_txid_t txid)
     resp.peers.peers.resize(0);
   }
   return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_Ordinal, txid);
+                        fuchsia::wlan::mlme::internal::kMLME_ListMinstrelPeers_GenOrdinal, txid);
 }
 
 zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t ordinal,
@@ -330,7 +330,7 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t 
   debugfn();
   wlan_mlme::MinstrelStatsResponse resp{};
   auto req = MlmeMsg<wlan_mlme::MinstrelStatsRequest>::Decode(
-      span, fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal);
+      span, fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_GenOrdinal);
   if (!req.has_value()) {
     errorf("could not deserialize MLME primitive %lu\n", ordinal);
     return ZX_ERR_INVALID_ARGS;
@@ -345,7 +345,7 @@ zx_status_t Dispatcher::HandleMinstrelTxStats(fbl::Span<uint8_t> span, uint64_t 
     errorf("could not get peer stats: %s\n", zx_status_get_string(status));
   }
   return SendServiceMsg(device_, &resp,
-                        fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_Ordinal, txid);
+                        fuchsia::wlan::mlme::internal::kMLME_GetMinstrelStats_GenOrdinal, txid);
 }
 
 void Dispatcher::HwIndication(uint32_t ind) {

@@ -28,7 +28,7 @@ zx::socket connect_to_logger() {
   }
   fuchsia_logger_LogSinkConnectRequest req;
   memset(&req, 0, sizeof(req));
-  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogSinkConnectOrdinal);
+  fidl_init_txn_header(&req.hdr, 0, fuchsia_logger_LogSinkConnectGenOrdinal);
   req.socket = FIDL_HANDLE_PRESENT;
   zx_handle_t handles[1] = {remote.release()};
   if (logger.write(0, &req, sizeof(req), handles, 1) != ZX_OK) {

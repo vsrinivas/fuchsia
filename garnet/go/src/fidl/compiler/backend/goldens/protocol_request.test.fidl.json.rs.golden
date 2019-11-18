@@ -354,20 +354,20 @@ impl ParentSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn get_child(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ClientEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x3692bc6900000000,
+				0x57e26ed694158086,
 				___deadline,
 			)}
 	pub fn get_child_request(&mut self,___deadline: zx::Time,) -> Result<(fidl::endpoints::ServerEnd<ChildMarker>), fidl::Error> {self.client.send_query(&mut (),
-				0x3faacc7e00000000,
+				0x5ea0990a698a80,
 				___deadline,
 			)}
 	pub fn take_child(&mut self,
 		mut c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (c),
-				0x4c0642f900000000,
+				0x6a9827d18871f87d,
 			)}
 	pub fn take_child_request(&mut self,
 		mut r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {self.client.send(&mut (r),
-				0x5ec3867a00000000,
+				0x6c4a70e2a2126637,
 			)}
 }
 
@@ -442,22 +442,22 @@ impl ParentProxyInterface for ParentProxy {
 	type GetChildResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ClientEnd<ChildMarker>)>;
 	fn get_child(&self,
 	)-> Self::GetChildResponseFut {
-		self.client.send_query(&mut (), 0x3692bc6900000000)
+		self.client.send_query(&mut (), 0x57e26ed694158086)
 	}
 	type GetChildRequestResponseFut = fidl::client::QueryResponseFut<(fidl::endpoints::ServerEnd<ChildMarker>)>;
 	fn get_child_request(&self,
 	)-> Self::GetChildRequestResponseFut {
-		self.client.send_query(&mut (), 0x3faacc7e00000000)
+		self.client.send_query(&mut (), 0x5ea0990a698a80)
 	}
 	fn take_child(&self,
 		mut c: fidl::endpoints::ClientEnd<ChildMarker>,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (c), 0x4c0642f900000000)
+		self.client.send(&mut (c), 0x6a9827d18871f87d)
 	}
 	fn take_child_request(&self,
 		mut r: fidl::endpoints::ServerEnd<ChildMarker>,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (r), 0x5ec3867a00000000)
+		self.client.send(&mut (r), 0x6c4a70e2a2126637)
 	}}
 
 pub struct ParentEventStream {
@@ -828,7 +828,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3692bc6900000000);
+			tx_id,0x57e26ed694158086);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -839,7 +839,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3692bc6900000000);
+			tx_id,0x57e26ed694158086);
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -850,7 +850,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3faacc7e00000000);
+			tx_id,0x5ea0990a698a80);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -861,7 +861,7 @@ impl ParentEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3faacc7e00000000);
+			tx_id,0x5ea0990a698a80);
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -870,7 +870,7 @@ impl ParentEncoder {
 	pub fn encode_take_child_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_c: fidl::endpoints::ClientEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x4c0642f900000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x6a9827d18871f87d);
 		let mut body = (in_c,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -879,7 +879,7 @@ impl ParentEncoder {
 	pub fn encode_take_child_request_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_r: fidl::endpoints::ServerEnd<ChildMarker>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x5ec3867a00000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x6c4a70e2a2126637);
 		let mut body = (in_r,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;

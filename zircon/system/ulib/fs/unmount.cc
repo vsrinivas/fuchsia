@@ -23,7 +23,7 @@ zx_status_t vfs_unmount_handle(zx_handle_t srv, zx_time_t deadline) {
   // the only other messages we ever send are no-reply OPEN or CLONE with
   // txid of 0.
   zx_txid_t txid = 1;
-  fidl_init_txn_header(&request->hdr, txid, fuchsia_io_DirectoryAdminUnmountOrdinal);
+  fidl_init_txn_header(&request->hdr, txid, fuchsia_io_DirectoryAdminUnmountGenOrdinal);
 
   zx_channel_call_args_t args;
   args.wr_bytes = request;

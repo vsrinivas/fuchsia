@@ -817,31 +817,31 @@ void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Repl
 
 
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsRequest(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_GenOrdinal);
 }
 void TestDevice::SetTransactionHeaderFor::AddDeviceWithPowerArgsResponse(const ::fidl::DecodedMessage<TestDevice::AddDeviceWithPowerArgsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddDeviceWithPowerArgs_GenOrdinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_GenOrdinal);
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePowerStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePowerStateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePowerState_GenOrdinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePerformanceStateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal);
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDevicePerformanceStateResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDevicePerformanceStateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDevicePerformanceState_GenOrdinal);
 }
 
 void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigRequest(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal);
 }
 void TestDevice::SetTransactionHeaderFor::GetCurrentDeviceAutoSuspendConfigResponse(const ::fidl::DecodedMessage<TestDevice::GetCurrentDeviceAutoSuspendConfigResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_GetCurrentDeviceAutoSuspendConfig_GenOrdinal);
 }
 
 }  // namespace test

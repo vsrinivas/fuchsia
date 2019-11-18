@@ -380,7 +380,7 @@ static zx_status_t send_handles(const zx::channel& launcher, size_t handle_capac
 
   memset(handles, 0, sizeof(handles));
 
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddHandlesOrdinal);
+  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddHandlesGenOrdinal);
 
   zx_status_t status = ZX_OK;
   uint32_t h = 0;
@@ -510,7 +510,7 @@ static zx_status_t send_namespace(const zx::channel& launcher, size_t name_count
 
   memset(handles, 0, sizeof(handles));
 
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddNamesOrdinal);
+  fidl_init_txn_header(&req->hdr, 0, fuchsia_process_LauncherAddNamesGenOrdinal);
   req->names.count = name_count;
   req->names.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
 
@@ -785,13 +785,13 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     extra_argv.push_back(nullptr);
 
     status =
-        send_cstring_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, extra_argv.data());
+        send_cstring_array(launcher, fuchsia_process_LauncherAddArgsGenOrdinal, extra_argv.data());
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send extra argument vector: %d", status);
       goto cleanup;
     }
   }
-  status = send_cstring_array(launcher, fuchsia_process_LauncherAddArgsOrdinal, argv);
+  status = send_cstring_array(launcher, fuchsia_process_LauncherAddArgsGenOrdinal, argv);
   if (status != ZX_OK) {
     report_error(err_msg, "failed to send argument vector: %d", status);
     goto cleanup;
@@ -799,13 +799,13 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
 
   if (explicit_environ) {
     status =
-        send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal, explicit_environ);
+        send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal, explicit_environ);
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment: %d", status);
       goto cleanup;
     }
   } else if ((flags & FDIO_SPAWN_CLONE_ENVIRON) != 0) {
-    status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsOrdinal,
+    status = send_cstring_array(launcher, fuchsia_process_LauncherAddEnvironsGenOrdinal,
                                 (const char* const*)environ);
     if (status != ZX_OK) {
       report_error(err_msg, "failed to send environment clone with FDIO_SPAWN_CLONE_ENVIRON: %d",
@@ -861,7 +861,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
     memset(&msg, 0, sizeof(msg));
     size_t msg_len = sizeof(fuchsia_process_LauncherLaunchRequest) + FIDL_ALIGN(process_name_size);
 
-    fidl_init_txn_header(&msg.req.hdr, 0, fuchsia_process_LauncherLaunchOrdinal);
+    fidl_init_txn_header(&msg.req.hdr, 0, fuchsia_process_LauncherLaunchGenOrdinal);
     msg.req.info.executable = FIDL_HANDLE_PRESENT;
     msg.req.info.job = FIDL_HANDLE_PRESENT;
     msg.req.info.name.size = process_name_size;

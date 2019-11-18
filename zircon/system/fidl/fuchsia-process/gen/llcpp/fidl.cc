@@ -171,10 +171,10 @@ void Resolver::Interface::ResolveCompleterBase::Reply(::fidl::DecodedMessage<Res
 
 
 void Resolver::SetTransactionHeaderFor::ResolveRequest(const ::fidl::DecodedMessage<Resolver::ResolveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kResolver_Resolve_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kResolver_Resolve_GenOrdinal);
 }
 void Resolver::SetTransactionHeaderFor::ResolveResponse(const ::fidl::DecodedMessage<Resolver::ResolveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kResolver_Resolve_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kResolver_Resolve_GenOrdinal);
 }
 
 namespace {
@@ -824,33 +824,33 @@ void Launcher::Interface::CreateWithoutStartingCompleterBase::Reply(::fidl::Deco
 
 
 void Launcher::SetTransactionHeaderFor::LaunchRequest(const ::fidl::DecodedMessage<Launcher::LaunchRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_Launch_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_Launch_GenOrdinal);
 }
 void Launcher::SetTransactionHeaderFor::LaunchResponse(const ::fidl::DecodedMessage<Launcher::LaunchResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_Launch_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_Launch_GenOrdinal);
 }
 
 void Launcher::SetTransactionHeaderFor::CreateWithoutStartingRequest(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_CreateWithoutStarting_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_CreateWithoutStarting_GenOrdinal);
 }
 void Launcher::SetTransactionHeaderFor::CreateWithoutStartingResponse(const ::fidl::DecodedMessage<Launcher::CreateWithoutStartingResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_CreateWithoutStarting_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_CreateWithoutStarting_GenOrdinal);
 }
 
 void Launcher::SetTransactionHeaderFor::AddArgsRequest(const ::fidl::DecodedMessage<Launcher::AddArgsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddArgs_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddArgs_GenOrdinal);
 }
 
 void Launcher::SetTransactionHeaderFor::AddEnvironsRequest(const ::fidl::DecodedMessage<Launcher::AddEnvironsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddEnvirons_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddEnvirons_GenOrdinal);
 }
 
 void Launcher::SetTransactionHeaderFor::AddNamesRequest(const ::fidl::DecodedMessage<Launcher::AddNamesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddNames_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddNames_GenOrdinal);
 }
 
 void Launcher::SetTransactionHeaderFor::AddHandlesRequest(const ::fidl::DecodedMessage<Launcher::AddHandlesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddHandles_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLauncher_AddHandles_GenOrdinal);
 }
 
 }  // namespace process

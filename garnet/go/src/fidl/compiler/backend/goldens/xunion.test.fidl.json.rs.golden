@@ -178,11 +178,11 @@ impl TestProtocolSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn strict_x_union_hence_response_may_be_stack_allocated(&mut self,___deadline: zx::Time,) -> Result<(StrictBoundedXUnion), fidl::Error> {self.client.send_query(&mut (),
-				0x71a1b4b700000000,
+				0x2b158c786064d0de,
 				___deadline,
 			)}
 	pub fn flexible_x_union_hence_response_must_be_heap_allocated(&mut self,___deadline: zx::Time,) -> Result<(OlderSimpleUnion), fidl::Error> {self.client.send_query(&mut (),
-				0x3959ff0900000000,
+				0x5ecf85aadd137696,
 				___deadline,
 			)}
 }
@@ -244,12 +244,12 @@ impl TestProtocolProxyInterface for TestProtocolProxy {
 	type StrictXUnionHenceResponseMayBeStackAllocatedResponseFut = fidl::client::QueryResponseFut<(StrictBoundedXUnion)>;
 	fn strict_x_union_hence_response_may_be_stack_allocated(&self,
 	)-> Self::StrictXUnionHenceResponseMayBeStackAllocatedResponseFut {
-		self.client.send_query(&mut (), 0x71a1b4b700000000)
+		self.client.send_query(&mut (), 0x2b158c786064d0de)
 	}
 	type FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut = fidl::client::QueryResponseFut<(OlderSimpleUnion)>;
 	fn flexible_x_union_hence_response_must_be_heap_allocated(&self,
 	)-> Self::FlexibleXUnionHenceResponseMustBeHeapAllocatedResponseFut {
-		self.client.send_query(&mut (), 0x3959ff0900000000)
+		self.client.send_query(&mut (), 0x5ecf85aadd137696)
 	}}
 
 pub struct TestProtocolEventStream {
@@ -540,7 +540,7 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x71a1b4b700000000);
+			tx_id,0x2b158c786064d0de);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -551,7 +551,7 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut StrictBoundedXUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x71a1b4b700000000);
+			tx_id,0x2b158c786064d0de);
 		let mut body = (in_xu,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -562,7 +562,7 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3959ff0900000000);
+			tx_id,0x5ecf85aadd137696);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -573,7 +573,7 @@ impl TestProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_xu: &mut OlderSimpleUnion,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x3959ff0900000000);
+			tx_id,0x5ecf85aadd137696);
 		let mut body = (in_xu,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;

@@ -114,7 +114,7 @@ MlmeMsg<wlan_mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time) {
   req->channel_list.emplace({11});
   req->max_channel_time = max_channel_time;
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StartScan_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StartScan_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
@@ -130,13 +130,13 @@ MlmeMsg<wlan_mlme::StartRequest> CreateStartRequest(bool protected_ap) {
     req->rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   }
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StartReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StartReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::StopRequest> CreateStopRequest() {
   auto req = wlan_mlme::StopRequest::New();
   req->ssid = std::vector<uint8_t>(kSsid, kSsid + sizeof(kSsid));
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StopReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_StopReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
@@ -149,7 +149,7 @@ MlmeMsg<wlan_mlme::JoinRequest> CreateJoinRequest(bool rsn) {
   req->selected_bss = CreateBssDescription(rsn);
   req->selected_bss.rates = {12, 24, 48};
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_JoinReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_JoinReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
@@ -160,7 +160,7 @@ MlmeMsg<wlan_mlme::AuthenticateRequest> CreateAuthRequest() {
   req->auth_failure_timeout = kAuthTimeout;
   req->auth_type = wlan_mlme::AuthenticationTypes::OPEN_SYSTEM;
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AuthenticateReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AuthenticateReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr peer_addr,
@@ -168,7 +168,7 @@ MlmeMsg<wlan_mlme::DeauthenticateRequest> CreateDeauthRequest(common::MacAddr pe
   auto req = wlan_mlme::DeauthenticateRequest::New();
   std::memcpy(req->peer_sta_address.data(), peer_addr.byte, common::kMacAddrLen);
   req->reason_code = reason_code;
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_DeauthenticateReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_DeauthenticateReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
@@ -177,7 +177,7 @@ MlmeMsg<wlan_mlme::AuthenticateResponse> CreateAuthResponse(
   std::memcpy(resp->peer_sta_address.data(), client_addr.byte, common::kMacAddrLen);
   resp->result_code = result_code;
 
-  return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AuthenticateResp_Ordinal};
+  return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AuthenticateResp_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsne) {
@@ -191,7 +191,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsne) {
     req->rsne.reset();
   }
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AssociateReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_AssociateReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
@@ -201,7 +201,7 @@ MlmeMsg<wlan_mlme::AssociateResponse> CreateAssocResponse(
   resp->result_code = result_code;
   resp->association_id = aid;
 
-  return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AssociateResp_Ordinal};
+  return {std::move(*resp), fuchsia::wlan::mlme::internal::kMLME_AssociateResp_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
@@ -212,7 +212,7 @@ MlmeMsg<wlan_mlme::EapolRequest> CreateEapolRequest(common::MacAddr src_addr,
   std::vector<uint8_t> eapol_pdu(kEapolPdu, kEapolPdu + sizeof(kEapolPdu));
   req->data = std::move(eapol_pdu);
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_EapolReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_EapolReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
@@ -231,7 +231,7 @@ MlmeMsg<wlan_mlme::SetKeysRequest> CreateSetKeysRequest(common::MacAddr addr,
   auto req = wlan_mlme::SetKeysRequest::New();
   req->keylist = std::move(keylist);
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_GenOrdinal};
 }
 
 MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
@@ -240,7 +240,7 @@ MlmeMsg<wlan_mlme::SetControlledPortRequest> CreateSetCtrlPortRequest(
   std::memcpy(req->peer_sta_address.data(), peer_addr.byte, sizeof(peer_addr));
   req->state = state;
 
-  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_Ordinal};
+  return {std::move(*req), fuchsia::wlan::mlme::internal::kMLME_SetKeysReq_GenOrdinal};
 }
 
 std::unique_ptr<Packet> CreateBeaconFrame(common::MacAddr bssid) {

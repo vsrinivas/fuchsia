@@ -821,45 +821,45 @@ void Controller::Interface::GenerateAggregatedObservationsCompleterBase::Reply(:
 
 
 void Controller::SetTransactionHeaderFor::RequestSendSoonRequest(const ::fidl::DecodedMessage<Controller::RequestSendSoonRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RequestSendSoon_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RequestSendSoon_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::RequestSendSoonResponse(const ::fidl::DecodedMessage<Controller::RequestSendSoonResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RequestSendSoon_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_RequestSendSoon_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::BlockUntilEmptyRequest(const ::fidl::DecodedMessage<Controller::BlockUntilEmptyRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_BlockUntilEmpty_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_BlockUntilEmpty_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::BlockUntilEmptyResponse(const ::fidl::DecodedMessage<Controller::BlockUntilEmptyResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_BlockUntilEmpty_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_BlockUntilEmpty_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetNumSendAttemptsRequest(const ::fidl::DecodedMessage<Controller::GetNumSendAttemptsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumSendAttempts_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumSendAttempts_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetNumSendAttemptsResponse(const ::fidl::DecodedMessage<Controller::GetNumSendAttemptsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumSendAttempts_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumSendAttempts_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetFailedSendAttemptsRequest(const ::fidl::DecodedMessage<Controller::GetFailedSendAttemptsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetFailedSendAttempts_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetFailedSendAttempts_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetFailedSendAttemptsResponse(const ::fidl::DecodedMessage<Controller::GetFailedSendAttemptsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetFailedSendAttempts_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetFailedSendAttempts_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GetNumObservationsAddedRequest(const ::fidl::DecodedMessage<Controller::GetNumObservationsAddedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumObservationsAdded_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumObservationsAdded_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GetNumObservationsAddedResponse(const ::fidl::DecodedMessage<Controller::GetNumObservationsAddedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumObservationsAdded_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GetNumObservationsAdded_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::GenerateAggregatedObservationsRequest(const ::fidl::DecodedMessage<Controller::GenerateAggregatedObservationsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GenerateAggregatedObservations_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GenerateAggregatedObservations_GenOrdinal);
 }
 void Controller::SetTransactionHeaderFor::GenerateAggregatedObservationsResponse(const ::fidl::DecodedMessage<Controller::GenerateAggregatedObservationsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GenerateAggregatedObservations_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_GenerateAggregatedObservations_GenOrdinal);
 }
 
 namespace {
@@ -1921,59 +1921,59 @@ void LoggerBase::Interface::EndTimerCompleterBase::Reply(::fidl::DecodedMessage<
 
 
 void LoggerBase::SetTransactionHeaderFor::LogEventRequest(const ::fidl::DecodedMessage<LoggerBase::LogEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEvent_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogEventResponse(const ::fidl::DecodedMessage<LoggerBase::LogEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEvent_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::LogEventCountRequest(const ::fidl::DecodedMessage<LoggerBase::LogEventCountRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEventCount_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogEventCountResponse(const ::fidl::DecodedMessage<LoggerBase::LogEventCountResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogEventCount_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::LogElapsedTimeRequest(const ::fidl::DecodedMessage<LoggerBase::LogElapsedTimeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogElapsedTime_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogElapsedTimeResponse(const ::fidl::DecodedMessage<LoggerBase::LogElapsedTimeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogElapsedTime_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::LogFrameRateRequest(const ::fidl::DecodedMessage<LoggerBase::LogFrameRateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogFrameRate_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogFrameRateResponse(const ::fidl::DecodedMessage<LoggerBase::LogFrameRateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogFrameRate_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::LogMemoryUsageRequest(const ::fidl::DecodedMessage<LoggerBase::LogMemoryUsageRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogMemoryUsage_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::DecodedMessage<LoggerBase::LogMemoryUsageResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogMemoryUsage_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<LoggerBase::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<LoggerBase::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_LogString_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<LoggerBase::StartTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_StartTimer_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::StartTimerResponse(const ::fidl::DecodedMessage<LoggerBase::StartTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_StartTimer_GenOrdinal);
 }
 
 void LoggerBase::SetTransactionHeaderFor::EndTimerRequest(const ::fidl::DecodedMessage<LoggerBase::EndTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_EndTimer_GenOrdinal);
 }
 void LoggerBase::SetTransactionHeaderFor::EndTimerResponse(const ::fidl::DecodedMessage<LoggerBase::EndTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerBase_EndTimer_GenOrdinal);
 }
 
 namespace {
@@ -3166,66 +3166,66 @@ void LoggerSimple::Interface::LogIntHistogramCompleterBase::Reply(::fidl::Decode
 
 
 void LoggerSimple::SetTransactionHeaderFor::LogEventRequest(const ::fidl::DecodedMessage<LoggerSimple::LogEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEvent_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogEventResponse(const ::fidl::DecodedMessage<LoggerSimple::LogEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEvent_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogEventCountRequest(const ::fidl::DecodedMessage<LoggerSimple::LogEventCountRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEventCount_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogEventCountResponse(const ::fidl::DecodedMessage<LoggerSimple::LogEventCountResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogEventCount_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogElapsedTimeRequest(const ::fidl::DecodedMessage<LoggerSimple::LogElapsedTimeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogElapsedTime_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogElapsedTimeResponse(const ::fidl::DecodedMessage<LoggerSimple::LogElapsedTimeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogElapsedTime_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogFrameRateRequest(const ::fidl::DecodedMessage<LoggerSimple::LogFrameRateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogFrameRate_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogFrameRateResponse(const ::fidl::DecodedMessage<LoggerSimple::LogFrameRateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogFrameRate_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogMemoryUsageRequest(const ::fidl::DecodedMessage<LoggerSimple::LogMemoryUsageRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogMemoryUsage_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::DecodedMessage<LoggerSimple::LogMemoryUsageResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogMemoryUsage_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<LoggerSimple::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<LoggerSimple::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogString_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<LoggerSimple::StartTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_StartTimer_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::StartTimerResponse(const ::fidl::DecodedMessage<LoggerSimple::StartTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_StartTimer_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::EndTimerRequest(const ::fidl::DecodedMessage<LoggerSimple::EndTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_EndTimer_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::EndTimerResponse(const ::fidl::DecodedMessage<LoggerSimple::EndTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_EndTimer_GenOrdinal);
 }
 
 void LoggerSimple::SetTransactionHeaderFor::LogIntHistogramRequest(const ::fidl::DecodedMessage<LoggerSimple::LogIntHistogramRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogIntHistogram_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogIntHistogram_GenOrdinal);
 }
 void LoggerSimple::SetTransactionHeaderFor::LogIntHistogramResponse(const ::fidl::DecodedMessage<LoggerSimple::LogIntHistogramResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogIntHistogram_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerSimple_LogIntHistogram_GenOrdinal);
 }
 
 namespace {
@@ -3758,31 +3758,31 @@ void LoggerFactory::Interface::CreateLoggerSimpleFromProjectNameCompleterBase::R
 
 
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_GenOrdinal);
 }
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLogger_GenOrdinal);
 }
 
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_GenOrdinal);
 }
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimple_GenOrdinal);
 }
 
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerFromProjectNameRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerFromProjectNameRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerFromProjectName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerFromProjectName_GenOrdinal);
 }
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerFromProjectNameResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerFromProjectNameResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerFromProjectName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerFromProjectName_GenOrdinal);
 }
 
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleFromProjectNameRequest(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleFromProjectNameRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimpleFromProjectName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimpleFromProjectName_GenOrdinal);
 }
 void LoggerFactory::SetTransactionHeaderFor::CreateLoggerSimpleFromProjectNameResponse(const ::fidl::DecodedMessage<LoggerFactory::CreateLoggerSimpleFromProjectNameResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimpleFromProjectName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLoggerFactory_CreateLoggerSimpleFromProjectName_GenOrdinal);
 }
 
 namespace {
@@ -4067,17 +4067,17 @@ void SystemDataUpdater::Interface::SetChannelCompleterBase::Reply(::fidl::Decode
 
 
 void SystemDataUpdater::SetTransactionHeaderFor::SetExperimentStateRequest(const ::fidl::DecodedMessage<SystemDataUpdater::SetExperimentStateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetExperimentState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetExperimentState_GenOrdinal);
 }
 void SystemDataUpdater::SetTransactionHeaderFor::SetExperimentStateResponse(const ::fidl::DecodedMessage<SystemDataUpdater::SetExperimentStateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetExperimentState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetExperimentState_GenOrdinal);
 }
 
 void SystemDataUpdater::SetTransactionHeaderFor::SetChannelRequest(const ::fidl::DecodedMessage<SystemDataUpdater::SetChannelRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetChannel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetChannel_GenOrdinal);
 }
 void SystemDataUpdater::SetTransactionHeaderFor::SetChannelResponse(const ::fidl::DecodedMessage<SystemDataUpdater::SetChannelResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetChannel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSystemDataUpdater_SetChannel_GenOrdinal);
 }
 
 ::llcpp::fuchsia::cobalt::EventPayload::EventPayload() {
@@ -5826,87 +5826,87 @@ void Logger::Interface::LogCobaltEventsCompleterBase::Reply(::fidl::DecodedMessa
 
 
 void Logger::SetTransactionHeaderFor::LogEventRequest(const ::fidl::DecodedMessage<Logger::LogEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEvent_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogEventResponse(const ::fidl::DecodedMessage<Logger::LogEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEvent_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogEventCountRequest(const ::fidl::DecodedMessage<Logger::LogEventCountRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEventCount_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogEventCountResponse(const ::fidl::DecodedMessage<Logger::LogEventCountResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEventCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogEventCount_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogElapsedTimeRequest(const ::fidl::DecodedMessage<Logger::LogElapsedTimeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogElapsedTime_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogElapsedTimeResponse(const ::fidl::DecodedMessage<Logger::LogElapsedTimeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogElapsedTime_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogElapsedTime_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogFrameRateRequest(const ::fidl::DecodedMessage<Logger::LogFrameRateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogFrameRate_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogFrameRateResponse(const ::fidl::DecodedMessage<Logger::LogFrameRateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogFrameRate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogFrameRate_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogMemoryUsageRequest(const ::fidl::DecodedMessage<Logger::LogMemoryUsageRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogMemoryUsage_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogMemoryUsageResponse(const ::fidl::DecodedMessage<Logger::LogMemoryUsageResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogMemoryUsage_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogMemoryUsage_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogStringRequest(const ::fidl::DecodedMessage<Logger::LogStringRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogStringResponse(const ::fidl::DecodedMessage<Logger::LogStringResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogString_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::StartTimerRequest(const ::fidl::DecodedMessage<Logger::StartTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_StartTimer_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::StartTimerResponse(const ::fidl::DecodedMessage<Logger::StartTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_StartTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_StartTimer_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::EndTimerRequest(const ::fidl::DecodedMessage<Logger::EndTimerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_EndTimer_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::EndTimerResponse(const ::fidl::DecodedMessage<Logger::EndTimerResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_EndTimer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_EndTimer_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogIntHistogramRequest(const ::fidl::DecodedMessage<Logger::LogIntHistogramRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogIntHistogram_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogIntHistogram_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogIntHistogramResponse(const ::fidl::DecodedMessage<Logger::LogIntHistogramResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogIntHistogram_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogIntHistogram_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogCustomEventRequest(const ::fidl::DecodedMessage<Logger::LogCustomEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCustomEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCustomEvent_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogCustomEventResponse(const ::fidl::DecodedMessage<Logger::LogCustomEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCustomEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCustomEvent_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogCobaltEventRequest(const ::fidl::DecodedMessage<Logger::LogCobaltEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvent_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogCobaltEventResponse(const ::fidl::DecodedMessage<Logger::LogCobaltEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvent_GenOrdinal);
 }
 
 void Logger::SetTransactionHeaderFor::LogCobaltEventsRequest(const ::fidl::DecodedMessage<Logger::LogCobaltEventsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvents_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvents_GenOrdinal);
 }
 void Logger::SetTransactionHeaderFor::LogCobaltEventsResponse(const ::fidl::DecodedMessage<Logger::LogCobaltEventsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvents_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLogger_LogCobaltEvents_GenOrdinal);
 }
 
 }  // namespace cobalt

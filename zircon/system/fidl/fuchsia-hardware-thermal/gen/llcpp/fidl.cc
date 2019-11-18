@@ -1379,80 +1379,80 @@ void Device::Interface::SetFanLevelCompleterBase::Reply(::fidl::DecodedMessage<S
 
 
 void Device::SetTransactionHeaderFor::GetInfoRequest(const ::fidl::DecodedMessage<Device::GetInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetInfoResponse(const ::fidl::DecodedMessage<Device::GetInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInfo_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetDeviceInfoRequest(const ::fidl::DecodedMessage<Device::GetDeviceInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDeviceInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDeviceInfo_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetDeviceInfoResponse(const ::fidl::DecodedMessage<Device::GetDeviceInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDeviceInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDeviceInfo_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetDvfsInfoRequest(const ::fidl::DecodedMessage<Device::GetDvfsInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsInfo_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetDvfsInfoResponse(const ::fidl::DecodedMessage<Device::GetDvfsInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsInfo_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetTemperatureCelsiusRequest(const ::fidl::DecodedMessage<Device::GetTemperatureCelsiusRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetTemperatureCelsius_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetTemperatureCelsius_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetTemperatureCelsiusResponse(const ::fidl::DecodedMessage<Device::GetTemperatureCelsiusResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetTemperatureCelsius_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetTemperatureCelsius_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetStateChangeEventRequest(const ::fidl::DecodedMessage<Device::GetStateChangeEventRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangeEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangeEvent_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetStateChangeEventResponse(const ::fidl::DecodedMessage<Device::GetStateChangeEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangeEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangeEvent_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetStateChangePortRequest(const ::fidl::DecodedMessage<Device::GetStateChangePortRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangePort_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangePort_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetStateChangePortResponse(const ::fidl::DecodedMessage<Device::GetStateChangePortResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangePort_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetStateChangePort_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetTripCelsiusRequest(const ::fidl::DecodedMessage<Device::SetTripCelsiusRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetTripCelsius_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetTripCelsius_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetTripCelsiusResponse(const ::fidl::DecodedMessage<Device::SetTripCelsiusResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetTripCelsius_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetTripCelsius_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetDvfsOperatingPointRequest(const ::fidl::DecodedMessage<Device::GetDvfsOperatingPointRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsOperatingPoint_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsOperatingPoint_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetDvfsOperatingPointResponse(const ::fidl::DecodedMessage<Device::GetDvfsOperatingPointResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsOperatingPoint_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetDvfsOperatingPoint_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetDvfsOperatingPointRequest(const ::fidl::DecodedMessage<Device::SetDvfsOperatingPointRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetDvfsOperatingPoint_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetDvfsOperatingPoint_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetDvfsOperatingPointResponse(const ::fidl::DecodedMessage<Device::SetDvfsOperatingPointResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetDvfsOperatingPoint_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetDvfsOperatingPoint_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetFanLevelRequest(const ::fidl::DecodedMessage<Device::GetFanLevelRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetFanLevel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetFanLevel_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetFanLevelResponse(const ::fidl::DecodedMessage<Device::GetFanLevelResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetFanLevel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetFanLevel_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetFanLevelRequest(const ::fidl::DecodedMessage<Device::SetFanLevelRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetFanLevel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetFanLevel_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetFanLevelResponse(const ::fidl::DecodedMessage<Device::SetFanLevelResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetFanLevel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetFanLevel_GenOrdinal);
 }
 
 }  // namespace thermal

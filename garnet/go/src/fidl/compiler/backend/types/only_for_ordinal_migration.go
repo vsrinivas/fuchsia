@@ -68,6 +68,25 @@ func NewOrdinalsStep5(method Method, ordName, genName string) Ordinals {
 	}
 }
 
+// NewOrdinalsStep7 creates an Ordinals using the `ordName`, and `genName`
+// provided.
+//
+// Step #7 of migration: neither ord nor gen are shifted (they are read directly
+// from fidlc). Send gen, which is 64b version.
+func NewOrdinalsStep7(method Method, ordName, genName string) Ordinals {
+	return Ordinals{
+		ord: NamedOrdinal{
+			Name:    ordName,
+			Ordinal: methodOrdinal(method.Ordinal),
+		},
+		gen: NamedOrdinal{
+			Name:    genName,
+			Ordinal: methodOrdinal(method.GenOrdinal),
+		},
+		writeGen: true,
+	}
+}
+
 // Reads returns all distinct ordinals to be used on read, i.e. either
 // ord, gen, or both, depending on the current status of the migration.
 func (ords Ordinals) Reads() []NamedOrdinal {

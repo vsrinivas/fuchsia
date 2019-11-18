@@ -161,10 +161,10 @@ void Device::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessage<Ge
 
 
 void Device::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<Device::GetChannelRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::DecodedMessage<Device::GetChannelResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetChannel_GenOrdinal);
 }
 
 }  // namespace audio

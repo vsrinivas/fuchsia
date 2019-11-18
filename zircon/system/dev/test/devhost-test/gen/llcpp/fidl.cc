@@ -234,10 +234,10 @@ void TestDevice::Interface::AddChildDeviceCompleterBase::Reply(::fidl::DecodedMe
 
 
 void TestDevice::SetTransactionHeaderFor::AddChildDeviceRequest(const ::fidl::DecodedMessage<TestDevice::AddChildDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChildDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChildDevice_GenOrdinal);
 }
 void TestDevice::SetTransactionHeaderFor::AddChildDeviceResponse(const ::fidl::DecodedMessage<TestDevice::AddChildDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChildDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kTestDevice_AddChildDevice_GenOrdinal);
 }
 
 }  // namespace test

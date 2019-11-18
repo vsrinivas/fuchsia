@@ -27,13 +27,13 @@ type SwitchingOrdinalsInterface _bindings.ChannelProxy
 
 func (p *SwitchingOrdinalsInterface) OrdinalFive() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveGenOrdinal, req_)
 	return err
 }
 
 func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal, req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal, req_)
 	return err
 }
 
@@ -106,11 +106,11 @@ type SwitchingOrdinalsEventProxy _bindings.ChannelProxy
 
 func (p *SwitchingOrdinalsEventProxy) EventOrdinalFifteen() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOrdinalFifteenOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOrdinalFifteenGenOrdinal, event_)
 }
 func (p *SwitchingOrdinalsEventProxy) EventOnlyGeneratedOrdinal() error {
 	var event_ _bindings.Message
-	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, event_)
+	return ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal, event_)
 }
 
 

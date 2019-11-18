@@ -433,24 +433,24 @@ void Device::Interface::ExchangeCompleterBase::Reply(::fidl::DecodedMessage<Exch
 
 
 void Device::SetTransactionHeaderFor::TransmitRequest(const ::fidl::DecodedMessage<Device::TransmitRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Transmit_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Transmit_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::TransmitResponse(const ::fidl::DecodedMessage<Device::TransmitResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Transmit_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Transmit_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::ReceiveRequest(const ::fidl::DecodedMessage<Device::ReceiveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Receive_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Receive_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::ReceiveResponse(const ::fidl::DecodedMessage<Device::ReceiveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Receive_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Receive_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::ExchangeRequest(const ::fidl::DecodedMessage<Device::ExchangeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Exchange_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Exchange_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::ExchangeResponse(const ::fidl::DecodedMessage<Device::ExchangeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Exchange_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_Exchange_GenOrdinal);
 }
 
 }  // namespace spi

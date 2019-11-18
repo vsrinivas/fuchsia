@@ -419,7 +419,7 @@ zx_status_t MeshMlme::HandleMpmOpenAction(const common::MacAddr& src_addr, Buffe
 
   src_addr.CopyTo(action.common.peer_sta_address.data());
   return SendServiceMsg(device_, &action,
-                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpOpenAction_Ordinal);
+                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpOpenAction_GenOrdinal);
 }
 
 zx_status_t MeshMlme::HandleMpmConfirmAction(const common::MacAddr& src_addr, BufferReader* r) {
@@ -430,7 +430,7 @@ zx_status_t MeshMlme::HandleMpmConfirmAction(const common::MacAddr& src_addr, Bu
 
   src_addr.CopyTo(action.common.peer_sta_address.data());
   return SendServiceMsg(device_, &action,
-                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpConfirmAction_Ordinal);
+                        fuchsia::wlan::mlme::internal::kMLME_IncomingMpConfirmAction_GenOrdinal);
 }
 
 const MeshPath* MeshMlme::QueryPathTable(const common::MacAddr& mesh_dest) {

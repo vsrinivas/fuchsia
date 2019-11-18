@@ -258,11 +258,11 @@ zx_status_t Interface::SendOnEventEvent(::zx::unowned_channel _chan) {
 
 
 void Interface::SetTransactionHeaderFor::MethodRequest(const ::fidl::DecodedMessage<Interface::MethodRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_Method_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_Method_GenOrdinal);
 }
 
 void Interface::SetTransactionHeaderFor::OnEventResponse(const ::fidl::DecodedMessage<Interface::OnEventResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_OnEvent_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kInterface_OnEvent_GenOrdinal);
 }
 
 }  // namespace name

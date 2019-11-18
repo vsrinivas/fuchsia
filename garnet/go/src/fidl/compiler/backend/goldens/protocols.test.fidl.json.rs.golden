@@ -136,28 +136,28 @@ impl WithAndWithoutRequestResponseSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn no_request_no_response(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x1e03f87500000000,
+				0x3931f96bc77fba8,
 			)}
 	pub fn no_request_empty_response(&mut self,___deadline: zx::Time,) -> Result<(), fidl::Error> {self.client.send_query(&mut (),
-				0x4df6dbd500000000,
+				0x706ec7bd335005f9,
 				___deadline,
 			)}
 	pub fn no_request_with_response(&mut self,___deadline: zx::Time,) -> Result<(String), fidl::Error> {self.client.send_query(&mut (),
-				0x668d7f800000000,
+				0x4625ad5934067a48,
 				___deadline,
 			)}
 	pub fn with_request_no_response(&mut self,
 		mut arg: &str,) -> Result<(), fidl::Error> {self.client.send(&mut (arg),
-				0x19c2137100000000,
+				0x46e5095902913025,
 			)}
 	pub fn with_request_empty_response(&mut self,
 		mut arg: &str,___deadline: zx::Time,) -> Result<(), fidl::Error> {self.client.send_query(&mut (arg),
-				0x76f2397300000000,
+				0x180c481d4a15967,
 				___deadline,
 			)}
 	pub fn with_request_with_response(&mut self,
 		mut arg: &str,___deadline: zx::Time,) -> Result<(String), fidl::Error> {self.client.send_query(&mut (arg),
-				0x1973292000000000,
+				0x553860267eceec0,
 				___deadline,
 			)}
 }
@@ -244,34 +244,34 @@ impl WithAndWithoutRequestResponseProxy {
 impl WithAndWithoutRequestResponseProxyInterface for WithAndWithoutRequestResponseProxy {
 	fn no_request_no_response(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x1e03f87500000000)
+		self.client.send(&mut (), 0x3931f96bc77fba8)
 	}
 	type NoRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
 	fn no_request_empty_response(&self,
 	)-> Self::NoRequestEmptyResponseResponseFut {
-		self.client.send_query(&mut (), 0x4df6dbd500000000)
+		self.client.send_query(&mut (), 0x706ec7bd335005f9)
 	}
 	type NoRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
 	fn no_request_with_response(&self,
 	)-> Self::NoRequestWithResponseResponseFut {
-		self.client.send_query(&mut (), 0x668d7f800000000)
+		self.client.send_query(&mut (), 0x4625ad5934067a48)
 	}
 	fn with_request_no_response(&self,
 		mut arg: &str,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (arg), 0x19c2137100000000)
+		self.client.send(&mut (arg), 0x46e5095902913025)
 	}
 	type WithRequestEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
 	fn with_request_empty_response(&self,
 		mut arg: &str,
 	)-> Self::WithRequestEmptyResponseResponseFut {
-		self.client.send_query(&mut (arg), 0x76f2397300000000)
+		self.client.send_query(&mut (arg), 0x180c481d4a15967)
 	}
 	type WithRequestWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;
 	fn with_request_with_response(&self,
 		mut arg: &str,
 	)-> Self::WithRequestWithResponseResponseFut {
-		self.client.send_query(&mut (arg), 0x1973292000000000)
+		self.client.send_query(&mut (arg), 0x553860267eceec0)
 	}
 	type OnEmptyResponseResponseFut = fidl::client::QueryResponseFut<()>;
 	type OnWithResponseResponseFut = fidl::client::QueryResponseFut<(String)>;}
@@ -807,7 +807,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_no_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x1e03f87500000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x3931f96bc77fba8);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -818,7 +818,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4df6dbd500000000);
+			tx_id,0x706ec7bd335005f9);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -829,7 +829,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4df6dbd500000000);
+			tx_id,0x706ec7bd335005f9);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -840,7 +840,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x668d7f800000000);
+			tx_id,0x4625ad5934067a48);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -851,7 +851,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x668d7f800000000);
+			tx_id,0x4625ad5934067a48);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -860,7 +860,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_with_request_no_response_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_arg: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x19c2137100000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x46e5095902913025);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -871,7 +871,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x76f2397300000000);
+			tx_id,0x180c481d4a15967);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -882,7 +882,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x76f2397300000000);
+			tx_id,0x180c481d4a15967);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -893,7 +893,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_arg: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x1973292000000000);
+			tx_id,0x553860267eceec0);
 		let mut body = (in_arg,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -904,7 +904,7 @@ impl WithAndWithoutRequestResponseEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_ret: &str,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x1973292000000000);
+			tx_id,0x553860267eceec0);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -913,7 +913,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_on_empty_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x697fd73200000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x42e90e9a86944b3);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -922,7 +922,7 @@ impl WithAndWithoutRequestResponseEncoder {
 	pub fn encode_on_with_response_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_ret: &str,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x7a47120700000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x2a9767b3ae6c2b09);
 		let mut body = (in_ret,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -952,7 +952,7 @@ impl WithAndWithoutRequestResponseControlHandle {
 	}
 	pub fn send_on_empty_response(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x697fd73200000000);
+			0, 0x42e90e9a86944b3);
 
 		let mut response = ();
 
@@ -971,7 +971,7 @@ impl WithAndWithoutRequestResponseControlHandle {
 	pub fn send_on_with_response(&self,
 		mut ret: &str) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x7a47120700000000);
+			0, 0x2a9767b3ae6c2b09);
 
 		let mut response = (ret);
 
@@ -1320,15 +1320,15 @@ impl WithErrorSyntaxSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn response_as_struct(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxResponseAsStructResult), fidl::Error> {self.client.send_query(&mut (),
-				0x4f3c32be00000000,
+				0x592157d505db2bcf,
 				___deadline,
 			)}
 	pub fn error_as_primitive(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxErrorAsPrimitiveResult), fidl::Error> {self.client.send_query(&mut (),
-				0x7b58113900000000,
+				0x20cf80ad7d9b60be,
 				___deadline,
 			)}
 	pub fn error_as_enum(&mut self,___deadline: zx::Time,) -> Result<(WithErrorSyntaxErrorAsEnumResult), fidl::Error> {self.client.send_query(&mut (),
-				0x4c95de1f00000000,
+				0x3fcd36560f812e7f,
 				___deadline,
 			)}
 }
@@ -1395,17 +1395,17 @@ impl WithErrorSyntaxProxyInterface for WithErrorSyntaxProxy {
 	type ResponseAsStructResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxResponseAsStructResult)>;
 	fn response_as_struct(&self,
 	)-> Self::ResponseAsStructResponseFut {
-		self.client.send_query(&mut (), 0x4f3c32be00000000)
+		self.client.send_query(&mut (), 0x592157d505db2bcf)
 	}
 	type ErrorAsPrimitiveResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsPrimitiveResult)>;
 	fn error_as_primitive(&self,
 	)-> Self::ErrorAsPrimitiveResponseFut {
-		self.client.send_query(&mut (), 0x7b58113900000000)
+		self.client.send_query(&mut (), 0x20cf80ad7d9b60be)
 	}
 	type ErrorAsEnumResponseFut = fidl::client::QueryResponseFut<(WithErrorSyntaxErrorAsEnumResult)>;
 	fn error_as_enum(&self,
 	)-> Self::ErrorAsEnumResponseFut {
-		self.client.send_query(&mut (), 0x4c95de1f00000000)
+		self.client.send_query(&mut (), 0x3fcd36560f812e7f)
 	}}
 
 pub struct WithErrorSyntaxEventStream {
@@ -1743,7 +1743,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4f3c32be00000000);
+			tx_id,0x592157d505db2bcf);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1754,7 +1754,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxResponseAsStructResult,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4f3c32be00000000);
+			tx_id,0x592157d505db2bcf);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1765,7 +1765,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x7b58113900000000);
+			tx_id,0x20cf80ad7d9b60be);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1776,7 +1776,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsPrimitiveResult,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x7b58113900000000);
+			tx_id,0x20cf80ad7d9b60be);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1787,7 +1787,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4c95de1f00000000);
+			tx_id,0x3fcd36560f812e7f);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -1798,7 +1798,7 @@ impl WithErrorSyntaxEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: &mut WithErrorSyntaxErrorAsEnumResult,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4c95de1f00000000);
+			tx_id,0x3fcd36560f812e7f);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2093,17 +2093,17 @@ impl ChannelProtocolSynchronousProxy {
 	pub fn method_a(&mut self,
 		mut a: i64,
 		mut b: i64,) -> Result<(), fidl::Error> {self.client.send(&mut (a, b),
-				0x556693d200000000,
+				0x1b1e059b3f02bffc,
 			)}
 	pub fn method_b(&mut self,
 		mut a: i64,
 		mut b: i64,___deadline: zx::Time,) -> Result<(i64), fidl::Error> {self.client.send_query(&mut (a, b),
-				0xac6551b00000000,
+				0x5db17a61464744a3,
 				___deadline,
 			)}
 	pub fn mutate_socket(&mut self,
 		mut a: fidl::Socket,___deadline: zx::Time,) -> Result<(fidl::Socket), fidl::Error> {self.client.send_query(&mut (a),
-				0x4b02e28600000000,
+				0x36caa6fff7569577,
 				___deadline,
 			)}
 }
@@ -2181,7 +2181,7 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
 		mut a: i64,
 		mut b: i64,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (a, b), 0x556693d200000000)
+		self.client.send(&mut (a, b), 0x1b1e059b3f02bffc)
 	}
 	type EventAResponseFut = fidl::client::QueryResponseFut<(i64, i64)>;
 	type MethodBResponseFut = fidl::client::QueryResponseFut<(i64)>;
@@ -2189,13 +2189,13 @@ impl ChannelProtocolProxyInterface for ChannelProtocolProxy {
 		mut a: i64,
 		mut b: i64,
 	)-> Self::MethodBResponseFut {
-		self.client.send_query(&mut (a, b), 0xac6551b00000000)
+		self.client.send_query(&mut (a, b), 0x5db17a61464744a3)
 	}
 	type MutateSocketResponseFut = fidl::client::QueryResponseFut<(fidl::Socket)>;
 	fn mutate_socket(&self,
 		mut a: fidl::Socket,
 	)-> Self::MutateSocketResponseFut {
-		self.client.send_query(&mut (a), 0x4b02e28600000000)
+		self.client.send_query(&mut (a), 0x36caa6fff7569577)
 	}}
 
 pub struct ChannelProtocolEventStream {
@@ -2596,7 +2596,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_method_a_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x556693d200000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x1b1e059b3f02bffc);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2605,7 +2605,7 @@ impl ChannelProtocolEncoder {
 	pub fn encode_event_a_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x1c78c20200000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x2558b206a254d8a0);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2616,7 +2616,7 @@ impl ChannelProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: i64,mut in_b: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0xac6551b00000000);
+			tx_id,0x5db17a61464744a3);
 		let mut body = (in_a,in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2627,7 +2627,7 @@ impl ChannelProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_result: i64,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0xac6551b00000000);
+			tx_id,0x5db17a61464744a3);
 		let mut body = (in_result,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2638,7 +2638,7 @@ impl ChannelProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_a: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4b02e28600000000);
+			tx_id,0x36caa6fff7569577);
 		let mut body = (in_a,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2649,7 +2649,7 @@ impl ChannelProtocolEncoder {
 		out_handles: &'a mut Vec<fidl::Handle>,
 		tx_id: u32,mut in_b: fidl::Socket,) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			tx_id,0x4b02e28600000000);
+			tx_id,0x36caa6fff7569577);
 		let mut body = (in_b,);
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -2681,7 +2681,7 @@ impl ChannelProtocolControlHandle {
 		mut a: i64,
 		mut b: i64) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x1c78c20200000000);
+			0, 0x2558b206a254d8a0);
 
 		let mut response = (a, b);
 

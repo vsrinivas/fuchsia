@@ -173,7 +173,7 @@ class EthertapClient {
 
   bool ExpectDataRead(const void* data, size_t len, const char* msg) {
     return ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnFrameEvent>(
-        fuchsia_hardware_ethertap_TapDeviceOnFrameOrdinal,
+        fuchsia_hardware_ethertap_TapDeviceOnFrameGenOrdinal,
         &fuchsia_hardware_ethertap_TapDeviceOnFrameEventTable,
         [data, len, msg](fuchsia_hardware_ethertap_TapDeviceOnFrameEvent* frame) {
           ASSERT_EQ(frame->data.count, len, msg);
@@ -188,7 +188,7 @@ class EthertapClient {
 
   bool ExpectSetParam(uint32_t param, int32_t value, size_t len, uint8_t* data, const char* msg) {
     return ExpectEvent<fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent>(
-        fuchsia_hardware_ethertap_TapDeviceOnReportParamsOrdinal,
+        fuchsia_hardware_ethertap_TapDeviceOnReportParamsGenOrdinal,
         &fuchsia_hardware_ethertap_TapDeviceOnReportParamsEventTable,
         [param, value, data, len,
          msg](fuchsia_hardware_ethertap_TapDeviceOnReportParamsEvent* report) {

@@ -411,24 +411,24 @@ void DebugDumper::Interface::DumpBindingPropertiesCompleterBase::Reply(::fidl::D
 
 
 void DebugDumper::SetTransactionHeaderFor::DumpTreeRequest(const ::fidl::DecodedMessage<DebugDumper::DumpTreeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_GenOrdinal);
 }
 void DebugDumper::SetTransactionHeaderFor::DumpTreeResponse(const ::fidl::DecodedMessage<DebugDumper::DumpTreeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpTree_GenOrdinal);
 }
 
 void DebugDumper::SetTransactionHeaderFor::DumpDriversRequest(const ::fidl::DecodedMessage<DebugDumper::DumpDriversRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_GenOrdinal);
 }
 void DebugDumper::SetTransactionHeaderFor::DumpDriversResponse(const ::fidl::DecodedMessage<DebugDumper::DumpDriversResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpDrivers_GenOrdinal);
 }
 
 void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesRequest(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_GenOrdinal);
 }
 void DebugDumper::SetTransactionHeaderFor::DumpBindingPropertiesResponse(const ::fidl::DecodedMessage<DebugDumper::DumpBindingPropertiesResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDebugDumper_DumpBindingProperties_GenOrdinal);
 }
 
 namespace {
@@ -585,10 +585,10 @@ void Administrator::Interface::SuspendCompleterBase::Reply(::fidl::DecodedMessag
 
 
 void Administrator::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<Administrator::SuspendRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_GenOrdinal);
 }
 void Administrator::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<Administrator::SuspendResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAdministrator_Suspend_GenOrdinal);
 }
 
 namespace {
@@ -947,18 +947,18 @@ void DevhostController::Interface::CreateCompositeDeviceCompleterBase::Reply(::f
 
 
 void DevhostController::SetTransactionHeaderFor::CreateDeviceStubRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceStubRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDeviceStub_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDeviceStub_GenOrdinal);
 }
 
 void DevhostController::SetTransactionHeaderFor::CreateDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateDevice_GenOrdinal);
 }
 
 void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceRequest(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_GenOrdinal);
 }
 void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(const ::fidl::DecodedMessage<DevhostController::CreateCompositeDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevhostController_CreateCompositeDevice_GenOrdinal);
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Coordinator_AddDevice_Result() {
@@ -2669,46 +2669,46 @@ void DeviceController::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMess
 
 
 void DeviceController::SetTransactionHeaderFor::BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_GenOrdinal);
 }
 void DeviceController::SetTransactionHeaderFor::BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_BindDriver_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_ConnectProxy_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_ConnectProxy_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_GenOrdinal);
 }
 void DeviceController::SetTransactionHeaderFor::UnbindResponse(const ::fidl::DecodedMessage<DeviceController::UnbindResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Unbind_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_GenOrdinal);
 }
 void DeviceController::SetTransactionHeaderFor::CompleteRemovalResponse(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteRemoval_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::SuspendRequest(const ::fidl::DecodedMessage<DeviceController::SuspendRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_GenOrdinal);
 }
 void DeviceController::SetTransactionHeaderFor::SuspendResponse(const ::fidl::DecodedMessage<DeviceController::SuspendResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Suspend_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::ResumeRequest(const ::fidl::DecodedMessage<DeviceController::ResumeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_GenOrdinal);
 }
 void DeviceController::SetTransactionHeaderFor::ResumeResponse(const ::fidl::DecodedMessage<DeviceController::ResumeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Resume_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::CompleteCompatibilityTestsRequest(const ::fidl::DecodedMessage<DeviceController::CompleteCompatibilityTestsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteCompatibilityTests_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_CompleteCompatibilityTests_GenOrdinal);
 }
 
 namespace {
@@ -4701,102 +4701,102 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::D
 
 
 void Coordinator::SetTransactionHeaderFor::AddDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::AddDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDevice_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleRequest(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::AddDeviceInvisibleResponse(const ::fidl::DecodedMessage<Coordinator::AddDeviceInvisibleResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddDeviceInvisible_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::ScheduleRemoveRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleRemoveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleRemove_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleRemove_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::ScheduleUnbindChildrenRequest(const ::fidl::DecodedMessage<Coordinator::ScheduleUnbindChildrenRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleUnbindChildren_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_ScheduleUnbindChildren_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::MakeVisibleRequest(const ::fidl::DecodedMessage<Coordinator::MakeVisibleRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::MakeVisibleResponse(const ::fidl::DecodedMessage<Coordinator::MakeVisibleResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_MakeVisible_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::BindDeviceRequest(const ::fidl::DecodedMessage<Coordinator::BindDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::BindDeviceResponse(const ::fidl::DecodedMessage<Coordinator::BindDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_BindDevice_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::GetTopologicalPathRequest(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::GetTopologicalPathResponse(const ::fidl::DecodedMessage<Coordinator::GetTopologicalPathResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetTopologicalPath_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::LoadFirmwareRequest(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::LoadFirmwareResponse(const ::fidl::DecodedMessage<Coordinator::LoadFirmwareResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_LoadFirmware_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::GetMetadataRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::GetMetadataResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadata_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::GetMetadataSizeRequest(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::GetMetadataSizeResponse(const ::fidl::DecodedMessage<Coordinator::GetMetadataSizeResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_GetMetadataSize_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::AddMetadataRequest(const ::fidl::DecodedMessage<Coordinator::AddMetadataRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::AddMetadataResponse(const ::fidl::DecodedMessage<Coordinator::AddMetadataResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddMetadata_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::PublishMetadataRequest(const ::fidl::DecodedMessage<Coordinator::PublishMetadataRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::PublishMetadataResponse(const ::fidl::DecodedMessage<Coordinator::PublishMetadataResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_PublishMetadata_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceRequest(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::AddCompositeDeviceResponse(const ::fidl::DecodedMessage<Coordinator::AddCompositeDeviceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_AddCompositeDevice_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::DirectoryWatchRequest(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::DirectoryWatchResponse(const ::fidl::DecodedMessage<Coordinator::DirectoryWatchResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_DirectoryWatch_GenOrdinal);
 }
 
 void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsRequest(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_GenOrdinal);
 }
 void Coordinator::SetTransactionHeaderFor::RunCompatibilityTestsResponse(const ::fidl::DecodedMessage<Coordinator::RunCompatibilityTestsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kCoordinator_RunCompatibilityTests_GenOrdinal);
 }
 
 }  // namespace manager

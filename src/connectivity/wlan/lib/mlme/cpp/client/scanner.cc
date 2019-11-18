@@ -39,7 +39,7 @@ static void SendScanEnd(DeviceInterface* device, uint64_t txn_id, wlan_mlme::Sca
   msg.txn_id = txn_id;
   msg.code = code;
   zx_status_t s =
-      SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_OnScanEnd_Ordinal);
+      SendServiceMsg(device, &msg, fuchsia::wlan::mlme::internal::kMLME_OnScanEnd_GenOrdinal);
   if (s != ZX_OK) {
     errorf("failed to send OnScanEnd event: %d\n", s);
   }
@@ -54,7 +54,7 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
       continue;
     }
     zx_status_t status =
-        SendServiceMsg(device, &r, fuchsia::wlan::mlme::internal::kMLME_OnScanResult_Ordinal);
+        SendServiceMsg(device, &r, fuchsia::wlan::mlme::internal::kMLME_OnScanResult_GenOrdinal);
     if (status != ZX_OK) {
       return status;
     }

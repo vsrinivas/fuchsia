@@ -892,52 +892,52 @@ void Light::Interface::SetRgbValueCompleterBase::Reply(::fidl::DecodedMessage<Se
 
 
 void Light::SetTransactionHeaderFor::GetNameRequest(const ::fidl::DecodedMessage<Light::GetNameRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetName_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::GetNameResponse(const ::fidl::DecodedMessage<Light::GetNameResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetName_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::GetCountRequest(const ::fidl::DecodedMessage<Light::GetCountRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetCount_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::GetCountResponse(const ::fidl::DecodedMessage<Light::GetCountResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetCount_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetCount_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::HasCapabilityRequest(const ::fidl::DecodedMessage<Light::HasCapabilityRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_HasCapability_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_HasCapability_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::HasCapabilityResponse(const ::fidl::DecodedMessage<Light::HasCapabilityResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_HasCapability_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_HasCapability_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::GetSimpleValueRequest(const ::fidl::DecodedMessage<Light::GetSimpleValueRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetSimpleValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetSimpleValue_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::GetSimpleValueResponse(const ::fidl::DecodedMessage<Light::GetSimpleValueResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetSimpleValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetSimpleValue_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::SetSimpleValueRequest(const ::fidl::DecodedMessage<Light::SetSimpleValueRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetSimpleValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetSimpleValue_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::SetSimpleValueResponse(const ::fidl::DecodedMessage<Light::SetSimpleValueResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetSimpleValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetSimpleValue_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::GetRgbValueRequest(const ::fidl::DecodedMessage<Light::GetRgbValueRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetRgbValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetRgbValue_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::GetRgbValueResponse(const ::fidl::DecodedMessage<Light::GetRgbValueResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetRgbValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_GetRgbValue_GenOrdinal);
 }
 
 void Light::SetTransactionHeaderFor::SetRgbValueRequest(const ::fidl::DecodedMessage<Light::SetRgbValueRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetRgbValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetRgbValue_GenOrdinal);
 }
 void Light::SetTransactionHeaderFor::SetRgbValueResponse(const ::fidl::DecodedMessage<Light::SetRgbValueResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetRgbValue_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLight_SetRgbValue_GenOrdinal);
 }
 
 }  // namespace light

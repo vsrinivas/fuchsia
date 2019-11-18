@@ -642,7 +642,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler 
 
 }  // namespace
 void TestProtocol_Proxy::StrictXUnionHenceResponseMayBeStackAllocated(StrictXUnionHenceResponseMayBeStackAllocatedCallback callback) {
-  ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+  ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
   controller_->Send(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), std::make_unique<TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_ResponseHandler>(std::move(callback)));
 }
 namespace {
@@ -677,7 +677,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandle
 
 }  // namespace
 void TestProtocol_Proxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(FlexibleXUnionHenceResponseMustBeHeapAllocatedCallback callback) {
-  ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+  ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
   controller_->Send(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), std::make_unique<TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_ResponseHandler>(std::move(callback)));
 }
 
@@ -695,7 +695,7 @@ class TestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Responder final 
       : response_(std::move(response)) {}
 
   void operator()(StrictBoundedXUnion xu) {
-    ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+    ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
     response_.Send(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_ResponseEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder, &xu));
   }
 
@@ -709,7 +709,7 @@ class TestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Responder fina
       : response_(std::move(response)) {}
 
   void operator()(OlderSimpleUnion xu) {
-    ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+    ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
     response_.Send(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_ResponseEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder, &xu));
   }
 
@@ -769,7 +769,7 @@ TestProtocol_SyncProxy::TestProtocol_SyncProxy(::zx::channel channel)
 TestProtocol_SyncProxy::~TestProtocol_SyncProxy() = default;
 
 zx_status_t TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated(StrictBoundedXUnion* out_xu) {
-  ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_Ordinal);
+  ::fidl::Encoder _encoder(internal::kTestProtocol_StrictXUnionHenceResponseMayBeStackAllocated_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(&test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedRequestTable, &test_name_TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponseTable, TestProtocol_RequestEncoder::StrictXUnionHenceResponseMayBeStackAllocated(&_encoder), &response_);
@@ -781,7 +781,7 @@ zx_status_t TestProtocol_SyncProxy::StrictXUnionHenceResponseMayBeStackAllocated
 }
 
 zx_status_t TestProtocol_SyncProxy::FlexibleXUnionHenceResponseMustBeHeapAllocated(OlderSimpleUnion* out_xu) {
-  ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_Ordinal);
+  ::fidl::Encoder _encoder(internal::kTestProtocol_FlexibleXUnionHenceResponseMustBeHeapAllocated_GenOrdinal);
   ::fidl::MessageBuffer buffer_;
   ::fidl::Message response_ = buffer_.CreateEmptyMessage();
   zx_status_t status_ = proxy_.Call(&test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedRequestTable, &test_name_TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponseTable, TestProtocol_RequestEncoder::FlexibleXUnionHenceResponseMustBeHeapAllocated(&_encoder), &response_);

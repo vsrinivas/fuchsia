@@ -319,10 +319,10 @@ void Handler::Interface::OnExceptionCompleterBase::Reply() {
 
 
 void Handler::SetTransactionHeaderFor::OnExceptionRequest(const ::fidl::DecodedMessage<Handler::OnExceptionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_GenOrdinal);
 }
 void Handler::SetTransactionHeaderFor::OnExceptionResponse(const ::fidl::DecodedMessage<Handler::OnExceptionResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHandler_OnException_GenOrdinal);
 }
 
 ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder ProcessExceptionMetadata::Build() {
@@ -1479,52 +1479,52 @@ void ProcessLimbo::Interface::GetFiltersCompleterBase::Reply(::fidl::DecodedMess
 
 
 void ProcessLimbo::SetTransactionHeaderFor::WatchActiveRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::WatchActiveResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchActiveResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchActive_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::WatchProcessesWaitingOnExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::WatchProcessesWaitingOnExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::WatchProcessesWaitingOnExceptionResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_WatchProcessesWaitingOnException_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionRequest(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::RetrieveExceptionResponse(const ::fidl::DecodedMessage<ProcessLimbo::RetrieveExceptionResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RetrieveException_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessRequest(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::ReleaseProcessResponse(const ::fidl::DecodedMessage<ProcessLimbo::ReleaseProcessResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_ReleaseProcess_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::AppendFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::AppendFiltersResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_AppendFilters_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::RemoveFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::RemoveFiltersResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_RemoveFilters_GenOrdinal);
 }
 
 void ProcessLimbo::SetTransactionHeaderFor::GetFiltersRequest(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_GenOrdinal);
 }
 void ProcessLimbo::SetTransactionHeaderFor::GetFiltersResponse(const ::fidl::DecodedMessage<ProcessLimbo::GetFiltersResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kProcessLimbo_GetFilters_GenOrdinal);
 }
 
 }  // namespace exception

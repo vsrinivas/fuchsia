@@ -140,13 +140,13 @@ zx_status_t SendLogMessagesHelper(const zx::channel& listener, uint64_t ordinal,
 zx_status_t SendLogMessage(const zx::channel& listener, LogMessage log_msg) {
   fbl::Vector<LogMessage> log_msgs;
   log_msgs.push_back(std::move(log_msg));
-  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogOrdinal, log_msgs);
+  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogGenOrdinal, log_msgs);
 }
 
 // Encodes and writes |log_msgs| to |listener|. This will replicate behaviour of
 // LogMany call in Log interface.
 zx_status_t SendLogMessages(const zx::channel& listener, const fbl::Vector<LogMessage>& log_msgs) {
-  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogManyOrdinal, log_msgs);
+  return SendLogMessagesHelper(listener, fuchsia_logger_LogListenerLogManyGenOrdinal, log_msgs);
 }
 
 bool TestLog() {

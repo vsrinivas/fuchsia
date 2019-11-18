@@ -1471,7 +1471,7 @@ TEST_F(WireParserTest, BadSchemaPrintHex) {
       "methods": [
         {
           "ordinal": 913676553315942400,
-          "generated_ordinal": 913676553315942400,
+          "generated_ordinal": 1593056155789170713,
           "name": "Int32",
           "location": {
             "filename": "../../src/lib/fidl_codec/testdata/types.test.fidl",

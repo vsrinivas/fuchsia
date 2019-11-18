@@ -260,15 +260,6 @@
       },
       "members": [
         {
-          "xunion_ordinal": 2,
-          "reserved": true,
-          "location": {
-            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 14,
-            "column": 5
-          }
-        },
-        {
           "xunion_ordinal": 1,
           "reserved": false,
           "name": "Primitive",
@@ -285,6 +276,15 @@
           "max_out_of_line": 0,
           "alignment": 4,
           "offset": 8
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": true,
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 14,
+            "column": 5
+          }
         },
         {
           "xunion_ordinal": 3,

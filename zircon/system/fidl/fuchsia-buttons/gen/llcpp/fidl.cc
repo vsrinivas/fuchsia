@@ -473,21 +473,21 @@ zx_status_t Buttons::SendNotifyEvent(::zx::unowned_channel _chan, ::fidl::Decode
 
 
 void Buttons::SetTransactionHeaderFor::GetStateRequest(const ::fidl::DecodedMessage<Buttons::GetStateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_GenOrdinal);
 }
 void Buttons::SetTransactionHeaderFor::GetStateResponse(const ::fidl::DecodedMessage<Buttons::GetStateResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_GetState_GenOrdinal);
 }
 
 void Buttons::SetTransactionHeaderFor::RegisterNotifyRequest(const ::fidl::DecodedMessage<Buttons::RegisterNotifyRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_GenOrdinal);
 }
 void Buttons::SetTransactionHeaderFor::RegisterNotifyResponse(const ::fidl::DecodedMessage<Buttons::RegisterNotifyResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_RegisterNotify_GenOrdinal);
 }
 
 void Buttons::SetTransactionHeaderFor::NotifyResponse(const ::fidl::DecodedMessage<Buttons::NotifyResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_Notify_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kButtons_Notify_GenOrdinal);
 }
 
 }  // namespace buttons

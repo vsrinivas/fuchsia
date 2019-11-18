@@ -367,14 +367,14 @@ type TestProtocolInterface _bindings.ChannelProxy
 func (p *TestProtocolInterface) StrictXUnionHenceResponseMayBeStackAllocated() (StrictBoundedXUnion, error) {
 	var req_ _bindings.Message
 	resp_ := &testProtocolStrictXUnionHenceResponseMayBeStackAllocatedResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, req_, resp_, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal)
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal, req_, resp_, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedOrdinal, TestProtocolStrictXUnionHenceResponseMayBeStackAllocatedGenOrdinal)
 	return resp_.Xu, err
 }
 
 func (p *TestProtocolInterface) FlexibleXUnionHenceResponseMustBeHeapAllocated() (OlderSimpleUnion, error) {
 	var req_ _bindings.Message
 	resp_ := &testProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, req_, resp_, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal)
+	err := ((*_bindings.ChannelProxy)(p)).Call(TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal, req_, resp_, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedOrdinal, TestProtocolFlexibleXUnionHenceResponseMustBeHeapAllocatedGenOrdinal)
 	return resp_.Xu, err
 }
 

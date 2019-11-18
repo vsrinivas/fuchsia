@@ -416,24 +416,24 @@ void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(::fidl::D
 
 
 void Device::SetTransactionHeaderFor::GetHypervisorResourceRequest(const ::fidl::DecodedMessage<Device::GetHypervisorResourceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetHypervisorResourceResponse(const ::fidl::DecodedMessage<Device::GetHypervisorResourceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetHypervisorResource_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetBoardNameRequest(const ::fidl::DecodedMessage<Device::GetBoardNameRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoResponse(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetInterruptControllerInfo_GenOrdinal);
 }
 
 }  // namespace sysinfo

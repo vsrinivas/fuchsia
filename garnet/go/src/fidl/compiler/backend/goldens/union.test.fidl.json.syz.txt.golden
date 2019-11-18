@@ -35,8 +35,8 @@ test_name_FieldCollisionHandles [
        void void
 ][varlen]
 test_name_ExplicitUnionInLine [
-        fidl_union_member[test_name_ExplicitUnionTag_, ]
        primitive fidl_union_member[test_name_ExplicitUnionTag_Primitive, int32]
+        fidl_union_member[test_name_ExplicitUnionTag_, ]
        string_needs_constructorInLine fidl_union_member[test_name_ExplicitUnionTag_StringNeedsConstructor, fidl_string]
 ]
 test_name_ExplicitUnionOutOfLine [

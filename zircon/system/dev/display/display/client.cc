@@ -1646,7 +1646,7 @@ void Client::SetOwnership(bool is_owner) {
 
   fuchsia_hardware_display_ControllerClientOwnershipChangeEvent msg = {};
   fidl_init_txn_header(&msg.hdr, 0,
-                       fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal);
+                       fuchsia_hardware_display_ControllerClientOwnershipChangeGenOrdinal);
   msg.has_ownership = is_owner;
 
   zx_status_t status = zx_channel_write(server_handle_, 0, &msg, sizeof(msg), nullptr, 0);
@@ -1666,7 +1666,7 @@ void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_coun
   fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
   auto req = builder.New<fuchsia_hardware_display_ControllerDisplaysChangedEvent>();
   zx_status_t status;
-  fidl_init_txn_header(&req->hdr, 0, fuchsia_hardware_display_ControllerDisplaysChangedOrdinal);
+  fidl_init_txn_header(&req->hdr, 0, fuchsia_hardware_display_ControllerDisplaysChangedGenOrdinal);
   req->added.count = 0;
   req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
   req->removed.count = 0;
@@ -2101,7 +2101,7 @@ zx_status_t ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp
 
   fuchsia_hardware_display_ControllerVsyncEvent* msg =
       reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(data);
-  fidl_init_txn_header(&msg->hdr, 0, fuchsia_hardware_display_ControllerVsyncOrdinal);
+  fidl_init_txn_header(&msg->hdr, 0, fuchsia_hardware_display_ControllerVsyncGenOrdinal);
   msg->display_id = display_id;
   msg->timestamp = timestamp;
   msg->images.count = count;

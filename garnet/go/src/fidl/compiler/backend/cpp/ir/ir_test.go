@@ -90,7 +90,7 @@ func TestCompileInterface(t *testing.T) {
 				HasEvents:           false,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -144,7 +144,7 @@ func TestCompileInterface(t *testing.T) {
 						},
 					},
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -259,7 +259,7 @@ func TestCompileInterface(t *testing.T) {
 				HasEvents:           true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -368,7 +368,7 @@ func TestCompileInterface(t *testing.T) {
 				HasEvents:           true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -523,7 +523,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				HasEvents:           false,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -577,7 +577,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 						},
 					},
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,
@@ -692,7 +692,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				HasEvents:           true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    1,
 								GenOrdinal: 314159,
@@ -801,7 +801,7 @@ func TestCompileInterfaceLLCPP(t *testing.T) {
 				HasEvents:           true,
 				Methods: []Method{
 					{
-						Ordinals: types.NewOrdinalsStep5(
+						Ordinals: types.NewOrdinalsStep7(
 							types.Method{
 								Ordinal:    2,
 								GenOrdinal: 271828,

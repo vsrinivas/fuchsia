@@ -96,7 +96,7 @@ bool send_sync(const zx::channel& client) {
   BEGIN_HELPER;
   fuchsia_io_NodeSyncRequest request;
   zx_txid_t txid = 5;
-  fidl_init_txn_header(&request.hdr, txid, fuchsia_io_NodeSyncOrdinal);
+  fidl_init_txn_header(&request.hdr, txid, fuchsia_io_NodeSyncGenOrdinal);
   ASSERT_EQ(client.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);
   END_HELPER;
 }

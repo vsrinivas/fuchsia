@@ -265,18 +265,18 @@ void BufferCollectionToken::Interface::SyncCompleterBase::Reply() {
 
 
 void BufferCollectionToken::SetTransactionHeaderFor::DuplicateRequest(const ::fidl::DecodedMessage<BufferCollectionToken::DuplicateRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Duplicate_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Duplicate_GenOrdinal);
 }
 
 void BufferCollectionToken::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollectionToken::SyncRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_GenOrdinal);
 }
 void BufferCollectionToken::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollectionToken::SyncResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Sync_GenOrdinal);
 }
 
 void BufferCollectionToken::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollectionToken::CloseRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Close_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionToken_Close_GenOrdinal);
 }
 
 namespace {
@@ -651,24 +651,24 @@ void Heap::Interface::DestroyResourceCompleterBase::Reply() {
 
 
 void Heap::SetTransactionHeaderFor::AllocateVmoRequest(const ::fidl::DecodedMessage<Heap::AllocateVmoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_GenOrdinal);
 }
 void Heap::SetTransactionHeaderFor::AllocateVmoResponse(const ::fidl::DecodedMessage<Heap::AllocateVmoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_AllocateVmo_GenOrdinal);
 }
 
 void Heap::SetTransactionHeaderFor::CreateResourceRequest(const ::fidl::DecodedMessage<Heap::CreateResourceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_GenOrdinal);
 }
 void Heap::SetTransactionHeaderFor::CreateResourceResponse(const ::fidl::DecodedMessage<Heap::CreateResourceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_CreateResource_GenOrdinal);
 }
 
 void Heap::SetTransactionHeaderFor::DestroyResourceRequest(const ::fidl::DecodedMessage<Heap::DestroyResourceRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_GenOrdinal);
 }
 void Heap::SetTransactionHeaderFor::DestroyResourceResponse(const ::fidl::DecodedMessage<Heap::DestroyResourceResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kHeap_DestroyResource_GenOrdinal);
 }
 
 namespace {
@@ -790,7 +790,7 @@ bool DriverConnector::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transac
 
 
 void DriverConnector::SetTransactionHeaderFor::ConnectRequest(const ::fidl::DecodedMessage<DriverConnector::ConnectRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDriverConnector_Connect_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDriverConnector_Connect_GenOrdinal);
 }
 
 namespace {
@@ -1080,15 +1080,15 @@ bool Allocator::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
 
 
 void Allocator::SetTransactionHeaderFor::AllocateNonSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateNonSharedCollectionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateNonSharedCollection_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateNonSharedCollection_GenOrdinal);
 }
 
 void Allocator::SetTransactionHeaderFor::AllocateSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::AllocateSharedCollectionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateSharedCollection_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_AllocateSharedCollection_GenOrdinal);
 }
 
 void Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(const ::fidl::DecodedMessage<Allocator::BindSharedCollectionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_BindSharedCollection_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kAllocator_BindSharedCollection_GenOrdinal);
 }
 
 ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SecureMem_SetPhysicalSecureHeaps_Result() {
@@ -1508,17 +1508,17 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::De
 
 
 void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_GenOrdinal);
 }
 void SecureMem::SetTransactionHeaderFor::GetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::GetPhysicalSecureHeapsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_GetPhysicalSecureHeaps_GenOrdinal);
 }
 
 void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsRequest(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_GenOrdinal);
 }
 void SecureMem::SetTransactionHeaderFor::SetPhysicalSecureHeapsResponse(const ::fidl::DecodedMessage<SecureMem::SetPhysicalSecureHeapsResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSecureMem_SetPhysicalSecureHeaps_GenOrdinal);
 }
 
 namespace {
@@ -1788,15 +1788,15 @@ bool BufferCollectionEvents::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::
 
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnDuplicatedTokensKnownByServerRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnDuplicatedTokensKnownByServerRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnDuplicatedTokensKnownByServer_GenOrdinal);
 }
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnBuffersAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnBuffersAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnBuffersAllocated_GenOrdinal);
 }
 
 void BufferCollectionEvents::SetTransactionHeaderFor::OnAllocateSingleBufferDoneRequest(const ::fidl::DecodedMessage<BufferCollectionEvents::OnAllocateSingleBufferDoneRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnAllocateSingleBufferDone_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollectionEvents_OnAllocateSingleBufferDone_GenOrdinal);
 }
 
 namespace {
@@ -2743,55 +2743,55 @@ void BufferCollection::Interface::WaitForSingleBufferAllocatedCompleterBase::Rep
 
 
 void BufferCollection::SetTransactionHeaderFor::SetEventSinkRequest(const ::fidl::DecodedMessage<BufferCollection::SetEventSinkRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetEventSink_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetEventSink_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::SyncRequest(const ::fidl::DecodedMessage<BufferCollection::SyncRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_GenOrdinal);
 }
 void BufferCollection::SetTransactionHeaderFor::SyncResponse(const ::fidl::DecodedMessage<BufferCollection::SyncResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Sync_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::SetConstraintsRequest(const ::fidl::DecodedMessage<BufferCollection::SetConstraintsRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetConstraints_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_SetConstraints_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_GenOrdinal);
 }
 void BufferCollection::SetTransactionHeaderFor::WaitForBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForBuffersAllocatedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForBuffersAllocated_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_GenOrdinal);
 }
 void BufferCollection::SetTransactionHeaderFor::CheckBuffersAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::CheckBuffersAllocatedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckBuffersAllocated_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::CloseSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::CloseSingleBufferRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CloseSingleBuffer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CloseSingleBuffer_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::AllocateSingleBufferRequest(const ::fidl::DecodedMessage<BufferCollection::AllocateSingleBufferRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_AllocateSingleBuffer_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_AllocateSingleBuffer_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal);
 }
 void BufferCollection::SetTransactionHeaderFor::WaitForSingleBufferAllocatedResponse(const ::fidl::DecodedMessage<BufferCollection::WaitForSingleBufferAllocatedResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_WaitForSingleBufferAllocated_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::CheckSingleBufferAllocatedRequest(const ::fidl::DecodedMessage<BufferCollection::CheckSingleBufferAllocatedRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckSingleBufferAllocated_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_CheckSingleBufferAllocated_GenOrdinal);
 }
 
 void BufferCollection::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<BufferCollection::CloseRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Close_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kBufferCollection_Close_GenOrdinal);
 }
 
 }  // namespace sysmem

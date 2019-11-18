@@ -128,7 +128,7 @@ bool NewDeviceProxy::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transact
 
 
 void NewDeviceProxy::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::DecodedMessage<NewDeviceProxy::GetChannelRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDeviceProxy_GetChannel_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDeviceProxy_GetChannel_GenOrdinal);
 }
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::NewDevice_Write_Result() {
@@ -519,17 +519,17 @@ void Device::Interface::SetConfigCompleterBase::Reply(::fidl::DecodedMessage<Set
 
 
 void Device::SetTransactionHeaderFor::GetClassRequest(const ::fidl::DecodedMessage<Device::GetClassRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::GetClassResponse(const ::fidl::DecodedMessage<Device::GetClassResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetClass_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::SetConfigRequest(const ::fidl::DecodedMessage<Device::SetConfigRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_GenOrdinal);
 }
 void Device::SetTransactionHeaderFor::SetConfigResponse(const ::fidl::DecodedMessage<Device::SetConfigResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_SetConfig_GenOrdinal);
 }
 
 namespace {
@@ -1079,31 +1079,31 @@ void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::DecodedMessage<Writ
 
 
 void NewDevice::SetTransactionHeaderFor::GetClassRequest(const ::fidl::DecodedMessage<NewDevice::GetClassRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_GenOrdinal);
 }
 void NewDevice::SetTransactionHeaderFor::GetClassResponse(const ::fidl::DecodedMessage<NewDevice::GetClassResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_GetClass_GenOrdinal);
 }
 
 void NewDevice::SetTransactionHeaderFor::SetConfigRequest(const ::fidl::DecodedMessage<NewDevice::SetConfigRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_GenOrdinal);
 }
 void NewDevice::SetTransactionHeaderFor::SetConfigResponse(const ::fidl::DecodedMessage<NewDevice::SetConfigResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_SetConfig_GenOrdinal);
 }
 
 void NewDevice::SetTransactionHeaderFor::ReadRequest(const ::fidl::DecodedMessage<NewDevice::ReadRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_GenOrdinal);
 }
 void NewDevice::SetTransactionHeaderFor::ReadResponse(const ::fidl::DecodedMessage<NewDevice::ReadResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Read_GenOrdinal);
 }
 
 void NewDevice::SetTransactionHeaderFor::WriteRequest(const ::fidl::DecodedMessage<NewDevice::WriteRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_GenOrdinal);
 }
 void NewDevice::SetTransactionHeaderFor::WriteResponse(const ::fidl::DecodedMessage<NewDevice::WriteResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kNewDevice_Write_GenOrdinal);
 }
 
 }  // namespace serial

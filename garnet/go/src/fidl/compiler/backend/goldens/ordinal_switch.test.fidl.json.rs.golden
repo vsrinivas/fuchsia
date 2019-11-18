@@ -59,10 +59,10 @@ impl SwitchingOrdinalsSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn ordinal_five(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x7784636700000000,
+				0x254f3bdfa9d3dcab,
 			)}
 	pub fn only_generated_ordinal(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				0x27c9581f00000000,
+				0x163a45fcac049f5b,
 			)}
 }
 
@@ -122,11 +122,11 @@ impl SwitchingOrdinalsProxy {
 impl SwitchingOrdinalsProxyInterface for SwitchingOrdinalsProxy {
 	fn ordinal_five(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x7784636700000000)
+		self.client.send(&mut (), 0x254f3bdfa9d3dcab)
 	}
 	fn only_generated_ordinal(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 0x27c9581f00000000)
+		self.client.send(&mut (), 0x163a45fcac049f5b)
 	}
 	type EventOrdinalFifteenResponseFut = fidl::client::QueryResponseFut<()>;
 	type EventOnlyGeneratedOrdinalResponseFut = fidl::client::QueryResponseFut<()>;}
@@ -447,7 +447,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_ordinal_five_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x7784636700000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x254f3bdfa9d3dcab);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -456,7 +456,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_only_generated_ordinal_request<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x27c9581f00000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x163a45fcac049f5b);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -465,7 +465,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_ordinal_fifteen_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x577495a100000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x15e4293098574a7);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -474,7 +474,7 @@ impl SwitchingOrdinalsEncoder {
 	pub fn encode_event_only_generated_ordinal_response<'a>(
 		out_bytes: &'a mut Vec<u8>,
 		out_handles: &'a mut Vec<fidl::Handle>,) -> Result<(), fidl::Error> {
-		let header = fidl::encoding::TransactionHeader::new(0,0x7fec464e00000000);
+		let header = fidl::encoding::TransactionHeader::new(0,0x47107cabe23f6510);
 		let mut body = ();
 		let mut msg = fidl::encoding::TransactionMessage { header, body: &mut body };
 		fidl::encoding::Encoder::encode(out_bytes, out_handles, &mut msg)?;
@@ -504,7 +504,7 @@ impl SwitchingOrdinalsControlHandle {
 	}
 	pub fn send_event_ordinal_fifteen(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x577495a100000000);
+			0, 0x15e4293098574a7);
 
 		let mut response = ();
 
@@ -522,7 +522,7 @@ impl SwitchingOrdinalsControlHandle {
 	
 	pub fn send_event_only_generated_ordinal(&self) -> Result<(), fidl::Error> {
 		let header = fidl::encoding::TransactionHeader::new(
-			0, 0x7fec464e00000000);
+			0, 0x47107cabe23f6510);
 
 		let mut response = ();
 

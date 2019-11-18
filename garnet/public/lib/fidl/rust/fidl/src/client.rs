@@ -664,7 +664,10 @@ pub mod sync {
             }
             let (buf, handles) = self.buf.split_mut();
             let (header, body_bytes) = decode_transaction_header(buf)?;
-            if header.tx_id() != QUERY_TX_ID || header.ordinal() != ordinal {
+            // TODO(fxb/7848): Check received ordinal against sent ordinal. For
+            // the migration, we disable this check and rely only on the tx_id
+            // since the ordinal sent may not be the ordinal received.
+            if header.tx_id() != QUERY_TX_ID {
                 return Err(Error::UnexpectedSyncResponse);
             }
             let mut output = D::new_empty();

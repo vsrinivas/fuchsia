@@ -951,7 +951,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 
 		m := Method{
 			Attributes: v.Attributes,
-			Ordinals: types.NewOrdinalsStep5(
+			Ordinals: types.NewOrdinalsStep7(
 				v,
 				fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
 				fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
