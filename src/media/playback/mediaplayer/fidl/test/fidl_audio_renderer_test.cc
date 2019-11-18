@@ -164,7 +164,7 @@ using FidlAudioRendererFixture = ::gtest::RealLoopFixture;
 /// Test NoPts packet handling to ensure we can recover from potential underrun situation by
 /// inserting gaps of silence
 ///
-TEST_F(FidlAudioRendererFixture, DontUnderrunJitteryNoPtsData) {
+TEST_F(FidlAudioRendererFixture, DISABLED_DontUnderrunJitteryNoPtsData) {
   syslog::InitLogger({"mediaplayer"});
 
   static constexpr AudioStreamType::SampleFormat kSampleFormat =
