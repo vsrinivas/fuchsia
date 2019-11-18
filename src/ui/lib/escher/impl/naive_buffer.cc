@@ -23,8 +23,6 @@ bool CheckBufferMemoryRequirements(ResourceManager* manager, vk::Buffer vk_buffe
   auto size_required = mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.size;
   auto alignment_required =
       mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
-  auto dedicated_required =
-      mem_requirements.get<vk::MemoryDedicatedRequirementsKHR>().requiresDedicatedAllocation;
 
   if (mem->size() < size_required) {
     FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires " << size_required
@@ -37,12 +35,6 @@ bool CheckBufferMemoryRequirements(ResourceManager* manager, vk::Buffer vk_buffe
     FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
                    << alignment_required << " bytes, while the provided mem offset is "
                    << mem->offset();
-    return false;
-  }
-
-  if (dedicated_required) {
-    FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires dedicated allocation, "
-                      "cannot use NaiveBuffer.";
     return false;
   }
 

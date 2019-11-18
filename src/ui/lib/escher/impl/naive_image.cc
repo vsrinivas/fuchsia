@@ -27,8 +27,6 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
   auto size_required = mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.size;
   auto alignment_required =
       mem_requirements.get<vk::MemoryRequirements2KHR>().memoryRequirements.alignment;
-  auto dedicated_required =
-      mem_requirements.get<vk::MemoryDedicatedRequirementsKHR>().requiresDedicatedAllocation;
 
   if (mem->size() < size_required) {
     FXL_LOG(ERROR) << "AdoptVkImage failed: Image requires " << size_required
@@ -41,12 +39,6 @@ ImagePtr NaiveImage::AdoptVkImage(ResourceManager* image_owner, ImageInfo info, 
     FXL_LOG(ERROR) << "Memory requirements check failed: Buffer requires alignment of "
                    << alignment_required << " bytes, while the provided mem offset is "
                    << mem->offset();
-    return nullptr;
-  }
-
-  if (dedicated_required) {
-    FXL_LOG(ERROR) << "AdoptVkImage failed: Image requires dedicated allocation, cannot use "
-                      "NaiveImage.";
     return nullptr;
   }
 
