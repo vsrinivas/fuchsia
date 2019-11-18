@@ -49,14 +49,14 @@ void ThreadSafeDeleterTest::WaitForDeferHolderDestruction() {
 }
 
 ThreadSafeDeleterTest::ThreadSafeDeleterTest()
-    : main_loop_(&kAsyncLoopConfigAttachToThread),
+    : main_loop_(&kAsyncLoopConfigAttachToCurrentThread),
       main_queue_(main_loop_.dispatcher(), thrd_current()),
-      other_loop_(&kAsyncLoopConfigNoAttachToThread) {
+      other_loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   thrd_t other_thread;
   zx_status_t status = other_loop_.StartThread("other_loop", &other_thread);
   ZX_ASSERT(status == ZX_OK);
   other_queue_.SetDispatcher(other_loop_.dispatcher(), other_thread);
-  defer_holder_.emplace(&main_queue_, fit::defer<fit::closure>([this]{
+  defer_holder_.emplace(&main_queue_, fit::defer<fit::closure>([this] {
     thrd_t current_thread = thrd_current();
     std::lock_guard<std::mutex> lock(lock_);
     destruction_thread_ = current_thread;
