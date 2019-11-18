@@ -5,47 +5,34 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::{self as bredr, ProfileEvent, ProfileMarker, ProfileProxy},
-    fuchsia_async as fasync,
     fuchsia_bluetooth::expectation::asynchronous::{ExpectableState, ExpectationHarness},
     fuchsia_zircon as zx,
-    futures::{Future, StreamExt, TryFutureExt},
+    futures::future::BoxFuture,
+    futures::{FutureExt, StreamExt},
     std::sync::Arc,
 };
 
 use crate::harness::{control::ActivatedFakeHost, TestHarness};
 
-pub async fn run_profile_test_async<F, Fut>(test: F) -> Result<(), Error>
-where
-    F: FnOnce(ProfileHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    let fake_host = ActivatedFakeHost::new("bt-hci-integration-profile-0").await?;
-
-    let proxy = fuchsia_component::client::connect_to_service::<ProfileMarker>()
-        .context("Failed to connect to Profile serivce")?;
-
-    let state = ProfileHarness::new(proxy);
-
-    fasync::spawn(
-        handle_profile_events(state.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling profile events: {:?}", e)),
-    );
-
-    let result = test(state).await;
-
-    fake_host.release().await?;
-
-    result
-}
-
 impl TestHarness for ProfileHarness {
-    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
-    where
-        F: FnOnce(Self) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().context("error creating event loop")?;
-        executor.run_singlethreaded(run_profile_test_async(test_func))
+    type Env = ActivatedFakeHost;
+    type Runner = BoxFuture<'static, Result<(), Error>>;
+
+    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+        async {
+            let fake_host = ActivatedFakeHost::new("bt-hci-integration-profile-0").await?;
+            let proxy = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+                .context("Failed to connect to Profile serivce")?;
+            let harness = ProfileHarness::new(proxy);
+
+            let run_profile = handle_profile_events(harness.clone()).boxed();
+            Ok((harness, fake_host, run_profile))
+        }
+        .boxed()
+    }
+
+    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        env.release().boxed()
     }
 }
 

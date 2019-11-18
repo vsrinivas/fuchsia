@@ -5,51 +5,38 @@
 use {
     failure::{Error, ResultExt},
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralMarker, CentralProxy},
-    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
         types::le::RemoteDevice,
     },
-    futures::{Future, TryFutureExt, TryStreamExt},
+    futures::future::BoxFuture,
+    futures::{FutureExt, TryStreamExt},
     std::convert::TryInto,
 };
 
 use crate::harness::{control::ActivatedFakeHost, emulator::EmulatorHarnessAux, TestHarness};
 
-/// Sets up the test environment and the given test case.
-/// Each integration test case is asynchronous and must return a Future that completes with the
-/// result of the test run.
-async fn run_central_test_async<F, Fut>(test: F) -> Result<(), Error>
-where
-    F: FnOnce(CentralHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    // Don't drop the ActivatedFakeHost until the end of this function
-    let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
-    let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
-        .context("Failed to connect to BLE Central service")?;
-
-    let harness = CentralHarness::new(CentralHarnessAux::new(proxy, fake_host.emulator().clone()));
-    fasync::spawn(
-        handle_central_events(harness.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling central events: {:?}", e)),
-    );
-
-    let result = test(harness).await;
-
-    fake_host.release().await?;
-
-    result
-}
-
 impl TestHarness for CentralHarness {
-    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
-    where
-        F: FnOnce(Self) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().context("error creating event loop")?;
-        executor.run_singlethreaded(run_central_test_async(test_func))
+    type Env = ActivatedFakeHost;
+    type Runner = BoxFuture<'static, Result<(), Error>>;
+
+    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+        async {
+            // Don't drop the ActivatedFakeHost until terminate()
+            let fake_host = ActivatedFakeHost::new("bt-hci-integration-le-0").await?;
+            let proxy = fuchsia_component::client::connect_to_service::<CentralMarker>()
+                .context("Failed to connect to BLE Central service")?;
+
+            let harness =
+                CentralHarness::new(CentralHarnessAux::new(proxy, fake_host.emulator().clone()));
+            let run_central = handle_central_events(harness.clone()).boxed();
+            Ok((harness, fake_host, run_central))
+        }
+        .boxed()
+    }
+
+    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        env.release().boxed()
     }
 }
 

@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    failure::{err_msg, Error, ResultExt},
+    failure::{err_msg, Error},
     fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice},
     fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
     fuchsia_async as fasync,
@@ -20,7 +20,7 @@ use {
         util::{clone_host_info, clone_host_state, clone_remote_device},
     },
     fuchsia_zircon::{Duration, DurationNum},
-    futures::{Future, TryFutureExt, TryStreamExt},
+    futures::{future::BoxFuture, FutureExt, TryStreamExt},
     std::{borrow::Borrow, collections::HashMap, path::PathBuf},
 };
 
@@ -143,13 +143,28 @@ pub async fn expect_adapter_state(
 }
 
 impl TestHarness for HostDriverHarness {
-    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
-    where
-        F: FnOnce(Self) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().context("error creating event loop")?;
-        executor.run_singlethreaded(run_host_harness_test_async(test_func))
+    type Env = (PathBuf, Emulator);
+    type Runner = BoxFuture<'static, Result<(), Error>>;
+
+    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+        async {
+            let (harness, emulator) = new_host_harness().await?;
+            let run_host = handle_host_events(harness.clone()).boxed();
+            let path = harness.read().host_path;
+            Ok((harness, (path, emulator), run_host))
+        }
+        .boxed()
+    }
+
+    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        let (path, mut emulator) = env;
+        async move {
+            // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
+            let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
+            emulator.destroy_and_wait().await?;
+            watcher.watch_removed(&path).await
+        }
+        .boxed()
     }
 }
 
@@ -188,31 +203,4 @@ async fn handle_host_events(harness: HostDriverHarness) -> Result<(), Error> {
     }
 
     Ok(())
-}
-
-async fn run_host_harness_test_async<F, Fut>(test_func: F) -> Result<(), Error>
-where
-    F: FnOnce(HostDriverHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    let (harness, mut emulator) = new_host_harness().await?;
-
-    // Start processing events in a background task.
-    fasync::spawn(
-        handle_host_events(harness.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling host events: {:?}", e)),
-    );
-
-    // Run the test and obtain the test result.
-    let result = test_func(harness.clone()).await;
-
-    // Shut down the fake bt-hci device and make sure the bt-host device gets removed.
-    let mut watcher = DeviceWatcher::new(HOST_DEVICE_DIR, timeout_duration()).await?;
-    let host_path = &harness.read().host_path;
-
-    emulator.destroy_and_wait().await?;
-
-    watcher.watch_removed(host_path).await?;
-
-    result
 }

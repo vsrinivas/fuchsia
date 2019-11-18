@@ -8,14 +8,13 @@ use {
         ConnectionProxy, PeripheralEvent, PeripheralMarker, PeripheralProxy,
     },
     fidl_fuchsia_bluetooth_test::HciEmulatorProxy,
-    fuchsia_async as fasync,
     fuchsia_bluetooth::{
         expectation::asynchronous::{ExpectableState, ExpectationHarness},
         types::le::Peer,
     },
-    futures::{select, Future, FutureExt, TryStreamExt},
+    futures::future::{self, BoxFuture},
+    futures::{FutureExt, TryStreamExt},
     parking_lot::MappedRwLockWriteGuard,
-    pin_utils::pin_mut,
     std::convert::TryInto,
 };
 
@@ -70,44 +69,30 @@ impl EmulatorHarness for PeripheralHarness {
 }
 
 impl TestHarness for PeripheralHarness {
-    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
-    where
-        F: FnOnce(Self) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().context("error creating event loop")?;
-        executor.run_singlethreaded(run_peripheral_test_async(test_func))
+    type Env = ActivatedFakeHost;
+    type Runner = BoxFuture<'static, Result<(), Error>>;
+
+    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+        async {
+            // Don't drop the ActivatedFakeHost until the end of this function.
+            let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
+            let proxy = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
+                .context("Failed to connect to BLE Peripheral service")?;
+            let harness =
+                PeripheralHarness::new(PeripheralHarnessAux::new(proxy, host.emulator().clone()));
+
+            // Create a task to process the state update watcher
+            let watch_adv = watch_advertising_states(harness.clone());
+            let watch_conn = watch_connections(harness.clone());
+            let run_peripheral = future::join(watch_adv, watch_conn).map(|(a, b)| a.and(b)).boxed();
+
+            Ok((harness, host, run_peripheral))
+        }
+        .boxed()
     }
-}
-
-async fn run_peripheral_test_async<F, Fut>(test: F) -> Result<(), Error>
-where
-    F: FnOnce(PeripheralHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    // Don't drop the ActivatedFakeHost until the end of this function.
-    let host = ActivatedFakeHost::new("bt-integration-le-peripheral").await?;
-    let proxy = fuchsia_component::client::connect_to_service::<PeripheralMarker>()
-        .context("Failed to connect to BLE Peripheral service")?;
-    let state = PeripheralHarness::new(PeripheralHarnessAux::new(proxy, host.emulator().clone()));
-
-    // Initialize the state update watcher and the test run tasks.
-    let watch_adv = watch_advertising_states(state.clone());
-    let watch_conn = watch_connections(state.clone());
-    let run_test = test(state);
-
-    // Run until one of the tasks finishes.
-    pin_mut!(watch_adv);
-    pin_mut!(watch_conn);
-    pin_mut!(run_test);
-    let result = select! {
-        watch_adv_result = watch_adv.fuse() => watch_adv_result,
-        watch_conn_result = watch_conn.fuse() => watch_conn_result,
-        test_result = run_test.fuse() => test_result,
-    };
-
-    host.release().await?;
-    result
+    fn terminate(env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        env.release().boxed()
+    }
 }
 
 async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {

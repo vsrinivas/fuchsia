@@ -16,7 +16,10 @@ use {
         util::{clone_host_info, clone_remote_device},
     },
     fuchsia_zircon::{Duration, DurationNum},
-    futures::{Future, TryFutureExt, TryStreamExt},
+    futures::{
+        future::{self, BoxFuture},
+        FutureExt, TryFutureExt, TryStreamExt,
+    },
     std::collections::HashMap,
 };
 
@@ -90,36 +93,23 @@ pub async fn new_control_harness() -> Result<ControlHarness, Error> {
             control_harness.write_state().hosts.insert(host.identifier.clone(), host);
         }
     }
-
-    fasync::spawn(
-        handle_control_events(control_harness.clone())
-            .unwrap_or_else(|e| eprintln!("Error handling control events: {:?}", e)),
-    );
-
     Ok(control_harness)
 }
 
-/// Sets up the test environment and the given test case.
-/// Each integration test case is asynchronous and must return a Future that completes with the
-/// result of the test run.
-pub async fn run_control_test_async<F, Fut>(test: F) -> Result<(), Error>
-where
-    F: FnOnce(ControlHarness) -> Fut,
-    Fut: Future<Output = Result<(), Error>>,
-{
-    let control_harness = new_control_harness().await?;
-
-    test(control_harness).await
-}
-
 impl TestHarness for ControlHarness {
-    fn run_with_harness<F, Fut>(test_func: F) -> Result<(), Error>
-    where
-        F: FnOnce(Self) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().context("error creating event loop")?;
-        executor.run_singlethreaded(run_control_test_async(test_func))
+    type Env = ();
+    type Runner = BoxFuture<'static, Result<(), Error>>;
+
+    fn init() -> BoxFuture<'static, Result<(Self, Self::Env, Self::Runner), Error>> {
+        async {
+            let harness = new_control_harness().await?;
+            let run_control = handle_control_events(harness.clone()).boxed();
+            Ok((harness, (), run_control))
+        }
+        .boxed()
+    }
+    fn terminate(_env: Self::Env) -> BoxFuture<'static, Result<(), Error>> {
+        future::ok(()).boxed()
     }
 }
 
@@ -166,6 +156,8 @@ pub struct ActivatedFakeHost {
 // All Fake HCI Devices have this address
 pub const FAKE_HCI_ADDRESS: &'static str = "00:00:00:00:00:00";
 
+/// Create and publish an emulated HCI device, and wait until the host is bound and registered to
+/// bt-gap
 pub async fn activate_fake_host(
     control: ControlHarness,
     name: &str,
@@ -210,6 +202,10 @@ pub async fn activate_fake_host(
 impl ActivatedFakeHost {
     pub async fn new(name: &str) -> Result<ActivatedFakeHost, Error> {
         let control = new_control_harness().await?;
+        fasync::spawn(
+            handle_control_events(control.clone())
+                .unwrap_or_else(|e| eprintln!("Error handling control events: {:?}", e)),
+        );
         let (host, hci) = activate_fake_host(control.clone(), name).await?;
         Ok(ActivatedFakeHost { control, host, hci: Some(hci) })
     }
