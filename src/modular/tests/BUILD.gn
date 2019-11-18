@@ -19,13 +19,6 @@ group("tests") {
   ]
 }
 
-# FIDL services/structs used for testing code only.
-fidl("fuchsia.testing.modular") {
-  sources = [
-    "test_service.test.fidl",
-  ]
-}
-
 executable("agent_services_test") {
   testonly = true
 
@@ -36,7 +29,6 @@ executable("agent_services_test") {
   ]
 
   deps = [
-    ":fuchsia.testing.modular",
     "//sdk/fidl/fuchsia.modular.testing",
     "//sdk/lib/sys/cpp/testing:integration",
     "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",

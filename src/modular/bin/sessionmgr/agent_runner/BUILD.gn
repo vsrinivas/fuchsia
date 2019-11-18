@@ -68,7 +68,6 @@ executable("agent_runner_unittest") {
     "//src/modular/lib/fidl:array_to_string",
     "//src/modular/lib/testing:mock_base",
     "//src/modular/lib/testing:test_with_ledger",
-    "//src/modular/tests:fuchsia.testing.modular",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/trace",
   ]
