@@ -419,19 +419,19 @@ TEST_F(ReporterTest, CapturerMetrics) {
 
   under_test_.AddingCapturer(capturer);
 
-  EXPECT_THAT(GetHierarchy(),
-              ChildrenMatch(Contains(AllOf(
-                  NodeMatches(NameMatches("capturers")),
-                  ChildrenMatch(UnorderedElementsAre(AllOf(
-                      ChildrenMatch(Contains(AllOf(NodeMatches(NameMatches("payload buffers")),
-                                                   ChildrenMatch(IsEmpty())))),
-                      NodeMatches(AllOf(NameMatches("1"),
-                                        PropertyList(UnorderedElementsAre(
-                                            UintIs("sample format", 0), UintIs("channels", 0),
-                                            UintIs("frames per second", 0),
-                                            DoubleIs("gain db", 0.0), UintIs("muted", 0),
-                                            UintIs("min fence time (ns)", 0),
-                                            UintIs("calls to SetGainWithRamp", 0))))))))))));
+  EXPECT_THAT(
+      GetHierarchy(),
+      ChildrenMatch(Contains(AllOf(
+          NodeMatches(NameMatches("capturers")),
+          ChildrenMatch(UnorderedElementsAre(AllOf(
+              ChildrenMatch(Contains(
+                  AllOf(NodeMatches(NameMatches("payload buffers")), ChildrenMatch(IsEmpty())))),
+              NodeMatches(AllOf(NameMatches("1"),
+                                PropertyList(UnorderedElementsAre(
+                                    UintIs("sample format", 0), UintIs("channels", 0),
+                                    UintIs("frames per second", 0), DoubleIs("gain db", 0.0),
+                                    UintIs("muted", 0), UintIs("min fence time (ns)", 0),
+                                    UintIs("calls to SetGainWithRamp", 0))))))))))));
 
   fuchsia::media::AudioStreamType stream_type{
       .sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16,
