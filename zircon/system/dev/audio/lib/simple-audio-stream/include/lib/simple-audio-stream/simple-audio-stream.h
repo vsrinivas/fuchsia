@@ -7,6 +7,7 @@
 
 #include <fuchsia/hardware/audio/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/vmo.h>
@@ -118,7 +119,7 @@ class SimpleAudioStream : public SimpleAudioStreamBase,
   SimpleAudioStream(zx_device_t* parent, bool is_input)
       : SimpleAudioStreamBase(parent),
         SimpleAudioStreamProtocol(is_input),
-        loop_(&kAsyncLoopConfigNoAttachToThread) {}
+        loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
   virtual ~SimpleAudioStream() = default;
 
   // Hooks for driver implementation.
