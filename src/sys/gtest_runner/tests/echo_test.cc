@@ -1,5 +1,6 @@
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <fidl/examples/echo/cpp/fidl.h>
@@ -9,7 +10,7 @@
 
 TEST(EchoTest, TestEcho) {
   printf("hello echo\n");
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto service = sys::ServiceDirectory::CreateFromNamespace();
   fidl::examples::echo::EchoSyncPtr echo;
   service->Connect(echo.NewRequest());
