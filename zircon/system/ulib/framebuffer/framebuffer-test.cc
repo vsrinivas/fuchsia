@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/display/llcpp/fidl.h>
 #include <fuchsia/sysmem/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/image-format-llcpp/image-format-llcpp.h>
@@ -284,7 +285,7 @@ void TestDisplayStride(bool ram_domain) {
   ASSERT_OK(zx::channel::create(0u, &server_channel, &client_channel));
 
   StubDisplayController controller(ram_domain);
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   fhd::Mode mode;
   mode.horizontal_resolution = 301;
   mode.vertical_resolution = 250;
