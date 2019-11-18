@@ -15,6 +15,7 @@
 
 #include "src/media/audio/audio_core/audio_input.h"
 #include "src/media/audio/audio_core/audio_output.h"
+#include "src/media/audio/audio_core/routing_config.h"
 #include "src/media/audio/audio_core/threading_model.h"
 
 namespace media::audio {
@@ -30,6 +31,8 @@ struct RoutingProfile {
 // |RouteGraph| owns user-level inputs and outputs (|AudioRenderer|s and |AudioCapturer|s).
 class RouteGraph {
  public:
+  RouteGraph(const RoutingConfig& routing_config);
+
   ~RouteGraph();
 
   // TODO(13339): Remove throttle_output_.
@@ -91,6 +94,8 @@ class RouteGraph {
   void LinkRenderersTo(AudioDevice* output);
   void LinkCapturersTo(AudioDevice* input);
   void LinkLoopbackCapturersTo(AudioDevice* output);
+
+  [[maybe_unused]] const RoutingConfig& routing_config_;
 
   // TODO(39624): convert to weak_ptr when ownership is explicit.
   std::deque<AudioDevice*> inputs_;

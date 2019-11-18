@@ -73,11 +73,13 @@ class FakeAudioOutput : public AudioOutput {
 class RouteGraphTest : public testing::ThreadingModelFixture {
  public:
   RouteGraphTest()
-      : throttle_output_(ThrottleOutput::Create(&threading_model(), &device_registry_)) {
+      : under_test_(routing_config_),
+        throttle_output_(ThrottleOutput::Create(&threading_model(), &device_registry_)) {
     under_test_.SetThrottleOutput(&threading_model(), throttle_output_);
   }
 
   testing::StubDeviceRegistry device_registry_;
+  RoutingConfig routing_config_;
   RouteGraph under_test_;
   fbl::RefPtr<AudioOutput> throttle_output_;
 };

@@ -39,6 +39,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   AudioRendererImplTest()
       : admin_(&gain_adjustment_, dispatcher(), &policy_action_reporter_),
         volume_manager_(dispatcher()),
+        route_graph_(routing_config_),
         vmar_(fzl::VmarManager::Create(kAudioRendererUnittestVmarSize, nullptr,
                                        kAudioRendererUnittestVmarFlags)) {}
 
@@ -98,6 +99,7 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
 
   testing::StubDeviceRegistry device_registry_;
   StreamVolumeManager volume_manager_;
+  RoutingConfig routing_config_;
   RouteGraph route_graph_;
 
   fuchsia::media::AudioRendererPtr fidl_renderer_;

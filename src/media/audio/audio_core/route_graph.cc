@@ -10,6 +10,8 @@
 
 namespace media::audio {
 
+RouteGraph::RouteGraph(const RoutingConfig& routing_config) : routing_config_(routing_config) {}
+
 RouteGraph::~RouteGraph() {
   if (throttle_release_fence_) {
     throttle_release_fence_->complete_ok();

@@ -41,6 +41,8 @@ class RoutingConfig {
     std::optional<UsageSupportSet> output_usage_support_set_;
   };
 
+  RoutingConfig() {}
+
   RoutingConfig(std::vector<std::pair<audio_stream_unique_id_t, DeviceProfile>> device_profiles,
                 std::optional<DeviceProfile> default_device_profile)
       : device_profiles_(std::move(device_profiles)),

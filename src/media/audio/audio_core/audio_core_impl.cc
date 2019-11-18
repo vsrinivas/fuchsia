@@ -9,6 +9,7 @@
 #include "src/media/audio/audio_core/audio_capturer_impl.h"
 #include "src/media/audio/audio_core/audio_device_manager.h"
 #include "src/media/audio/audio_core/audio_renderer_impl.h"
+#include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/lib/logging/logging.h"
 
@@ -33,6 +34,7 @@ AudioCoreImpl::AudioCoreImpl(ThreadingModel* threading_model,
       device_manager_(threading_model, &route_graph_, &device_settings_persistence_, *this),
       volume_manager_(threading_model->FidlDomain().dispatcher()),
       audio_admin_(this, threading_model->FidlDomain().dispatcher(), &usage_reporter_),
+      route_graph_(ProcessConfig::instance().routing_config()),
       component_context_(std::move(component_context)),
       vmar_manager_(
           fzl::VmarManager::Create(kAudioRendererVmarSize, nullptr, kAudioRendererVmarFlags)) {
