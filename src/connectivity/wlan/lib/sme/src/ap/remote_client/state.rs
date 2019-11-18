@@ -645,6 +645,10 @@ impl States {
                         }
                     }
                 }
+                States::Associated(state) => {
+                    // If the client is already associated, we can't time it out.
+                    state.into()
+                },
                 _ => {
                     error!(
                         "client {:02X?} received AssociationTimeout in unexpected state; \
