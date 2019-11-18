@@ -307,11 +307,7 @@ void FunctionCallExprNode::EvalMemberPtrCall(const fxl::RefPtr<EvalContext>& con
 }
 
 void IdentifierExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const {
-  context->GetNamedValue(ident_,
-                         [cb = std::move(cb)](ErrOrValue value, fxl::RefPtr<Symbol>) mutable {
-                           // Discard resolved symbol, we only need the value.
-                           cb(std::move(value));
-                         });
+  context->GetNamedValue(ident_, std::move(cb));
 }
 
 void IdentifierExprNode::Print(std::ostream& out, int indent) const {

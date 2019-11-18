@@ -33,21 +33,18 @@ void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, ValueCallback
   // expression evaluation system.
   auto found = values_by_name_.find(ident.GetFullName());
   if (found == values_by_name_.end()) {
-    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", ident.GetFullName().c_str()),
-       nullptr);
+    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", ident.GetFullName().c_str()));
   } else {
-    cb(found->second, nullptr);
+    cb(found->second);
   }
 }
 
 void MockEvalContext::GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const {
   auto found = values_by_symbol_.find(variable.get());
-  if (found == values_by_symbol_.end()) {
-    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", variable->GetFullName().c_str()),
-       nullptr);
-  } else {
-    cb(found->second, nullptr);
-  }
+  if (found == values_by_symbol_.end())
+    cb(Err("MockEvalContext::GetVariableValue '%s' not found.", variable->GetFullName().c_str()));
+  else
+    cb(found->second);
 }
 
 fxl::RefPtr<Type> MockEvalContext::ResolveForwardDefinition(const Type* type) const {

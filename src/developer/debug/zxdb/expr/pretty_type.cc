@@ -73,7 +73,7 @@ void PrettyEvalContext::GetNamedValue(const ParsedIdentifier& name, ValueCallbac
   ResolveMember(impl_, value_, name,
                 [impl = impl_, name, cb = std::move(cb)](ErrOrValue value) mutable {
                   if (value.ok())
-                    return cb(std::move(value), fxl::RefPtr<Symbol>());
+                    return cb(std::move(value));
 
                   // Fall back on regular name lookup.
                   impl->GetNamedValue(name, std::move(cb));

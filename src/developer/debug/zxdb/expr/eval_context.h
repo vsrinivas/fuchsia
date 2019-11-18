@@ -35,7 +35,7 @@ class Variable;
 // automatically ref-ed when bound in a lambda.
 class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
  public:
-  using ValueCallback = fit::callback<void(ErrOrValue, fxl::RefPtr<Symbol>)>;
+  using ValueCallback = fit::callback<void(ErrOrValue)>;
 
   virtual ~EvalContext() = default;
 

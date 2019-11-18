@@ -180,12 +180,7 @@ void DoResolveMember(const fxl::RefPtr<EvalContext>& context, const ExprValue& b
   if (member.data_member()->is_external()) {
     // A forward-declared static member. In C++ static members can't be bitfields so we don't handle
     // them.
-    return context->GetVariableValue(
-        RefPtrTo(member.data_member()),
-        [cb = std::move(cb)](ErrOrValue value, fxl::RefPtr<Symbol>) mutable {
-          // Discard the symbol since it's not needed in this path.
-          cb(std::move(value));
-        });
+    return context->GetVariableValue(RefPtrTo(member.data_member()), std::move(cb));
   }
 
   // Normal nonstatic resolution is synchronous.

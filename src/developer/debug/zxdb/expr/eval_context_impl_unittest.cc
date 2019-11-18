@@ -76,7 +76,6 @@ struct ValueResult {
 
   bool called = false;  // Set when the callback is issued.
   ErrOrValue value;
-  fxl::RefPtr<Symbol> symbol;
 };
 
 // Wrapper around eval_context->GetNamedValue that places the callback parameters into a struct. It
@@ -87,20 +86,18 @@ void GetNamedValue(const fxl::RefPtr<EvalContext>& eval_context, const std::stri
   Err err = ExprParser::ParseIdentifier(name, &ident);
   ASSERT_FALSE(err.has_error());
 
-  eval_context->GetNamedValue(ident, [result](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+  eval_context->GetNamedValue(ident, [result](ErrOrValue value) {
     result->called = true;
     result->value = std::move(value);
-    result->symbol = std::move(symbol);
   });
 }
 
 // Sync wrapper around GetVariableValue().
 void GetVariableValue(const fxl::RefPtr<EvalContext>& eval_context, fxl::RefPtr<Variable> variable,
                       ValueResult* result) {
-  eval_context->GetVariableValue(variable, [result](ErrOrValue value, fxl::RefPtr<Symbol> symbol) {
+  eval_context->GetVariableValue(variable, [result](ErrOrValue value) {
     result->called = true;
     result->value = std::move(value);
-    result->symbol = std::move(symbol);
   });
 }
 
@@ -119,7 +116,6 @@ TEST_F(EvalContextImplTest, NotFoundSynchronous) {
 
   EXPECT_TRUE(result.called);
   EXPECT_TRUE(result.value.has_error());
-  EXPECT_FALSE(result.symbol);
 }
 
 TEST_F(EvalContextImplTest, FoundSynchronous) {
@@ -135,12 +131,6 @@ TEST_F(EvalContextImplTest, FoundSynchronous) {
   EXPECT_TRUE(result.called);
   EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
   EXPECT_EQ(ExprValue(kValue), result.value.value());
-
-  // Symbol should match.
-  ASSERT_TRUE(result.symbol);
-  const Variable* var = result.symbol->AsVariable();
-  ASSERT_TRUE(var);
-  EXPECT_EQ(kPresentVarName, var->GetFullName());
 }
 
 TEST_F(EvalContextImplTest, FoundAsynchronous) {
@@ -161,37 +151,6 @@ TEST_F(EvalContextImplTest, FoundAsynchronous) {
   EXPECT_TRUE(result.called);
   EXPECT_FALSE(result.value.has_error()) << result.value.err().msg();
   EXPECT_EQ(ExprValue(kValue), result.value.value());
-
-  // Symbol should match.
-  ASSERT_TRUE(result.symbol);
-  const Variable* var = result.symbol->AsVariable();
-  ASSERT_TRUE(var);
-  EXPECT_EQ(kPresentVarName, var->GetFullName());
-}
-
-// Tests a symbol that's found but couldn't be evaluated (in this case, because there's no "register
-// 0" available.
-TEST_F(EvalContextImplTest, FoundButNotEvaluatable) {
-  provider()->set_ip(0x1010);
-
-  auto context = MakeEvalContext();
-
-  ValueResult result;
-  GetNamedValue(context, kPresentVarName, &result);
-
-  // The value should be not found and this should be known synchronously.
-  EXPECT_TRUE(result.called);
-  EXPECT_TRUE(result.value.has_error());
-
-  // The symbol should still have been found even though the value could not be computed.
-  ASSERT_TRUE(result.symbol);
-  const Variable* var = result.symbol->AsVariable();
-  ASSERT_TRUE(var);
-  EXPECT_EQ(kPresentVarName, var->GetFullName());
-
-  // Prevent leak by processing pending messages. The symbol eval context currently deletes the
-  // DwarfExprEval on a PostTask().
-  loop().RunUntilNoTasks();
 }
 
 // Tests finding variables on |this| and subclasses of |this|.
@@ -251,12 +210,6 @@ TEST_F(EvalContextImplTest, FoundThis) {
   EXPECT_TRUE(result_b2.called);
   EXPECT_FALSE(result_b2.value.has_error()) << result_b2.value.err().msg();
   EXPECT_EQ(ExprValue(static_cast<uint32_t>(kB2)), result_b2.value.value());
-
-  // Symbol should match.
-  ASSERT_TRUE(result_b2.symbol);
-  const DataMember* dm = result_b2.symbol->AsDataMember();
-  ASSERT_TRUE(dm);
-  EXPECT_EQ("b2", dm->GetFullName());
 }
 
 // Tests a variable lookup that has the IP out of range of the variable's validity.
@@ -398,7 +351,6 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   ASSERT_TRUE(result.called);
   ASSERT_TRUE(result.value.ok());
   EXPECT_EQ(ExprValue(kValValue), result.value.value());
-  EXPECT_EQ(static_cast<const Symbol*>(real_variable.get()), result.symbol.get());
 }
 
 // This is a larger test that runs the EvalContext through ExprNode.Eval.

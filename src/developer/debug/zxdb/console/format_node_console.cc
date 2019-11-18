@@ -614,18 +614,18 @@ fxl::RefPtr<AsyncOutputBuffer> FormatVariableForConsole(const Variable* var,
                                                         const ConsoleFormatOptions& options,
                                                         fxl::RefPtr<EvalContext> context) {
   auto out = fxl::MakeRefCounted<AsyncOutputBuffer>();
-  context->GetVariableValue(RefPtrTo(var), [name = var->GetAssignedName(), context, options, out](
-                                               ErrOrValue value, fxl::RefPtr<Symbol>) {
-    if (value.has_error()) {
-      // In the error case, construct a node with the error set so the formatting with other
-      // types of errors is consistent.
-      FormatNode err_node(name);
-      err_node.SetDescribedError(value.err());
-      out->Complete(FormatNodeForConsole(err_node, options));
-    } else {
-      out->Complete(FormatValueForConsole(value.take_value(), options, context, name));
-    }
-  });
+  context->GetVariableValue(
+      RefPtrTo(var), [name = var->GetAssignedName(), context, options, out](ErrOrValue value) {
+        if (value.has_error()) {
+          // In the error case, construct a node with the error set so the formatting with other
+          // types of errors is consistent.
+          FormatNode err_node(name);
+          err_node.SetDescribedError(value.err());
+          out->Complete(FormatNodeForConsole(err_node, options));
+        } else {
+          out->Complete(FormatValueForConsole(value.take_value(), options, context, name));
+        }
+      });
   return out;
 }
 
