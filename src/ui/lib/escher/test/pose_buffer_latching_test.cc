@@ -4,6 +4,7 @@
 
 #include "gtest/gtest.h"
 #include "gtest_escher.h"
+#include "src/ui/lib/escher/defaults/default_shader_program_factory.h"
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/hmd/pose_buffer.h"
 #include "src/ui/lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -58,6 +59,8 @@ using PoseBufferTest = escher::test::TestWithVkValidationLayer;
 // TODO(36692): This test now causes Vulkan validation errors on AEMU.
 VK_TEST_F(PoseBufferTest, ComputeShaderLatching) {
   auto escher = escher::test::EscherEnvironment::GetGlobalTestEnvironment()->GetEscher();
+  escher->shader_program_factory()->filesystem()->InitializeWithRealFiles({});
+
   escher::FramePtr frame = escher->NewFrame("PoseBufferLatchingTest", 0);
 
   uint32_t num_entries = 8;

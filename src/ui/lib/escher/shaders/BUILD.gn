@@ -21,6 +21,19 @@ shaders = [
   "paper/vert/vertex_attributes.vert",
 ]
 
+shaders_spirv = [
+  "shaders_model_renderer_main_frag17553292397499926694.spirv",
+  "shaders_model_renderer_main_frag8280587512758179706.spirv",
+  "shaders_model_renderer_main_vert11112688489391456647.spirv",
+  "shaders_model_renderer_main_vert17553292397499926694.spirv",
+  "shaders_model_renderer_main_vert4295183060635058569.spirv",
+  "shaders_model_renderer_main_vert8280587512758179706.spirv",
+  "shaders_paper_frag_main_ambient_light_frag17553292397499926694.spirv",
+  "shaders_paper_frag_main_point_light_frag11112688489391456647.spirv",
+  "shaders_paper_frag_main_point_light_frag4295183060635058569.spirv",
+  "pose_buffer_latching_comp14695981039346656037.spirv",
+]
+
 # Copies shaders needed for escher linux tests to a specific test data
 # directory near the test binary.
 group_deps = []
@@ -31,6 +44,21 @@ foreach(shader, shaders) {
   copy(copy_name) {
     sources = [
       shader,
+    ]
+    outputs = [
+      "$root_out_dir/test_data/escher/shaders/$shader",
+    ]
+  }
+  group_deps += [ ":$copy_name" ]
+  test_data += get_target_outputs(":$copy_name")
+}
+
+foreach(shader, shaders_spirv) {
+  name = get_path_info(shader, "file")
+  copy_name = "copy_$name"
+  copy(copy_name) {
+    sources = [
+      "spirv/$shader",
     ]
     outputs = [
       "$root_out_dir/test_data/escher/shaders/$shader",
