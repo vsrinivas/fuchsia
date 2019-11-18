@@ -60,7 +60,7 @@ struct ProcessStartData {
 
   // The vmar object that was created when the process was created.
   //
-  // See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_create.md>.
+  // See <https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md>.
   ::zx::vmar root_vmar = {};
 
   // The initial thread for the process.
@@ -898,8 +898,7 @@ class Launcher final {
     // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
-    // for details.
+    // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
     // Request is heap-allocated.
@@ -908,8 +907,7 @@ class Launcher final {
     // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
-    // for details.
+    // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1005,8 +1003,7 @@ class Launcher final {
     // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
-    // for details.
+    // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
     // Request is heap-allocated.
@@ -1015,8 +1012,7 @@ class Launcher final {
     // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
-    // for details.
+    // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
     // Caller provides the backing storage for FIDL message via request and response buffers.
@@ -1074,8 +1070,7 @@ class Launcher final {
     // Adds the given names to the namespace for the process.
     //
     // The paths in the namespace must be non-overlapping. See
-    // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md>
-    // for details.
+    // <https://fuchsia.dev/fuchsia-src/concepts/framework/namespaces> for details.
     //
     // Calling this method multiple times concatenates the names.
     static ::fidl::internal::StatusAndError AddNames(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AddNamesRequest> params);

@@ -8,7 +8,7 @@
 
 Ledger writes all data under `/data/modular/<USER_ID>/LEDGER`. In order for data
 to be persisted, ensure that a persistent partition is mounted under /data. See
-[minfs setup](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/minfs.md).
+[minfs setup](/docs/concepts/filesystems/minfs).
 
 ### Networking
 

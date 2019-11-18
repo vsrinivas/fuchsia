@@ -7,4 +7,4 @@ The inspect library is documented [here][inspect]
 This library is being deprecated in favor of an SDK implementation. Please do not depend on this code for new clients.
 
 <!-- xrefs -->
-[inspect]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/inspect/README.md
+[inspect]: /docs/development/inspect/README.md

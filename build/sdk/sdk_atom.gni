@@ -24,7 +24,7 @@ import("config.gni")
 #   id
 #     Identifier of this element within SDKs.
 #     The identifier should represent the canonical base path of the element
-#     within SDKs according to the standard layout (https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/sdk/layout.md).
+#     within SDKs according to the standard layout (https://fuchsia.dev/fuchsia-src/development/sdk/layout.md).
 #     For an element at $ROOT/pkg/foo, the id should be "sdk://pkg/foo".
 #
 #   category

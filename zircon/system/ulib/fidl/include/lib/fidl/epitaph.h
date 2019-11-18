@@ -13,7 +13,7 @@ __BEGIN_CDECLS
 
 // Sends an epitaph with the given values down the channel.
 // See
-// https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/languages/c.md#fidl_epitaph_write
+// https://fuchsia.dev/fuchsia-src/development/languages/fidl/languages/c.md#fidl_epitaph_write
 zx_status_t fidl_epitaph_write(zx_handle_t channel, zx_status_t error);
 
 #endif  // __Fuchsia__

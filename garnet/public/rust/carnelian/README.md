@@ -4,7 +4,7 @@ Carnelian is a prototype framework for writing Fuchsia modules in Rust.
 
 To build the included samples, add `--with garnet/packages/examples:carnelian` to
 your fx set line. `terminal.x86` is sufficient to support Carnelian samples. See
-[these fx set](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#build)
+[these fx set](/docs/getting_started.md#build_fuchsia)
 instructions for more details.
 
 # Tentative Roadmap

@@ -51,8 +51,8 @@
 //! let process: zx::Process = builder.start()?;
 //! ```
 //!
-//! [zx_process_create]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_create.md
-//! [zx_job_set_policy]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/job_set_policy.md
+//! [zx_process_create]: https://fuchsia.dev/fuchsia-src/reference/syscalls/process_create.md
+//! [zx_job_set_policy]: https://fuchsia.dev/fuchsia-src/reference/syscalls/job_set_policy.md
 //! [fuchsia.process.Launcher]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-process/launcher.fidl
 //
 // TODO: Consider supporting this for processes that do not meet the above requirements (nearly
@@ -125,7 +125,7 @@ struct BuilderInner {
 /// information in this struct to manipulate the process or its address space before starting it,
 /// such as when creating a process in a debugger.
 ///
-/// [zx_process_start]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_start.md
+/// [zx_process_start]: https://fuchsia.dev/fuchsia-src/reference/syscalls/process_start.md
 pub struct BuiltProcess {
     /// The newly created process.
     pub process: zx::Process,
@@ -397,7 +397,7 @@ impl ProcessBuilder {
     /// linked (has a PT_INTERP program header) but no loader service has been provided through
     /// [ProcessBuilder::set_loader_service()] or [ProcessBuilder::add_handles()].
     ///
-    /// [zx_process_start]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_start.md
+    /// [zx_process_start]: https://fuchsia.dev/fuchsia-src/reference/syscalls/process_start.md
     pub async fn build(mut self) -> Result<BuiltProcess, ProcessBuilderError> {
         // Parse the executable as an ELF64 file, reading in the headers we need. Done first since
         // this is most likely to be invalid and error out.
@@ -760,7 +760,7 @@ impl BuiltProcess {
     /// This is a simple wrapper around the [zx_process_start] syscall that consumes the handles
     /// and data in the BuiltProcess struct as needed.
     ///
-    /// [zx_process_start]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_start.md
+    /// [zx_process_start]: https://fuchsia.dev/fuchsia-src/reference/syscalls/process_start.md
     pub fn start(self) -> Result<zx::Process, ProcessBuilderError> {
         self.process
             .start(

@@ -83,7 +83,7 @@ struct FieldShape {
   uint32_t Offset() const { return offset; }
   // Padding after this field until the next field or the end of the container.
   // See
-  // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/README.md#size-and-alignment
+  // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/wire-format/README.md#size-and-alignment
   uint32_t Padding() const { return padding; }
 
   void SetOffset(uint32_t updated_offset) { offset = updated_offset; }

@@ -29,7 +29,7 @@ impl DebugLog {
     /// logging facility.
     ///
     /// Wraps the
-    /// [zx_debuglog_create]((https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/debuglog_create.md)
+    /// [zx_debuglog_create]((https://fuchsia.dev/fuchsia-src/reference/syscalls/debuglog_create.md)
     /// syscall.
     pub fn create(opts: DebugLogOpts) -> Result<DebugLog, Status> {
         // TODO(ZX-2184): Once the resource required for zx_debuglog_create is defined, add it as a
@@ -44,7 +44,7 @@ impl DebugLog {
     /// Write a message to the kernel debug log.
     ///
     /// Wraps the
-    /// [zx_debuglog_write]((https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/debuglog_write.md)
+    /// [zx_debuglog_write]((https://fuchsia.dev/fuchsia-src/reference/syscalls/debuglog_write.md)
     /// syscall.
     pub fn write(&self, message: &[u8]) -> Result<(), Status> {
         // TODO(ZX-3187): Discussion ongoing over whether debuglog levels are supported, so no
@@ -61,7 +61,7 @@ impl DebugLog {
     /// an error.
     ///
     /// Wraps the
-    /// [zx_debuglog_read]((https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/debuglog_read.md)
+    /// [zx_debuglog_read]((https://fuchsia.dev/fuchsia-src/reference/syscalls/debuglog_read.md)
     /// syscall.
     // TODO(ZX-3187): Return a safe wrapper type for zx_log_record_t rather than raw bytes
     // depending on resolution.

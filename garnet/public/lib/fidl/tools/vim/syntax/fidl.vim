@@ -5,7 +5,7 @@
 "
 " Based on the grammar describe in
 "
-"     https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/grammar.md
+"     https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/grammar.md
 "
 " There is still some work to be done.
 if !exists("g:main_syntax")

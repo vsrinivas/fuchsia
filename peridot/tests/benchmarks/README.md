@@ -5,5 +5,5 @@ on CI and upload its results to the performance dashboard, add an entry in bench
 More detailed instructions can be found the [CI benchmarking guide].
 
 
-[CI benchmarking guide]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/running_on_ci.md
+[CI benchmarking guide]: /docs/development/benchmarking/running_on_ci.md
 

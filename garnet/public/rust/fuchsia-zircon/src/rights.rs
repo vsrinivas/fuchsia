@@ -10,8 +10,7 @@ use fuchsia_zircon_sys as sys;
 bitflags! {
     /// Rights associated with a handle.
     ///
-    /// See [rights.md](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/rights.md)
-    /// for more information.
+    /// See [rights](https://fuchsia.dev/fuchsia-src/concepts/kernel/rights) for more information.
     #[repr(C)]
     pub struct Rights: sys::zx_rights_t {
         const NONE           = sys::ZX_RIGHT_NONE;

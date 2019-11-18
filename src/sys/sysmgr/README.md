@@ -6,7 +6,7 @@ This directory contains sysmgr, an application which is responsible for
 setting up an environment which provides access to global system services.
 
 This application runs quite early in the Fuchsia boot process. See the [boot
-sequence](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/boot_sequence.md)
+sequence](/docs/concepts/framework/boot_sequence)
 for more information.
 
 sysmgr is designed to be fairly robust. If any of the services dies, they

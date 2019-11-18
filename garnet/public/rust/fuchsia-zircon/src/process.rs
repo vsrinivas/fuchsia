@@ -37,7 +37,7 @@ impl Process {
     /// Similar to `Thread::start`, but is used to start the first thread in a process.
     ///
     /// Wraps the
-    /// [zx_process_start](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_start.md)
+    /// [zx_process_start](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_start.md)
     /// syscall.
     pub fn start(
         &self,
@@ -56,7 +56,7 @@ impl Process {
     /// Create a thread inside a process.
     ///
     /// Wraps the
-    /// [zx_thread_create](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/thread_create.md)
+    /// [zx_thread_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/thread_create.md)
     /// syscall.
     pub fn create_thread(&self, name: &[u8]) -> Result<Thread, Status> {
         let process_raw = self.raw_handle();
@@ -72,7 +72,7 @@ impl Process {
     }
 
     /// Wraps the
-    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_PROCESS topic.
     pub fn info(&self) -> Result<ProcessInfo, Status> {
         let mut info = ProcessInfo::default();
@@ -83,7 +83,7 @@ impl Process {
     /// Exit the current process with the given return code.
     ///
     /// Wraps the
-    /// [zx_process_exit](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/process_exit.md)
+    /// [zx_process_exit](https://fuchsia.dev/fuchsia-src/reference/syscalls/process_exit.md)
     /// syscall.
     pub fn exit(retcode: i64) -> ! {
         unsafe { sys::zx_process_exit(retcode) }

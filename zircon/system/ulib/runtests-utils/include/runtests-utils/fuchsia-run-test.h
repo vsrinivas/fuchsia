@@ -22,7 +22,7 @@ struct ComponentInfo {
 // If tests are in this path, they can run as a component if corresponding cmx
 // file is present.
 //
-// https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_metadata.md#component-manifest
+// https://fuchsia.dev/fuchsia-src/concepts/storage/package_metadata#component_manifest
 constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 
 // If |path| starts with |kPkgPrefix|, this function will generate corresponding

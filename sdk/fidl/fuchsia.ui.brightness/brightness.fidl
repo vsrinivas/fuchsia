@@ -17,7 +17,7 @@ protocol Control {
 
     /// Requests the current auto-brightness mode.
     /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#delay-responses-using-hanging-gets
+    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
     WatchAutoBrightness() -> (bool enabled);
 
     /// Turns auto-brightness mode off.
@@ -29,7 +29,7 @@ protocol Control {
     /// This result is valid for both manual and auto-brightness modes and is typically used
     /// to show the current brightness on a slider.
     /// This call implements the Hanging Get protocol as detailed in
-    /// https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#delay-responses-using-hanging-gets
+    /// https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets
     WatchCurrentBrightness() -> (brightness value);
 
     /// Sets the brightness curve as a set of points.

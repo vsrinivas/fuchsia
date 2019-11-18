@@ -1,6 +1,5 @@
-See
-[package_metadata](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_metadata.md)
-for documentation about this directory.
+See [package_metadata](/docs/concepts/storage/package_metadata) for documentation about this
+directory.
 
 For testing, start the component with (replace 192.168.42.10:50051 with the IP
 address and port number for the dockyard):

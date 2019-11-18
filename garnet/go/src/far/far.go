@@ -5,7 +5,7 @@
 // Package far implements Fuchsia archive operations. At this time only
 // archive writing is supported. The specification for the archive format
 // can be found in
-// https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/archive_format.md.
+// https://fuchsia.dev/fuchsia-src/concepts/storage/archive_format
 package far
 
 import (

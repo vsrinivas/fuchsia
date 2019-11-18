@@ -736,8 +736,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
     FXL_LOG(ERROR) << "Component " << package->resolved_url
                    << " does not have a component manifest (a.k.a. cmx file)! "
                    << "Please add a cmx file to your component. "
-                   << "https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/"
-                   << "package_metadata.md#Component-manifest.";
+                   << "https://fuchsia.dev/fuchsia-src/concepts/storage/"
+                   << "package_metadata#component_manifest";
     component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::INTERNAL_ERROR);
     return;
   }

@@ -5,8 +5,8 @@
 //! Carnelian
 //!
 //! Carnelian is a prototype framework for writing
-//! [Fuchsia](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/README.md)
-//! [modules](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module) in
+//! [Fuchsia](https://fuchsia.dev/fuchsia-src/concepts)
+//! [modules](https://fuchsia.dev/fuchsia-src/glossary#module) in
 //! [Rust](https://www.rust-lang.org/).
 
 #![deny(missing_docs)]

@@ -53,7 +53,7 @@ struct LogMessage {
     uint64 pid;
     uint64 tid;
     // Nanoseconds since the system was powered on, aka ZX_CLOCK_MONOTONIC.
-    // https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/clock_get.md#supported-clock-ids
+    // https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get.md#supported-clock-ids
     zx.time time;
     int32 severity;
 

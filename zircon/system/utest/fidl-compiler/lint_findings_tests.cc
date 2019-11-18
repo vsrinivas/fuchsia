@@ -1613,7 +1613,7 @@ bool method_returns_status_with_non_optional_result_please_implement_me() {
 
   // Warning if return a status and a non-optional result? we now have another more expressive
   // pattern for this, this section should be updated. Specifically, see:
-  // https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/ftp/ftp-014.md.
+  // https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/ftp/ftp-014.md.
 
   LintTest test;
   test.check_id("method-returns-status-with-non-optional-result")

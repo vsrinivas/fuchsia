@@ -45,7 +45,7 @@ template("tests_package") {
 # the value of the 'tests' paremeter from 'deps'.
 #
 # This variant, as described in
-# https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/tests/test_component.md,
+# https://fuchsia.dev/fuchsia-src/development/tests/test_component.md,
 # requires a .cmx file for each test.
 #
 #

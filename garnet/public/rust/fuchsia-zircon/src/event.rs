@@ -9,7 +9,7 @@ use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [event object](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/objects/event.md).
+/// [event object](https://fuchsia.dev/fuchsia-src/concepts/objects/event.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -19,7 +19,7 @@ impl_handle_based!(Event);
 
 impl Event {
     /// Create an event object, an object which is signalable but nothing else. Wraps the
-    /// [zx_event_create](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/event_create.md)
+    /// [zx_event_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/event_create.md)
     /// syscall.
     pub fn create() -> Result<Event, Status> {
         let mut out = 0;

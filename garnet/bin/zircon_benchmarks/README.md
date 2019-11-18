@@ -32,4 +32,4 @@ There are two ways to run zircon_benchmarks:
   For this, run
   `run-test-component fuchsia-pkg://fuchsia.com/zircon_benchmarks#meta/zircon_benchmarks.cmx`.
 
-[perf test result schema]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/results_schema.md
+[perf test result schema]: /docs/development/benchmarking/results_schema.md

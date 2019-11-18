@@ -12,7 +12,7 @@ use fuchsia_zircon_sys as sys;
 use std::ptr;
 
 /// An object representing a Zircon
-/// [virtual memory object](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/objects/vm_object.md).
+/// [virtual memory object](https://fuchsia.dev/fuchsia-src/concepts/objects/vm_object.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -50,7 +50,7 @@ impl Vmo {
     /// Wraps the
     /// `zx_vmo_create`
     /// syscall. See the
-    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
+    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.dev/fuchsia-src/concepts/kernel/concepts#shared_memory_virtual_memory_objects_vmos)
     /// for more information.
     pub fn create(size: u64) -> Result<Vmo, Status> {
         Vmo::create_with_opts(VmoOptions::from_bits_truncate(0), size)
@@ -117,7 +117,7 @@ impl Vmo {
     /// Perform an operation on a range of a virtual memory object.
     ///
     /// Wraps the
-    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/vmo_op_range.md)
+    /// [zx_vmo_op_range](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_op_range.md)
     /// syscall.
     pub fn op_range(&self, op: VmoOp, offset: u64, size: u64) -> Result<(), Status> {
         let status = unsafe {
@@ -126,7 +126,7 @@ impl Vmo {
         ok(status)
     }
 
-    /// Wraps the [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// Wraps the [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_VMO topic.
     pub fn info(&self) -> Result<VmoInfo, Status> {
         let mut info = sys::zx_info_vmo_t::default();
@@ -137,7 +137,7 @@ impl Vmo {
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
-    /// [zx_vmo_create_child](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/vmo_create_child.md)
+    /// [zx_vmo_create_child](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_create_child.md)
     /// syscall.
     pub fn create_child(
         &self,
@@ -156,7 +156,7 @@ impl Vmo {
     /// Replace a VMO, adding execute rights.
     ///
     /// Wraps the
-    /// [zx_vmo_replace_as_executable](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/vmo_replace_as_executable.md)
+    /// [zx_vmo_replace_as_executable](https://fuchsia.dev/fuchsia-src/reference/syscalls/vmo_replace_as_executable.md)
     /// syscall.
     pub fn replace_as_executable(self) -> Result<Vmo, Status> {
         // TODO(SEC-42): Add resource argument for exec setter.

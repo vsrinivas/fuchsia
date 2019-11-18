@@ -12,7 +12,7 @@
 ## target must be reachable from the host and must already know how to reach
 ## the host package server (i.e. fx serve must be running).
 ##
-## See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/package_update.md
+## See https://fuchsia.dev/fuchsia-src/development/workflows/package_update
 ## for more information about using this workflow.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?

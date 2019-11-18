@@ -9,7 +9,7 @@
 
 namespace flatland {
 /// A helper class for managing [hanging get
-/// semantics](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#delay-responses-using-hanging-gets).
+/// semantics](https://fuchsia.dev/fuchsia-src/development/api/fidl.md#delay-responses-using-hanging-gets).
 /// It responds with the most recently updated value.
 ///
 /// For each hanging get method in a FIDL interface, like GetData() -> ( Data response ), create one

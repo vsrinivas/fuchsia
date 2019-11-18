@@ -16,7 +16,7 @@
 ##   --cache     - list only packages in cache
 ##   --universe  - list all packages
 ##
-## See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/boards_and_products.md
+## See https://fuchsia.dev/fuchsia-src/development/build/boards_and_products
 ## for more information about using these package sets.
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?

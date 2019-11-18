@@ -4,7 +4,7 @@
 
 // This file implements the perf test results schema.
 //
-// See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/results_schema.md
+// See https://fuchsia.dev/fuchsia-src/development/benchmarking/results_schema
 // for more details.
 
 /// The set of valid Unit constants.

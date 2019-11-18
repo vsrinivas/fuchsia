@@ -56,7 +56,7 @@ impl Resource {
     /// Create a child resource object.
     ///
     /// Wraps the
-    /// [zx_resource_create](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/resource_create.md)
+    /// [zx_resource_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/resource_create.md)
     /// syscall
     pub fn create_child(
         &self,
@@ -91,7 +91,7 @@ impl Resource {
     }
 
     /// Wraps the
-    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_RESOURCE topic.
     pub fn info(&self) -> Result<ResourceInfo, Status> {
         let mut info = ResourceInfo::default();

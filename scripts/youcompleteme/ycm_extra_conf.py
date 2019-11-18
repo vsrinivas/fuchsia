@@ -22,7 +22,7 @@ fuchsia_root = os.path.realpath(fuchsia_paths.FUCHSIA_ROOT)
 zircon_database = None
 zircon_dir = os.path.join(fuchsia_root, 'zircon')
 # This doc explains how to generate compile_commands.json for Zircon:
-# https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/editors.md
+# https://fuchsia.dev/fuchsia-src/development/editors/youcompleteme
 if os.path.exists(os.path.join(zircon_dir, 'compile_commands.json')):
   zircon_database = ycm_core.CompilationDatabase(zircon_dir)
 

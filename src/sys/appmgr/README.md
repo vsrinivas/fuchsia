@@ -8,9 +8,9 @@ by `devmgr`.
 
 See:
 
-* [Boot sequence](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/boot_sequence.md)
-* [Sandboxing](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/sandboxing.md)
-* [Package metadata](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_metadata.md)
+* [Boot sequence](/docs/concepts/framework/boot_sequence)
+* [Sandboxing](/docs/concepts/framework/sandboxing)
+* [Package metadata](/docs/concepts/storage/package_metadata)
 
 ## Building
 

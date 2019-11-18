@@ -122,7 +122,7 @@ protocol Engine {
     ///    URL. See [`fuchsia-pkg URL`].
     ///
     /// [`fuchsia-pkg URL`]:
-    ///    https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_url.md
+    ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
     TestApply(string url) -> (string rewritten) error zx.status;
 };
 
@@ -148,7 +148,7 @@ protocol EditTransaction {
     ///    URL. See [`fuchsia-pkg URL`].
     ///
     /// [`fuchsia-pkg URL`]:
-    ///    https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_url.md
+    ///    https://fuchsia.dev/fuchsia-src/concepts/storage/package_url
     Add(Rule rule) -> (zx.status status);
 
     /// Commit this transaction, or detect another transaction that committed

@@ -67,7 +67,7 @@ sudo xcode-select --switch "${expected_path}"
 EOF
     details << EOF
 
-See $(link 'https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#macos')
+See $(link 'https://fuchsia.dev/fuchsia-src/getting_started#macos')
 for more details.
 EOF
   fi

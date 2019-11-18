@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 //! Type-safe bindings for Zircon kernel
-//! [syscalls](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls.md).
+//! [syscalls](https://fuchsia.dev/fuchsia-src/reference/syscalls).
 
 pub mod sys {
     pub use fuchsia_zircon_sys::*;
@@ -210,7 +210,7 @@ pub struct WaitItem<'a> {
 }
 
 /// An identifier to select a particular clock. See
-/// [zx_clock_get](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/clock_get.md)
+/// [zx_clock_get](https://fuchsia.dev/fuchsia-src/reference/syscalls/clock_get.md)
 /// for more information about the possible values.
 #[repr(u32)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
@@ -231,7 +231,7 @@ pub enum ClockId {
 /// provided handle references was closed during the wait.
 ///
 /// Wraps the
-/// [zx_object_wait_many](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_wait_many.md)
+/// [zx_object_wait_many](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_wait_many.md)
 /// syscall.
 pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status> {
     let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;

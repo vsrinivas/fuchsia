@@ -11,7 +11,7 @@ pub trait Task: AsHandleRef {
     /// Kill the give task (job, process, or thread).
     ///
     /// Wraps the
-    /// [zx_task_kill](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/task_kill.md)
+    /// [zx_task_kill](https://fuchsia.dev/fuchsia-src/reference/syscalls/task_kill.md)
     /// syscall.
     // TODO: Not yet implemented on Thread, need to add object_get_info impl for Thread for proper
     // testability.

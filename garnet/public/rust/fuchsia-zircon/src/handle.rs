@@ -27,7 +27,7 @@ impl Koid {
 }
 
 /// An object representing a Zircon
-/// [handle](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/handles.md).
+/// [handle](https://fuchsia.dev/fuchsia-src/concepts/objects/handles).
 ///
 /// Internally, it is represented as a 32-bit integer, but this wrapper enforces
 /// strict ownership semantics. The `Drop` implementation closes the handle.
@@ -183,21 +183,21 @@ pub trait AsHandleRef {
     }
 
     /// Set and clear userspace-accessible signal bits on an object. Wraps the
-    /// [zx_object_signal](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_signal.md)
+    /// [zx_object_signal](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal.md)
     /// syscall.
     fn signal_handle(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         self.as_handle_ref().signal(clear_mask, set_mask)
     }
 
     /// Waits on a handle. Wraps the
-    /// [zx_object_wait_one](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_wait_one.md)
+    /// [zx_object_wait_one](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_wait_one.md)
     /// syscall.
     fn wait_handle(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         self.as_handle_ref().wait(signals, deadline)
     }
 
     /// Causes packet delivery on the given port when the object changes state and matches signals.
-    /// [zx_object_wait_async](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_wait_async.md)
+    /// [zx_object_wait_async](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_wait_async.md)
     /// syscall.
     fn wait_async_handle(
         &self,
@@ -212,7 +212,7 @@ pub trait AsHandleRef {
     /// Get the [Property::NAME] property for this object.
     ///
     /// Wraps a call to the
-    /// [zx_object_get_property](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_property.md)
+    /// [zx_object_get_property](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_property.md)
     /// syscall for the ZX_PROP_NAME property.
     fn get_name(&self) -> Result<CString, Status> {
         let buf = object_get_property::<NameProperty>(self.as_handle_ref())?;
@@ -228,7 +228,7 @@ pub trait AsHandleRef {
     /// Err([Status::INVALID_ARGS]) will be returned.
     ///
     /// Wraps a call to the
-    /// [zx_object_get_property](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_property.md)
+    /// [zx_object_get_property](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_property.md)
     /// syscall for the ZX_PROP_NAME property.
     fn set_name(&self, name: &CStr) -> Result<(), Status> {
         let bytes = name.to_bytes_with_nul();
@@ -242,7 +242,7 @@ pub trait AsHandleRef {
     }
 
     /// Wraps the
-    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_HANDLE_BASIC topic.
     fn basic_info(&self) -> Result<HandleBasicInfo, Status> {
         let mut info = sys::zx_info_handle_basic_t::default();
@@ -274,7 +274,7 @@ impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
 /// interface.
 pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     /// Duplicate a handle, possibly reducing the rights available. Wraps the
-    /// [zx_handle_duplicate](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/handle_duplicate.md)
+    /// [zx_handle_duplicate](https://fuchsia.dev/fuchsia-src/reference/syscalls/handle_duplicate.md)
     /// syscall.
     fn duplicate_handle(&self, rights: Rights) -> Result<Self, Status> {
         self.as_handle_ref().duplicate(rights).map(|handle| Self::from(handle))
@@ -282,7 +282,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 
     /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
     /// the original handle. Wraps the
-    /// [zx_handle_replace](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/handle_replace.md)
+    /// [zx_handle_replace](https://fuchsia.dev/fuchsia-src/reference/syscalls/handle_replace.md)
     /// syscall.
     fn replace_handle(self, rights: Rights) -> Result<Self, Status> {
         <Self as Into<Handle>>::into(self).replace(rights).map(|handle| Self::from(handle))
@@ -331,7 +331,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 /// A trait implemented by all handles for objects which have a peer.
 pub trait Peered: HandleBased {
     /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
-    /// [zx_object_signal_peer](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_signal.md)
+    /// [zx_object_signal_peer](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.raw_handle();

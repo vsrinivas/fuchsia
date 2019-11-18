@@ -21,7 +21,7 @@ impl Thread {
     /// Cause the thread to begin execution.
     ///
     /// Wraps the
-    /// [zx_thread_start](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/thread_start.md)
+    /// [zx_thread_start](https://fuchsia.dev/fuchsia-src/reference/syscalls/thread_start.md)
     /// syscall.
     pub fn start(
         &self,

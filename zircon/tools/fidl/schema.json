@@ -1,6 +1,6 @@
 {
     "$schema": "http://json-schema.org/draft-04/schema#",
-    "description": "See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/json-ir.md",
+    "description": "See https://fuchsia.dev/fuchsia-src/development/languages/fidl/reference/json-ir.md",
     "type": "object",
     "required": [
         "version",

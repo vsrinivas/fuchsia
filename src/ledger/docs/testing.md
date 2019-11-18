@@ -200,6 +200,6 @@ You can refer to the full [fuzzing] instructions for details.
 [testing abstractions]: /src/ledger/bin/testing/ledger_app_instance_factory.h
 [benchmarks]: /src/ledger/bin/tests/benchmark/README.md
 [Firestore cloud provider]: /src/ledger/cloud_provider_firestore/README.md#testing
-[fuzzing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/libfuzzer.md
+[fuzzing]: /docs/development/workflows/libfuzzer.md
 [Ledger lib]: /src/ledger/lib
 [Cloud provider validation tests]: /src/ledger/bin/tests/cloud_provider

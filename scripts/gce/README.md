@@ -8,7 +8,7 @@ The scripts are usable via `//scripts/gce/gce` as an executable bash script.
 
 ## Prerequisites
 
- * You have followed the Fuchsia getting started documents: https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md
+ * You have followed the Fuchsia getting started documents: /docs/getting_started
  * You have installed & configured gcloud(1): https://cloud.google.com/sdk/gcloud/
  * You have setup defaults for gcloud, e.g.:
 ```

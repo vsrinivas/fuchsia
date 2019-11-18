@@ -9,7 +9,7 @@
 /// Draw random bytes from the kernel's CPRNG to fill the given buffer.
 ///
 /// Wraps the
-/// [zx_cprng_draw](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/cprng_draw.md)
+/// [zx_cprng_draw](https://fuchsia.dev/fuchsia-src/reference/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) {
     unsafe { zx_cprng_draw(buffer.as_mut_ptr(), buffer.len()) };

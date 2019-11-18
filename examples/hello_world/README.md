@@ -14,8 +14,7 @@ $ fx build
 ```
 
 (Disclaimer: if these build rules become out of date please check the
-[Build documentation](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/fx.md)
-and update this readme!)
+[Build documentation](docs/development/workflows) and update this readme!)
 
 ## Running
 

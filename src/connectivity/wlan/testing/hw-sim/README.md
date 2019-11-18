@@ -20,7 +20,7 @@ The most convenient way to run this test locally is to run it in a QEMU instance
     fx emu
     ```
 
-    Note: If QEMU is not working, troubleshoot steps can be found at https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#Boot-from-QEMU
+    Note: If QEMU is not working, troubleshoot steps can be found [here](/docs/getting_started#boot_from_qemu)
 
 1. In the QEMU command prompt, run the tests individually in the `test` directory. For example:
 
@@ -41,7 +41,7 @@ The most convenient way to run this test locally is to run it in a QEMU instance
     ```
 
 ##### Emulator with network (run test with `fx emu` from host)
-1. Setup QEMU network by following https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md#enabling-network
+1. Setup QEMU network by following [these instructions](/docs/getting_started#enabling_network)
 
     (*Googlers*: Search "QEMU network setup" for additional steps for your workstation)
 

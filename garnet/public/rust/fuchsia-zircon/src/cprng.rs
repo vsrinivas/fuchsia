@@ -11,7 +11,7 @@ use fuchsia_zircon_sys as sys;
 /// bytes drawn, which is always the size of the buffer provided.
 ///
 /// Wraps the
-/// [zx_cprng_draw](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/cprng_draw.md)
+/// [zx_cprng_draw](https://fuchsia.dev/fuchsia-src/reference/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
     unsafe { sys::zx_cprng_draw(buffer.as_mut_ptr(), buffer.len()) };
@@ -23,7 +23,7 @@ pub fn cprng_draw(buffer: &mut [u8]) -> Result<usize, Status> {
 /// The buffer must have length less than `ZX_CPRNG_ADD_ENTROPY_MAX_LEN`.
 ///
 /// Wraps the
-/// [zx_cprng_add_entropy](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/cprng_add_entropy.md)
+/// [zx_cprng_add_entropy](https://fuchsia.dev/fuchsia-src/reference/syscalls/cprng_add_entropy.md)
 /// syscall.
 pub fn cprng_add_entropy(buffer: &[u8]) -> Result<(), Status> {
     let status = unsafe { sys::zx_cprng_add_entropy(buffer.as_ptr(), buffer.len()) };

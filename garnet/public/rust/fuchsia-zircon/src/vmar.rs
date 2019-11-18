@@ -11,7 +11,7 @@ use bitflags::bitflags;
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [virtual memory address region](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/objects/vm_address_region.md).
+/// [virtual memory address region](https://fuchsia.dev/fuchsia-src/concepts/objects/vm_address_region.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
@@ -108,7 +108,7 @@ impl Vmar {
     }
 
     /// Wraps the
-    /// [zx_object_get_info](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/object_get_info.md)
+    /// [zx_object_get_info](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_get_info.md)
     /// syscall for the ZX_INFO_VMAR topic.
     pub fn info(&self) -> Result<VmarInfo, Status> {
         let mut info = VmarInfo::default();

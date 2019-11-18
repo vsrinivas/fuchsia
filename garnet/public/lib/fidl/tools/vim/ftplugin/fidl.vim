@@ -12,7 +12,7 @@ augroup fidl.vim
   autocmd!
 
   " Set some recommended formatting options defined in
-  " https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/fidl.md#organization
+  " https://fuchsia.dev/fuchsia-src/development/api/fidl.md#organization
 
   setlocal comments=sr1:/*,mb:*,ex:*/,:///,://
   setlocal commentstring=//%s

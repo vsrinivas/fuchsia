@@ -7,7 +7,7 @@
 """Visualizes the output of Zircon's "memgraph" tool.
 
 For usage, see
-https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/memory.md#Visualize-memory-usage
+https://fuchsia.dev/fuchsia-src/development/memory/memory#visualize_memory_usage
 """
 
 from __future__ import absolute_import
@@ -373,7 +373,7 @@ def build_tree(dataset):
     """Builds a Node tree from a set of memgraph records.
 
     See
-    https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/memory.md#Visualize-memory-usage
+    https://fuchsia.dev/fuchsia-src/development/memory/memory#visualize_memory_usage
     for an example of generating memgraph JSON data.
 
     Args:

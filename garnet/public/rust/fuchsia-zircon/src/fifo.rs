@@ -19,7 +19,7 @@ impl_handle_based!(Fifo);
 impl Fifo {
     /// Create a pair of fifos and return their endpoints. Writing to one endpoint enqueues an
     /// element into the fifo from which the opposing endpoint reads. Wraps the
-    /// [zx_fifo_create](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/fifo_create.md)
+    /// [zx_fifo_create](https://fuchsia.dev/fuchsia-src/reference/syscalls/fifo_create.md)
     /// syscall.
     pub fn create(elem_count: usize, elem_size: usize) -> Result<(Fifo, Fifo), Status> {
         let mut out0 = 0;
@@ -36,7 +36,7 @@ impl Fifo {
     /// On success, returns the number of elements actually written.
     ///
     /// Wraps
-    /// [zx_fifo_write](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/fifo_write.md).
+    /// [zx_fifo_write](https://fuchsia.dev/fuchsia-src/reference/syscalls/fifo_write.md).
     pub fn write(&self, elem_size: usize, bytes: &[u8]) -> Result<usize, Status> {
         let count = bytes.len() / elem_size;
         debug_assert!(
@@ -61,7 +61,7 @@ impl Fifo {
     /// On success, returns the number of elements actually read.
     ///
     /// Wraps
-    /// [zx_fifo_read](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/syscalls/fifo_read.md).
+    /// [zx_fifo_read](https://fuchsia.dev/fuchsia-src/reference/syscalls/fifo_read.md).
     pub fn read(&self, elem_size: usize, bytes: &mut [u8]) -> Result<usize, Status> {
         let count = bytes.len() / elem_size;
         debug_assert!(

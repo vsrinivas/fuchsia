@@ -52,7 +52,7 @@ for this API:
   bluetooth>
   ```
 
-We also have a Flutter [module](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module)
+We also have a Flutter [module](/docs/glossary#module)
 that acts as a Bluetooth system menu based on this API at
 [topaz/bin/bluetooth\_settings](https://fuchsia.googlesource.com/topaz/+/master/bin/bluetooth_settings/).
 
@@ -159,7 +159,7 @@ Add the commands to `$FUCHSIA_DIR/local/kernel_cmdline.txt`, e.g. to enable full
 
 Using `fx set` writes these values into the image, so they will survive a restart.
 
-For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/fuchsia/+/master/docs/zircon/ddk/driver-development.md#logging)
+For more detail on driver logging, see [Zircon driver logging](/docs/concepts/drivers/driver-development#logging)
 
 #### bin/bt-gap
 
@@ -183,7 +183,7 @@ example:
 
 ### Inspecting Component State
 
-The Bluetooth system supports inspection through the [Inspect API](https://fuchsia.dev/fuchsia-src/development/inspect).
+The Bluetooth system supports inspection through the [Inspect API](/docs/development/inspect).
 bt-gap, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
 
 #### Usage
@@ -193,7 +193,7 @@ bt-gap, bt-a2dp-sink, and bt-snoop all expose information though Inspect.
 * bt-snoop: `fx iquery bt-snoop` exposes information about which hci devices are being logged and how much data is stored.
 * All Bluetooth components: `fx iquery bt-*`
 
-See the [iquery documentation](https://fuchsia.dev/fuchsia-src/development/inspect/iquery) for complete instructions on using `iquery`.
+See the [iquery documentation](/docs/development/inspect/iquery) for complete instructions on using `iquery`.
 
 ### Respectful Code
 

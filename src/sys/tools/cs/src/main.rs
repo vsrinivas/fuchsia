@@ -245,10 +245,9 @@ struct Opt {
 }
 
 fn main() -> TraversalResult {
-    // Visit the directory /hub and recursively traverse it, outputting
-    // information about the component hierarchy.
-    // See https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/hub.md for
-    // more information on the Hub directory structure.
+    // Visit the directory /hub and recursively traverse it, outputting information about the
+    // component hierarchy. See https://fuchsia.dev/fuchsia-src/concepts/components/hub for more
+    // information on the Hub directory structure.
     let opt = Opt::from_args();
     let root_realm = Realm::create("/hub")?;
     match opt.job_id {

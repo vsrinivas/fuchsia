@@ -26,7 +26,7 @@ trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/put.tspec
 ```
 
 You can read more on the trace spec file format in the [trace-based benchmarking
-guide](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/trace_based_benchmarking.md#specification-file).
+guide](/docs/development/benchmarking/trace_based_benchmarking.md#specification-file).
 
 ### Tracing benchmark apps directly
 You can also trace the app directly:
@@ -189,7 +189,7 @@ section](README.md#benchmarks-using-sync).
     * `sync_big_change.tspec`: syncing a big change (containing several write
       operations)
 
-[trace-based benchmarks]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/trace_based_benchmarking.md
+[trace-based benchmarks]: /docs/development/benchmarking/trace_based_benchmarking.md
 [cloud sync set-up instructions]: /src/ledger/docs/testing.md#cloud-sync
 [lazy value]: /src/ledger/docs/api_guide.md#lazy-values
 [PageWatcher notification]: /src/ledger/docs/api_guide.md#watch

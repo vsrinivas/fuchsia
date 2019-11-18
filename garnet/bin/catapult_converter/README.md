@@ -44,4 +44,4 @@ the dashboard:
 For more information on Catapult's format, see [How to Write
 Metrics](https://github.com/catapult-project/catapult/blob/master/docs/how-to-write-metrics.md).
 
-[our format]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/results_schema.md
+[our format]: /docs/development/benchmarking/results_schema.md
