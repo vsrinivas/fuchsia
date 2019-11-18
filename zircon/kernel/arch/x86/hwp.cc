@@ -11,6 +11,7 @@
 #include <string.h>
 #include <zircon/compiler.h>
 
+#include <arch/x86/cpuid.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/hwp.h>
 #include <arch/x86/platform_access.h>
@@ -49,15 +50,15 @@ static uint8_t x86_intel_epb_to_epp(uint8_t epb) {
   return energy_perf_bias_to_energy_perf_preference[epb];
 }
 
-void x86_intel_hwp_init(MsrAccess* msr) {
+void x86_intel_hwp_init(const cpu_id::CpuId* cpuid, MsrAccess* msr) {
   static constexpr uint8_t kBalancedEPP = 0x80;  // default
 
-  if (!x86_feature_test(X86_FEATURE_HWP_PREF)) {
+  if (!cpuid->ReadFeatures().HasFeature(cpu_id::Features::HWP_PREF)) {
     return;
   }
 
   // If available, use firmware-set IA32_ENERGY_PERF_BIAS to select Energy/Performance Preference
-  bool has_epb = x86_feature_test(X86_FEATURE_PERF_BIAS);
+  bool has_epb = cpuid->ReadFeatures().HasFeature(cpu_id::Features::EPB);
   uint8_t epb;
   if (has_epb) {
     epb = msr->read_msr(X86_MSR_IA32_ENERGY_PERF_BIAS) & 0xF;

@@ -7,8 +7,9 @@
 #ifndef ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_
 #define ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_HWP_H_
 
+#include <arch/x86/cpuid.h>
 #include <arch/x86/platform_access.h>
 
-void x86_intel_hwp_init(MsrAccess*);
+void x86_intel_hwp_init(const cpu_id::CpuId*, MsrAccess*);
 
 #endif

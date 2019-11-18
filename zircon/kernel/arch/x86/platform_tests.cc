@@ -650,24 +650,24 @@ static bool test_amd_platform_init() {
 static bool test_hwp_init() {
   BEGIN_TEST;
 
-  // TODO: Use cpu_id::CpuId for HWP enumeration, when it supports LEAF6.
-  if (x86_feature_test(X86_FEATURE_HWP_PREF) && x86_feature_test(X86_FEATURE_PERF_BIAS)) {
-    // This test only runs when the underlying platform supports HWP and EPB.
-    FakeMsrAccess fake_msrs = {};
-    fake_msrs.msrs_[0] = {X86_MSR_IA32_ENERGY_PERF_BIAS, 0x6};
-    fake_msrs.msrs_[1] = {X86_MSR_IA32_PM_ENABLE, 0x0};
-    fake_msrs.msrs_[2] = {X86_MSR_IA32_HWP_CAPABILITIES, 0x110000FEull};  // min = 0x11, max=0xfe
-    fake_msrs.msrs_[3] = {X86_MSR_IA32_HWP_REQUEST, 0x0ull};
+  // HWP_PREF not supported, expect no MSR writes.
+  FakeMsrAccess fake_msrs = {};
+  x86_intel_hwp_init(&cpu_id::kCpuIdXeon2690v4, &fake_msrs);
+  // An empty FakeMsrAccess will panic if you attempt to write to any uninitialized MSRs.
 
-    x86_intel_hwp_init(&fake_msrs);
-    EXPECT_EQ(fake_msrs.read_msr(X86_MSR_IA32_PM_ENABLE), 1u);  // HWP enabled.
-    uint64_t fake_hwp_request = fake_msrs.read_msr(X86_MSR_IA32_HWP_REQUEST);
-    // Expect IA32_ENERGY_PERF_BIAS = 0x6 mapped to 0x80 EPP, min/max perf just copied from caps.
-    EXPECT_EQ((fake_hwp_request & 0xFF000000ull) >> 24, 0x80u);
-    EXPECT_EQ((fake_hwp_request & 0x00FF0000ull) >> 16, 0x00u);
-    EXPECT_EQ((fake_hwp_request & 0x0000FF00ull) >> 8, 0xFEu);
-    EXPECT_EQ((fake_hwp_request & 0x000000FFull), 0x11u);
-  }
+  // Skylake-U has HWP_PREF and EPB
+  fake_msrs.msrs_[0] = {X86_MSR_IA32_ENERGY_PERF_BIAS, 0x6};
+  fake_msrs.msrs_[1] = {X86_MSR_IA32_PM_ENABLE, 0x0};
+  fake_msrs.msrs_[2] = {X86_MSR_IA32_HWP_CAPABILITIES, 0x110000FEull};  // min = 0x11, max=0xfe
+  fake_msrs.msrs_[3] = {X86_MSR_IA32_HWP_REQUEST, 0x0ull};
+  x86_intel_hwp_init(&cpu_id::kCpuIdCorei5_6260U, &fake_msrs);
+  EXPECT_EQ(fake_msrs.read_msr(X86_MSR_IA32_PM_ENABLE), 1u);  // HWP enabled.
+  uint64_t fake_hwp_request = fake_msrs.read_msr(X86_MSR_IA32_HWP_REQUEST);
+  // Expect IA32_ENERGY_PERF_BIAS = 0x6 mapped to 0x80 EPP, min/max perf just copied from caps.
+  EXPECT_EQ((fake_hwp_request & 0xFF000000ull) >> 24, 0x80u);
+  EXPECT_EQ((fake_hwp_request & 0x00FF0000ull) >> 16, 0x00u);
+  EXPECT_EQ((fake_hwp_request & 0x0000FF00ull) >> 8, 0xFEu);
+  EXPECT_EQ((fake_hwp_request & 0x000000FFull), 0x11u);
 
   END_TEST;
 }

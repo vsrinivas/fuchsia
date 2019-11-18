@@ -204,7 +204,7 @@ void x86_intel_init_percpu(void) {
   }
 
   if (gCmdline.GetBool("cpu.hwp", true)) {
-    x86_intel_hwp_init(&msr);
+    x86_intel_hwp_init(&cpuid, &msr);
   }
 }
 
