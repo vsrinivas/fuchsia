@@ -5,7 +5,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_timezone/fidl_async.dart';
+import 'package:fidl_fuchsia_deprecatedtimezone/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_services/services.dart' show StartupContext;

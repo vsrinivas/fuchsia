@@ -22,10 +22,10 @@ dart_library("settings") {
 
   deps = [
     "//sdk/fidl/fuchsia.bluetooth.control",
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/fidl/fuchsia.media",
     "//sdk/fidl/fuchsia.memory",
     "//sdk/fidl/fuchsia.power",
-    "//sdk/fidl/fuchsia.timezone",
     "//sdk/fidl/fuchsia.ui.brightness",
     "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
