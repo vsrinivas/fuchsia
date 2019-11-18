@@ -50,6 +50,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   __WARN_UNUSED_RESULT DeviceType device_type() override { return device_type_; }
   __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override { return firmware_.get(); }
+  [[nodiscard]]
+  bool is_tee_available() override { return is_tee_available_; }
+  [[nodiscard]]
+  zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
+                                      FirmwareBlob::FirmwareVdecLoadMode vdec) override;
   __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
                                                                     uint32_t offset, uint32_t width,
                                                                     uint32_t height, uint32_t wrap,
@@ -153,6 +158,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len, uint32_t current_offset,
                                            uint32_t* written_out = nullptr);
+  zx_status_t PreloadFirmwareViaTee();
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
   void SwapInCurrentInstance() __TA_REQUIRES(video_decoder_lock_);

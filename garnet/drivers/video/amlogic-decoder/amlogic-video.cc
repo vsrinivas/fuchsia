@@ -37,6 +37,7 @@
 #include "registers.h"
 #include "util.h"
 #include "vdec1.h"
+#include "video_firmware_session.h"
 
 // TODO(35200):
 //
@@ -508,6 +509,33 @@ zx_status_t AmlogicVideo::SetProtected(ProtectableHardwareUnit unit, bool protec
   return ZX_OK;
 }
 
+zx_status_t AmlogicVideo::TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
+                                                  FirmwareBlob::FirmwareVdecLoadMode vdec) {
+  ZX_DEBUG_ASSERT(is_tee_available());
+  ZX_DEBUG_ASSERT(secure_monitor_);
+
+  // Call into the TEE to tell the HW to use a particular piece of the previously pre-loaded overall
+  // firmware blob.
+  zx_smc_parameters_t params = {};
+  zx_smc_result_t result = {};
+  constexpr uint32_t kFuncIdLoadVideoFirmware = 15;
+  params.func_id = tee_smc::CreateFunctionId(tee_smc::kFastCall, tee_smc::kSmc32CallConv,
+                                             tee_smc::kTrustedOsService, kFuncIdLoadVideoFirmware);
+  params.arg1 = static_cast<uint32_t>(index);
+  params.arg2 = static_cast<uint32_t>(vdec);
+  zx_status_t status = zx_smc_call(secure_monitor_.get(), &params, &result);
+  if (status != ZX_OK) {
+    LOG(ERROR, "Failed to kFuncIdLoadVideoFirmware - index: %u vdec: %u status: %d",
+        index, vdec, status);
+    return status;
+  }
+  if (result.arg0 != 0) {
+    LOG(ERROR, "kFuncIdLoadVideoFirmware result.arg0 != 0 - value: %lu", result.arg0);
+    return ZX_ERR_INTERNAL;
+  }
+  return ZX_OK;
+}
+
 zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   parent_ = parent;
 
@@ -682,6 +710,53 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx_status_t AmlogicVideo::PreloadFirmwareViaTee() {
+  ZX_DEBUG_ASSERT(is_tee_available_);
+
+  uint8_t* firmware_data;
+  uint32_t firmware_size;
+  firmware_->GetWholeBlob(&firmware_data, &firmware_size);
+
+  zx::channel tee_client;
+  zx::channel tee_server;
+  zx_status_t status = zx::channel::create(/*flags=*/0, &tee_client, &tee_server);
+  if (status != ZX_OK) {
+    LOG(ERROR, "zx::channel::create() failed - status: %d", status);
+    return status;
+  }
+
+  status = tee_connect(&tee_, tee_server.release(), /*service_provider=*/ZX_HANDLE_INVALID);
+  if (status != ZX_OK) {
+    LOG(ERROR, "tee_connect() failed - status: %d", status);
+    return status;
+  }
+
+  TEEC_Context tee_context{};
+  // Ownership stays with tee_client so the channel will get closed at the end of this method, or
+  // on early return.
+  //
+  // TODO(dustingreen): Find a way to use TEEC_InitializeContext(), or create a more official way to
+  // do this.
+  tee_context.imp.tee_channel = tee_client.get();
+
+  VideoFirmwareSession video_firmware_session(&tee_context);
+  status = video_firmware_session.Init();
+  if (status != ZX_OK) {
+    LOG(ERROR, "video_firmware_session.Init() failed - status: %d", status);
+    return status;
+  }
+
+  status = video_firmware_session.LoadVideoFirmware(firmware_data, firmware_size);
+  if (status != ZX_OK) {
+    LOG(ERROR, "video_firmware_session.LoadVideoFirmware() failed - status: %d", status);
+    return status;
+  }
+
+  // ~video_firmware_session
+  // ~tee_client
+  return ZX_OK;
+}
+
 void AmlogicVideo::InitializeInterrupts() {
   vdec0_interrupt_thread_ = std::thread([this]() {
     while (true) {
@@ -723,6 +798,18 @@ void AmlogicVideo::InitializeInterrupts() {
 }
 
 zx_status_t AmlogicVideo::InitDecoder() {
+  if (is_tee_available_) {
+    zx_status_t status = PreloadFirmwareViaTee();
+    if (status != ZX_OK) {
+      LOG(ERROR, "PreloadFirmwareViaTee() failed - status: %d", status);
+      return status;
+    }
+    // TODO(dustingreen): Remove log spam after secure decode works.
+    LOG(INFO, "PreloadFirmwareViaTee() succeeded.");
+  } else {
+    LOG(INFO, "!is_tee_available_");
+  }
+
   InitializeInterrupts();
 
   return ZX_OK;

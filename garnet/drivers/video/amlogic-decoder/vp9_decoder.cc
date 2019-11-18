@@ -259,8 +259,8 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
       IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)
-          ? FirmwareBlob::FirmwareType::kVp9MmuG12a
-          : FirmwareBlob::FirmwareType::kVp9Mmu;
+          ? FirmwareBlob::FirmwareType::kDec_Vp9_G12a
+          : FirmwareBlob::FirmwareType::kDec_Vp9_Mmu;
 
   status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &firmware, &firmware_size);
   if (status != ZX_OK)

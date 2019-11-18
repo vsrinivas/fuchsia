@@ -21,6 +21,7 @@
 #include <ddk/driver.h>
 
 #include "decoder_core.h"
+#include "firmware_blob.h"
 #include "pts_manager.h"
 #include "registers.h"
 #include "video_frame.h"
@@ -95,14 +96,19 @@ class VideoDecoder {
     virtual __WARN_UNUSED_RESULT zx::unowned_bti bti() = 0;
     virtual __WARN_UNUSED_RESULT DeviceType device_type() = 0;
     virtual __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() = 0;
+    [[nodiscard]]
+    virtual bool is_tee_available() = 0;
+    // Requires is_tee_available() true.
+    [[nodiscard]]
+    virtual zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
+                                                FirmwareBlob::FirmwareVdecLoadMode vdec) = 0;
     virtual __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(
         io_buffer_t* io_buffer, uint32_t offset, uint32_t width, uint32_t height, uint32_t wrap,
         uint32_t blockmode) = 0;
     virtual __WARN_UNUSED_RESULT DecoderCore* core() = 0;
     virtual __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
-                                                              uint32_t alignement_log2,
-
-                                                                  uint32_t flags, const char* name) = 0;
+                                                              uint32_t alignment_log2,
+                                                              uint32_t flags, const char* name) = 0;
     [[nodiscard]]
     virtual fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() = 0;
 

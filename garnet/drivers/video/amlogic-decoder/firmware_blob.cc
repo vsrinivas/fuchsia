@@ -6,6 +6,7 @@
 
 #include <ddk/debug.h>
 #include <lib/zx/vmar.h>
+#include <zircon/assert.h>
 
 #include "macros.h"
 
@@ -88,6 +89,7 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
 
     char firmware_format[sizeof(header->data.format) + 1] = {};
     memcpy(firmware_format, header->data.format, sizeof(header->data.format));
+    LOG(INFO, "firmware_format: %s", firmware_format);
 
     FirmwareCode code = {offset + sizeof(FirmwareHeader), firmware_length};
     firmware_code_[std::string(firmware_format)] = code;
@@ -98,26 +100,50 @@ zx_status_t FirmwareBlob::LoadFirmware(zx_device_t* device) {
 }
 
 namespace {
+
 std::string FirmwareTypeToName(FirmwareBlob::FirmwareType type) {
   switch (type) {
-    case FirmwareBlob::FirmwareType::kMPEG12:
-      return "mpeg12";
-      break;
-    case FirmwareBlob::FirmwareType::kH264:
-      return "h264";
-      break;
-    case FirmwareBlob::FirmwareType::kVp9Mmu:
-      return "vp9_mmu";
-      break;
-    case FirmwareBlob::FirmwareType::kVp9MmuG12a:
-      return "vp9_g12a";
-      break;
+    case FirmwareBlob::FirmwareType::kDec_Mpeg12: return "mpeg12";
+    case FirmwareBlob::FirmwareType::kDec_Mpeg4_3: return "divx311";
+    case FirmwareBlob::FirmwareType::kDec_Mpeg4_4: return "divx4x";
+    case FirmwareBlob::FirmwareType::kDec_Mpeg4_5: return "xvid";
+    case FirmwareBlob::FirmwareType::kDec_H263: return "h263";
+    case FirmwareBlob::FirmwareType::kDec_Mjpeg: return "mjpeg";
+    case FirmwareBlob::FirmwareType::kDec_Mjpeg_Multi: return "mjpeg_multi";
+    case FirmwareBlob::FirmwareType::kDec_Real_v8: return "real_v8";
+    case FirmwareBlob::FirmwareType::kDec_Real_v9: return "real_v9";
+    case FirmwareBlob::FirmwareType::kDec_Vc1: return "vc1";
+    case FirmwareBlob::FirmwareType::kDec_Avs: return "avs";
+    case FirmwareBlob::FirmwareType::kDec_H264: return "h264";
+    case FirmwareBlob::FirmwareType::kDec_H264_4k2k: return "h264_4k2k";
+    case FirmwareBlob::FirmwareType::kDec_H264_4k2k_Single: return "h264_4k2k_single";
+    case FirmwareBlob::FirmwareType::kDec_H264_Mvc: return "h264_mvc";
+    case FirmwareBlob::FirmwareType::kDec_H264_Multi: return "h264_multi";
+    case FirmwareBlob::FirmwareType::kDec_Hevc: return "hevc";
+    case FirmwareBlob::FirmwareType::kDec_Hevc_Mmu: return "hevc_mmu";
+    case FirmwareBlob::FirmwareType::kDec_Vp9: return "vp9";
+    case FirmwareBlob::FirmwareType::kDec_Vp9_Mmu: return "vp9_mmu";
+    case FirmwareBlob::FirmwareType::kEnc_H264: return "h264_enc";
+    case FirmwareBlob::FirmwareType::kEnc_Jpeg: return "jpeg_enc";
+    // value 22 kPackage is missing intentionally - 22 isn't a firmware
+    case FirmwareBlob::FirmwareType::kDec_H264_Multi_Mmu: return "h264_multi_mmu";
+    case FirmwareBlob::FirmwareType::kDec_Hevc_G12a: return "hevc_g12a";
+    case FirmwareBlob::FirmwareType::kDec_Vp9_G12a: return "vp9_g12a";
+    case FirmwareBlob::FirmwareType::kDec_Avs2: return "avs2";
+    case FirmwareBlob::FirmwareType::kDec_Avs2_Mmu: return "avs2_mmu";
+    case FirmwareBlob::FirmwareType::kDec_Avs_Gxm: return "avs_gxm";
+    case FirmwareBlob::FirmwareType::kDec_Avs_NoCabac: return "avs_no_cabac";
+    case FirmwareBlob::FirmwareType::kDec_H264_Multi_Gxm: return "h264_multi_gxm";
+    case FirmwareBlob::FirmwareType::kDec_H264_Mvc_Gxm: return "h264_mvc_gxm";
+    case FirmwareBlob::FirmwareType::kDec_Vc1_G12a: return "vc1_g12a";
     default:
-      DECODE_ERROR("Invalid firmware type: %d\n", type);
+      LOG(ERROR, "Unrecognized firmware type: %d\n", type);
       return "";
   }
 }
+
 }  // namespace
+
 zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** data_out,
                                           uint32_t* size_out) {
   std::string format_name = FirmwareTypeToName(firmware_type);
@@ -131,6 +157,13 @@ zx_status_t FirmwareBlob::GetFirmwareData(FirmwareType firmware_type, uint8_t** 
   *data_out = reinterpret_cast<uint8_t*>(ptr_) + it->second.offset;
   *size_out = it->second.size;
   return ZX_OK;
+}
+
+void FirmwareBlob::GetWholeBlob(uint8_t** data_out, uint32_t* size_out) {
+  // This must not be called if LoadFirmware() failed.
+  ZX_DEBUG_ASSERT(ptr_);
+  *data_out = reinterpret_cast<uint8_t*>(ptr_);
+  *size_out = fw_size_;
 }
 
 void FirmwareBlob::LoadFakeFirmwareForTesting(FirmwareType firmware_type, uint8_t* data,

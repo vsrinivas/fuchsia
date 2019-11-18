@@ -28,9 +28,9 @@
 // Plumb is_secure to each of the above.
 //
 // (Fine as io_bufer_t for now:
-//    * loading firmware can use clear memory, since those are just reads by the HW, and we can only
-//      load firmware if we can write the firmware bits to RAM using REE CPU.
-//    * secondary_firmware_ - never secure)
+//    * loading firmware uses video_firmware TA when possible, so io_buffer_t when
+//      !is_tee_available_ is fine.
+//    * secondary_firmware_ - same as for main firmware.
 
 static const uint32_t kBufferAlignShift = 4 + 12;
 static const uint32_t kBufferAlign = 1 << kBufferAlignShift;
@@ -290,13 +290,30 @@ zx_status_t H264Decoder::Initialize() {
   if (status != ZX_OK)
     return status;
 
-  status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kH264, &data,
-                                                    &firmware_size);
-  if (status != ZX_OK)
-    return status;
-  status = owner_->core()->LoadFirmware(data, firmware_size);
-  if (status != ZX_OK)
-    return status;
+  if (owner_->is_tee_available()) {
+    status = owner_->TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType::kDec_H264, FirmwareBlob::FirmwareVdecLoadMode::kCompatible);
+    if (status != ZX_OK) {
+      LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
+      return status;
+    }
+  } else {
+    status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kDec_H264, &data,
+                                                      &firmware_size);
+    if (status != ZX_OK)
+      return status;
+    status = owner_->core()->LoadFirmware(data, firmware_size);
+    if (status != ZX_OK)
+      return status;
+
+    status = LoadSecondaryFirmware(data, firmware_size);
+    if (status != ZX_OK)
+      return status;
+    BarrierAfterFlush();  // After secondary_firmware_ cache is flushed to RAM.
+
+    AvScratchG::Get()
+        .FromValue(truncate_to_32(io_buffer_phys(&secondary_firmware_)))
+        .WriteTo(owner_->dosbus());
+  }
 
   if (!WaitForRegister(std::chrono::milliseconds(100), [this]() {
         return !(DcacDmaCtrl::Get().ReadFrom(owner_->dosbus()).reg_value() & 0x8000);
@@ -334,22 +351,14 @@ zx_status_t H264Decoder::Initialize() {
   // sysmem ensures that newly allocated buffers are zeroed and flushed, to extent possible, so
   // codec_data_ doesn't need CacheFlush() here.
 
-  status = LoadSecondaryFirmware(data, firmware_size);
-  if (status != ZX_OK)
-    return status;
-
   enum {
     kBufferStartAddressOffset = 0x1000000,
   };
 
-  BarrierAfterFlush();  // For codec_data and secondary_firmware_
-
   // This may wrap if the address is less than the buffer start offset.
   uint32_t buffer_offset = truncate_to_32(aligned_codec_data_phys) - kBufferStartAddressOffset;
   AvScratch1::Get().FromValue(buffer_offset).WriteTo(owner_->dosbus());
-  AvScratchG::Get()
-      .FromValue(truncate_to_32(io_buffer_phys(&secondary_firmware_)))
-      .WriteTo(owner_->dosbus());
+
   AvScratch7::Get().FromValue(0).WriteTo(owner_->dosbus());
   AvScratch8::Get().FromValue(0).WriteTo(owner_->dosbus());
   AvScratch9::Get().FromValue(0).WriteTo(owner_->dosbus());

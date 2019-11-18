@@ -96,6 +96,8 @@ if (target_cpu == "arm64") {
       "vdec1.cc",
       "vdec1.h",
       "video_decoder.h",
+      "video_firmware_session.cc",
+      "video_firmware_session.h",
       "video_frame.cc",
       "video_frame.h",
       "vp9_decoder.cc",
@@ -138,6 +140,7 @@ if (target_cpu == "arm64") {
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fidl/cpp",
       "//src/media/lib/codec_impl",
+      "//zircon/public/lib/tee-client-api",
       "//zircon/system/fidl/fuchsia-hardware-mediacodec:fuchsia-hardware-mediacodec_c",
     ]
     public_configs = [ ":sources_include_config" ]

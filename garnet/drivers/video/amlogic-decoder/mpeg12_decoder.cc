@@ -82,7 +82,7 @@ zx_status_t Mpeg12Decoder::Initialize() {
   if (status != ZX_OK)
     return status;
 
-  status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kMPEG12, &data,
+  status = owner_->firmware_blob()->GetFirmwareData(FirmwareBlob::FirmwareType::kDec_Mpeg12, &data,
                                                     &firmware_size);
   if (status != ZX_OK)
     return status;

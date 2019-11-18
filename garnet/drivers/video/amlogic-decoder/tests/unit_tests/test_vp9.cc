@@ -30,13 +30,18 @@ class FakeDecoderCore : public DecoderCore {
 class FakeOwner : public VideoDecoder::Owner {
  public:
   FakeOwner(DosRegisterIo* dosbus, AmlogicVideo* video) : dosbus_(dosbus), video_(video) {
-    blob_.LoadFakeFirmwareForTesting(FirmwareBlob::FirmwareType::kVp9Mmu, nullptr, 0);
+    blob_.LoadFakeFirmwareForTesting(FirmwareBlob::FirmwareType::kDec_Vp9_Mmu, nullptr, 0);
   }
 
   DosRegisterIo* dosbus() override { return dosbus_; }
   zx::unowned_bti bti() override { return video_->bti(); }
   DeviceType device_type() override { return DeviceType::kGXM; }
   FirmwareBlob* firmware_blob() override { return &blob_; }
+  bool is_tee_available() override { return false; };
+  zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
+                                      FirmwareBlob::FirmwareVdecLoadMode vdec) override {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
   std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer, uint32_t offset,
                                                uint32_t width, uint32_t height, uint32_t wrap,
                                                uint32_t blockmode) override {

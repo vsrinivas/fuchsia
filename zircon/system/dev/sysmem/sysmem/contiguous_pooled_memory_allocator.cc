@@ -166,6 +166,7 @@ zx_status_t ContiguousPooledMemoryAllocator::Allocate(uint64_t size, zx::vmo* pa
 
   regions_.emplace(std::make_pair(result_parent_vmo.get(), std::move(region)));
   *parent_vmo = std::move(result_parent_vmo);
+
   return ZX_OK;
 }
 

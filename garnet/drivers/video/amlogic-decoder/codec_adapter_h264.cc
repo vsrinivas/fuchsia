@@ -157,6 +157,17 @@ void CodecAdapterH264::CoreCodecInit(
 
 void CodecAdapterH264::CoreCodecSetSecureMemoryMode(
     CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  // TODO(40198): Ideally a codec list from the main CodecFactory would avoid reporting support for
+  // secure output or input when !is_tee_available(), which likely will mean reporting that in list
+  // from driver's local codec factory up to main factory.  The main CodecFactory could also avoid
+  // handing out a codec that can't do secure output / input when the TEE isn't available, so we
+  // wouldn't end up here.
+  if (secure_memory_mode != fuchsia::mediacodec::SecureMemoryMode::OFF &&
+      !video_->is_tee_available()) {
+    events_->onCoreCodecFailCodec(
+      "BUG 40198 - Codec factory should catch earlier when secure requested without TEE.");
+    return;
+  }
   secure_memory_mode_[port] = secure_memory_mode;
 }
 
@@ -706,6 +717,9 @@ void CodecAdapterH264::CoreCodecSetBufferCollectionInfo(
   buffer_settings_[port].emplace(buffer_collection_info.settings);
   ZX_DEBUG_ASSERT(IsPortSecure(port) || !IsPortSecureRequired(port));
   ZX_DEBUG_ASSERT(!IsPortSecure(port) || IsPortSecurePermitted(port));
+  // TODO(dustingreen): Remove after secure video decode works e2e.
+  LOG(INFO, "CodecAdapterH264::CoreCodecSetBufferCollectionInfo() - IsPortSecure(): %u port: %u",
+      IsPortSecure(port), port);
 }
 
 fuchsia::media::StreamOutputFormat CodecAdapterH264::CoreCodecGetOutputFormat(

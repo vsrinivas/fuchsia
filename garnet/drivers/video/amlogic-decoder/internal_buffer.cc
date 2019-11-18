@@ -214,6 +214,11 @@ zx_status_t InternalBuffer::Init(const char* name, fuchsia::sysmem::AllocatorSyn
     return status;
   }
 
+  if (!!is_secure_ != !!out_buffer_collection_info.settings.buffer_settings.is_secure) {
+    LOG(ERROR, "sysmem bug?");
+    return ZX_ERR_INTERNAL;
+  }
+
   ZX_DEBUG_ASSERT(out_buffer_collection_info.buffers[0].vmo_usable_start % ZX_PAGE_SIZE == 0);
   zx::vmo vmo = std::move(out_buffer_collection_info.buffers[0].vmo);
 

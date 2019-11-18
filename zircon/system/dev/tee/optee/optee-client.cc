@@ -894,6 +894,7 @@ zx_status_t OpteeClient::HandleRpcCommandFileSystem(FileSystemRpcMessage&& messa
   message.set_return_origin(TEEC_ORIGIN_COMMS);
 
   if (!provider_channel_.is_valid()) {
+    zxlogf(ERROR, "optee: HandleRpcCommandFileSystem() called with !provider_channel_.is_valid()\n");
     // Client did not connect with a Provider so none of these RPCs can be serviced
     message.set_return_code(TEEC_ERROR_BAD_STATE);
     return ZX_ERR_UNAVAILABLE;
