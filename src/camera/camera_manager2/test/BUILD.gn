@@ -60,6 +60,8 @@ executable("camera_plug_detector_test") {
 
 source_set("camera-fakes") {
   sources = [
+    "camera_stream_constraints.cc",
+    "camera_stream_constraints.h",
     "fake_camera_controller.cc",
     "fake_camera_controller.h",
     "fake_logical_buffer_collection.cc",
