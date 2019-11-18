@@ -48,9 +48,9 @@ In order to update a clock, a user fills out the fields of a
 structure to the update call, setting the bits in `options` which indicate which
 of these fields are valid and should be set.  Defined `options` bits are
 
-+ **ZX_CLOCK_UPDATE_OPT_VALUE_VALID**
-+ **ZX_CLOCK_UPDATE_OPT_RATE_ADJUST_VALID**
-+ **ZX_CLOCK_UPDATE_OPT_ERROR_BOUND_VALID**
++ **ZX_CLOCK_UPDATE_OPTION_VALUE_VALID**
++ **ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID**
++ **ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID**
 
 In addition, maintainer **must** indicate that they are using the V1 version of
 the struct using the ZX_CLOCK_ARGS_VERSION(...) macro.
@@ -69,7 +69,7 @@ void MaintainMyClock(zx_handle_t the_clock) {
   // Set the clock's value to 1500.  Note that this also starts the clock.
   args.value = 1500;
   status = zx_clock_update(the_clock,
-                           ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_UPDATE_OPT_VALUE_VALID,
+                           ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_UPDATE_OPTION_VALUE_VALID,
                            &args);
   if (status != ZX_OK) {
     // Panic!
@@ -79,7 +79,7 @@ void MaintainMyClock(zx_handle_t the_clock) {
   // Make the clock run 23 PPM slower than nominal relative to clock monotonic.
   args.rate_adjust = -23;
   status = zx_clock_update(the_clock,
-                           ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_UPDATE_OPT_RATE_ADJUST_VALID,
+                           ZX_CLOCK_ARGS_VERSION(1) | ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID,
                            &args);
   if (status != ZX_OK) {
     // Halt and catch fire
@@ -89,9 +89,9 @@ void MaintainMyClock(zx_handle_t the_clock) {
   // Set the clock to 100,000, make it run 50 PPM faster than nominal, and specify an error bound of
   // +/- 400mSec, all at the same time.
   const uint64_t options = ZX_CLOCK_ARGS_VERSION(1) |
-                           ZX_CLOCK_UPDATE_OPT_VALUE_VALID |
-                           ZX_CLOCK_UPDATE_OPT_RATE_ADJUST_VALID |
-                           ZX_CLOCK_UPDATE_OPT_ERROR_BOUND_VALID;
+                           ZX_CLOCK_UPDATE_OPTION_VALUE_VALID |
+                           ZX_CLOCK_UPDATE_OPTION_RATE_ADJUST_VALID |
+                           ZX_CLOCK_UPDATE_OPTION_ERROR_BOUND_VALID;
   args.value = 100000;
   args.rate_adjust = 50;
   args.error_bound = ZX_MSEC(400);
