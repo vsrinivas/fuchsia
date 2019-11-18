@@ -34,7 +34,7 @@ protocol ComponentRunner {
 table ComponentStartInfo {
     /// The resolved URL of the component.
     /// This is the canonical URL obtained by the component resolver after
-    /// after following redirects and resolving relative paths.
+    /// following redirects and resolving relative paths.
     1: string resolved_url;
 
     /// The component's program declaration.
