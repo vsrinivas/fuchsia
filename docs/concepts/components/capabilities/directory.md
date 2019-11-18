@@ -13,7 +13,7 @@ directory][glossary-outgoing] in one of the following ways:
 
   ```
   {
-      "expose: [{
+      "expose": [{
           "directory": "/data",
           "from": "self",
       }],
@@ -25,7 +25,7 @@ directory][glossary-outgoing] in one of the following ways:
 
   ```
   {
-      "offer: [{
+      "offer": [{
           "directory": "/data",
           "from": "self",
           "to": [{
@@ -99,7 +99,7 @@ component `A`'s outgoing directory.
 ```
 A.cml:
 {
-    "offer: [{
+    "offer": [{
         "directory": "/data",
         "from": "self",
         "to": [{
@@ -116,7 +116,7 @@ A.cml:
 ```
 B.cml:
 {
-    "offer: [{
+    "offer": [{
         "directory": "/intermediary",
         "from": "self",
         "to": [{
