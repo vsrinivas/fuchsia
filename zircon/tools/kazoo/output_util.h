@@ -43,6 +43,14 @@ JsonTypeNameData GetJsonName(const Type& type);
 // Gets a string representing |type| suitable for output to a Go file.
 std::string GetGoName(const Type& type);
 
+// Gets a size-compatible Go native type.
+std::string GetNativeGoName(const Type& type);
+
+// Ensure argument name isn't a Go keyword.
+std::string RemapReservedGoName(const std::string& name);
+
+uint32_t DJBHash(const std::string& str);
+
 enum class SignatureNewlineStyle { kAllOneLine, kOnePerLine };
 
 // Emits a C syscall signature, up to the closing parenthesis of the argument list (but does not

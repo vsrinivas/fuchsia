@@ -19,4 +19,7 @@ out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
 out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   --go-syscall-stubs=/tmp/syscalls_fuchsia.go \
   --go-syscall-x86-asm=/tmp/syscalls_fuchsia_amd64.go \
+  --go-vdso-keys=/tmp/vdso_keys_fuchsia.go \
+  --go-vdso-x86-calls=/tmp/vdso_fuchsia_amd64.s \
+  --go-vdso-arm64-calls=/tmp/vdso_fuchsia_arm64.s \
   /tmp/syscalls.json

@@ -7,14 +7,6 @@
 
 namespace {
 
-std::string RemapReservedGoName(const std::string& name) {
-  // Probably more of these and/or a better way to do this, but this is the only one that happens in
-  // practice today.
-  if (name == "type")
-    return "typ";
-  return name;
-}
-
 void PrintStub(Writer* writer, Syscall* syscall) {
   writer->Printf("func Sys_%s(", syscall->name().c_str());
   for (size_t i = 0; i < syscall->num_kernel_args(); ++i) {

@@ -237,8 +237,9 @@ std::string GetGoNameImpl(const Type& type) {
 }  // namespace
 
 std::string GetGoName(const Type& type) {
-  // Most of the "normal" implementation is in GetGoNameImpl(), and then we do a few hacks here to
-  // make it match the previous output of the Go-written tool that parsed abigen directly.
+  // Most of the "normal" implementation is in GetGoNameImpl(), and then we do
+  // a few hacks here to make it match the previous output of the Go-written
+  // tool that parsed abigen directly.
   // TODO(scottmg|dhobsd): Remove or rationalize these over time.
   std::string name = GetGoNameImpl(type);
   if (name == "Futex") return "int32";
@@ -257,6 +258,62 @@ std::string GetGoName(const Type& type) {
   if (name == "zx_system_powerctl_arg_t") return "int";
   if (name == "zx_wait_item_t") return "WaitItem";
   return name;
+}
+
+// Returns a size-compatible Go native type.
+std::string GetNativeGoName(const Type& type) {
+  if (type.IsPointer()) {
+    return "unsafe.Pointer";
+  }
+  std::string name = GetGoNameImpl(type);
+
+  // Most of the "normal" implementation is in GetGoNameImpl(), and then we do
+  // a few hacks here to make it match the previous output of the Go-written
+  // tool that parsed abigen directly.
+  // TODO(scottmg|dhobsd): Remove or rationalize these over time.
+  if (name == "Duration") return "int64";
+  if (name == "Futex") return "int32";
+  if (name == "Handle") return "uint32";
+  if (name == "Koid") return "uint64";
+  if (name == "Paddr") return "uintptr";
+  if (name == "Signals") return "uint32";
+  if (name == "Status") return "int32";
+  if (name == "Ticks") return "int64";
+  if (name == "Time") return "int64";
+  if (name == "Vaddr") return "uintptr";
+  if (name == "Vm_option") return "uint32";
+  if (name == "zx_channel_call_args_t") return "uintptr";
+  if (name == "zx_clock_t") return "uint32";
+  if (name == "zx_handle_disposition_t") return "uintptr";
+  if (name == "zx_handle_info_t") return "int";
+  if (name == "zx_port_packet_t") return "int";
+  if (name == "zx_profile_info_t") return "int";
+  if (name == "zx_rights_t") return "uint32";
+  if (name == "zx_smc_parameters_t") return "uintptr";
+  if (name == "zx_smc_result_t") return "uintptr";
+  if (name == "zx_system_powerctl_arg_t") return "int";
+  if (name == "zx_wait_item_t") return "uintptr";
+  return name;
+}
+
+std::string RemapReservedGoName(const std::string& name) {
+  // Probably more of these and/or a better way to do this, but this is the only one that happens in
+  // practice today.
+  if (name == "type")
+    return "typ";
+  return name;
+}
+
+// http://www.cse.yorku.ca/~oz/hash.html
+// Used by Go output, taken from
+// https://fuchsia.googlesource.com/third_party/go/+/ae00e6ff359966a496acacc3aa386c79e972279d/src/runtime/mkfuchsiavdso.go#36
+// TODO(scottmg): Not clear on whether this must match something in Go internals.
+uint32_t DJBHash(const std::string& str) {
+  uint32_t h = 5381;
+  for (const auto& c : str) {
+    h = (h << 5) + h + static_cast<uint32_t>(c);
+  }
+  return h;
 }
 
 void CSignatureLine(const Syscall& syscall, const char* prefix, const char* name_prefix,

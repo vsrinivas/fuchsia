@@ -61,4 +61,9 @@ TEST(OutputUtil, CamelToSnake) {
   EXPECT_EQ(CamelToSnake("WAcK"), "wac_k");
 }
 
+TEST(DJBHash, DJBHash) {
+  EXPECT_EQ(DJBHash(""), 5381u);
+  EXPECT_EQ(DJBHash("zircon rocks"), 259778556u);
+}
+
 }  // namespace
