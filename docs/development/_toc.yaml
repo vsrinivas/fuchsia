@@ -47,6 +47,10 @@ toc:
 - title: "Trace"
   section:
   - include: /docs/development/tracing/_toc.yaml
+- heading: "Publish and deploy"
+- title: "Publish prebuilt packages"
+  section:
+  - include: /docs/development/prebuilt_packages/_toc.yaml
 - heading: "Guides"
 - title: "API"
   section:

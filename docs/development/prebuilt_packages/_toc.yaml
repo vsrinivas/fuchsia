@@ -1,0 +1,6 @@
+# Please, read https://fuchsia.dev/fuchsia-src/contribute/best-practices/documentation_navigation_toc
+# before making changes to this file, and add a member of the fuchsia.dev
+# team as reviewer.
+toc:
+- title: "Publish prebuilt packages to CIPD"
+  path: /docs/development/prebuilt_packages/publish_prebuilt_packages_to_cipd.md
