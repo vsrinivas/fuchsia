@@ -219,11 +219,11 @@ bool is_board_astro_or_sherlock() {
 
 // TODO(37686): (or jbauman) Change to is_board_astro_or_sherlock() once
 // AMLOGIC_SECURE is working on sherlock.
-bool is_board_with_amlogic_secure() { return is_board_astro(); }
+bool is_board_with_amlogic_secure() { return is_board_astro_or_sherlock(); }
 
 // TODO(37686): (or jbauman) Change to is_board_astro_or_sherlock() once
 // AMLOGIC_SECURE_VDEC is working on sherlock.
-bool is_board_with_amlogic_secure_vdec() { return is_board_astro(); }
+bool is_board_with_amlogic_secure_vdec() { return is_board_astro_or_sherlock(); }
 
 void nanosleep_duration(zx::duration duration) {
   zx_status_t status = zx::nanosleep(zx::deadline_after(duration));
