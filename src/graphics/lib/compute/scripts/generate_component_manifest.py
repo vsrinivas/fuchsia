@@ -37,7 +37,7 @@ def main(argv):
     if not args.output:
         output = sys.stdout
     else:
-        output = open(args.output, 'wb')
+        output = open(args.output, 'w')
 
     needs_vulkan = args.needs_vulkan or args.needs_vulkan_framebuffer
 

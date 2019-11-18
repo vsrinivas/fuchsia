@@ -94,7 +94,7 @@ def dir_signatures(path):
                         chunk = file.read(CHUNK_SIZE)
                         if not chunk:
                             break
-                        hash.update(hashlib.sha1(chunk).hexdigest())
+                        hash.update(hashlib.sha1(chunk).hexdigest().encode('utf-8'))
 
                     relative = os.path.relpath(file_path, path)
                     signatures[relative] = hash.hexdigest()
