@@ -73,13 +73,13 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
 
   // No-op function that does nothing when channel is closing
   // FIDL requires us to have this for some reason.
-  fidl::OnChannelCloseFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> nop(
-      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev) {
+  fidl::OnChannelErrorFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> nop(
+      [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev, fidl::ErrorType error) {
 
       });
 
   // Function that is invoked when channel is closed
-  fidl::OnChannelCloseFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> close_fn(
+  fidl::OnChannelClosedFn<llcpp::fuchsia::hardware::serial::NewDevice::Interface> close_fn(
       [](llcpp::fuchsia::hardware::serial::NewDevice::Interface* dev) {
         static_cast<SerialDevice*>(dev)->loop_->Quit();
       });

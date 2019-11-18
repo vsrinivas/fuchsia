@@ -16,8 +16,21 @@
 
 namespace fidl {
 
+enum class ErrorType {
+  // No error.
+  kNoError,
+  // An internal error occurred in the binding.
+  kErrorInternal,
+  // An error occurred when reading the channel.
+  kErrorChannelRead,
+  // Received a PEER_CLOSED in the channel.
+  kErrorPeerClosed,
+};
+
 template <typename Interface>
-using OnChannelCloseFn = fit::callback<void(Interface*)>;
+using OnChannelErrorFn = fit::callback<void(Interface*, ErrorType)>;
+template <typename Interface>
+using OnChannelClosedFn = fit::callback<void(Interface*)>;
 
 // Forward declarations.
 class BindingRef;
@@ -27,8 +40,8 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl,
-                                               OnChannelCloseFn<Interface> on_channel_closing_fn,
-                                               OnChannelCloseFn<Interface> on_channel_closed_fn);
+                                               OnChannelErrorFn<Interface> on_channel_error_fn,
+                                               OnChannelClosedFn<Interface> on_channel_closed_fn);
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                std::unique_ptr<Interface> impl);
@@ -36,11 +49,12 @@ namespace internal {
 
 class AsyncBinding;
 using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-using TypeErasedOnChannelCloseFn = fit::callback<void(void*)>;
+using TypeErasedOnChannelErrorFn = fit::callback<void(void*, ErrorType)>;
+using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
 fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
-    TypeErasedOnChannelCloseFn on_channel_closed_fn);
+    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
+    TypeErasedOnChannelClosedFn on_channel_closed_fn);
 
 }  // namespace internal
 
@@ -55,13 +69,13 @@ class BindingRef {
     return AsyncBind(dispatcher, std::move(channel), impl);
   }
   // Same as AsyncBind(async_dispatcher_t*, zx::channel, Interface*,
-  // OnChannelCloseFn<Interface>, OnChannelCloseFn<Interface>) below.
+  // OnChannelErrorFn<Interface>, OnChannelClosedFn<Interface>) below.
   template <typename Interface>
   static fit::result<BindingRef, zx_status_t> CreateAsyncBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, Interface* impl,
-      OnChannelCloseFn<Interface> on_channel_closing_fn,
-      OnChannelCloseFn<Interface> on_channel_closed_fn) {
-    return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_channel_closing_fn),
+      OnChannelErrorFn<Interface> on_channel_error_fn,
+      OnChannelClosedFn<Interface> on_channel_closed_fn) {
+    return AsyncBind(dispatcher, std::move(channel), impl, std::move(on_channel_error_fn),
                      std::move(on_channel_closed_fn));
   }
   // Same as AsyncBind(async_dispatcher_t*, zx::channel, std::unique_ptr<Interface>) below.
@@ -88,8 +102,8 @@ class BindingRef {
   friend fit::result<BindingRef, zx_status_t> internal::AsyncTypeErasedBind(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
       internal::TypeErasedDispatchFn dispatch_fn,
-      internal::TypeErasedOnChannelCloseFn on_channel_closing_fn,
-      internal::TypeErasedOnChannelCloseFn on_channel_closed_fn);
+      internal::TypeErasedOnChannelErrorFn on_channel_error_fn,
+      internal::TypeErasedOnChannelClosedFn on_channel_closed_fn);
 
   explicit BindingRef(std::shared_ptr<internal::AsyncBinding> internal_binding)
       : binding_(std::move(internal_binding)) {}
@@ -134,7 +148,6 @@ class BindingRef {
 // - If the client end of the channel gets closed (PEER_CLOSED).
 // - If an error occurs in the binding itself, e.g. a channel write fails.
 //
-// TODO(38455): Specify reason in close related callbacks (suggestion by yifeit@).
 // TODO(38456): Add support for multithreaded dispatchers.
 // TODO(40787): on_closed callback removal.
 //
@@ -145,19 +158,20 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
                                        &Interface::_Outer::TypeErasedDispatch, nullptr, nullptr);
 }
 
-// As above, but will invoke |on_channel_closing_fn| on |impl| when either end of the |channel|
-// is being closed, this notification allows in-flight transactions to be cancelled.
-// |Unbind| calls from a |BindingRef| won't invoke |on_channel_closing_fn|.
+// As above, but will invoke |on_channel_error_fn| on |impl| when either end of the |channel|
+// is being closed unless this is due to a call to |Close|, this notification allows in-flight
+// transactions to be cancelled.
+// |Unbind| calls from a |BindingRef| won't invoke |on_channel_error_fn|.
 // |on_channel_closed_fn| is called before the channel is closed as part of the binding destruction.
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                Interface* impl,
-                                               OnChannelCloseFn<Interface> on_channel_closing_fn,
-                                               OnChannelCloseFn<Interface> on_channel_closed_fn) {
+                                               OnChannelErrorFn<Interface> on_channel_error_fn,
+                                               OnChannelClosedFn<Interface> on_channel_closed_fn) {
   return internal::AsyncTypeErasedBind(
       dispatcher, std::move(channel), impl, &Interface::_Outer::TypeErasedDispatch,
-      [fn = std::move(on_channel_closing_fn)](void* impl) mutable {
-        fn(static_cast<Interface*>(impl));
+      [fn = std::move(on_channel_error_fn)](void* impl, ErrorType type) mutable {
+        fn(static_cast<Interface*>(impl), type);
       },
       [fn = std::move(on_channel_closed_fn)](void* impl) mutable {
         fn(static_cast<Interface*>(impl));
@@ -168,9 +182,9 @@ fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, z
 template <typename Interface>
 fit::result<BindingRef, zx_status_t> AsyncBind(async_dispatcher_t* dispatcher, zx::channel channel,
                                                std::unique_ptr<Interface> impl) {
-  OnChannelCloseFn<Interface> on_closing = [](Interface* impl) {};
-  OnChannelCloseFn<Interface> on_closed = [](Interface* impl) { delete impl; };
-  return AsyncBind(dispatcher, std::move(channel), impl.release(), std::move(on_closing),
+  OnChannelErrorFn<Interface> on_error = [](Interface* impl, ErrorType type) {};
+  OnChannelClosedFn<Interface> on_closed = [](Interface* impl) { delete impl; };
+  return AsyncBind(dispatcher, std::move(channel), impl.release(), std::move(on_error),
                    std::move(on_closed));
 }
 

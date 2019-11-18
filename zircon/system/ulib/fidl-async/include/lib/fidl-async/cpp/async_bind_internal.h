@@ -37,8 +37,8 @@ class AsyncBinding;
 struct Deleter;
 
 using TypeErasedDispatchFn = bool (*)(void*, fidl_msg_t*, ::fidl::Transaction*);
-
-using TypeErasedOnChannelCloseFn = fit::callback<void(void*)>;
+using TypeErasedOnChannelErrorFn = fit::callback<void(void*, ErrorType)>;
+using TypeErasedOnChannelClosedFn = fit::callback<void(void*)>;
 
 // This class abstracts the binding of a channel, a single threaded dispatcher and an implementation
 // of the llcpp bindings.
@@ -52,8 +52,8 @@ class AsyncBinding {
   // this static method.
   static std::shared_ptr<AsyncBinding> CreateSelfManagedBinding(
       async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-      TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
-      TypeErasedOnChannelCloseFn on_channel_closed_fn);
+      TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
+      TypeErasedOnChannelClosedFn on_channel_closed_fn);
   ~AsyncBinding() __TA_REQUIRES(domain_token());
 
   void MessageHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
@@ -65,8 +65,8 @@ class AsyncBinding {
  protected:
   explicit AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
                         TypeErasedDispatchFn dispatch_fn,
-                        TypeErasedOnChannelCloseFn on_channel_closing_fn,
-                        TypeErasedOnChannelCloseFn on_channel_closed_fn);
+                        TypeErasedOnChannelErrorFn on_channel_error_fn,
+                        TypeErasedOnChannelClosedFn on_channel_closed_fn);
 
  private:
   friend fidl::internal::AsyncTransaction;
@@ -83,7 +83,7 @@ class AsyncBinding {
 
   zx::unowned_channel channel() const { return zx::unowned_channel(channel_); }
   const Token& domain_token() const __TA_RETURN_CAPABILITY(domain_token_) { return domain_token_; }
-  void OnChannelClosing(zx_status_t epitaph) __TA_REQUIRES(domain_token());
+  void OnChannelError(zx_status_t epitaph, ErrorType error_type) __TA_REQUIRES(domain_token());
   void Close(zx_status_t epitaph, std::shared_ptr<AsyncBinding> binding)
       __TA_EXCLUDES(domain_token());
 
@@ -93,8 +93,8 @@ class AsyncBinding {
   zx::channel channel_ = {};
   void* interface_ = nullptr;
   TypeErasedDispatchFn dispatch_fn_ = {};
-  TypeErasedOnChannelCloseFn on_channel_closing_fn_ __TA_GUARDED(domain_token()) = {};
-  TypeErasedOnChannelCloseFn on_channel_closed_fn_ __TA_GUARDED(domain_token()) = {};
+  TypeErasedOnChannelErrorFn on_channel_error_fn_ __TA_GUARDED(domain_token()) = {};
+  TypeErasedOnChannelClosedFn on_channel_closed_fn_ __TA_GUARDED(domain_token()) = {};
   zx_status_t epitaph_ __TA_GUARDED(domain_token()) = ZX_OK;
   async::WaitMethod<AsyncBinding, &AsyncBinding::MessageHandler> callback_{this};
   std::atomic<bool> closing_ = false;

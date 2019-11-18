@@ -54,11 +54,13 @@ TEST(AsyncBindTestCase, SyncReply) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t closed;
-  fidl::OnChannelCloseFn<SyncServer> on_closing = [](SyncServer* server) {};
-  fidl::OnChannelCloseFn<SyncServer> on_closed = [&closed](SyncServer* server) {
+  fidl::OnChannelErrorFn<SyncServer> on_error = [](SyncServer* server, fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+  };
+  fidl::OnChannelClosedFn<SyncServer> on_closed = [&closed](SyncServer* server) {
     sync_completion_signal(&closed);
   };
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.get(), std::move(on_error),
                   std::move(on_closed));
 
   // Sync client call.
@@ -93,11 +95,13 @@ TEST(AsyncBindTestCase, AsyncReply) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t closed;
-  fidl::OnChannelCloseFn<AsyncServer> on_closing = [](AsyncServer* server) {};
-  fidl::OnChannelCloseFn<AsyncServer> on_closed = [&closed](AsyncServer* server) {
+  fidl::OnChannelErrorFn<AsyncServer> on_error = [](AsyncServer* server, fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+  };
+  fidl::OnChannelClosedFn<AsyncServer> on_closed = [&closed](AsyncServer* server) {
     sync_completion_signal(&closed);
   };
-  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_error),
                   std::move(on_closed));
 
   // Sync client call.
@@ -142,11 +146,14 @@ TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t closed;
-  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closing = [](AsyncDelayedServer* server) {};
-  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
+  fidl::OnChannelErrorFn<AsyncDelayedServer> on_error = [](AsyncDelayedServer* server,
+                                                           fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+  };
+  fidl::OnChannelClosedFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
     sync_completion_signal(&closed);
   };
-  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_error),
                   std::move(on_closed));
 
   // Sync client calls.
@@ -213,11 +220,12 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t closed;
-  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closing = [](AsyncDelayedServer* server) {};
-  fidl::OnChannelCloseFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
+  fidl::OnChannelErrorFn<AsyncDelayedServer> on_error = [](AsyncDelayedServer* server,
+                                                           fidl::ErrorType type) { FAIL(); };
+  fidl::OnChannelClosedFn<AsyncDelayedServer> on_closed = [&closed](AsyncDelayedServer* server) {
     sync_completion_signal(&closed);
   };
-  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_closing),
+  fidl::AsyncBind(main.dispatcher(), std::move(remote), server.get(), std::move(on_error),
                   std::move(on_closed));
 
   // Sync client calls.
@@ -286,10 +294,12 @@ TEST(AsyncBindTestCase, CallbackDestroyOnClientClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelCloseFn<Server> on_closing = [](Server* server) {};
-  fidl::OnChannelCloseFn<Server> on_closed = [](Server* server) { delete server; };
+  fidl::OnChannelErrorFn<Server> on_error = [](Server* server, fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+  };
+  fidl::OnChannelClosedFn<Server> on_closed = [](Server* server) { delete server; };
 
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_closing),
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_error),
                   std::move(on_closed));
   loop.RunUntilIdle();
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
@@ -299,9 +309,9 @@ TEST(AsyncBindTestCase, CallbackDestroyOnClientClose) {
   ASSERT_OK(sync_completion_wait(&destroyed, ZX_TIME_INFINITE));
 }
 
-TEST(AsyncBindTestCase, CallbacksClosingAndClosedClientTriggered) {
-  struct ClosingServer : ::llcpp::fidl::test::simple::Simple::Interface {
-    explicit ClosingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
+TEST(AsyncBindTestCase, CallbacksErrorAndClosedClientTriggered) {
+  struct ErrorServer : ::llcpp::fidl::test::simple::Simple::Interface {
+    explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
@@ -319,29 +329,31 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedClientTriggered) {
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
   };
-  sync_completion_t worker_start, worker_done, closing, closed;
+  sync_completion_t worker_start, worker_done, error, closed;
 
-  // Launches a thread so we can wait on the server closing.
-  auto server = std::make_unique<ClosingServer>(&worker_start, &worker_done);
+  // Launches a thread so we can wait on the server error.
+  auto server = std::make_unique<ErrorServer>(&worker_start, &worker_done);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelCloseFn<ClosingServer> on_closing = [&closing](ClosingServer* server) {
-    sync_completion_signal(&closing);
+  fidl::OnChannelErrorFn<ErrorServer> on_error = [&error](ErrorServer* server,
+                                                          fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+    sync_completion_signal(&error);
   };
-  fidl::OnChannelCloseFn<ClosingServer> on_closed = [&closed](ClosingServer* server) {
+  fidl::OnChannelClosedFn<ErrorServer> on_closed = [&closed](ErrorServer* server) {
     sync_completion_signal(&closed);
   };
 
-  fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                 std::move(on_closing), std::move(on_closed));
+  fidl::AsyncBind<ErrorServer>(loop.dispatcher(), std::move(remote), server.get(),
+                               std::move(on_error), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
-  ASSERT_FALSE(sync_completion_signaled(&closing));
+  ASSERT_FALSE(sync_completion_signaled(&error));
   ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Client launches a thread so we can hold the transaction in progress.
@@ -358,11 +370,11 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedClientTriggered) {
   // Wait until worker_start so we have an in-flight transaction.
   ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
 
-  // Client closes the channel, we are now closing and on_closing is called.
+  // Client closes the channel, triggers an error and on_error is called.
   local.reset();
 
-  // Wait for the closing callback to be called.
-  ASSERT_OK(sync_completion_wait(&closing, ZX_TIME_INFINITE));
+  // Wait for the error callback to be called.
+  ASSERT_OK(sync_completion_wait(&error, ZX_TIME_INFINITE));
 
   // Give some time to the server thread to potentially call close, it should not though.
   // This sleep is not needed to pass the test, it just allows the server to potentially fail.
@@ -407,13 +419,15 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   sync_completion_t closed;
-  fidl::OnChannelCloseFn<WorkingServer> on_closing = [](WorkingServer* server) {};
-  fidl::OnChannelCloseFn<WorkingServer> on_closed = [&closed](WorkingServer* server) {
+  fidl::OnChannelErrorFn<WorkingServer> on_error = [](WorkingServer* server, fidl::ErrorType type) {
+    ASSERT_EQ(type, fidl::ErrorType::kErrorPeerClosed);
+  };
+  fidl::OnChannelClosedFn<WorkingServer> on_closed = [&closed](WorkingServer* server) {
     sync_completion_signal(&closed);
   };
 
   fidl::AsyncBind<WorkingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                 std::move(on_closing), std::move(on_closed));
+                                 std::move(on_error), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
@@ -433,7 +447,7 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   // Wait until worker_start so we have an in-flight transaction.
   ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
 
-  // Client closes its end of the channel, we are now closing but can't close until the in-flight
+  // Client closes its end of the channel, we trigger an error but can't close until the in-flight
   // transaction is destroyed.
   local.reset();
 
@@ -443,7 +457,7 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   });
 
   // Trigger finishing the transaction, Reply() will fail (closed channel) and the transaction will
-  // Close(). We make sure the channel closing by the client happens first and the in-flight
+  // Close(). We make sure the channel error by the client happens first and the in-flight
   // transaction tries to Reply() second.
   sync_completion_signal(&worker_done);
 
@@ -463,9 +477,9 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   ASSERT_OK(sync_completion_wait(&closed, ZX_TIME_INFINITE));
 }
 
-TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
-  struct ClosingServer : ::llcpp::fidl::test::simple::Simple::Interface {
-    explicit ClosingServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
+TEST(AsyncBindTestCase, CallbacksErrorAndClosedServerTriggered) {
+  struct ErrorServer : ::llcpp::fidl::test::simple::Simple::Interface {
+    explicit ErrorServer(sync_completion_t* worker_start, sync_completion_t* worker_done)
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
@@ -483,39 +497,34 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
     sync_completion_t* worker_done_;
     std::unique_ptr<async::Loop> worker_;
   };
-  sync_completion_t worker_start, worker_done, closing, closed;
+  sync_completion_t worker_start, worker_done, closed;
 
-  // Launches a thread so we can wait on the server closing.
-  auto server = std::make_unique<ClosingServer>(&worker_start, &worker_done);
+  // Launches a thread so we can wait on the server error.
+  auto server = std::make_unique<ErrorServer>(&worker_start, &worker_done);
   async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_OK(loop.StartThread());
 
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelCloseFn<ClosingServer> on_closing = [&closing](ClosingServer* server) {
-    sync_completion_signal(&closing);
+  fidl::OnChannelErrorFn<ErrorServer> on_error = [](ErrorServer* server, fidl::ErrorType type) {
+    FAIL();
   };
-  fidl::OnChannelCloseFn<ClosingServer> on_closed = [&closed](ClosingServer* server) {
+  fidl::OnChannelClosedFn<ErrorServer> on_closed = [&closed](ErrorServer* server) {
     sync_completion_signal(&closed);
   };
 
-  fidl::AsyncBind<ClosingServer>(loop.dispatcher(), std::move(remote), server.get(),
-                                 std::move(on_closing), std::move(on_closed));
+  fidl::AsyncBind<ErrorServer>(loop.dispatcher(), std::move(remote), server.get(),
+                               std::move(on_error), std::move(on_closed));
 
   ASSERT_FALSE(sync_completion_signaled(&worker_start));
   ASSERT_FALSE(sync_completion_signaled(&worker_done));
-  ASSERT_FALSE(sync_completion_signaled(&closing));
   ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Client1 launches a thread so we can hold its transaction in progress.
   auto client1 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   async::PostTask(client1->dispatcher(), [&local]() {
-    auto result =
-        ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
-    if (result.status() != ZX_ERR_PEER_CLOSED) {
-      FAIL();
-    }
+    ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
   });
   ASSERT_OK(client1->StartThread());
 
@@ -525,16 +534,13 @@ TEST(AsyncBindTestCase, CallbacksClosingAndClosedServerTriggered) {
   // Client2 launches a thread to continue the test while its transaction is still in progress.
   auto client2 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
   async::PostTask(client2->dispatcher(), [&local]() {
-    // Server will close the channel, we are now closing and on_closing is called.
+    // Server will close the channel, on_error is not called.
     auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
     if (result.status() != ZX_ERR_PEER_CLOSED) {
       FAIL();
     }
   });
   ASSERT_OK(client2->StartThread());
-
-  // Wait for the closing callback to be called.
-  ASSERT_OK(sync_completion_wait(&closing, ZX_TIME_INFINITE));
 
   // Trigger finishing the client1 outstanding transaction.
   sync_completion_signal(&worker_done);
@@ -553,10 +559,10 @@ TEST(AsyncBindTestCase, CallbackDestroyOnServerClose) {
   zx::channel local, remote;
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
-  fidl::OnChannelCloseFn<Server> on_closing = [](Server* server) {};
-  fidl::OnChannelCloseFn<Server> on_closed = [](Server* server) { delete server; };
+  fidl::OnChannelErrorFn<Server> on_error = [](Server* server, fidl::ErrorType type) { FAIL(); };
+  fidl::OnChannelClosedFn<Server> on_closed = [](Server* server) { delete server; };
 
-  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_closing),
+  fidl::AsyncBind(loop.dispatcher(), std::move(remote), server.release(), std::move(on_error),
                   std::move(on_closed));
   ASSERT_FALSE(sync_completion_signaled(&destroyed));
 
@@ -624,12 +630,14 @@ TEST(AsyncBindTestCase, ExplicitForceSyncUnbindWithPendingTransaction) {
   });
   ASSERT_OK(client->StartThread());
 
-  fidl::OnChannelCloseFn<WorkingServer> on_closing = [](WorkingServer* server) {};
-  fidl::OnChannelCloseFn<WorkingServer> on_closed = [](WorkingServer* server) {};
+  fidl::OnChannelErrorFn<WorkingServer> on_error = [](WorkingServer* server, fidl::ErrorType type) {
+    FAIL();
+  };
+  fidl::OnChannelClosedFn<WorkingServer> on_closed = [](WorkingServer* server) {};
 
   auto binding_ref =
       fidl::BindingRef::CreateAsyncBinding(loop.dispatcher(), std::move(remote), server.get(),
-                                           std::move(on_closing), std::move(on_closed));
+                                           std::move(on_error), std::move(on_closed));
   ASSERT_TRUE(binding_ref.is_ok());
 
   // Wait until worker_start so we have an in-flight transaction.

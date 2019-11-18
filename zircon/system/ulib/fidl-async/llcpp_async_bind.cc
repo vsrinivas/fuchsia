@@ -18,13 +18,13 @@ namespace internal {
 
 AsyncBinding::AsyncBinding(async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
                            TypeErasedDispatchFn dispatch_fn,
-                           TypeErasedOnChannelCloseFn on_channel_closing_fn,
-                           TypeErasedOnChannelCloseFn on_channel_closed_fn)
+                           TypeErasedOnChannelErrorFn on_channel_error_fn,
+                           TypeErasedOnChannelClosedFn on_channel_closed_fn)
     : dispatcher_(dispatcher),
       channel_(std::move(channel)),
       interface_(impl),
       dispatch_fn_(dispatch_fn),
-      on_channel_closing_fn_(std::move(on_channel_closing_fn)),
+      on_channel_error_fn_(std::move(on_channel_error_fn)),
       on_channel_closed_fn_(std::move(on_channel_closed_fn)) {
   callback_.set_object(channel_.get());
   callback_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
@@ -39,15 +39,15 @@ AsyncBinding::~AsyncBinding() {
   }
 }
 
-void AsyncBinding::OnChannelClosing(zx_status_t epitaph) {
+void AsyncBinding::OnChannelError(zx_status_t epitaph, ErrorType error_type) {
   auto local_keep_alive = keep_alive_;  // Potential last reference dropped outside the object.
   closing_ = true;
   if (epitaph_ == ZX_OK) {
     epitaph_ = epitaph;  // We use the first one set.
   }
-  if (on_channel_closing_fn_) {
-    on_channel_closing_fn_(interface_);
-    on_channel_closing_fn_ = nullptr;
+  if (on_channel_error_fn_ && error_type != ErrorType::kNoError) {
+    on_channel_error_fn_(interface_, error_type);
+    on_channel_error_fn_ = nullptr;
   }
   keep_alive_ = nullptr;  // Binding can be destroyed now or when the last transaction is done.
 }
@@ -55,7 +55,7 @@ void AsyncBinding::OnChannelClosing(zx_status_t epitaph) {
 void AsyncBinding::MessageHandler(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                                   zx_status_t status, const zx_packet_signal_t* signal) {
   if (status != ZX_OK) {
-    OnChannelClosing(status);
+    OnChannelError(status, ErrorType::kErrorInternal);
     return;
   }
 
@@ -75,7 +75,7 @@ void AsyncBinding::MessageHandler(async_dispatcher_t* dispatcher, async::WaitBas
         if (status == ZX_OK) {
           status = ZX_ERR_INTERNAL;
         }
-        OnChannelClosing(status);
+        OnChannelError(status, ErrorType::kErrorChannelRead);
         return;
       }
 
@@ -86,8 +86,8 @@ void AsyncBinding::MessageHandler(async_dispatcher_t* dispatcher, async::WaitBas
     callback_.Begin(dispatcher_);
   } else {
     ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
-    // No epitaph triggered by closing due to a PEER_CLOSED.
-    OnChannelClosing(ZX_OK);
+    // No epitaph triggered by error due to a PEER_CLOSED.
+    OnChannelError(ZX_OK, ErrorType::kErrorPeerClosed);
   }
 }
 
@@ -95,8 +95,8 @@ void AsyncBinding::Close(zx_status_t epitaph, std::shared_ptr<AsyncBinding> bind
   // std::shared_ptr<AsyncBinding> keeps binding alive while closing.
   async::PostTask(dispatcher_, [this, binding, epitaph]() {
     ScopedToken t(domain_token());
-    callback_.Cancel();
-    OnChannelClosing(epitaph);
+    binding->callback_.Cancel();
+    OnChannelError(epitaph, ErrorType::kNoError);
   });
 }
 
@@ -111,11 +111,11 @@ void AsyncBinding::Unbind() {
 
 std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedBinding(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
-    TypeErasedOnChannelCloseFn on_channel_closed_fn) {
+    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
+    TypeErasedOnChannelClosedFn on_channel_closed_fn) {
   auto ret = std::shared_ptr<internal::AsyncBinding>(
       new internal::AsyncBinding(dispatcher, std::move(channel), impl, dispatch_fn,
-                                 std::move(on_channel_closing_fn), std::move(on_channel_closed_fn)),
+                                 std::move(on_channel_error_fn), std::move(on_channel_closed_fn)),
       Deleter());
   ret->keep_alive_ = ret;  // We keep the binding alive until somebody decides to close the channel.
   return ret;
@@ -123,10 +123,10 @@ std::shared_ptr<internal::AsyncBinding> AsyncBinding::CreateSelfManagedBinding(
 
 fit::result<BindingRef, zx_status_t> AsyncTypeErasedBind(
     async_dispatcher_t* dispatcher, zx::channel channel, void* impl,
-    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelCloseFn on_channel_closing_fn,
-    TypeErasedOnChannelCloseFn on_channel_closed_fn) {
+    TypeErasedDispatchFn dispatch_fn, TypeErasedOnChannelErrorFn on_channel_error_fn,
+    TypeErasedOnChannelClosedFn on_channel_closed_fn) {
   auto internal_binding = internal::AsyncBinding::CreateSelfManagedBinding(
-      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_channel_closing_fn),
+      dispatcher, std::move(channel), impl, dispatch_fn, std::move(on_channel_error_fn),
       std::move(on_channel_closed_fn));
   auto status = internal_binding->BeginWait();
   if (status == ZX_OK) {

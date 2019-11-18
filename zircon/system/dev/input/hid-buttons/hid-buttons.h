@@ -208,9 +208,11 @@ class ButtonsNotifyInterface : public Buttons::Interface {
     id_ = id;
     chan_ = zx::unowned_channel(chan);
 
-    fidl::OnChannelCloseFn<ButtonsNotifyInterface> closing =
-        [this](ButtonsNotifyInterface* interface) { device_->ClosingChannel(id_); };
-    fidl::OnChannelCloseFn<ButtonsNotifyInterface> closed = [](ButtonsNotifyInterface* interface) {
+    fidl::OnChannelErrorFn<ButtonsNotifyInterface> closing =
+        [this](ButtonsNotifyInterface* interface, fidl::ErrorType type) {
+          device_->ClosingChannel(id_);
+        };
+    fidl::OnChannelClosedFn<ButtonsNotifyInterface> closed = [](ButtonsNotifyInterface* interface) {
       return;
     };
     fidl::AsyncBind(dispatcher, std::move(chan), this, std::move(closing), std::move(closed));
