@@ -57,9 +57,9 @@ static bool wait_for_driver_event(zx_time_t deadline) {
   return true;
 }
 
-static bool bind_display(fbl::Vector<Display>* displays) {
+static bool bind_display(const char* controller, fbl::Vector<Display>* displays) {
   printf("Opening controller\n");
-  fbl::unique_fd fd(open("/dev/class/display-controller/000", O_RDWR));
+  fbl::unique_fd fd(open(controller, O_RDWR));
   if (!fd) {
     printf("Failed to open display controller (%d)\n", errno);
     return false;
@@ -455,6 +455,8 @@ int main(int argc, const char* argv[]) {
   int32_t delay = 0;
   bool capture = false;
   bool verify_capture = false;
+  const char* controller = "/dev/class/display-controller/000";
+
   enum Platform {
     SIMPLE,
     INTEL,
@@ -463,7 +465,14 @@ int main(int argc, const char* argv[]) {
   };
   Platform platform = INTEL;  // default to Intel
 
-  if (!bind_display(&displays)) {
+  for (int i = 1; i < argc-1; i++) {
+    if (!strcmp(argv[i], "--controller")) {
+      controller = argv[i+1];
+      break;
+    }
+  }
+
+  if (!bind_display(controller, &displays)) {
     return -1;
   }
 
@@ -512,6 +521,10 @@ int main(int argc, const char* argv[]) {
       argc--;
     } else if (strcmp(argv[0], "--num-frames") == 0) {
       num_frames = atoi(argv[1]);
+      argv += 2;
+      argc -= 2;
+    } else if (strcmp(argv[0], "--controller") == 0) {
+      // We already processed this, skip it.
       argv += 2;
       argc -= 2;
     } else if (strcmp(argv[0], "--delay") == 0) {
