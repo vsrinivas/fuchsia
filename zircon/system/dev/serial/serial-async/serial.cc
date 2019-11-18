@@ -6,6 +6,7 @@
 
 #include <fuchsia/hardware/serial/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/async_bind.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl-utils/bind.h>
@@ -67,7 +68,7 @@ void SerialDevice::GetChannel(zx::channel req, GetChannelCompleter::Sync complet
       return;
     }
   }
-  loop_.emplace(&kAsyncLoopConfigNoAttachToThread);
+  loop_.emplace(&kAsyncLoopConfigNoAttachToCurrentThread);
   loop_->StartThread("serial-thread");
 
   // No-op function that does nothing when channel is closing

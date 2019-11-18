@@ -7,7 +7,8 @@ zx_driver("serial-async") {
     ":common",
     "$zx/system/ulib/driver",
   ]
-  # TODO (31742): Remove this in the future when we have official libasync support in drivers. 
+
+  # TODO (31742): Remove this in the future when we have official libasync support in drivers.
   deprecated_inhibit_driver_shlib_allowlist = true
 }
 
@@ -17,10 +18,11 @@ source_set("common") {
   ]
   public_deps = [
     "$zx/system/banjo/ddk.protocol.serialimpl.async",
+    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/fidl/fuchsia-hardware-serial:llcpp",
+    "$zx/system/ulib/async-loop:async-loop-default",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
