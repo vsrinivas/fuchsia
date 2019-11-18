@@ -11,7 +11,7 @@
 
 #include "cb_pool.h"
 
-#include "common/vk/vk_assert.h"
+#include "common/vk/assert.h"
 #include "device.h"
 
 //

@@ -12,8 +12,8 @@
 
 #include "common/macros.h"
 #include "common/vk/find_validation_layer.h"
-#include "common/vk/vk_assert.h"
-#include "common/vk/vk_debug.h"
+#include "common/vk/assert.h"
+#include "common/vk/debug.h"
 
 //
 //
