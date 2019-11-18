@@ -6,7 +6,15 @@
 
 #include <fcntl.h>
 #include <fuchsia/hardware/input/c/fidl.h>
+#include <fuchsia/io/c/fidl.h>
+#include <lib/fdio/directory.h>
+#include <lib/fdio/fd.h>
+#include <lib/fdio/fdio.h>
+#include <lib/fdio/io.h>
+#include <lib/fdio/spawn.h>
+#include <lib/fdio/watcher.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/channel.h>
 #include <poll.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -18,12 +26,22 @@
 #include <hid/hid.h>
 #include <hid/usages.h>
 
-#include "src/bringup/virtcon/port/port.h"
+namespace {
 
-#define LOW_REPEAT_KEY_FREQ 250000000
-#define HIGH_REPEAT_KEY_FREQ 50000000
+constexpr zx::duration kSlackDuration = zx::msec(1);
+constexpr zx::duration kHighRepeatKeyFreq = zx::msec(50);
+constexpr zx::duration kLowRepeatKeyFreq = zx::msec(250);
 
-static int modifiers_from_keycode(uint8_t keycode) {
+// TODO(dgilhooley): this global watcher is necessary because the ports we are using
+// take a raw function pointer. I think once we move this library to libasync we can
+// remove the global watcher and use lambdas.
+KeyboardWatcher main_watcher;
+
+zx_status_t keyboard_main_callback(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+  return main_watcher.DirCallback(ph, signals, evt);
+}
+
+int modifiers_from_keycode(uint8_t keycode) {
   switch (keycode) {
     case HID_USAGE_KEY_LEFT_SHIFT:
       return MOD_LSHIFT;
@@ -41,7 +59,31 @@ static int modifiers_from_keycode(uint8_t keycode) {
   return 0;
 }
 
-static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
+bool keycode_is_modifier(uint8_t keycode) { return modifiers_from_keycode(keycode) != 0; }
+
+}  // namespace
+
+zx_status_t setup_keyboard_watcher(keypress_handler_t handler, bool repeat_keys) {
+  return main_watcher.Setup(handler, repeat_keys);
+}
+
+zx_status_t Keyboard::TimerCallback(zx_signals_t signals, uint32_t evt) {
+  handler_(repeating_key_, modifiers_);
+
+  // increase repeat rate if we're not yet at the fastest rate
+  if ((repeat_interval_ = repeat_interval_ * 3 / 4) < kHighRepeatKeyFreq) {
+    repeat_interval_ = kHighRepeatKeyFreq;
+  }
+
+  timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
+
+  return ZX_OK;
+}
+
+void Keyboard::SetCapsLockLed(bool caps_lock) {
+  if (!caller_) {
+    return;
+  }
   // The following bit to set is specified in "Device Class Definition
   // for Human Interface Devices (HID)", Version 1.11,
   // http://www.usb.org/developers/hidpage/HID1_11.pdf.  Zircon leaves
@@ -50,204 +92,217 @@ static void set_caps_lock_led(int keyboard_fd, bool caps_lock) {
   const uint8_t kUsbCapsLockBit = 1 << 1;
   const uint8_t report_body[1] = {static_cast<uint8_t>(caps_lock ? kUsbCapsLockBit : 0)};
 
-  // Temporarily wrap keyboard_fd, we will release it after the call so we don't close it.
-  fzl::FdioCaller caller{fbl::unique_fd(keyboard_fd)};
   zx_status_t call_status;
   zx_status_t status = fuchsia_hardware_input_DeviceSetReport(
-      caller.borrow_channel(), fuchsia_hardware_input_ReportType_OUTPUT, 0, report_body,
+      caller_.borrow_channel(), fuchsia_hardware_input_ReportType_OUTPUT, 0, report_body,
       sizeof(report_body), &call_status);
-  caller.release().release();
   if (status != ZX_OK || call_status != ZX_OK) {
-#if !BUILD_FOR_TEST
     printf("fuchsia.hardware.input.Device.SetReport() failed (returned %d, %d)\n", status,
            call_status);
-#endif
   }
 }
-
-struct vc_input {
-  port_fd_handler_t fh;
-  port_handler_t th;
-  zx_handle_t timer;
-
-  keypress_handler_t handler;
-  int fd;
-
-  uint8_t previous_report_buf[8];
-  uint8_t report_buf[8];
-  hid_keys_t state[2];
-  int cur_idx;
-  int prev_idx;
-  int modifiers;
-  uint64_t repeat_interval;
-  bool repeat_enabled;
-};
 
 // returns true if key was pressed and none were released
-bool vc_input_process(vc_input_t* vi, uint8_t report[8]) {
-  bool do_repeat = false;
-
-  // process the key
+void Keyboard::ProcessInput(hid_keys_t state) {
+  // Process the pressed keys.
   uint8_t keycode;
   hid_keys_t keys;
-
-  hid_kbd_parse_report(report, &vi->state[vi->cur_idx]);
-
-  hid_kbd_pressed_keys(&vi->state[vi->prev_idx], &vi->state[vi->cur_idx], &keys);
+  hid_kbd_pressed_keys(&previous_state_, &state, &keys);
   hid_for_every_key(&keys, keycode) {
     if (keycode == HID_USAGE_KEY_ERROR_ROLLOVER) {
-      return false;
+      return;
     }
-    vi->modifiers |= modifiers_from_keycode(keycode);
+    modifiers_ |= modifiers_from_keycode(keycode);
     if (keycode == HID_USAGE_KEY_CAPSLOCK) {
-      vi->modifiers ^= MOD_CAPSLOCK;
-      set_caps_lock_led(vi->fd, vi->modifiers & MOD_CAPSLOCK);
+      modifiers_ ^= MOD_CAPSLOCK;
+      SetCapsLockLed(modifiers_ & MOD_CAPSLOCK);
     }
-    vi->handler(keycode, vi->modifiers);
-    do_repeat = true;
+
+    if (repeat_enabled_ && !keycode_is_modifier(keycode)) {
+      is_repeating_ = true;
+      repeating_key_ = keycode;
+      repeat_interval_ = kLowRepeatKeyFreq;
+      timer_.cancel();
+      timer_.set(zx::deadline_after(repeat_interval_), kSlackDuration);
+    }
+    handler_(keycode, modifiers_);
   }
 
-  hid_kbd_released_keys(&vi->state[vi->prev_idx], &vi->state[vi->cur_idx], &keys);
+  // Process the released keys.
+  hid_kbd_released_keys(&previous_state_, &state, &keys);
   hid_for_every_key(&keys, keycode) {
-    vi->modifiers &= ~modifiers_from_keycode(keycode);
-    do_repeat = false;
+    modifiers_ &= ~modifiers_from_keycode(keycode);
+
+    if (repeat_enabled_ && is_repeating_ && (repeating_key_ == keycode)) {
+      is_repeating_ = false;
+      repeating_key_ = 0;
+      timer_.cancel();
+    }
   }
 
-  // swap key states
-  vi->cur_idx = 1 - vi->cur_idx;
-  vi->prev_idx = 1 - vi->prev_idx;
-
-  return do_repeat;
+  // Store the previous state.
+  previous_state_ = state;
 }
 
-#if !BUILD_FOR_TEST
-static void vc_input_destroy(vc_input_t* vi) {
-  port_cancel(&port, &vi->th);
-  if (vi->fd >= 0) {
-    port_fd_handler_done(&vi->fh);
-    close(vi->fd);
+Keyboard::~Keyboard() {
+  if (input_notifier_.fdio_context != nullptr) {
+    port_fd_handler_done(&input_notifier_);
   }
-  zx_handle_close(vi->timer);
-  free(vi);
-}
-
-static zx_status_t vc_timer_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  vc_input_t* vi = containerof(ph, vc_input_t, th);
-
-  vc_input_process(vi, vi->previous_report_buf);
-  vc_input_process(vi, vi->report_buf);
-
-  // increase repeat rate if we're not yet at the fastest rate
-  if ((vi->repeat_interval = vi->repeat_interval * 3 / 4) < HIGH_REPEAT_KEY_FREQ) {
-    vi->repeat_interval = HIGH_REPEAT_KEY_FREQ;
+  if (timer_notifier_.func != nullptr) {
+    port_cancel(&port, &timer_notifier_);
   }
-
-  zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
-
-  return ZX_OK;
 }
 
-static zx_status_t vc_input_cb(port_fd_handler_t* fh, unsigned pollevt, uint32_t evt) {
-  vc_input_t* vi = containerof(fh, vc_input_t, fh);
-  ssize_t r;
-
+zx_status_t Keyboard::InputCallback(unsigned pollevt, uint32_t evt) {
   if (!(pollevt & POLLIN)) {
-    r = ZX_ERR_PEER_CLOSED;
-  } else {
-    memcpy(vi->previous_report_buf, vi->report_buf, sizeof(vi->report_buf));
-    r = read(vi->fd, vi->report_buf, sizeof(vi->report_buf));
-  }
-  if (r <= 0) {
-    vc_input_destroy(vi);
     return ZX_ERR_STOP;
   }
-  if ((size_t)(r) != sizeof(vi->report_buf)) {
-    vi->repeat_interval = ZX_TIME_INFINITE;
+
+  uint8_t report[8];
+  ssize_t r = read(caller_.fd().get(), report, sizeof(report));
+  if (r <= 0) {
+    return ZX_ERR_STOP;
+  }
+  if ((size_t)(r) != sizeof(report)) {
+    repeat_interval_ = zx::duration::infinite();
     return ZX_OK;
   }
 
-  if (vc_input_process(vi, vi->report_buf) && vi->repeat_enabled) {
-    vi->repeat_interval = LOW_REPEAT_KEY_FREQ;
-    zx_timer_set(vi->timer, zx_deadline_after(vi->repeat_interval), 0);
-  } else {
-    zx_timer_cancel(vi->timer);
-  }
-  return ZX_OK;
-}
-#endif
+  hid_keys_t state = {};
+  hid_kbd_parse_report(report, &state);
 
-zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd) {
-  vc_input_t* vi = reinterpret_cast<vc_input_t*>(calloc(1, sizeof(vc_input_t)));
-  if (vi == NULL) {
-    return ZX_ERR_NO_MEMORY;
-  }
-
-  vi->fd = fd;
-  vi->handler = handler;
-
-  vi->cur_idx = 0;
-  vi->prev_idx = 1;
-  vi->modifiers = 0;
-  vi->repeat_interval = ZX_TIME_INFINITE;
-  vi->repeat_enabled = true;
-
-  char* flag = getenv("virtcon.keyrepeat");
-  if (flag && (!strcmp(flag, "0") || !strcmp(flag, "false"))) {
-    printf("vc: Key repeat disabled\n");
-    vi->repeat_enabled = false;
-  }
-
-#if !BUILD_FOR_TEST
-  zx_status_t r;
-  if ((r = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &vi->timer)) < 0) {
-    free(vi);
-    return r;
-  }
-
-  vi->fh.func = vc_input_cb;
-  if ((r = port_fd_handler_init(&vi->fh, fd, POLLIN | POLLHUP | POLLRDHUP)) < 0) {
-    zx_handle_close(vi->timer);
-    free(vi);
-    return r;
-  }
-
-  if ((r = port_wait(&port, &vi->fh.ph)) < 0) {
-    port_fd_handler_done(&vi->fh);
-    zx_handle_close(vi->timer);
-    free(vi);
-    return r;
-  }
-
-  vi->th.handle = vi->timer;
-  vi->th.waitfor = ZX_TIMER_SIGNALED;
-  vi->th.func = vc_timer_cb;
-  port_wait(&port, &vi->th);
-#endif
-
-  *out = vi;
+  ProcessInput(state);
   return ZX_OK;
 }
 
-#if !BUILD_FOR_TEST
-zx_status_t new_input_device(int fd, keypress_handler_t handler) {
-  // test to see if this is a device we can read
+zx_status_t Keyboard::Setup(fzl::FdioCaller caller) {
+  caller_ = std::move(caller);
+
+  zx_status_t status;
+  if ((status = zx::timer::create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &timer_)) != ZX_OK) {
+    return status;
+  }
+
+  input_notifier_.func = [](port_fd_handler* input_notifier, unsigned pollevt, uint32_t evt) {
+    Keyboard* kbd = containerof(input_notifier, Keyboard, input_notifier_);
+    zx_status_t status = kbd->InputCallback(pollevt, evt);
+    if (status == ZX_ERR_STOP) {
+      delete kbd;
+    }
+    return status;
+  };
+
+  if ((status = port_fd_handler_init(&input_notifier_, caller_.fd().get(),
+                                     POLLIN | POLLHUP | POLLRDHUP)) < 0) {
+    return status;
+  }
+
+  if ((status = port_wait(&port, &input_notifier_.ph)) != ZX_OK) {
+    port_fd_handler_done(&input_notifier_);
+    return status;
+  }
+
+  timer_notifier_.handle = timer_.get();
+  timer_notifier_.waitfor = ZX_TIMER_SIGNALED;
+  timer_notifier_.func = [](port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+    Keyboard* kbd = containerof(ph, Keyboard, timer_notifier_);
+    return kbd->TimerCallback(signals, evt);
+  };
+  port_wait(&port, &timer_notifier_);
+  return ZX_OK;
+}
+
+zx_status_t KeyboardWatcher::OpenFile(uint8_t evt, char* name) {
+  if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
+    return ZX_OK;
+  }
+
+  int fd;
+  if ((fd = openat(Fd(), name, O_RDONLY)) < 0) {
+    return ZX_OK;
+  }
+
+  fzl::FdioCaller caller = fzl::FdioCaller(fbl::unique_fd(fd));
   uint32_t proto = fuchsia_hardware_input_BootProtocol_NONE;
-
-  // Temporarily wrap fd, we will release it after the call so we don't close it.
-  fzl::FdioCaller caller{fbl::unique_fd(fd)};
   zx_status_t status =
       fuchsia_hardware_input_DeviceGetBootProtocol(caller.borrow_channel(), &proto);
-  caller.release().release();
+  // skip devices that aren't keyboards
   if ((status != ZX_OK) || (proto != fuchsia_hardware_input_BootProtocol_KBD)) {
-    // skip devices that aren't keyboards
-    close(fd);
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  vc_input_t* vi;
-  if ((status = vc_input_create(&vi, handler, fd)) < 0) {
-    close(fd);
+  printf("vc: new input device /dev/class/input/%s\n", name);
+
+  // This is not a memory leak, because keyboards free themselves when their underlying
+  // devices close.
+  Keyboard* keyboard = new Keyboard(handler_, repeat_keys_);
+  status = keyboard->Setup(std::move(caller));
+  if (status != ZX_OK) {
+    delete keyboard;
+    return status;
   }
-  return status;
+  return ZX_OK;
 }
-#endif
+
+zx_status_t KeyboardWatcher::DirCallback(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
+  if (!(signals & ZX_CHANNEL_READABLE)) {
+    printf("vc: device directory died\n");
+    return ZX_ERR_STOP;
+  }
+
+  // Buffer contains events { Opcode, Len, Name[Len] }
+  // See zircon/device/vfs.h for more detail
+  // extra byte is for temporary NUL
+  std::array<uint8_t, fuchsia_io_MAX_BUF + 1> buffer;
+  uint32_t len;
+  if (zx_channel_read(ph->handle, 0, buffer.data(), NULL, buffer.size() - 1, 0, &len, NULL) < 0) {
+    printf("vc: failed to read from device directory\n");
+    return ZX_ERR_STOP;
+  }
+
+  uint32_t index = 0;
+  while (index + 2 <= len) {
+    uint8_t event = buffer[index];
+    uint8_t namelen = buffer[index + 1];
+    index += 2;
+    if ((namelen + index) > len) {
+      printf("vc: malformed device directory message\n");
+      return ZX_ERR_STOP;
+    }
+    // add temporary nul
+    uint8_t tmp = buffer[index + namelen];
+    buffer[index + namelen] = 0;
+    OpenFile(event, reinterpret_cast<char*>(&buffer[index]));
+    buffer[index + namelen] = tmp;
+    index += namelen;
+  }
+  return ZX_OK;
+}
+
+zx_status_t KeyboardWatcher::Setup(keypress_handler_t handler, bool repeat_keys) {
+  repeat_keys_ = repeat_keys;
+  handler_ = handler;
+  fbl::unique_fd fd(open("/dev/class/input", O_DIRECTORY | O_RDONLY));
+  if (!fd) {
+    return ZX_ERR_IO;
+  }
+  zx::channel client, server;
+  zx_status_t status;
+  if ((status = zx::channel::create(0, &client, &server)) != ZX_OK) {
+    return status;
+  }
+
+  dir_caller_ = fzl::FdioCaller(std::move(fd));
+  zx_status_t io_status = fuchsia_io_DirectoryWatch(
+      dir_caller_.borrow_channel(), fuchsia_io_WATCH_MASK_ALL, 0, server.release(), &status);
+  if (io_status != ZX_OK || status != ZX_OK) {
+    return io_status;
+  }
+
+  dir_handler_.handle = client.release();
+  dir_handler_.waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
+  dir_handler_.func = keyboard_main_callback;
+  port_wait(&port, &dir_handler_);
+
+  return ZX_OK;
+}

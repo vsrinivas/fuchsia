@@ -12,6 +12,9 @@
 
 #include "keyboard-vt100.h"
 
+// Global port needed for IPC calls.
+port_t port;
+
 namespace {
 
 // State reported to keypress_handler().
@@ -46,11 +49,15 @@ void expect_no_keypress() { EXPECT_FALSE(g_got_keypress); }
 
 class KeyboardInputHelper {
  public:
-  KeyboardInputHelper() { EXPECT_OK(vc_input_create(&vi_, keypress_handler, -1)); }
+  KeyboardInputHelper() : keyboard_(keypress_handler, true) {}
 
   ~KeyboardInputHelper() {}
 
-  void WriteReportBuf() { vc_input_process(vi_, report_buf_.data()); }
+  void WriteReportBuf() {
+    hid_keys_t state = {};
+    hid_kbd_parse_report(report_buf_.data(), &state);
+    keyboard_.ProcessInput(state);
+  }
 
   // Byte 0 contains one bit per modifier key.
   void set_modifiers_byte(uint8_t value) { report_buf_[0] = value; }
@@ -73,8 +80,7 @@ class KeyboardInputHelper {
  private:
   // USB HID key state buffer.
   std::array<uint8_t, 8> report_buf_ = {};
-
-  vc_input_t* vi_;
+  Keyboard keyboard_;
 };
 
 TEST(GfxConsoleKeyboardTests, KeyboardInputThread) {

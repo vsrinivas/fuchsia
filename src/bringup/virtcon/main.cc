@@ -37,14 +37,11 @@
 #include <fbl/unique_fd.h>
 #include <fs/handler.h>
 
+#include "keyboard.h"
 #include "vc.h"
 
 port_t port;
 static port_handler_t new_vc_ph;
-static port_handler_t input_ph;
-
-static int input_dir_fd;
-
 static zx_status_t launch_shell(vc_t* vc, int fd, const char* cmd) {
   const char* argv[] = {"/boot/bin/sh", nullptr, nullptr, nullptr};
 
@@ -316,50 +313,6 @@ static zx_status_t fidl_connection_cb(port_handler_t* ph, zx_signals_t signals, 
   return ZX_OK;
 }
 
-static zx_status_t input_dir_event(unsigned evt, const char* name) {
-  if ((evt != fuchsia_io_WATCH_EVENT_EXISTING) && (evt != fuchsia_io_WATCH_EVENT_ADDED)) {
-    return ZX_OK;
-  }
-
-  printf("vc: new input device /dev/class/input/%s\n", name);
-
-  int fd;
-  if ((fd = openat(input_dir_fd, name, O_RDONLY)) < 0) {
-    return ZX_OK;
-  }
-
-  new_input_device(fd, handle_key_press);
-  return ZX_OK;
-}
-
-static void setup_dir_watcher(const char* dir,
-                              zx_status_t (*cb)(port_handler_t*, zx_signals_t, uint32_t),
-                              port_handler_t* ph, int* fd_out) {
-  *fd_out = -1;
-  fbl::unique_fd fd(open(dir, O_DIRECTORY | O_RDONLY));
-  if (!fd) {
-    return;
-  }
-  zx::channel client, server;
-  if (zx::channel::create(0, &client, &server) != ZX_OK) {
-    return;
-  }
-
-  fzl::FdioCaller caller(std::move(fd));
-  zx_status_t status;
-  zx_status_t io_status = fuchsia_io_DirectoryWatch(
-      caller.borrow_channel(), fuchsia_io_WATCH_MASK_ALL, 0, server.release(), &status);
-  if (io_status != ZX_OK || status != ZX_OK) {
-    return;
-  }
-
-  *fd_out = caller.release().release();
-  ph->handle = client.release();
-  ph->waitfor = ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED;
-  ph->func = cb;
-  port_wait(&port, ph);
-}
-
 zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
                                     zx_status_t (*event_handler)(unsigned event, const char* msg)) {
   if (!(signals & ZX_CHANNEL_READABLE)) {
@@ -397,10 +350,6 @@ zx_status_t handle_device_dir_event(port_handler_t* ph, zx_signals_t signals,
     len -= (namelen + 2u);
   }
   return ZX_OK;
-}
-
-static zx_status_t input_cb(port_handler_t* ph, zx_signals_t signals, uint32_t evt) {
-  return handle_device_dir_event(ph, signals, input_dir_event);
 }
 
 int main(int argc, char** argv) {
@@ -458,7 +407,19 @@ int main(int argc, char** argv) {
     port_wait(&port, &new_vc_ph);
   }
 
-  setup_dir_watcher("/dev/class/input", input_cb, &input_ph, &input_dir_fd);
+  bool repeat_keys = true;
+  {
+    char* flag = getenv("virtcon.keyrepeat");
+    if (flag && (!strcmp(flag, "0") || !strcmp(flag, "false"))) {
+      printf("vc: Key repeat disabled\n");
+      repeat_keys = false;
+    }
+  }
+
+  zx_status_t status = setup_keyboard_watcher(handle_key_press, repeat_keys);
+  if (status != ZX_OK) {
+    printf("vc: setup_keyboard_watcher failed with %d\n", status);
+  }
 
   if (!vc_sysmem_connect()) {
     return -1;
