@@ -33,6 +33,7 @@
 #include <wlan/protocol/mac.h>
 
 #include "bits.h"
+#include "brcmu_d11.h"
 #include "brcmu_utils.h"
 #include "brcmu_wifi.h"
 #include "btcoex.h"
@@ -148,39 +149,6 @@ struct parsed_vndr_ies {
 };
 
 static inline void fill_with_broadcast_addr(uint8_t* address) { memset(address, 0xff, ETH_ALEN); }
-
-uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, const wlan_channel_t* ch) {
-  struct brcmu_chan ch_inf;
-
-  ch_inf.chnum = ch->primary;
-
-  switch (ch->cbw) {
-    case WLAN_CHANNEL_BANDWIDTH__20:
-      ch_inf.bw = BRCMU_CHAN_BW_20;
-      ch_inf.sb = BRCMU_CHAN_SB_NONE;
-      break;
-    case WLAN_CHANNEL_BANDWIDTH__40:
-      ch_inf.bw = BRCMU_CHAN_BW_40;
-      ch_inf.sb = BRCMU_CHAN_SB_U;
-      break;
-    case WLAN_CHANNEL_BANDWIDTH__40BELOW:
-      ch_inf.bw = BRCMU_CHAN_BW_40;
-      ch_inf.sb = BRCMU_CHAN_SB_L;
-      break;
-    case WLAN_CHANNEL_BANDWIDTH__80:
-    case WLAN_CHANNEL_BANDWIDTH__160:
-    case WLAN_CHANNEL_BANDWIDTH__80P80:
-    default:
-      BRCMF_ERR("unsupported channel width\n");
-      break;
-  }
-
-  // ch_info.band is handled by encchspec
-
-  d11inf->encchspec(&ch_inf);
-
-  return ch_inf.chspec;
-}
 
 /* Traverse a string of 1-byte tag/1-byte length/variable-length value
  * triples, returning a pointer to the substring whose first element

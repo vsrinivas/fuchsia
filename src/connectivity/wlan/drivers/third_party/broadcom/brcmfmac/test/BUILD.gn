@@ -15,6 +15,19 @@
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
+executable("channel_conversion_test") {
+  output_name = "channel_conversion_test"
+  testonly = true
+  sources = [
+    "channel_conversion_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake_ddk",
+  ]
+}
+
 executable("debug_test") {
   output_name = "debug_test"
   testonly = true
@@ -72,12 +85,17 @@ executable("workqueue_test") {
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
   deps = [
+    ":channel_conversion_test",
     ":debug_test",
     ":firmware_test",
     ":netbuf_test",
     ":workqueue_test",
   ]
   tests = [
+    {
+      name = "channel_conversion_test"
+      environments = basic_envs
+    },
     {
       name = "debug_test"
       environments = basic_envs

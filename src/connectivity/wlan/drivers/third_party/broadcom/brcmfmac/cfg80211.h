@@ -411,7 +411,6 @@ void brcmf_free_vif(struct brcmf_cfg80211_vif* vif);
 zx_status_t brcmf_vif_set_mgmt_ie(struct brcmf_cfg80211_vif* vif, int32_t pktflag,
                                   const uint8_t* vndr_ie_buf, uint32_t vndr_ie_len);
 zx_status_t brcmf_vif_clear_mgmt_ies(struct brcmf_cfg80211_vif* vif);
-uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, const wlan_channel_t* ch);
 bool brcmf_get_vif_state_any(struct brcmf_cfg80211_info* cfg, unsigned long state);
 void brcmf_cfg80211_arm_vif_event(struct brcmf_cfg80211_info* cfg, struct brcmf_cfg80211_vif* vif,
                                   uint8_t pending_action);

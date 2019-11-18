@@ -19,6 +19,8 @@
 
 #include <zircon/types.h>
 
+#include <ddk/protocol/wlan/info.h>
+
 /* d11 io type */
 #define BRCMU_D11N_IOTYPE 1
 #define BRCMU_D11AC_IOTYPE 2
@@ -169,5 +171,7 @@ struct brcmu_d11inf {
 };
 
 void brcmu_d11_attach(struct brcmu_d11inf* d11inf);
+uint16_t channel_to_chanspec(const brcmu_d11inf* d11inf, const wlan_channel_t* ch);
+void chanspec_to_channel(const brcmu_d11inf* d11_inf, uint16_t chanspec, wlan_channel_t* ch);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_BROADCOM_BRCMFMAC_BRCMU_D11_H_
