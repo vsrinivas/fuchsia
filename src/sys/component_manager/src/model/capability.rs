@@ -256,6 +256,7 @@ fn target_matches_moniker(parent_target: &OfferTarget, child_moniker: &ChildMoni
 mod tests {
     use {
         super::*,
+        crate::model::testing::test_helpers::default_component_decl,
         cm_rust::{
             ExposeSource, ExposeTarget, OfferServiceSource, ServiceSource, StorageDirectorySource,
         },
@@ -315,19 +316,12 @@ mod tests {
             },
         };
         let decl = ComponentDecl {
-            program: None,
-            uses: vec![],
             exposes: vec![
                 ExposeDecl::Service(net_service.clone()),
                 ExposeDecl::Service(log_service.clone()),
                 ExposeDecl::Service(unmatched_service.clone()),
             ],
-            offers: vec![],
-            children: vec![],
-            collections: vec![],
-            storage: vec![],
-            facets: None,
-            runners: vec![],
+            ..default_component_decl()
         };
         let sources = capability.find_expose_service_sources(&decl);
         assert_eq!(sources, vec![&net_service, &log_service])
@@ -342,18 +336,7 @@ mod tests {
             source: StorageDirectorySource::Realm,
             source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
         });
-        let decl = ComponentDecl {
-            program: None,
-            uses: vec![],
-            exposes: vec![],
-            offers: vec![],
-            children: vec![],
-            collections: vec![],
-            storage: vec![],
-            facets: None,
-            runners: vec![],
-        };
-        capability.find_expose_service_sources(&decl);
+        capability.find_expose_service_sources(&default_component_decl());
     }
 
     #[test]
@@ -410,19 +393,12 @@ mod tests {
             },
         };
         let decl = ComponentDecl {
-            program: None,
-            uses: vec![],
-            exposes: vec![],
             offers: vec![
                 OfferDecl::Service(net_service.clone()),
                 OfferDecl::Service(log_service.clone()),
                 OfferDecl::Service(unmatched_service.clone()),
             ],
-            children: vec![],
-            collections: vec![],
-            storage: vec![],
-            facets: None,
-            runners: vec![],
+            ..default_component_decl()
         };
         let moniker = ChildMoniker::new("child".to_string(), None, 0);
         let sources = capability.find_offer_service_sources(&decl, &moniker);
@@ -438,18 +414,7 @@ mod tests {
             source: StorageDirectorySource::Realm,
             source_path: CapabilityPath { dirname: "".to_string(), basename: "".to_string() },
         });
-        let decl = ComponentDecl {
-            program: None,
-            uses: vec![],
-            exposes: vec![],
-            offers: vec![],
-            children: vec![],
-            collections: vec![],
-            storage: vec![],
-            facets: None,
-            runners: vec![],
-        };
         let moniker = ChildMoniker::new("".to_string(), None, 0);
-        capability.find_offer_service_sources(&decl, &moniker);
+        capability.find_offer_service_sources(&default_component_decl(), &moniker);
     }
 }
