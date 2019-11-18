@@ -21,3 +21,15 @@ source_set("stream_utils_lib") {
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
+
+source_set("stream_configs") {
+  sources = [
+    "camera_stream_constraints.cc",
+    "camera_stream_constraints.h",
+  ]
+
+  deps = [
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+  ]
+}

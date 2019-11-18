@@ -60,8 +60,6 @@ executable("camera_plug_detector_test") {
 
 source_set("camera-fakes") {
   sources = [
-    "camera_stream_constraints.cc",
-    "camera_stream_constraints.h",
     "fake_camera_controller.cc",
     "fake_camera_controller.h",
     "fake_logical_buffer_collection.cc",
@@ -71,6 +69,7 @@ source_set("camera-fakes") {
   deps = [
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//src/camera/stream_utils:stream_configs",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",

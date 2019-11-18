@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_CAMERA_CAMERA_MANAGER2_TEST_CAMERA_STREAM_CONSTRAINTS_H_
-#define SRC_CAMERA_CAMERA_MANAGER2_TEST_CAMERA_STREAM_CONSTRAINTS_H_
+#ifndef SRC_CAMERA_STREAM_UTILS_CAMERA_STREAM_CONSTRAINTS_H_
+#define SRC_CAMERA_STREAM_UTILS_CAMERA_STREAM_CONSTRAINTS_H_
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
@@ -45,4 +45,4 @@ struct CameraStreamConstraints {
 
 }  // namespace camera
 
-#endif  // SRC_CAMERA_CAMERA_MANAGER2_TEST_CAMERA_STREAM_CONSTRAINTS_H_
+#endif  // SRC_CAMERA_STREAM_UTILS_CAMERA_STREAM_CONSTRAINTS_H_
