@@ -92,6 +92,8 @@ impl EventLoop {
         let _r = overnet_worker.spawn(event_send.clone());
         let event_worker = crate::event_worker::EventWorker;
         event_worker.spawn(streams, event_send.clone());
+        let oir_worker = crate::oir_worker::OirWorker;
+        oir_worker.spawn(event_send);
 
         Ok(EventLoop { event_recv, device })
     }
@@ -115,6 +117,7 @@ impl EventLoop {
                 }
                 Some(Event::StackEvent(event)) => self.handle_stack_event(event).await,
                 Some(Event::NetstackEvent(event)) => self.handle_netstack_event(event).await,
+                Some(Event::OIR(event)) => self.handle_oir_event(event).await,
                 None => bail!("Stream of events ended unexpectedly"),
             }
         }
@@ -132,6 +135,13 @@ impl EventLoop {
             .update_state_for_netstack_event(event)
             .await
             .unwrap_or_else(|err| warn!("error updating state: {:?}", err));
+    }
+
+    async fn handle_oir_event(&mut self, event: network_manager_core::oir::OIRInfo) {
+        self.device
+            .oir_event(event)
+            .await
+            .unwrap_or_else(|err| warn!("error processing oir event: {:?}", err));
     }
 
     async fn handle_fidl_router_admin_request(&mut self, req: RouterAdminRequest) {

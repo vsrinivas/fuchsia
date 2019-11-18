@@ -27,6 +27,9 @@ pub enum NetworkManager {
     /// Errors related to HAL layer.
     #[fail(display = "{}", _0)]
     HAL(#[cause] Hal),
+    /// Errors related to OIR.
+    #[fail(display = "{}", _0)]
+    OIR(#[cause] Oir),
     /// Internal errors with an attached context.
     #[fail(display = "An error occurred.")]
     INTERNAL(ErrorWithContext),
@@ -49,6 +52,11 @@ impl From<Port> for NetworkManager {
 impl From<Hal> for NetworkManager {
     fn from(e: Hal) -> Self {
         NetworkManager::HAL(e)
+    }
+}
+impl From<Oir> for NetworkManager {
+    fn from(e: Oir) -> Self {
+        NetworkManager::OIR(e)
     }
 }
 impl From<Service> for NetworkManager {
@@ -168,4 +176,19 @@ pub enum Config {
     FailedToLoadDeviceSchema { path: String, error: String },
     #[fail(display = "Failed to validate device config: {}, because: {}", path, error)]
     FailedToValidateConfig { path: String, error: String },
+}
+
+/// Error type for OIR.
+#[derive(Fail, Debug, PartialEq)]
+pub enum Oir {
+    #[fail(display = "Unsupported port type")]
+    UnsupportedPort,
+    #[fail(display = "Information missing")]
+    MissingInformation,
+    #[fail(display = "Invalid device path")]
+    InvalidPath,
+    #[fail(display = "Inconsistent state")]
+    InconsistentState,
+    #[fail(display = "Operation failed")]
+    OperationFailed,
 }

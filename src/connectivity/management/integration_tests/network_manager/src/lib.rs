@@ -57,21 +57,29 @@ macro_rules! test_suite {
 
 fn generate_launch_services() -> Vec<LaunchService> {
     let names_and_urls = vec![
-        ("fuchsia.net.stack.Stack", component_url!("netstack")),
-        ("fuchsia.net.NameLookup", component_url!("netstack")),
-        ("fuchsia.netstack.Netstack", component_url!("netstack")),
-        ("fuchsia.netstack.ResolverAdmin", component_url!("netstack")),
-        ("fuchsia.posix.socket.Provider", component_url!("netstack")),
-        ("fuchsia.net.filter.Filter", component_url!("netstack")),
-        ("fuchsia.router.config.RouterAdmin", component_url!("network_manager")),
-        ("fuchsia.router.config.RouterState", component_url!("network_manager")),
+        ("fuchsia.net.stack.Stack", component_url!("netstack"), None),
+        ("fuchsia.net.NameLookup", component_url!("netstack"), None),
+        ("fuchsia.netstack.Netstack", component_url!("netstack"), None),
+        ("fuchsia.netstack.ResolverAdmin", component_url!("netstack"), None),
+        ("fuchsia.posix.socket.Provider", component_url!("netstack"), None),
+        ("fuchsia.net.filter.Filter", component_url!("netstack"), None),
+        (
+            "fuchsia.router.config.RouterAdmin",
+            component_url!("network_manager"),
+            Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
+        ),
+        (
+            "fuchsia.router.config.RouterState",
+            component_url!("network_manager"),
+            Some(vec!["--devicepath".to_string(), "vdev".to_string()]),
+        ),
     ];
     names_and_urls
         .into_iter()
-        .map(|(name, url)| LaunchService {
+        .map(|(name, url, args)| LaunchService {
             name: name.to_string(),
             url: url.to_string(),
-            arguments: None,
+            arguments: args,
         })
         .collect()
 }
@@ -217,8 +225,10 @@ async fn exec_cmd(env: &ManagedEnvironmentProxy, command: &str) -> String {
     actual_output
 }
 
-fn execute_test_suite<'a>(router: &'a Device, commands: TestSuite)
--> Pin<Box<dyn Future<Output = ()> + 'a>> {
+fn execute_test_suite<'a>(
+    router: &'a Device,
+    commands: TestSuite,
+) -> Pin<Box<dyn Future<Output = ()> + 'a>> {
     // Boxing is needed so we don't overflow the stack when running in
     // panic=abort mode with the default Fuchsia stack size.
     Box::pin(async move {

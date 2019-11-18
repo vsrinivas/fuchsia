@@ -3,6 +3,9 @@
         "binary": "test/network_manager_bin_test"
     },
     "sandbox": {
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.filter.Filter",

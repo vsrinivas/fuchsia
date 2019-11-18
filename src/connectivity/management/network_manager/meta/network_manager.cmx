@@ -3,6 +3,12 @@
         "binary": "bin/network_manager"
     },
     "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
             "fuchsia.net.filter.Filter",

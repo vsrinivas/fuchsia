@@ -295,7 +295,7 @@ impl PacketFilter {
             error::Service::UpdateNatPendingConfig
         })?;
         // Make sure that NAT is enabled before we try to install any rules.
-        if nat_config.enable == false {
+        if !nat_config.enable {
             return Err(error::NetworkManager::SERVICE(error::Service::NatNotEnabled));
         }
         // TODO(cgibson): NAT should work on IP packets, we shouldn't need to provide a proto field

@@ -36,7 +36,7 @@ impl EventWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|err: Error| error!("Received event error {:?}", err)),
+            .unwrap_or_else(|err: Error| error!("Received event error {:?}", err)),
         );
     }
 }

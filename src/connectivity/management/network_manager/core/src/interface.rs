@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(unused)]
-
 use {
     failure::{self, ResultExt},
     fidl_fuchsia_hardware_ethernet_ext::MacAddress,
@@ -38,12 +36,10 @@ impl Config {
             } else {
                 PersistentIdentifier::TopologicalPath(topological_path.to_string())
             }
+        } else if topological_path.contains("/platform/") {
+            PersistentIdentifier::TopologicalPath(topological_path.to_string())
         } else {
-            if topological_path.contains("/platform/") {
-                PersistentIdentifier::TopologicalPath(topological_path.to_string())
-            } else {
-                PersistentIdentifier::MacAddress(mac_address)
-            }
+            PersistentIdentifier::MacAddress(mac_address)
         }
     }
 
@@ -87,13 +83,10 @@ impl Config {
     // it's handled the same way as a sdio device.
     fn generate_name_from_mac(
         &self,
-        octets: &[u8; 6],
+        octets: [u8; 6],
         wlan: bool,
     ) -> Result<String, failure::Error> {
-        let prefix = match wlan {
-            true => "wlanx",
-            false => "ethx",
-        };
+        let prefix = if wlan { "wlanx" } else { "ethx" };
         let last_byte = octets[octets.len() - 1];
         for i in 0u8..255u8 {
             let candidate = ((last_byte as u16 + i as u16) % 256 as u16) as u8;
@@ -108,7 +101,7 @@ impl Config {
         }
         Err(failure::format_err!(
             "could not find unique name for mac={}, wlan={}",
-            MacAddress { octets: *octets },
+            MacAddress { octets: octets },
             wlan
         ))
     }
@@ -153,7 +146,7 @@ impl Config {
     ) -> Result<String, failure::Error> {
         match persistent_id {
             PersistentIdentifier::MacAddress(mac_addr) => {
-                self.generate_name_from_mac(&mac_addr.octets, wlan)
+                self.generate_name_from_mac(mac_addr.octets, wlan)
             }
             PersistentIdentifier::TopologicalPath(ref topological_path) => {
                 self.generate_name_from_topological_path(&topological_path, wlan)

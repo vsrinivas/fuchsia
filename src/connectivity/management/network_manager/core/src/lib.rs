@@ -19,6 +19,7 @@ pub mod error;
 pub mod hal;
 pub(crate) mod interface;
 pub mod lifmgr;
+pub mod oir;
 pub mod packet_filter;
 pub mod portmgr;
 mod servicemgr;
@@ -30,6 +31,11 @@ use fidl_fuchsia_netstack as netstack;
 use fidl_fuchsia_router_config::LifProperties;
 use std::sync::atomic::{AtomicUsize, Ordering};
 
+// TODO(cgibson): remove the 2 const defined below and the code that references them ones the
+// configuration support is in place. This is temporaty code to hardcode configuraition.
+const WAN_PORT: &str = "00:1f.6";
+const NUMBER_OF_PORTS_IN_LAN: usize = 3;
+
 /// `DeviceState` holds the device state.
 pub struct DeviceState {
     version: Version, // state version.
@@ -40,6 +46,7 @@ pub struct DeviceState {
     dns_config: DnsConfig,
     hal: hal::NetCfg,
     config: config::Config,
+    lans: Vec<PortId>,
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -113,6 +120,7 @@ impl DeviceState {
             service_manager: servicemgr::Manager::new(),
             packet_filter,
             hal,
+            lans: Vec::new(),
             dns_config: DnsConfig {
                 id: ElementId::new(v),
                 servers: Default::default(),
@@ -176,6 +184,110 @@ impl DeviceState {
         }
     }
 
+    async fn configure_wan(&mut self, pid: PortId) -> error::Result<()> {
+        let lif = self.create_lif(LIFType::WAN, "wan".to_string(), 1, [pid].to_vec()).await?;
+        let properties =
+            crate::lifmgr::LIFProperties { enabled: true, dhcp: true, address: None }.to_fidl_wan();
+        info!("WAN configured: pid: {:?} lif: {:?} properties: {:?} ", pid, lif, properties);
+        self.update_lif_properties(lif.id().uuid(), &properties).await?;
+        Ok(())
+    }
+
+    async fn configure_lan(&mut self, pids: &[PortId]) -> error::Result<()> {
+        let lif = self.create_lif(LIFType::LAN, "lan".to_string(), 2, pids.to_vec()).await?;
+        let properties = crate::lifmgr::LIFProperties {
+            enabled: true,
+            dhcp: false,
+            address: Some(LifIpAddr { address: "192.168.51.1".parse().unwrap(), prefix: 24 }),
+        }
+        .to_fidl_wan();
+        info!("LAN configured: lif: {:?} iproperties: {:?} ", lif, properties);
+        self.update_lif_properties(lif.id().uuid(), &properties).await?;
+        for pid in pids {
+            self.hal.set_interface_state(*pid, true).await?
+        }
+        Ok(())
+    }
+
+    async fn apply_configuration_on_new_port(
+        &mut self,
+        pid: PortId,
+        topological_path: &str,
+    ) -> error::Result<()> {
+        //TODO(dpradilla): hardcoding configuration for now.
+        //Remove this once configuration can be
+        //read on start up.
+        if topological_path.contains(WAN_PORT) {
+            return self.configure_wan(pid).await;
+        }
+        // TODO(dpradilla) Remove this temporaty code once there
+        // is a way to add to an existing bridge
+        // This code is just for testing purposes,
+        // until support for adding/removing ports from a
+        // bridge is added to netstack.
+        self.lans.push(pid);
+        if self.lans.len() == NUMBER_OF_PORTS_IN_LAN {
+            let lans = self.lans.clone();
+            info!("LAN ports : {:?}", lans);
+            return self.configure_lan(&lans).await;
+        }
+        self.hal.set_ip_forwarding(true).await?;
+        Ok(())
+    }
+
+    pub async fn port_with_topopath(&self, path: &str) -> error::Result<Option<hal::Port>> {
+        let port = self.hal.ports().await?.into_iter().find(|x| x.path == path);
+        info!("ports {:?}", port);
+        Ok(port)
+    }
+
+    /// Informs network manager of an external event from fuchsia.netstack containing updates to
+    /// properties associated with an interface.
+    pub async fn oir_event(&mut self, event: oir::OIRInfo) -> error::Result<()> {
+        match event.action {
+            oir::Action::ADD => {
+                // Add to netstack if not there already.
+                let pid = if let Some(p) = self.port_with_topopath(&event.topological_path).await? {
+                    info!("port already added {}: {:?}", &event.topological_path, p);
+                    p.id
+                } else {
+                    let info = event.device_information.ok_or(error::Oir::MissingInformation)?;
+                    let port =
+                        oir::PortDevice::new(&event.file_path, &event.topological_path, info)?;
+                    info!("adding port {}: {:?}", &event.topological_path, port);
+                    self.hal.add_ethernet_device(event.device_channel.unwrap(), port).await?
+                };
+
+                // Verify port manager is consistent.
+                if let Some(id) = self.port_manager.port_id(&event.topological_path) {
+                    if pid != *id {
+                        error!("port {:?} already exists with id {:?}", event.topological_path, id);
+                        return Err(error::NetworkManager::OIR(error::Oir::InconsistentState));
+                    }
+                    return Ok(());
+                }
+
+                // Port manager does not know about this port, add it.
+
+                // No version change, this is just added a port insertion,
+                // not a configuration update.
+                self.add_port(pid, &event.topological_path, self.version());
+
+                // Apply initial configuration.
+                self.apply_configuration_on_new_port(pid, &event.topological_path).await?
+            }
+            oir::Action::REMOVE => {
+                // Tell portmanager interface is removed. It should keep any config there.
+                // Tell LIF manager associated port is gone, keep config there so it can be
+                // reapplied if it comes back.
+                info!("device {:?} will be removed", event.topological_path);
+                // Tell netstack interface is gone.
+                oir::remove_interface(&event.topological_path);
+            }
+        }
+        Ok(())
+    }
+
     /// Update internal state with information about an LIF that was added or updated externally.
     /// When an interface not known before is found, it will add it.
     /// If it's a know interface, it will log the new operational state.
@@ -189,7 +301,7 @@ impl DeviceState {
 
     /// Update internal state with information about an LIF that was added externally.
     fn notify_lif_added(&mut self, iface: hal::Interface) -> error::Result<()> {
-        if !iface.get_address().is_some() {
+        if iface.get_address().is_none() {
             return Ok(());
         }
         let port = iface.id;
@@ -217,7 +329,9 @@ impl DeviceState {
         })?;
         // TODO(guzt): This should ideally compare metrics or be manually settable when there are
         // multiple WAN ports.
-        iface.get_address().map(|addr| self.service_manager.set_global_ip_nat(addr, port));
+        if let Some(addr) = iface.get_address() {
+            self.service_manager.set_global_ip_nat(addr, port)
+        }
         Ok(())
     }
 
@@ -243,7 +357,7 @@ impl DeviceState {
     }
 
     /// Releases the given ports.
-    fn release_ports(&mut self, ports: &Vec<PortId>) {
+    fn release_ports(&mut self, ports: &[PortId]) {
         ports.iter().for_each(|p| {
             self.port_manager.release_port(*p);
         });
@@ -448,6 +562,9 @@ impl DeviceState {
                 }
                 match &p.connection_v6_mode {
                     None => {}
+                    Some(fidl_fuchsia_router_config::WanIpV6ConnectionMode::Passthrough) => {
+                        info!("v6 mode Passthrough");
+                    }
                     Some(cfg) => {
                         info!("v6 mode {:?}", cfg);
                         return Err(error::NetworkManager::LIF(error::Lif::NotSupported));
@@ -587,6 +704,7 @@ impl DeviceState {
     pub fn lif(&self, lif_id: UUID) -> Option<&lifmgr::LIF> {
         self.lif_manager.lif(&lif_id)
     }
+
     /// Returns all LIFs of the given type.
     pub fn lifs(&self, t: LIFType) -> impl Iterator<Item = &lifmgr::LIF> {
         self.lif_manager.lifs(t)

@@ -6,6 +6,7 @@
 
 use crate::error;
 use crate::lifmgr::{self, subnet_mask_to_prefix_length, to_ip_addr, LIFProperties, LifIpAddr};
+use crate::oir;
 use crate::DnsPolicy;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_net as net;
@@ -150,7 +151,7 @@ pub struct Interface {
 
 impl Interface {
     pub fn get_address(&self) -> Option<LifIpAddr> {
-        self.addr.as_ref().map(|a| a.address.clone())
+        self.addr.as_ref().map(|a| a.address)
     }
 }
 
@@ -300,7 +301,7 @@ impl NetCfg {
         }
         info!("bridge created {:?}", br.1);
         if let Some(i) = self.get_interface(br.1.into()).await {
-            Ok(i.into())
+            Ok(i)
         } else {
             Err(error::NetworkManager::HAL(error::Hal::BridgeNotFound))
         }
@@ -498,6 +499,34 @@ impl NetCfg {
                 error!("set_dns_resolver error {:?}", e);
                 error::NetworkManager::HAL(error::Hal::OperationFailed)
             })
+    }
+
+    /// Adds an ethernet device to netstack.
+    pub async fn add_ethernet_device(
+        &self,
+        channel: fuchsia_zircon::Channel,
+        port: oir::PortDevice,
+    ) -> error::Result<PortId> {
+        info!("Adding port: {:#?}", port);
+        let nic_id = self
+            .netstack
+            .add_ethernet_device(
+                &port.topological_path,
+                &mut fidl_fuchsia_netstack::InterfaceConfig {
+                    name: port.name,
+                    metric: port.metric,
+                    filepath: port.file_path,
+                    ip_address_config: fidl_fuchsia_netstack::IpAddressConfig::Dhcp(false),
+                },
+                fidl::endpoints::ClientEnd::<fidl_fuchsia_hardware_ethernet::DeviceMarker>::new(
+                    channel,
+                ),
+            )
+            .await
+            .map_err(|_| error::NetworkManager::HAL(error::Hal::OperationFailed))?;
+        info!("added port with id {:?}", nic_id);
+
+        Ok(StackPortId::from(u64::from(nic_id)).into())
     }
 }
 

@@ -27,7 +27,7 @@ pub struct OvernetWorker;
 impl OvernetWorker {
     pub fn spawn(self, event_ch: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
         let admin_event_ch = event_ch.clone();
-        let state_event_ch = event_ch.clone();
+        let state_event_ch = event_ch;
 
         let overnet_svc = fclient::connect_to_service::<ServicePublisherMarker>()?;
         Self::setup_overnet_service(&overnet_svc, &RouterAdminMarker::NAME, move |ch| {

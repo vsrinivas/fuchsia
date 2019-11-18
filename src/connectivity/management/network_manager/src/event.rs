@@ -15,4 +15,6 @@ pub enum Event {
     StackEvent(fidl_fuchsia_net_stack::StackEvent),
     /// An event coming from fuchsia.netstack.
     NetstackEvent(fidl_fuchsia_netstack::NetstackEvent),
+    /// An event indicating Insertion/Removal of a port.
+    OIR(network_manager_core::oir::OIRInfo),
 }

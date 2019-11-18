@@ -19,7 +19,7 @@ pub struct FidlWorker;
 impl FidlWorker {
     pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
         let router_admin_event_chan = event_chan.clone();
-        let router_state_event_chan = event_chan.clone();
+        let router_state_event_chan = event_chan;
 
         let mut fs = ServiceFs::new_local();
         fs.dir("svc")
@@ -45,7 +45,7 @@ impl FidlWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 
@@ -60,7 +60,7 @@ impl FidlWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
