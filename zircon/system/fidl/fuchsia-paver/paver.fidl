@@ -116,6 +116,8 @@ protocol Paver {
     /// configuration is currently unbootable.
     ///
     /// If the configuration is already marked healthy, no action is taken.
+    ///
+    /// Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     SetActiveConfigurationHealthy() -> (zx.status status);
 
     /// Reads partition corresponding to |configuration| and |asset| into a

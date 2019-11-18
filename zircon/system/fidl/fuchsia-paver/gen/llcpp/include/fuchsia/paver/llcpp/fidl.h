@@ -2105,6 +2105,8 @@ class Paver final {
     // configuration is currently unbootable.
     //
     // If the configuration is already marked healthy, no action is taken.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy();
 
@@ -2114,6 +2116,8 @@ class Paver final {
     // configuration is currently unbootable.
     //
     // If the configuration is already marked healthy, no action is taken.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(::fidl::BytePart _response_buffer);
 
@@ -2358,6 +2362,8 @@ class Paver final {
     // configuration is currently unbootable.
     //
     // If the configuration is already marked healthy, no action is taken.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(zx::unowned_channel _client_end);
 
@@ -2367,6 +2373,8 @@ class Paver final {
     // configuration is currently unbootable.
     //
     // If the configuration is already marked healthy, no action is taken.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetActiveConfigurationHealthy SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
@@ -2560,6 +2568,8 @@ class Paver final {
     // configuration is currently unbootable.
     //
     // If the configuration is already marked healthy, no action is taken.
+    //
+    // Returns `ZX_ERR_NOT_SUPPORTED` if A/B partition scheme is not supported.
     static ::fidl::DecodeResult<SetActiveConfigurationHealthyResponse> SetActiveConfigurationHealthy(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     // Reads partition corresponding to |configuration| and |asset| into a
