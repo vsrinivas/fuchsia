@@ -27,7 +27,7 @@ following installed and up to date:
     sudo apt-get install build-essential curl git python unzip
     ```
 
- 1. Go to the directory where you want to set up your workspace foer the Fuchsia
+ 1. Go to the directory where you want to set up your workspace for the Fuchsia
     codebase. This can be anywhere, but this example uses your home directory.
 
     ```

@@ -78,17 +78,17 @@ See [QEMU](/docs/development/emulator/qemu.md) for information on building and u
 If the prebuilt toolchain binaries do not work for you, you can build your
 own from vanilla upstream sources.
 
- * The GCC toolchain is used to build Zircon by default.
- * The Clang toolchain is used to build Zircon if you build with
+ * The Clang toolchain is used to build Zircon by default or if you build with
    `variants = [ "clang" ]` or `variants = [ "asan" ]`.
  * The Clang toolchain is also used by default to build host-side code, but
    any C++14-capable toolchain for your build host should work fine.
+ * The GCC toolchain is also available.
 
 Build one or the other or both, as needed for how you want build Zircon.
 
 ### GCC Toolchain
 
-We use GNU `binutils` 2.30[^1] and GCC 8.2[^2], configured with
+We use GNU `binutils` 2.30[^1] and GCC 8.2, configured with
 `--enable-initfini-array --enable-gold`, and with `--target=x86_64-elf
 --enable-targets=x86_64-pep` for x86-64 or `--target=aarch64-elf` for ARM64.
 
@@ -115,11 +115,6 @@ build on your particular host system.  See the GNU documentation.
     upstream `binutils-2_30-branch` git branch, which is what we actually build.
     But the 2.30 release version works fine for building Zircon; it just has some
     spurious failures in its own test suite.
-
-[^2]: As of 2008-6-15, GCC 8.2 has not been released yet.
-    There is no released version of GCC that works for building
-    Zircon without backporting some fixes.  What we actually use
-    is the upstream `gcc-8-branch` git branch.
 
 ### Clang/LLVM Toolchain
 
