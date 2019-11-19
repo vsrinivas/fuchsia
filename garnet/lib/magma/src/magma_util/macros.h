@@ -24,7 +24,6 @@ namespace magma {
 
 static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
-// TODO(13095) - use MAGMA_LOG here
 #define DASSERT(...)                                \
   do {                                              \
     if (magma::kDebug && !(__VA_ARGS__)) {          \
@@ -33,7 +32,6 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
     }                                               \
   } while (0)
 
-// TODO(13095) - use MAGMA_LOG here
 #define DMESSAGE(...)                       \
   do {                                      \
     if (magma::kDebug) {                    \
@@ -44,7 +42,6 @@ static constexpr bool kDebug = MAGMA_DEBUG_INTERNAL_USE_ONLY;
 
 static constexpr bool kMagmaDretEnable = kDebug;
 
-// TODO(13095) - use MAGMA_LOG here
 template <typename T>
 __attribute__((format(printf, 4, 5))) static inline T dret(const char* file, int line, T ret,
                                                            const char* msg, ...) {
@@ -69,7 +66,6 @@ __attribute__((format(printf, 4, 5))) static inline T dret(const char* file, int
   (magma::kMagmaDretEnable ? (ret == 0 ? ret : magma::dret(__FILE__, __LINE__, ret, __VA_ARGS__)) \
                            : ret)
 
-// TODO(13095) - use MAGMA_LOG here
 __attribute__((format(printf, 3, 4))) static inline bool dret_false(const char* file, int line,
                                                                     const char* msg, ...) {
   printf("%s:%d returning false: ", file, line);
@@ -87,7 +83,6 @@ __attribute__((format(printf, 3, 4))) static inline bool dret_false(const char* 
        ? (ret == true ? true : magma::dret_false(__FILE__, __LINE__, __VA_ARGS__)) \
        : ret)
 
-// TODO(13095) - use MAGMA_LOG here
 __attribute__((format(printf, 3, 4))) static inline void dret_null(const char* file, int line,
                                                                    const char* msg, ...) {
   printf("%s:%d returning null: ", file, line);
@@ -106,7 +101,6 @@ __attribute__((format(printf, 3, 4))) static inline void dret_null(const char* f
 
 enum LogLevel { LOG_WARNING, LOG_INFO };
 
-// TODO(13095) - replace with MAGMA_LOG
 __attribute__((format(printf, 2, 3))) static inline void log(LogLevel level, const char* msg, ...) {
   switch (level) {
     case LOG_WARNING:

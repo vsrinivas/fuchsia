@@ -30,7 +30,6 @@ executable("magma_abi_conformance_tests") {
   if (is_fuchsia) {
     deps += [
       "$magma_build_root/src/libmagma",
-      "//garnet/lib/magma/src/magma_util/platform:logger",
       "//garnet/lib/magma/src/magma_util/platform:trace_provider",
       "//zircon/public/lib/fdio",
       "//zircon/system/fidl/fuchsia-sysmem",
