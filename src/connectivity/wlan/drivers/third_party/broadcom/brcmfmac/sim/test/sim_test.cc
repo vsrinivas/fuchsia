@@ -41,11 +41,11 @@ zx_status_t SimTest::CreateInterface(wlan_info_mac_role_t role,
     return ZX_ERR_INTERNAL;
   }
 
-  sim_ifc->if_impl_args_ = device_info->dev_args;
+  sim_ifc->if_impl_ctx_ = device_info->dev_args.ctx;
+  sim_ifc->if_impl_ops_ = static_cast<wlanif_impl_protocol_ops_t*>(device_info->dev_args.proto_ops);
 
-  auto if_impl_ops = static_cast<wlanif_impl_protocol_ops_t*>(sim_ifc->if_impl_args_.proto_ops);
   zx_handle_t sme_ch;
-  status = if_impl_ops->start(device_info->dev_args.ctx, &sme_protocol, &sme_ch);
+  status = sim_ifc->if_impl_ops_->start(sim_ifc->if_impl_ctx_, &sme_protocol, &sme_ch);
 
   // Verify that the channel passed back from start() is the same one we gave to create_iface()
   if (sme_ch != sim_ifc->ch_mlme_) {

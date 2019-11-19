@@ -115,8 +115,6 @@ void ScanTest::EndSimulation() {
 
 // Tell the DUT to run a scan
 void ScanTest::StartScan() {
-  auto if_impl_args = &client_ifc_->if_impl_args_;
-  auto if_impl_ops = static_cast<wlanif_impl_protocol_ops_t*>(if_impl_args->proto_ops);
   wlanif_scan_req_t req = {
       .txn_id = ++scan_txn_id_,
       .bss_type = WLAN_BSS_TYPE_INFRASTRUCTURE,
@@ -127,7 +125,7 @@ void ScanTest::StartScan() {
       .max_channel_time = kDwellTimeMs,
       .num_ssids = 0,
   };
-  if_impl_ops->start_scan(if_impl_args->ctx, &req);
+  client_ifc_->if_impl_ops_->start_scan(client_ifc_->if_impl_ctx_, &req);
   scan_state_ = RUNNING;
   scans_remaining_--;
 }

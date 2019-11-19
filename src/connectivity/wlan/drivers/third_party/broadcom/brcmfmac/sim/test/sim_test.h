@@ -31,7 +31,8 @@ struct SimInterface {
   }
 
   // This provides our DDK (wlanif-impl) API into the interface
-  device_add_args_t if_impl_args_;
+  void* if_impl_ctx_;
+  wlanif_impl_protocol_ops_t* if_impl_ops_;
 
   // Unique identifier provided by the driver
   uint16_t iface_id_;
