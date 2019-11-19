@@ -159,6 +159,7 @@ config_data("ermine_fonts") {
 
 flutter_test("ermine_unittests") {
   sources = [
+    "app_widget_test.dart",
     "ask_model_test.dart",
     "ask_widget_test.dart",
     "ermine_test.dart",

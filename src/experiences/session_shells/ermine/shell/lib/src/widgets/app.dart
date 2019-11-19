@@ -30,6 +30,9 @@ class App extends StatelessWidget {
         stream: model.localeStream,
         builder: (context, snapshot) {
           final locale = snapshot.data;
+          if (locale == null) {
+            return Offstage();
+          }
           // Needed to set the locale for anything that depends on the Intl
           // package.
           Intl.defaultLocale = locale.toString();
