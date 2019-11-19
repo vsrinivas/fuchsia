@@ -19,7 +19,7 @@ namespace magma {
 static std::unique_ptr<ZirconPlatformTraceProvider> g_platform_trace;
 
 ZirconPlatformTraceProvider::ZirconPlatformTraceProvider()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+    : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
 ZirconPlatformTraceProvider::~ZirconPlatformTraceProvider() {
   if (trace_provider_) {

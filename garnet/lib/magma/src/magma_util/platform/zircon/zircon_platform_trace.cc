@@ -18,7 +18,7 @@ namespace magma {
 #if MAGMA_ENABLE_TRACING
 
 ZirconPlatformTraceObserver::ZirconPlatformTraceObserver()
-    : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
+    : loop_(&kAsyncLoopConfigNeverAttachToThread) {}
 
 bool ZirconPlatformTraceObserver::Initialize() {
   zx_status_t status = loop_.StartThread();

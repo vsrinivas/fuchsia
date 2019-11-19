@@ -4,7 +4,6 @@
 
 #include <fuchsia/gpu/magma/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
-#include <lib/async-loop/default.h>
 #include <lib/async/task.h>
 #include <lib/async/time.h>
 #include <lib/async/wait.h>
@@ -55,7 +54,7 @@ class ZirconPlatformConnection : public PlatformConnection, public fuchsia::gpu:
         client_endpoint_(std::move(client_endpoint)),
         server_notification_endpoint_(std::move(server_notification_endpoint)),
         client_notification_endpoint_(std::move(client_notification_endpoint)),
-        async_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
+        async_loop_(&kAsyncLoopConfigNeverAttachToThread),
         async_wait_shutdown_(
             this, static_cast<magma::ZirconPlatformEvent*>(shutdown_event.get())->zx_handle(),
             ZX_EVENT_SIGNALED),

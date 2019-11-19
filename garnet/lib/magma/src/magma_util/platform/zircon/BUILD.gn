@@ -142,7 +142,6 @@ source_set("connection") {
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
-    "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
     "//sdk/fidl/fuchsia.gpu.magma",
@@ -340,7 +339,6 @@ source_set("trace") {
     deps += [
       "$zircon_build_root/public/lib/async-cpp",
       "$zircon_build_root/public/lib/async-loop-cpp",
-      "$zircon_build_root/public/lib/async-loop-default",
       "$zircon_build_root/public/lib/trace-vthread-with-static-engine",
       "$zircon_build_root/public/lib/trace-with-static-engine",
     ]
@@ -371,7 +369,6 @@ source_set("trace_provider") {
     deps += [ "$zircon_build_root/public/lib/async-cpp" ]
     public_deps += [
       "$zircon_build_root/public/lib/async-loop-cpp",
-      "$zircon_build_root/public/lib/async-loop-default",
       "//zircon/public/lib/trace-provider-with-static-engine",
     ]
   }
