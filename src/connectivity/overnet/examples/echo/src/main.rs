@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    clap::{App, Arg, SubCommand},
+    argh::FromArgs,
     failure::{Error, ResultExt},
     fidl::endpoints::{ClientEnd, RequestStream, ServiceMarker},
     fidl_fidl_examples_echo as echo,
@@ -13,22 +13,40 @@ use {
     futures::prelude::*,
 };
 
-fn app<'a, 'b>() -> App<'a, 'b> {
-    App::new("overnet-echo")
-        .version("0.1.0")
-        .about("Echo example for overnet")
-        .author("Fuchsia Team")
-        .arg(Arg::with_name("quiet").help("Should output be quiet"))
-        .subcommand(SubCommand::with_name("client").about("Run as client").arg(
-            Arg::with_name("text").help("Text string to echo back and forth").takes_value(true),
-        ))
-        .subcommand(SubCommand::with_name("server").about("Run as server"))
+#[derive(FromArgs)]
+/// Echo example for Overnet.
+struct OvernetEcho {
+    #[argh(switch, short = 'q')]
+    /// whether or not to silence logs
+    quiet: bool,
+
+    #[argh(subcommand)]
+    subcommand: Subcommand,
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "server", description = "run as server")]
+struct ServerCommand {}
+
+#[derive(FromArgs)]
+#[argh(subcommand, name = "client", description = "run as client")]
+struct ClientCommand {
+    #[argh(positional)]
+    /// text string to echo back and forth
+    text: Option<String>,
+}
+
+#[derive(FromArgs)]
+#[argh(subcommand)]
+enum Subcommand {
+    Server(ServerCommand),
+    Client(ClientCommand),
 }
 
 ////////////////////////////////////////////////////////////////////////////////
 // Client implementation
 
-async fn exec_client(text: Option<&str>) -> Result<(), Error> {
+async fn exec_client(text: Option<String>) -> Result<(), Error> {
     let svc = hoist::connect_as_service_consumer()?;
     loop {
         let peers = svc.list_peers().await?;
@@ -47,6 +65,9 @@ async fn exec_client(text: Option<&str>) -> Result<(), Error> {
             {
                 continue;
             }
+
+            log::trace!("Trying peer: {:?}", peer.id);
+
             let (s, p) = fidl::Channel::create().context("failed to create zx channel")?;
             if let Err(e) = svc.connect_to_service(&mut peer.id, echo::EchoMarker::NAME, s) {
                 log::trace!("{:?}", e);
@@ -56,7 +77,7 @@ async fn exec_client(text: Option<&str>) -> Result<(), Error> {
                 fidl::AsyncChannel::from_channel(p).context("failed to make async channel")?;
             let cli = echo::EchoProxy::new(proxy);
             log::trace!("Sending {:?} to {:?}", text, peer.id);
-            match cli.echo_string(text).await {
+            match cli.echo_string(text.as_ref().map(|s| s.as_str())).await {
                 Ok(r) => {
                     log::trace!("SUCCESS: received {:?}", r);
                     return Ok(());
@@ -90,7 +111,7 @@ fn spawn_echo_server(chan: fidl::AsyncChannel, quiet: bool) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| log::trace!("{:?}", e)),
     );
 }
 
@@ -126,16 +147,15 @@ async fn exec_server(quiet: bool) -> Result<(), Error> {
 // main
 
 async fn async_main() -> Result<(), Error> {
-    let args = app().get_matches();
+    let app: OvernetEcho = argh::from_env();
 
-    match args.subcommand() {
-        ("server", Some(_)) => exec_server(args.is_present("quiet")).await,
-        ("client", Some(cmd)) => {
-            let r = exec_client(cmd.value_of("text")).await;
+    match app.subcommand {
+        Subcommand::Server(_) => exec_server(app.quiet).await,
+        Subcommand::Client(c) => {
+            let r = exec_client(c.text).await;
             log::trace!("finished client");
             r
         }
-        (_, _) => unimplemented!(),
     }
 }
 
