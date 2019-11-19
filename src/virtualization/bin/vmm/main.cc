@@ -71,13 +71,6 @@ static constexpr char kMcfgPath[] = "/pkg/data/mcfg.aml";
 // allocator that starts fairly high in the guest physical address space.
 static constexpr zx_gpaddr_t kFirstDynamicDeviceAddr = 0xc00000000;
 
-// This is a locally administered MAC address (first byte 0x02) mixed with the
-// Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
-// and the guest gets 00:00:00 for the last three octets.
-static constexpr fuchsia::hardware::ethernet::MacAddress kGuestMacAddress = {
-    .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00},
-};
-
 static zx_status_t read_guest_cfg(const char* cfg_path, int argc, char** argv, GuestConfig* cfg) {
   GuestConfigParser parser(cfg);
   std::string cfg_str;
@@ -309,17 +302,20 @@ int main(int argc, char** argv) {
   }
 
   // Setup net device.
-  VirtioNet net(guest.phys_mem());
-  if (cfg.virtio_net()) {
-    status = bus.Connect(net.pci_device(), device_loop.dispatcher(), true);
+  std::vector<std::unique_ptr<VirtioNet>> net_devices;
+  for (auto net_device : cfg.net_devices()) {
+    auto net = std::make_unique<VirtioNet>(guest.phys_mem());
+    status = bus.Connect(net->pci_device(), device_loop.dispatcher(), true);
     if (status != ZX_OK) {
       return status;
     }
-    status = net.Start(guest.object(), kGuestMacAddress, launcher.get(), device_loop.dispatcher());
+    status = net->Start(guest.object(), net_device.mac_address, launcher.get(),
+                        device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(INFO) << "Could not open Ethernet device";
+      FXL_LOG(INFO) << "Could not open Ethernet device " << status;
       return status;
     }
+    net_devices.push_back(std::move(net));
   }
 
   // Setup RNG device.
@@ -331,7 +327,7 @@ int main(int argc, char** argv) {
     }
     status = rng.Start(guest.object(), launcher.get(), device_loop.dispatcher());
     if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Failed to start RNG device" << status;
+      FXL_LOG(ERROR) << "Failed to start RNG device " << status;
       return status;
     }
   }

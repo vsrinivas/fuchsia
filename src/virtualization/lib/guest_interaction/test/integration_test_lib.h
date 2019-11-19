@@ -52,7 +52,7 @@ class GuestInteractionTest : public sys::testing::TestWithEnvironment {
     fuchsia::virtualization::LaunchInfo guest_launch_info;
     guest_launch_info.url = kDebianGuestUrl;
     guest_launch_info.label = kGuestLabel;
-    guest_launch_info.args.emplace({"--virtio-gpu=false", "--virtio-net=true"});
+    guest_launch_info.args.emplace({"--virtio-gpu=false"});
 
     fuchsia::virtualization::ManagerPtr guest_environment_manager;
     fuchsia::virtualization::GuestPtr guest_instance_controller;

@@ -228,10 +228,10 @@ class VirtioBlockZirconGuest : public ZirconEnclosedGuest, public VirtioBlockTes
     if (!launch_info->args.has_value()) {
       launch_info->args = std::vector<std::string>{};
     }
+    launch_info->args->push_back("--default-net=false");
     launch_info->args->push_back("--virtio-balloon=false");
     launch_info->args->push_back("--virtio-gpu=false");
     launch_info->args->push_back("--virtio-magma=false");
-    launch_info->args->push_back("--virtio-net=false");
     launch_info->args->push_back("--virtio-rng=false");
     launch_info->args->push_back("--virtio-vsock=false");
 
@@ -253,10 +253,10 @@ class VirtioBlockDebianGuest : public DebianEnclosedGuest, public VirtioBlockTes
     if (!launch_info->args.has_value()) {
       launch_info->args = std::vector<std::string>{};
     }
+    launch_info->args->push_back("--default-net=false");
     launch_info->args->push_back("--virtio-balloon=false");
     launch_info->args->push_back("--virtio-gpu=false");
     launch_info->args->push_back("--virtio-magma=false");
-    launch_info->args->push_back("--virtio-net=false");
     launch_info->args->push_back("--virtio-rng=false");
     launch_info->args->push_back("--virtio-vsock=false");
 

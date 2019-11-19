@@ -3,19 +3,42 @@
 // found in the LICENSE file.
 
 use ethernet as eth;
+use fidl_fuchsia_hardware_ethernet_ext::MacAddress;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
-use std::fs::File;
+use std::fs::{self, File};
+use std::str::FromStr;
 use structopt::StructOpt;
 
-const DEFAULT_ETH: &str = "/dev/class/ethernet/000";
+const ETH_DIRECTORY: &str = "/dev/class/ethernet";
 
 #[derive(StructOpt, Debug)]
 struct Config {
     send_byte: u8,
     receive_byte: u8,
     length: usize,
+    mac: String,
+}
+
+async fn find_ethernet_device(mac: MacAddress) -> Result<eth::Client, failure::Error> {
+    let eth_devices = fs::read_dir(ETH_DIRECTORY)?;
+
+    for device in eth_devices {
+        let dev = File::open(device?.path().to_str().unwrap())?;
+        let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
+
+        let eth_client = eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "test").await?;
+
+        eth_client.start().await?;
+
+        let eth_info = eth_client.info().await?;
+        if eth_info.mac == mac {
+            return Ok(eth_client);
+        }
+    }
+
+    failure::bail!("Could not find {}", mac);
 }
 
 #[fasync::run_singlethreaded]
@@ -24,14 +47,7 @@ async fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::set_severity(-1);
 
     let config = Config::from_args();
-
-    let dev = File::open(DEFAULT_ETH)?;
-    let vmo = zx::Vmo::create(256 * eth::DEFAULT_BUFFER_SIZE as u64)?;
-
-    let mut eth_client =
-        eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "test").await?;
-
-    eth_client.start().await?;
+    let mut eth_client = find_ethernet_device(MacAddress::from_str(&config.mac)?).await?;
 
     let buf = vec![config.send_byte; config.length];
     eth_client.send(&buf);

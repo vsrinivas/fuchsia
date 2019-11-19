@@ -18,7 +18,6 @@ static constexpr size_t kMtu = 1500;
 static constexpr size_t kVmoSize = kMtu * 2;
 
 static constexpr uint8_t kHostMacAddress[ETH_ALEN] = {0x02, 0x1a, 0x11, 0x00, 0x00, 0x00};
-static constexpr uint8_t kGuestMacAddress[ETH_ALEN] = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00};
 
 static constexpr uint8_t kHostIpv4Address[4] = {192, 168, 0, 1};
 static constexpr uint8_t kGuestIpv4Address[4] = {192, 168, 0, 10};
@@ -26,8 +25,6 @@ static constexpr uint8_t kGuestIpv4Address[4] = {192, 168, 0, 10};
 static constexpr uint16_t kProtocolIpv4 = 0x0800;
 static constexpr uint8_t kPacketTypeUdp = 17;
 static constexpr uint16_t kTestPort = 4242;
-
-static constexpr uint32_t kFakeNicId = 0;
 
 zx_status_t Device::Create(fuchsia::hardware::ethernet::DeviceSyncPtr eth_device,
                            std::unique_ptr<Device>* out) {
@@ -258,7 +255,10 @@ void FakeNetstack::AddEthernetDevice(
     std::string topological_path, fuchsia::netstack::InterfaceConfig interfaceConfig,
     fidl::InterfaceHandle<::fuchsia::hardware::ethernet::Device> eth_device,
     AddEthernetDeviceCallback callback) {
-  auto deferred = fit::defer([callback = std::move(callback)]() { callback(kFakeNicId); });
+  auto deferred = fit::defer([this, callback = std::move(callback)]() {
+    callback(nic_counter_);
+    nic_counter_++;
+  });
 
   auto device_sync_ptr = eth_device.BindSync();
 
@@ -303,7 +303,7 @@ void FakeNetstack::SetInterfaceAddress(uint32_t nicid, fuchsia::net::IpAddress a
                                        uint8_t prefixLen, SetInterfaceAddressCallback callback) {
   fuchsia::netstack::NetErr err;
 
-  if (nicid != kFakeNicId) {
+  if (nicid >= nic_counter_) {
     err.status = fuchsia::netstack::Status::UNKNOWN_INTERFACE;
     err.message = "No such interface.";
   } else {
@@ -329,10 +329,11 @@ static uint16_t checksum(const void* _data, size_t len, uint16_t _sum) {
   return ~sum;
 }
 
-static size_t make_ip_header(uint8_t packet_type, size_t length, uint8_t* data) {
+static size_t make_ip_header(const uint8_t guest_mac[ETH_ALEN], uint8_t packet_type, size_t length,
+                             uint8_t* data) {
   // First construct the ethernet header.
   ethhdr* eth = reinterpret_cast<ethhdr*>(data);
-  memcpy(eth->h_dest, kGuestMacAddress, ETH_ALEN);
+  memcpy(eth->h_dest, guest_mac, ETH_ALEN);
   memcpy(eth->h_source, kHostMacAddress, ETH_ALEN);
   eth->h_proto = htons(kProtocolIpv4);
 
@@ -370,7 +371,8 @@ fit::promise<void, zx_status_t> FakeNetstack::SendUdpPacket(
   }
 
   std::vector<uint8_t> udp_packet(total_length);
-  size_t header_len = make_ip_header(kPacketTypeUdp, packet_length, udp_packet.data());
+  size_t header_len =
+      make_ip_header(mac_addr.octets.data(), kPacketTypeUdp, packet_length, udp_packet.data());
 
   uintptr_t off = header_len;
   auto udp = reinterpret_cast<udp_hdr_t*>(udp_packet.data() + off);

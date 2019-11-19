@@ -206,6 +206,7 @@ executable("vmm_unittests") {
     ":lib",
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
   ]
 }
 

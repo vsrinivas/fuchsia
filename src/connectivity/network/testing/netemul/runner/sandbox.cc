@@ -487,7 +487,7 @@ Sandbox::Promise Sandbox::LaunchGuestEnvironment(ConfiguringEnvironmentPtr env,
                fuchsia::virtualization::LaunchInfo guest_launch_info;
                guest_launch_info.label = guest.guest_label();
                guest_launch_info.url = guest.guest_image_url();
-               guest_launch_info.args.emplace({"--virtio-gpu=false", "--virtio-net=true"});
+               guest_launch_info.args.emplace({"--virtio-gpu=false"});
                fuchsia::virtualization::GuestPtr guest_controller;
 
                fit::bridge<fuchsia::virtualization::GuestPtr, SandboxResult> bridge;

@@ -16,8 +16,14 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 
+// This is a locally administered MAC address (first byte 0x02) mixed with the
+// Google Organizationally Unique Identifier (00:1a:11). The host gets ff:ff:ff
+// and the guest gets 00:00:00 for the last three octets.
+static constexpr fuchsia::hardware::ethernet::MacAddress kGuestMacAddress = {
+    .octets = {0x02, 0x1a, 0x11, 0x00, 0x01, 0x00},
+};
+
 static void print_usage(fxl::CommandLine& cl) {
-  // clang-format off
   std::cerr << "usage: " << cl.argv0() << " [OPTIONS]\n";
   std::cerr << "\n";
   std::cerr << "OPTIONS:\n";
@@ -27,16 +33,17 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "\t                        using --cmdline or --cmdline-add\n";
   std::cerr << "\t--cmdline=[string]      Use 'string' as the kernel command line\n";
   std::cerr << "\t--cpus=[number]         Number of virtual CPUs available to the guest\n";
+  std::cerr << "\t--default-net           Enable a default net device (defaults to true)\n";
   std::cerr << "\t--dtb-overlay=[path]    Load a DTB overlay for a Linux kernel\n";
   std::cerr << "\t--linux=[path]          Load a Linux kernel from 'path'\n";
   std::cerr << "\t--memory=[bytes]        Allocate 'bytes' of memory for the guest.\n";
   std::cerr << "\t                        The suffixes 'k', 'M', and 'G' are accepted\n";
+  std::cerr << "\t--net=[spec]            Adds a net device with the given parameters\n";
   std::cerr << "\t--interrupt=[spec]      Adds a hardware interrupt mapping to the guest\n";
   std::cerr << "\t--ramdisk=[path]        Load 'path' as an initial RAM disk\n";
   std::cerr << "\t--virtio-balloon        Enable virtio-balloon (default)\n";
   std::cerr << "\t--virtio-console        Enable virtio-console (default)\n";
   std::cerr << "\t--virtio-gpu            Enable virtio-gpu and virtio-input (default)\n";
-  std::cerr << "\t--virtio-net            Enable virtio-net (default)\n";
   std::cerr << "\t--virtio-rng            Enable virtio-rng (default)\n";
   std::cerr << "\t--virtio-vsock          Enable virtio-vsock (default)\n";
   std::cerr << "\t--zircon=[path]         Load a Zircon kernel from 'path'\n";
@@ -44,7 +51,7 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "BLOCK SPEC\n";
   std::cerr << "\n";
   std::cerr << " Block devices can be specified by path:\n";
-  std::cerr << "    /pkg/data/disk.img\n";
+  std::cerr << "    --block=/pkg/data/disk.img\n";
   std::cerr << "\n";
   std::cerr << " Additional Options:\n";
   std::cerr << "    rw/ro: Create a read/write or read-only device.\n";
@@ -56,17 +63,27 @@ static void print_usage(fxl::CommandLine& cl) {
   std::cerr << "  (read-only is important here as the /pkg/data namespace provides\n";
   std::cerr << "  read-only view into the package resources):\n";
   std::cerr << "\n";
-  std::cerr << "      /pkg/data/system.img,fdio,ro\n";
+  std::cerr << "      --block=/pkg/data/system.img,fdio,ro\n";
   std::cerr << "\n";
   std::cerr << "  To specify a block device with a given path and read-write\n";
   std::cerr << "  permissions\n";
   std::cerr << "\n";
-  std::cerr << "      /dev/class/block/000,fdio,rw\n";
+  std::cerr << "      --block=/dev/class/block/000,fdio,rw\n";
   std::cerr << "\n";
-  // clang-format on
+  std::cerr << "NET SPEC\n";
+  std::cerr << "\n";
+  std::cerr << " Net devices can be specified by MAC address. Each --net argument specifies an\n";
+  std::cerr << " additional device.\n";
+  std::cerr << "\n";
+  std::cerr << " Ex:\n";
+  std::cerr << "    --net=02:1a:11:00:00:00\n";
+  std::cerr << "\n";
+  std::cerr << " By default the guest is configured with one net device with the MAC address in\n";
+  std::cerr << " the example above. To remove the default device pass --default-net=false.\n";
+  std::cerr << "\n";
 }
 
-static GuestConfigParser::OptionHandler set_option(std::string* out) {
+static GuestConfigParser::OptionHandler set_string(std::string* out) {
   return [out](const std::string& key, const std::string& value) {
     if (value.empty()) {
       FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
@@ -96,6 +113,24 @@ static GuestConfigParser::OptionHandler add_option(C* out, OptionParser<T> parse
       return status;
     }
     out->insert(out->end(), t);
+    return ZX_OK;
+  };
+}
+
+template <typename T>
+static GuestConfigParser::OptionHandler set_option(T* out, OptionParser<T> parse) {
+  return [out, parse](const std::string& key, const std::string& value) {
+    if (value.empty()) {
+      FXL_LOG(ERROR) << "Option: '" << key << "' expects a value (--" << key << "=<value>)";
+      return ZX_ERR_INVALID_ARGS;
+    }
+    T t;
+    zx_status_t status = parse(value, &t);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to parse option string '" << value << "'";
+      return status;
+    }
+    *out = t;
     return ZX_OK;
   };
 }
@@ -175,6 +210,20 @@ static zx_status_t parse_block_spec(const std::string& spec, BlockSpec* out) {
   }
   if (out->path.empty()) {
     return ZX_ERR_INVALID_ARGS;
+  }
+  return ZX_OK;
+}
+
+static zx_status_t parse_net_spec(const std::string& input, NetSpec* out) {
+  uint32_t bytes[6];
+  int r = std::sscanf(input.c_str(), "%02x:%02x:%02x:%02x:%02x:%02x", &bytes[0], &bytes[1],
+                      &bytes[2], &bytes[3], &bytes[4], &bytes[5]);
+  if (r != 6) {
+    FXL_LOG(ERROR) << "Couldn't parse MAC address";
+    return ZX_ERR_INVALID_ARGS;
+  }
+  for (size_t i = 0; i != 6; ++i) {
+    out->mac_address.octets[i] = static_cast<uint8_t>(bytes[i]);
   }
   return ZX_OK;
 }
@@ -264,7 +313,7 @@ static zx_status_t parse_memory_spec(const std::string& spec, MemorySpec* out) {
 static GuestConfigParser::OptionHandler set_kernel(std::string* out, Kernel* kernel,
                                                    Kernel set_kernel) {
   return [out, kernel, set_kernel](const std::string& key, const std::string& value) {
-    zx_status_t status = set_option(out)(key, value);
+    zx_status_t status = set_string(out)(key, value);
     if (status == ZX_OK) {
       *kernel = set_kernel;
     }
@@ -277,18 +326,19 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
       opts_{
           {"block", add_option<BlockSpec>(&cfg_->block_devices_, parse_block_spec)},
           {"cmdline-add", add_string(&cfg_->cmdline_, " ")},
-          {"cmdline", set_option(&cfg_->cmdline_)},
+          {"cmdline", set_string(&cfg_->cmdline_)},
           {"cpus", set_number(&cfg_->cpus_)},
-          {"dtb-overlay", set_option(&cfg_->dtb_overlay_path_)},
+          {"dtb-overlay", set_string(&cfg_->dtb_overlay_path_)},
+          {"default-net", set_flag(&cfg_->default_net_, true)},
           {"interrupt", add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
           {"linux", set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},
-          {"ramdisk", set_option(&cfg_->ramdisk_path_)},
+          {"net", add_option<NetSpec>(&cfg_->net_devices_, parse_net_spec)},
+          {"ramdisk", set_string(&cfg_->ramdisk_path_)},
           {"virtio-balloon", set_flag(&cfg_->virtio_balloon_, true)},
           {"virtio-console", set_flag(&cfg_->virtio_console_, true)},
           {"virtio-gpu", set_flag(&cfg_->virtio_gpu_, true)},
           {"virtio-magma", set_flag(&cfg_->virtio_magma_, true)},
-          {"virtio-net", set_flag(&cfg_->virtio_net_, true)},
           {"virtio-rng", set_flag(&cfg_->virtio_rng_, true)},
           {"virtio-vsock", set_flag(&cfg_->virtio_vsock_, true)},
           {"zircon", set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::ZIRCON)},
@@ -297,6 +347,11 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
 void GuestConfigParser::SetDefaults() {
   if (cfg_->memory_.empty()) {
     cfg_->memory_.push_back({.size = 1ul << 30});
+  }
+  if (cfg_->default_net_) {
+    NetSpec default_spec;
+    default_spec.mac_address = kGuestMacAddress;
+    cfg_->net_devices_.push_back(default_spec);
   }
 }
 

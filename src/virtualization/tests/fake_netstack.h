@@ -152,6 +152,8 @@ class FakeNetstack : public fuchsia::netstack::Netstack {
       completers_ __TA_GUARDED(mutex_);
 
   async::Loop loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
+
+  uint8_t nic_counter_ = 0;
 };
 
 #endif  // SRC_VIRTUALIZATION_TESTS_FAKE_NETSTACK_H_

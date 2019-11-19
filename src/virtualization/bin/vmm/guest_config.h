@@ -6,6 +6,7 @@
 #define SRC_VIRTUALIZATION_BIN_VMM_GUEST_CONFIG_H_
 
 #include <fuchsia/virtualization/cpp/fidl.h>
+#include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -14,10 +15,16 @@
 #include <unordered_map>
 #include <vector>
 
+#include <virtio/net.h>
+
 struct BlockSpec {
   std::string path;
   fuchsia::virtualization::BlockFormat format = fuchsia::virtualization::BlockFormat::RAW;
   fuchsia::virtualization::BlockMode mode = fuchsia::virtualization::BlockMode::READ_WRITE;
+};
+
+struct NetSpec {
+  fuchsia::hardware::ethernet::MacAddress mac_address;
 };
 
 enum class MemoryPolicy {
@@ -56,13 +63,13 @@ class GuestConfig {
   const std::string& cmdline() const { return cmdline_; }
   const std::vector<BlockSpec>& block_devices() const { return block_devices_; }
   const std::vector<MemorySpec>& memory() const { return memory_; }
+  const std::vector<NetSpec>& net_devices() const { return net_devices_; }
   const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
   bool virtio_gpu() const { return virtio_gpu_; }
   bool virtio_magma() const { return virtio_magma_; }
-  bool virtio_net() const { return virtio_net_; }
   bool virtio_rng() const { return virtio_rng_; }
   bool virtio_vsock() const { return virtio_vsock_; }
 
@@ -75,13 +82,14 @@ class GuestConfig {
   std::string cmdline_;
   std::vector<BlockSpec> block_devices_;
   std::vector<MemorySpec> memory_;
+  std::vector<NetSpec> net_devices_;
   std::vector<InterruptSpec> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
+  bool default_net_ = true;
   bool virtio_balloon_ = true;
   bool virtio_console_ = true;
   bool virtio_gpu_ = true;
   bool virtio_magma_ = true;
-  bool virtio_net_ = true;
   bool virtio_rng_ = true;
   bool virtio_vsock_ = true;
 };

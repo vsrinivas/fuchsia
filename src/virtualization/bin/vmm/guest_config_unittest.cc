@@ -6,6 +6,7 @@
 
 #include <zircon/compiler.h>
 
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
 #include "src/lib/fxl/arraysize.h"
@@ -68,13 +69,13 @@ TEST_F(GuestConfigParserTest, UnknownArgument) {
 }
 
 TEST_F(GuestConfigParserTest, BooleanFlag) {
-  const char* argv_false[] = {"exe_name", "--virtio-net=false"};
+  const char* argv_false[] = {"exe_name", "--virtio-balloon=false"};
   ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_false), const_cast<char**>(argv_false)));
-  ASSERT_FALSE(config_.virtio_net());
+  ASSERT_FALSE(config_.virtio_balloon());
 
-  const char* argv_true[] = {"exe_name", "--virtio-net=true"};
+  const char* argv_true[] = {"exe_name", "--virtio-balloon=true"};
   ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv_true), const_cast<char**>(argv_true)));
-  ASSERT_TRUE(config_.virtio_net());
+  ASSERT_TRUE(config_.virtio_balloon());
 }
 
 TEST_F(GuestConfigParserTest, CommandLineAppend) {
@@ -119,6 +120,22 @@ TEST_F(GuestConfigParserTest, BlockSpecJson) {
   ASSERT_EQ(fuchsia::virtualization::BlockMode::READ_WRITE, spec1.mode);
   ASSERT_EQ(fuchsia::virtualization::BlockFormat::RAW, spec1.format);
   ASSERT_EQ("/dev/class/block/001", spec1.path);
+}
+
+TEST_F(GuestConfigParserTest, NetSpecArg) {
+  const char* argv[] = {"exe_name", "--net=00:11:22:33:44:55", "--net=66:77:88:99:aa:bb"};
+  ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
+  ASSERT_EQ(2ul, config_.net_devices().size());
+
+  const NetSpec& spec0 = config_.net_devices()[0];
+  EXPECT_THAT(spec0.mac_address.octets, testing::ElementsAre(0x00, 0x11, 0x22, 0x33, 0x44, 0x55));
+
+  const NetSpec& spec1 = config_.net_devices()[1];
+  EXPECT_THAT(spec1.mac_address.octets, testing::ElementsAre(0x66, 0x77, 0x88, 0x99, 0xaa, 0xbb));
+
+  const char* argv_invalid[] = {"exe_name", "--net=000:111:22:33:44:55"};
+  ASSERT_EQ(ZX_ERR_INVALID_ARGS,
+            parser_.ParseArgcArgv(arraysize(argv_invalid), const_cast<char**>(argv_invalid)));
 }
 
 TEST_F(GuestConfigParserTest, InterruptSpecArg) {
