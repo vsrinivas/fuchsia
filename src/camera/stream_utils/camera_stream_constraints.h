@@ -24,11 +24,25 @@ namespace camera {
 // stream.AddImageFormat(896, 1600, fuchsia::sysmem::PixelFormatType::NV12);
 // configs[0].stream_configs.push_back(stream.ConvertToStreamConfig());
 //
+// NOTE: The default settings for stream configs is below
+//    |bytes_per_row_divisor_| = 128;
+//    |buffer_count_for_camping_| = 3;
+//    |frames_per_second_| = 30;
+// If you need to use different settings, please use the setter functions
+// to update, before you call |CameraStreamConstraints|
+
 struct CameraStreamConstraints {
  public:
   CameraStreamConstraints(fuchsia::camera2::CameraStreamType type) : stream_type_(type) {}
 
   void AddImageFormat(uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format);
+
+  void set_contiguous(bool flag) { contiguous_ = flag; }
+  void set_bytes_per_row_divisor(uint32_t bytes_per_row_divisor) {
+    bytes_per_row_divisor_ = bytes_per_row_divisor;
+  }
+
+  void set_frames_per_second(uint32_t frames_per_second) { frames_per_second_ = frames_per_second; }
 
   // Converts the data in this struct into a StreamConfig.
   fuchsia::camera2::hal::StreamConfig ConvertToStreamConfig();
