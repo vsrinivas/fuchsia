@@ -331,6 +331,7 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(base1);
   auto* base1_type = base1->from().Get()->AsType();
   EXPECT_EQ("my_ns::Base1", base1_type->GetFullName());
+  EXPECT_EQ(InheritedFrom::kConstant, base1->kind());
   EXPECT_EQ(0u, base1->offset());
 
   // It should be followed by Base2. To allow flexibility in packing without breaking this test, all
@@ -339,6 +340,7 @@ TEST(DwarfSymbolFactory, Collection) {
   ASSERT_TRUE(base2);
   auto* base2_type = base2->from().Get()->AsType();
   EXPECT_EQ("my_ns::Base2", base2_type->GetFullName());
+  EXPECT_EQ(InheritedFrom::kConstant, base2->kind());
   EXPECT_LT(0u, base2->offset());
   EXPECT_TRUE(base2->offset() % 4 == 0);
 
@@ -393,6 +395,31 @@ TEST(DwarfSymbolFactory, Collection) {
   std::vector<uint8_t> expected_64bit{0x1f, 0x85, 0xeb, 0x51, 0xb8, 0x1e, 0x09, 0x40};
   EXPECT_TRUE(expected_64bit == member_cd->const_value().GetConstValue(8) ||
               expected_80bit == member_cd->const_value().GetConstValue(10));
+}
+
+// Covers cases of InheritedFrom not covered by the collection test above.
+TEST(DwarfSymbolFactory, InheritedFrom) {
+  auto module_symbols =
+      fxl::MakeRefCounted<ModuleSymbolsImpl>(TestSymbolModule::GetTestFileName(), "", "");
+  Err err = module_symbols->Load();
+  EXPECT_FALSE(err.has_error()) << err.msg();
+
+  const char kGetVirtualDerived[] = "GetVirtualDerived";
+  fxl::RefPtr<const Function> function = GetFunctionWithName(module_symbols, kGetVirtualDerived);
+  ASSERT_TRUE(function);
+
+  auto* derived_type = function->return_type().Get()->AsCollection();
+  ASSERT_TRUE(derived_type);
+  EXPECT_EQ("VirtualDerived", derived_type->GetFullName());
+
+  ASSERT_EQ(1u, derived_type->inherited_from().size());
+  const InheritedFrom* inherited = derived_type->inherited_from()[0].Get()->AsInheritedFrom();
+  ASSERT_TRUE(inherited);
+
+  // Validate that it has a nonempty expression. This test doesn't require that the expression
+  // be a specific thing.
+  EXPECT_EQ(InheritedFrom::kExpression, inherited->kind());
+  EXPECT_FALSE(inherited->location_expression().empty());
 }
 
 TEST(DwarfSymbolFactory, Enum) {

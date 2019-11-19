@@ -693,8 +693,22 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(const llvm::DWARFDie
   llvm::DWARFDie type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &type);
 
+  // The DW_AT_data_member_location can either be a constant or an expression.
   llvm::Optional<uint64_t> member_offset;
-  decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_data_member_location, &member_offset);
+  std::vector<uint8_t> offset_expression;
+  decoder.AddCustom(llvm::dwarf::DW_AT_data_member_location,
+                    [unit = die.getDwarfUnit(), &member_offset,
+                     &offset_expression](const llvm::DWARFFormValue& form) {
+                      if (form.isFormClass(llvm::DWARFFormValue::FC_Exprloc)) {
+                        // Location expression.
+                        llvm::ArrayRef<uint8_t> block = *form.getAsBlock();
+                        offset_expression.assign(block.data(), block.data() + block.size());
+                      } else if (form.isFormClass(llvm::DWARFFormValue::FC_Constant)) {
+                        // Constant value.
+                        member_offset = form.getAsUnsignedConstant();
+                      }
+                      // Otherwise leave both empty.
+                    });
 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
@@ -702,17 +716,12 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeInheritedFrom(const llvm::DWARFDie
   LazySymbol lazy_type;
   if (type)
     lazy_type = MakeLazy(type);
-  if (!member_offset) {
-    // According to the spec the offset could be a location description which won't have been read
-    // as an unsigned. See InheritedFrom::offset() for more. If this triggers, we should implement
-    // and test this feature.
-    fprintf(stderr,
-            "DW_TAG_inheritance has a non-constant offset for the base class. "
-            "Please file a bug with a repro so we can support this case.\n");
-    return fxl::MakeRefCounted<Symbol>();
-  }
 
-  return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type), *member_offset);
+  if (member_offset)
+    return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type), *member_offset);
+  if (!offset_expression.empty())
+    return fxl::MakeRefCounted<InheritedFrom>(std::move(lazy_type), std::move(offset_expression));
+  return fxl::MakeRefCounted<Symbol>();  // Missing location.
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeLexicalBlock(const llvm::DWARFDie& die) {

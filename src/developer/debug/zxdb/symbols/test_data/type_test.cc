@@ -138,6 +138,18 @@ EXPORT TypeForUsing GetUsing() {
   return result;
 }
 
+class VirtualBase {
+ virtual void DoIt() {}
+};
+
+class VirtualDerived : public virtual VirtualBase {
+ virtual void DoIt() {}
+};
+
+EXPORT VirtualDerived GetVirtualDerived() {
+  return VirtualDerived();
+}
+
 // TODO(brettw) test:
 //   stuff in an anonymous namespace
 //   local types defined in functions

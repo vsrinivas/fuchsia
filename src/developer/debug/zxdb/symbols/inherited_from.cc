@@ -7,7 +7,11 @@
 namespace zxdb {
 
 InheritedFrom::InheritedFrom(LazySymbol from, uint64_t offset)
-    : from_(std::move(from)), offset_(offset) {}
+    : kind_(kConstant), from_(std::move(from)), offset_(offset) {}
+
+InheritedFrom::InheritedFrom(LazySymbol from, std::vector<uint8_t> expr)
+    : kind_(kExpression), from_(std::move(from)), location_expression_(std::move(expr)) {}
+
 InheritedFrom::~InheritedFrom() = default;
 
 const InheritedFrom* InheritedFrom::AsInheritedFrom() const { return this; }
