@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -13,7 +14,7 @@
 
 int main(int argc, char** argv) {
   fprintf(stderr, "memfs starting up\n");
-  async::Loop global_loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop global_loop(&kAsyncLoopConfigAttachToCurrentThread);
 
   memfs_filesystem_t* memfs_handle = nullptr;
   zx_handle_t memfs_root = ZX_HANDLE_INVALID;
