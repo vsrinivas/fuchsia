@@ -267,6 +267,12 @@ async fn get_package<'a>(
         Err(Status::INVALID_ARGS)
     })?;
 
+    if experiments.get(Experiment::RustTuf) {
+        // not implemented yet
+        fx_log_err!("Experiment::RustTuf not implemented");
+        return Err(Status::INTERNAL);
+    }
+
     if experiments.get(Experiment::DownloadBlob) {
         crate::cache::cache_package(repo, config, url, cache, blob_fetcher).await.map_err(|e| {
             fx_log_err!("error caching package: {}", e);
