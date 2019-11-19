@@ -83,6 +83,7 @@ async fn run() -> Result<(), Error> {
     let peripheral_hd = hd.clone();
     let profile_hd = hd.clone();
     let gatt_hd = hd.clone();
+    let bootstrap_hd = hd.clone();
 
     let host_watcher_task = async {
         let stream = watch_hosts();
@@ -139,6 +140,19 @@ async fn run() -> Result<(), Error> {
                 fasync::spawn(gatt_hd.clone().request_host_service(chan, LeGatt));
             }
             None
+        })
+        // TODO(1496) - according fuchsia.bluetooth.sys/bootstrap.fidl, the bootstrap service should
+        // only be available before initialization, and only allow a single commit before becoming
+        // unservicable. This behavior interacts with parts of Bluetooth lifecycle and component
+        // framework design that are not yet complete. For now, we provide the service to whomever
+        // asks, whenever, but clients should not rely on this. The implementation will change once
+        // we have a better solution.
+        .add_fidl_service(move |request_stream| {
+            fx_log_info!("Serving Bootstrap Service");
+            fasync::spawn(
+                services::bootstrap::run(bootstrap_hd.clone(), request_stream)
+                    .unwrap_or_else(|e| fx_log_warn!("Bootstrap service failed: {:?}", e)),
+            );
         });
     fs.take_and_serve_directory_handle()?;
     let svc_fs_task = fs.collect::<()>().map(Ok);

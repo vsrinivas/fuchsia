@@ -485,6 +485,15 @@ pub struct Identity {
     pub bonds: Vec<BondingData>,
 }
 
+impl From<Identity> for sys::Identity {
+    fn from(src: Identity) -> sys::Identity {
+        sys::Identity {
+            host: Some(src.host),
+            bonds: Some(src.bonds.into_iter().map(|i| i.into()).collect()),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {

@@ -86,6 +86,12 @@ impl Stash {
     pub fn store_bond(&mut self, bond: BondingData) -> impl Future<Output = Result<(), Error>> {
         self.send_req(move |send| Request::StoreBonds(vec![bond], send)).map(|r| r.and_then(|r| r))
     }
+    pub fn store_bonds(
+        &mut self,
+        bonds: Vec<BondingData>,
+    ) -> impl Future<Output = Result<(), Error>> {
+        self.send_req(move |send| Request::StoreBonds(bonds, send)).map(|r| r.and_then(|r| r))
+    }
     pub fn rm_peer(&mut self, peer: PeerId) -> impl Future<Output = Result<(), Error>> {
         self.send_req(move |send| Request::RmPeer(peer, send)).map(|r| r.and_then(|r| r))
     }
@@ -450,7 +456,8 @@ mod tests {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor = create_stash_accessor("new_stash_succeeds_with_empty_values").await
+        let accessor = create_stash_accessor("new_stash_succeeds_with_empty_values")
+            .await
             .expect("failed to create StashAccessor");
         let stash = StashInner::new(accessor, inspect).await.expect("expected Stash to initialize");
 
@@ -463,14 +470,17 @@ mod tests {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor = create_stash_accessor("new_stash_fails_with_malformed_key_value_entry").await
+        let accessor = create_stash_accessor("new_stash_fails_with_malformed_key_value_entry")
+            .await
             .expect("failed to create StashAccessor");
 
         // Set a key/value that contains a non-string value.
         accessor
             .set_value("bonding-data:test1234", &mut Value::Intval(5))
             .expect("failed to set a bonding data value");
-        accessor.flush().await
+        accessor
+            .flush()
+            .await
             .expect("failed to flush a bonding data value")
             .expect("failed to flush a bonding data value");
 
@@ -483,14 +493,17 @@ mod tests {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a mock Stash service interface.
-        let accessor = create_stash_accessor("new_stash_fails_with_malformed_json").await
+        let accessor = create_stash_accessor("new_stash_fails_with_malformed_json")
+            .await
             .expect("failed to create StashAccessor");
 
         // Set a vector that contains a malformed JSON value
         accessor
             .set_value("bonding-data:test1234", &mut Value::Stringval("{0}".to_string()))
             .expect("failed to set a bonding data value");
-        accessor.flush().await
+        accessor
+            .flush()
+            .await
             .expect("failed to flush a bonding data value")
             .expect("failed to flush a bonding data value");
 
@@ -619,14 +632,17 @@ mod tests {
         let inspect = fuchsia_inspect::Inspector::new().root().create_child("test");
 
         // Create a Stash service interface.
-        let accessor = create_stash_accessor("new_stash_succeeds_with_values").await
+        let accessor = create_stash_accessor("new_stash_succeeds_with_values")
+            .await
             .expect("failed to create StashAccessor");
 
         // Insert values into stash that contain bonding data for several devices.
         accessor.set_value("bonding-data:1", &mut bond_entry_1()).expect("failed to set value");
         accessor.set_value("bonding-data:2", &mut bond_entry_2()).expect("failed to set value");
         accessor.set_value("bonding-data:3", &mut bond_entry_3()).expect("failed to set value");
-        accessor.flush().await
+        accessor
+            .flush()
+            .await
             .expect("failed to flush a bonding data value")
             .expect("failed to flush a bonding data value");
 
@@ -778,7 +794,9 @@ mod tests {
         for (id, mut entry) in entries {
             accessor.set_value(id, &mut entry).expect("failed to set value");
         }
-        accessor.flush().await
+        accessor
+            .flush()
+            .await
             .expect("failed to flush a bonding data value")
             .expect("failed to flush a bonding data value");
         StashInner::new(accessor, inspect).await.expect("stash failed to initialize")

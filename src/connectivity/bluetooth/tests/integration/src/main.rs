@@ -21,6 +21,7 @@ fn main() -> Result<(), Error> {
         tests::host_driver::run_all(),
         tests::bonding::run_all(),
         // Tests that trigger bt-gap.cmx.
+        tests::bootstrap::run_all(),
         tests::control::run_all(),
         tests::profile::run_all(),
         tests::low_energy_central::run_all(),

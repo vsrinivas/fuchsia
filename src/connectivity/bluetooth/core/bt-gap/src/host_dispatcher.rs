@@ -21,7 +21,7 @@ use {
     fuchsia_bluetooth::{
         self as bt,
         inspect::{DebugExt, Inspectable, ToProperty},
-        types::{AdapterInfo, Address, BondingData, Peer, PeerId},
+        types::{AdapterInfo, Address, BondingData, Identity, Peer, PeerId},
     },
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog},
@@ -618,6 +618,25 @@ impl HostDispatcher {
                 fx_log_warn!("Error passing message through Generic Access proxy: {:?}", err);
             })
         }));
+        Ok(())
+    }
+
+    /// Commit all bootstrapped bonding identities to the system. This will update both the Stash
+    /// and our in memory store, and notify all hosts of new bonding identities. If we already have
+    /// bonding data for any of the peers (as identified by address), the new bootstrapped data
+    /// will override them.
+    pub async fn commit_bootstrap(&self, identities: Vec<Identity>) -> types::Result<()> {
+        let mut stash = self.state.read().stash.clone();
+        for identity in identities {
+            stash.store_bonds(identity.bonds).await?
+        }
+        // Notify all current hosts of any changes to their bonding data
+        let host_devices: Vec<_> = self.state.read().host_devices.values().cloned().collect();
+
+        for host in host_devices {
+            let address = host.read().get_info().address;
+            try_restore_bonds(host.clone(), self.clone(), &address).await?;
+        }
         Ok(())
     }
 

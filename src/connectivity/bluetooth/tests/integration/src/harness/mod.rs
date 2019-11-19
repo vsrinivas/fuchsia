@@ -15,6 +15,7 @@ use {
 pub mod expect;
 
 // Test harnesses
+pub mod bootstrap;
 pub mod control;
 pub mod emulator;
 pub mod host_driver;

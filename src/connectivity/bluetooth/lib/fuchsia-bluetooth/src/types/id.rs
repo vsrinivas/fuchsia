@@ -27,6 +27,12 @@ fn parse_hex_identifier(hex_repr: &str) -> Result<u64, Error> {
 #[derive(Copy, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct PeerId(pub u64);
 
+impl PeerId {
+    pub fn random() -> PeerId {
+        PeerId(rand::random())
+    }
+}
+
 impl fmt::Display for PeerId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         /// Zero-Pad the output string to be 16 characters to maintain formatting consistency.
