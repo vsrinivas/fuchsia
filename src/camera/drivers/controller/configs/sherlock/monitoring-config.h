@@ -12,6 +12,7 @@
 
 #include "common-util.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
+#include "src/camera/stream_utils/camera_stream_constraints.h"
 
 // This file contains static information for the Monitor Configuration
 // There are three streams in one configuration
@@ -76,28 +77,6 @@ constexpr uint32_t kGdcBytesPerRowDivisor = 16;
  **********************************
  */
 
-static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLFRConstraints() {
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count_for_camping = kOutputStreamMlFRMinBufferForCamping;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.physically_contiguous_required = true;
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = kOutputStreamMlFRPixelFormat;
-  image_constraints.min_coded_width = kOutputStreamMlFRWidth;
-  image_constraints.max_coded_width = kOutputStreamMlFRWidth;
-  image_constraints.min_coded_height = kOutputStreamMlFRHeight;
-  image_constraints.max_coded_height = kOutputStreamMlFRHeight;
-  image_constraints.min_bytes_per_row = kOutputStreamMlFRWidth;
-  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
-  image_constraints.layers = kOutputStreamMlFRLayers;
-  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
-  image_constraints.color_spaces_count = kOutputStreamMlFRColorSpaceCount;
-  image_constraints.color_space[0].type = kOutputStreamMlFRColorSpaceType;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
-  return constraints;
-}
-
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLFRImageFormats() {
   return {
       {
@@ -112,60 +91,21 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLFRImageFormats(
   };
 }
 
-static std::vector<fuchsia::sysmem::ImageFormat_2> MonitorConfigDownScaledResImageFormats() {
-  return {
-      {
-          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-          .coded_width = kOutputStreamDSWidth,
-          .coded_height = kOutputStreamDSHeight,
-          .bytes_per_row = kOutputStreamDSWidth,
-          .display_width = kOutputStreamDSWidth,
-          .display_height = kOutputStreamDSHeight,
-          .color_space.type = kOutputStreamMlDSColorSpaceType,
-      },
-  };
-}
-
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
-  return {
-      .frame_rate =
-          {
-              .frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
-              .frames_per_sec_denominator = 1,
-          },
-      .constraints = OutputStreamMLFRConstraints(),
-      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                                        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING),
-      .image_formats = OutputStreamMLFRImageFormats(),
-  };
+  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                                 fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+  stream.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
+                        kOutputStreamMlFRPixelFormat);
+  stream.set_bytes_per_row_divisor(kISPPerRowDivisor);
+  stream.set_contiguous(true);
+  stream.set_frames_per_second(kOutputStreamMlFRFrameRate);
+  return stream.ConvertToStreamConfig();
 };
 
 /***********************************
  * Output Stream ML DS paramters   *
  ***********************************
  */
-
-static constexpr fuchsia::sysmem::BufferCollectionConstraints OutputStreamMLDSConstraints() {
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count_for_camping = kOutputStreamMlDSMinBufferForCamping;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.physically_contiguous_required = true;
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = kOutputStreamMlDSPixelFormat;
-  image_constraints.min_coded_width = kOutputStreamMlDSWidth;
-  image_constraints.max_coded_width = kOutputStreamMlDSWidth;
-  image_constraints.min_coded_height = kOutputStreamMlDSHeight;
-  image_constraints.max_coded_height = kOutputStreamMlDSHeight;
-  image_constraints.min_bytes_per_row = kOutputStreamMlDSWidth;
-  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
-  image_constraints.layers = kOutputStreamMlDSLayers;
-  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
-  image_constraints.color_spaces_count = kOutputStreamMlDSColorSpaceCount;
-  image_constraints.color_space[0].type = kOutputStreamMlDSColorSpaceType;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
-  return constraints;
-}
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLDSImageFormats() {
   return {
@@ -182,17 +122,14 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLDSImageFormats(
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
-  return {
-      .frame_rate =
-          {
-              .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
-              .frames_per_sec_denominator = 1,
-          },
-      .constraints = OutputStreamMLDSConstraints(),
-      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                                        fuchsia::camera2::CameraStreamType::MACHINE_LEARNING),
-      .image_formats = OutputStreamMLDSImageFormats(),
-  };
+  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                                 fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+  stream.AddImageFormat(kOutputStreamMlDSWidth, kOutputStreamMlDSHeight,
+                        kOutputStreamMlFRPixelFormat);
+  stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
+  stream.set_contiguous(true);
+  stream.set_frames_per_second(kOutputStreamMlDSFrameRate);
+  return stream.ConvertToStreamConfig();
 };
 
 /******************************************
@@ -200,27 +137,18 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
  ******************************************
  */
 
-static constexpr fuchsia::sysmem::BufferCollectionConstraints
-OutputStreamDSMonitoringConstraints() {
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count_for_camping = kOutputStreamMonitoringMinBufferForCamping;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.physically_contiguous_required = true;
-  constraints.image_format_constraints_count = 1;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = kOutputStreamMonitoringPixelFormat;
-  image_constraints.min_coded_width = kOutputStreamMonitoringWidth;
-  image_constraints.max_coded_width = kOutputStreamMonitoringWidth;
-  image_constraints.min_coded_height = kOutputStreamMonitoringHeight;
-  image_constraints.max_coded_height = kOutputStreamMonitoringHeight;
-  image_constraints.min_bytes_per_row = kOutputStreamMonitoringWidth;
-  image_constraints.max_bytes_per_row = kMaxBytesPerRow;
-  image_constraints.layers = kOutputStreamMonitoringLayers;
-  image_constraints.bytes_per_row_divisor = kISPPerRowDivisor;
-  image_constraints.color_spaces_count = kOutputStreamMonitoringColorSpaceCount;
-  image_constraints.color_space[0].type = kOutputStreamMonitoringColorSpaceType;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
-  return constraints;
+static std::vector<fuchsia::sysmem::ImageFormat_2> MonitorConfigDownScaledResImageFormats() {
+  return {
+      {
+          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
+          .coded_width = kOutputStreamDSWidth,
+          .coded_height = kOutputStreamDSHeight,
+          .bytes_per_row = kOutputStreamDSWidth,
+          .display_width = kOutputStreamDSWidth,
+          .display_height = kOutputStreamDSHeight,
+          .color_space.type = kOutputStreamMlDSColorSpaceType,
+      },
+  };
 }
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMonitoringImageFormats() {
@@ -256,16 +184,17 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMonitoringImageFo
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
-  return {
-      .frame_rate =
-          {
-              .frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
-              .frames_per_sec_denominator = 1,
-          },
-      .constraints = OutputStreamDSMonitoringConstraints(),
-      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::MONITORING),
-      .image_formats = OutputStreamMonitoringImageFormats(),
-  };
+  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::MONITORING);
+  stream.AddImageFormat(kOutputStreamMonitoringWidth, kOutputStreamMonitoringHeight,
+                        kOutputStreamMonitoringPixelFormat);
+  stream.AddImageFormat(kOutputStreamMonitoringWidth1, kOutputStreamMonitoringHeight1,
+                        kOutputStreamMonitoringPixelFormat);
+  stream.AddImageFormat(kOutputStreamMonitoringWidth2, kOutputStreamMonitoringHeight2,
+                        kOutputStreamMonitoringPixelFormat);
+  stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
+  stream.set_contiguous(true);
+  stream.set_frames_per_second(kOutputStreamMonitoringFrameRate);
+  return stream.ConvertToStreamConfig();
 };
 
 /*****************************

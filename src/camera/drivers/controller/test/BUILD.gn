@@ -104,6 +104,7 @@ executable("controller-allocator-test") {
     "controller-allocator-test.cc",
   ]
   deps = [
+    "//src/camera/stream_utils:stream_configs",
     "//garnet/public/lib/gtest",
     "//sdk/banjo/ddk.protocol.isp",
     "//sdk/fidl/fuchsia.camera2",
