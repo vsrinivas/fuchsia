@@ -18,6 +18,9 @@ use parking_lot::Mutex;
 use std::convert::Into;
 use std::sync::Arc;
 
+static LOG_TAG: &str = "battery_manager";
+static LOG_VERBOSITY: i32 = 1;
+
 struct BatteryManagerServer {
     manager: Arc<Mutex<BatteryManager>>,
 }
@@ -32,6 +35,7 @@ fn spawn_battery_manager(
                 match req {
                     fpower::BatteryManagerRequest::GetBatteryInfo { responder, .. } => {
                         let battery_manager = bms.manager.lock();
+                        fx_log_info!("BatteryManagerServer handle GetBatteryInfo request");
                         if let Err(e) =
                             responder.send(battery_manager.get_battery_info_copy().into())
                         {
@@ -45,9 +49,16 @@ fn spawn_battery_manager(
                             }
                             Ok(w) => {
                                 let battery_manager = bms.manager.clone();
-                                let info = battery_manager.lock().get_battery_info_copy().into();
-                                match (w.on_change_battery_info(info)).await {
-                                    Ok(_) => battery_manager.lock().add_watcher(w),
+                                fx_log_info!(
+                                    "BatterManagerServer handle Watch request for watcher {:?}",
+                                    &w
+                                );
+
+                                battery_manager.lock().add_watcher(w.clone());
+
+                                let info = { battery_manager.lock().get_battery_info_copy() };
+                                match (w.on_change_battery_info(info.clone().into())).await {
+                                    Ok(_) => {}
                                     Err(e) => fx_log_err!("failed to add watcher: {:?}", e),
                                 };
                             }
@@ -57,13 +68,12 @@ fn spawn_battery_manager(
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
+        .unwrap_or_else(|e: failure::Error| fx_log_err!("{:?}", e)),
     );
 }
 
 fn main() -> Result<(), Error> {
-    syslog::init_with_tags(&["battery_manager"]).expect("Can't init logger");
-
+    syslog::init_with_tags(&[LOG_TAG]).expect("Can't init logger");
     fx_log_info!("starting up");
 
     let mut fs = ServiceFs::new();

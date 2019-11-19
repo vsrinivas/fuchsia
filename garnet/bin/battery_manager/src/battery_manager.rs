@@ -5,11 +5,13 @@
 use fidl_fuchsia_hardware_power as hpower;
 use fidl_fuchsia_power as fpower;
 use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_info;
+use fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog};
 use fuchsia_zircon as zx;
 use parking_lot::Mutex;
 use std::convert::{From, Into};
 use std::sync::Arc;
+
+use crate::LOG_VERBOSITY;
 
 #[derive(Debug, PartialEq)]
 struct TimeRemainingWrapper(fpower::TimeRemaining);
@@ -119,7 +121,9 @@ impl BatteryManager {
 
     // Adds watcher
     pub fn add_watcher(&mut self, watcher: fpower::BatteryInfoWatcherProxy) {
-        self.watchers.lock().push(watcher)
+        let mut watchers = self.watchers.lock();
+        fx_vlog!(LOG_VERBOSITY, "::manager:: adding watcher: {:?} [{:?}]", watcher, watchers.len());
+        watchers.push(watcher)
     }
 
     // Updates the status
@@ -129,7 +133,7 @@ impl BatteryManager {
         battery_info: Option<hpower::BatteryInfo>,
     ) -> Result<(), failure::Error> {
         fx_log_info!(
-            "update status with power info: {:#?} and battery info: {:#?}",
+            "update_status with power info: {:#?} and battery info: {:#?}",
             &power_info,
             &battery_info
         );
@@ -141,7 +145,9 @@ impl BatteryManager {
 
                 BatteryManager::run_watchers(watchers_clone, info_clone);
             }
-            Ok(StatusUpdateResult::DoNotNotify) => {}
+            Ok(StatusUpdateResult::DoNotNotify) => {
+                fx_vlog!(LOG_VERBOSITY, "::manager:: update status unchanged - skipping NOTIFY");
+            }
             Err(e) => return Err(e),
         }
 
@@ -152,15 +158,19 @@ impl BatteryManager {
         watchers: Arc<Mutex<Vec<fpower::BatteryInfoWatcherProxy>>>,
         info: BatteryInfoWrapper,
     ) {
+        fx_vlog!(LOG_VERBOSITY, "::manager:: spawn task to run watchers...");
         fasync::spawn(async move {
-            let watchers = watchers.lock().clone();
-
+            let watchers = {
+                let mut watchers = watchers.lock();
+                watchers.retain(|w| !w.is_closed());
+                watchers.clone()
+            };
+            fx_vlog!(LOG_VERBOSITY, "::manager:: run watchers [{:?}]", &watchers.len());
             for w in &watchers {
-                let _ = w.on_change_battery_info(info.clone().into()).await;
+                if let Err(e) = w.on_change_battery_info(info.clone().into()).await {
+                    fx_log_err!("failed to send battery info to watcher {:?}", e);
+                }
             }
-            // TODO (DNO-686): refactoring will include fixing this, which
-            // is necessary to clean up the watcher list (retain...) in the
-            // event that client connections are closed/dropped.
         })
     }
 
@@ -277,6 +287,10 @@ impl BatteryManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl::endpoints::create_request_stream;
+    use fidl_fuchsia_power as fpower;
+    use fuchsia_async::futures::TryStreamExt;
+    use futures::future::*;
 
     macro_rules! cmp_fields {
         ($got:ident, $want:ident, [$($field:ident,)*], $test_no:expr) => { $(
@@ -325,6 +339,116 @@ mod tests {
             present_voltage: 7000,
         };
         return battery_info;
+    }
+
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn test_run_watcher() {
+        let battery_manager = BatteryManager::new();
+        let mut battery_info: BatteryInfoWrapper = battery_manager.get_battery_info_copy();
+        battery_info.level_percent = 50.0;
+
+        let (watcher_client_end, mut stream) =
+            create_request_stream::<fpower::BatteryInfoWatcherMarker>().unwrap();
+        let watcher = watcher_client_end.into_proxy().unwrap();
+
+        let watchers = Arc::new(Mutex::new(vec![watcher]));
+
+        let serve_fut = async move {
+            let request = stream.try_next().await.unwrap();
+            if let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo {
+                info,
+                responder,
+            }) = request
+            {
+                let level = info.level_percent.unwrap().round() as u8;
+                assert_eq!(level, 50);
+                responder.send().unwrap();
+            } else {
+                panic!("Unexpected message received");
+            };
+        };
+        let request_fut = async move {
+            BatteryManager::run_watchers(watchers, battery_info);
+        };
+
+        join(serve_fut, request_fut).await;
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn test_run_watchers_channel_closed() {
+        let battery_manager = BatteryManager::new();
+        let mut battery_info: BatteryInfoWrapper = battery_manager.get_battery_info_copy();
+        battery_info.level_percent = 50.0;
+
+        let (watcher1_client_end, mut stream1) =
+            create_request_stream::<fpower::BatteryInfoWatcherMarker>().unwrap();
+        let watcher1 = watcher1_client_end.into_proxy().unwrap();
+
+        let (watcher2_client_end, mut stream2) =
+            create_request_stream::<fpower::BatteryInfoWatcherMarker>().unwrap();
+        let watcher2 = watcher2_client_end.into_proxy().unwrap();
+
+        let watchers = Arc::new(Mutex::new(vec![watcher1, watcher2]));
+
+        let serve1_fut = async move {
+            // first request should match first change notification sent
+            // at 50%
+            let request = stream1.try_next().await.unwrap();
+            if let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo {
+                info,
+                responder,
+            }) = request
+            {
+                let level = info.level_percent.unwrap().round() as u8;
+                assert_eq!(level, 50);
+                responder.send().unwrap();
+            } else {
+                panic!("Unexpected message received");
+            };
+            // second should match subsequent notification at 60%
+            let request = stream1.try_next().await.unwrap();
+            if let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo {
+                info,
+                responder,
+            }) = request
+            {
+                let level = info.level_percent.unwrap().round() as u8;
+                assert_eq!(level, 60);
+                responder.send().unwrap();
+            } else {
+                panic!("Unexpected message received");
+            };
+        };
+
+        let serve2_fut = async move {
+            // first request should match first change notification sent
+            // at 50%
+            let request = stream2.try_next().await.unwrap();
+            if let Some(fpower::BatteryInfoWatcherRequest::OnChangeBatteryInfo {
+                info,
+                responder,
+            }) = request
+            {
+                let level = info.level_percent.unwrap().round() as u8;
+                assert_eq!(level, 50);
+                // but then we drop the channel...
+                std::mem::drop(responder);
+            } else {
+                panic!("Unexpected message received");
+            };
+            // should not get the second...
+            if let Some(_) = stream2.try_next().await.unwrap() {
+                panic!("Unexpected message, channel should be closed");
+            }
+        };
+
+        let request_fut = async move {
+            BatteryManager::run_watchers(watchers.clone(), battery_info.clone());
+            battery_info.level_percent = 60.0;
+            BatteryManager::run_watchers(watchers, battery_info);
+        };
+
+        join3(serve1_fut, serve2_fut, request_fut).await;
     }
 
     #[test]

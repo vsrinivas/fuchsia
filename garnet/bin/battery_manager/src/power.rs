@@ -8,7 +8,7 @@ use failure::{Error, ResultExt};
 use fdio::{self, clone_channel};
 use fidl_fuchsia_hardware_power as hpower;
 use fuchsia_async as fasync;
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog};
+use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn, fx_vlog};
 use fuchsia_vfs_watcher as vfs_watcher;
 use fuchsia_zircon::{self as zx, Signals};
 use futures::prelude::*;
@@ -21,6 +21,7 @@ use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::battery_manager::BatteryManager;
+use crate::LOG_VERBOSITY;
 
 // TODO (ZX-3385): binding the FIDL service via file descriptor is still
 // required for hardware FIDLs (implemented by ACPI battery driver).
@@ -54,7 +55,7 @@ pub async fn get_power_info(file: &File) -> ioResult<hpower::SourceInfo> {
     match power_source.get_power_info().map_err(|_| zx::Status::IO).await? {
         result => {
             let (status, info) = result;
-            fx_vlog!(1, "power_info: {:?}, status: {:?}", info, status);
+            fx_vlog!(LOG_VERBOSITY, "::power:: get_power_info: {:#?}, status: {:#?}", info, status);
             Ok(info)
         }
     }
@@ -72,7 +73,12 @@ pub async fn get_battery_info(file: &File) -> ioResult<hpower::BatteryInfo> {
     match power_source.get_battery_info().map_err(|_| zx::Status::IO).await? {
         result => {
             let (status, info) = result;
-            fx_vlog!(1, "battery_info: {:?}, status: {:?}", info, status);
+            fx_vlog!(
+                LOG_VERBOSITY,
+                "::power:: get_battery_info: {:#?}, status: {:#?}",
+                info,
+                status
+            );
             Ok(info)
         }
     }
@@ -87,6 +93,7 @@ where
         .try_clone()
         .map_err(|e| io::Error::new(e.kind(), format!("error copying power device file: {}", e)))?;
 
+    fx_vlog!(LOG_VERBOSITY, "::power:: add_listener spawn device state change event listener");
     fasync::spawn(
         async move {
             loop {
@@ -97,7 +104,10 @@ where
                 let (_status, handle) =
                     power_source.get_state_change_event().map_err(|_| zx::Status::IO).await?;
 
+                fx_vlog!(LOG_VERBOSITY, "::power:: waiting on signal for state change event");
                 fasync::OnSignals::new(&handle, Signals::USER_0).await?;
+                fx_vlog!(LOG_VERBOSITY, "::power:: got state change event...");
+
                 let power_info = get_power_info(&file_copy).await?;
                 let mut battery_info = None;
                 if power_info.type_ == hpower::PowerType::Battery {
@@ -106,9 +116,9 @@ where
                 callback(power_info, battery_info);
             }
         }
-            .unwrap_or_else(|e: failure::Error| {
-                fx_log_err!("not able to apply listener to power device, wait failed: {:?}", e)
-            }),
+        .unwrap_or_else(|e: failure::Error| {
+            fx_log_err!("not able to apply listener to power device, wait failed: {:?}", e)
+        }),
     );
 
     Ok(())
@@ -120,7 +130,7 @@ async fn process_watch_event(
     battery_device_found: &mut bool,
     adapter_device_found: &mut bool,
 ) -> Result<WatchSuccess, failure::Error> {
-    fx_log_info!("process_watch_event for {:#?}", &filepath);
+    fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event for {:#?}", &filepath);
 
     let file = File::open(&filepath)?;
     let power_info = get_power_info(&file).await?;
@@ -139,7 +149,9 @@ async fn process_watch_event(
     // add the listener to wait on the signal/notification from
     // state event change interface provided by the hardware FIDL
     let battery_manager2 = battery_manager.clone();
+    fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event add_listener with callback");
     add_listener(&file, move |p_info, b_info| {
+        fx_vlog!(LOG_VERBOSITY, "::power:: add_listener callback to update_status");
         let mut battery_manager2 = battery_manager2.lock();
         if let Err(e) = battery_manager2.update_status(p_info.clone(), b_info.clone()) {
             fx_log_err!("{}", e);
@@ -153,9 +165,11 @@ async fn process_watch_event(
         // otherwise be notified (i.e. gradual charge/discharge)
         let battery_manager = battery_manager.clone();
         let mut timer = fasync::Interval::new(zx::Duration::from_seconds(60));
+        fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event spawn periodic timer");
+
         fasync::spawn(async move {
             while let Some(()) = (timer.next()).await {
-                fx_log_info!("Getting periodic battery info update...");
+                fx_vlog!(LOG_VERBOSITY, "::power:: Getting periodic battery info update...");
                 let power_info = get_power_info(&file).await.unwrap();
                 battery_info = Some(get_battery_info(&file).await.unwrap());
                 let mut battery_manager = battery_manager.lock();
@@ -173,6 +187,7 @@ async fn process_watch_event(
     // update the status with the current state info from the watch event
     {
         let mut battery_manager = battery_manager.lock();
+        fx_vlog!(LOG_VERBOSITY, "::power:: process_watch_event update_status");
         battery_manager
             .update_status(power_info.clone(), battery_info.clone())
             .context("adding watch events")?;
@@ -187,11 +202,13 @@ pub async fn watch_power_device(battery_manager: Arc<Mutex<BatteryManager>>) -> 
     let mut adapter_device_found = false;
     let mut battery_device_found = false;
     while let Some(msg) = (watcher.try_next()).await? {
+        fx_vlog!(LOG_VERBOSITY, "watch_power_device trying next: {:#?}", &msg);
         if battery_device_found && adapter_device_found {
             continue;
         }
         let mut filepath = PathBuf::from(POWER_DEVICE);
         filepath.push(msg.filename);
+        fx_log_info!("watch_power_device for file: {:?}", &filepath);
         match process_watch_event(
             &filepath,
             battery_manager.clone(),
@@ -207,10 +224,15 @@ pub async fn watch_power_device(battery_manager: Arc<Mutex<BatteryManager>>) -> 
                     WatchSuccess::BatteryAlreadyFound => "battery",
                     WatchSuccess::AdapterAlreadyFound => "adapter",
                 };
-                fx_vlog!(1, "Skip '{:?}' as {} device already found", filepath, device_type);
+                fx_vlog!(
+                    LOG_VERBOSITY,
+                    "::power:: Skip '{:?}' as {} device already found",
+                    filepath,
+                    device_type
+                );
             }
             Err(err) => {
-                fx_log_err!("error for file while adding watch event '{:?}': {}", filepath, err);
+                fx_log_warn!("Failed to add watch event for '{:?}': {}", filepath, err);
             }
         }
     }
