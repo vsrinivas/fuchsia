@@ -8,10 +8,15 @@ fidl("fuchsia.input.report") {
   sources = [
     "descriptor.fidl",
     "device.fidl",
+    "keyboard.fidl",
     "mouse.fidl",
     "report.fidl",
     "sensor.fidl",
     "touch.fidl",
     "units.fidl",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input2",
   ]
 }

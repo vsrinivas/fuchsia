@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.input.report;
+
+using fuchsia.ui.input2;
+
+/// A hardcoded number of max keys. This should be increased in the future
+/// if we ever see keyboards with more keys.
+const uint32 KEYBOARD_MAX_NUM_KEYS = 150;
+
+/// A hardcoded number of the maximum keys that can be pressed at a time.
+/// This should be increased in the future if we see keyboards that can
+/// handle more pressed keys.
+const uint32 KEYBOARD_MAX_PRESSED_KEYS = 15;
+
+/// The capabilities of a keyboard device.
+table KeyboardDescriptor {
+    /// The list of keys that this keyboard contains.
+    1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_NUM_KEYS keys;
+};
+
+/// A single report created by a keyboard device.
+table KeyboardReport {
+    /// The list of keys that are currently pressed down.
+    1: vector<fuchsia.ui.input2.Key>:KEYBOARD_MAX_PRESSED_KEYS pressed_keys;
+};

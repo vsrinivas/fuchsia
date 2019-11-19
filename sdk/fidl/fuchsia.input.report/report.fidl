@@ -16,6 +16,8 @@ table InputReport {
     4: SensorReport sensor;
     /// |touch| is the report generated if the device contains a touch device.
     5: TouchReport touch;
+    /// |keyboard| is the report generated if the device contains a keyboard.
+    6: KeyboardReport keyboard;
 
     /// Unique ID to connect trace async begin/end events.
     3: uint64 trace_id;

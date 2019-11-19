@@ -35,4 +35,7 @@ table DeviceDescriptor {
     /// When |touch| is present the device has a touch device.
     /// (E.g: Touchscreen, touchpad).
     4: TouchDescriptor touch;
+
+    /// When |keyboard| is present the device has a keyboard.
+    5: KeyboardDescriptor keyboard;
 };
