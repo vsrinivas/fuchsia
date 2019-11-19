@@ -77,7 +77,7 @@ TEST(AsyncBindTestCase, AsyncReply) {
   struct AsyncServer : ::llcpp::fidl::test::simple::Simple::Interface {
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync()]() mutable {
         completer.Reply(request);
       });
@@ -118,7 +118,7 @@ TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   struct AsyncDelayedServer : ::llcpp::fidl::test::simple::Simple::Interface {
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
                         static std::atomic<int> count;
@@ -160,7 +160,7 @@ TEST(AsyncBindTestCase, MultipleAsyncReplies) {
   sync_completion_t done;
   std::vector<std::unique_ptr<async::Loop>> clients;
   for (uint32_t i = 0; i < kNumberOfAsyncs; ++i) {
-    auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [&local, &done]() {
       auto result = ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local},
                                                                     kExpectedReply);
@@ -184,7 +184,7 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
     AsyncDelayedServer(std::vector<std::unique_ptr<async::Loop>>* loops) : loops_(loops) {}
     void Close(CloseCompleter::Sync completer) override { ADD_FAILURE("Must not call close"); }
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
-      auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      auto worker = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
                         bool signal = false;
@@ -231,7 +231,7 @@ TEST(AsyncBindTestCase, MultipleAsyncRepliesOnePeerClose) {
   // Sync client calls.
   std::vector<std::unique_ptr<async::Loop>> clients;
   for (uint32_t i = 0; i < kNumberOfAsyncs; ++i) {
-    auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+    auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
     async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
       auto result = ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local},
                                                                     kExpectedReply);
@@ -315,7 +315,7 @@ TEST(AsyncBindTestCase, CallbacksErrorAndClosedClientTriggered) {
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
                         sync_completion_signal(worker_start_);
@@ -357,7 +357,7 @@ TEST(AsyncBindTestCase, CallbacksErrorAndClosedClientTriggered) {
   ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Client launches a thread so we can hold the transaction in progress.
-  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
     auto result =
         ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
@@ -393,7 +393,7 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction.
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync(), this,
                                               worker = worker_.get()]() mutable {
         sync_completion_signal(worker_start_);
@@ -434,7 +434,7 @@ TEST(AsyncBindTestCase, DestroyBindingWithPendingCancel) {
   ASSERT_FALSE(sync_completion_signaled(&server_busy));
 
   // Client launches a thread so we can hold the transaction in progress.
-  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
     auto result =
         ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
@@ -483,7 +483,7 @@ TEST(AsyncBindTestCase, CallbacksErrorAndClosedServerTriggered) {
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction in progress.
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(),
                       [request, completer = completer.ToAsync(), this]() mutable {
                         sync_completion_signal(worker_start_);
@@ -522,7 +522,7 @@ TEST(AsyncBindTestCase, CallbacksErrorAndClosedServerTriggered) {
   ASSERT_FALSE(sync_completion_signaled(&closed));
 
   // Client1 launches a thread so we can hold its transaction in progress.
-  auto client1 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto client1 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client1->dispatcher(), [&local]() {
     ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
   });
@@ -532,7 +532,7 @@ TEST(AsyncBindTestCase, CallbacksErrorAndClosedServerTriggered) {
   ASSERT_OK(sync_completion_wait(&worker_start, ZX_TIME_INFINITE));
 
   // Client2 launches a thread to continue the test while its transaction is still in progress.
-  auto client2 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto client2 = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client2->dispatcher(), [&local]() {
     // Server will close the channel, on_error is not called.
     auto result = ::llcpp::fidl::test::simple::Simple::Call::Close(zx::unowned_channel{local});
@@ -598,7 +598,7 @@ TEST(AsyncBindTestCase, ExplicitForceSyncUnbindWithPendingTransaction) {
         : worker_start_(worker_start), worker_done_(worker_done) {}
     void Echo(int32_t request, EchoCompleter::Sync completer) override {
       // Launches a thread so we can hold the transaction.
-      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+      worker_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
       async::PostTask(worker_->dispatcher(), [request, completer = completer.ToAsync(), this,
                                               worker = worker_.get()]() mutable {
         sync_completion_signal(worker_start_);
@@ -624,7 +624,7 @@ TEST(AsyncBindTestCase, ExplicitForceSyncUnbindWithPendingTransaction) {
   ASSERT_OK(zx::channel::create(0, &local, &remote));
 
   // Client launches a thread so we can hold the transaction in progress.
-  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+  auto client = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToCurrentThread);
   async::PostTask(client->dispatcher(), [&local, client = client.get()]() {
     ::llcpp::fidl::test::simple::Simple::Call::Echo(zx::unowned_channel{local}, kExpectedReply);
   });
