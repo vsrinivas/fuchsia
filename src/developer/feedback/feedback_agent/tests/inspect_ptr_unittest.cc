@@ -35,12 +35,14 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
   void SetUp() override { ASSERT_EQ(collection_loop_.StartThread("collection-thread"), ZX_OK); }
 
   void TearDown() override {
+    std::cout << "TearDown START" << std::endl << std::flush;
     if (inspect_test_app_controller_) {
       TerminateInspectTestApp();
     }
     // To make sure there are no more running tasks on |collection_executor_| when it gets
     // destroyed, cf. fxb/39880.
     collection_loop_.Shutdown();
+    std::cout << "TearDown END" << std::endl << std::flush;
   }
 
  protected:
@@ -76,6 +78,7 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
 
  private:
   void TerminateInspectTestApp() {
+    std::cout << "TerminateInspectTestApp START" << std::endl << std::flush;
     inspect_test_app_controller_->Kill();
     bool is_inspect_test_app_terminated = false;
     inspect_test_app_controller_.events().OnTerminated =
@@ -84,6 +87,7 @@ class CollectInspectDataTest : public sys::testing::TestWithEnvironment {
           is_inspect_test_app_terminated = true;
         };
     RunLoopUntil([&is_inspect_test_app_terminated] { return is_inspect_test_app_terminated; });
+    std::cout << "TerminateInspectTestApp END" << std::endl << std::flush;
   }
 
  protected:
@@ -175,6 +179,7 @@ TEST_F(CollectInspectDataTest, Fail_NoComponentExposesInspectData) {
 }
 
 TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
+  std::cout << "Fail_InspectDiscoveryTimeout START" << std::endl << std::flush;
   // The test app exposes some Inspect data, but will be too busy to answer.
   InjectInspectTestApp({"--busy"});
 
@@ -182,6 +187,7 @@ TEST_F(CollectInspectDataTest, Fail_InspectDiscoveryTimeout) {
   fit::result<fuchsia::mem::Buffer> result = CollectInspectData(/*timeout=*/zx::msec(50));
 
   ASSERT_TRUE(result.is_error());
+  std::cout << "Fail_InspectDiscoveryTimeout END" << std::endl << std::flush;
 }
 
 TEST_F(CollectInspectDataTest, Fail_CallCollectTwice) {
