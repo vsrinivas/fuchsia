@@ -34,55 +34,6 @@ TimeDelta _computeDisplayRefreshRate(Model model) {
   return TimeDelta.fromNanoseconds(refreshRate);
 }
 
-/// Find all [Event]s that follow [event].
-///
-/// A following event is defined to be all events that are reachable by walking
-/// forward in the flow/duration graph.  "Walking forward" means recursively
-/// visiting all sub-duration-events and outgoing flow events for duration
-/// events, and the enclosing duration and next flow event for flow events.
-List<Event> _getFollowingEvents(Event event) {
-  final List<Event> frontier = [event];
-  final Set<Event> visited = {};
-
-  while (frontier.isNotEmpty) {
-    final current = frontier.removeLast();
-    if (current == null) {
-      continue;
-    }
-    final added = visited.add(current);
-    if (!added) {
-      continue;
-    }
-    if (current is DurationEvent) {
-      frontier..addAll(current.childDurations)..addAll(current.childFlows);
-    } else if (current is FlowEvent) {
-      frontier..add(current.enclosingDuration)..add(current.nextFlow);
-    } else {
-      assert(false);
-    }
-  }
-
-  final result = List<Event>.from(visited)
-    ..sort((a, b) => a.start.compareTo(b.start));
-  return result;
-}
-
-/// Find the first "VSYNC" event that [vsyncCallback] is connected to.
-DurationEvent _findFollowingVsync(DurationEvent vsyncCallback) {
-  if (!(vsyncCallback.category == 'flutter' &&
-      vsyncCallback.name == 'vsync callback')) {
-    throw ArgumentError(
-        'Unexpected name and category for vsync callback event: (${vsyncCallback.category}, ${vsyncCallback.name})');
-  }
-  final followingEvents = _getFollowingEvents(vsyncCallback);
-  final followingVsyncs = filterEventsTyped<DurationEvent>(followingEvents,
-      category: 'gfx', name: 'Display::Controller::OnDisplayVsync');
-  if (followingVsyncs.isEmpty) {
-    return null;
-  }
-  return followingVsyncs.first;
-}
-
 /// Groups of FPS events, where events in the same group are part of the same
 /// batch of frames we attempted to render.
 ///
@@ -133,7 +84,7 @@ double _computeFps(Model model, Thread uiThread, Thread gpuThread) {
     } else if (event is DurationEvent &&
         event.category == 'flutter' &&
         event.name == 'vsync callback') {
-      final maybeFollowingVsync = _findFollowingVsync(event);
+      final maybeFollowingVsync = findFollowingVsync(event);
       if (maybeFollowingVsync == null) {
         maybeNewEnd =
             _max(event.start + event.duration, event.start + refreshRate);
@@ -187,7 +138,7 @@ double _computeFps(Model model, Thread uiThread, Thread gpuThread) {
     final vsyncCallbacks = filterEventsTyped<DurationEvent>(group.events,
         category: 'flutter', name: 'vsync callback');
     final followingVsyncs =
-        vsyncCallbacks.map(_findFollowingVsync).where((e) => e != null);
+        vsyncCallbacks.map(findFollowingVsync).where((e) => e != null);
     countedDisplayVsyncs.addAll(followingVsyncs);
 
     firstVsync = followingVsyncs.first;
@@ -236,14 +187,16 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
     Model model, MetricsSpec metricsSpec) {
   if (metricsSpec.name != 'flutter_frame_stats') {
     throw ArgumentError(
-        'Error, unexpected metrics name "${metricsSpec.name}" in flutterFrameStatsMetricsProcessor');
+        'Error, unexpected metrics name "${metricsSpec.name}" in '
+        'flutterFrameStatsMetricsProcessor');
   }
 
   final extraArgs = metricsSpec.extraArgs;
   if (!(extraArgs.containsKey('flutterAppName') &&
       extraArgs['flutterAppName'] is String)) {
     throw ArgumentError(
-        'Error, expected metrics spec extra args $extraArgs to contain String field "flutterAppName"');
+        'Error, expected metrics spec extra args $extraArgs to contain String '
+        'field "flutterAppName"');
   }
   final String flutterAppName = extraArgs['flutterAppName'];
 
@@ -286,5 +239,6 @@ List<TestCaseResults> flutterFrameStatsMetricsProcessor(
   }
 
   throw ArgumentError(
-      'Failed to find any matching flutter process in $model for flutter app name $flutterAppName');
+      'Failed to find any matching flutter process in $model for flutter app '
+      'name $flutterAppName');
 }

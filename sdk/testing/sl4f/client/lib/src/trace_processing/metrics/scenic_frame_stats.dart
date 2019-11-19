@@ -41,6 +41,6 @@ List<TestCaseResults> scenicFrameStatsMetricsProcessor(
   return [
     TestCaseResults('scenic_fps', Unit.framesPerSecond, [fps]),
     TestCaseResults(
-        'scenic_RenderFrame', Unit.milliseconds, renderFrameDurations)
+        'scenic_RenderFrame', Unit.milliseconds, renderFrameDurations),
   ];
 }

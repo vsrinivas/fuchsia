@@ -48,6 +48,11 @@ class TimeDelta implements Comparable<TimeDelta> {
   TimeDelta operator *(double factor) =>
       TimeDelta._timeDelta((_delta * factor).round());
 
+  bool operator <(TimeDelta other) => _delta < other._delta;
+  bool operator >(TimeDelta other) => _delta > other._delta;
+  bool operator <=(TimeDelta other) => _delta <= other._delta;
+  bool operator >=(TimeDelta other) => _delta >= other._delta;
+
   @override
   bool operator ==(dynamic other) =>
       other is TimeDelta && _delta == other._delta;

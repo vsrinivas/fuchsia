@@ -32,6 +32,58 @@ Iterable<T> filterEventsTyped<T extends Event>(Iterable<Event> events,
         (category == null || event.category == category) &&
         (name == null || event.name == name)));
 
+/// Find all [Event]s that follow [event].
+///
+/// A following event is defined to be all events that are reachable by walking
+/// forward in the flow/duration graph.  "Walking forward" means recursively
+/// visiting all sub-duration-events and outgoing flow events for duration
+/// events, and the enclosing duration and next flow event for flow events.
+List<Event> getFollowingEvents(Event event) {
+  final List<Event> frontier = [event];
+  final Set<Event> visited = {};
+
+  while (frontier.isNotEmpty) {
+    final current = frontier.removeLast();
+    if (current == null) {
+      continue;
+    }
+    final added = visited.add(current);
+    if (!added) {
+      continue;
+    }
+    if (current is DurationEvent) {
+      frontier..addAll(current.childDurations)..addAll(current.childFlows);
+    } else if (current is FlowEvent) {
+      frontier..add(current.enclosingDuration)..add(current.nextFlow);
+    } else {
+      assert(false);
+    }
+  }
+
+  final result = List<Event>.from(visited)
+    ..sort((a, b) => a.start.compareTo(b.start));
+  return result;
+}
+
+/// Find the first "VSYNC" event that [vsyncCallback] is connected to.
+///
+/// Returns [null] if no "VSYNC" is found.
+DurationEvent findFollowingVsync(DurationEvent vsyncCallback) {
+  if (!(vsyncCallback.category == 'flutter' &&
+      vsyncCallback.name == 'vsync callback')) {
+    throw ArgumentError(
+        'Unexpected name and category for vsync callback event: '
+        '(${vsyncCallback.category}, ${vsyncCallback.name})');
+  }
+  final followingEvents = getFollowingEvents(vsyncCallback);
+  final followingVsyncs = filterEventsTyped<DurationEvent>(followingEvents,
+      category: 'gfx', name: 'Display::Controller::OnDisplayVsync');
+  if (followingVsyncs.isEmpty) {
+    return null;
+  }
+  return followingVsyncs.first;
+}
+
 /// Compute the mean (https://en.wikipedia.org/wiki/Arithmetic_mean#Definition)
 /// of [values].
 double computeMean<T extends num>(Iterable<T> values) {

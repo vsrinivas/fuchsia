@@ -4,6 +4,7 @@
 
 import 'package:meta/meta.dart';
 
+import 'metrics/drm_fps.dart';
 import 'metrics/flutter_frame_stats.dart';
 import 'metrics/scenic_frame_stats.dart';
 import 'metrics_results.dart';
@@ -40,6 +41,7 @@ List<TestCaseResults> processWithDefaultMetricsRegistry(
   const mapping = {
     'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
     'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
+    'drm_fps': drmFpsMetricsProcessor,
   };
 
   final processor = mapping[metricsSpec.name];
