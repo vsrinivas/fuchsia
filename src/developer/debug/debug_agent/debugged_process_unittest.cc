@@ -120,8 +120,7 @@ constexpr uint64_t kAddress2 = 0x5678;
 constexpr uint64_t kAddress3 = 0x9abc;
 constexpr uint64_t kAddress4 = 0xdef0;
 
-const debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
-const debug_ipc::AddressRange kAddressRange2 = {0x3, 0x4};
+constexpr debug_ipc::AddressRange kAddressRange1 = {0x1, 0x2};
 
 TEST(DebuggedProcess, RegisterBreakpoints) {
   MockProcessDelegate process_delegate;

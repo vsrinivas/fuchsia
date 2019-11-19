@@ -6,16 +6,16 @@
 
 #include <inttypes.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace debug_ipc {
 
-AddressRange::AddressRange(uint64_t begin, uint64_t end) : begin_(begin), end_(end) {
-  FXL_DCHECK(end_ >= begin_);
-}
-
+// Implemented out-of-line to avoid bringing <algorithm> into all headers that use address_range.h.
 AddressRange AddressRange::Union(const AddressRange& other) const {
+  if (other.empty())
+    return *this;
+  if (empty())
+    return other;
   return AddressRange(std::min(begin_, other.begin_), std::max(end_, other.end_));
 }
 

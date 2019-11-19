@@ -9,37 +9,46 @@
 
 #include <string>
 
+#include "src/lib/fxl/logging.h"
+
 namespace debug_ipc {
 
 class AddressRange {
  public:
-  AddressRange() = default;
-  AddressRange(uint64_t begin, uint64_t end);
+  constexpr AddressRange() = default;
+  constexpr AddressRange(uint64_t begin, uint64_t end) : begin_(begin), end_(end) {
+    FXL_DCHECK(end_ >= begin_);
+  }
 
-  uint64_t begin() const { return begin_; }
-  uint64_t end() const { return end_; }
+  constexpr uint64_t begin() const { return begin_; }
+  constexpr uint64_t end() const { return end_; }
 
-  uint64_t size() const { return end_ - begin_; }
-  bool empty() const { return end_ == begin_; }
+  constexpr uint64_t size() const { return end_ - begin_; }
+  constexpr bool empty() const { return end_ == begin_; }
 
-  bool InRange(uint64_t addr) const { return addr >= begin_ && addr < end_; }
+  constexpr bool InRange(uint64_t addr) const { return addr >= begin_ && addr < end_; }
 
-  bool Contains(const AddressRange& other) const {
+  // Callers need to consider the semantics they want for empty ranges.
+  //
+  // An empty range whose start and end are within this range is considered to Contain/Overlap
+  // this one. If you want to consider empty ranges as being unoverlapping with anything you will
+  // need to perform an extra check.
+  constexpr bool Contains(const AddressRange& other) const {
     return other.begin_ >= begin_ && other.end_ <= end_;
   }
-  bool Overlaps(const AddressRange& other) const {
+  constexpr bool Overlaps(const AddressRange& other) const {
     return other.begin_ < end_ && other.end_ >= begin_;
   }
 
   // Returns a new range covering both inputs (|this| and |other|). If the inputs don't touch, the
   // result will also cover the in-between addresses. Use the AddressRanges class if you need to
-  // represent multiple discontiguous ranges.
+  // represent multiple discontiguous ranges. Empty ranges do not count toward a union.
   [[nodiscard]] AddressRange Union(const AddressRange& other) const;
 
-  bool operator==(const AddressRange& other) const {
+  constexpr bool operator==(const AddressRange& other) const {
     return begin_ == other.begin_ && end_ == other.end_;
   }
-  bool operator!=(const AddressRange& other) const { return !operator==(other); }
+  constexpr bool operator!=(const AddressRange& other) const { return !operator==(other); }
 
   // Returns a string representing this set of ranges for debugging purposes.
   std::string ToString() const;
