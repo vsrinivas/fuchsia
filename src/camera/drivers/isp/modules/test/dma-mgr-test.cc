@@ -158,6 +158,9 @@ class DmaMgrTest : public zxtest::Test {
     if (bti_handle_ != ZX_HANDLE_INVALID) {
       fake_bti_destroy(bti_handle_);
     }
+
+    ASSERT_OK(DestroyContiguousBufferCollection(&full_resolution_buffer_collection_));
+    ASSERT_OK(DestroyContiguousBufferCollection(&downscaled_buffer_collection_));
   }
 
   char local_mmio_buffer_[kLocalBufferSize];

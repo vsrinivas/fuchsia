@@ -186,6 +186,10 @@ void ArmIspDeviceTester::TestConnectStream(fuchsia_camera_test_TestReport* repor
                                                  &cb, &output_stream),
                      ZX_ERR_INVALID_ARGS,
                      "Failed to return ZX_ERR_INVALID_ARGS for invalid stream");
+
+  // Clean up
+  ISP_TEST_EXPECT_OK(camera::DestroyContiguousBufferCollection(&buffer_collection),
+                     "Failed to destroy contiguous buffer collection");
 }
 
 void ArmIspDeviceTester::TestCallbacks(fuchsia_camera_test_TestReport* report) {

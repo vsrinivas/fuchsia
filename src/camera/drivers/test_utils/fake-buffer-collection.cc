@@ -20,13 +20,32 @@
 
 namespace camera {
 
+// TODO(41499): Track creation & destruction of buffer collections for programmatic
+//      checks of leaks.
+
+// Utility to ensure log messages will appear during testing.
+bool kEnableLogsInBufferCollections = false;
+
+void InitFakeBufferCollectionLogging() {
+  if (kEnableLogsInBufferCollections) {
+    fx_log_init();
+  }
+}
+
 zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo* buffer_collection, zx_handle_t bti_handle, uint32_t width,
     uint32_t height, uint32_t num_buffers) {
-  // set all the vmo handles to invalid:
+  FX_LOG(INFO, "", "CreateContiguousBufferCollectionInfo\n");
+
+  // Initialize all the vmo handles to invalid.
   for (unsigned int& vmo : buffer_collection->vmos) {
     vmo = ZX_HANDLE_INVALID;
   }
+
+  if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= countof(buffer_collection->vmos)) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
   buffer_collection->format.image = {.width = width,
                                      .height = height,
                                      .layers = 2u,
@@ -103,14 +122,19 @@ zx_status_t GetImageFormat(image_format_2_t& image_format, uint32_t pixel_format
 zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buffer_collection,
                                                  const image_format_2_t& image_format,
                                                  zx_handle_t bti_handle, uint32_t num_buffers) {
-  // set all the vmo handles to invalid:
-  for (fuchsia_sysmem_VmoBuffer& vmo_buffer : buffer_collection.buffers) {
-    vmo_buffer.vmo = ZX_HANDLE_INVALID;
+  InitFakeBufferCollectionLogging();
+
+  FX_LOG(INFO, "", "CreateContiguousBufferCollectionInfo(2)");
+
+  // Initialize all the vmo handles to invalid.
+  for (auto& buffer : buffer_collection.buffers) {
+    buffer.vmo = ZX_HANDLE_INVALID;
   }
 
-  if (num_buffers >= countof(buffer_collection.buffers)) {
+  if (bti_handle == ZX_HANDLE_INVALID || num_buffers >= countof(buffer_collection.buffers)) {
     return ZX_ERR_INVALID_ARGS;
   }
+
   size_t vmo_size = ImageFormatImageSize(&image_format);
   buffer_collection.buffer_count = num_buffers;
   GetFakeBufferSettings(buffer_collection, vmo_size);
@@ -125,6 +149,42 @@ zx_status_t CreateContiguousBufferCollectionInfo(buffer_collection_info_2_t& buf
   }
 
   return ZX_OK;
+}
+
+zx_status_t DestroyContiguousBufferCollection(
+    fuchsia_sysmem_BufferCollectionInfo* buffer_collection) {
+  auto result = ZX_OK;
+  FX_LOG(INFO, "", "DestroyContiguousBufferCollectionInfo.");
+
+  // Release all the vmo handles.
+  for (auto& vmo : buffer_collection->vmos) {
+    auto status = zx_handle_close(vmo);
+    if (status != ZX_OK) {
+      FX_LOG(WARNING, "", "Error destroying a vmo.\n");
+      result = status;
+    }
+    vmo = ZX_HANDLE_INVALID;
+  }
+
+  return result;
+}
+
+zx_status_t DestroyContiguousBufferCollection(
+    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection) {
+  auto result = ZX_OK;
+  FX_LOG(INFO, "Mem", "DestroyContiguousBufferCollectionInfo(2)");
+
+  // Release all the vmo handles.
+  for (auto& vmo_buffer : buffer_collection.buffers) {
+    auto status = zx_handle_close(vmo_buffer.vmo);
+    if (status != ZX_OK) {
+      FX_LOG(ERROR, "", "Error destroying a vmo.\n");
+      result = status;
+    }
+    vmo_buffer.vmo = ZX_HANDLE_INVALID;
+  }
+
+  return result;
 }
 
 }  // namespace camera

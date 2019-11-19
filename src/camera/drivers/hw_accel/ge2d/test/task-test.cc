@@ -184,12 +184,9 @@ class TaskTest : public zxtest::Test {
     if (bti_handle_ != ZX_HANDLE_INVALID) {
       fake_bti_destroy(bti_handle_.get());
     }
-    for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
-      ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection_.buffers[i].vmo));
-    }
-    for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
-      ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection_.buffers[i].vmo));
-    }
+
+    EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection_));
+    EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
   }
 
   zx::vmo watermark_vmo_;
@@ -664,6 +661,10 @@ TEST(TaskTest, NonContigVmoTest) {
   // Expecting Task setup to be returning an error when watermark vmo is not
   // contig.
   EXPECT_NE(ZX_OK, status);
+
+  // Cleanup
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
   fake_bti_destroy(bti_handle.get());
 }
 

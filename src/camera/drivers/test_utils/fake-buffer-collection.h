@@ -37,6 +37,11 @@ zx_status_t CreateContiguousBufferCollectionInfo(
     fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection, const image_format_2_t& image_format,
     zx_handle_t bti_handle, uint32_t num_buffers);
 
+// Tears down the buffer collections.
+zx_status_t DestroyContiguousBufferCollection(
+    fuchsia_sysmem_BufferCollectionInfo* buffer_collection);
+zx_status_t DestroyContiguousBufferCollection(
+    fuchsia_sysmem_BufferCollectionInfo_2& buffer_collection);
 }  // namespace camera
 
 #endif  // SRC_CAMERA_DRIVERS_TEST_UTILS_FAKE_BUFFER_COLLECTION_H_

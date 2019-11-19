@@ -184,12 +184,9 @@ class TaskTest : public zxtest::Test {
       fake_bti_destroy(bti_handle_.get());
     }
     zx_handle_close(config_info_.config_vmo);
-    for (uint32_t i = 0; i < input_buffer_collection_.buffer_count; i++) {
-      ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection_.buffers[i].vmo));
-    }
-    for (uint32_t i = 0; i < output_buffer_collection_.buffer_count; i++) {
-      ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection_.buffers[i].vmo));
-    }
+
+    camera::DestroyContiguousBufferCollection(input_buffer_collection_);
+    camera::DestroyContiguousBufferCollection(output_buffer_collection_);
   }
 
   zx::bti bti_handle_;
@@ -540,12 +537,11 @@ TEST(TaskTest, NonContigVmoTest) {
                       image_format_table, 1, 0, &info, 1, &callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_OK, status);
-  for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
-    ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection.buffers[i].vmo));
-  }
-  for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
-    ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection.buffers[i].vmo));
-  }
+
+  // Cleanup
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
+  zx_handle_close(info.config_vmo);
   fake_bti_destroy(bti_handle.get());
 }
 
@@ -580,12 +576,10 @@ TEST(TaskTest, InvalidConfigVmoTest) {
                       image_format_table, 1, 0, &info, 1, &callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-  for (uint32_t i = 0; i < input_buffer_collection.buffer_count; i++) {
-    ZX_ASSERT(ZX_OK == zx_handle_close(input_buffer_collection.buffers[i].vmo));
-  }
-  for (uint32_t i = 0; i < output_buffer_collection.buffer_count; i++) {
-    ZX_ASSERT(ZX_OK == zx_handle_close(output_buffer_collection.buffers[i].vmo));
-  }
+
+  // Cleanup
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
+  EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
   fake_bti_destroy(bti_handle.get());
 }
 

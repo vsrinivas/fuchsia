@@ -40,6 +40,10 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
       EXPECT_TRUE(buffer_collection.vmos[i] == ZX_HANDLE_INVALID);
     }
   }
+
+  // Clean up
+  EXPECT_EQ(DestroyContiguousBufferCollection(&buffer_collection), ZX_OK);
+  fake_bti_destroy(bti_handle);
 }
 
 TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
@@ -66,14 +70,21 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
       EXPECT_TRUE(buffer_collection.buffers[i].vmo == ZX_HANDLE_INVALID);
     }
   }
+
+  // Clean up
+  EXPECT_EQ(DestroyContiguousBufferCollection(buffer_collection), ZX_OK);
+  fake_bti_destroy(bti_handle);
 }
 
 TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {
   zx_handle_t bti_handle = ZX_HANDLE_INVALID;
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_DEATH(camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth,
-                                                            kHeight, kNumberOfBuffers),
-               "fake bti_pin: Bad handle 0");
+  EXPECT_EQ(camera::CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth,
+                                                         kHeight, kNumberOfBuffers),
+            ZX_ERR_INVALID_ARGS);
+
+  // Clean up
+  EXPECT_EQ(DestroyContiguousBufferCollection(&buffer_collection), ZX_OK);
 }
 
 TEST(CreateContiguousBufferCollectionInfo2, FailsOnBadHandle) {
@@ -83,10 +94,12 @@ TEST(CreateContiguousBufferCollectionInfo2, FailsOnBadHandle) {
 
   EXPECT_EQ(GetImageFormat(image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight),
             ZX_OK);
-  ASSERT_DEATH(camera::CreateContiguousBufferCollectionInfo(buffer_collection, image_format,
-                                                            bti_handle, kNumberOfBuffers),
-               "fake bti_pin: Bad handle 0");
-}
+  EXPECT_EQ(camera::CreateContiguousBufferCollectionInfo(buffer_collection, image_format,
+                                                         bti_handle, kNumberOfBuffers),
+            ZX_ERR_INVALID_ARGS);
 
+  // Cleanup
+  EXPECT_EQ(DestroyContiguousBufferCollection(buffer_collection), ZX_OK);
+}
 }  // namespace
 }  // namespace camera
