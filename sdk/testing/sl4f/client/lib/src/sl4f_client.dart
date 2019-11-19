@@ -149,10 +149,14 @@ class Sl4f {
       // using the `end_to_end_deps` bundle, but it could still happen
       // if something gets misconfigured in the product build config.
       //
-      // TODO(mesch): It seems as if we could just await this ssh()
-      // call, but if we do this, we hang. Observed in
-      // screen_navigation_test on workstation.
-      unawaited(ssh.run('run -d $_sl4fComponentUrl'));
+      // The run program launches the specified component with stdout and stderr
+      // cloned from its own environment, even when -d is specified. Ssh hooks
+      // into those standard file descriptors and waits for those hooks to close
+      // before exiting, so with a simple run command it effectively waits on
+      // the daemonized component, which would cause a hang here if we awaited
+      // it. By redirecting stdout and stderr to /dev/null, we make it so that
+      // ssh does not wait for them to close, and thus we can await here safely.
+      await ssh.run('run -d $_sl4fComponentUrl > /dev/null 2> /dev/null');
 
       if (await _isRunning(tries: 3, delay: Duration(seconds: 2))) {
         _log.info('SL4F has started.');
