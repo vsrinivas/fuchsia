@@ -186,4 +186,79 @@ TEST_F(EventTest, DuplicateEvents) {
   EXPECT_EQ(env_.GetTime(), ABSOLUTE_TIME(kDuplicateEventsTime));
 }
 
+// Test cancelling events. Start with events scheduled at 1, 2, 3, 4, and 5 seconds into
+// simulation.
+//
+// Timeline:
+//   1s: Event fires, do nothing
+//   2s: Cancel event at time 4s (ZX_OK)
+//       Test calls to cancel with invalid args
+//   3s: Test calls to cancel with invalid args
+//   5s: Event fires, do nothing
+constexpr size_t kNotificationsCount = 5;
+
+static struct CancelNotificationState {
+  bool notifications_seen[kNotificationsCount];
+  uint64_t ids[kNotificationsCount];
+} cancel_state;
+
+void NotificationReceived(EventTest* test_ptr, uint64_t value) {
+  ASSERT_LE(value, kNotificationsCount);
+  cancel_state.notifications_seen[value] = true;
+
+  if (value == 1) {  // 2s into the test
+    // Try to cancel an already-passed event
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[0]));
+
+    // Try to cancel our current event
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[1]));
+
+    // Try to cancel a future event with incorrect recipient
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(nullptr, cancel_state.ids[3]));
+
+    // Try to cancel a future event with incorrect ID
+    uint64_t fake_id = 0x6b46616b654964;
+    bool match_found;
+    do {
+      match_found = false;
+      for (size_t i = 0; i < kNotificationsCount; i++) {
+        if (fake_id == cancel_state.ids[i]) {
+          match_found = true;
+          fake_id++;
+          break;
+        }
+      }
+    } while (match_found);
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, fake_id));
+
+    // Cancel a future event (hopefully successfully)
+    EXPECT_EQ(ZX_OK, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[3]));
+  }
+
+  if (value == 2) {  // 3s into the test
+    // Try cancelling a previously-cancelled event
+    EXPECT_EQ(ZX_ERR_NOT_FOUND, test_ptr->env_.CancelNotification(test_ptr, cancel_state.ids[3]));
+  }
+}
+
+TEST_F(EventTest, CancelEvents) {
+  // Create and initialize notification objects
+  EventNotification notifications[kNotificationsCount];
+  for (uint64_t i = 0; i < kNotificationsCount; i++) {
+    notifications[i].callback = NotificationReceived;
+    notifications[i].value = i;
+    cancel_state.notifications_seen[i] = false;
+    EXPECT_EQ(ZX_OK, env_.ScheduleNotification(this, zx::sec(i + 1),
+                                               static_cast<void*>(&notifications[i]),
+                                               &cancel_state.ids[i]));
+  }
+
+  env_.Run();
+
+  // Verify notification events seen (except the one at time 4, which should have been cancelled)
+  for (uint64_t i = 0; i < kNotificationsCount; i++) {
+    EXPECT_EQ(cancel_state.notifications_seen[i], (i == 3) ? false : true);
+  }
+}
+
 }  // namespace wlan::testing

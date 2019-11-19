@@ -8,6 +8,8 @@
 
 namespace wlan::simulation {
 
+uint64_t Environment::event_count_ = 0;
+
 void Environment::Run() {
   while (!events_.empty()) {
     auto event = std::move(events_.front());
@@ -69,13 +71,17 @@ void Environment::TxProbeResp(StationIfc* sender, const wlan_channel_t& channel,
   }
 }
 
-zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload) {
+zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload,
+                                              uint64_t* id_out) {
+  uint64_t id = event_count_++;
+
   // Disallow past events
   if (delay < zx::usec(0)) {
     return ZX_ERR_INVALID_ARGS;
   }
 
   auto event = std::make_unique<EnvironmentEvent>();
+  event->id = id;
   event->time = time_ + delay;
   event->requester = sta;
   event->payload = payload;
@@ -88,7 +94,22 @@ zx_status_t Environment::ScheduleNotification(StationIfc* sta, zx::duration dela
   }
   events_.insert(event_iter, std::move(event));
 
+  if (id_out != nullptr) {
+    *id_out = id;
+  }
+
   return ZX_OK;
+}
+
+// Since all events are processed synchronously, we don't have to worry about locking.
+zx_status_t Environment::CancelNotification(StationIfc* sta, uint64_t id) {
+  for (auto& event_iter : events_) {
+    if (event_iter->requester == sta && event_iter->id == id) {
+      events_.remove(event_iter);
+      return ZX_OK;
+    }
+  }
+  return ZX_ERR_NOT_FOUND;
 }
 
 }  // namespace wlan::simulation

@@ -84,14 +84,22 @@ class Environment {
   void TxProbeResp(StationIfc* sender, const wlan_channel_t& channel, const common::MacAddr& src,
                    const common::MacAddr& dst, const wlan_ssid_t& ssid);
 
-  // Ask for a future notification, time is relative to current time.
-  zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload);
+  // Ask for a future notification, time is relative to current time. If 'id' is non-null, it will
+  // be given a unique identifier for reference in future notification-related operations.
+  zx_status_t ScheduleNotification(StationIfc* sta, zx::duration delay, void* payload,
+                                   uint64_t* id_out = nullptr);
+
+  // Cancel a future notification
+  zx_status_t CancelNotification(StationIfc* sta, uint64_t id);
 
   // Get simulation absolute time
   zx::time GetTime() { return time_; }
 
  private:
+  static uint64_t event_count_;
+
   struct EnvironmentEvent {
+    uint64_t id;
     zx::time time;  // The absolute time to fire
     StationIfc* requester;
     void* payload;
