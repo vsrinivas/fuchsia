@@ -25,10 +25,9 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
-    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased},
+    fuchsia_zircon::{self as zx, AsHandleRef, HandleBased, Job, Task},
     futures::{
         future::{AbortHandle, Abortable, BoxFuture},
-        lock::Mutex,
         TryStreamExt,
     },
     library_loader,
@@ -99,7 +98,6 @@ impl From<ElfRunnerError> for RunnerError {
 /// Runs components with ELF binaries.
 pub struct ElfRunner {
     launcher_connector: ProcessLauncherConnector,
-    instances: Mutex<Vec<RuntimeDirectory>>,
 }
 
 fn get_resolved_url(start_info: &fsys::ComponentStartInfo) -> Result<String, Error> {
@@ -163,7 +161,7 @@ fn handle_info_from_fd(fd: i32) -> Result<Option<fproc::HandleInfo>, Error> {
 
 impl ElfRunner {
     pub fn new(launcher_connector: ProcessLauncherConnector) -> ElfRunner {
-        ElfRunner { launcher_connector, instances: Mutex::new(Vec::new()) }
+        ElfRunner { launcher_connector }
     }
 
     async fn create_runtime_directory<'a>(
@@ -331,11 +329,11 @@ impl ElfRunner {
         ))
     }
 
-    async fn start_async(
+    async fn start_component(
         &self,
         start_info: fsys::ComponentStartInfo,
         server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> Result<(), RunnerError> {
+    ) -> Result<Option<Box<ElfController>>, RunnerError> {
         let resolved_url =
             get_resolved_url(&start_info).map_err(|e| RunnerError::invalid_args("", e))?;
 
@@ -349,6 +347,7 @@ impl ElfRunner {
         let (runtime_dir, mut launch_info) = self
             .load_launch_info(&resolved_url, start_info, &launcher)
             .await
+            .context("loading launch info failed")
             .map_err(|e| RunnerError::component_load_error(&*resolved_url, e))?;
 
         let job_koid = launch_info
@@ -356,6 +355,12 @@ impl ElfRunner {
             .get_koid()
             .map_err(|e| ElfRunnerError::component_job_id_error(resolved_url.clone(), e))?
             .raw_koid();
+
+        let component_job = launch_info
+            .job
+            .as_handle_ref()
+            .duplicate(zx::Rights::SAME_RIGHTS)
+            .expect("handle duplication failed!");
 
         // Launch the component
         let process_koid = async {
@@ -381,36 +386,106 @@ impl ElfRunner {
 
         if let Some(runtime_dir) = runtime_dir {
             self.create_elf_directory(&runtime_dir, &resolved_url, process_koid, job_koid).await?;
-            let mut instances = self.instances.lock().await;
-            instances.push(runtime_dir);
+            let server_stream = server_end.into_stream().expect("failed to convert");
+            let controller =
+                Box::new(ElfController::new(runtime_dir, Job::from(component_job), server_stream));
+            Ok(Some(controller))
+        } else {
+            Ok(None)
         }
+    }
 
-        let server_stream = server_end.into_stream().expect("failed to convert");
-        fasync::spawn(async move {
-            let _ = serve_controller(server_stream);
-        });
+    async fn start_async(
+        &self,
+        start_info: fsys::ComponentStartInfo,
+        server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> Result<(), RunnerError> {
+        // start the component and move any ElfController into a new async
+        // execution context. The ElfController lives until the Future from
+        // `ElfController.serve()` completes. This future completes when the
+        // ElfController is told to stop the component.
+        self.start_component(start_info, server_end)
+            .await
+            .map(|controller_opt| -> Option<()> {
+                controller_opt.and_then(|mut controller| {
+                    fasync::spawn(async move {
+                        let _ = controller.as_mut().serve().await;
+                    });
+                    Some(())
+                })
+            })
+            .map(|_option_unit| ())
+    }
+}
+
+/// Holds information about the Elf component that allows the controller to
+/// interact with and control the remove component.
+struct ElfController {
+    // namespace directory for this component, kept just as a reference to
+    // keep the namespace alive
+    _runtime_dir: RuntimeDirectory,
+    // stream via which the component manager will ask the controller to
+    // manipulate the component
+    request_stream: fsys::ComponentControllerRequestStream,
+    // zircon job to kill when this component exits
+    job: Job,
+}
+
+impl ElfController {
+    pub fn new(
+        runtime_dir: RuntimeDirectory,
+        job: Job,
+        requests: fsys::ComponentControllerRequestStream,
+    ) -> ElfController {
+        // wrap the runtime_dir in an Option so it is explicitly dropped in
+        // `kill()`. In most cases this has no practical effect because the
+        // ElfController typically is dropped after the `serve()` future
+        // returns.
+        return ElfController { _runtime_dir: runtime_dir, job, request_stream: requests };
+    }
+
+    /// Serve the request stream held by this ElfController. The job holding
+    /// the component controlled by this object will be terminated before the
+    /// future completes.
+    pub async fn serve(&mut self) -> Result<(), Error> {
+        while let Ok(Some(request)) = self.request_stream.try_next().await {
+            match request {
+                fsys::ComponentControllerRequest::Stop { control_handle: c } => {
+                    // for now, treat a stop the same as a kill because this
+                    // is not yet implementing proper behavior to first ask the
+                    // remote process to exit
+                    // let _ = self.job.kill();
+                    // c.shutdown();
+                    self.kill(c);
+                    break;
+                }
+                fsys::ComponentControllerRequest::Kill { control_handle: c } => {
+                    self.kill(c);
+                    // let _ = self.job.kill();
+                    // c.shutdown();
+                    break;
+                }
+            }
+        }
 
         Ok(())
     }
-}
 
-async fn serve_controller(
-    mut server_stream: fsys::ComponentControllerRequestStream,
-) -> Result<(), Error> {
-    while let Some(request) = server_stream.try_next().await? {
-        match request {
-            fsys::ComponentControllerRequest::Stop { control_handle: _ } => {
-                println!("stop request");
-            }
-            fsys::ComponentControllerRequest::Kill { control_handle: _ } => {
-                println!("kill request");
-            }
-        }
+    /// Kill the job and shutdown control handle supplied to this function.
+    fn kill(&self, control_handle: fsys::ComponentControllerControlHandle) {
+        let _ = self.job.kill();
+        control_handle.shutdown();
     }
-    Ok(())
 }
 
 impl Runner for ElfRunner {
+    /// Starts a component by creating a new Job and Process for the component.
+    /// The Runner also creates and hosts a namespace for the component. The
+    /// namespace and other runtime state of the component will live until the
+    /// Future returned is dropped or the `server_end` is sent either
+    /// `ComponentController.Stop` or `ComponentController.Kill`. Sending
+    /// `ComponentController.Stop` or `ComponentController.Kill` causes the
+    /// Future to complete.
     fn start(
         &self,
         start_info: fsys::ComponentStartInfo,
@@ -670,5 +745,65 @@ mod tests {
                     .unwrap_err()
             )
         );
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_kill_component() -> Result<(), Error> {
+        let (runtime_dir_client, runtime_dir_server) = zx::Channel::create()?;
+        let start_info = hello_world_startinfo(Some(ServerEnd::new(runtime_dir_server)));
+
+        let _runtime_dir_proxy = DirectoryProxy::from_channel(
+            fasync::Channel::from_channel(runtime_dir_client).unwrap(),
+        );
+
+        let args = Arguments {
+            use_builtin_process_launcher: should_use_builtin_process_launcher(),
+            ..Default::default()
+        };
+        let launcher_connector = ProcessLauncherConnector::new(&args);
+        let runner = ElfRunner::new(launcher_connector);
+        let (client_endpoint, server_endpoint) =
+            create_endpoints::<fsys::ComponentControllerMarker>()
+                .expect("could not create component controller endpoints");
+
+        let mut controller = runner
+            .start_component(start_info, server_endpoint)
+            .await
+            .expect("hello_world start failed")
+            .unwrap();
+
+        let job_copy = Job::from(
+            controller
+                .job
+                .as_handle_ref()
+                .duplicate(zx::Rights::SAME_RIGHTS)
+                .expect("job handle duplication failed"),
+        );
+
+        fasync::spawn(async move {
+            let _ = controller.as_mut().serve().await;
+        });
+
+        let job_info = job_copy.info()?;
+        if job_info.exited {
+            return Err(format_err!("job exited unexpectedly."));
+        }
+
+        client_endpoint
+            .into_proxy()
+            .expect("conversion to proxy failed.")
+            .stop()
+            .expect("FIDL error returned from stop request to controller");
+
+        let h = job_copy.as_handle_ref();
+        fasync::OnSignals::new(&h, zx::Signals::TASK_TERMINATED)
+            .await
+            .expect("failed waiting for termination signal");
+
+        let job_info = job_copy.info()?;
+        if !job_info.exited {
+            return Err(format_err!("job should have exited, but did not."));
+        }
+        Ok(())
     }
 }
