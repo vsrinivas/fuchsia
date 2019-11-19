@@ -128,8 +128,8 @@ class MessageDecoder {
     uint64_t new_offset = (next_object_offset_ + size + 7) & ~7;
     if (new_offset > num_bytes_) {
       AddError() << std::hex << (absolute_offset_ + next_object_offset_) << std::dec
-                 << ": Not enough data to decode (needs " << size << ", remains "
-                 << (num_bytes_ - next_object_offset_) << ")\n";
+                 << ": Not enough data to decode (needs " << (new_offset - next_object_offset_)
+                 << ", remains " << (num_bytes_ - next_object_offset_) << ")\n";
       new_offset = num_bytes_;
     }
     next_object_offset_ = new_offset;

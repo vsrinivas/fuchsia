@@ -177,12 +177,34 @@ bool MessageDecoderDispatcher::DecodeMessage(uint64_t process_koid, zx_handle_t 
   if (matched_request || matched_response) {
     return true;
   }
-  os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
-     << "request errors" << colors_.reset << ":\n"
-     << request_error_stream.str();
-  os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
-     << "response errors" << colors_.reset << ":\n"
-     << response_error_stream.str();
+  std::string request_errors = request_error_stream.str();
+  if (!request_errors.empty()) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
+       << "request errors" << colors_.reset << ":\n"
+       << request_errors;
+    if (decoded_request != nullptr) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
+         << message_direction << "request" << colors_.reset << ' ' << colors_.green
+         << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
+      decoded_request->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
+                                   display_options_.columns);
+      os << '\n';
+    }
+  }
+  std::string response_errors = response_error_stream.str();
+  if (!response_errors.empty()) {
+    os << line_header << std::string(tabs * kTabSize, ' ') << colors_.red << message_direction
+       << "response errors" << colors_.reset << ":\n"
+       << response_errors;
+    if (decoded_response != nullptr) {
+      os << line_header << std::string(tabs * kTabSize, ' ') << colors_.white_on_magenta
+         << message_direction << "request" << colors_.reset << ' ' << colors_.green
+         << method->enclosing_interface().name() << '.' << method->name() << colors_.reset << " = ";
+      decoded_response->PrettyPrint(os, colors_, header, line_header, tabs, tabs * kTabSize,
+                                    display_options_.columns);
+      os << '\n';
+    }
+  }
   return false;
 }
 

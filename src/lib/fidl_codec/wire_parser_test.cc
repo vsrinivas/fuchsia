@@ -427,16 +427,12 @@ TEST_DECODE_WIRE(VectorTwoElt, Vector, R"({"v_1":["1", "2"]})",
                  "{ v_1: #gre#vector<int32>#rst# = [ #blu#1#rst#, #blu#2#rst# ] }",
                  two_param_vector);
 
-namespace {
-
 std::array<std::string, 2> TwoStringArrayFromVals(const std::string& v1, const std::string& v2) {
   std::array<std::string, 2> brother_array;
   brother_array[0] = v1;
   brother_array[1] = v2;
   return brother_array;
 }
-
-}  // namespace
 
 TEST_DECODE_WIRE(TwoStringArrayInt, TwoStringArrayInt, R"({"arr":["harpo","chico"], "i32":"1"})",
                  R"({ arr: #gre#array<string>#rst# = [ #red#"harpo"#rst#, #red#"chico"#rst# ], )" +

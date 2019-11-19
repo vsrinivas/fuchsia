@@ -45,6 +45,7 @@ static_library("fidl_codec") {
 executable("fidl_codec_test_bin") {
   testonly = true
   sources = [
+    "dispatcher_test.cc",
     "library_loader_test.cc",
     "message_decoder_test.cc",
     "wire_object_test.cc",
