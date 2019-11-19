@@ -101,7 +101,7 @@ class Weather extends UiSpec {
     var properties = data['properties'];
     location
       ..observation = properties['textDescription']
-      ..tempInDegrees = properties['temperature']['value'].toDouble();
+      ..tempInDegrees = properties['temperature']['value']?.toDouble();
   }
 
   // Read the string response from the [HttpClientResponse].
