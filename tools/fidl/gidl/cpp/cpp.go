@@ -17,156 +17,222 @@ import (
 	gidlmixer "gidl/mixer"
 )
 
-var tmpls = template.Must(template.New("tmpls").Parse(`
-{{- define "Header"}}
+var tmpl = template.Must(template.New("tmpl").Parse(`
+#include <conformance/cpp/fidl.h>
 #include <gtest/gtest.h>
 
-#include <lib/fidl/cpp/test/test_util.h>
+#include "lib/fidl/cpp/test/test_util.h"
 
-#include <conformance/cpp/fidl.h>
+{{ range .EncodeSuccessCases }}
+TEST(Conformance, {{ .Name }}_Encode) {
+	{{ .ValueBuild }}
+	const auto expected = std::vector<uint8_t>{
+		{{ .Bytes }}
+	};
+	{{/* Must use a variable because macros don't understand commas in template args. */}}
+	const auto result =
+		fidl::test::util::ValueToBytes<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
+			{{ .ValueVar }}, expected);
+	EXPECT_TRUE(result);
+}
+{{ end }}
 
-{{end -}}
+{{ range .DecodeSuccessCases }}
+TEST(Conformance, {{ .Name }}_Decode) {
+	{{ .ValueBuild }}
+	auto bytes = std::vector<uint8_t>{
+		{{ .Bytes }}
+	};
+	EXPECT_TRUE(fidl::Equals(
+		fidl::test::util::DecodedBytes<decltype({{ .ValueVar }})>(bytes),
+		{{ .ValueVar }}));
+}
+{{ end }}
 
-{{- define "EncodeSuccessCase"}}
+{{ range .EncodeFailureCases }}
+TEST(Conformance, {{ .Name }}_Encode_Failure) {
+  {{ .ValueBuild }}
+  fidl::test::util::CheckEncodeFailure<decltype({{ .ValueVar }}), {{ .EncoderType }}>(
+	  {{ .ValueVar }}, {{ .ErrorCode }});
+}
+{{ end }}
 
-TEST(Conformance, {{ .name }}_Encode) {
-  {{ .value_build }}
-
-  auto expected = std::vector<uint8_t>{
-    {{ .bytes }}
+{{ range .DecodeFailureCases }}
+TEST(Conformance, {{ .Name }}_Decode_Failure) {
+  auto bytes = std::vector<uint8_t>{
+    {{ .Bytes }}
   };
-
-  auto result = ::fidl::test::util::ValueToBytes<decltype({{ .value_var }}), {{ .encoder_type }}>({{ .value_var }}, expected);
-  EXPECT_TRUE(result);
+  fidl::test::util::CheckDecodeFailure<{{ .ValueType }}>(bytes, {{ .ErrorCode }});
 }
-
-{{end -}}
-
-{{- define "DecodeSuccessCase"}}
-
-TEST(Conformance, {{ .name }}_Decode) {
-  auto input = std::vector<uint8_t>{
-    {{ .bytes }}
-  };
-
-  {{ .value_build }}
-
-  auto expected = ::fidl::test::util::DecodedBytes<decltype({{ .value_var }})>(input);
-  EXPECT_TRUE(::fidl::Equals({{ .value_var }}, expected));
-}
-
-{{end -}}
-
-{{- define "EncodeFailureCase"}}
-
-TEST(Conformance, {{ .name }}_Encode_Failure) {
-  {{ .value_build }}
-
-  zx_status_t expected = {{ .error_code }};
-
-  ::fidl::test::util::CheckEncodeFailure<decltype({{ .value_var }}), {{ .encoder_type }}>({{ .value_var }}, expected);
-}
-
-{{end -}}
-
-{{- define "DecodeFailureCase"}}
-
-TEST(Conformance, {{ .name }}_Decode_Failure) {
-  auto input = std::vector<uint8_t>{
-    {{ .bytes }}
-  };
-  zx_status_t expected = {{ .error_code }};
-
-  ::fidl::test::util::CheckDecodeFailure<{{ .value_type }}>(input, expected);
-}
-
-{{end -}}
+{{ end }}
 `))
 
+type tmplInput struct {
+	EncodeSuccessCases []encodeSuccessCase
+	DecodeSuccessCases []decodeSuccessCase
+	EncodeFailureCases []encodeFailureCase
+	DecodeFailureCases []decodeFailureCase
+}
+
+type encodeSuccessCase struct {
+	Name, EncoderType, ValueBuild, ValueVar, Bytes string
+}
+
+type decodeSuccessCase struct {
+	Name, ValueBuild, ValueVar, Bytes string
+}
+
+type encodeFailureCase struct {
+	Name, EncoderType, ValueBuild, ValueVar, ErrorCode string
+}
+
+type decodeFailureCase struct {
+	Name, ValueType, Bytes, ErrorCode string
+}
+
+// Generate generates High-Level C++ tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
-	if err := tmpls.ExecuteTemplate(wr, "Header", nil); err != nil {
+	encodeSuccessCases, err := encodeSuccessCases(gidl.EncodeSuccess, fidl)
+	if err != nil {
 		return err
 	}
-	// Note: while the encodeSuccess and decodeSuccess loops look identical, they operate
-	// on different structures so are hard to consolidate.
-	for _, encodeSuccess := range gidl.EncodeSuccess {
+	decodeSuccessCases, err := decodeSuccessCases(gidl.DecodeSuccess, fidl)
+	if err != nil {
+		return err
+	}
+	encodeFailureCases, err := encodeFailureCases(gidl.EncodeFailure, fidl)
+	if err != nil {
+		return err
+	}
+	decodeFailureCases, err := decodeFailureCases(gidl.DecodeFailure, fidl)
+	if err != nil {
+		return err
+	}
+	input := tmplInput{
+		EncodeSuccessCases: encodeSuccessCases,
+		DecodeSuccessCases: decodeSuccessCases,
+		EncodeFailureCases: encodeFailureCases,
+		DecodeFailureCases: decodeFailureCases,
+	}
+	return tmpl.Execute(wr, input)
+}
+
+func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.Root) ([]encodeSuccessCase, error) {
+	var encodeSuccessCases []encodeSuccessCase
+	for _, encodeSuccess := range gidlEncodeSuccesses {
 		decl, err := gidlmixer.ExtractDeclaration(encodeSuccess.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
+			return nil, fmt.Errorf("encodeSuccess %s: %s", encodeSuccess.Name, err)
 		}
-
+		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
+			continue
+		}
 		var valueBuilder cppValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
-
-		if err := tmpls.ExecuteTemplate(wr, "EncodeSuccessCase", map[string]interface{}{
-			"name":         encodeSuccess.Name,
-			"value_build":  valueBuilder.String(),
-			"value_var":    valueBuilder.lastVar,
-			"bytes":        bytesBuilder(encodeSuccess.Bytes),
-			"encoder_type": fmt.Sprintf("::fidl::test::util::EncoderFactory%s", fidlcommon.ToUpperCamelCase(encodeSuccess.WireFormat.String())),
-		}); err != nil {
-			return err
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		for _, encoding := range encodeSuccess.Encodings {
+			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+				Name:        testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				EncoderType: encoderType(encoding.WireFormat),
+				ValueBuild:  valueBuild,
+				ValueVar:    valueVar,
+				Bytes:       bytesBuilder(encoding.Bytes),
+			})
 		}
 	}
-	for _, decodeSuccess := range gidl.DecodeSuccess {
+	return encodeSuccessCases, nil
+}
+
+func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]decodeSuccessCase, error) {
+	var decodeSuccessCases []decodeSuccessCase
+	for _, decodeSuccess := range gidlDecodeSuccesses {
 		decl, err := gidlmixer.ExtractDeclaration(decodeSuccess.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
+			return nil, fmt.Errorf("decodeSuccess %s: %s", decodeSuccess.Name, err)
 		}
-
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
 		var valueBuilder cppValueBuilder
 		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
-
-		if err := tmpls.ExecuteTemplate(wr, "DecodeSuccessCase", map[string]interface{}{
-			"name":        decodeSuccess.Name,
-			"value_build": valueBuilder.String(),
-			"value_var":   valueBuilder.lastVar,
-			"bytes": bytesBuilder(append(
-				transactionHeaderBytes(decodeSuccess.WireFormat),
-				decodeSuccess.Bytes...)),
-		}); err != nil {
-			return err
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		for _, encoding := range decodeSuccess.Encodings {
+			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				Bytes: bytesBuilder(append(
+					transactionHeaderBytes(encoding.WireFormat),
+					encoding.Bytes...)),
+			})
 		}
 	}
-	for _, encodeFailure := range gidl.EncodeFailure {
+	return decodeSuccessCases, nil
+}
+
+func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.Root) ([]encodeFailureCase, error) {
+	var encodeFailureCases []encodeFailureCase
+	for _, encodeFailure := range gidlEncodeFailures {
 		decl, err := gidlmixer.ExtractDeclarationUnsafe(encodeFailure.Value, fidl)
 		if err != nil {
-			return fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
+			return nil, fmt.Errorf("encodeFailure %s: %s", encodeFailure.Name, err)
+		}
+		if gidlir.ContainsUnknownField(encodeFailure.Value) {
+			continue
 		}
 
 		var valueBuilder cppValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeFailure.Value, decl)
-
-		if err := tmpls.ExecuteTemplate(wr, "EncodeFailureCase", map[string]interface{}{
-			"name":         encodeFailure.Name,
-			"value_build":  valueBuilder.String(),
-			"value_var":    valueBuilder.lastVar,
-			"error_code":   cppErrorCode(encodeFailure.Err),
-			"encoder_type": fmt.Sprintf("::fidl::test::util::EncoderFactory%s", fidlcommon.ToUpperCamelCase(encodeFailure.WireFormat.String())),
-		}); err != nil {
-			return err
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		errorCode := cppErrorCode(encodeFailure.Err)
+		for _, wireFormat := range encodeFailure.WireFormats {
+			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+				Name:        testCaseName(encodeFailure.Name, wireFormat),
+				EncoderType: encoderType(wireFormat),
+				ValueBuild:  valueBuild,
+				ValueVar:    valueVar,
+				ErrorCode:   errorCode,
+			})
 		}
 	}
-	for _, decodeFailure := range gidl.DecodeFailure {
-		if err := tmpls.ExecuteTemplate(wr, "DecodeFailureCase", map[string]interface{}{
-			"name":       decodeFailure.Name,
-			"value_type": cppType(decodeFailure.Type),
-			"bytes":      bytesBuilder(decodeFailure.Bytes),
-			"error_code": cppErrorCode(decodeFailure.Err),
-		}); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return encodeFailureCases, nil
 }
 
-func transactionHeaderBytes(wf gidlir.WireFormat) []byte {
-	// See the FIDL wire format specif for the transaction header layout.
-	switch wf {
+func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.Root) ([]decodeFailureCase, error) {
+	var decodeFailureCases []decodeFailureCase
+	for _, decodeFailure := range gidlDecodeFailures {
+		valueType := cppType(decodeFailure.Type)
+		errorCode := cppErrorCode(decodeFailure.Err)
+		for _, encoding := range decodeFailure.Encodings {
+			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
+				ValueType: valueType,
+				Bytes: bytesBuilder(append(
+					transactionHeaderBytes(encoding.WireFormat),
+					encoding.Bytes...)),
+				ErrorCode: errorCode,
+			})
+		}
+	}
+	return decodeFailureCases, nil
+}
+
+func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("%s_%s", baseName,
+		fidlcommon.ToUpperCamelCase(wireFormat.String()))
+}
+
+func encoderType(wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("fidl::test::util::EncoderFactory%s",
+		fidlcommon.ToUpperCamelCase(wireFormat.String()))
+}
+
+func transactionHeaderBytes(wireFormat gidlir.WireFormat) []byte {
+	// See the FIDL wire format spec for the transaction header layout:
+	switch wireFormat {
 	case gidlir.V1WireFormat:
 		// Flags[0] == 1 (union represented as xunion bytes)
 		return []byte{
@@ -179,7 +245,7 @@ func transactionHeaderBytes(wf gidlir.WireFormat) []byte {
 			0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 		}
 	default:
-		panic("unknown wire format")
+		panic(fmt.Sprintf("unexpected wire format %v", wireFormat))
 	}
 }
 

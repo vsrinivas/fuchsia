@@ -143,15 +143,10 @@ func (kind bodyElement) String() string {
 	}
 }
 
-type wireFormatBytes struct {
-	WireFormat ir.WireFormat
-	Bytes      []byte
-}
-
 type body struct {
 	Type              string
 	Value             ir.Value
-	Bytes             []wireFormatBytes
+	Encodings         []ir.Encoding
 	Err               ir.ErrorCode
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
@@ -168,70 +163,58 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			for _, wfb := range body.Bytes {
-				encodeSuccess := ir.EncodeSuccess{
-					Name:              ir.TestCaseName(name, wfb.WireFormat),
-					WireFormat:        wfb.WireFormat,
-					Value:             body.Value,
-					Bytes:             wfb.Bytes,
-					BindingsAllowlist: body.BindingsAllowlist,
-					BindingsDenylist:  body.BindingsDenylist,
-				}
-				all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
-				decodeSuccess := ir.DecodeSuccess{
-					Name:              ir.TestCaseName(name, wfb.WireFormat),
-					WireFormat:        wfb.WireFormat,
-					Value:             body.Value,
-					Bytes:             wfb.Bytes,
-					BindingsAllowlist: body.BindingsAllowlist,
-					BindingsDenylist:  body.BindingsDenylist,
-				}
-				all.DecodeSuccess = append(all.DecodeSuccess, decodeSuccess)
+			encodeSuccess := ir.EncodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Encodings:         body.Encodings,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
+			all.EncodeSuccess = append(all.EncodeSuccess, encodeSuccess)
+			decodeSuccess := ir.DecodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Encodings:         body.Encodings,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
+			}
+			all.DecodeSuccess = append(all.DecodeSuccess, decodeSuccess)
 		},
 	},
 	"encode_success": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
-			for _, wfb := range body.Bytes {
-				result := ir.EncodeSuccess{
-					Name:              ir.TestCaseName(name, wfb.WireFormat),
-					WireFormat:        wfb.WireFormat,
-					Value:             body.Value,
-					Bytes:             wfb.Bytes,
-					BindingsAllowlist: body.BindingsAllowlist,
-				}
-				all.EncodeSuccess = append(all.EncodeSuccess, result)
+			result := ir.EncodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Encodings:         body.Encodings,
+				BindingsAllowlist: body.BindingsAllowlist,
 			}
+			all.EncodeSuccess = append(all.EncodeSuccess, result)
 		},
 	},
 	"decode_success": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isBytes: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true},
 		setter: func(name string, body body, all *ir.All) {
-			for _, wfb := range body.Bytes {
-				result := ir.DecodeSuccess{
-					Name:              ir.TestCaseName(name, wfb.WireFormat),
-					WireFormat:        wfb.WireFormat,
-					Value:             body.Value,
-					Bytes:             wfb.Bytes,
-					BindingsAllowlist: body.BindingsAllowlist,
-				}
-				all.DecodeSuccess = append(all.DecodeSuccess, result)
+			result := ir.DecodeSuccess{
+				Name:              name,
+				Value:             body.Value,
+				Encodings:         body.Encodings,
+				BindingsAllowlist: body.BindingsAllowlist,
 			}
+			all.DecodeSuccess = append(all.DecodeSuccess, result)
 		},
 	},
 	"encode_failure": {
 		requiredKinds: map[bodyElement]bool{isValue: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			// TODO(fxb/39579): Generate a test case for each wire format.
-			wf := ir.DefaultWireFormat
 			result := ir.EncodeFailure{
-				Name:              ir.TestCaseName(name, wf),
-				WireFormat:        wf,
+				Name:              name,
 				Value:             body.Value,
+				WireFormats:       ir.AllWireFormats(),
 				Err:               body.Err,
 				BindingsAllowlist: body.BindingsAllowlist,
 				BindingsDenylist:  body.BindingsDenylist,
@@ -243,18 +226,15 @@ var sections = map[string]sectionMetadata{
 		requiredKinds: map[bodyElement]bool{isType: true, isBytes: true, isErr: true},
 		optionalKinds: map[bodyElement]bool{isBindingsAllowlist: true, isBindingsDenylist: true},
 		setter: func(name string, body body, all *ir.All) {
-			for _, wfb := range body.Bytes {
-				result := ir.DecodeFailure{
-					Name:              ir.TestCaseName(name, wfb.WireFormat),
-					WireFormat:        wfb.WireFormat,
-					Type:              body.Type,
-					Bytes:             wfb.Bytes,
-					Err:               body.Err,
-					BindingsAllowlist: body.BindingsAllowlist,
-					BindingsDenylist:  body.BindingsDenylist,
-				}
-				all.DecodeFailure = append(all.DecodeFailure, result)
+			result := ir.DecodeFailure{
+				Name:              name,
+				Type:              body.Type,
+				Encodings:         body.Encodings,
+				Err:               body.Err,
+				BindingsAllowlist: body.BindingsAllowlist,
+				BindingsDenylist:  body.BindingsDenylist,
 			}
+			all.DecodeFailure = append(all.DecodeFailure, result)
 		},
 	},
 }
@@ -352,11 +332,11 @@ func (p *Parser) parseSingleBodyElement(result *body, all map[bodyElement]bool) 
 		result.Value = val
 		kind = isValue
 	case "bytes":
-		bytes, err := p.parseByteSection()
+		encodings, err := p.parseByteSection()
 		if err != nil {
 			return err
 		}
-		result.Bytes = bytes
+		result.Encodings = encodings
 		kind = isBytes
 	case "err":
 		errorCode, err := p.parseErrorCode()
@@ -521,19 +501,21 @@ func (p *Parser) parseTextSlice() ([]string, error) {
 	return result, nil
 }
 
-func (p *Parser) parseByteSection() ([]wireFormatBytes, error) {
-	if p.peekTokenKind(tLsquare) {
+func (p *Parser) parseByteSection() ([]ir.Encoding, error) {
+	firstTok := p.peekToken()
+	if firstTok.kind == tLsquare {
 		if b, err := p.parseByteList(); err == nil {
-			return []wireFormatBytes{{
-				WireFormat: ir.DefaultWireFormat,
+			return []ir.Encoding{{
+				// Default to the old wire format.
+				WireFormat: ir.OldWireFormat,
 				Bytes:      b,
 			}}, nil
 		} else {
 			return nil, err
 		}
-
 	}
-	res := []wireFormatBytes{}
+	var res []ir.Encoding
+	wireFormats := map[ir.WireFormat]struct{}{}
 	err := p.parseCommaSeparated(tLacco, tRacco, func() error {
 		tok, ok := p.consumeToken(tText)
 		if !ok {
@@ -546,11 +528,15 @@ func (p *Parser) parseByteSection() ([]wireFormatBytes, error) {
 		if err != nil {
 			return err
 		}
-		wf, err := ir.ParseWireFormat(tok.value)
+		wf, err := ir.WireFormatByName(tok.value)
 		if err != nil {
 			return err
 		}
-		res = append(res, wireFormatBytes{
+		if _, ok := wireFormats[wf]; ok {
+			return p.newParseError(tok, "duplicate wire format: %s", tok.value)
+		}
+		wireFormats[wf] = struct{}{}
+		res = append(res, ir.Encoding{
 			WireFormat: wf,
 			Bytes:      b,
 		})
@@ -558,6 +544,9 @@ func (p *Parser) parseByteSection() ([]wireFormatBytes, error) {
 	})
 	if err != nil {
 		return nil, err
+	}
+	if len(res) == 0 {
+		return nil, p.newParseError(firstTok, "no bytes provided for any wire format")
 	}
 	return res, nil
 }

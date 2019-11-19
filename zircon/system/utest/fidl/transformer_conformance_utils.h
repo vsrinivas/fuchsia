@@ -7,6 +7,14 @@
 
 #include <lib/fidl/transformer.h>
 
+#include "zircon/types.h"
+
+// Runs `fidl_transform` but does not check anything. This is used in failure
+// tests to make sure the transformer does not crash on invalid inputs.
+void run_fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
+                        const uint8_t* src_bytes, uint32_t src_num_bytes);
+
+// Asserts that `fidl_transform` succeeds and produces the expected bytes.
 bool check_fidl_transform(fidl_transformation_t transformation, const fidl_type_t* type,
                           const uint8_t* src_bytes, uint32_t src_num_bytes,
                           const uint8_t* expected_bytes, uint32_t expected_num_bytes);

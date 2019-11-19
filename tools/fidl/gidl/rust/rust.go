@@ -121,6 +121,10 @@ func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
 	return tmpl.Execute(wr, input)
 }
 
+func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
+	return fidlcommon.ToSnakeCase(fmt.Sprintf("%s_%s", baseName, wireFormat))
+}
+
 func encodingContext(wireFormat gidlir.WireFormat) string {
 	switch wireFormat {
 	case gidlir.OldWireFormat:
@@ -142,12 +146,15 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		if gidlir.ContainsUnknownField(encodeSuccess.Value) {
 			continue
 		}
-		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-			Name:    fidlcommon.ToSnakeCase(encodeSuccess.Name),
-			Context: encodingContext(encodeSuccess.WireFormat),
-			Value:   visit(encodeSuccess.Value, decl),
-			Bytes:   bytesBuilder(encodeSuccess.Bytes),
-		})
+		value := visit(encodeSuccess.Value, decl)
+		for _, encoding := range encodeSuccess.Encodings {
+			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+				Name:    testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				Context: encodingContext(encoding.WireFormat),
+				Value:   value,
+				Bytes:   bytesBuilder(encoding.Bytes),
+			})
+		}
 	}
 	return encodeSuccessCases, nil
 }
@@ -162,13 +169,17 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		if gidlir.ContainsUnknownField(decodeSuccess.Value) {
 			continue
 		}
-		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-			Name:      fidlcommon.ToSnakeCase(decodeSuccess.Name),
-			Context:   encodingContext(decodeSuccess.WireFormat),
-			ValueType: rustType(decodeSuccess.Value.(gidlir.Object).Name),
-			Value:     visit(decodeSuccess.Value, decl),
-			Bytes:     bytesBuilder(decodeSuccess.Bytes),
-		})
+		valueType := rustType(decodeSuccess.Value.(gidlir.Object).Name)
+		value := visit(decodeSuccess.Value, decl)
+		for _, encoding := range decodeSuccess.Encodings {
+			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+				Name:      testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				Context:   encodingContext(encoding.WireFormat),
+				ValueType: valueType,
+				Value:     value,
+				Bytes:     bytesBuilder(encoding.Bytes),
+			})
+		}
 	}
 	return decodeSuccessCases, nil
 }
@@ -187,12 +198,16 @@ func encodeFailureCases(gidlEncodeFailures []gidlir.EncodeFailure, fidl fidlir.R
 		if err != nil {
 			return nil, err
 		}
-		encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
-			Name:      fidlcommon.ToSnakeCase(encodeFailure.Name),
-			Context:   encodingContext(encodeFailure.WireFormat),
-			Value:     visit(encodeFailure.Value, decl),
-			ErrorCode: errorCode,
-		})
+		value := visit(encodeFailure.Value, decl)
+
+		for _, wireFormat := range encodeFailure.WireFormats {
+			encodeFailureCases = append(encodeFailureCases, encodeFailureCase{
+				Name:      testCaseName(encodeFailure.Name, wireFormat),
+				Context:   encodingContext(wireFormat),
+				Value:     value,
+				ErrorCode: errorCode,
+			})
+		}
 	}
 	return encodeFailureCases, nil
 }
@@ -204,13 +219,16 @@ func decodeFailureCases(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.R
 		if err != nil {
 			return nil, err
 		}
-		decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
-			Name:      fidlcommon.ToSnakeCase(decodeFailure.Name),
-			Context:   encodingContext(decodeFailure.WireFormat),
-			ValueType: rustType(decodeFailure.Type),
-			Bytes:     bytesBuilder(decodeFailure.Bytes),
-			ErrorCode: errorCode,
-		})
+		valueType := rustType(decodeFailure.Type)
+		for _, encoding := range decodeFailure.Encodings {
+			decodeFailureCases = append(decodeFailureCases, decodeFailureCase{
+				Name:      testCaseName(decodeFailure.Name, encoding.WireFormat),
+				Context:   encodingContext(encoding.WireFormat),
+				ValueType: valueType,
+				Bytes:     bytesBuilder(encoding.Bytes),
+				ErrorCode: errorCode,
+			})
+		}
 	}
 	return decodeFailureCases, nil
 }

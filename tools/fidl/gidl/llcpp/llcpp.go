@@ -11,6 +11,7 @@ import (
 	"strings"
 	"text/template"
 
+	fidlcommon "fidl/compiler/backend/common"
 	fidlir "fidl/compiler/backend/types"
 	gidlir "gidl/ir"
 	gidlmixer "gidl/mixer"
@@ -29,29 +30,21 @@ var tmpl = template.Must(template.New("tmpl").Parse(`
 
 {{ range .EncodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Encode) {
+	{{ .ValueBuild }}
 	const auto expected = std::vector<uint8_t>{
 		{{ .Bytes }}
 	};
-
-	{
-		{{ .ValueBuild }}
-
-		EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&{{ .ValueVarName }}, expected));
-	}
+	EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&{{ .ValueVar }}, expected));
 }
 {{ end }}
 
 {{ range .DecodeSuccessCases }}
 TEST(Conformance, {{ .Name }}_Decode) {
+	{{ .ValueBuild }}
 	auto bytes = std::vector<uint8_t>{
 		{{ .Bytes }}
 	};
-
-	{
-		{{ .ValueBuild }}
-
-		EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&{{ .ValueVarName }}, std::move(bytes)));
-	}
+	EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&{{ .ValueVar }}, std::move(bytes)));
 }
 {{ end }}
 `))
@@ -62,11 +55,11 @@ type tmplInput struct {
 }
 
 type encodeSuccessCase struct {
-	Name, ValueBuild, ValueVarName, Bytes string
+	Name, ValueBuild, ValueVar, Bytes string
 }
 
 type decodeSuccessCase struct {
-	Name, ValueBuild, ValueVarName, Bytes string
+	Name, ValueBuild, ValueVar, Bytes string
 }
 
 // Generate generates Low-Level C++ tests.
@@ -97,12 +90,19 @@ func encodeSuccessCases(gidlEncodeSuccesses []gidlir.EncodeSuccess, fidl fidlir.
 		}
 		var valueBuilder llcppValueBuilder
 		gidlmixer.Visit(&valueBuilder, encodeSuccess.Value, decl)
-		encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
-			Name:         encodeSuccess.Name,
-			ValueBuild:   valueBuilder.String(),
-			ValueVarName: valueBuilder.lastVar,
-			Bytes:        bytesBuilder(encodeSuccess.Bytes),
-		})
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		for _, encoding := range encodeSuccess.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			encodeSuccessCases = append(encodeSuccessCases, encodeSuccessCase{
+				Name:       testCaseName(encodeSuccess.Name, encoding.WireFormat),
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				Bytes:      bytesBuilder(encoding.Bytes),
+			})
+		}
 	}
 	return encodeSuccessCases, nil
 }
@@ -119,14 +119,29 @@ func decodeSuccessCases(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.
 		}
 		var valueBuilder llcppValueBuilder
 		gidlmixer.Visit(&valueBuilder, decodeSuccess.Value, decl)
-		decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
-			Name:         decodeSuccess.Name,
-			ValueBuild:   valueBuilder.String(),
-			ValueVarName: valueBuilder.lastVar,
-			Bytes:        bytesBuilder(decodeSuccess.Bytes),
-		})
+		valueBuild := valueBuilder.String()
+		valueVar := valueBuilder.lastVar
+		for _, encoding := range decodeSuccess.Encodings {
+			if !wireFormatSupported(encoding.WireFormat) {
+				continue
+			}
+			decodeSuccessCases = append(decodeSuccessCases, decodeSuccessCase{
+				Name:       testCaseName(decodeSuccess.Name, encoding.WireFormat),
+				ValueBuild: valueBuild,
+				ValueVar:   valueVar,
+				Bytes:      bytesBuilder(encoding.Bytes),
+			})
+		}
 	}
 	return decodeSuccessCases, nil
+}
+
+func wireFormatSupported(wireFormat gidlir.WireFormat) bool {
+	return wireFormat == gidlir.OldWireFormat
+}
+
+func testCaseName(baseName string, wireFormat gidlir.WireFormat) string {
+	return fmt.Sprintf("%s_%s", baseName, fidlcommon.ToUpperCamelCase(wireFormat.String()))
 }
 
 // TODO(fxb/39685) extract out to common library

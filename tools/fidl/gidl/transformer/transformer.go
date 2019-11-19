@@ -23,32 +23,31 @@ var tmpl = template.Must(template.New("tmpls").Parse(`
 
 namespace {
 
-{{ range .TestCases }}
-uint8_t {{ .Name }}_old_bytes[] = { {{ .OldBytes }} };
-
-uint8_t {{ .Name }}_v1_bytes[] = { {{ .V1Bytes }} };
+{{ range .TestArrays }}
+uint8_t {{ .Name }}[] = { {{ .Bytes }} };
 {{ end }}
 
-{{ range .TestCases }}
-bool test_{{ .Name }}_old_to_v1() {
+{{ range .SuccessCases }}
+bool test_{{ .Name }}() {
 	BEGIN_TEST;
 	ASSERT_TRUE(check_fidl_transform(
-		FIDL_TRANSFORMATION_OLD_TO_V1,
-		&{{ .OldFidlType }},
-		{{ .Name }}_old_bytes, sizeof {{ .Name }}_old_bytes,
-		{{ .Name }}_v1_bytes, sizeof {{ .Name }}_v1_bytes
+		{{ .Transformation }},
+		&{{ .FidlType }},
+		{{ .SrcBytesVar }}, sizeof {{ .SrcBytesVar }},
+		{{ .ExpectedBytesVar }}, sizeof {{ .ExpectedBytesVar }}
 	));
 	END_TEST;
 }
+{{ end }}
 
-bool test_{{ .Name }}_v1_to_old() {
+{{ range .FailureCases }}
+bool test_{{ .Name }}_failure() {
 	BEGIN_TEST;
-	ASSERT_TRUE(check_fidl_transform(
-		FIDL_TRANSFORMATION_V1_TO_OLD,
-		&{{ .V1FidlType }},
-		{{ .Name }}_v1_bytes, sizeof {{ .Name }}_v1_bytes,
-		{{ .Name }}_old_bytes, sizeof {{ .Name }}_old_bytes
-	));
+	run_fidl_transform(
+		{{ .Transformation }},
+		&{{ .FidlType }},
+		{{ .SrcBytesVar }}, sizeof {{ .SrcBytesVar }}
+	);
 	END_TEST;
 }
 {{ end }}
@@ -56,58 +55,161 @@ bool test_{{ .Name }}_v1_to_old() {
 } // namespace
 
 BEGIN_TEST_CASE(transformer_conformance)
-{{ range .TestCases }}
-RUN_TEST(test_{{ .Name }}_old_to_v1)
-RUN_TEST(test_{{ .Name }}_v1_to_old)
+{{ range .SuccessCases }}
+RUN_TEST(test_{{ .Name }})
+{{ end }}
+{{ range .FailureCases }}
+RUN_TEST(test_{{ .Name }}_failure)
 {{ end }}
 END_TEST_CASE(transformer_conformance)
 `))
 
 type tmplInput struct {
-	TestCases []testCase
+	TestArrays   []testArray
+	SuccessCases []successCase
+	FailureCases []failureCase
 }
 
-type testCase struct {
-	Name, OldFidlType, V1FidlType, OldBytes, V1Bytes string
+type testArray struct {
+	Name, Bytes string
+}
+
+type successCase struct {
+	Name, Transformation, FidlType, SrcBytesVar, ExpectedBytesVar string
+}
+
+type failureCase struct {
+	Name, Transformation, FidlType, SrcBytesVar string
 }
 
 // Generate generates transformer tests.
 func Generate(wr io.Writer, gidl gidlir.All, fidl fidlir.Root) error {
+	successArrays, successCases, err := successTests(gidl.DecodeSuccess, fidl)
+	if err != nil {
+		return err
+	}
+	failureArrays, failureCases, err := failureTests(gidl.DecodeFailure, fidl)
+	if err != nil {
+		return err
+	}
 	input := tmplInput{
-		TestCases: testCases(gidl.EncodeSuccess),
+		TestArrays:   append(successArrays, failureArrays...),
+		SuccessCases: successCases,
+		FailureCases: failureCases,
 	}
 	return tmpl.Execute(wr, input)
 }
 
-func testCases(gidlEncodeSuccesses []gidlir.EncodeSuccess) []testCase {
-	v1BytesByName := make(map[string][]byte)
-	for _, encodeSuccess := range gidlEncodeSuccesses {
-		if encodeSuccess.WireFormat != gidlir.V1WireFormat {
-			continue
+func successTests(gidlDecodeSuccesses []gidlir.DecodeSuccess, fidl fidlir.Root) ([]testArray, []successCase, error) {
+	var arrays []testArray
+	var cases []successCase
+	for _, decodeSuccess := range gidlDecodeSuccesses {
+		typeName := decodeSuccess.Value.(gidlir.Object).Name
+		for _, encoding := range decodeSuccess.Encodings {
+			srcWireFormat := encoding.WireFormat
+			srcBytesVar := testArrayName(
+				decodeSuccess.Name, decodeSuccess.Encodings, srcWireFormat)
+			expectedBytesVar := testArrayName(
+				decodeSuccess.Name, decodeSuccess.Encodings, targetWireFormat(srcWireFormat))
+			arrays = append(arrays, testArray{
+				Name:  srcBytesVar,
+				Bytes: bytesBuilder(encoding.Bytes),
+			})
+			cases = append(cases, successCase{
+				Name:             testCaseName(decodeSuccess.Name, srcWireFormat),
+				Transformation:   transformationFrom(srcWireFormat),
+				FidlType:         fidlTypeName(srcWireFormat, typeName),
+				SrcBytesVar:      srcBytesVar,
+				ExpectedBytesVar: expectedBytesVar,
+			})
 		}
-		v1BytesByName[encodeSuccess.Name] = encodeSuccess.Bytes
 	}
+	return arrays, cases, nil
+}
 
-	var testCases []testCase
-	for _, encodeSuccess := range gidlEncodeSuccesses {
-		if encodeSuccess.WireFormat != gidlir.OldWireFormat {
-			continue
+func failureTests(gidlDecodeFailures []gidlir.DecodeFailure, fidl fidlir.Root) ([]testArray, []failureCase, error) {
+	var arrays []testArray
+	var cases []failureCase
+	for _, decodeFailure := range gidlDecodeFailures {
+		for _, encoding := range decodeFailure.Encodings {
+			srcWireFormat := encoding.WireFormat
+			srcBytesVar := testArrayName(
+				decodeFailure.Name, decodeFailure.Encodings, srcWireFormat)
+			arrays = append(arrays, testArray{
+				Name:  srcBytesVar,
+				Bytes: bytesBuilder(encoding.Bytes),
+			})
+			cases = append(cases, failureCase{
+				Name:           testCaseName(decodeFailure.Name, srcWireFormat),
+				Transformation: transformationFrom(srcWireFormat),
+				FidlType:       fidlTypeName(srcWireFormat, decodeFailure.Type),
+				SrcBytesVar:    srcBytesVar,
+			})
 		}
-		v1Name := gidlir.TestCaseName(encodeSuccess.Name, gidlir.V1WireFormat)
-		v1Bytes, ok := v1BytesByName[v1Name]
-		if !ok {
-			continue
-		}
-		typeName := encodeSuccess.Value.(gidlir.Object).Name
-		testCases = append(testCases, testCase{
-			Name:        fidlcommon.ToSnakeCase(encodeSuccess.Name),
-			OldFidlType: fidlTypeName(gidlir.OldWireFormat, typeName),
-			V1FidlType:  fidlTypeName(gidlir.V1WireFormat, typeName),
-			OldBytes:    bytesBuilder(encodeSuccess.Bytes),
-			V1Bytes:     bytesBuilder(v1Bytes),
-		})
 	}
-	return testCases
+	return arrays, cases, nil
+}
+
+func targetWireFormat(srcWireFormat gidlir.WireFormat) gidlir.WireFormat {
+	switch srcWireFormat {
+	case gidlir.OldWireFormat:
+		return gidlir.V1WireFormat
+	case gidlir.V1WireFormat:
+		return gidlir.OldWireFormat
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", srcWireFormat))
+	}
+}
+
+func testArrayName(
+	baseName string,
+	encodings []gidlir.Encoding,
+	srcWireFormat gidlir.WireFormat,
+) string {
+	var hasSrc, hasTarget bool
+	for _, encoding := range encodings {
+		if encoding.WireFormat == srcWireFormat {
+			hasSrc = true
+		} else if encoding.WireFormat == targetWireFormat(srcWireFormat) {
+			hasTarget = true
+		}
+	}
+	if !hasSrc && !hasTarget {
+		panic(fmt.Sprintf("test %q has no bytes for either wire format", baseName))
+	}
+	if !(hasSrc && hasTarget) {
+		return fidlcommon.ToSnakeCase(fmt.Sprintf("bytes_%s_old_and_v1", baseName))
+	}
+	switch srcWireFormat {
+	case gidlir.OldWireFormat:
+		return fidlcommon.ToSnakeCase(fmt.Sprintf("bytes_%s_old", baseName))
+	case gidlir.V1WireFormat:
+		return fidlcommon.ToSnakeCase(fmt.Sprintf("bytes_%s_v1", baseName))
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", srcWireFormat))
+	}
+}
+
+func testCaseName(baseName string, srcWireFormat gidlir.WireFormat) string {
+	switch srcWireFormat {
+	case gidlir.OldWireFormat:
+		return fidlcommon.ToSnakeCase(fmt.Sprintf("%s_old_to_v1", baseName))
+	case gidlir.V1WireFormat:
+		return fidlcommon.ToSnakeCase(fmt.Sprintf("%s_v1_to_old", baseName))
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", srcWireFormat))
+	}
+}
+
+func transformationFrom(srcWireFormat gidlir.WireFormat) string {
+	switch srcWireFormat {
+	case gidlir.OldWireFormat:
+		return "FIDL_TRANSFORMATION_OLD_TO_V1"
+	case gidlir.V1WireFormat:
+		return "FIDL_TRANSFORMATION_V1_TO_OLD"
+	default:
+		panic(fmt.Sprintf("unexpected wire format %v", srcWireFormat))
+	}
 }
 
 func fidlTypeName(wireFormat gidlir.WireFormat, typeName string) string {

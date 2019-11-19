@@ -41,7 +41,6 @@ success("Sandwich1Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich1WithOptUnionPresent") {
@@ -88,7 +87,6 @@ success("Sandwich1WithOptUnionPresent") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich1WithOptUnionAbsent") {
@@ -126,7 +124,6 @@ success("Sandwich1WithOptUnionAbsent") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich2Case1") {
@@ -171,7 +168,6 @@ success("Sandwich2Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich3Case1") {
@@ -224,7 +220,6 @@ success("Sandwich3Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich4Case1") {
@@ -290,7 +285,6 @@ success("Sandwich4Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich5Case1") {
@@ -349,7 +343,6 @@ success("Sandwich5Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich5Case2") {
@@ -414,7 +407,6 @@ success("Sandwich5Case2") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case1") {
@@ -472,7 +464,6 @@ success("Sandwich6Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case1AbsentVector") {
@@ -522,7 +513,6 @@ success("Sandwich6Case1AbsentVector") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case2") {
@@ -586,7 +576,6 @@ success("Sandwich6Case2") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case3") {
@@ -656,7 +645,6 @@ success("Sandwich6Case3") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case4") {
@@ -729,7 +717,6 @@ success("Sandwich6Case4") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case5") {
@@ -793,7 +780,6 @@ success("Sandwich6Case5") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case6") {
@@ -852,7 +838,6 @@ success("Sandwich6Case6") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case7") {
@@ -909,7 +894,6 @@ success("Sandwich6Case7") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich6Case8") {
@@ -976,7 +960,6 @@ success("Sandwich6Case8") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich7Case1") {
@@ -1032,7 +1015,6 @@ success("Sandwich7Case1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich7Case2") {
@@ -1062,7 +1044,6 @@ success("Sandwich7Case2") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Regression1") {
@@ -1101,7 +1082,6 @@ success("Regression1") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Regression2") {
@@ -1147,7 +1127,6 @@ success("Regression2") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Regression3Absent") {
@@ -1168,7 +1147,6 @@ success("Regression3Absent") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Regression3Present") {
@@ -1220,7 +1198,6 @@ success("Regression3Present") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Size5Alignment1Array") {
@@ -1256,7 +1233,6 @@ success("Size5Alignment1Array") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 
@@ -1300,7 +1276,6 @@ success("Size5Alignment4Array") {
             )
         ]
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Size5Alignment1Vector") {
@@ -1341,7 +1316,6 @@ success("Size5Alignment1Vector") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Size5Alignment4Vector") {
@@ -1384,7 +1358,6 @@ success("Size5Alignment4Vector") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Table_StructWithReservedSandwich") {
@@ -1449,7 +1422,6 @@ success("Table_StructWithReservedSandwich") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Table_StructWithUint32Sandwich") {
@@ -1532,7 +1504,6 @@ success("Table_StructWithUint32Sandwich") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Table_UnionWithVector_ReservedSandwich") {
@@ -1604,7 +1575,6 @@ success("Table_UnionWithVector_ReservedSandwich") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Table_UnionWithVector_StructSandwich") {
@@ -1702,7 +1672,6 @@ success("Table_UnionWithVector_StructSandwich") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("XUnionWithStruct") {
@@ -1740,7 +1709,6 @@ success("XUnionWithStruct") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("XUnionWithUnknownOrdinal") {
@@ -1972,7 +1940,6 @@ success("ArrayStruct") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("TransformerEmptyStruct") {
@@ -1992,7 +1959,6 @@ success("TransformerEmptyStruct") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("EmptyStructUnion") {
@@ -2021,7 +1987,6 @@ success("EmptyStructUnion") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("NoCodingTablesStressor") {
@@ -2214,7 +2179,6 @@ success("NoCodingTablesStressor") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("OutOfLineSandwich1Case1") {
@@ -2317,7 +2281,6 @@ success("OutOfLineSandwich1Case1") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("OutOfLineSandwich1WithOptUnionPresent") {
@@ -2426,7 +2389,6 @@ success("OutOfLineSandwich1WithOptUnionPresent") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("OutOfLineSandwich1WithOptUnionAbsent") {
@@ -2526,7 +2488,6 @@ success("OutOfLineSandwich1WithOptUnionAbsent") {
             )
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Regression4") {
@@ -2568,7 +2529,6 @@ success("Regression4") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich4Align8") {
@@ -2639,7 +2599,6 @@ success("Sandwich4Align8") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich4Align8WithPointer") {
@@ -2717,7 +2676,6 @@ success("Sandwich4Align8WithPointer") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich8Case1") {
@@ -2777,7 +2735,6 @@ success("Sandwich8Case1") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("Sandwich9Case1") {
@@ -2853,7 +2810,6 @@ success("Sandwich9Case1") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("SimpleTableArrayStruct") {
@@ -2918,7 +2874,6 @@ success("SimpleTableArrayStruct") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("StringUnionVector") {
@@ -3007,7 +2962,6 @@ success("StringUnionVector") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }
 
 success("CreateComponentRequest") {
@@ -3137,5 +3091,4 @@ success("CreateComponentRequest") {
             ),
         ],
     },
-    bindings_denylist=[llcpp],
 }

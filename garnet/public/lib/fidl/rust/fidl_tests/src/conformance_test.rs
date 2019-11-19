@@ -14,7 +14,7 @@ const OLD_CONTEXT: &Context = &Context { unions_use_xunion_format: false };
 const V1_CONTEXT: &Context = &Context { unions_use_xunion_format: true };
 
 #[test]
-fn test_3_byte_object_alignment_in_struct_encode() {
+fn test_3_byte_object_alignment_in_struct_old_encode() {
     let value = &mut conformance::ThreeByteInStruct {
         elem1: conformance::ThreeByte { elem1: 1u8, elem2: 2u8, elem3: 3u8 },
         elem2: conformance::ThreeByte { elem1: 4u8, elem2: 5u8, elem3: 6u8 },
@@ -32,7 +32,7 @@ fn test_3_byte_object_alignment_in_struct_encode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_struct_encode() {
+fn test_5_byte_object_alignment_in_struct_old_encode() {
     let value = &mut conformance::FiveByteInStruct {
         elem1: conformance::FiveByte { elem1: 16909060u32, elem2: 5u8 },
         elem2: conformance::FiveByte { elem1: 101124105u32, elem2: 10u8 },
@@ -50,7 +50,7 @@ fn test_5_byte_object_alignment_in_struct_encode() {
 }
 
 #[test]
-fn test_3_byte_object_alignment_in_vector_encode() {
+fn test_3_byte_object_alignment_in_vector_old_encode() {
     let value = &mut conformance::ThreeByteInVector {
         elems: vec![
             conformance::ThreeByte { elem1: 1u8, elem2: 2u8, elem3: 3u8 },
@@ -71,7 +71,7 @@ fn test_3_byte_object_alignment_in_vector_encode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_vector_encode() {
+fn test_5_byte_object_alignment_in_vector_old_encode() {
     let value = &mut conformance::FiveByteInVector {
         elems: vec![
             conformance::FiveByte { elem1: 16909060u32, elem2: 5u8 },
@@ -92,7 +92,7 @@ fn test_5_byte_object_alignment_in_vector_encode() {
 }
 
 #[test]
-fn test_3_byte_object_alignment_in_array_encode() {
+fn test_3_byte_object_alignment_in_array_old_encode() {
     let value = &mut conformance::ThreeByteInArray {
         elems: [
             conformance::ThreeByte { elem1: 1u8, elem2: 2u8, elem3: 3u8 },
@@ -112,7 +112,7 @@ fn test_3_byte_object_alignment_in_array_encode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_array_encode() {
+fn test_5_byte_object_alignment_in_array_old_encode() {
     let value = &mut conformance::FiveByteInArray {
         elems: [
             conformance::FiveByte { elem1: 16909060u32, elem2: 5u8 },
@@ -132,7 +132,7 @@ fn test_5_byte_object_alignment_in_array_encode() {
 }
 
 #[test]
-fn test_empty_struct_encode() {
+fn test_empty_struct_old_encode() {
     let value = &mut conformance::EmptyStruct {};
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -140,7 +140,7 @@ fn test_empty_struct_encode() {
 }
 
 #[test]
-fn test_empty_struct_sandwich_encode() {
+fn test_empty_struct_sandwich_old_encode() {
     let value = &mut conformance::EmptyStructSandwich {
         before: String::from("before"),
         es: conformance::EmptyStruct {},
@@ -160,7 +160,7 @@ fn test_empty_struct_sandwich_encode() {
 }
 
 #[test]
-fn test_uint8_uint16_uint32_uint64_encode() {
+fn test_uint8_uint16_uint32_uint64_old_encode() {
     let value = &mut conformance::Uint8Uint16Uint32Uint64 {
         f1: 1u8,
         f2: 515u16,
@@ -179,7 +179,7 @@ fn test_uint8_uint16_uint32_uint64_encode() {
 }
 
 #[test]
-fn test_uint64_uint32_uint16_uint8_encode() {
+fn test_uint64_uint32_uint16_uint8_old_encode() {
     let value = &mut conformance::Uint64Uint32Uint16Uint8 {
         f1: 579005069656919567u64,
         f2: 67438087u32,
@@ -198,7 +198,7 @@ fn test_uint64_uint32_uint16_uint8_encode() {
 }
 
 #[test]
-fn test_simple_table_empty_encode() {
+fn test_simple_table_empty_old_encode() {
     let value = &mut conformance::StructOfSimpleTable {
         table: conformance::SimpleTable { x: None, y: None },
     };
@@ -214,7 +214,7 @@ fn test_simple_table_empty_encode() {
 }
 
 #[test]
-fn test_simple_table_x_and_y_encode() {
+fn test_simple_table_x_and_y_old_encode() {
     let value = &mut conformance::StructOfSimpleTable {
         table: conformance::SimpleTable { x: Some(42i64), y: Some(67i64) },
     };
@@ -236,7 +236,7 @@ fn test_simple_table_x_and_y_encode() {
 }
 
 #[test]
-fn test_simple_table_just_y_encode() {
+fn test_simple_table_just_y_old_encode() {
     let value = &mut conformance::StructOfSimpleTable {
         table: conformance::SimpleTable { y: Some(67i64), x: None },
     };
@@ -258,7 +258,7 @@ fn test_simple_table_just_y_encode() {
 }
 
 #[test]
-fn test_table_with_string_and_vector_no_vector_content_encode() {
+fn test_table_with_string_and_vector_no_vector_content_old_encode() {
     let value = &mut conformance::StructOfTableWithStringAndVector {
         table: conformance::TableWithStringAndVector {
             foo: Some(String::from("hello")),
@@ -282,7 +282,7 @@ fn test_table_with_string_and_vector_no_vector_content_encode() {
 }
 
 #[test]
-fn test_simple_table_then_uint64_encode() {
+fn test_simple_table_then_uint64_old_encode() {
     let value = &mut conformance::SimpleTableThenUint64 {
         table: conformance::SimpleTable { x: Some(42i64), y: Some(67i64) },
         number: 16045690984833335023u64,
@@ -306,7 +306,7 @@ fn test_simple_table_then_uint64_encode() {
 }
 
 #[test]
-fn test_inline_x_union_in_struct_encode() {
+fn test_inline_x_union_in_struct_old_encode() {
     let value = &mut conformance::TestInlineXUnionInStruct {
         before: String::from("before"),
         xu: conformance::SampleXUnion::U(3735928559u32),
@@ -328,7 +328,7 @@ fn test_inline_x_union_in_struct_encode() {
 }
 
 #[test]
-fn test_optional_x_union_in_struct_absent_encode() {
+fn test_optional_x_union_in_struct_absent_old_encode() {
     let value = &mut conformance::TestOptionalXUnionInStruct {
         before: String::from("before"),
         after: String::from("after"),
@@ -350,7 +350,7 @@ fn test_optional_x_union_in_struct_absent_encode() {
 }
 
 #[test]
-fn test_optional_x_union_in_struct_present_encode() {
+fn test_optional_x_union_in_struct_present_old_encode() {
     let value = &mut conformance::TestOptionalXUnionInStruct {
         before: String::from("before"),
         xu: Some(Box::new(conformance::SampleXUnion::U(3735928559u32))),
@@ -372,7 +372,7 @@ fn test_optional_x_union_in_struct_present_encode() {
 }
 
 #[test]
-fn test_x_union_in_table_x_union_absent_encode() {
+fn test_x_union_in_table_x_union_absent_old_encode() {
     let value = &mut conformance::TestXUnionInTable {
         value: conformance::XUnionInTable {
             before: Some(String::from("before")),
@@ -398,7 +398,7 @@ fn test_x_union_in_table_x_union_absent_encode() {
 }
 
 #[test]
-fn test_x_union_in_table_x_union_present_encode() {
+fn test_x_union_in_table_x_union_present_old_encode() {
     let value = &mut conformance::TestXUnionInTable {
         value: conformance::XUnionInTable {
             before: Some(String::from("before")),
@@ -427,7 +427,7 @@ fn test_x_union_in_table_x_union_present_encode() {
 }
 
 #[test]
-fn test_strict_x_union_encode() {
+fn test_strict_x_union_old_encode() {
     let value = &mut conformance::TestStrictXUnionInStruct {
         xu: conformance::SampleStrictXUnion::U(3735928559u32),
     };
@@ -444,7 +444,7 @@ fn test_strict_x_union_encode() {
 }
 
 #[test]
-fn test_add_ethernet_device_request_encode() {
+fn test_add_ethernet_device_request_old_encode() {
     let value = &mut conformance::TestAddEthernetDeviceRequest {
         topological_path: String::from("@/dev/sys/pci/00:03.0/e1000/ethernet"),
         config: conformance::InterfaceConfig {
@@ -472,7 +472,35 @@ fn test_add_ethernet_device_request_encode() {
 }
 
 #[test]
-fn test_file_get_attr_response_encode() {
+fn test_add_ethernet_device_request_v1_encode() {
+    let value = &mut conformance::TestAddEthernetDeviceRequest {
+        topological_path: String::from("@/dev/sys/pci/00:03.0/e1000/ethernet"),
+        config: conformance::InterfaceConfig {
+            name: String::from("ethp0003"),
+            ip_address_config: conformance::IpAddressConfig::Dhcp(true),
+        },
+        this_should_be_a_handle: 4294967295u32,
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x40, 0x2f, 0x64, 0x65, 0x76, 0x2f,
+            0x73, 0x79, 0x73, 0x2f, 0x70, 0x63, 0x69, 0x2f, 0x30, 0x30, 0x3a, 0x30, 0x33, 0x2e,
+            0x30, 0x2f, 0x65, 0x31, 0x30, 0x30, 0x30, 0x2f, 0x65, 0x74, 0x68, 0x65, 0x72, 0x6e,
+            0x65, 0x74, 0x00, 0x00, 0x00, 0x00, 0x65, 0x74, 0x68, 0x70, 0x30, 0x30, 0x30, 0x33,
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_file_get_attr_response_old_encode() {
     let value = &mut conformance::FileGetAttrResponse {
         s: 2125315759i32,
         attributes: conformance::NodeAttributes {
@@ -500,7 +528,7 @@ fn test_file_get_attr_response_encode() {
 }
 
 #[test]
-fn test_optionals_encode() {
+fn test_optionals_old_encode() {
     let value = &mut conformance::StructWithOptionals {
         s: conformance::EmptyStruct {},
         s2: Some(Box::new(conformance::EmptyStruct {})),
@@ -532,7 +560,41 @@ fn test_optionals_encode() {
 }
 
 #[test]
-fn test_arrays_encode() {
+fn test_optionals_v1_encode() {
+    let value = &mut conformance::StructWithOptionals {
+        s: conformance::EmptyStruct {},
+        s2: Some(Box::new(conformance::EmptyStruct {})),
+        t: conformance::TableWithEmptyStruct { s: Some(conformance::EmptyStruct {}) },
+        xu: conformance::XUnionWithEmptyStruct::S(conformance::EmptyStruct {}),
+        xu2: Some(Box::new(conformance::XUnionWithEmptyStruct::S(conformance::EmptyStruct {}))),
+        u: conformance::UnionWithEmptyStruct::S(conformance::EmptyStruct {}),
+        u2: Some(Box::new(conformance::UnionWithEmptyStruct::S(conformance::EmptyStruct {}))),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0xfe, 0xe0, 0x99, 0x74, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xfe, 0xe0, 0x99, 0x74, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff,
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+            0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_arrays_old_encode() {
     let value = &mut conformance::StructWithArrays {
         arr_int: [1i32, 2i32],
         arr_string: [String::from("a"), String::from("b")],
@@ -565,7 +627,7 @@ fn test_arrays_encode() {
 }
 
 #[test]
-fn test_vectors_encode() {
+fn test_vectors_old_encode() {
     let value = &mut conformance::StructWithVectors {
         vec_empty: vec![],
         vec_int: vec![1i32, 2i32],
@@ -612,7 +674,7 @@ fn test_vectors_encode() {
 }
 
 #[test]
-fn test_bool_true_encode() {
+fn test_bool_true_old_encode() {
     let value = &mut conformance::MyBool { value: true };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -620,7 +682,7 @@ fn test_bool_true_encode() {
 }
 
 #[test]
-fn test_bool_false_encode() {
+fn test_bool_false_old_encode() {
     let value = &mut conformance::MyBool { value: false };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -628,7 +690,7 @@ fn test_bool_false_encode() {
 }
 
 #[test]
-fn test_byte_zero_encode() {
+fn test_byte_zero_old_encode() {
     let value = &mut conformance::MyByte { value: 0u8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -636,7 +698,7 @@ fn test_byte_zero_encode() {
 }
 
 #[test]
-fn test_byte255_encode() {
+fn test_byte255_old_encode() {
     let value = &mut conformance::MyByte { value: 255u8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -644,7 +706,7 @@ fn test_byte255_encode() {
 }
 
 #[test]
-fn test_int8_min_encode() {
+fn test_int8_min_old_encode() {
     let value = &mut conformance::MyInt8 { value: -128i8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -652,7 +714,7 @@ fn test_int8_min_encode() {
 }
 
 #[test]
-fn test_int8_zero_encode() {
+fn test_int8_zero_old_encode() {
     let value = &mut conformance::MyInt8 { value: 0i8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -660,7 +722,7 @@ fn test_int8_zero_encode() {
 }
 
 #[test]
-fn test_int8_max_encode() {
+fn test_int8_max_old_encode() {
     let value = &mut conformance::MyInt8 { value: 127i8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -668,7 +730,7 @@ fn test_int8_max_encode() {
 }
 
 #[test]
-fn test_int16_min_encode() {
+fn test_int16_min_old_encode() {
     let value = &mut conformance::MyInt16 { value: -32768i16 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -676,7 +738,7 @@ fn test_int16_min_encode() {
 }
 
 #[test]
-fn test_int16_zero_encode() {
+fn test_int16_zero_old_encode() {
     let value = &mut conformance::MyInt16 { value: 0i16 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -684,7 +746,7 @@ fn test_int16_zero_encode() {
 }
 
 #[test]
-fn test_int16_max_encode() {
+fn test_int16_max_old_encode() {
     let value = &mut conformance::MyInt16 { value: 32767i16 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -692,7 +754,7 @@ fn test_int16_max_encode() {
 }
 
 #[test]
-fn test_int32_min_encode() {
+fn test_int32_min_old_encode() {
     let value = &mut conformance::MyInt32 { value: -2147483648i32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -700,7 +762,7 @@ fn test_int32_min_encode() {
 }
 
 #[test]
-fn test_int32_zero_encode() {
+fn test_int32_zero_old_encode() {
     let value = &mut conformance::MyInt32 { value: 0i32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -708,7 +770,7 @@ fn test_int32_zero_encode() {
 }
 
 #[test]
-fn test_int32_max_encode() {
+fn test_int32_max_old_encode() {
     let value = &mut conformance::MyInt32 { value: 2147483647i32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -716,7 +778,7 @@ fn test_int32_max_encode() {
 }
 
 #[test]
-fn test_int64_min_encode() {
+fn test_int64_min_old_encode() {
     let value = &mut conformance::MyInt64 { value: -9223372036854775808i64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -724,7 +786,7 @@ fn test_int64_min_encode() {
 }
 
 #[test]
-fn test_int64_zero_encode() {
+fn test_int64_zero_old_encode() {
     let value = &mut conformance::MyInt64 { value: 0i64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -732,7 +794,7 @@ fn test_int64_zero_encode() {
 }
 
 #[test]
-fn test_int64_max_encode() {
+fn test_int64_max_old_encode() {
     let value = &mut conformance::MyInt64 { value: 9223372036854775807i64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -740,7 +802,7 @@ fn test_int64_max_encode() {
 }
 
 #[test]
-fn test_uint8_zero_encode() {
+fn test_uint8_zero_old_encode() {
     let value = &mut conformance::MyUint8 { value: 0u8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -748,7 +810,7 @@ fn test_uint8_zero_encode() {
 }
 
 #[test]
-fn test_uint8_max_encode() {
+fn test_uint8_max_old_encode() {
     let value = &mut conformance::MyUint8 { value: 255u8 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -756,7 +818,7 @@ fn test_uint8_max_encode() {
 }
 
 #[test]
-fn test_uint16_zero_encode() {
+fn test_uint16_zero_old_encode() {
     let value = &mut conformance::MyUint16 { value: 0u16 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -764,7 +826,7 @@ fn test_uint16_zero_encode() {
 }
 
 #[test]
-fn test_uint16_max_encode() {
+fn test_uint16_max_old_encode() {
     let value = &mut conformance::MyUint16 { value: 65535u16 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -772,7 +834,7 @@ fn test_uint16_max_encode() {
 }
 
 #[test]
-fn test_uint32_zero_encode() {
+fn test_uint32_zero_old_encode() {
     let value = &mut conformance::MyUint32 { value: 0u32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -780,7 +842,7 @@ fn test_uint32_zero_encode() {
 }
 
 #[test]
-fn test_uint32_max_encode() {
+fn test_uint32_max_old_encode() {
     let value = &mut conformance::MyUint32 { value: 4294967295u32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -788,7 +850,7 @@ fn test_uint32_max_encode() {
 }
 
 #[test]
-fn test_uint64_zero_encode() {
+fn test_uint64_zero_old_encode() {
     let value = &mut conformance::MyUint64 { value: 0u64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -796,7 +858,7 @@ fn test_uint64_zero_encode() {
 }
 
 #[test]
-fn test_uint64_max_encode() {
+fn test_uint64_max_old_encode() {
     let value = &mut conformance::MyUint64 { value: 18446744073709551615u64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -804,7 +866,7 @@ fn test_uint64_max_encode() {
 }
 
 #[test]
-fn test_float32_zero_encode() {
+fn test_float32_zero_old_encode() {
     let value = &mut conformance::MyFloat32 { value: 0f32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -812,7 +874,7 @@ fn test_float32_zero_encode() {
 }
 
 #[test]
-fn test_float32_one_encode() {
+fn test_float32_one_old_encode() {
     let value = &mut conformance::MyFloat32 { value: 1f32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -820,7 +882,7 @@ fn test_float32_one_encode() {
 }
 
 #[test]
-fn test_float32_minus_one_encode() {
+fn test_float32_minus_one_old_encode() {
     let value = &mut conformance::MyFloat32 { value: -1f32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -828,7 +890,7 @@ fn test_float32_minus_one_encode() {
 }
 
 #[test]
-fn test_float32_max_encode() {
+fn test_float32_max_old_encode() {
     let value = &mut conformance::MyFloat32 { value: 3.4028234663852886e+38f32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -836,7 +898,7 @@ fn test_float32_max_encode() {
 }
 
 #[test]
-fn test_float64_zero_encode() {
+fn test_float64_zero_old_encode() {
     let value = &mut conformance::MyFloat64 { value: 0f64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -844,7 +906,7 @@ fn test_float64_zero_encode() {
 }
 
 #[test]
-fn test_float64_one_encode() {
+fn test_float64_one_old_encode() {
     let value = &mut conformance::MyFloat64 { value: 1f64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -852,7 +914,7 @@ fn test_float64_one_encode() {
 }
 
 #[test]
-fn test_float64_minus_one_encode() {
+fn test_float64_minus_one_old_encode() {
     let value = &mut conformance::MyFloat64 { value: -1f64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -860,7 +922,7 @@ fn test_float64_minus_one_encode() {
 }
 
 #[test]
-fn test_float64_max_encode() {
+fn test_float64_max_old_encode() {
     let value = &mut conformance::MyFloat64 { value: 1.7976931348623157e+308f64 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -868,7 +930,7 @@ fn test_float64_max_encode() {
 }
 
 #[test]
-fn test_sandwich1_case1_encode() {
+fn test_sandwich1_case1_old_encode() {
     let value = &mut conformance::Sandwich1 {
         before: 67305985u32,
         the_union: conformance::UnionSize8Align4::Variant(202050057u32),
@@ -906,7 +968,7 @@ fn test_sandwich1_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich1_with_opt_union_present_encode() {
+fn test_sandwich1_with_opt_union_present_old_encode() {
     let value = &mut conformance::Sandwich1WithOptUnion {
         before: 67305985u32,
         opt_union: Some(Box::new(conformance::UnionSize8Align4::Variant(202050057u32))),
@@ -945,7 +1007,7 @@ fn test_sandwich1_with_opt_union_present_v1_encode() {
 }
 
 #[test]
-fn test_sandwich1_with_opt_union_absent_encode() {
+fn test_sandwich1_with_opt_union_absent_old_encode() {
     let value = &mut conformance::Sandwich1WithOptUnion {
         before: 67305985u32,
         after: 134678021u32,
@@ -982,7 +1044,7 @@ fn test_sandwich1_with_opt_union_absent_v1_encode() {
 }
 
 #[test]
-fn test_sandwich2_case1_encode() {
+fn test_sandwich2_case1_old_encode() {
     let value = &mut conformance::Sandwich2 {
         before: 67305985u32,
         the_union: conformance::UnionSize12Align4::Variant([
@@ -1024,7 +1086,7 @@ fn test_sandwich2_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich3_case1_encode() {
+fn test_sandwich3_case1_old_encode() {
     let value = &mut conformance::Sandwich3 {
         before: 67305985u32,
         the_union: conformance::UnionSize24Align8::Variant(conformance::StructSize16Align8 {
@@ -1069,7 +1131,7 @@ fn test_sandwich3_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich4_case1_encode() {
+fn test_sandwich4_case1_old_encode() {
     let value = &mut conformance::Sandwich4 {
         before: 67305985u32,
         the_union: conformance::UnionSize36Align4::Variant([
@@ -1119,7 +1181,7 @@ fn test_sandwich4_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich5_case1_encode() {
+fn test_sandwich5_case1_old_encode() {
     let value = &mut conformance::Sandwich5 {
         before: 67305985u32,
         union_of_union: conformance::UnionOfUnion::Size8align4(
@@ -1165,7 +1227,7 @@ fn test_sandwich5_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich5_case2_encode() {
+fn test_sandwich5_case2_old_encode() {
     let value = &mut conformance::Sandwich5 {
         before: 67305985u32,
         union_of_union: conformance::UnionOfUnion::Size24align8(
@@ -1217,7 +1279,7 @@ fn test_sandwich5_case2_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case1_encode() {
+fn test_sandwich6_case1_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::VectorOfUint8(vec![
@@ -1262,7 +1324,7 @@ fn test_sandwich6_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case1_absent_vector_encode() {
+fn test_sandwich6_case1_absent_vector_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::VectorOfUint8(vec![]),
@@ -1301,7 +1363,7 @@ fn test_sandwich6_case1_absent_vector_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case2_encode() {
+fn test_sandwich6_case2_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::S(String::from("soft migrations rock!")),
@@ -1344,7 +1406,7 @@ fn test_sandwich6_case2_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case3_encode() {
+fn test_sandwich6_case3_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::VectorS3A1(vec![
@@ -1394,7 +1456,7 @@ fn test_sandwich6_case3_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case4_encode() {
+fn test_sandwich6_case4_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::VectorS3A2(vec![
@@ -1444,7 +1506,7 @@ fn test_sandwich6_case4_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case5_encode() {
+fn test_sandwich6_case5_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::Handles(vec![
@@ -1494,7 +1556,7 @@ fn test_sandwich6_case5_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case6_encode() {
+fn test_sandwich6_case6_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::ArrayS3A1([
@@ -1539,7 +1601,7 @@ fn test_sandwich6_case6_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case7_encode() {
+fn test_sandwich6_case7_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::ArrayS3A2([
@@ -1584,7 +1646,7 @@ fn test_sandwich6_case7_v1_encode() {
 }
 
 #[test]
-fn test_sandwich6_case8_encode() {
+fn test_sandwich6_case8_old_encode() {
     let value = &mut conformance::Sandwich6 {
         before: 67305985u32,
         the_union: conformance::UnionWithVector::VectorUnion(vec![
@@ -1631,7 +1693,7 @@ fn test_sandwich6_case8_v1_encode() {
 }
 
 #[test]
-fn test_sandwich7_case1_encode() {
+fn test_sandwich7_case1_old_encode() {
     let value = &mut conformance::Sandwich7 {
         before: 336794129u32,
         opt_sandwich1: Some(Box::new(conformance::Sandwich1 {
@@ -1680,7 +1742,7 @@ fn test_sandwich7_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich7_case2_encode() {
+fn test_sandwich7_case2_old_encode() {
     let value = &mut conformance::Sandwich7 {
         before: 336794129u32,
         after: 606282273u32,
@@ -1716,7 +1778,7 @@ fn test_sandwich7_case2_v1_encode() {
 }
 
 #[test]
-fn test_regression1_encode() {
+fn test_regression1_old_encode() {
     let value =
         &mut conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 };
     let bytes = &mut Vec::new();
@@ -1748,7 +1810,7 @@ fn test_regression1_v1_encode() {
 }
 
 #[test]
-fn test_regression2_encode() {
+fn test_regression2_old_encode() {
     let value = &mut conformance::Regression2 {
         head: conformance::Regression1 { f1: 1u8, f2: 2u32, f3: 3u8, f4: 4u16, f5: 5u64, f6: 6u8 },
         f7: 7u8,
@@ -1784,7 +1846,7 @@ fn test_regression2_v1_encode() {
 }
 
 #[test]
-fn test_regression3_absent_encode() {
+fn test_regression3_absent_old_encode() {
     let value = &mut conformance::Regression3 { opt_value: None };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -1800,7 +1862,7 @@ fn test_regression3_absent_v1_encode() {
 }
 
 #[test]
-fn test_regression3_present_encode() {
+fn test_regression3_present_old_encode() {
     let value = &mut conformance::Regression3 {
         opt_value: Some(Box::new(conformance::Regression2 {
             head: conformance::Regression1 {
@@ -1856,7 +1918,7 @@ fn test_regression3_present_v1_encode() {
 }
 
 #[test]
-fn test_size5_alignment1_array_encode() {
+fn test_size5_alignment1_array_old_encode() {
     let value = &mut conformance::Size5Alignment1Array {
         a: [
             conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
@@ -1896,7 +1958,7 @@ fn test_size5_alignment1_array_v1_encode() {
 }
 
 #[test]
-fn test_size5_alignment4_array_encode() {
+fn test_size5_alignment4_array_old_encode() {
     let value = &mut conformance::Size5Alignment4Array {
         a: [
             conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
@@ -1936,7 +1998,7 @@ fn test_size5_alignment4_array_v1_encode() {
 }
 
 #[test]
-fn test_size5_alignment1_vector_encode() {
+fn test_size5_alignment1_vector_old_encode() {
     let value = &mut conformance::Size5Alignment1Vector {
         v: vec![
             conformance::Size5Alignment1 { data: [1u8, 2u8, 3u8, 4u8, 5u8] },
@@ -1976,7 +2038,7 @@ fn test_size5_alignment1_vector_v1_encode() {
 }
 
 #[test]
-fn test_size5_alignment4_vector_encode() {
+fn test_size5_alignment4_vector_old_encode() {
     let value = &mut conformance::Size5Alignment4Vector {
         v: vec![
             conformance::Size5Alignment4 { four: 67305985u32, one: 5u8 },
@@ -2016,7 +2078,7 @@ fn test_size5_alignment4_vector_v1_encode() {
 }
 
 #[test]
-fn test_table_struct_with_reserved_sandwich_encode() {
+fn test_table_struct_with_reserved_sandwich_old_encode() {
     let value = &mut conformance::TableStructWithReservedSandwichStruct {
         table: conformance::TableStructWithReservedSandwich {
             s1: Some(conformance::StructSize3Align1 { three_bytes: [9u8, 10u8, 11u8] }),
@@ -2062,7 +2124,7 @@ fn test_table_struct_with_reserved_sandwich_v1_encode() {
 }
 
 #[test]
-fn test_table_struct_with_uint32_sandwich_encode() {
+fn test_table_struct_with_uint32_sandwich_old_encode() {
     let value = &mut conformance::TableStructWithUint32SandwichStruct {
         table: conformance::TableStructWithUint32Sandwich {
             i: Some(67305985u32),
@@ -2116,7 +2178,7 @@ fn test_table_struct_with_uint32_sandwich_v1_encode() {
 }
 
 #[test]
-fn test_table_union_with_vector_reserved_sandwich_encode() {
+fn test_table_union_with_vector_reserved_sandwich_old_encode() {
     let value = &mut conformance::TableUnionWithVectorReservedSandwichStruct {
         table: conformance::TableUnionWithVectorReservedSandwich {
             uv: Some(conformance::UnionWithVector::S(String::from("hello"))),
@@ -2161,7 +2223,7 @@ fn test_table_union_with_vector_reserved_sandwich_v1_encode() {
 }
 
 #[test]
-fn test_table_union_with_vector_struct_sandwich_encode() {
+fn test_table_union_with_vector_struct_sandwich_old_encode() {
     let value = &mut conformance::TableUnionWithVectorStructSandwichStruct {
         table: conformance::TableUnionWithVectorStructSandwich {
             s1: Some(conformance::StructSize3Align1 { three_bytes: [1u8, 2u8, 3u8] }),
@@ -2215,7 +2277,7 @@ fn test_table_union_with_vector_struct_sandwich_v1_encode() {
 }
 
 #[test]
-fn test_x_union_with_struct_encode() {
+fn test_x_union_with_struct_old_encode() {
     let value = &mut conformance::XUnionWithStructStruct {
         xu: conformance::XUnionWithStruct::S(conformance::StructSize3Align1 {
             three_bytes: [1u8, 2u8, 3u8],
@@ -2253,7 +2315,7 @@ fn test_x_union_with_struct_v1_encode() {
 }
 
 #[test]
-fn test_array_struct_encode() {
+fn test_array_struct_old_encode() {
     let value = &mut conformance::ArrayStruct {
         unions: [
             conformance::StringUnion::S(String::from("one")),
@@ -2336,7 +2398,7 @@ fn test_array_struct_v1_encode() {
 }
 
 #[test]
-fn test_transformer_empty_struct_encode() {
+fn test_transformer_empty_struct_old_encode() {
     let value = &mut conformance::TransformerEmptyStruct {};
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -2352,7 +2414,7 @@ fn test_transformer_empty_struct_v1_encode() {
 }
 
 #[test]
-fn test_empty_struct_union_encode() {
+fn test_empty_struct_union_old_encode() {
     let value = &mut conformance::EmptyStructUnionStruct {
         u: conformance::EmptyStructUnion::Es(conformance::TransformerEmptyStruct {}),
     };
@@ -2379,7 +2441,7 @@ fn test_empty_struct_union_v1_encode() {
 }
 
 #[test]
-fn test_no_coding_tables_stressor_encode() {
+fn test_no_coding_tables_stressor_old_encode() {
     let value = &mut conformance::NoCodingTablesStressor {
         f1: 1229782938247303441u64,
         f2: 2459565876494606882u64,
@@ -2493,7 +2555,7 @@ fn test_no_coding_tables_stressor_v1_encode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_case1_encode() {
+fn test_out_of_line_sandwich1_case1_old_encode() {
     let value = &mut conformance::OutOfLineSandwich1 {
         before: String::from("soft migrations rock!"),
         v: vec![conformance::Sandwich1 {
@@ -2552,7 +2614,7 @@ fn test_out_of_line_sandwich1_case1_v1_encode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_with_opt_union_present_encode() {
+fn test_out_of_line_sandwich1_with_opt_union_present_old_encode() {
     let value = &mut conformance::OutOfLineSandwich1WithOptUnion {
         before: String::from("soft migrations rock!"),
         v: vec![conformance::Sandwich1WithOptUnion {
@@ -2613,7 +2675,7 @@ fn test_out_of_line_sandwich1_with_opt_union_present_v1_encode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_with_opt_union_absent_encode() {
+fn test_out_of_line_sandwich1_with_opt_union_absent_old_encode() {
     let value = &mut conformance::OutOfLineSandwich1WithOptUnion {
         before: String::from("soft migrations rock!"),
         v: vec![conformance::Sandwich1WithOptUnion {
@@ -2672,7 +2734,7 @@ fn test_out_of_line_sandwich1_with_opt_union_absent_v1_encode() {
 }
 
 #[test]
-fn test_regression4_encode() {
+fn test_regression4_old_encode() {
     let value = &mut conformance::Regression4 {
         f1: 1u8,
         f2: 2u32,
@@ -2718,7 +2780,7 @@ fn test_regression4_v1_encode() {
 }
 
 #[test]
-fn test_sandwich4_align8_encode() {
+fn test_sandwich4_align8_old_encode() {
     let value = &mut conformance::Sandwich4Align8 {
         sandwich4: conformance::Sandwich4 {
             before: 67305985u32,
@@ -2774,7 +2836,7 @@ fn test_sandwich4_align8_v1_encode() {
 }
 
 #[test]
-fn test_sandwich4_align8_with_pointer_encode() {
+fn test_sandwich4_align8_with_pointer_old_encode() {
     let value = &mut conformance::Sandwich4Align8WithPointer {
         sandwich4: conformance::Sandwich4 {
             before: 67305985u32,
@@ -2836,7 +2898,7 @@ fn test_sandwich4_align8_with_pointer_v1_encode() {
 }
 
 #[test]
-fn test_sandwich8_case1_encode() {
+fn test_sandwich8_case1_old_encode() {
     let value = &mut conformance::Sandwich8 {
         before: 67305985u64,
         union_of_union: conformance::UnionOfUnion::Size8align4(
@@ -2882,7 +2944,7 @@ fn test_sandwich8_case1_v1_encode() {
 }
 
 #[test]
-fn test_sandwich9_case1_encode() {
+fn test_sandwich9_case1_old_encode() {
     let value = &mut conformance::Sandwich9 {
         before: 513u16,
         the_union: conformance::UnionWithVectorOfVectors::V(vec![vec![
@@ -2935,7 +2997,7 @@ fn test_sandwich9_case1_v1_encode() {
 }
 
 #[test]
-fn test_simple_table_array_struct_encode() {
+fn test_simple_table_array_struct_old_encode() {
     let value = &mut conformance::SimpleTableArrayStruct {
         the_array: [
             conformance::TransformerSimpleTable { value: Some(2745344416u32) },
@@ -2981,7 +3043,7 @@ fn test_simple_table_array_struct_v1_encode() {
 }
 
 #[test]
-fn test_string_union_vector_encode() {
+fn test_string_union_vector_old_encode() {
     let value = &mut conformance::StringUnionVector {
         the_vector: vec![
             Some(Box::new(conformance::StringUnion::S(String::from("hello")))),
@@ -3036,7 +3098,7 @@ fn test_string_union_vector_v1_encode() {
 }
 
 #[test]
-fn test_create_component_request_encode() {
+fn test_create_component_request_old_encode() {
     let value = &mut conformance::CreateComponentRequest { launch_info: conformance::LaunchInfo { url: String::from("fuchsia-pkg://fuchsia.com/fidl_compatibility_test_server_rust_write_xunion#meta/fidl_compatibility_test_server_rust_write_xunion.cmx"), directory_request: 4294967295u32, arguments: None, out: None, err: None, flat_namespace: None, additional_services: None }, controller: 4294967295u32 };
     let bytes = &mut Vec::new();
     Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
@@ -3092,7 +3154,7 @@ fn test_create_component_request_v1_encode() {
 }
 
 #[test]
-fn test_union_with_bound_string_encode() {
+fn test_union_with_bound_string_old_encode() {
     let value = &mut conformance::UnionWithBoundStringStruct {
         v: conformance::UnionWithBoundString::BoundFiveStr(String::from("abcd")),
     };
@@ -3109,7 +3171,25 @@ fn test_union_with_bound_string_encode() {
 }
 
 #[test]
-fn test_union_migration_single_variant_encode() {
+fn test_union_with_bound_string_v1_encode() {
+    let value = &mut conformance::UnionWithBoundStringStruct {
+        v: conformance::UnionWithBoundString::BoundFiveStr(String::from("abcd")),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x61, 0x62,
+            0x63, 0x64, 0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_union_migration_single_variant_old_encode() {
     let value =
         &mut conformance::SingleVariantUnionStruct { u: conformance::SingleVariantUnion::X(42u32) };
     let bytes = &mut Vec::new();
@@ -3134,7 +3214,7 @@ fn test_union_migration_single_variant_v1_encode() {
 }
 
 #[test]
-fn test_3_byte_object_alignment_in_struct_decode() {
+fn test_3_byte_object_alignment_in_struct_old_decode() {
     let value = &mut conformance::ThreeByteInStruct::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -3152,7 +3232,7 @@ fn test_3_byte_object_alignment_in_struct_decode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_struct_decode() {
+fn test_5_byte_object_alignment_in_struct_old_decode() {
     let value = &mut conformance::FiveByteInStruct::new_empty();
     let bytes = &mut [
         0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06, 0x0a, 0x00, 0x00,
@@ -3170,7 +3250,7 @@ fn test_5_byte_object_alignment_in_struct_decode() {
 }
 
 #[test]
-fn test_3_byte_object_alignment_in_vector_decode() {
+fn test_3_byte_object_alignment_in_vector_old_decode() {
     let value = &mut conformance::ThreeByteInVector::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3191,7 +3271,7 @@ fn test_3_byte_object_alignment_in_vector_decode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_vector_decode() {
+fn test_5_byte_object_alignment_in_vector_old_decode() {
     let value = &mut conformance::FiveByteInVector::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3212,7 +3292,7 @@ fn test_5_byte_object_alignment_in_vector_decode() {
 }
 
 #[test]
-fn test_3_byte_object_alignment_in_array_decode() {
+fn test_3_byte_object_alignment_in_array_old_decode() {
     let value = &mut conformance::ThreeByteInArray::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -3232,7 +3312,7 @@ fn test_3_byte_object_alignment_in_array_decode() {
 }
 
 #[test]
-fn test_5_byte_object_alignment_in_array_decode() {
+fn test_5_byte_object_alignment_in_array_old_decode() {
     let value = &mut conformance::FiveByteInArray::new_empty();
     let bytes = &mut [
         0x04, 0x03, 0x02, 0x01, 0x05, 0x00, 0x00, 0x00, 0x09, 0x08, 0x07, 0x06, 0x0a, 0x00, 0x00,
@@ -3252,7 +3332,7 @@ fn test_5_byte_object_alignment_in_array_decode() {
 }
 
 #[test]
-fn test_empty_struct_decode() {
+fn test_empty_struct_old_decode() {
     let value = &mut conformance::EmptyStruct::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3260,7 +3340,7 @@ fn test_empty_struct_decode() {
 }
 
 #[test]
-fn test_empty_struct_sandwich_decode() {
+fn test_empty_struct_sandwich_old_decode() {
     let value = &mut conformance::EmptyStructSandwich::new_empty();
     let bytes = &mut [
         0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3280,7 +3360,7 @@ fn test_empty_struct_sandwich_decode() {
 }
 
 #[test]
-fn test_uint8_uint16_uint32_uint64_decode() {
+fn test_uint8_uint16_uint32_uint64_old_decode() {
     let value = &mut conformance::Uint8Uint16Uint32Uint64::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x03, 0x02, 0x07, 0x06, 0x05, 0x04, 0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09,
@@ -3299,7 +3379,7 @@ fn test_uint8_uint16_uint32_uint64_decode() {
 }
 
 #[test]
-fn test_uint64_uint32_uint16_uint8_decode() {
+fn test_uint64_uint32_uint16_uint8_old_decode() {
     let value = &mut conformance::Uint64Uint32Uint16Uint8::new_empty();
     let bytes = &mut [
         0x0f, 0x0e, 0x0d, 0x0c, 0x0b, 0x0a, 0x09, 0x08, 0x07, 0x06, 0x05, 0x04, 0x03, 0x02, 0x01,
@@ -3318,7 +3398,7 @@ fn test_uint64_uint32_uint16_uint8_decode() {
 }
 
 #[test]
-fn test_simple_table_empty_decode() {
+fn test_simple_table_empty_old_decode() {
     let value = &mut conformance::StructOfSimpleTable::new_empty();
     let bytes = &mut [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3332,7 +3412,7 @@ fn test_simple_table_empty_decode() {
 }
 
 #[test]
-fn test_simple_table_x_and_y_decode() {
+fn test_simple_table_x_and_y_old_decode() {
     let value = &mut conformance::StructOfSimpleTable::new_empty();
     let bytes = &mut [
         0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3354,7 +3434,7 @@ fn test_simple_table_x_and_y_decode() {
 }
 
 #[test]
-fn test_simple_table_just_y_decode() {
+fn test_simple_table_just_y_old_decode() {
     let value = &mut conformance::StructOfSimpleTable::new_empty();
     let bytes = &mut [
         0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3375,7 +3455,7 @@ fn test_simple_table_just_y_decode() {
 }
 
 #[test]
-fn test_table_with_string_and_vector_no_vector_content_decode() {
+fn test_table_with_string_and_vector_no_vector_content_old_decode() {
     let value = &mut conformance::StructOfTableWithStringAndVector::new_empty();
     let bytes = &mut [
         0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3399,7 +3479,7 @@ fn test_table_with_string_and_vector_no_vector_content_decode() {
 }
 
 #[test]
-fn test_simple_table_then_uint64_decode() {
+fn test_simple_table_then_uint64_old_decode() {
     let value = &mut conformance::SimpleTableThenUint64::new_empty();
     let bytes = &mut [
         0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3422,7 +3502,7 @@ fn test_simple_table_then_uint64_decode() {
 }
 
 #[test]
-fn test_inline_x_union_in_struct_decode() {
+fn test_inline_x_union_in_struct_old_decode() {
     let value = &mut conformance::TestInlineXUnionInStruct::new_empty();
     let bytes = &mut [
         0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3444,7 +3524,7 @@ fn test_inline_x_union_in_struct_decode() {
 }
 
 #[test]
-fn test_optional_x_union_in_struct_absent_decode() {
+fn test_optional_x_union_in_struct_absent_old_decode() {
     let value = &mut conformance::TestOptionalXUnionInStruct::new_empty();
     let bytes = &mut [
         0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3465,7 +3545,7 @@ fn test_optional_x_union_in_struct_absent_decode() {
 }
 
 #[test]
-fn test_optional_x_union_in_struct_present_decode() {
+fn test_optional_x_union_in_struct_present_old_decode() {
     let value = &mut conformance::TestOptionalXUnionInStruct::new_empty();
     let bytes = &mut [
         0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3487,7 +3567,7 @@ fn test_optional_x_union_in_struct_present_decode() {
 }
 
 #[test]
-fn test_x_union_in_table_x_union_absent_decode() {
+fn test_x_union_in_table_x_union_absent_old_decode() {
     let value = &mut conformance::TestXUnionInTable::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3513,7 +3593,7 @@ fn test_x_union_in_table_x_union_absent_decode() {
 }
 
 #[test]
-fn test_x_union_in_table_x_union_present_decode() {
+fn test_x_union_in_table_x_union_present_old_decode() {
     let value = &mut conformance::TestXUnionInTable::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3541,7 +3621,7 @@ fn test_x_union_in_table_x_union_present_decode() {
 }
 
 #[test]
-fn test_strict_x_union_decode() {
+fn test_strict_x_union_old_decode() {
     let value = &mut conformance::TestStrictXUnionInStruct::new_empty();
     let bytes = &mut [
         0x72, 0xea, 0xe2, 0x08, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -3558,7 +3638,7 @@ fn test_strict_x_union_decode() {
 }
 
 #[test]
-fn test_add_ethernet_device_request_decode() {
+fn test_add_ethernet_device_request_old_decode() {
     let value = &mut conformance::TestAddEthernetDeviceRequest::new_empty();
     let bytes = &mut [
         0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3585,7 +3665,34 @@ fn test_add_ethernet_device_request_decode() {
 }
 
 #[test]
-fn test_file_get_attr_response_decode() {
+fn test_add_ethernet_device_request_v1_decode() {
+    let value = &mut conformance::TestAddEthernetDeviceRequest::new_empty();
+    let bytes = &mut [
+        0x24, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0x00, 0x00, 0x00, 0x00, 0x40, 0x2f, 0x64, 0x65, 0x76, 0x2f, 0x73, 0x79, 0x73, 0x2f, 0x70,
+        0x63, 0x69, 0x2f, 0x30, 0x30, 0x3a, 0x30, 0x33, 0x2e, 0x30, 0x2f, 0x65, 0x31, 0x30, 0x30,
+        0x30, 0x2f, 0x65, 0x74, 0x68, 0x65, 0x72, 0x6e, 0x65, 0x74, 0x00, 0x00, 0x00, 0x00, 0x65,
+        0x74, 0x68, 0x70, 0x30, 0x30, 0x30, 0x33, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::TestAddEthernetDeviceRequest {
+            topological_path: String::from("@/dev/sys/pci/00:03.0/e1000/ethernet"),
+            config: conformance::InterfaceConfig {
+                name: String::from("ethp0003"),
+                ip_address_config: conformance::IpAddressConfig::Dhcp(true)
+            },
+            this_should_be_a_handle: 4294967295u32
+        }
+    );
+}
+
+#[test]
+fn test_file_get_attr_response_old_decode() {
     let value = &mut conformance::FileGetAttrResponse::new_empty();
     let bytes = &mut [
         0xaf, 0xbe, 0xad, 0x7e, 0x00, 0x00, 0x00, 0x00, 0xa4, 0x81, 0x23, 0x96, 0x00, 0x00, 0x00,
@@ -3613,7 +3720,7 @@ fn test_file_get_attr_response_decode() {
 }
 
 #[test]
-fn test_optionals_decode() {
+fn test_optionals_old_decode() {
     let value = &mut conformance::StructWithOptionals::new_empty();
     let bytes = &mut [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3645,7 +3752,40 @@ fn test_optionals_decode() {
 }
 
 #[test]
-fn test_arrays_decode() {
+fn test_optionals_v1_decode() {
+    let value = &mut conformance::StructWithOptionals::new_empty();
+    let bytes = &mut [
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xfe, 0xe0, 0x99, 0x74, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xfe, 0xe0, 0x99, 0x74,
+        0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
+        0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::StructWithOptionals {
+            s: conformance::EmptyStruct {},
+            s2: Some(Box::new(conformance::EmptyStruct {})),
+            t: conformance::TableWithEmptyStruct { s: Some(conformance::EmptyStruct {}) },
+            xu: conformance::XUnionWithEmptyStruct::S(conformance::EmptyStruct {}),
+            xu2: Some(Box::new(conformance::XUnionWithEmptyStruct::S(conformance::EmptyStruct {}))),
+            u: conformance::UnionWithEmptyStruct::S(conformance::EmptyStruct {}),
+            u2: Some(Box::new(conformance::UnionWithEmptyStruct::S(conformance::EmptyStruct {})))
+        }
+    );
+}
+
+#[test]
+fn test_arrays_old_decode() {
     let value = &mut conformance::StructWithArrays::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -3681,7 +3821,7 @@ fn test_arrays_decode() {
 }
 
 #[test]
-fn test_vectors_decode() {
+fn test_vectors_old_decode() {
     let value = &mut conformance::StructWithVectors::new_empty();
     let bytes = &mut [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -3726,7 +3866,7 @@ fn test_vectors_decode() {
 }
 
 #[test]
-fn test_bool_true_decode() {
+fn test_bool_true_old_decode() {
     let value = &mut conformance::MyBool::new_empty();
     let bytes = &mut [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3734,7 +3874,7 @@ fn test_bool_true_decode() {
 }
 
 #[test]
-fn test_bool_false_decode() {
+fn test_bool_false_old_decode() {
     let value = &mut conformance::MyBool::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3742,7 +3882,7 @@ fn test_bool_false_decode() {
 }
 
 #[test]
-fn test_byte_zero_decode() {
+fn test_byte_zero_old_decode() {
     let value = &mut conformance::MyByte::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3750,7 +3890,7 @@ fn test_byte_zero_decode() {
 }
 
 #[test]
-fn test_byte255_decode() {
+fn test_byte255_old_decode() {
     let value = &mut conformance::MyByte::new_empty();
     let bytes = &mut [0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3758,7 +3898,7 @@ fn test_byte255_decode() {
 }
 
 #[test]
-fn test_int8_min_decode() {
+fn test_int8_min_old_decode() {
     let value = &mut conformance::MyInt8::new_empty();
     let bytes = &mut [0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3766,7 +3906,7 @@ fn test_int8_min_decode() {
 }
 
 #[test]
-fn test_int8_zero_decode() {
+fn test_int8_zero_old_decode() {
     let value = &mut conformance::MyInt8::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3774,7 +3914,7 @@ fn test_int8_zero_decode() {
 }
 
 #[test]
-fn test_int8_max_decode() {
+fn test_int8_max_old_decode() {
     let value = &mut conformance::MyInt8::new_empty();
     let bytes = &mut [0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3782,7 +3922,7 @@ fn test_int8_max_decode() {
 }
 
 #[test]
-fn test_int16_min_decode() {
+fn test_int16_min_old_decode() {
     let value = &mut conformance::MyInt16::new_empty();
     let bytes = &mut [0x00, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3790,7 +3930,7 @@ fn test_int16_min_decode() {
 }
 
 #[test]
-fn test_int16_zero_decode() {
+fn test_int16_zero_old_decode() {
     let value = &mut conformance::MyInt16::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3798,7 +3938,7 @@ fn test_int16_zero_decode() {
 }
 
 #[test]
-fn test_int16_max_decode() {
+fn test_int16_max_old_decode() {
     let value = &mut conformance::MyInt16::new_empty();
     let bytes = &mut [0xff, 0x7f, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3806,7 +3946,7 @@ fn test_int16_max_decode() {
 }
 
 #[test]
-fn test_int32_min_decode() {
+fn test_int32_min_old_decode() {
     let value = &mut conformance::MyInt32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x80, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3814,7 +3954,7 @@ fn test_int32_min_decode() {
 }
 
 #[test]
-fn test_int32_zero_decode() {
+fn test_int32_zero_old_decode() {
     let value = &mut conformance::MyInt32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3822,7 +3962,7 @@ fn test_int32_zero_decode() {
 }
 
 #[test]
-fn test_int32_max_decode() {
+fn test_int32_max_old_decode() {
     let value = &mut conformance::MyInt32::new_empty();
     let bytes = &mut [0xff, 0xff, 0xff, 0x7f, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3830,7 +3970,7 @@ fn test_int32_max_decode() {
 }
 
 #[test]
-fn test_int64_min_decode() {
+fn test_int64_min_old_decode() {
     let value = &mut conformance::MyInt64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x80];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3838,7 +3978,7 @@ fn test_int64_min_decode() {
 }
 
 #[test]
-fn test_int64_zero_decode() {
+fn test_int64_zero_old_decode() {
     let value = &mut conformance::MyInt64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3846,7 +3986,7 @@ fn test_int64_zero_decode() {
 }
 
 #[test]
-fn test_int64_max_decode() {
+fn test_int64_max_old_decode() {
     let value = &mut conformance::MyInt64::new_empty();
     let bytes = &mut [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x7f];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3854,7 +3994,7 @@ fn test_int64_max_decode() {
 }
 
 #[test]
-fn test_uint8_zero_decode() {
+fn test_uint8_zero_old_decode() {
     let value = &mut conformance::MyUint8::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3862,7 +4002,7 @@ fn test_uint8_zero_decode() {
 }
 
 #[test]
-fn test_uint8_max_decode() {
+fn test_uint8_max_old_decode() {
     let value = &mut conformance::MyUint8::new_empty();
     let bytes = &mut [0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3870,7 +4010,7 @@ fn test_uint8_max_decode() {
 }
 
 #[test]
-fn test_uint16_zero_decode() {
+fn test_uint16_zero_old_decode() {
     let value = &mut conformance::MyUint16::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3878,7 +4018,7 @@ fn test_uint16_zero_decode() {
 }
 
 #[test]
-fn test_uint16_max_decode() {
+fn test_uint16_max_old_decode() {
     let value = &mut conformance::MyUint16::new_empty();
     let bytes = &mut [0xff, 0xff, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3886,7 +4026,7 @@ fn test_uint16_max_decode() {
 }
 
 #[test]
-fn test_uint32_zero_decode() {
+fn test_uint32_zero_old_decode() {
     let value = &mut conformance::MyUint32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3894,7 +4034,7 @@ fn test_uint32_zero_decode() {
 }
 
 #[test]
-fn test_uint32_max_decode() {
+fn test_uint32_max_old_decode() {
     let value = &mut conformance::MyUint32::new_empty();
     let bytes = &mut [0xff, 0xff, 0xff, 0xff, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3902,7 +4042,7 @@ fn test_uint32_max_decode() {
 }
 
 #[test]
-fn test_uint64_zero_decode() {
+fn test_uint64_zero_old_decode() {
     let value = &mut conformance::MyUint64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3910,7 +4050,7 @@ fn test_uint64_zero_decode() {
 }
 
 #[test]
-fn test_uint64_max_decode() {
+fn test_uint64_max_old_decode() {
     let value = &mut conformance::MyUint64::new_empty();
     let bytes = &mut [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3918,7 +4058,7 @@ fn test_uint64_max_decode() {
 }
 
 #[test]
-fn test_float32_zero_decode() {
+fn test_float32_zero_old_decode() {
     let value = &mut conformance::MyFloat32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3926,7 +4066,7 @@ fn test_float32_zero_decode() {
 }
 
 #[test]
-fn test_float32_one_decode() {
+fn test_float32_one_old_decode() {
     let value = &mut conformance::MyFloat32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x80, 0x3f, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3934,7 +4074,7 @@ fn test_float32_one_decode() {
 }
 
 #[test]
-fn test_float32_minus_one_decode() {
+fn test_float32_minus_one_old_decode() {
     let value = &mut conformance::MyFloat32::new_empty();
     let bytes = &mut [0x00, 0x00, 0x80, 0xbf, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3942,7 +4082,7 @@ fn test_float32_minus_one_decode() {
 }
 
 #[test]
-fn test_float32_max_decode() {
+fn test_float32_max_old_decode() {
     let value = &mut conformance::MyFloat32::new_empty();
     let bytes = &mut [0xff, 0xff, 0x7f, 0x7f, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3950,7 +4090,7 @@ fn test_float32_max_decode() {
 }
 
 #[test]
-fn test_float64_zero_decode() {
+fn test_float64_zero_old_decode() {
     let value = &mut conformance::MyFloat64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3958,7 +4098,7 @@ fn test_float64_zero_decode() {
 }
 
 #[test]
-fn test_float64_one_decode() {
+fn test_float64_one_old_decode() {
     let value = &mut conformance::MyFloat64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0x3f];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3966,7 +4106,7 @@ fn test_float64_one_decode() {
 }
 
 #[test]
-fn test_float64_minus_one_decode() {
+fn test_float64_minus_one_old_decode() {
     let value = &mut conformance::MyFloat64::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xf0, 0xbf];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3974,7 +4114,7 @@ fn test_float64_minus_one_decode() {
 }
 
 #[test]
-fn test_float64_max_decode() {
+fn test_float64_max_old_decode() {
     let value = &mut conformance::MyFloat64::new_empty();
     let bytes = &mut [0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xef, 0x7f];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -3982,7 +4122,7 @@ fn test_float64_max_decode() {
 }
 
 #[test]
-fn test_sandwich1_case1_decode() {
+fn test_sandwich1_case1_old_decode() {
     let value = &mut conformance::Sandwich1::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x0c, 0x05, 0x06, 0x07,
@@ -4020,7 +4160,7 @@ fn test_sandwich1_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich1_with_opt_union_present_decode() {
+fn test_sandwich1_with_opt_union_present_old_decode() {
     let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -4059,7 +4199,7 @@ fn test_sandwich1_with_opt_union_present_v1_decode() {
 }
 
 #[test]
-fn test_sandwich1_with_opt_union_absent_decode() {
+fn test_sandwich1_with_opt_union_absent_old_decode() {
     let value = &mut conformance::Sandwich1WithOptUnion::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4096,7 +4236,7 @@ fn test_sandwich1_with_opt_union_absent_v1_decode() {
 }
 
 #[test]
-fn test_sandwich2_case1_decode() {
+fn test_sandwich2_case1_old_decode() {
     let value = &mut conformance::Sandwich2::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0x00,
@@ -4138,7 +4278,7 @@ fn test_sandwich2_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich3_case1_decode() {
+fn test_sandwich3_case1_old_decode() {
     let value = &mut conformance::Sandwich3::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4183,7 +4323,7 @@ fn test_sandwich3_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich4_case1_decode() {
+fn test_sandwich4_case1_old_decode() {
     let value = &mut conformance::Sandwich4::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6,
@@ -4232,7 +4372,7 @@ fn test_sandwich4_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich5_case1_decode() {
+fn test_sandwich5_case1_old_decode() {
     let value = &mut conformance::Sandwich5::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4277,7 +4417,7 @@ fn test_sandwich5_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich5_case2_decode() {
+fn test_sandwich5_case2_old_decode() {
     let value = &mut conformance::Sandwich5::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4329,7 +4469,7 @@ fn test_sandwich5_case2_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case1_decode() {
+fn test_sandwich6_case1_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4374,7 +4514,7 @@ fn test_sandwich6_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case1_absent_vector_decode() {
+fn test_sandwich6_case1_absent_vector_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4413,7 +4553,7 @@ fn test_sandwich6_case1_absent_vector_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case2_decode() {
+fn test_sandwich6_case2_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4456,7 +4596,7 @@ fn test_sandwich6_case2_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case3_decode() {
+fn test_sandwich6_case3_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4505,7 +4645,7 @@ fn test_sandwich6_case3_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case4_decode() {
+fn test_sandwich6_case4_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4554,7 +4694,7 @@ fn test_sandwich6_case4_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case5_decode() {
+fn test_sandwich6_case5_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4603,7 +4743,7 @@ fn test_sandwich6_case5_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case6_decode() {
+fn test_sandwich6_case6_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4648,7 +4788,7 @@ fn test_sandwich6_case6_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case7_decode() {
+fn test_sandwich6_case7_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x07, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4693,7 +4833,7 @@ fn test_sandwich6_case7_v1_decode() {
 }
 
 #[test]
-fn test_sandwich6_case8_decode() {
+fn test_sandwich6_case8_old_decode() {
     let value = &mut conformance::Sandwich6::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4739,7 +4879,7 @@ fn test_sandwich6_case8_v1_decode() {
 }
 
 #[test]
-fn test_sandwich7_case1_decode() {
+fn test_sandwich7_case1_old_decode() {
     let value = &mut conformance::Sandwich7::new_empty();
     let bytes = &mut [
         0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -4787,7 +4927,7 @@ fn test_sandwich7_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich7_case2_decode() {
+fn test_sandwich7_case2_old_decode() {
     let value = &mut conformance::Sandwich7::new_empty();
     let bytes = &mut [
         0x11, 0x12, 0x13, 0x14, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -4815,7 +4955,7 @@ fn test_sandwich7_case2_v1_decode() {
 }
 
 #[test]
-fn test_regression1_decode() {
+fn test_regression1_old_decode() {
     let value = &mut conformance::Regression1::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
@@ -4845,7 +4985,7 @@ fn test_regression1_v1_decode() {
 }
 
 #[test]
-fn test_regression2_decode() {
+fn test_regression2_old_decode() {
     let value = &mut conformance::Regression2::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x03, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00,
@@ -4895,7 +5035,7 @@ fn test_regression2_v1_decode() {
 }
 
 #[test]
-fn test_regression3_absent_decode() {
+fn test_regression3_absent_old_decode() {
     let value = &mut conformance::Regression3::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -4911,7 +5051,7 @@ fn test_regression3_absent_v1_decode() {
 }
 
 #[test]
-fn test_regression3_present_decode() {
+fn test_regression3_present_old_decode() {
     let value = &mut conformance::Regression3::new_empty();
     let bytes = &mut [
         0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00,
@@ -4967,7 +5107,7 @@ fn test_regression3_present_v1_decode() {
 }
 
 #[test]
-fn test_size5_alignment1_array_decode() {
+fn test_size5_alignment1_array_old_decode() {
     let value = &mut conformance::Size5Alignment1Array::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, 0x0e, 0x0f,
@@ -5007,7 +5147,7 @@ fn test_size5_alignment1_array_v1_decode() {
 }
 
 #[test]
-fn test_size5_alignment4_array_decode() {
+fn test_size5_alignment4_array_old_decode() {
     let value = &mut conformance::Size5Alignment4Array::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x00, 0x00, 0x06, 0x07, 0x08, 0x09, 0x0a, 0x00, 0x00,
@@ -5047,7 +5187,7 @@ fn test_size5_alignment4_array_v1_decode() {
 }
 
 #[test]
-fn test_size5_alignment1_vector_decode() {
+fn test_size5_alignment1_vector_old_decode() {
     let value = &mut conformance::Size5Alignment1Vector::new_empty();
     let bytes = &mut [
         0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5087,7 +5227,7 @@ fn test_size5_alignment1_vector_v1_decode() {
 }
 
 #[test]
-fn test_size5_alignment4_vector_decode() {
+fn test_size5_alignment4_vector_old_decode() {
     let value = &mut conformance::Size5Alignment4Vector::new_empty();
     let bytes = &mut [
         0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5127,7 +5267,7 @@ fn test_size5_alignment4_vector_v1_decode() {
 }
 
 #[test]
-fn test_table_struct_with_reserved_sandwich_decode() {
+fn test_table_struct_with_reserved_sandwich_old_decode() {
     let value = &mut conformance::TableStructWithReservedSandwichStruct::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5173,7 +5313,7 @@ fn test_table_struct_with_reserved_sandwich_v1_decode() {
 }
 
 #[test]
-fn test_table_struct_with_uint32_sandwich_decode() {
+fn test_table_struct_with_uint32_sandwich_old_decode() {
     let value = &mut conformance::TableStructWithUint32SandwichStruct::new_empty();
     let bytes = &mut [
         0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5227,7 +5367,7 @@ fn test_table_struct_with_uint32_sandwich_v1_decode() {
 }
 
 #[test]
-fn test_table_union_with_vector_reserved_sandwich_decode() {
+fn test_table_union_with_vector_reserved_sandwich_old_decode() {
     let value = &mut conformance::TableUnionWithVectorReservedSandwichStruct::new_empty();
     let bytes = &mut [
         0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5272,7 +5412,7 @@ fn test_table_union_with_vector_reserved_sandwich_v1_decode() {
 }
 
 #[test]
-fn test_table_union_with_vector_struct_sandwich_decode() {
+fn test_table_union_with_vector_struct_sandwich_old_decode() {
     let value = &mut conformance::TableUnionWithVectorStructSandwichStruct::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5325,7 +5465,7 @@ fn test_table_union_with_vector_struct_sandwich_v1_decode() {
 }
 
 #[test]
-fn test_x_union_with_struct_decode() {
+fn test_x_union_with_struct_old_decode() {
     let value = &mut conformance::XUnionWithStructStruct::new_empty();
     let bytes = &mut [
         0x14, 0x5c, 0x3e, 0x19, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -5363,7 +5503,7 @@ fn test_x_union_with_struct_v1_decode() {
 }
 
 #[test]
-fn test_array_struct_decode() {
+fn test_array_struct_old_decode() {
     let value = &mut conformance::ArrayStruct::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -5444,7 +5584,7 @@ fn test_array_struct_v1_decode() {
 }
 
 #[test]
-fn test_transformer_empty_struct_decode() {
+fn test_transformer_empty_struct_old_decode() {
     let value = &mut conformance::TransformerEmptyStruct::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -5460,7 +5600,7 @@ fn test_transformer_empty_struct_v1_decode() {
 }
 
 #[test]
-fn test_empty_struct_union_decode() {
+fn test_empty_struct_union_old_decode() {
     let value = &mut conformance::EmptyStructUnionStruct::new_empty();
     let bytes = &mut [0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -5490,7 +5630,7 @@ fn test_empty_struct_union_v1_decode() {
 }
 
 #[test]
-fn test_no_coding_tables_stressor_decode() {
+fn test_no_coding_tables_stressor_old_decode() {
     let value = &mut conformance::NoCodingTablesStressor::new_empty();
     let bytes = &mut [
         0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22, 0x22,
@@ -5602,7 +5742,7 @@ fn test_no_coding_tables_stressor_v1_decode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_case1_decode() {
+fn test_out_of_line_sandwich1_case1_old_decode() {
     let value = &mut conformance::OutOfLineSandwich1::new_empty();
     let bytes = &mut [
         0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5660,7 +5800,7 @@ fn test_out_of_line_sandwich1_case1_v1_decode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_with_opt_union_present_decode() {
+fn test_out_of_line_sandwich1_with_opt_union_present_old_decode() {
     let value = &mut conformance::OutOfLineSandwich1WithOptUnion::new_empty();
     let bytes = &mut [
         0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5719,7 +5859,7 @@ fn test_out_of_line_sandwich1_with_opt_union_present_v1_decode() {
 }
 
 #[test]
-fn test_out_of_line_sandwich1_with_opt_union_absent_decode() {
+fn test_out_of_line_sandwich1_with_opt_union_absent_old_decode() {
     let value = &mut conformance::OutOfLineSandwich1WithOptUnion::new_empty();
     let bytes = &mut [
         0x15, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -5777,7 +5917,7 @@ fn test_out_of_line_sandwich1_with_opt_union_absent_v1_decode() {
 }
 
 #[test]
-fn test_regression4_decode() {
+fn test_regression4_old_decode() {
     let value = &mut conformance::Regression4::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x02, 0x00, 0x00, 0x00, 0x09, 0x0a, 0x0b, 0x03, 0x04, 0x00, 0x00,
@@ -5823,7 +5963,7 @@ fn test_regression4_v1_decode() {
 }
 
 #[test]
-fn test_sandwich4_align8_decode() {
+fn test_sandwich4_align8_old_decode() {
     let value = &mut conformance::Sandwich4Align8::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6,
@@ -5879,7 +6019,7 @@ fn test_sandwich4_align8_v1_decode() {
 }
 
 #[test]
-fn test_sandwich4_align8_with_pointer_decode() {
+fn test_sandwich4_align8_with_pointer_old_decode() {
     let value = &mut conformance::Sandwich4Align8WithPointer::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x03, 0x00, 0x00, 0x00, 0xa0, 0xa1, 0xa2, 0xa3, 0xa4, 0xa5, 0xa6,
@@ -5940,7 +6080,7 @@ fn test_sandwich4_align8_with_pointer_v1_decode() {
 }
 
 #[test]
-fn test_sandwich8_case1_decode() {
+fn test_sandwich8_case1_old_decode() {
     let value = &mut conformance::Sandwich8::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x03, 0x04, 0x00, 0x00, 0x00, 0x00, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -5985,7 +6125,7 @@ fn test_sandwich8_case1_v1_decode() {
 }
 
 #[test]
-fn test_sandwich9_case1_decode() {
+fn test_sandwich9_case1_old_decode() {
     let value = &mut conformance::Sandwich9::new_empty();
     let bytes = &mut [
         0x01, 0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -6036,7 +6176,7 @@ fn test_sandwich9_case1_v1_decode() {
 }
 
 #[test]
-fn test_simple_table_array_struct_decode() {
+fn test_simple_table_array_struct_old_decode() {
     let value = &mut conformance::SimpleTableArrayStruct::new_empty();
     let bytes = &mut [
         0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -6082,7 +6222,7 @@ fn test_simple_table_array_struct_v1_decode() {
 }
 
 #[test]
-fn test_string_union_vector_decode() {
+fn test_string_union_vector_old_decode() {
     let value = &mut conformance::StringUnionVector::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -6135,7 +6275,7 @@ fn test_string_union_vector_v1_decode() {
 }
 
 #[test]
-fn test_create_component_request_decode() {
+fn test_create_component_request_old_decode() {
     let value = &mut conformance::CreateComponentRequest::new_empty();
     let bytes = &mut [
         0x84, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
@@ -6183,7 +6323,7 @@ fn test_create_component_request_v1_decode() {
 }
 
 #[test]
-fn test_union_with_bound_string_decode() {
+fn test_union_with_bound_string_old_decode() {
     let value = &mut conformance::UnionWithBoundStringStruct::new_empty();
     let bytes = &mut [
         0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
@@ -6200,7 +6340,25 @@ fn test_union_with_bound_string_decode() {
 }
 
 #[test]
-fn test_union_migration_single_variant_decode() {
+fn test_union_with_bound_string_v1_decode() {
+    let value = &mut conformance::UnionWithBoundStringStruct::new_empty();
+    let bytes = &mut [
+        0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x61, 0x62, 0x63, 0x64, 0x00,
+        0x00, 0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::UnionWithBoundStringStruct {
+            v: conformance::UnionWithBoundString::BoundFiveStr(String::from("abcd"))
+        }
+    );
+}
+
+#[test]
+fn test_union_migration_single_variant_old_decode() {
     let value = &mut conformance::SingleVariantUnionStruct::new_empty();
     let bytes = &mut [0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00];
     Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
@@ -6226,7 +6384,7 @@ fn test_union_migration_single_variant_v1_decode() {
 }
 
 #[test]
-fn test_non_empty_string_with_null_ptr_body_decode_failure() {
+fn test_non_empty_string_with_null_ptr_body_old_decode_failure() {
     let value = &mut conformance::StringWrapper::new_empty();
     let bytes = &mut [
         0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,

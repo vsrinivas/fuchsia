@@ -5,16 +5,24 @@
 success("UnionWithBoundString") {
     value = UnionWithBoundStringStruct {
         v: UnionWithBoundString {
-                boundFiveStr: "abcd",
+            boundFiveStr: "abcd",
         },
     },
-    bytes = [
-        tag 8:num(0),
-        // envelope for string:
-        size 8:num(4),
-        ptr 8:num(-1),
-        data 4:raw('a', 'b', 'c', 'd',), 4:padding,
-    ],
+    bytes = {
+        old = [
+            tag 8:num(0),
+            size 8:num(4),
+            ptr 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
+            data 4:raw('a', 'b', 'c', 'd',), 4:padding,
+        ],
+        v1 = [
+            ordinal 8:num(1), num_bytes 4:num(24), num_handles 4:num(0),
+            present 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
+            size 8:num(4),
+            ptr 8:raw(0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff),
+            data 4:raw('a', 'b', 'c', 'd',), 4:padding,
+        ],
+    },
 }
 
 encode_failure("UnionWithBoundString_ExceedsBounds") {
@@ -49,5 +57,4 @@ success("UnionMigration_SingleVariant") {
             x 4:num(42), 4:padding,
         ],
     },
-    bindings_denylist = [llcpp],
 }

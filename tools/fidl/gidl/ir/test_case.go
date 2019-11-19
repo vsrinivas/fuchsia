@@ -15,9 +15,8 @@ type All struct {
 
 type EncodeSuccess struct {
 	Name              string
-	WireFormat        WireFormat
 	Value             interface{}
-	Bytes             []byte
+	Encodings         []Encoding
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
 	// Handles
@@ -25,9 +24,8 @@ type EncodeSuccess struct {
 
 type DecodeSuccess struct {
 	Name              string
-	WireFormat        WireFormat
 	Value             interface{}
-	Bytes             []byte
+	Encodings         []Encoding
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
 	// Handles
@@ -35,8 +33,8 @@ type DecodeSuccess struct {
 
 type EncodeFailure struct {
 	Name              string
-	WireFormat        WireFormat
 	Value             interface{}
+	WireFormats       []WireFormat
 	Err               ErrorCode
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
@@ -44,12 +42,16 @@ type EncodeFailure struct {
 
 type DecodeFailure struct {
 	Name              string
-	WireFormat        WireFormat
 	Type              string
-	Bytes             []byte
+	Encodings         []Encoding
 	Err               ErrorCode
 	BindingsAllowlist *[]string
 	BindingsDenylist  *[]string
+}
+
+type Encoding struct {
+	WireFormat WireFormat
+	Bytes      []byte
 }
 
 type WireFormat uint
@@ -58,33 +60,36 @@ const (
 	_ WireFormat = iota
 	OldWireFormat
 	V1WireFormat
-	DefaultWireFormat = OldWireFormat
 )
 
-var wireFormats = map[string]WireFormat{
-	"old": OldWireFormat,
-	"v1":  V1WireFormat,
-}
-
-func (input WireFormat) String() string {
-	for s, wf := range wireFormats {
-		if wf == input {
-			return s
-		}
+var nameToWireFormat = map[string]WireFormat{}
+var wireFormatToName = map[WireFormat]string{}
+var allWireFormats = func() []WireFormat {
+	register := func(wf WireFormat, name string) WireFormat {
+		nameToWireFormat[name] = wf
+		wireFormatToName[wf] = name
+		return wf
 	}
-	panic(fmt.Sprintf("wire format %d not found", input))
+	return []WireFormat{
+		register(OldWireFormat, "old"),
+		register(V1WireFormat, "v1"),
+	}
+}()
+
+func AllWireFormats() []WireFormat {
+	return append([]WireFormat(nil), allWireFormats...)
 }
 
-func TestCaseName(name string, wf WireFormat) string {
-	if wf == DefaultWireFormat {
+func (wf WireFormat) String() string {
+	if name, ok := wireFormatToName[wf]; ok {
 		return name
 	}
-	return fmt.Sprintf("%s_%s", name, wf)
+	return fmt.Sprintf("unknown wire format (%d)", wf)
 }
 
-func ParseWireFormat(str string) (WireFormat, error) {
-	if wf, ok := wireFormats[str]; ok {
+func WireFormatByName(name string) (WireFormat, error) {
+	if wf, ok := nameToWireFormat[name]; ok {
 		return wf, nil
 	}
-	return 0, fmt.Errorf("unknown wire format %q", str)
+	return 0, fmt.Errorf("unknown wire format %q", name)
 }

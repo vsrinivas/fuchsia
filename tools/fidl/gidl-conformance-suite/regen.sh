@@ -100,12 +100,12 @@ function cleanup {
 trap cleanup EXIT
 
 readonly json_path="$( mktemp ${tmpout}/tmp.XXXXXXXX )"
-fidlc_args="--json ${json_path} --files "
+all_fidl_files=""
 for fidl_path in "$(find "${EXAMPLE_DIR}" -name '*.fidl')"; do
-    fidlc_args="${fidlc_args} ${fidl_path}"
+    all_fidl_files+=" ${fidl_path}"
 done
 
-${FIDLC} ${fidlc_args}
+${FIDLC} --json "${json_path}" --files ${all_fidl_files}
 
 generated_source_header=$(cat << EOF
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
@@ -165,7 +165,7 @@ ${GIDL} \
     -json "${json_path}" \
     ${GIDL_SRCS} >> "${DART_TEST_PATH}"
 ${FUCHSIA_DIR}/prebuilt/third_party/dart/linux-x64/bin/dartfmt -w ${DART_TEST_PATH} > /dev/null
-fx format-code --files="$DART_TEST_PATH"
+fx format-code --files="$DART_DEFINITION_PATH,$DART_TEST_PATH"
 
 # LLCPP
 echo "${generated_source_header}" > "${LLCPP_TEST_PATH}"
@@ -187,7 +187,7 @@ fx format-code --files="$RUST_TEST_PATH"
 # TODO(fxb/41049): Depend on a build target instead of generating the file here.
 ${FIDLC} \
   --tables ${tmpout}/transformer_conformance_tables.h \
-  --files ${EXAMPLE_DIR}/transformer.test.fidl
+  --files ${all_fidl_files}
 TRANSFORMER_INCLUDE_GUARD="ZIRCON_SYSTEM_UTEST_FIDL_GENERATED_TRANSFORMER_CONFORMANCE_TABLES_H_"
 cat <<EOS > "${TRANSFORMER_TABLES_PATH}"
 $generated_source_header
@@ -201,5 +201,5 @@ echo "$generated_source_header" > "${TRANSFORMER_TEST_PATH}"
 ${GIDL} \
     -language transformer \
     -json "${json_path}" \
-    ${EXAMPLE_DIR}/transformer.gidl >> "${TRANSFORMER_TEST_PATH}"
+    ${GIDL_SRCS} >> "${TRANSFORMER_TEST_PATH}"
 fx format-code --files="$TRANSFORMER_TEST_PATH"
