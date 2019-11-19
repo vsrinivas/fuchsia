@@ -4,6 +4,8 @@
 
 #[allow(unused)]
 mod channel_scheduler;
+#[allow(unused)]
+mod convert_beacon;
 mod frame_writer;
 mod state;
 

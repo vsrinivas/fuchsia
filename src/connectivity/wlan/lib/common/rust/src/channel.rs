@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 #![allow(dead_code)]
-use failure::{self, bail};
-use fidl_fuchsia_wlan_common as fidl_common;
-use std::fmt;
+use {
+    crate::ie,
+    failure::{self, bail},
+    fidl_fuchsia_wlan_common as fidl_common,
+    std::fmt,
+};
 
 // IEEE Std 802.11-2016, Annex E
 // Note the distinction of index for primary20 and index for center frequency.
@@ -300,6 +303,67 @@ impl Channel {
     }
 }
 
+/// Derive channel given DSSS param set, HT operation, and VHT operation IEs from
+/// beacon or probe response, and the primary channel from which such frame is
+/// received on.
+///
+/// Primary channel is extracted from HT op, DSSS param set, or `rx_primary_channel`,
+/// in descending priority.
+///
+/// The channel bandwidth is derived based on IEEE 802.11-2016, Table 11-24
+/// Also see section 11.40.1 about VHT STA.
+pub fn derive_channel(
+    rx_primary_channel: u8,
+    dsss_channel: Option<u8>,
+    ht_op: Option<ie::HtOperation>,
+    vht_op: Option<ie::VhtOperation>,
+) -> fidl_common::WlanChan {
+    use ie::StaChanWidth as Scw;
+    use ie::VhtChannelBandwidth as Vcb;
+
+    let primary = match ht_op {
+        Some(ht_op) => ht_op.primary_chan,
+        None => dsss_channel.unwrap_or(rx_primary_channel),
+    };
+
+    let ht_op_cbw = ht_op.map(|ht_op| ht_op.ht_op_info_head.sta_chan_width());
+    let vht_cbw_and_segs =
+        vht_op.map(|vht_op| (vht_op.vht_cbw, vht_op.center_freq_seg0, vht_op.center_freq_seg1));
+
+    let (cbw, secondary80) = match (ht_op_cbw, vht_cbw_and_segs) {
+        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, _, 0))) => (fidl_common::Cbw::Cbw80, 0),
+        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, seg0, seg1))) if abs_sub(seg0, seg1) == 8 => {
+            (fidl_common::Cbw::Cbw160, 0)
+        }
+        (Some(Scw::ANY), Some((Vcb::CBW_80_160_80P80, seg0, seg1))) if abs_sub(seg0, seg1) > 16 => {
+            // See IEEE 802.11-2016, Table 9-252, about channel center frequency segment 1
+            (fidl_common::Cbw::Cbw80P80, seg1)
+        }
+        // Use HT CBW if
+        // - VHT op is not present,
+        // - VHT op has deprecated parameters sets, or
+        // - VHT CBW field is set to 0
+        // Safe to unwrap `ht_op` because `ht_op_cbw` is only Some(_) if `ht_op` has a value.
+        (Some(Scw::ANY), _) => match ht_op.unwrap().ht_op_info_head.secondary_chan_offset() {
+            ie::SecChanOffset::SECONDARY_ABOVE => (fidl_common::Cbw::Cbw40, 0),
+            ie::SecChanOffset::SECONDARY_BELOW => (fidl_common::Cbw::Cbw40Below, 0),
+            ie::SecChanOffset::SECONDARY_NONE | _ => (fidl_common::Cbw::Cbw20, 0),
+        },
+        // Default to Cbw20 if HT CBW field is set to 0 or not present.
+        (Some(Scw::TWENTY_MHZ), _) | _ => (fidl_common::Cbw::Cbw20, 0),
+    };
+
+    fidl_common::WlanChan { primary, cbw, secondary80 }
+}
+
+fn abs_sub(v1: u8, v2: u8) -> u8 {
+    if v2 >= v1 {
+        v2 - v1
+    } else {
+        v1 - v2
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -455,5 +519,155 @@ mod tests {
         let p = Phy::Vht;
         assert_eq!(p.to_fidl(), fidl_common::Phy::Vht);
         assert_eq!(Phy::from_fidl(p.to_fidl()), p);
+    }
+
+    const RX_PRIMARY_CHAN: u8 = 11;
+    const HT_PRIMARY_CHAN: u8 = 48;
+
+    #[test]
+    fn test_derive_channel_basic() {
+        let chan = derive_channel(RX_PRIMARY_CHAN, None, None, None);
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: RX_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw20,
+                secondary80: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_dsss_param() {
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), None, None);
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan { primary: 6, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_ht_20mhz() {
+        let expected_chan = fidl_common::WlanChan {
+            primary: HT_PRIMARY_CHAN,
+            cbw: fidl_common::Cbw::Cbw20,
+            secondary80: 0,
+        };
+
+        let test_params = [
+            (ie::StaChanWidth::TWENTY_MHZ, ie::SecChanOffset::SECONDARY_NONE),
+            (ie::StaChanWidth::TWENTY_MHZ, ie::SecChanOffset::SECONDARY_ABOVE),
+            (ie::StaChanWidth::TWENTY_MHZ, ie::SecChanOffset::SECONDARY_BELOW),
+            (ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_NONE),
+        ];
+
+        for (ht_width, sec_chan_offset) in test_params.iter() {
+            let ht_op = ht_op(HT_PRIMARY_CHAN, *ht_width, *sec_chan_offset);
+            let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
+            assert_eq!(chan, expected_chan);
+        }
+    }
+
+    #[test]
+    fn test_derive_channel_with_ht_40mhz() {
+        let ht_op =
+            ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: HT_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw40,
+                secondary80: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_ht_40mhz_below() {
+        let ht_op =
+            ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_BELOW);
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), None);
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: HT_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw40Below,
+                secondary80: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_vht_80mhz() {
+        let ht_op =
+            ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
+        let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 8, 0);
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: HT_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw80,
+                secondary80: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_vht_160mhz() {
+        let ht_op =
+            ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
+        let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 0, 8);
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: HT_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw160,
+                secondary80: 0,
+            }
+        );
+    }
+
+    #[test]
+    fn test_derive_channel_with_vht_80plus80mhz() {
+        let ht_op =
+            ht_op(HT_PRIMARY_CHAN, ie::StaChanWidth::ANY, ie::SecChanOffset::SECONDARY_ABOVE);
+        let vht_op = vht_op(ie::VhtChannelBandwidth::CBW_80_160_80P80, 18, 1);
+        let chan = derive_channel(RX_PRIMARY_CHAN, Some(6), Some(ht_op), Some(vht_op));
+        assert_eq!(
+            chan,
+            fidl_common::WlanChan {
+                primary: HT_PRIMARY_CHAN,
+                cbw: fidl_common::Cbw::Cbw80P80,
+                secondary80: 1,
+            }
+        );
+    }
+
+    fn ht_op(
+        primary: u8,
+        chan_width: ie::StaChanWidth,
+        offset: ie::SecChanOffset,
+    ) -> ie::HtOperation {
+        let mut info_head = ie::HtOpInfoHead(0);
+        info_head.set_sta_chan_width(chan_width);
+        info_head.set_secondary_chan_offset(offset);
+        ie::HtOperation {
+            primary_chan: primary,
+            ht_op_info_head: info_head,
+            ht_op_info_tail: ie::HtOpInfoTail(0),
+            basic_ht_mcs_set: ie::SupportedMcsSet(0),
+        }
+    }
+
+    fn vht_op(vht_cbw: ie::VhtChannelBandwidth, seg0: u8, seg1: u8) -> ie::VhtOperation {
+        ie::VhtOperation {
+            vht_cbw,
+            center_freq_seg0: seg0,
+            center_freq_seg1: seg1,
+            basic_mcs_nss: ie::VhtMcsNssMap(0),
+        }
     }
 }

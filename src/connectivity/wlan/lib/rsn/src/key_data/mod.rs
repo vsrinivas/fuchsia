@@ -32,7 +32,7 @@ fn parse_ie(i0: &[u8]) -> IResult<&[u8], Element> {
     let (i1, id) = try_parse!(i0, call!(peek_u8_at, 0));
     let (i2, len) = try_parse!(i1, call!(peek_u8_at, 1));
     let (out, bytes) = try_parse!(i2, take!(2 + (len as usize)));
-    match id.into() {
+    match Id(id) {
         Id::RSNE => {
             let (_, rsne) = try_parse!(bytes, rsne::from_bytes);
             Ok((out, Element::Rsne(rsne)))

@@ -382,7 +382,7 @@ pub struct HtOperation {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct HtOpInfoHead(pub u8);
 
-#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct SecChanOffset(pub u8);
 impl SecChanOffset {
     pub_const!(SECONDARY_NONE, 0); // No secondary channel
@@ -391,7 +391,7 @@ impl SecChanOffset {
     pub_const!(SECONDARY_BELOW, 3); // Secondary channel is below the primary channel
 }
 
-#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct StaChanWidth(pub u8);
 impl StaChanWidth {
     pub_const!(TWENTY_MHZ, 0);
@@ -424,7 +424,7 @@ impl StaChanWidth {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct HtOpInfoTail(pub u32);
 
-#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct HtProtection(pub u8);
 impl HtProtection {
     pub_const!(NONE, 0);
@@ -433,7 +433,7 @@ impl HtProtection {
     pub_const!(NON_HT_MIXED, 3);
 }
 
-#[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
+#[derive(Debug, PartialOrd, PartialEq, Eq, Clone, Copy)]
 pub struct PcoPhase(pub u8);
 impl PcoPhase {
     pub_const!(TWENTY_MHZ, 0);
