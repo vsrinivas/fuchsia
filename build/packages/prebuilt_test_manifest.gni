@@ -53,6 +53,7 @@ template("prebuilt_test_manifest") {
 
   group(target_name) {
     testonly = true
+    forward_variables_from(invoker, [ "visibility" ])
     public_deps = test_targets
   }
 }

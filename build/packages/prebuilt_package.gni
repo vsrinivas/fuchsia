@@ -36,6 +36,7 @@ template("prebuilt_package") {
   if (defined(invoker.package_name)) {
     pkg_name = invoker.package_name
   }
+  manifest_target_name = target_name + ".manifest"
 
   meta_dir = target_out_dir + "/" + pkg_name + ".meta"
   blobs_json = "$meta_dir/blobs.json"
@@ -106,6 +107,10 @@ template("prebuilt_package") {
 
     archive = invoker.archive
 
+    if (defined(visibility)) {
+      visibility += [ ":$manifest_target_name" ]
+    }
+
     script = "//build/packages/prebuilt_package.py"
 
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
@@ -174,7 +179,7 @@ template("prebuilt_package") {
     }
   }
 
-  group(target_name + ".manifest") {
+  group(manifest_target_name) {
     forward_variables_from(invoker, [ "testonly" ])
     public_deps = [
       ":$pkg_target_name",
