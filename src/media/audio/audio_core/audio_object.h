@@ -60,11 +60,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
 
   bool format_valid() const { return format() != nullptr; }
 
-  virtual std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
-      int64_t reference_time) {
-    return std::nullopt;
-  }
-
   // Hooks to add logging or metrics for [Partial]Underflow events.
   virtual void UnderflowOccurred(int64_t source_start, int64_t mix_point,
                                  zx::duration underflow_duration) {}

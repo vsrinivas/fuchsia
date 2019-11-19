@@ -194,8 +194,7 @@ void AudioOutput::ForEachSource(TaskType task_type) {
     auto& info = mixer->bookkeeping();
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
-    auto source = link->GetSource();
-    UpdateSourceTrans(source, &info);
+    UpdateSourceTrans(*stream, &info);
 
     bool setup_done = false;
     fbl::RefPtr<Packet> pkt_ref;
@@ -229,8 +228,8 @@ void AudioOutput::ForEachSource(TaskType task_type) {
 
       // Now process the packet at the front of the renderer's queue. If the packet has been
       // entirely consumed, pop it off the front and proceed to the next. Otherwise, we are done.
-      release_packet =
-          (task_type == TaskType::Mix) ? ProcessMix(source, mixer, pkt_ref) : ProcessTrim(pkt_ref);
+      release_packet = (task_type == TaskType::Mix) ? ProcessMix(link->GetSource(), mixer, pkt_ref)
+                                                    : ProcessTrim(pkt_ref);
 
       // If we have mixed enough destination frames, we are done with this mix, regardless of what
       // we should now do with the source packet.
@@ -484,22 +483,19 @@ bool AudioOutput::ProcessTrim(const fbl::RefPtr<Packet>& pkt_ref) {
   return true;
 }
 
-void AudioOutput::UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source,
-                                    Mixer::Bookkeeping* bk) {
+void AudioOutput::UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk) {
   TRACE_DURATION("audio", "AudioOutput::UpdateSourceTrans");
-  FX_DCHECK(source != nullptr);
 
-  auto func = source->SnapshotCurrentTimelineFunction(zx::clock::get_monotonic().get());
-  FX_DCHECK(func);
-  bk->clock_mono_to_frac_source_frames = func->first;
+  auto func = stream.ReferenceClockToFractionalFrames();
+  bk->clock_mono_to_frac_source_frames = func.first;
 
   // If local->media transformation hasn't changed since last time, we're done.
-  if (bk->source_trans_gen_id == func->second) {
+  if (bk->source_trans_gen_id == func.second) {
     return;
   }
 
   // Transformation has changed. Update gen; invalidate dest-to-src generation.
-  bk->source_trans_gen_id = func->second;
+  bk->source_trans_gen_id = func.second;
   bk->dest_trans_gen_id = kInvalidGenerationId;
 }
 

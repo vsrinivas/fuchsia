@@ -17,12 +17,15 @@
 #include "src/media/audio/audio_core/packet.h"
 #include "src/media/audio/audio_core/pending_flush_token.h"
 #include "src/media/audio/audio_core/stream.h"
+#include "src/media/audio/audio_core/versioned_timeline_function.h"
 
 namespace media::audio {
 
 class PacketQueue : public Stream {
  public:
-  PacketQueue(Format format);
+  explicit PacketQueue(Format format);
+  PacketQueue(Format format,
+              fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames);
   ~PacketQueue();
 
   bool empty() const {
@@ -36,6 +39,7 @@ class PacketQueue : public Stream {
   // |media::audio::Stream|
   fbl::RefPtr<Packet> LockPacket(bool* was_flushed) override;
   void UnlockPacket(bool release_packet) override;
+  std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const override;
 
  private:
   std::mutex flush_mutex_;
@@ -47,6 +51,7 @@ class PacketQueue : public Stream {
       FXL_GUARDED_BY(pending_mutex_);
   bool flushed_ FXL_GUARDED_BY(pending_mutex_) = true;
   bool processing_in_progress_ FXL_GUARDED_BY(pending_mutex_) = false;
+  fbl::RefPtr<VersionedTimelineFunction> timeline_function_;
 };
 
 }  // namespace media::audio

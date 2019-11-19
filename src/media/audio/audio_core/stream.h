@@ -7,6 +7,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/result.h>
+#include <lib/media/cpp/timeline_function.h>
 #include <lib/zx/time.h>
 
 #include <fbl/ref_counted.h>
@@ -31,6 +32,9 @@ class Stream : public fbl::RefCounted<Stream> {
   // without forcing AudioRenderers to wait to queue new data if a mix operation is in progress.
   virtual fbl::RefPtr<Packet> LockPacket(bool* was_flushed) = 0;
   virtual void UnlockPacket(bool release_packet) = 0;
+
+  // Reads the function that converts reference clock to fractional stream frames.
+  virtual std::pair<TimelineFunction, uint32_t> ReferenceClockToFractionalFrames() const = 0;
 
   const Format& format() const { return format_; }
 

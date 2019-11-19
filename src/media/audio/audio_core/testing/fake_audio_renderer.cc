@@ -62,7 +62,7 @@ void FakeAudioRenderer::EnqueueAudioPacket(float sample, zx::duration duration) 
     auto now = async::Now(dispatcher_) + min_lead_time;
     auto frac_fps = 48000 << kPtsFractionalBits;
     auto rate = TimelineRate(frac_fps, 1000000000u);
-    timeline_func_ = TimelineFunction(0, now.get(), rate);
+    timeline_function_->Update(TimelineFunction(0, now.get(), rate));
   }
 
   auto packet_ref = fbl::MakeRefCounted<Packet>(
@@ -88,7 +88,7 @@ zx::duration FakeAudioRenderer::FindMinLeadTime() {
 }
 
 zx_status_t FakeAudioRenderer::InitializeDestLink(const fbl::RefPtr<AudioLink>& link) {
-  auto queue = fbl::MakeRefCounted<PacketQueue>(*format());
+  auto queue = fbl::MakeRefCounted<PacketQueue>(*format(), timeline_function_);
   packet_queues_.insert({link.get(), queue});
   link->set_stream(std::move(queue));
   return ZX_OK;

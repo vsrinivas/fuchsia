@@ -144,8 +144,6 @@ class AudioRendererImpl : public AudioObject,
                          zx::duration underflow_duration) final;
   void PartialUnderflowOccurred(int64_t source_offset, int64_t mix_offset) final;
   const fbl::RefPtr<Format>& format() const final { return format_; }
-  std::optional<std::pair<TimelineFunction, uint32_t>> SnapshotCurrentTimelineFunction(
-      int64_t reference_time) final;
   zx_status_t InitializeDestLink(const fbl::RefPtr<AudioLink>& link) override;
   void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) override;
 
@@ -185,9 +183,7 @@ class AudioRendererImpl : public AudioObject,
   // Minimum Clock Lead Time state
   bool min_lead_time_events_enabled_ = false;
 
-  std::mutex ref_to_ff_lock_;
-  TimelineFunction ref_clock_to_frac_frames_ FXL_GUARDED_BY(ref_to_ff_lock_);
-  GenerationId ref_clock_to_frac_frames_gen_ FXL_GUARDED_BY(ref_to_ff_lock_);
+  fbl::RefPtr<VersionedTimelineFunction> reference_clock_to_fractional_frames_;
 
   std::atomic<uint16_t> underflow_count_;
   std::atomic<uint16_t> partial_underflow_count_;

@@ -12,7 +12,10 @@
 
 namespace media::audio {
 
-PacketQueue::PacketQueue(Format format) : Stream(std::move(format)) {}
+PacketQueue::PacketQueue(Format format) : PacketQueue(format, nullptr) {}
+
+PacketQueue::PacketQueue(Format format, fbl::RefPtr<VersionedTimelineFunction> timeline_function)
+    : Stream(std::move(format)), timeline_function_(std::move(timeline_function)) {}
 
 PacketQueue::~PacketQueue() {
   pending_flush_packet_queue_.clear();
@@ -120,6 +123,13 @@ void PacketQueue::UnlockPacket(bool release_packet) {
       pending_packet_queue_.pop_front();
     }
   }
+}
+
+std::pair<TimelineFunction, uint32_t> PacketQueue::ReferenceClockToFractionalFrames() const {
+  if (!timeline_function_) {
+    return std::make_pair(TimelineFunction(), kInvalidGenerationId);
+  }
+  return timeline_function_->get();
 }
 
 }  // namespace media::audio

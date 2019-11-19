@@ -47,7 +47,7 @@ class AudioOutput : public AudioDevice {
   };
 
   // TODO(13415): Integrate it into the Mixer class itself.
-  void UpdateSourceTrans(const fbl::RefPtr<AudioObject>& source, Mixer::Bookkeeping* bk);
+  void UpdateSourceTrans(const Stream& stream, Mixer::Bookkeeping* bk);
   void UpdateDestTrans(const MixJob& job, Mixer::Bookkeeping* bk);
 
   void Cleanup() override FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
