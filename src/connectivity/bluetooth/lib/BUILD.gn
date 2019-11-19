@@ -13,6 +13,8 @@ group("lib") {
     "fidl:tests",
     "fuchsia-audio-device-output",
     "fuchsia-audio-device-output:fuchsia-audio-device-output-tests",
+    "fuchsia-audio-encoder",
+    "fuchsia-audio-encoder:fuchsia-audio-encoder-tests",
     "fuchsia-bluetooth",
     "fuchsia-bluetooth:tests",
   ]

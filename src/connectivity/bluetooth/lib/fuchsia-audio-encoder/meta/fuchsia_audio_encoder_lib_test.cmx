@@ -1,0 +1,20 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/fuchsia_audio_encoder_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}
