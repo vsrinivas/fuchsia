@@ -2,27 +2,26 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "init.h"
-
-#include <assert.h>
 #include <limits.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <zircon/syscalls/iommu.h>
 
+#include <acpica/acpi.h>
 #include <ddk/debug.h>
 
 #include "dev.h"
+#include "errors.h"
 #include "iommu.h"
+#include "x86.h"
 
 #define ACPI_MAX_INIT_TABLES 32
 
+namespace {
+
 /* @brief Switch interrupts to APIC model (controls IRQ routing) */
-static ACPI_STATUS set_apic_irq_mode(void) {
-  ACPI_OBJECT selector = {
-      .Integer.Type = ACPI_TYPE_INTEGER,
-      .Integer.Value = 1,  // 1 means APIC mode according to ACPI v5 5.8.1
-  };
+ACPI_STATUS set_apic_irq_mode(void) {
+  ACPI_OBJECT selector = {};
+  selector.Integer.Type = ACPI_TYPE_INTEGER;
+  selector.Integer.Value = 1;  // 1 means APIC mode according to ACPI v5 5.8.1
+
   ACPI_OBJECT_LIST params = {
       .Count = 1,
       .Pointer = &selector,
@@ -30,7 +29,7 @@ static ACPI_STATUS set_apic_irq_mode(void) {
   return AcpiEvaluateObject(NULL, (char*)"\\_PIC", &params, NULL);
 }
 
-static int is_gpe_device(ACPI_HANDLE object) {
+int is_gpe_device(ACPI_HANDLE object) {
   ACPI_DEVICE_INFO* info = NULL;
   ACPI_STATUS acpi_status = AcpiGetObjectInfo(object, &info);
   if (acpi_status == AE_OK) {
@@ -51,7 +50,7 @@ static int is_gpe_device(ACPI_HANDLE object) {
   return 0;
 }
 
-static ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** out_value) {
+ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, void** out_value) {
   ACPI_BUFFER buffer = {
       // Request that the ACPI subsystem allocate the buffer
       .Length = ACPI_ALLOCATE_BUFFER,
@@ -61,7 +60,7 @@ static ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, v
   if (status != AE_OK) {
     return AE_OK;  // Keep walking the tree
   }
-  ACPI_OBJECT* prw_res = buffer.Pointer;
+  ACPI_OBJECT* prw_res = static_cast<ACPI_OBJECT*>(buffer.Pointer);
 
   // _PRW returns a package with >= 2 entries. The first entry indicates what type of
   // event it is. If it's a GPE event, the first entry is either an integer indicating
@@ -78,7 +77,7 @@ static ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, v
   ACPI_OBJECT* event_info = &prw_res->Package.Elements[0];
   if (event_info->Type == ACPI_TYPE_INTEGER) {
     gpe_block = NULL;
-    gpe_bit = prw_res->Package.Elements[0].Integer.Value;
+    gpe_bit = static_cast<UINT32>(prw_res->Package.Elements[0].Integer.Value);
   } else if (event_info->Type == ACPI_TYPE_PACKAGE) {
     if (event_info->Package.Count != 2) {
       goto bailout;
@@ -93,12 +92,12 @@ static ACPI_STATUS acpi_prw_walk(ACPI_HANDLE obj, UINT32 level, void* context, v
       goto bailout;
     }
     gpe_block = handle_obj->Reference.Handle;
-    gpe_bit = gpe_num_obj->Integer.Value;
+    gpe_bit = static_cast<UINT32>(gpe_num_obj->Integer.Value);
   } else {
     goto bailout;
   }
   if (AcpiSetupGpeForWake(obj, gpe_block, gpe_bit) != AE_OK) {
-    printf("INFO: Acpi failed to setup wake GPE\n");
+    zxlogf(INFO, "Acpi failed to setup wake GPE\n");
   }
 
 bailout:
@@ -107,55 +106,50 @@ bailout:
   return AE_OK;  // We want to keep going even if we bailed out
 }
 
-ACPI_STATUS init(void) {
+ACPI_STATUS acpi_sub_init(void) {
   // This sequence is described in section 10.1.2.1 (Full ACPICA Initialization)
   // of the ACPICA developer's reference.
   ACPI_STATUS status = AcpiInitializeSubsystem();
   if (status != AE_OK) {
-    printf("WARNING: could not initialize ACPI\n");
+    zxlogf(WARN, "Could not initialize ACPI\n");
     return status;
   }
 
   status = AcpiInitializeTables(NULL, ACPI_MAX_INIT_TABLES, FALSE);
   if (status == AE_NOT_FOUND) {
-    printf("WARNING: could not find ACPI tables\n");
+    zxlogf(WARN, "Could not find ACPI tables\n");
     return status;
   } else if (status == AE_NO_MEMORY) {
-    printf("WARNING: could not initialize ACPI tables\n");
+    zxlogf(WARN, "Could not initialize ACPI tables\n");
     return status;
   } else if (status != AE_OK) {
-    printf("WARNING: could not initialize ACPI tables for unknown reason\n");
+    zxlogf(WARN, "Could not initialize ACPI tables for unknown reason\n");
     return status;
   }
 
   status = AcpiLoadTables();
   if (status != AE_OK) {
-    printf("WARNING: could not load ACPI tables: %d\n", status);
+    zxlogf(WARN, "Could not load ACPI tables: %d\n", status);
     return status;
   }
 
   status = AcpiEnableSubsystem(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    printf("WARNING: could not enable ACPI\n");
+    zxlogf(WARN, "Could not enable ACPI\n");
     return status;
   }
 
   status = AcpiInitializeObjects(ACPI_FULL_INITIALIZATION);
   if (status != AE_OK) {
-    printf("WARNING: could not initialize ACPI objects\n");
+    zxlogf(WARN, "Could not initialize ACPI objects\n");
     return status;
-  }
-
-  zx_status_t zx_status = iommu_manager_init();
-  if (zx_status != ZX_OK) {
-    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager\n");
   }
 
   status = set_apic_irq_mode();
   if (status == AE_NOT_FOUND) {
-    printf("WARNING: Could not find ACPI IRQ mode switch\n");
+    zxlogf(WARN, "Could not find ACPI IRQ mode switch\n");
   } else if (status != AE_OK) {
-    printf("Failed to set APIC IRQ mode\n");
+    zxlogf(WARN, "Failed to set APIC IRQ mode\n");
     return status;
   }
 
@@ -163,7 +157,7 @@ ACPI_STATUS init(void) {
 
   status = AcpiUpdateAllGpes();
   if (status != AE_OK) {
-    printf("WARNING: could not initialize ACPI GPEs\n");
+    zxlogf(WARN, "Could not initialize ACPI GPEs\n");
     return status;
   }
 
@@ -172,3 +166,24 @@ ACPI_STATUS init(void) {
   // successful boot anyway.
   return AE_OK;
 }
+
+}  // namespace
+
+namespace x86 {
+
+zx_status_t X86::EarlyAcpiInit() {
+  // First initialize the ACPI subsystem.
+  zx_status_t status = acpi_to_zx_status(acpi_sub_init());
+  if (status != ZX_OK) {
+    return status;
+  }
+  // Now initialize the IOMMU manager. Any failures in setting it up we consider non-fatal and do
+  // not propagate.
+  status = iommu_manager_init();
+  if (status != ZX_OK) {
+    zxlogf(INFO, "acpi: Failed to initialize IOMMU manager: %d\n", status);
+  }
+  return ZX_OK;
+}
+
+}  // namespace x86

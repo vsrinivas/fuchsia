@@ -60,7 +60,7 @@ zx_driver("platform-bus-x86") {
     "acpi-dev/dev-thermal.cc",
     "acpi-nswalk.c",
     "debug.c",
-    "init.c",
+    "init.cc",
     "iommu.c",
     "methods.cc",
     "nhlt.c",

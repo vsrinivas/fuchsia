@@ -33,6 +33,9 @@ class X86 : public ddk::Device<X86> {
 
   zx_status_t SysmemInit();
 
+  // Performs ACPICA initialization.
+  zx_status_t EarlyAcpiInit();
+
   zx_status_t Start();
   int Thread();
 

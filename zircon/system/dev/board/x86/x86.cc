@@ -62,13 +62,6 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
     return status;
   }
 
-  // Do ACPI init.
-  status = acpi_init();
-  if (status != ZX_OK) {
-    zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
-    return status;
-  }
-
   // TODO(ZX-4858): Remove this use of device_get_parent().  For now, suppress this
   // deprecation warning to not spam the build logs
 #pragma GCC diagnostic push
@@ -84,6 +77,13 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
   auto board = fbl::make_unique_checked<X86>(&ac, parent, &pbus, sys_root);
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
+  }
+
+  // Do ACPI init.
+  status = board->EarlyAcpiInit();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: failed to initialize ACPI %d \n", __func__, status);
+    return status;
   }
 
   // publish the board as ACPI root under /dev/sys/platform. PCI will get created under /dev/sys

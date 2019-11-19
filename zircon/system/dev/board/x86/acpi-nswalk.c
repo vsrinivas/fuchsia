@@ -22,7 +22,6 @@
 #include "acpi-private.h"
 #include "dev.h"
 #include "errors.h"
-#include "init.h"
 #include "iommu.h"
 #include "methods.h"
 #include "nhlt.h"
@@ -704,8 +703,6 @@ zx_status_t acpi_suspend(uint32_t flags) {
       return ZX_ERR_NOT_SUPPORTED;
   };
 }
-
-zx_status_t acpi_init(void) { return init(); }
 
 zx_status_t publish_acpi_devices(zx_device_t* parent, zx_device_t* sys_root,
                                  zx_device_t* acpi_root) {
