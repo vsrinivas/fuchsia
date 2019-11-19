@@ -40,9 +40,6 @@ namespace {
 constexpr size_t kMaxDebugReadBlock = 64 * 1024u * 1024u;
 constexpr size_t kMaxDebugWriteBlock = 64 * 1024u * 1024u;
 
-// Assume the typical set-policy call has 8 items or less.
-constexpr size_t kPolicyBasicInlineCount = 8;
-
 // TODO(ZX-1025): copy_user_string may truncate the incoming string,
 // and may copy extra data past the NUL.
 // TODO(dbort): If anyone else needs this, move it into user_ptr.
@@ -518,7 +515,7 @@ static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
   if ((options != ZX_JOB_POL_RELATIVE) && (options != ZX_JOB_POL_ABSOLUTE)) {
     return ZX_ERR_INVALID_ARGS;
   }
-  if (!_policy || (count == 0u)) {
+  if (!_policy || (count == 0u) || (count > 32u)) {
     return ZX_ERR_INVALID_ARGS;
   }
 

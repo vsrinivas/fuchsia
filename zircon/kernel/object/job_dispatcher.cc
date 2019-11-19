@@ -16,6 +16,7 @@
 #include <fbl/alloc_checker.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
+#include <fbl/inline_array.h>
 #include <fbl/mutex.h>
 #include <object/process_dispatcher.h>
 
@@ -437,25 +438,31 @@ bool JobDispatcher::CanSetPolicy() TA_REQ(get_lock()) {
   return true;
 }
 
-zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v1* in_policy,
+zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v1_t* in_policy,
+                                          size_t policy_count) {
+  fbl::AllocChecker ac;
+  fbl::InlineArray<zx_policy_basic_v2_t, kPolicyBasicInlineCount> policy(&ac, policy_count);
+  if (!ac.check()) {
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  for (size_t ix = 0; ix != policy.size(); ++ix) {
+    policy[ix].condition = in_policy[ix].condition;
+    policy[ix].action = in_policy[ix].policy;
+    policy[ix].flags = ZX_POL_OVERRIDE_DENY;
+  }
+
+  return SetBasicPolicy(mode, policy.get(), policy.size());
+}
+
+zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t* in_policy,
                                           size_t policy_count) {
   Guard<fbl::Mutex> guard{get_lock()};
 
   if (!CanSetPolicy()) {
     return ZX_ERR_BAD_STATE;
   }
-
-  auto status = policy_.AddBasicPolicy(mode, in_policy, policy_count);
-
-  if (status != ZX_OK)
-    return status;
-
-  return ZX_OK;
-}
-
-zx_status_t JobDispatcher::SetBasicPolicy(uint32_t mode, const zx_policy_basic_v2* in_policy,
-                                          size_t policy_count) {
-  return ZX_ERR_NOT_SUPPORTED;
+  return policy_.AddBasicPolicy(mode, in_policy, policy_count);
 }
 
 zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& policy) {

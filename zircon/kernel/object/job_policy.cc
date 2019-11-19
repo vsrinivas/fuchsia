@@ -221,7 +221,7 @@ JobPolicy JobPolicy::CreateRootPolicy() {
   return JobPolicy(policy.value, TimerSlack::none());
 }
 
-zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* policy_input,
+zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t* policy_input,
                                       size_t policy_count) {
   // Don't allow overlong policies.
   if (policy_count > ZX_POL_MAX) {
@@ -231,19 +231,21 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* po
   zx_status_t res = ZX_OK;
   JobPolicyBits pol_new(cookie_);
   bool has_new_any = false;
+  uint32_t new_any_override = 0;
 
   for (size_t ix = 0; ix != policy_count; ++ix) {
     const auto& in = policy_input[ix];
 
     if (in.condition == ZX_POL_NEW_ANY) {
       for (auto cond : kNewObjectPolicies) {
-        res = AddPartial(mode, cond, in.policy, ZX_POL_OVERRIDE_ALLOW, &pol_new);
+        res = AddPartial(mode, cond, in.action, ZX_POL_OVERRIDE_ALLOW, &pol_new);
         if (res != ZX_OK)
           return res;
       }
       has_new_any = true;
+      new_any_override = in.flags;
     } else {
-      res = AddPartial(mode, in.condition, in.policy, ZX_POL_OVERRIDE_DENY, &pol_new);
+      res = AddPartial(mode, in.condition, in.action, in.flags, &pol_new);
       if (res != ZX_OK)
         return res;
     }
@@ -251,7 +253,7 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* po
 
   if (has_new_any) {
     for (auto cond : kNewObjectPolicies) {
-      auto res = SetOverride(&pol_new, cond, ZX_POL_OVERRIDE_DENY);
+      auto res = SetOverride(&pol_new, cond, new_any_override);
       if (res != ZX_OK)
         return res;
     }

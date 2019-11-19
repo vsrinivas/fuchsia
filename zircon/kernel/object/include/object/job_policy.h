@@ -44,7 +44,7 @@ class JobPolicy {
   // ZX_JOB_POL_ABSOLUTE - If any of the policies in |policy| conflict with those in this object,
   //   the call will fail with an error and this object will not be modified.
   //
-  zx_status_t AddBasicPolicy(uint32_t mode, const zx_policy_basic_t* policy, size_t count);
+  zx_status_t AddBasicPolicy(uint32_t mode, const zx_policy_basic_v2_t* policy, size_t count);
 
   // Returns the action (e.g. ZX_POL_ACTION_ALLOW) for the specified |condition|.
   //

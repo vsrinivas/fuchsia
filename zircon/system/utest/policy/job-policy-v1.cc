@@ -109,6 +109,7 @@ void InvalidCalls(uint32_t options) {
 
     zx_policy_basic_v1_t policy[] = {{ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL}};
     EXPECT_OK(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 1u));
+    EXPECT_EQ(job.set_policy(options, ZX_JOB_POL_BASIC, policy, 33u), ZX_ERR_INVALID_ARGS);
   }
 
   {

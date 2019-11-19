@@ -27,6 +27,9 @@
 
 class JobNode;
 
+// Assume the typical set-policy call has 8 items or less.
+constexpr size_t kPolicyBasicInlineCount = 8;
+
 // Interface for walking a job/process tree.
 class JobEnumerator {
  public:

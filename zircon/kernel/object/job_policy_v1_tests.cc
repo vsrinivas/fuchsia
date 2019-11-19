@@ -39,12 +39,12 @@ static bool add_basic_policy_no_widening() {
   auto p = JobPolicy::CreateRootPolicy();
 
   // Start with deny all.
-  zx_policy_basic_v1_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
 
   // Attempt to allow event creation.
-  policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW};
+  policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
   // Fails because mode is ZX_JOB_POL_ABSOLUTE.
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   // Does not fail because mode is ZX_JOB_POL_RELATIVE.
@@ -64,12 +64,12 @@ static bool add_basic_policy_no_widening_with_any() {
   auto p = JobPolicy::CreateRootPolicy();
 
   // Start with deny event creation.
-  zx_policy_basic_v1_t policy{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY};
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_EVENT, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY};
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
 
   // Attempt to allow event creation.
-  policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW};
+  policy = {ZX_POL_NEW_EVENT, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
   // Fails because mode is ZX_JOB_POL_ABSOLUTE.
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   // Does not fail because mode is ZX_JOB_POL_RELATIVE.
@@ -79,7 +79,7 @@ static bool add_basic_policy_no_widening_with_any() {
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
 
   // Attempt to allow any.
-  policy = {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW};
+  policy = {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, &policy, 1));
 
@@ -94,13 +94,14 @@ static bool add_basic_policy_absolute() {
 
   auto p = JobPolicy::CreateRootPolicy();
 
-  zx_policy_basic_v1_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
-                                   {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
+  zx_policy_basic_v2_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+                                   {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, repeated, 2));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT));
 
-  zx_policy_basic_v1_t conflicting[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
-                                      {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW}};
+  zx_policy_basic_v2_t conflicting[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+                                      {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY}};
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, conflicting, 2));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
 
@@ -112,13 +113,15 @@ static bool add_basic_policy_relative() {
 
   auto p = JobPolicy::CreateRootPolicy();
 
-  zx_policy_basic_v1_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
-                                   {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
+  zx_policy_basic_v2_t repeated[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+                                   {ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY}};
+
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, repeated, 2));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_TIMER));
 
-  zx_policy_basic_v1_t conflicting[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY},
-                                      {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW}};
+  zx_policy_basic_v2_t conflicting[2]{{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY},
+                                      {ZX_POL_NEW_ANY, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY}};
+
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_RELATIVE, conflicting, 2));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_FIFO));
 
@@ -131,19 +134,21 @@ static bool add_basic_policy_unmodified_on_error() {
 
   auto p = JobPolicy::CreateRootPolicy();
 
-  zx_policy_basic_v1_t policy[2]{{ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION},
-                                 {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL}};
+  zx_policy_basic_v2_t policy[2]{
+      {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW_EXCEPTION, ZX_POL_OVERRIDE_DENY},
+      {ZX_POL_NEW_CHANNEL, ZX_POL_ACTION_KILL, ZX_POL_OVERRIDE_DENY}};
+
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, policy, fbl::count_of(policy)));
   ASSERT_EQ(ZX_POL_ACTION_ALLOW_EXCEPTION, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
   ASSERT_EQ(ZX_POL_ACTION_KILL, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL));
 
   const JobPolicy orig = p;
 
-  zx_policy_basic_v1_t new_policy{ZX_POL_NEW_ANY, UINT32_MAX};
+  zx_policy_basic_v2_t new_policy{ZX_POL_NEW_ANY, UINT32_MAX, ZX_POL_OVERRIDE_DENY};
   ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &new_policy, 1));
   ASSERT_TRUE(orig == p);
 
-  new_policy = {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW};
+  new_policy = {ZX_POL_NEW_VMO, ZX_POL_ACTION_ALLOW, ZX_POL_OVERRIDE_DENY};
   ASSERT_EQ(ZX_ERR_ALREADY_EXISTS, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &new_policy, 1));
   ASSERT_TRUE(orig == p);
 
@@ -155,7 +160,8 @@ static bool add_basic_policy_deny_any_new() {
 
   auto p = JobPolicy::CreateRootPolicy();
 
-  zx_policy_basic_v1_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
+  zx_policy_basic_v2_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY, ZX_POL_OVERRIDE_DENY};
+
   ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO));
   ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL));
