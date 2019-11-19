@@ -91,7 +91,7 @@ class AppModel {
 
     topbarModel = TopbarModel(appModel: this);
 
-    status = StatusModel.fromStartupContext(_startupContext);
+    status = StatusModel.fromStartupContext(_startupContext, onLogout);
   }
 
   SuggestionService get suggestions => SuggestionService(_suggestionsService);

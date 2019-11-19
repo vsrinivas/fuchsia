@@ -268,7 +268,7 @@ class Strings {
         name: 'openPackage',
         desc: 'Open an application with supplied package name',
         args: [packageName],
-        examples: const {'packageName': 'simple_browser'}
+        examples: const {'packageName': 'simple_browser'},
       );
 
   static String get name => Intl.message(
@@ -331,5 +331,11 @@ class Strings {
         'Bluetooth',
         name: 'bluetooth',
         desc: 'The label for the bluetooth settings widget',
+      );
+
+  static String get logout => Intl.message(
+        'Logout',
+        name: 'logout',
+        desc: 'The label for logout button.',
       );
 }

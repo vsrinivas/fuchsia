@@ -4,7 +4,6 @@
 
 import 'package:flutter/material.dart';
 
-import 'package:fidl_fuchsia_modular/fidl_async.dart' as modular;
 import 'package:fidl_fuchsia_device_manager/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_remotewidgets/fidl_async.dart';
 import 'package:fuchsia_inspect/inspect.dart';
@@ -13,9 +12,6 @@ import 'package:quickui/uistream.dart';
 import 'package:settings/settings.dart';
 
 import '../utils/utils.dart';
-
-const _kSettingsPackageUrl =
-    'fuchsia-pkg://fuchsia.com/settings#meta/settings.cmx';
 
 class StatusModel implements Inspectable {
   /// The [GlobalKey] associated with [Status] widget.
@@ -29,11 +25,11 @@ class StatusModel implements Inspectable {
   UiStream datetime;
   UiStream timezone;
   final StartupContext startupContext;
-  final modular.PuppetMasterProxy puppetMaster;
   final AdministratorProxy deviceManager;
+  final VoidCallback logout;
   final ValueNotifier<UiStream> detailNotifier = ValueNotifier<UiStream>(null);
 
-  StatusModel({this.startupContext, this.puppetMaster, this.deviceManager}) {
+  StatusModel({this.startupContext, this.deviceManager, this.logout}) {
     datetime = UiStream(Datetime());
     timezone = UiStream(TimeZone.fromStartupContext(startupContext));
     brightness = UiStream(Brightness.fromStartupContext(startupContext));
@@ -44,23 +40,20 @@ class StatusModel implements Inspectable {
     weather = UiStream(Weather());
   }
 
-  factory StatusModel.fromStartupContext(StartupContext startupContext) {
-    final puppetMaster = modular.PuppetMasterProxy();
-    startupContext.incoming.connectToService(puppetMaster);
-
+  factory StatusModel.fromStartupContext(
+      StartupContext startupContext, VoidCallback logout) {
     final deviceManager = AdministratorProxy();
     startupContext.incoming.connectToService(deviceManager);
 
     return StatusModel(
       startupContext: startupContext,
-      puppetMaster: puppetMaster,
       deviceManager: deviceManager,
+      logout: logout,
     );
   }
 
   void dispose() {
     deviceManager.ctrl.close();
-    puppetMaster.ctrl.close();
     brightness.dispose();
     memory.dispose();
     battery.dispose();
@@ -82,26 +75,13 @@ class StatusModel implements Inspectable {
     detailNotifier.value = null;
   }
 
-  /// Launch settings mod.
-  void launchSettings() {
-    final storyMaster = modular.StoryPuppetMasterProxy();
-    puppetMaster.controlStory('settings', storyMaster.ctrl.request());
-    final addMod = modular.AddMod(
-      intent: modular.Intent(action: '', handler: _kSettingsPackageUrl),
-      surfaceParentModName: [],
-      modName: ['root'],
-      surfaceRelation: modular.SurfaceRelation(),
-    );
-    storyMaster
-      ..enqueue([modular.StoryCommand.withAddMod(addMod)])
-      ..execute();
-  }
-
   /// Reboot the device.
   void restartDevice() => deviceManager.suspend(suspendFlagReboot);
 
   /// Shutdown the device.
   void shutdownDevice() => deviceManager.suspend(suspendFlagPoweroff);
+
+  void logoutSession() => logout();
 
   @override
   void onInspect(Node node) {

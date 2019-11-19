@@ -121,7 +121,7 @@ class _ManualStatusEntry extends StatelessWidget {
           Padding(padding: EdgeInsets.only(right: kPadding)),
           StatusButton(Strings.shutdown, model.shutdownDevice),
           Spacer(),
-          StatusButton(Strings.settings, model.launchSettings),
+          StatusButton(Strings.logout, model.logoutSession),
         ],
       ),
     );
