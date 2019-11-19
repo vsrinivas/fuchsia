@@ -282,7 +282,7 @@ pub mod handler {
         }
     }
 
-    /// Handler that overrides the all requests that start with the given request path using the
+    /// Handler that overrides all the requests that start with the given request path using the
     /// given handler.
     pub struct ForPathPrefix<H: UriPathHandler> {
         prefix: PathBuf,
@@ -300,7 +300,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> ForPathPrefix<H> {
-        /// Creates handler that overrides the all requests that start with the given request path
+        /// Creates handler that overrides all the requests that start with the given request path
         /// using the given handler.
         pub fn new(prefix: impl Into<PathBuf>, handler: H) -> Self {
             Self { prefix: prefix.into(), handler }
