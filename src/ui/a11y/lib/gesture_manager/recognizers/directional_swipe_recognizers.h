@@ -10,6 +10,11 @@
 
 namespace a11y {
 
+// NOTE: These recognizers use normalized device coordinates. This coordinate space defines
+// the origin as the center of the screen, with +x extending to the right and +y extending down.
+
+// Recognizer for upward-oriented swipes.
+// In NDC, an upward swipe moves toward -y.
 class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
  public:
   // A line with a slope of 1.732 has an angle of elevation above the x-axis of ~60 degrees,
@@ -30,9 +35,11 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
   bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
 };
 
+// Recognizer for downward-oriented swipes.
+// In the NDC coordinate space, a downward swipe moves toward +y.
 class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
  public:
-  // A line with a slope of 1.732 has an angle of elevation above the x-axis of ~60 degrees,
+  // A line with a slope of -1.732 has an angle of elevation below the x-axis of ~60 degrees,
   // so in order for a swipe to be recognized as "down", it must fall within 30 degrees of vertical.
   static constexpr float kMinDownSwipeSlopeMagnitude = 1.732f;
 
@@ -50,6 +57,8 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
   bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
 };
 
+// Recognizer for right-oriented swipes.
+// In the NDC coordinate space, a rightward swipe moves toward +x.
 class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
  public:
   // A line with a slope of 0.577 has an angle of elevation above the x-axis of ~30 degrees,
@@ -71,6 +80,8 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
   bool ValidateSwipeSlopeAndDirection(float x_displacement, float y_displacement) override;
 };
 
+// Recognizer for left-oriented swipes.
+// In the NDC coordinate space, a leftward swipe moves toward -x.
 class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
  public:
   // A line with a slope of 0.577 has an angle of elevation above the x-axis of ~30 degrees,

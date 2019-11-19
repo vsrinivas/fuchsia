@@ -73,7 +73,7 @@ TEST_F(SwipeRecognizerTest, WonAfterUpGestureDetected) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
@@ -87,7 +87,7 @@ TEST_F(SwipeRecognizerTest, WonAfterUpGestureDetected) {
 
     // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
     // a swipe.
-    event.set_ndc_point({0, .7f});
+    event.set_ndc_point({0, -.7f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
@@ -141,7 +141,7 @@ TEST_F(SwipeRecognizerTest, WonAfterDownGestureDetected) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
+    event.set_ndc_point({0, .1f});
     down_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
@@ -155,7 +155,7 @@ TEST_F(SwipeRecognizerTest, WonAfterDownGestureDetected) {
 
     // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
     // a swipe.
-    event.set_ndc_point({0, -.7f});
+    event.set_ndc_point({0, .7f});
     down_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
@@ -345,7 +345,7 @@ TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooSmall) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
@@ -359,7 +359,7 @@ TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooSmall) {
 
     // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
     // a swipe.
-    event.set_ndc_point({0, .2f});
+    event.set_ndc_point({0, -.2f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -407,7 +407,7 @@ TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooLarge) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
@@ -421,7 +421,7 @@ TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooLarge) {
 
     // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
     // a swipe.
-    event.set_ndc_point({0, 2.f});
+    event.set_ndc_point({0, -2.f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -468,7 +468,7 @@ TEST_F(SwipeRecognizerTest, RejectWhenTimeoutExceeded) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
@@ -521,7 +521,7 @@ TEST_F(SwipeRecognizerTest, RejectUpSwipeOnInvalidEndLocation) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
@@ -535,7 +535,7 @@ TEST_F(SwipeRecognizerTest, RejectUpSwipeOnInvalidEndLocation) {
 
     // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
     // a swipe.
-    event.set_ndc_point({.5f, .5f});
+    event.set_ndc_point({.5f, -.5f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -581,7 +581,7 @@ TEST_F(SwipeRecognizerTest, RejectUpSwipeOnInvalidPath) {
   {
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
+    event.set_ndc_point({0, .1f});
     up_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -628,7 +628,7 @@ TEST_F(SwipeRecognizerTest, RejectDownSwipeOnInvalidEndLocation) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
+    event.set_ndc_point({0, .1f});
     down_swipe_recognizer.HandleEvent(event);
     EXPECT_FALSE(member.IsRejectCalled());
     EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
@@ -640,7 +640,7 @@ TEST_F(SwipeRecognizerTest, RejectDownSwipeOnInvalidEndLocation) {
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::UP);
 
-    event.set_ndc_point({-.5f, -.5f});
+    event.set_ndc_point({-.5f, .5f});
     down_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -687,7 +687,7 @@ TEST_F(SwipeRecognizerTest, RejectDownSwipeOnInvalidPath) {
     // Sends a Move event, and expects the state of Gesture to stay the same.
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
+    event.set_ndc_point({0, -.1f});
     down_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -746,7 +746,7 @@ TEST_F(SwipeRecognizerTest, RejectRightSwipeOnInvalidEndLocation) {
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::UP);
 
-    event.set_ndc_point({.5f, -.5f});
+    event.set_ndc_point({.5f, .5f});
     right_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
@@ -852,7 +852,7 @@ TEST_F(SwipeRecognizerTest, RejectLeftSwipeOnInvalidEndLocation) {
     auto event = GetDefaultSwipePointerEvent();
     event.set_phase(Phase::UP);
 
-    event.set_ndc_point({-.5f, -.5f});
+    event.set_ndc_point({-.5f, .5f});
     left_swipe_recognizer.HandleEvent(event);
     EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
               a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
