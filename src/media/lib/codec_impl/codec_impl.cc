@@ -32,7 +32,13 @@
 #endif
 
 #define LOGF(format, ...) \
-    printf("[%s:%s:%d] " format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
+  printf("[%s:%s:%d] " format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
+
+// Temporary solution for logging in driver and non-driver contexts by logging to stderr
+// TODO(41539): Replace with logging interface that accommodates both driver and non-driver contexts
+#define LOG(severity, format, ...)      \
+  if (FX_LOG_##severity >= FX_LOG_INFO) \
+  fprintf(stderr, "[%s:%s:%d]" format "\n", "codec_impl", __func__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -604,9 +610,8 @@ void CodecImpl::Sync(SyncCallback callback) {
   // lambda will still post destruction of callback to fidl_thread(), and this
   // posting will queue before the lamda that runs
   // shared_fidl_queue_.StopAndClear().
-  PostToStreamControl([this,
-      callback_holder = ThreadSafeDeleter<SyncCallback>(
-          &shared_fidl_queue_, std::move(callback))]() mutable {
+  PostToStreamControl([this, callback_holder = ThreadSafeDeleter<SyncCallback>(
+                                 &shared_fidl_queue_, std::move(callback))]() mutable {
     Sync_StreamControl(std::move(callback_holder));
   });
 }
@@ -975,8 +980,8 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
   }
 
   // Flush the data out to RAM if needed.
-  if (IsCoreCodecHwBased() && port_settings_[kInputPort]->coherency_domain() ==
-      fuchsia::sysmem::CoherencyDomain::CPU) {
+  if (IsCoreCodecHwBased() &&
+      port_settings_[kInputPort]->coherency_domain() == fuchsia::sysmem::CoherencyDomain::CPU) {
     // This flushes only the portion of the buffer that the packet is
     // referencing.
     zx_status_t status = core_codec_packet->CacheFlush();
@@ -1363,9 +1368,8 @@ fuchsia::mediacodec::SecureMemoryMode CodecImpl::OutputSecureMemoryMode() {
     if (!decryptor_params().has_require_secure_mode()) {
       return fuchsia::mediacodec::SecureMemoryMode::OFF;
     }
-    return decryptor_params().require_secure_mode() ?
-        fuchsia::mediacodec::SecureMemoryMode::ON :
-        fuchsia::mediacodec::SecureMemoryMode::OFF;
+    return decryptor_params().require_secure_mode() ? fuchsia::mediacodec::SecureMemoryMode::ON
+                                                    : fuchsia::mediacodec::SecureMemoryMode::OFF;
   }
 }
 
@@ -2067,9 +2071,8 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
       return false;
     }
 
-    std::unique_ptr<CodecBuffer> local_buffer =
-        std::unique_ptr<CodecBuffer>(new CodecBuffer(this, port, std::move(buffer),
-                                                     port_settings_[port]->is_secure()));
+    std::unique_ptr<CodecBuffer> local_buffer = std::unique_ptr<CodecBuffer>(
+        new CodecBuffer(this, port, std::move(buffer), port_settings_[port]->is_secure()));
     if (IsCoreCodecMappedBufferUseful(port)) {
       if (fake_map_range_[port]) {
         // The fake_map_range_[port]->base() is % ZX_PAGE_SIZE == 0, which is the same as a mapping
@@ -3088,11 +3091,10 @@ void CodecImpl::vFailLocked(bool is_fatal, const char* format, va_list args) {
   // official way, especially if doing so would print a timestamp automatically
   // and/or provide filtering goodness etc.
   const char* message = is_fatal ? "devhost will fail" : "Codec channel will close async";
-
-  // TODO(dustingreen): probably use zxlogf() instead.
+  // Logs to syslog if syslog::InitLogger called by non-driver client
   FX_LOGS(ERROR) << buffer.get() << " -- " << message << "\n";
-  // Output this way also, so we can see the output from unit tests.
-  fprintf(stderr, "%s -- %s\n", buffer.get(), message);
+  // Default logging to stderr for both driver and non-driver clients
+  LOG(ERROR, "%s -- %s", buffer.get(), message);
 
   // TODO(dustingreen): Send string in buffer via epitaph, when possible.  First
   // we should switch to events so we'll only have the Codec channel not the

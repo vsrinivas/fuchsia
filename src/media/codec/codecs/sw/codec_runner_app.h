@@ -28,7 +28,7 @@ class CodecRunnerApp {
         codec_admission_control_(std::make_unique<CodecAdmissionControl>(loop_.dispatcher())) {}
 
   void Run() {
-    zx_status_t status = syslog::InitLogger();
+    zx_status_t status = syslog::InitLogger({"codec_runner"});
     ZX_ASSERT_MSG(status == ZX_OK, "Failed to init syslog: %d", status);
 
     component_context_->outgoing()->AddPublicService(
