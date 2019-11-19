@@ -189,7 +189,6 @@ async fn await_connection(peripheral: &PeripheralProxy) -> Result<ConnectionProx
                 eprintln!("Connected to central: {}", Peer::try_from(peer)?);
                 return connection.into_proxy().map_err(|e| e.into());
             }
-            _ => (), // ignore the deprecated events
         }
     }
     Err(format_err!("le.Peripheral service disconnected"))
@@ -421,7 +420,6 @@ mod tests {
                     };
                     return Ok((mock, conn_server_end));
                 }
-                _ => (),
             }
         }
         Err(format_err!("le.Peripheral connection failed"))

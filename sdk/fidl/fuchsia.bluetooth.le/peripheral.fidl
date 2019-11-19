@@ -4,8 +4,6 @@
 
 library fuchsia.bluetooth.le;
 
-using fuchsia.bluetooth;
-
 enum PeripheralError {
     /// The operation or parameters requested are not supported on the current hardware.
     NOT_SUPPORTED = 1;
@@ -101,7 +99,6 @@ protocol Peripheral {
     /// + request `handle` Handle that remains valid for the duration of this advertising session.
     /// * error Returns a [`fuchsia.bluetooth.le/PeripheralError`] if advertising cannot be
     ///         initiated. In this case the `handle` will be closed.
-    [Transitional]
     StartAdvertising(AdvertisingParameters parameters, request<AdvertisingHandle> handle) -> () error PeripheralError;
 
     /// Event delivered when a remote LE central initiates a connection to this Peripheral when
@@ -115,65 +112,5 @@ protocol Peripheral {
     ///
     /// + request `peer` Information about the central that initiated the connection.
     /// + request `handle` Represents the connection.
-    [Transitional]
     -> OnPeerConnected(Peer peer, Connection connection);
-
-    // TODO(BT-812): All methods and events declared below are deprecated. Remove them once all
-    // clients have transitioned to the new API.
-
-    /// [[DEPRECATED]]
-    ///
-    /// Starts sending advertisements based on the given parameters.
-    ///   - `advertising_data`: The advertising data that should be included in the payload.
-    ///   - `scan_result`: The scan result that will be returned when the advertisement is
-    ///                    scanned.  Setting this will mark the advertisement set as scannable.
-    ///   - `connectable`: when true, this advertisement will be marked as connectable.
-    ///                 NOTE: connections can be made to a GATT server even if this is not set.
-    ///   - `interval_ms`: The requested interval to advertise this set at in milliseconds.
-    ///                    minimum 20, maximum 10,000,000 (almost 3 hours). A reasonable
-    ///                    default is 1 second (1000).
-    ///   - `anonymous`: if true, the address of this device will not be included
-    ///
-    /// If the `tx_power_level` is set in either AdvertisingData, it will be replaced with
-    /// the actual TX Power level reported by the adapter, or included in the extended header
-    /// of the Advertising PDU to save advertising space.
-    ///
-    /// If `scan_result` and `advertising_data` are both set, legacy advertising will be used,
-    /// which limits the size of the advertising data.
-    ///
-    /// This request will fail if:
-    ///   - The `service_uuids` field of `advertising_data` contains a UUID that does not match
-    ///     a GATT service that was previously registered by this application;
-    ///   - If the provided advertising data cannot fit within the advertising payload MTU that
-    ///     is supported on the current platform and parameters.
-    ///   - If `anonymous` advertising is requested but the controller cannot support it.
-    [Transitional]
-    StartAdvertisingDeprecated(AdvertisingDataDeprecated advertising_data, AdvertisingDataDeprecated? scan_result,
-                               bool connectable, uint32 interval_ms, bool anonymous)
-        -> (fuchsia.bluetooth.Status status, string? advertisement_id);
-
-    /// [[DEPRECATED]]
-    ///
-    /// Stop an advertising session that was previously started by this application.
-    [Transitional]
-    StopAdvertisingDeprecated(string advertisement_id) -> (fuchsia.bluetooth.Status status);
-
-    /// [[DEPRECATED]]
-    ///
-    /// Called when a remote central device has connected to a connectable advertisement.
-    // TODO(BT-839): Provide a GATT client handle which can be used to interact with GATT service
-    // on the central device.
-    //
-    // When this is called, the Advertisement will have stopped, and StartAdvertising
-    // should be called again to re-start advertising when the peripheral can accept
-    // another connection.
-    //
-    // Note: Centrals can connect to the local device and interact with the GATT server
-    // from an application without Peripheral.StartAdvertising() being called.
-    -> OnCentralConnected(string advertisement_id, RemoteDevice central);
-
-    /// [[DEPRECATED]]
-    ///
-    /// Called when a remote central previously connected to this application is disconnected.
-    -> OnCentralDisconnected(string device_id);
 };

@@ -2,6 +2,6 @@
   "fidl/fuchsia.bluetooth.le/advertising_data.fidl": "3bad38e3c10b679757d6499773d40542",
   "fidl/fuchsia.bluetooth.le/central.fidl": "05b935f3b8cf96321221edf9bd808773",
   "fidl/fuchsia.bluetooth.le/peer.fidl": "f883ab14d73a77989b032c6fc86b3959",
-  "fidl/fuchsia.bluetooth.le/peripheral.fidl": "9311c46808bace61200a964d8c1dbca0",
+  "fidl/fuchsia.bluetooth.le/peripheral.fidl": "ae1c8412dd0b4874dc5fdb6f9eb42238",
   "fidl/fuchsia.bluetooth.le/types_deprecated.fidl": "35b7eff6379540e992ebd6c89d57fef4"
 }

@@ -105,9 +105,6 @@ async fn watch_connections(harness: PeripheralHarness) -> Result<(), Error> {
                     .connections
                     .push((peer.try_into()?, connection.into_proxy()?));
             }
-            // Ignore the deprecated events.
-            PeripheralEvent::OnCentralConnected { .. } => (),
-            PeripheralEvent::OnCentralDisconnected { .. } => (),
         }
         harness.notify_state_changed();
     }
