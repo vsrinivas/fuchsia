@@ -34,8 +34,6 @@ class CodecFactoryApp {
   const fuchsia::mediacodec::CodecFactoryPtr* FindHwDecoder(
       fit::function<bool(const fuchsia::mediacodec::CodecDescription&)> is_match);
 
-  std::vector<fuchsia::mediacodec::CodecDescription> MakeCodecList() const;
-
   async::Loop* loop() { return loop_; }
 
  private:

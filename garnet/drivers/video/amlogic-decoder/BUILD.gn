@@ -5,7 +5,6 @@
 import("//build/cipd.gni")
 import("//build/config/fuchsia/rules.gni")
 import("//build/package.gni")
-import("//build/test/test_package.gni")
 
 declare_args() {
   amlogic_decoder_tests = false
@@ -255,10 +254,6 @@ if (target_cpu == "arm64") {
         ":amlogic_decoder",
         ":amlogic_decoder_test",
       ]
-      if (board_name == "astro") {
-        # This test only works with the real driver/board
-        deps += [ ":test_amlogic_codec_factory_package" ]
-      }
     }
   }
 
@@ -279,17 +274,18 @@ if (target_cpu == "arm64") {
     ]
   }
 
-  test_package("test_amlogic_codec_factory_package") {
-    if (target_cpu == "arm64") {
-      deps = [
-        ":test_amlogic_codec_factory",
-      ]
-      tests = [
-        {
-          name = "test_amlogic_codec_factory"
-          environments = basic_envs
-        },
-      ]
-    }
-  }
+  # XXX(37098): (dustingreen) target is disabled as it does not build.
+  # test_package("test_amlogic_codec_factory_package") {
+  #   if (target_cpu == "arm64") {
+  #     deps = [
+  #       ":test_amlogic_codec_factory",
+  #     ]
+  #     tests = [
+  #       {
+  #         name = "test_amlogic_codec_factory"
+  #         environments = basic_envs
+  #       },
+  #     ]
+  #   }
+  # }
 }

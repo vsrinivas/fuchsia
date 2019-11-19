@@ -50,27 +50,6 @@ void test_factory() {
     FailFatal();
   });
 
-  constexpr size_t kNumSoftwareCodecs = 1;
-  constexpr size_t kNumAmlogicHardwareCodecs = 2;
-  codec_factory.events().OnCodecList =
-      [](std::vector<fuchsia::mediacodec::CodecDescription> codecs) {
-        // We should have at least all the software decoders and 2 hardware decoders.
-        if (codecs.size() < kNumSoftwareCodecs + kNumAmlogicHardwareCodecs) {
-          printf("OnCodecList did not return minimum number of total codecs\n");
-          FailFatal();
-        }
-        size_t num_hw_decoders = 0;
-        for (const auto& description : codecs) {
-          if (description.is_hw) {
-            ++num_hw_decoders;
-          }
-        }
-        if (num_hw_decoders < kNumAmlogicHardwareCodecs) {
-          printf("OnCodecList did not return minimum number of hardware codecs\n");
-          FailFatal();
-        }
-      };
-
   // It appears ConnectToEnvironmentService() is probably currently safe to call
   // from the main thread, but if it moves to use FIDL libs instead, then it
   // won't be any longer, so call from FIDL thread instead.
@@ -89,16 +68,15 @@ void test_factory() {
     FailFatal();
   });
   // Use FIDL thread to send request for Codec.
-  PostSerial(fidl_loop.dispatcher(),
-             [&codec_factory, request = codec.NewRequest(fidl_loop.dispatcher())]() mutable {
-               fuchsia::mediacodec::CreateDecoder_Params params;
-               params.mutable_input_details()->set_format_details_version_ordinal(0);
-               params.mutable_input_details()->set_mime_type("video/h264");
-               *params.mutable_promise_separate_access_units_on_input() = true;
-               *params.mutable_require_hw() = true;
-
-               codec_factory->CreateDecoder(std::move(params), std::move(request));
-             });
+  PostSerial(
+      fidl_loop.dispatcher(),
+      [&codec_factory, request = codec.NewRequest(fidl_loop.dispatcher()),
+       params = fuchsia::mediacodec::CreateDecoder_Params{
+           .input_details.format_details_version_ordinal = 0,
+           .input_details.mime_type = "video/h264",
+           .promise_separate_access_units_on_input = true,
+           .require_hw = true,
+       }]() mutable { codec_factory->CreateDecoder(std::move(params), std::move(request)); });
 
   // Use FIDL thread to check that codec can communicate to the driver
   // round-trip.  The other-thread usage is a bit unnatural here, but we want to

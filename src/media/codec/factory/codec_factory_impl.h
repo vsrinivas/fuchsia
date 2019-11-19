@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
-#define SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
+#ifndef SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
+#define SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -59,4 +59,4 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
 
 }  // namespace codec_factory
 
-#endif  // SRC_MEDIA_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
+#endif  // SRC_MEDIA_CODEC_CODEC_FACTORY_CODEC_FACTORY_IMPL_H_
