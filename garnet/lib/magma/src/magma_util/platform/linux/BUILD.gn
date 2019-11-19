@@ -30,6 +30,7 @@ source_set("bus_mapper") {
 
   deps = [
     ":device",
+    ":logger",
   ]
 
   sources = [
@@ -96,6 +97,15 @@ source_set("iommu") {
   deps = [
     ":device",
     "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("logger") {
+  public_deps = [
+    "..:logger_header",
+  ]
+  sources = [
+    "linux_platform_logger.cc",
   ]
 }
 

@@ -361,3 +361,7 @@ magma_status_t magma_map_specific(magma_connection_t connection, magma_buffer_t 
 magma_status_t magma_initialize_tracing(magma_handle_t channel) {
   return MAGMA_STATUS_UNIMPLEMENTED;
 }
+
+magma_status_t magma_initialize_logging(magma_handle_t channel) {
+  return MAGMA_STATUS_UNIMPLEMENTED;
+}

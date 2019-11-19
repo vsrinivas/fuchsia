@@ -339,6 +339,69 @@ source_set("event") {
   allow_circular_includes_from = [ "zircon:event" ]
 }
 
+source_set("logger_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":handle_header",
+  ]
+
+  sources = [
+    "platform_logger.h",
+  ]
+}
+
+# Logger target doesn't dictate an implementation, because
+# a different implementation may be needed for clients vs system drivers.
+group("logger") {
+  public_deps = [
+    ":logger_header",
+  ]
+}
+
+group("logger_impl") {
+  public_deps = [
+    ":logger_header",
+  ]
+
+  if (is_fuchsia) {
+    deps = [
+      "zircon:logger",
+    ]
+  }
+  if (is_linux) {
+    deps = [
+      "linux:logger",
+    ]
+  }
+}
+
+source_set("logger_impl_with_init") {
+  testonly = true
+  deps = [
+    ":logger_impl",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "zircon:logger_impl_with_init" ]
+  }
+}
+
+source_set("logger_for_system_drivers") {
+  public_deps = [
+    ":logger_header",
+  ]
+  if (is_fuchsia) {
+    deps = [
+      "zircon:logger_for_system_drivers",
+    ]
+  } else {
+    deps = [
+      ":logger_impl",
+    ]
+  }
+}
+
 source_set("object") {
   public_configs = [ ":platform_include_config" ]
 

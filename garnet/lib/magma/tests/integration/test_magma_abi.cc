@@ -14,6 +14,7 @@
 
 #include "fuchsia/sysmem/cpp/fidl.h"
 #include "magma_sysmem.h"
+#include "platform_logger.h"
 #include "platform_trace_provider.h"
 #endif
 
@@ -458,6 +459,19 @@ class TestConnection {
 #endif
   }
 
+  void LoggingInit() {
+#if !defined(__Fuchsia__)
+    GTEST_SKIP();
+#else
+    zx::channel local_endpoint, server_endpoint;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
+    EXPECT_EQ(ZX_OK,
+              fdio_service_connect("/svc/fuchsia.logger.LogSink", server_endpoint.release()));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_initialize_logging(local_endpoint.release()));
+    EXPECT_TRUE(magma::PlatformLogger::IsInitialized());
+#endif
+  }
+
   void GetDeviceIdImported() {
     uint64_t device_id = 0;
     EXPECT_EQ(MAGMA_STATUS_OK, magma_query2(device_, MAGMA_QUERY_DEVICE_ID, &device_id));
@@ -540,9 +554,14 @@ TEST(MagmaAbiImport, QueryReturnsBuffer) {
   test.QueryReturnsBufferImported();
 }
 
-TEST(MagmaAbiImport, TracingInit) {
+TEST(MagmaAbi, TracingInit) {
   TestConnection test(true);
   test.TracingInit();
+}
+
+TEST(MagmaAbi, LoggingInit) {
+  TestConnection test(true);
+  test.LoggingInit();
 }
 
 // Use the parameter to choose whether to use magma_device_import or an fd.
