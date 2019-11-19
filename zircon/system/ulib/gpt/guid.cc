@@ -35,6 +35,8 @@ GUID_MAKE_ARRAY(CROS_RESERVED);
 GUID_MAKE_ARRAY(CROS_FIRMWARE);
 GUID_MAKE_ARRAY(CROS_DATA);
 GUID_MAKE_ARRAY(BIOS);
+GUID_MAKE_ARRAY(EMMC_BOOT1);
+GUID_MAKE_ARRAY(EMMC_BOOT2);
 
 #define GUID_NAMETAB(name) \
   GuidProperties(GUID_##name##_NAME, GUID_##name##_STRING, GUID_##name##_ARRAY)
@@ -63,6 +65,8 @@ std::array<GuidProperties, kKnownGuidEntries> const KnownGuid::nametab_ = {{
     GUID_NAMETAB(CROS_FIRMWARE),
     GUID_NAMETAB(CROS_DATA),
     GUID_NAMETAB(BIOS),
+    GUID_NAMETAB(EMMC_BOOT1),
+    GUID_NAMETAB(EMMC_BOOT2),
 }};
 // clang-format on
 

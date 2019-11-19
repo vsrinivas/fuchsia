@@ -6,11 +6,13 @@
 
 #include <threads.h>
 
+#include <array>
 #include <atomic>
 
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
 #include <fbl/ref_counted.h>
@@ -22,9 +24,58 @@
 
 namespace sdmmc {
 
+// See the eMMC specification section 7.4.69 for these constants.
+enum EmmcPartition : uint8_t {
+  USER_DATA_PARTITION = 0x0,
+  BOOT_PARTITION_1 = 0x1,
+  BOOT_PARTITION_2 = 0x2,
+  RPMB_PARTITION = 0x3,
+};
+
+using BlockOperation = block::BorrowedOperation<EmmcPartition>;
+
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::GetSizable,
-                                         ddk::UnbindableDeprecated>;
+class BootPartitionDevice;
+
+using BootPartitionDeviceType = ddk::Device<BootPartitionDevice, ddk::GetSizable,
+                                            ddk::GetProtocolable, ddk::UnbindableDeprecated>;
+
+class BootPartitionDevice : public BootPartitionDeviceType,
+                            public ddk::BlockImplProtocol<BootPartitionDevice, ddk::base_protocol>,
+                            public ddk::BlockPartitionProtocol<BootPartitionDevice>,
+                            public fbl::RefCounted<BootPartitionDevice> {
+ public:
+  BootPartitionDevice(zx_device_t* parent, SdmmcBlockDevice* sdmmc_parent,
+                      const block_info_t& block_info, EmmcPartition partition)
+      : BootPartitionDeviceType(parent),
+        sdmmc_parent_(sdmmc_parent),
+        block_info_(block_info),
+        partition_(partition) {}
+
+  zx_status_t AddDevice();
+
+  void DdkUnbindDeprecated();
+  void DdkRelease();
+
+  zx_off_t DdkGetSize();
+  zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+
+  void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
+  void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
+
+  zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
+  zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
+
+ private:
+  SdmmcBlockDevice* const sdmmc_parent_;
+  const block_info_t block_info_;
+  const EmmcPartition partition_;
+  std::atomic<bool> dead_ = false;
+};
+
+class SdmmcBlockDevice;
+using SdmmcBlockDeviceType =
+    ddk::Device<SdmmcBlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated>;
 
 class SdmmcBlockDevice : public SdmmcBlockDeviceType,
                          public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
@@ -52,14 +103,31 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
   void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
 
+  // Called by children of this device.
+  void BlockQueueInternal(BlockOperation txn);
+
   // Visible for testing.
   zx_status_t Init() { return sdmmc_.Init(); }
   zx_status_t StartWorkerThread();
   void StopWorkerThread();
 
- private:
-  using BlockOperation = block::BorrowedOperation<>;
+  ddk::BlockImplProtocolClient GetBootBlockClient(size_t index) {
+    block_impl_protocol_t proto = {};
+    if (boot_partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_IMPL, &proto) == ZX_OK) {
+      return ddk::BlockImplProtocolClient(&proto);
+    }
+    return ddk::BlockImplProtocolClient();
+  }
 
+  ddk::BlockPartitionProtocolClient GetBootPartitionClient(size_t index) {
+    block_partition_protocol_t proto = {};
+    if (boot_partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_PARTITION, &proto) == ZX_OK) {
+      return ddk::BlockPartitionProtocolClient(&proto);
+    }
+    return ddk::BlockPartitionProtocolClient();
+  }
+
+ private:
   void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
   void DoTxn(BlockOperation* txn);
   int WorkerThread();
@@ -95,7 +163,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
 
   // blockio requests
-  block::BorrowedOperationQueue<> txn_list_ TA_GUARDED(lock_);
+  block::BorrowedOperationQueue<EmmcPartition> txn_list_ TA_GUARDED(lock_);
 
   // outstanding request (1 right now)
   sdmmc_req_t req_;
@@ -107,6 +175,10 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   block_info_t block_info_;
 
   bool is_sd_ = false;
+
+  uint64_t boot_partition_block_count_ = 0;
+  std::array<fbl::RefPtr<BootPartitionDevice>, 2> boot_partitions_;
+  EmmcPartition current_partition_ = EmmcPartition::USER_DATA_PARTITION;
 };
 
 }  // namespace sdmmc

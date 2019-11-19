@@ -26,6 +26,7 @@ constexpr uint64_t kMmcSectorSize = 512;  // physical sector size
 constexpr uint64_t kMmcBlockSize = 512;   // block size is 512 bytes always because it is the
                                           // required value if the card is in DDR mode
 
+constexpr uint32_t kSwitchTimeMultiplierMs = 10;
 constexpr uint32_t kSwitchStatusRetries = 3;
 
 }  // namespace
@@ -83,7 +84,13 @@ zx_status_t SdmmcBlockDevice::MmcDoSwitch(uint8_t index, uint8_t value) {
   // The GENERIC_CMD6_TIME field defines a maximum timeout value for CMD6 in tens of milliseconds.
   // There does not appear to be any other way to check the status of CMD6, so just sleep for the
   // maximum required time before issuing CMD13.
-  zx::nanosleep(zx::deadline_after(zx::msec(10 * raw_ext_csd_[MMC_EXT_CSD_GENERIC_CMD6_TIME])));
+  uint8_t switch_time = raw_ext_csd_[MMC_EXT_CSD_GENERIC_CMD6_TIME];
+  if (index == MMC_EXT_CSD_PARTITION_CONFIG &&
+      raw_ext_csd_[MMC_EXT_CSD_PARTITION_SWITCH_TIME] > 0) {
+    switch_time = raw_ext_csd_[MMC_EXT_CSD_PARTITION_SWITCH_TIME];
+  }
+
+  zx::nanosleep(zx::deadline_after(zx::msec(kSwitchTimeMultiplierMs * switch_time)));
 
   // Check status after MMC_SWITCH
   uint32_t resp;

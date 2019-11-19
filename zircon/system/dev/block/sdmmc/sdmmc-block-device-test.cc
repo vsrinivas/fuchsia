@@ -36,8 +36,12 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
     });
 
     sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) -> void {
-      uint8_t* const virt_buffer = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
-      *reinterpret_cast<uint32_t*>(&virt_buffer[212]) = htole32(kBlockCount);
+      uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer) + req->buf_offset;
+      *reinterpret_cast<uint32_t*>(&ext_csd[212]) = htole32(kBlockCount);
+      ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
+      ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+      ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0x10;
+      ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
     });
 
     EXPECT_OK(dut_.ProbeMmc());
@@ -446,10 +450,43 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
-  fake_ddk::Bind ddk;
-  EXPECT_OK(dut_.AddDevice());
-  dut_.DdkUnbindDeprecated();
-  EXPECT_TRUE(ddk.Ok());
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 0;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  SdmmcBlockDevice dut(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.ProbeMmc());
+
+  Bind ddk;
+  EXPECT_OK(dut.AddDevice());
+
+  dut.DdkUnbindDeprecated();
+  dut.StopWorkerThread();
+  ASSERT_NO_FATAL_FAILURES(ddk.Ok());
+  EXPECT_EQ(ddk.total_children(), 0);
+}
+
+TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 1;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  SdmmcBlockDevice dut(fake_ddk::kFakeParent, SdmmcDevice(sdmmc_.GetClient()));
+  EXPECT_OK(dut.ProbeMmc());
+
+  Bind ddk;
+  EXPECT_OK(dut.AddDevice());
+
+  dut.DdkUnbindDeprecated();
+  dut.StopWorkerThread();
+  ASSERT_NO_FATAL_FAILURES(ddk.Ok());
+  EXPECT_EQ(ddk.total_children(), 2);
 }
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
@@ -521,6 +558,210 @@ TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusFail) {
 
   SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
   EXPECT_NOT_OK(dut.ProbeMmc());
+}
+
+TEST_F(SdmmcBlockDeviceTest, QueryBootPartitions) {
+  EXPECT_OK(dut_.AddDevice());
+
+  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
+  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
+
+  ASSERT_TRUE(boot1.is_valid());
+  ASSERT_TRUE(boot2.is_valid());
+
+  size_t boot1_op_size, boot2_op_size;
+  block_info_t boot1_info, boot2_info;
+  boot1.Query(&boot1_info, &boot1_op_size);
+  boot2.Query(&boot2_info, &boot2_op_size);
+
+  EXPECT_EQ(boot1_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
+  EXPECT_EQ(boot2_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
+
+  EXPECT_EQ(boot1_info.block_size, FakeSdmmcDevice::kBlockSize);
+  EXPECT_EQ(boot2_info.block_size, FakeSdmmcDevice::kBlockSize);
+
+  EXPECT_EQ(boot1_op_size, block_op_size_);
+  EXPECT_EQ(boot2_op_size, block_op_size_);
+}
+
+TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
+  EXPECT_OK(dut_.AddDevice());
+
+  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
+  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
+
+  ASSERT_TRUE(boot1.is_valid());
+  ASSERT_TRUE(boot2.is_valid());
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 5, 10, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 10, 500, &op3));
+
+  FillVmo(op1->private_storage()->mapper, 1);
+  FillSdmmc(5, 10);
+  FillVmo(op3->private_storage()->mapper, 10);
+
+  CallbackContext ctx(1, block_op_size_);
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    const uint32_t value = (req->arg >> 8) & 0xff;
+    EXPECT_EQ(index, MMC_EXT_CSD_PARTITION_CONFIG);
+    EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_1);
+  });
+
+  boot1.Queue(op1->operation(), OperationCallback, &ctx);
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  ctx.expected_operations = 1;
+  sync_completion_reset(&ctx.completion);
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    const uint32_t value = (req->arg >> 8) & 0xff;
+    EXPECT_EQ(index, MMC_EXT_CSD_PARTITION_CONFIG);
+    EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_2);
+  });
+
+  boot2.Queue(op2->operation(), OperationCallback, &ctx);
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  ctx.expected_operations = 1;
+  sync_completion_reset(&ctx.completion);
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    const uint32_t value = (req->arg >> 8) & 0xff;
+    EXPECT_EQ(index, MMC_EXT_CSD_PARTITION_CONFIG);
+    EXPECT_EQ(value, 0xa8 | USER_DATA_PARTITION);
+  });
+
+  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_TRUE(op3->private_storage()->completed);
+
+  EXPECT_OK(op1->private_storage()->status);
+  EXPECT_OK(op2->private_storage()->status);
+  EXPECT_OK(op3->private_storage()->status);
+
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(1, 0));
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op2->private_storage()->mapper, 5));
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(10, 500));
+}
+
+TEST_F(SdmmcBlockDeviceTest, BootPartitionRepeatedAccess) {
+  EXPECT_OK(dut_.AddDevice());
+
+  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
+
+  ASSERT_TRUE(boot2.is_valid());
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 1, 0, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 5, 10, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 2, 5, &op3));
+
+  FillSdmmc(1, 0);
+  FillVmo(op2->private_storage()->mapper, 5);
+  FillVmo(op3->private_storage()->mapper, 2);
+
+  CallbackContext ctx(1, block_op_size_);
+
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) {
+    const uint32_t index = (req->arg >> 16) & 0xff;
+    const uint32_t value = (req->arg >> 8) & 0xff;
+    EXPECT_EQ(index, MMC_EXT_CSD_PARTITION_CONFIG);
+    EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_2);
+  });
+
+  boot2.Queue(op1->operation(), OperationCallback, &ctx);
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  ctx.expected_operations = 2;
+  sync_completion_reset(&ctx.completion);
+
+  // Repeated accesses to one partition should not generate more than one MMC_SWITCH command.
+  sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) { FAIL(); });
+
+  boot2.Queue(op2->operation(), OperationCallback, &ctx);
+  boot2.Queue(op3->operation(), OperationCallback, &ctx);
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_TRUE(op3->private_storage()->completed);
+
+  EXPECT_OK(op1->private_storage()->status);
+  EXPECT_OK(op2->private_storage()->status);
+  EXPECT_OK(op3->private_storage()->status);
+
+  ASSERT_NO_FATAL_FAILURES(CheckVmo(op1->private_storage()->mapper, 1));
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(5, 10));
+  ASSERT_NO_FATAL_FAILURES(CheckSdmmc(2, 5));
+}
+
+TEST_F(SdmmcBlockDeviceTest, AccessBootPartitionOutOfRange) {
+  EXPECT_OK(dut_.AddDevice());
+
+  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
+
+  ASSERT_TRUE(boot1.is_valid());
+
+  std::optional<block::Operation<OperationContext>> op1;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 4000, &op1));
+
+  std::optional<block::Operation<OperationContext>> op2;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 8, 3992, &op2));
+
+  std::optional<block::Operation<OperationContext>> op3;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 9, 3992, &op3));
+
+  std::optional<block::Operation<OperationContext>> op4;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 16, 3992, &op4));
+
+  std::optional<block::Operation<OperationContext>> op5;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 0, 2000, &op5));
+
+  std::optional<block::Operation<OperationContext>> op6;
+  ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 3999, &op6));
+
+  CallbackContext ctx(6, block_op_size_);
+
+  boot1.Queue(op1->operation(), OperationCallback, &ctx);
+  boot1.Queue(op2->operation(), OperationCallback, &ctx);
+  boot1.Queue(op3->operation(), OperationCallback, &ctx);
+  boot1.Queue(op4->operation(), OperationCallback, &ctx);
+  boot1.Queue(op5->operation(), OperationCallback, &ctx);
+  boot1.Queue(op6->operation(), OperationCallback, &ctx);
+
+  EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
+
+  EXPECT_TRUE(op1->private_storage()->completed);
+  EXPECT_TRUE(op2->private_storage()->completed);
+  EXPECT_TRUE(op3->private_storage()->completed);
+  EXPECT_TRUE(op4->private_storage()->completed);
+  EXPECT_TRUE(op5->private_storage()->completed);
+  EXPECT_TRUE(op6->private_storage()->completed);
+
+  EXPECT_NOT_OK(op1->private_storage()->status);
+  EXPECT_OK(op2->private_storage()->status);
+  EXPECT_NOT_OK(op3->private_storage()->status);
+  EXPECT_NOT_OK(op4->private_storage()->status);
+  EXPECT_OK(op5->private_storage()->status);
+  EXPECT_OK(op6->private_storage()->status);
 }
 
 }  // namespace sdmmc

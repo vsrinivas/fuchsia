@@ -14,6 +14,7 @@ zx_driver("sdmmc") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.block.partition",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdio",
     "$zx/system/banjo/ddk.protocol.sdmmc",
@@ -53,6 +54,7 @@ zx_test("sdmmc-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.block",
+    "$zx/system/banjo/ddk.protocol.block.partition",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/banjo/ddk.protocol.sdio",
     "$zx/system/banjo/ddk.protocol.sdmmc",

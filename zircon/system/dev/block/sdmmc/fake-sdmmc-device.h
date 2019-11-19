@@ -11,8 +11,31 @@
 #include <ddktl/protocol/sdio.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/span.h>
+#include <lib/fake_ddk/fake_ddk.h>
 
 namespace sdmmc {
+
+class Bind : public fake_ddk::Bind {
+ public:
+  int total_children() const { return total_children_; }
+
+  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                        zx_device_t** out) override;
+  zx_status_t DeviceRemove(zx_device_t* device) override;
+  void Ok();
+
+ private:
+  zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
+  zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
+
+  int total_children_ = 0;
+  int children_ = 0;
+
+  bool bad_parent_ = false;
+  bool bad_device_ = false;
+  bool add_called_ = false;
+  bool remove_called_ = false;
+};
 
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {
  public:

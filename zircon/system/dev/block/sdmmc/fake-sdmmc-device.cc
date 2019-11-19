@@ -4,10 +4,51 @@
 
 #include <hw/sdmmc.h>
 #include <hw/sdio.h>
+#include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
 
 namespace sdmmc {
+
+zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
+                            zx_device_t** out) {
+  if (parent == fake_ddk::kFakeParent) {
+    *out = fake_ddk::kFakeDevice;
+    add_called_ = true;
+  } else if (parent == fake_ddk::kFakeDevice) {
+    *out = kFakeChild;
+    children_++;
+    total_children_++;
+  } else {
+    *out = kUnknownDevice;
+    bad_parent_ = true;
+  }
+
+  return ZX_OK;
+}
+
+zx_status_t Bind::DeviceRemove(zx_device_t* device) {
+  if (device == fake_ddk::kFakeDevice) {
+    remove_called_ = true;
+  } else if (device == kFakeChild) {
+    // Check that all children are removed before the parent is removed.
+    if (!remove_called_) {
+      children_--;
+    }
+  } else {
+    bad_device_ = true;
+  }
+
+  return ZX_OK;
+}
+
+void Bind::Ok() {
+  EXPECT_EQ(children_, 0);
+  EXPECT_TRUE(add_called_);
+  EXPECT_TRUE(remove_called_);
+  EXPECT_FALSE(bad_parent_);
+  EXPECT_FALSE(bad_device_);
+}
 
 zx_status_t FakeSdmmcDevice::SdmmcHostInfo(sdmmc_host_info_t* out_info) {
   memcpy(out_info, &host_info_, sizeof(host_info_));

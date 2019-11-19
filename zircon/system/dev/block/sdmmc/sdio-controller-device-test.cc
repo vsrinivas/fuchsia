@@ -8,70 +8,12 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <hw/sdio.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <lib/zx/vmo.h>
 #include <zxtest/zxtest.h>
 
 #include "fake-sdmmc-device.h"
 
 namespace sdmmc {
-
-class Bind : public fake_ddk::Bind {
- public:
-  int total_children() const { return total_children_; }
-
-  zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
-                        zx_device_t** out) override {
-    if (parent == fake_ddk::kFakeParent) {
-      *out = fake_ddk::kFakeDevice;
-      add_called_ = true;
-    } else if (parent == fake_ddk::kFakeDevice) {
-      *out = kFakeChild;
-      children_++;
-      total_children_++;
-    } else {
-      *out = kUnknownDevice;
-      bad_parent_ = false;
-    }
-
-    return ZX_OK;
-  }
-
-  zx_status_t DeviceRemove(zx_device_t* device) override {
-    if (device == fake_ddk::kFakeDevice) {
-      remove_called_ = true;
-    } else if (device == kFakeChild) {
-      // Check that all children are removed before the parent is removed.
-      if (!remove_called_) {
-        children_--;
-      }
-    } else {
-      bad_device_ = true;
-    }
-
-    return ZX_OK;
-  }
-
-  void Ok() {
-    EXPECT_EQ(children_, 0);
-    EXPECT_TRUE(add_called_);
-    EXPECT_TRUE(remove_called_);
-    EXPECT_FALSE(bad_parent_);
-    EXPECT_FALSE(bad_device_);
-  }
-
- private:
-  zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
-  zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
-
-  int total_children_ = 0;
-  int children_ = 0;
-
-  bool bad_parent_ = false;
-  bool bad_device_ = false;
-  bool add_called_ = false;
-  bool remove_called_ = false;
-};
 
 class SdioControllerDeviceTest : public zxtest::Test {
  public:

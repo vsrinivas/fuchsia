@@ -259,6 +259,24 @@ static_assert(GPT_ENTRY_SIZE == sizeof(gpt_entry_t), "Gpt entry size invalid");
 }
 #define GUID_BIOS_NAME "bios"
 
+#define GUID_EMMC_BOOT1_STRING "900B0FC5-90CD-4D4F-84F9-9F8ED579DB88"
+#define GUID_EMMC_BOOT1_VALUE {                    \
+    0xc5, 0x0f, 0x0b, 0x90,                        \
+    0xcd, 0x90,                                    \
+    0x4f, 0x4d,                                    \
+    0x84, 0xf9, 0x9f, 0x8e, 0xd5, 0x79, 0xdb, 0x88 \
+}
+#define GUID_EMMC_BOOT1_NAME "emmc-boot1"
+
+#define GUID_EMMC_BOOT2_STRING "B2B2E8D1-7C10-4EBC-A2D0-4614568260AD"
+#define GUID_EMMC_BOOT2_VALUE {                    \
+    0xd1, 0xe8, 0xb2, 0xb2,                        \
+    0x10, 0x7c,                                    \
+    0xbc, 0x4e,                                    \
+    0xa2, 0xd0, 0x46, 0x14, 0x56, 0x82, 0x60, 0xad \
+}
+#define GUID_EMMC_BOOT2_NAME "emmc-boot2"
+
 // clang-format on
 
 #endif  // SYSROOT_ZIRCON_HW_GPT_H_

@@ -28,7 +28,7 @@ struct guid_t {
 static_assert(sizeof(guid_t) == GPT_GUID_LEN, "unexpected guid_t size");
 
 // Number of GUID_.*[STRING|VALUE|NAME] pairs
-constexpr uint8_t kKnownGuidEntries = 22;
+constexpr uint8_t kKnownGuidEntries = 24;
 
 class GuidProperties {
  public:
