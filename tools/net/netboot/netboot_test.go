@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/binary"
+	"log"
 	"net"
 	"strconv"
 	"testing"
@@ -48,12 +49,12 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 				// This isn't necessarily a fatal error.
 				// As this can happen when the connection
 				// is closed.
-				t.Logf("conn read: %v", err)
+				log.Printf("conn read: %v\n", err)
 				break
 			}
 			var req netbootMessage
 			if err := binary.Read(r, binary.LittleEndian, &req); err != nil {
-				t.Logf("malformed binary read: %v", err)
+				log.Printf("malformed binary read: %v", err)
 				continue
 			}
 			for _, n := range nodenames {
@@ -78,7 +79,7 @@ func startFakeNetbootServers(t *testing.T, nodenames []string) (int, func()) {
 		t.Helper()
 		// Odds are this isn't fatal, so just log for debugging.
 		if err := conn.Close(); err != nil {
-			t.Logf("closing fake server: %v", err)
+			log.Printf("closing fake server: %v", err)
 		}
 	}
 }
