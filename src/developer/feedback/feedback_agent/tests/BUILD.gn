@@ -59,6 +59,9 @@ test_package("feedback_agent_tests") {
       name = "kernel_log_ptr_integration_test"
     },
     {
+      name = "product_info_provider_unittest"
+    },
+    {
       name = "ref_counted_delayed_task_unittest"
     },
     {
@@ -131,6 +134,7 @@ test_package("feedback_agent_tests") {
     ":inspect_exe",
     ":inspect_ptr_unittest",
     ":kernel_log_ptr_integration_test",
+    ":product_info_provider_unittest",
     ":ref_counted_delayed_task_unittest",
     ":screenshot_ptr_unittest",
     ":system_log_ptr_unittest",
@@ -349,6 +353,29 @@ executable("kernel_log_ptr_integration_test") {
   ]
 }
 
+executable("product_info_provider_unittest") {
+  testonly = true
+
+  sources = [
+    "product_info_provider_unittest.cc",
+  ]
+
+  deps = [
+    ":stub_product",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/feedback_agent/annotations:product_info_provider",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("ref_counted_delayed_task_unittest") {
   testonly = true
 
@@ -440,6 +467,18 @@ source_set("stub_logger") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-logger",
+  ]
+}
+
+source_set("stub_product") {
+  sources = [
+    "stub_product.cc",
+    "stub_product.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.hwinfo",
+    "//sdk/lib/fidl/cpp",
   ]
 }
 

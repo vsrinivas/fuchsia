@@ -14,6 +14,13 @@ constexpr char kAnnotationBuildVersion[] = "build.version";
 constexpr char kAnnotationChannel[] = "channel";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
+constexpr char kAnnotationHardwareProductLanguage[] = "hardware.product.language";
+constexpr char kAnnotationHardwareProductLocaleList[] = "hardware.product.locale-list";
+constexpr char kAnnotationHardwareProductManufacturer[] = "hardware.product.manufacturer";
+constexpr char kAnnotationHardwareProductModel[] = "hardware.product.model";
+constexpr char kAnnotationHardwareProductName[] = "hardware.product.name";
+constexpr char kAnnotationHardwareProductRegulatoryDomain[] = "hardware.product.regulatory-domain";
+constexpr char kAnnotationHardwareProductSKU[] = "hardware.product.sku";
 
 constexpr char kAttachmentAnnotations[] = "annotations.json";
 constexpr char kAttachmentBuildSnapshot[] = "build.snapshot.xml";
