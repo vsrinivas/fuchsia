@@ -89,7 +89,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
-  void InitializeClipboard();
   void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
                                    fuchsia::modular::AppConfig story_shell_config,
                                    bool use_session_shell_for_story_shell_factory);
@@ -259,13 +258,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // executed. We can rely on Terminate() only being called once. (And if not,
   // this could simply be made a vector as usual.)
   fit::function<void()> at_end_done_;
-
-  // The service provider used to connect to services advertised by the
-  // clipboard agent.
-  fuchsia::sys::ServiceProviderPtr services_from_clipboard_agent_;
-
-  // The agent controller used to control the clipboard agent.
-  fuchsia::modular::AgentControllerPtr clipboard_agent_controller_;
 
   class SwapSessionShellOperation;
 

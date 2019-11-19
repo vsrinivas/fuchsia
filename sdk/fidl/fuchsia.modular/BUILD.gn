@@ -21,7 +21,6 @@ fidl("fuchsia.modular") {
     "annotation/annotation.fidl",
     "basemgr/base_shell.fidl",
     "basemgr/user_provider.fidl",
-    "clipboard/clipboard.fidl",
     "component/component_context.fidl",
     "config/config.fidl",
     "entity/entity.fidl",

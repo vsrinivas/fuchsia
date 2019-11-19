@@ -52,13 +52,6 @@ ModuleContextImpl::ModuleContextImpl(
         service_provider->ConnectToService(fuchsia::intl::PropertyProvider::Name_,
                                            request.TakeChannel());
       });
-  service_provider_impl_.AddService<fuchsia::modular::Clipboard>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-        fuchsia::sys::ServiceProviderPtr service_provider;
-        session_environment_->environment()->GetServices(service_provider.NewRequest());
-        service_provider->ConnectToService(fuchsia::modular::Clipboard::Name_,
-                                           request.TakeChannel());
-      });
   service_provider_impl_.AddBinding(std::move(service_provider_request));
 }
 

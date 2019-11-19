@@ -288,7 +288,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
     service_list->names.push_back(fuchsia::modular::ModuleContext::Name_);
     service_list->names.push_back(fuchsia::intl::PropertyProvider::Name_);
-    service_list->names.push_back(fuchsia::modular::Clipboard::Name_);
     service_list->names.push_back(fuchsia::app::discover::StoryModule::Name_);
     service_list->provider = std::move(module_context_provider);
 

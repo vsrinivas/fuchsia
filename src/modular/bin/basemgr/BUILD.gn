@@ -51,7 +51,6 @@ executable_package("basemgr") {
     "//sdk/lib/ui/scenic/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/modular/bin/agents/clipboard:clipboard_sources",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib/async/cpp:future",
     "//src/modular/lib/async/cpp:future",
@@ -97,7 +96,6 @@ source_set("wait_for_minfs") {
 
 source_set("lib") {
   sources = [
-    "noop_clipboard_impl.h",
     "presentation_container.cc",
     "presentation_container.h",
     "session_context_impl.cc",

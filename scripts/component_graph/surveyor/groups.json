@@ -175,7 +175,6 @@
     "basemgr_launcher",
     "datetime_settings",
     "chromium",
-    "clipboard_agent",
     "cloud_provider_firestore",
     "cloud_provider_in_memory",
     "cloud_provider_memory_diff",

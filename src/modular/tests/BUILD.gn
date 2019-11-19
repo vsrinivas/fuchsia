@@ -265,26 +265,6 @@ executable("story_shell_embedded_mod_test") {
   ]
 }
 
-executable("clipboard_test") {
-  testonly = true
-
-  sources = [
-    "clipboard_test.cc",
-  ]
-
-  deps = [
-    "//peridot/lib/ledger_client:page_client",
-    "//sdk/fidl/fuchsia.modular.testing",
-    "//sdk/lib/sys/cpp/testing:integration",
-    "//src/lib/component/cpp",
-    "//src/modular/bin/agents/clipboard:clipboard_sources",
-    "//src/modular/bin/basemgr:lib",
-    "//src/modular/lib/modular_test_harness/cpp:test_harness_fixture",
-    "//src/modular/lib/testing:ledger_repository_for_testing",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
 executable("login_override_test") {
   testonly = true
 
@@ -435,10 +415,6 @@ test_package("modular_integration_tests") {
       environments = basic_envs
     },
     {
-      name = "clipboard_test"
-      environments = basic_envs
-    },
-    {
       name = "login_override_test"
       environments = basic_envs
     },
@@ -454,7 +430,6 @@ test_package("modular_integration_tests") {
 
   deps = [
     ":agent_services_test",
-    ":clipboard_test",
     ":component_context_test",
     ":inspect_session_test",
     ":intents_test",

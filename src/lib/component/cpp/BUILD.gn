@@ -50,7 +50,6 @@ source_set("cpp") {
     "//src/modular/bin/sessionmgr:sessionmgr_lib",
     "//src/modular/bin/sessionmgr:user_intelligence_provider",
     "//src/modular/lib/testing:component_base",
-    "//src/modular/tests:clipboard_test",
     "//src/ui/bin/root_presenter:accessibility",
     "//src/ui/bin/root_presenter:factory_reset_manager",
     "//src/ui/bin/root_presenter:lib",

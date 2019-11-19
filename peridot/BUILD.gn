@@ -34,7 +34,6 @@ group("tests") {
     "//peridot/packages/tests:modular_test_harness",
     "//src/ledger/bin",
     "//src/ledger/third_party/bup:bup_tests",
-    "//src/modular/bin/agents/clipboard:clipboard_unittests",
     "//src/modular/bin/basemgr:auto_login_base_shell_test",
     "//src/modular/bin/basemgr:basemgr_unittests",
     "//src/modular/bin/basemgr/intl_property_provider_impl:intl_property_provider_impl_tests",

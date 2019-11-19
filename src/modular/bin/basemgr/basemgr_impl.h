@@ -21,7 +21,6 @@
 
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
-#include "src/modular/bin/basemgr/noop_clipboard_impl.h"
 #include "src/modular/bin/basemgr/presentation_container.h"
 #include "src/modular/bin/basemgr/session_provider.h"
 #include "src/modular/bin/basemgr/session_user_provider_impl.h"
@@ -180,9 +179,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   fuchsia::modular::BaseShellPtr base_shell_;
 
   AsyncHolder<SessionProvider> session_provider_;
-
-  std::unique_ptr<NoopClipboardImpl> noop_clipboard_;
-  component::ServiceNamespace services_;
 
   enum class State {
     // normal mode of operation

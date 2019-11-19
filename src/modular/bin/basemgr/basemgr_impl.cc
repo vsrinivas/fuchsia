@@ -100,21 +100,8 @@ void BasemgrImpl::StartBaseShell() {
   auto base_shell_config =
       fidl::To<fuchsia::modular::AppConfig>(config_.basemgr_config().base_shell().app_config());
 
-  fuchsia::sys::ServiceProviderPtr service_provider;
-  services_.AddBinding(service_provider.NewRequest());
-  noop_clipboard_ = std::make_unique<NoopClipboardImpl>();
-
-  services_.AddService<fuchsia::modular::Clipboard>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-        noop_clipboard_->Connect(std::move(request));
-      });
-  fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
-  service_list->names.push_back(fuchsia::modular::Clipboard::Name_);
-  service_list->provider = std::move(service_provider);
-
   base_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      launcher_.get(), std::move(base_shell_config), /* data_origin = */ "",
-      std::move(service_list));
+      launcher_.get(), std::move(base_shell_config), /* data_origin = */ "");
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
 
   fuchsia::ui::app::ViewProviderPtr base_shell_view_provider;

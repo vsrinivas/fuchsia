@@ -56,9 +56,6 @@ constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
 
 constexpr char kSessionShellComponentNamespace[] = "user-shell-namespace";
 
-constexpr char kClipboardAgentUrl[] =
-    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
-
 constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 
 // The name in the outgoing debug directory (hub) for developer session control
@@ -206,7 +203,6 @@ void SessionmgrImpl::Initialize(
                                 use_session_shell_for_story_shell_factory);
     ConnectSessionShellToStoryProvider();
     AtEnd([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
-    InitializeClipboard();
     ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
   };
 
@@ -244,7 +240,7 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
   // Create the session's environment (in which we run stories, modules, agents, and so on) as a
   // child of sessionmgr's environment. Add session-provided additional services, |kEnvServices|.
   static const auto* const kEnvServices = new std::vector<std::string>{
-      fuchsia::modular::Clipboard::Name_, fuchsia::intl::PropertyProvider::Name_};
+      fuchsia::intl::PropertyProvider::Name_};
   session_environment_ = std::make_unique<Environment>(
       /* parent_env = */ sessionmgr_context_->svc()->Connect<fuchsia::sys::Environment>(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
@@ -401,20 +397,6 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
           return;
         }
         sessionmgr_context_->svc()->Connect<fuchsia::intl::PropertyProvider>(std::move(request));
-      });
-}
-
-void SessionmgrImpl::InitializeClipboard() {
-  agent_runner_->ConnectToAgent(kAppId, kClipboardAgentUrl,
-                                services_from_clipboard_agent_.NewRequest(),
-                                clipboard_agent_controller_.NewRequest());
-  session_environment_->AddService<fuchsia::modular::Clipboard>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
-        if (terminating_) {
-          return;
-        }
-        services_from_clipboard_agent_->ConnectToService(fuchsia::modular::Clipboard::Name_,
-                                                         request.TakeChannel());
       });
 }
 

@@ -10,7 +10,6 @@
             "fuchsia.auth.TokenManagerFactory",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
-            "fuchsia.modular.Clipboard",
             "fuchsia.ui.input.ImeService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",

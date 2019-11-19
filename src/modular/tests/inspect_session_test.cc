@@ -48,8 +48,7 @@ constexpr char kSessionmgrInspectRootGlobPath[] =
 constexpr char kInitialIntentParameterData[] = "\"initial\"";
 constexpr char kIntentAction[] = "action";
 constexpr char kIntentParameterName[] = "intent_parameter";
-constexpr char kClipboardAgentUrl[] =
-    "fuchsia-pkg://fuchsia.com/clipboard_agent#meta/clipboard_agent.cmx";
+
 class InspectSessionTest : public modular_testing::TestHarnessFixture {
  protected:
   InspectSessionTest()
@@ -186,9 +185,8 @@ TEST_F(InspectSessionTest, DefaultAgentsHierarchy) {
   EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
   const auto& child = hierarchy.children();
-  EXPECT_THAT(child.size(), 2);
-  EXPECT_THAT(child.at(0), NodeMatches(NameMatches(kClipboardAgentUrl)));
-  EXPECT_THAT(child.at(1),
+  ASSERT_THAT(child.size(), 1);
+  EXPECT_THAT(child.at(0),
               NodeMatches(NameMatches(modular_testing::kSessionAgentFakeInterceptionUrl)));
 }
 
@@ -261,8 +259,8 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyStartAndStopStory) {
   EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
   const auto& children = hierarchy.children();
-  // Contains 2 agents and 1 story
-  EXPECT_THAT(children.size(), 3);
+  // Contains 1 agent and 1 story
+  ASSERT_THAT(children.size(), 2);
   EXPECT_THAT(children, Contains(NodeMatches(NameMatches("my_story"))));
   EXPECT_THAT(children.at(0), NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
                                   IntIs("last_focus_time", last_focus_timestamps.back()),
@@ -336,13 +334,13 @@ TEST_F(InspectSessionTest, CheckNodeHierarchyMods) {
   EXPECT_THAT(hierarchy, (NodeMatches(NameMatches("root"))));
 
   const auto& child = hierarchy.children();
-  EXPECT_THAT(child.size(), 3);
+  ASSERT_THAT(child.size(), 2);
 
-  EXPECT_THAT(child.at(2), NodeMatches(NameMatches("my_story")));
+  EXPECT_THAT(child.at(0), NodeMatches(NameMatches("my_story")));
 
-  const auto& grandchild = child.at(2).children();
+  const auto& grandchild = child.at(0).children();
 
-  EXPECT_THAT(grandchild.size(), 1);
+  ASSERT_THAT(grandchild.size(), 1);
   EXPECT_THAT(grandchild.at(0), NodeMatches(NameMatches(kFakeModuleUrl)));
   EXPECT_THAT(grandchild.at(0),
               NodeMatches(AllOf(PropertyList(UnorderedElementsAre(
