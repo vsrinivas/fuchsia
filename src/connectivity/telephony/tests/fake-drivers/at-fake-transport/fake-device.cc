@@ -62,7 +62,7 @@ void AtDevice::SnoopCtrlMsg(uint8_t* snoop_data, uint32_t snoop_data_len,
     msg.direction = direction;
     msg.timestamp = zx_clock_get_monotonic();
     memcpy(msg.opaque_bytes.data_, snoop_data, current_length);
-    snoop_msg.set_qmi_message(msg);
+    snoop_msg.set_qmi_message(&msg);
     zxlogf(INFO, "at-fake-transport: snoop msg %u %u %u %u sent\n", msg.opaque_bytes.data_[0],
            msg.opaque_bytes.data_[1], msg.opaque_bytes.data_[2],
            msg.opaque_bytes.data_[3]);

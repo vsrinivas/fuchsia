@@ -229,16 +229,17 @@ static zx_status_t set_snoop_channel(qmi_ctx_t* qmi_ctx, zx_handle_t channel) {
 void Device::SetChannel(::zx::channel transport, SetChannelCompleter::Sync completer) {
   zx_status_t set_channel_res = set_channel(qmi_ctx, transport.release());
   if (set_channel_res == ZX_OK) {
-    completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse({
+    telephony_transport::Qmi_SetChannel_Response response{
         .__reserved = 0,
-    }));
+    };
+    completer.Reply(telephony_transport::Qmi_SetChannel_Result::WithResponse(&response));
     zx_status_t status = set_async_wait(qmi_ctx);
     if (status != ZX_OK) {
       zx_handle_close(qmi_ctx->channel);
     }
   } else {
     completer.Reply(
-        telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t>(set_channel_res)));
+        telephony_transport::Qmi_SetChannel_Result::WithErr(static_cast<int32_t*>(&set_channel_res)));
   }
 }
 
@@ -250,12 +251,13 @@ void Device::SetNetwork(bool connected, SetNetworkCompleter::Sync completer) {
 void Device::SetSnoopChannel(::zx::channel interface, SetSnoopChannelCompleter::Sync completer) {
   zx_status_t set_snoop_res = set_snoop_channel(qmi_ctx, interface.release());
   if (set_snoop_res == ZX_OK) {
-    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse({
+    telephony_transport::Qmi_SetSnoopChannel_Response response{
         .__reserved = 0,
-    }));
+    };
+    completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithResponse(&response));
   } else {
     completer.Reply(telephony_transport::Qmi_SetSnoopChannel_Result::WithErr(
-        static_cast<int32_t>(set_snoop_res)));
+        static_cast<int32_t*>(&set_snoop_res)));
   }
 }
 
@@ -418,8 +420,7 @@ static void qmi_handle_interrupt(qmi_ctx_t* qmi_ctx, usb_request_t* request) {
         qmi_msg.direction = telephony_snoop::Direction::FROM_MODEM;
         qmi_msg.timestamp = zx_clock_get_monotonic();
         memcpy(qmi_msg.opaque_bytes.data_, buffer, current_length);
-        telephony_snoop::Message snoop_msg =
-            telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
+        telephony_snoop::Message snoop_msg = telephony_snoop::Message::WithQmiMessage(&qmi_msg);
         telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(qmi_ctx->snoop_channel),
                                                       std::move(snoop_msg));
       }
@@ -491,8 +492,7 @@ static int qmi_transport_thread(void* cookie) {
           qmi_msg.direction = telephony_snoop::Direction::TO_MODEM;
           qmi_msg.timestamp = zx_clock_get_monotonic();
           memcpy(qmi_msg.opaque_bytes.data_, buffer, current_length);
-          telephony_snoop::Message snoop_msg =
-              telephony_snoop::Message::WithQmiMessage(std::move(qmi_msg));
+          telephony_snoop::Message snoop_msg = telephony_snoop::Message::WithQmiMessage(&qmi_msg);
           telephony_snoop::Publisher::Call::SendMessage(zx::unowned_channel(ctx->snoop_channel),
                                                         std::move(snoop_msg));
         }
