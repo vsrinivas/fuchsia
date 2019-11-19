@@ -45,6 +45,10 @@ class Bluetooth extends UiSpec {
   }
 
   static Spec _specForBluetooth(List<TextValue> values) {
+    if (values.isEmpty) {
+      // No connected devices found. Send nullSpec to hide bluetooth settings
+      return UiSpec.nullSpec;
+    }
     return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withIcon(IconValue(codePoint: Icons.bluetooth.codePoint)),

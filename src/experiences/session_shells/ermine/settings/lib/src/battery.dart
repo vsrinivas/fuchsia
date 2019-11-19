@@ -47,7 +47,8 @@ class Battery extends UiSpec {
 
   static Spec _specForBattery(double value, bool charging) {
     if (value.isNaN || value == 0) {
-      return null;
+      // Send nullSpec to hide battery settings.
+      return UiSpec.nullSpec;
     }
     final batteryText = '${value.toStringAsFixed(0)}%';
     if (value == 100) {
