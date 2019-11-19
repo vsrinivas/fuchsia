@@ -356,7 +356,7 @@ void x86_intel_init_percpu(void);
 #ifdef __cplusplus
 bool x86_intel_cpu_has_meltdown(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_l1tf(const cpu_id::CpuId* cpuid, MsrAccess* msr);
-bool x86_intel_cpu_has_mds(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+bool x86_intel_cpu_has_mds_taa(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_intel_cpu_has_swapgs_bug(const cpu_id::CpuId* cpuid);
 bool x86_intel_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssb(const cpu_id::CpuId* cpuid, MsrAccess* msr);

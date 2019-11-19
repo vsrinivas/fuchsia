@@ -310,7 +310,7 @@ static bool test_x64_mds_enumeration() {
   {
     // Test an Intel Xeon E5-2690 V4 w/ older microcode (no ARCH_CAPABILITIES)
     FakeMsrAccess fake_msrs;
-    EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
+    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu_id::kCpuIdXeon2690v4, &fake_msrs));
   }
 
   {
@@ -322,11 +322,11 @@ static bool test_x64_mds_enumeration() {
     cpu_id::FakeCpuId cpu(*data.get());
     FakeMsrAccess fake_msrs = {};
     fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0};
-    EXPECT_TRUE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
+    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
   }
 
   {
-    // Intel(R) Xeon(R) Gold 6xxx; does not have MDS
+    // Intel(R) Xeon(R) Gold 6xxx; does not have MDS but it does have TAA.
     auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
     ASSERT_TRUE(ac.check(), "");
     data->leaf0 = {.reg = {0x16, 0x756e6547, 0x6c65746e, 0x49656e69}};
@@ -337,12 +337,13 @@ static bool test_x64_mds_enumeration() {
     cpu_id::FakeCpuId cpu(*data.get());
     FakeMsrAccess fake_msrs = {};
     fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x2b};
-    EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
+    EXPECT_TRUE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
   }
 
   {
     // Intel(R) Celeron(R) CPU J3455 (Goldmont) does not have MDS but does not
-    // enumerate MDS_NO with microcode 32h (at least)
+    // enumerate MDS_NO with microcode 32h (at least). It does not have TSX,
+    // so it does not have TAA.
     auto data = ktl::make_unique<cpu_id::TestDataSet>(&ac);
     ASSERT_TRUE(ac.check(), "");
     data->leaf0 = {.reg = {0x15, 0x756e6547, 0x6c65746e, 0x49656e69}};
@@ -354,7 +355,7 @@ static bool test_x64_mds_enumeration() {
     FakeMsrAccess fake_msrs = {};
     // 0x19 = RDCL_NO | SKIP_VMENTRY_L1DFLUSH | SSB_NO
     fake_msrs.msrs_[0] = {X86_MSR_IA32_ARCH_CAPABILITIES, 0x19};
-    EXPECT_FALSE(x86_intel_cpu_has_mds(&cpu, &fake_msrs));
+    EXPECT_FALSE(x86_intel_cpu_has_mds_taa(&cpu, &fake_msrs));
   }
 
   END_TEST;

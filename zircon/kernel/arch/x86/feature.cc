@@ -40,7 +40,7 @@ bool g_x86_feature_pcid_good;
 bool g_x86_feature_has_smap;
 bool g_has_meltdown;
 bool g_has_l1tf;
-bool g_has_mds;
+bool g_has_mds_taa;
 bool g_has_swapgs_bug;
 bool g_swapgs_bug_mitigated;
 bool g_has_ssb;
@@ -164,10 +164,10 @@ void x86_feature_init(void) {
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
-    g_has_mds = x86_intel_cpu_has_mds(&cpuid, &msr);
+    g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) &&
-                                g_has_mds && g_has_md_clear &&
+                                g_has_mds_taa && g_has_md_clear &&
                                 gCmdline.GetBool("kernel.x86.md_clear_on_user_return",
                                                  /*default_value=*/false);
     g_has_swapgs_bug = x86_intel_cpu_has_swapgs_bug(&cpuid);
@@ -379,8 +379,8 @@ void x86_feature_debug(void) {
     printf("meltdown ");
   if (g_has_l1tf)
     printf("l1tf ");
-  if (g_has_mds)
-    printf("mds ");
+  if (g_has_mds_taa)
+    printf("mds/taa ");
   if (g_has_md_clear)
     printf("md_clear ");
   if (g_md_clear_on_user_return)
