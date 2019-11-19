@@ -9,12 +9,17 @@ source_set("hid-input-report") {
   sources = [
     "axis.cc",
     "fidl.cc",
+    "keyboard.cc",
     "mouse.cc",
     "sensor.cc",
     "touch.cc",
   ]
   public_deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.ui.input2",
+    "//src/ui/lib/key_util",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
   ]
 }
@@ -23,9 +28,11 @@ test("lib-hid-input-report-test") {
   sources = [
     "axis.cc",
     "fidl.cc",
+    "keyboard.cc",
     "mouse.cc",
     "sensor.cc",
     "test/fidl-test.cc",
+    "test/keyboard-test.cc",
     "test/mouse-test.cc",
     "test/sensor-test.cc",
     "test/touch-test.cc",
@@ -34,8 +41,14 @@ test("lib-hid-input-report-test") {
 
   deps = [
     "//sdk/fidl/fuchsia.input.report:fuchsia.input.report_llcpp",
+    "//sdk/fidl/fuchsia.ui.input2",
+    "//src/ui/lib/key_util",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/hid",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/hid-parser",
+    "//zircon/public/lib/zxtest",
     "//zircon/public/lib/zxtest",
   ]
 }

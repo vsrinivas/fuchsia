@@ -21,6 +21,7 @@ enum ParseResult : uint32_t {
   kParseTooManyItems = 2,
   kParseReportSizeMismatch = 3,
   kParseNoCollection = 4,
+  kParseBadReport = 5,
 };
 
 class Device {

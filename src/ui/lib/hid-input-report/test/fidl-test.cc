@@ -6,6 +6,7 @@
 
 #include <variant>
 
+#include <hid/usages.h>
 #include <zxtest/zxtest.h>
 
 #include "src/ui/lib/hid-input-report/descriptors.h"
@@ -236,4 +237,50 @@ TEST(FidlTest, TouchReport) {
   EXPECT_EQ(touch_report.contacts[0].pressure, fidl_touch.contacts()[0].pressure());
   EXPECT_EQ(touch_report.contacts[0].contact_width, fidl_touch.contacts()[0].contact_width());
   EXPECT_EQ(touch_report.contacts[0].contact_height, fidl_touch.contacts()[0].contact_height());
+}
+
+TEST(FidlTest, KeyboardDescriptor) {
+  hid_input_report::KeyboardDescriptor keyboard_descriptor = {};
+  keyboard_descriptor.num_keys = 3;
+  keyboard_descriptor.keys[0] = HID_USAGE_KEY_A;
+  keyboard_descriptor.keys[1] = HID_USAGE_KEY_END;
+  keyboard_descriptor.keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+
+  hid_input_report::ReportDescriptor descriptor;
+  descriptor.descriptor = keyboard_descriptor;
+
+  hid_input_report::FidlDescriptor fidl_desc = {};
+  ASSERT_OK(SetFidlDescriptor(descriptor, &fidl_desc));
+
+  llcpp_report::DeviceDescriptor fidl = fidl_desc.descriptor_builder.view();
+  ASSERT_TRUE(fidl.has_keyboard());
+  auto& fidl_keyboard = fidl.keyboard();
+
+  ASSERT_EQ(3, fidl_keyboard.keys().count());
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, fidl_keyboard.keys()[0]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::END, fidl_keyboard.keys()[1]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT, fidl_keyboard.keys()[2]);
+}
+
+TEST(FidlTest, KeyboardReport) {
+  hid_input_report::KeyboardReport keyboard_report = {};
+  keyboard_report.num_pressed_keys = 3;
+  keyboard_report.pressed_keys[0] = HID_USAGE_KEY_A;
+  keyboard_report.pressed_keys[1] = HID_USAGE_KEY_END;
+  keyboard_report.pressed_keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+
+  hid_input_report::Report report;
+  report.report = keyboard_report;
+
+  hid_input_report::FidlReport fidl_report = {};
+  ASSERT_OK(SetFidlReport(report, &fidl_report));
+
+  llcpp_report::InputReport fidl = fidl_report.report_builder.view();
+  ASSERT_TRUE(fidl.has_keyboard());
+  auto& fidl_keyboard = fidl.keyboard();
+
+  ASSERT_EQ(3, fidl_keyboard.pressed_keys().count());
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, fidl_keyboard.pressed_keys()[0]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::END, fidl_keyboard.pressed_keys()[1]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::LEFT_SHIFT, fidl_keyboard.pressed_keys()[2]);
 }

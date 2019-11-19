@@ -9,6 +9,8 @@
 #include <variant>
 
 #include <hid-parser/usages.h>
+
+#include "src/ui/lib/key_util/key_util.h"
 namespace hid_input_report {
 
 namespace llcpp_report = ::llcpp::fuchsia::input::report;
@@ -288,6 +290,47 @@ zx_status_t SetTouchReport(const TouchReport& hid_touch_report, FidlReport* repo
   return ZX_OK;
 }
 
+zx_status_t SetKeyboardDescriptor(const KeyboardDescriptor& hid_keyboard_desc,
+                                  FidlDescriptor* descriptor) {
+  FidlKeyboardDescriptor& keyboard_desc = descriptor->keyboard_descriptor;
+  size_t fidl_key_index = 0;
+  for (size_t i = 0; i < hid_keyboard_desc.num_keys; i++) {
+    std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
+        hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_desc.keys[i]));
+    if (key) {
+      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
+      keyboard_desc.keys_data[fidl_key_index++] =
+          static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
+    }
+  }
+  keyboard_desc.keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
+      keyboard_desc.keys_data.data(), fidl_key_index);
+  keyboard_desc.keyboard_builder.set_keys(&keyboard_desc.keys_view);
+  keyboard_desc.keyboard_descriptor = keyboard_desc.keyboard_builder.view();
+  descriptor->descriptor_builder.set_keyboard(&keyboard_desc.keyboard_descriptor);
+  return ZX_OK;
+}
+
+zx_status_t SetKeyboardReport(const KeyboardReport& hid_keyboard_report, FidlReport* report) {
+  FidlKeyboardReport& keyboard_report = std::get<FidlKeyboardReport>(report->report);
+  size_t fidl_key_index = 0;
+  for (size_t i = 0; i < hid_keyboard_report.num_pressed_keys; i++) {
+    std::optional<fuchsia::ui::input2::Key> key = key_util::hid_key_to_fuchsia_key(
+        hid::USAGE(hid::usage::Page::kKeyboardKeypad, hid_keyboard_report.pressed_keys[i]));
+    if (key) {
+      // Cast the key enum from HLCPP to LLCPP. We are guaranteed that this will be equivalent.
+      keyboard_report.pressed_keys_data[fidl_key_index++] =
+          static_cast<llcpp::fuchsia::ui::input2::Key>(*key);
+    }
+  }
+  keyboard_report.pressed_keys_view = fidl::VectorView<llcpp::fuchsia::ui::input2::Key>(
+      keyboard_report.pressed_keys_data.data(), fidl_key_index);
+  keyboard_report.keyboard_builder.set_pressed_keys(&keyboard_report.pressed_keys_view);
+  keyboard_report.keyboard_report = keyboard_report.keyboard_builder.view();
+  report->report_builder.set_keyboard(&keyboard_report.keyboard_report);
+  return ZX_OK;
+}
+
 zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc,
                               FidlDescriptor* descriptor) {
   if (std::holds_alternative<MouseDescriptor>(hid_desc.descriptor)) {
@@ -298,6 +341,9 @@ zx_status_t SetFidlDescriptor(const hid_input_report::ReportDescriptor& hid_desc
   }
   if (std::holds_alternative<TouchDescriptor>(hid_desc.descriptor)) {
     return SetTouchDescriptor(std::get<TouchDescriptor>(hid_desc.descriptor), descriptor);
+  }
+  if (std::holds_alternative<KeyboardDescriptor>(hid_desc.descriptor)) {
+    return SetKeyboardDescriptor(std::get<KeyboardDescriptor>(hid_desc.descriptor), descriptor);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }
@@ -314,6 +360,10 @@ zx_status_t SetFidlReport(const hid_input_report::Report& hid_report, FidlReport
   if (std::holds_alternative<TouchReport>(hid_report.report)) {
     report->report = FidlTouchReport();
     return SetTouchReport(std::get<TouchReport>(hid_report.report), report);
+  }
+  if (std::holds_alternative<KeyboardReport>(hid_report.report)) {
+    report->report = FidlKeyboardReport();
+    return SetKeyboardReport(std::get<KeyboardReport>(hid_report.report), report);
   }
   return ZX_ERR_NOT_SUPPORTED;
 }

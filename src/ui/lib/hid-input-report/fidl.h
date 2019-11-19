@@ -6,6 +6,7 @@
 #define SRC_UI_LIB_HID_INPUT_REPORT_FIDL_H_
 
 #include <fuchsia/input/report/llcpp/fidl.h>
+#include <fuchsia/ui/input2/cpp/fidl.h>
 
 #include "src/ui/lib/hid-input-report/descriptors.h"
 
@@ -68,6 +69,19 @@ struct FidlTouchDescriptor {
   ::llcpp::fuchsia::input::report::TouchType touch_type = {};
 };
 
+struct FidlKeyboardDescriptor {
+  FidlKeyboardDescriptor() {}
+  ::llcpp::fuchsia::input::report::KeyboardDescriptor keyboard_descriptor;
+  ::llcpp::fuchsia::input::report::KeyboardDescriptor::Builder keyboard_builder =
+      ::llcpp::fuchsia::input::report::KeyboardDescriptor::Build();
+  fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> keys_view;
+
+  // Holds the actual data that the builders/views point to.
+  std::array<::llcpp::fuchsia::ui::input2::Key,
+             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS>
+      keys_data;
+};
+
 struct FidlDescriptor {
   FidlDescriptor() {}
   ::llcpp::fuchsia::input::report::DeviceDescriptor::Builder descriptor_builder =
@@ -76,6 +90,7 @@ struct FidlDescriptor {
   FidlMouseDescriptor mouse_descriptor;
   FidlSensorDescriptor sensor_descriptor;
   FidlTouchDescriptor touch_descriptor;
+  FidlKeyboardDescriptor keyboard_descriptor;
 };
 
 struct FidlMouseReport {
@@ -120,11 +135,24 @@ struct FidlTouchReport {
   TouchReport report_data;
 };
 
+struct FidlKeyboardReport {
+  FidlKeyboardReport() {}
+  ::llcpp::fuchsia::input::report::KeyboardReport keyboard_report;
+  ::llcpp::fuchsia::input::report::KeyboardReport::Builder keyboard_builder =
+      ::llcpp::fuchsia::input::report::KeyboardReport::Build();
+  fidl::VectorView<::llcpp::fuchsia::ui::input2::Key> pressed_keys_view;
+
+  // Holds the actual data that the builders/views point to.
+  std::array<::llcpp::fuchsia::ui::input2::Key,
+             ::llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS>
+      pressed_keys_data;
+};
+
 struct FidlReport {
   FidlReport() {}
   ::llcpp::fuchsia::input::report::InputReport::Builder report_builder =
       ::llcpp::fuchsia::input::report::InputReport::Build();
-  std::variant<FidlMouseReport, FidlSensorReport, FidlTouchReport> report;
+  std::variant<FidlMouseReport, FidlSensorReport, FidlTouchReport, FidlKeyboardReport> report;
 };
 
 // Builds the |FidlDescriptor| object from the |ReportDescriptor|.

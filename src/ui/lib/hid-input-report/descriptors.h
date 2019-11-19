@@ -138,12 +138,24 @@ struct TouchReport {
   size_t num_contacts;
 };
 
+struct KeyboardDescriptor {
+  // The list of keys that a keyboard contains. These keys are expressed in HID key usages.
+  std::array<uint32_t, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_NUM_KEYS> keys;
+  size_t num_keys = 0;
+};
+
+struct KeyboardReport {
+  // The list of keys currently pressed. These keys are expressed in HID key usages.
+  std::array<uint32_t, ::llcpp::fuchsia::input::report::KEYBOARD_MAX_PRESSED_KEYS> pressed_keys;
+  size_t num_pressed_keys;
+};
+
 struct ReportDescriptor {
-  std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor> descriptor;
+  std::variant<MouseDescriptor, SensorDescriptor, TouchDescriptor, KeyboardDescriptor> descriptor;
 };
 
 struct Report {
-  std::variant<std::monostate, MouseReport, SensorReport, TouchReport> report;
+  std::variant<std::monostate, MouseReport, SensorReport, TouchReport, KeyboardReport> report;
 };
 
 }  // namespace hid_input_report
