@@ -9,18 +9,6 @@ use serde_json;
 #[derive(Debug, Fail)]
 pub enum Error {
     #[fail(display = "{}", _0)]
-    Help(&'static str),
-
-    #[fail(display = "missing argument {}", _0)]
-    MissingArgument(&'static str),
-
-    #[fail(display = "unrecognized argument {}", _0)]
-    UnrecognizedArgument(String),
-
-    #[fail(display = "missing subcommand")]
-    MissingCommand,
-
-    #[fail(display = "{}", _0)]
     Json(#[cause] serde_json::Error),
 
     #[fail(display = "{}", _0)]

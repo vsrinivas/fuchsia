@@ -23,6 +23,7 @@ rustc_binary("bin") {
     "//sdk/fidl/fuchsia.pkg.rewrite:fuchsia.pkg.rewrite-rustc",
     "//sdk/fidl/fuchsia.space:fuchsia.space-rustc",
     "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
+    "//src/lib/argh",
     "//src/sys/lib/fuchsia_url_rewrite",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",

@@ -3,7 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::args::{Command, ExperimentCommand, RepoCommand, RuleCommand, RuleConfigInputType},
+    crate::args::{
+        Args, Command, ExperimentCommand, ExperimentDisableCommand, ExperimentEnableCommand,
+        ExperimentSubCommand, GcCommand, OpenCommand, RepoAddCommand, RepoCommand,
+        RepoRemoveCommand, RepoSubCommand, ResolveCommand, RuleClearCommand, RuleCommand,
+        RuleListCommand, RuleReplaceCommand, RuleReplaceFileCommand, RuleReplaceJsonCommand,
+        RuleReplaceSubCommand, RuleSubCommand, UpdateCommand,
+    },
     failure::{self, format_err, Fail, ResultExt},
     fidl_fuchsia_pkg::{
         PackageCacheMarker, PackageResolverAdminMarker, PackageResolverMarker,
@@ -16,13 +22,11 @@ use {
     fuchsia_component::client::connect_to_service,
     fuchsia_url_rewrite::{Rule as RewriteRule, RuleConfig},
     fuchsia_zircon as zx,
-    serde_json,
     std::{
         convert::{TryFrom, TryInto},
-        env,
         fs::File,
         future::Future,
-        io, process,
+        io,
     },
 };
 
@@ -30,21 +34,13 @@ mod args;
 mod error;
 
 fn main() -> Result<(), failure::Error> {
-    // Ignore the first argument.
-    let args = env::args().skip(1).collect::<Vec<_>>();
-    let cmd = match args::parse_args(args.iter().map(|s| &**s)) {
-        Ok(cmd) => cmd,
-        Err(err) => {
-            eprintln!("{}", err);
-            process::exit(1);
-        }
-    };
+    let Args { command } = argh::from_env();
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     let fut = async {
-        match cmd {
-            Command::Resolve { pkg_url, selectors } => {
+        match command {
+            Command::Resolve(ResolveCommand { pkg_url, selectors }) => {
                 let resolver = connect_to_service::<PackageResolverMarker>()
                     .context("Failed to connect to resolver service")?;
                 println!("resolving {} with the selectors {:?}", pkg_url, selectors);
@@ -69,7 +65,7 @@ fn main() -> Result<(), failure::Error> {
 
                 Ok(())
             }
-            Command::Open { meta_far_blob_id, selectors } => {
+            Command::Open(OpenCommand { meta_far_blob_id, selectors }) => {
                 let cache = connect_to_service::<PackageCacheMarker>()
                     .context("Failed to connect to cache service")?;
                 println!("opening {} with the selectors {:?}", meta_far_blob_id, selectors);
@@ -93,12 +89,31 @@ fn main() -> Result<(), failure::Error> {
 
                 Ok(())
             }
-            Command::Repo(cmd) => {
+            Command::Repo(RepoCommand { verbose, subcommand }) => {
                 let repo_manager = connect_to_service::<RepositoryManagerMarker>()
                     .context("Failed to connect to resolver service")?;
 
-                match cmd {
-                    RepoCommand::Add { file } => {
+                match subcommand {
+                    None => {
+                        if !verbose {
+                            // with no arguments, list available repos
+                            let repos = fetch_repos(repo_manager).await?;
+
+                            let mut urls = repos
+                                .into_iter()
+                                .map(|r| r.repo_url().to_string())
+                                .collect::<Vec<_>>();
+                            urls.sort_unstable();
+                            urls.into_iter().for_each(|url| println!("{}", url));
+                        } else {
+                            let repos = fetch_repos(repo_manager).await?;
+
+                            let s = serde_json::to_string_pretty(&repos).expect("valid json");
+                            println!("{}", s);
+                        }
+                        Ok(())
+                    }
+                    Some(RepoSubCommand::Add(RepoAddCommand { file })) => {
                         let repo: RepositoryConfig =
                             serde_json::from_reader(io::BufReader::new(File::open(file)?))?;
 
@@ -108,40 +123,20 @@ fn main() -> Result<(), failure::Error> {
                         Ok(())
                     }
 
-                    RepoCommand::Remove { repo_url } => {
+                    Some(RepoSubCommand::Remove(RepoRemoveCommand { repo_url })) => {
                         let res = repo_manager.remove(&repo_url).await?;
                         zx::Status::ok(res)?;
 
                         Ok(())
                     }
-
-                    RepoCommand::List => {
-                        let repos = fetch_repos(repo_manager).await?;
-
-                        let mut urls =
-                            repos.into_iter().map(|r| r.repo_url().to_string()).collect::<Vec<_>>();
-                        urls.sort_unstable();
-                        urls.into_iter().for_each(|url| println!("{}", url));
-
-                        Ok(())
-                    }
-
-                    RepoCommand::ListVerbose => {
-                        let repos = fetch_repos(repo_manager).await?;
-
-                        let s = serde_json::to_string_pretty(&repos).expect("valid json");
-                        println!("{}", s);
-
-                        Ok(())
-                    }
                 }
             }
-            Command::Rule(cmd) => {
+            Command::Rule(RuleCommand { subcommand }) => {
                 let engine = connect_to_service::<EngineMarker>()
                     .context("Failed to connect to rewrite engine service")?;
 
-                match cmd {
-                    RuleCommand::List => {
+                match subcommand {
+                    RuleSubCommand::List(RuleListCommand {}) => {
                         let (iter, iter_server_end) = fidl::endpoints::create_proxy()?;
                         engine.list(iter_server_end)?;
 
@@ -162,7 +157,7 @@ fn main() -> Result<(), failure::Error> {
                             println!("{:#?}", rule);
                         }
                     }
-                    RuleCommand::Clear => {
+                    RuleSubCommand::Clear(RuleClearCommand {}) => {
                         do_transaction(engine, |transaction| {
                             async move {
                                 transaction.reset_all()?;
@@ -171,12 +166,14 @@ fn main() -> Result<(), failure::Error> {
                         })
                         .await?;
                     }
-                    RuleCommand::Replace { input_type } => {
-                        let RuleConfig::Version1(ref rules) = match input_type {
-                            RuleConfigInputType::File { path } => {
-                                serde_json::from_reader(io::BufReader::new(File::open(path)?))?
+                    RuleSubCommand::Replace(RuleReplaceCommand { subcommand }) => {
+                        let RuleConfig::Version1(ref rules) = match subcommand {
+                            RuleReplaceSubCommand::File(RuleReplaceFileCommand { file }) => {
+                                serde_json::from_reader(io::BufReader::new(File::open(file)?))?
                             }
-                            RuleConfigInputType::Json { config } => config,
+                            RuleReplaceSubCommand::Json(RuleReplaceJsonCommand { config }) => {
+                                config
+                            }
                         };
 
                         do_transaction(engine, |transaction| {
@@ -196,22 +193,22 @@ fn main() -> Result<(), failure::Error> {
 
                 Ok(())
             }
-            Command::Experiment(cmd) => {
+            Command::Experiment(ExperimentCommand { subcommand }) => {
                 let admin = connect_to_service::<PackageResolverAdminMarker>()
                     .context("Failed to connect to package resolver admin service")?;
 
-                match cmd {
-                    ExperimentCommand::Enable(experiment) => {
+                match subcommand {
+                    ExperimentSubCommand::Enable(ExperimentEnableCommand { experiment }) => {
                         admin.set_experiment_state(experiment, true).await?;
                     }
-                    ExperimentCommand::Disable(experiment) => {
+                    ExperimentSubCommand::Disable(ExperimentDisableCommand { experiment }) => {
                         admin.set_experiment_state(experiment, false).await?;
                     }
                 }
 
                 Ok(())
             }
-            Command::Update => {
+            Command::Update(UpdateCommand {}) => {
                 let update = connect_to_service::<fidl_update::ManagerMarker>()
                     .context("Failed to connect to update manager service")?;
                 match update
@@ -228,7 +225,7 @@ fn main() -> Result<(), failure::Error> {
                     | fidl_update::CheckStartedResult::InProgress => Ok(()),
                 }
             }
-            Command::Gc => {
+            Command::Gc(GcCommand {}) => {
                 let space_manager = connect_to_service::<SpaceManagerMarker>()
                     .context("Failed to connect to space manager service")?;
                 space_manager
