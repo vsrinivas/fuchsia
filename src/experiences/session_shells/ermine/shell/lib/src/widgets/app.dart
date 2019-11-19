@@ -9,6 +9,7 @@ import 'package:internationalization/localizations_delegate.dart'
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:intl/intl.dart';
 
 import '../models/app_model.dart';
 import '../utils/styles.dart';
@@ -29,6 +30,9 @@ class App extends StatelessWidget {
         stream: model.localeStream,
         builder: (context, snapshot) {
           final locale = snapshot.data;
+          // Needed to set the locale for anything that depends on the Intl
+          // package.
+          Intl.defaultLocale = locale.toString();
           return MaterialApp(
             debugShowCheckedModeBanner: false,
             theme: ErmineStyle.kErmineTheme,
