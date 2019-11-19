@@ -131,35 +131,6 @@ void WithErrorSyntax_ResponseAsStruct_Result::Decode(::fidl::Decoder* _decoder, 
   }
 }
 
-void WithErrorSyntax_ResponseAsStruct_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      WithErrorSyntax_ResponseAsStruct_Response _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_response(std::move(_member));
-      break;
-    }
-    case 2: {
-      uint32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_err(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
-  }
-}
-
 zx_status_t WithErrorSyntax_ResponseAsStruct_Result::Clone(WithErrorSyntax_ResponseAsStruct_Result* _result) const {
   zx_status_t _status = ZX_OK;
   switch (Which()) {
@@ -305,35 +276,6 @@ void WithErrorSyntax_ErrorAsPrimitive_Result::Decode(::fidl::Decoder* _decoder, 
     }
    default:
     _value->value_.emplace<0>();
-  }
-}
-
-void WithErrorSyntax_ErrorAsPrimitive_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      WithErrorSyntax_ErrorAsPrimitive_Response _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_response(std::move(_member));
-      break;
-    }
-    case 2: {
-      uint32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_err(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
   }
 }
 
@@ -1283,35 +1225,6 @@ void WithErrorSyntax_ErrorAsEnum_Result::Decode(::fidl::Decoder* _decoder, WithE
     }
    default:
     _value->value_.emplace<0>();
-  }
-}
-
-void WithErrorSyntax_ErrorAsEnum_Result::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      WithErrorSyntax_ErrorAsEnum_Response _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_response(std::move(_member));
-      break;
-    }
-    case 2: {
-      ErrorEnun _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_err(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
   }
 }
 

@@ -41,7 +41,6 @@ class UnionSize8Alignment4 final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize8Alignment4* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -133,7 +132,6 @@ class UnionSize36Alignment4 final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize36Alignment4* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -225,7 +223,6 @@ class UnionSize12Alignment4 final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset);
   zx_status_t Clone(UnionSize12Alignment4* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -340,7 +337,6 @@ class UnionSize24Alignment8 final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset);
   zx_status_t Clone(UnionSize24Alignment8* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }

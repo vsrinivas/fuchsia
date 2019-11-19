@@ -173,7 +173,6 @@ class WithErrorSyntax_ResponseAsStruct_Result final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ResponseAsStruct_Result* _value, size_t _offset);
   zx_status_t Clone(WithErrorSyntax_ResponseAsStruct_Result* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -306,7 +305,6 @@ class WithErrorSyntax_ErrorAsPrimitive_Result final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsPrimitive_Result* _value, size_t _offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsPrimitive_Result* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -1068,7 +1066,6 @@ class WithErrorSyntax_ErrorAsEnum_Result final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, WithErrorSyntax_ErrorAsEnum_Result* _value, size_t _offset);
   zx_status_t Clone(WithErrorSyntax_ErrorAsEnum_Result* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }

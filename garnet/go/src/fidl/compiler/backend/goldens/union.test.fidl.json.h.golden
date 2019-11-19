@@ -39,7 +39,6 @@ class Union final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   zx_status_t Clone(Union* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -153,7 +152,6 @@ class FieldCollision final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset);
   zx_status_t Clone(FieldCollision* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -222,7 +220,6 @@ class ExplicitUnion final {
   void Encode(::fidl::Encoder* _encoder, size_t _offset);
   void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
   static void Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset);
-  static void DecodeFromXUnionBytes(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset);
   zx_status_t Clone(ExplicitUnion* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }

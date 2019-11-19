@@ -82,29 +82,6 @@ void UnionSize8Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize8Alignment
   }
 }
 
-void UnionSize8Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize8Alignment4* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      uint32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_variant(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
-  }
-}
-
 zx_status_t UnionSize8Alignment4::Clone(UnionSize8Alignment4* _result) const {
   zx_status_t _status = ZX_OK;
   switch (Which()) {
@@ -237,29 +214,6 @@ void UnionSize36Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize36Alignme
   }
 }
 
-void UnionSize36Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize36Alignment4* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      ::std::array<uint8_t, 32> _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_variant(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
-  }
-}
-
 zx_status_t UnionSize36Alignment4::Clone(UnionSize36Alignment4* _result) const {
   zx_status_t _status = ZX_OK;
   switch (Which()) {
@@ -389,29 +343,6 @@ void UnionSize12Alignment4::Decode(::fidl::Decoder* _decoder, UnionSize12Alignme
     }
    default:
     _value->value_.emplace<0>();
-  }
-}
-
-void UnionSize12Alignment4::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize12Alignment4* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      ::std::array<uint8_t, 6> _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_variant(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
   }
 }
 
@@ -573,29 +504,6 @@ void UnionSize24Alignment8::Decode(::fidl::Decoder* _decoder, UnionSize24Alignme
     }
    default:
     _value->value_.emplace<0>();
-  }
-}
-
-void UnionSize24Alignment8::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, UnionSize24Alignment8* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      StructSize16Alignment8 _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_variant(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
   }
 }
 

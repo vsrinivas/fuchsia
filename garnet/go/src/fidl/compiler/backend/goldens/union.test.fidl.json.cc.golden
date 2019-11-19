@@ -111,41 +111,6 @@ void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
   }
 }
 
-void Union::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_Primitive(std::move(_member));
-      break;
-    }
-    case 2: {
-      ::std::string _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_StringNeedsConstructor(std::move(_member));
-      break;
-    }
-    case 3: {
-      ::std::vector<::std::string> _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_VectorStringAlsoNeedsConstructor(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
-  }
-}
-
 zx_status_t Union::Clone(Union* _result) const {
   zx_status_t _status = ZX_OK;
   switch (Which()) {
@@ -292,29 +257,6 @@ void FieldCollision::Decode(::fidl::Decoder* _decoder, FieldCollision* _value, s
   }
 }
 
-void FieldCollision::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, FieldCollision* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_field_collision_tag(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
-  }
-}
-
 zx_status_t FieldCollision::Clone(FieldCollision* _result) const {
   zx_status_t _status = ZX_OK;
   switch (Which()) {
@@ -424,35 +366,6 @@ void ExplicitUnion::Decode(::fidl::Decoder* _decoder, ExplicitUnion* _value, siz
     }
    default:
     _value->value_.emplace<0>();
-  }
-}
-
-void ExplicitUnion::DecodeFromXUnionBytes(::fidl::Decoder* _decoder, ExplicitUnion* _value, size_t _offset) {
-  fidl_xunion_t* xunion = _decoder->GetPtr<fidl_xunion_t>(_offset);
-
-  uint32_t ordinal;
-  ::fidl::Decode(_decoder, &ordinal, _offset);
-
-
-  const size_t envelope_offset = _decoder->GetOffset(xunion->envelope.data);
-
-
-switch (ordinal) {
-    case 1: {
-      int32_t _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_Primitive(std::move(_member));
-      break;
-    }
-    case 3: {
-      ::std::string _member{};
-      ::fidl::Decode(_decoder, &_member, envelope_offset);
-      _value->set_StringNeedsConstructor(std::move(_member));
-      break;
-    }
-  default:
-    _value->value_.emplace<0>();
-    break;
   }
 }
 
