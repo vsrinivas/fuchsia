@@ -248,7 +248,7 @@ class AudioCapturerImpl : public AudioObject,
   zx::duration min_fence_time_;
 
   // Capture format and gain state.
-  fuchsia::media::AudioStreamTypePtr format_;
+  fuchsia::media::AudioStreamType format_;
   uint32_t bytes_per_frame_;
   TimelineRate dest_frames_to_clock_mono_rate_;
   uint32_t max_frames_per_capture_;

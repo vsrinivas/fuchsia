@@ -94,7 +94,7 @@ class SilenceMaker<DType, typename std::enable_if_t<std::is_same_v<DType, uint8_
 template <typename DType>
 class OutputProducerImpl : public OutputProducer {
  public:
-  explicit OutputProducerImpl(const fuchsia::media::AudioStreamTypePtr& format)
+  explicit OutputProducerImpl(const fuchsia::media::AudioStreamType& format)
       : OutputProducer(format, sizeof(DType)) {}
 
   void ProduceOutput(const float* source, void* dest_void, uint32_t frames) const override {
@@ -116,24 +116,24 @@ class OutputProducerImpl : public OutputProducer {
 };
 
 // Constructor/destructor for the common OutputProducer base class.
-OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
+OutputProducer::OutputProducer(const fuchsia::media::AudioStreamType& format,
                                uint32_t bytes_per_sample)
-    : channels_(format->channels),
+    : channels_(format.channels),
       bytes_per_sample_(bytes_per_sample),
-      bytes_per_frame_(bytes_per_sample * format->channels) {
+      bytes_per_frame_(bytes_per_sample * format.channels) {
   fidl::Clone(format, &format_);
 }
 
 // Selection routine which will instantiate a particular templatized version of the output producer.
 std::unique_ptr<OutputProducer> OutputProducer::Select(
-    const fuchsia::media::AudioStreamTypePtr& format) {
+    const fuchsia::media::AudioStreamType& format) {
   TRACE_DURATION("audio", "OutputProducer::Select");
-  if (!format || format->channels == 0u) {
+  if (format.channels == 0u) {
     FX_LOGS(ERROR) << "Invalid output format";
     return nullptr;
   }
 
-  switch (format->sample_format) {
+  switch (format.sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:
       return std::make_unique<OutputProducerImpl<uint8_t>>(format);
     case fuchsia::media::AudioSampleFormat::SIGNED_16:
@@ -143,7 +143,7 @@ std::unique_ptr<OutputProducer> OutputProducer::Select(
     case fuchsia::media::AudioSampleFormat::FLOAT:
       return std::make_unique<OutputProducerImpl<float>>(format);
     default:
-      FX_LOGS(ERROR) << "Unsupported output format " << (uint32_t)format->sample_format;
+      FX_LOGS(ERROR) << "Unsupported output format " << (uint32_t)format.sample_format;
       return nullptr;
   }
 }

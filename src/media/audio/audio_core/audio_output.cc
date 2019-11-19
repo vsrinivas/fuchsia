@@ -113,7 +113,7 @@ zx_status_t AudioOutput::InitializeSourceLink(const fbl::RefPtr<AudioLink>& link
   std::unique_ptr<Mixer> mixer;
   auto stream = link->stream();
   if (output_producer_ && stream) {
-    mixer = Mixer::Select(stream->format().stream_type(), *(output_producer_->format()));
+    mixer = Mixer::Select(stream->format().stream_type(), output_producer_->format());
   } else {
     mixer = std::make_unique<audio::mixer::NoOp>();
   }

@@ -332,11 +332,10 @@ void DriverOutput::OnDriverInfoFetched() {
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
 
   // Select our output producer
-  fuchsia::media::AudioStreamTypePtr config(fuchsia::media::AudioStreamType::New());
-  config->frames_per_second = pref_fps;
-  config->channels = pref_chan;
-  config->sample_format = pref_fmt;
-
+  fuchsia::media::AudioStreamType config;
+  config.frames_per_second = pref_fps;
+  config.channels = pref_chan;
+  config.sample_format = pref_fmt;
   output_producer_ = OutputProducer::Select(config);
   if (!output_producer_) {
     FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "

@@ -14,7 +14,7 @@ namespace media::audio {
 class OutputProducer {
  public:
   static std::unique_ptr<OutputProducer> Select(
-      const fuchsia::media::AudioStreamTypePtr& output_format);
+      const fuchsia::media::AudioStreamType& output_format);
 
   virtual ~OutputProducer() = default;
 
@@ -46,16 +46,15 @@ class OutputProducer {
    */
   virtual void FillWithSilence(void* dest, uint32_t frames) const = 0;
 
-  const fuchsia::media::AudioStreamTypePtr& format() const { return format_; }
+  const fuchsia::media::AudioStreamType& format() const { return format_; }
   uint32_t channels() const { return channels_; }
   uint32_t bytes_per_sample() const { return bytes_per_sample_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }
 
  protected:
-  OutputProducer(const fuchsia::media::AudioStreamTypePtr& output_format,
-                 uint32_t bytes_per_sample);
+  OutputProducer(const fuchsia::media::AudioStreamType& output_format, uint32_t bytes_per_sample);
 
-  fuchsia::media::AudioStreamTypePtr format_;
+  fuchsia::media::AudioStreamType format_;
   uint32_t channels_ = 0;
   uint32_t bytes_per_sample_ = 0;
   uint32_t bytes_per_frame_ = 0;

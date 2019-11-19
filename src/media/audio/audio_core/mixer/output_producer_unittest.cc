@@ -13,10 +13,10 @@ class OutputProducerTest : public testing::Test {
  public:
   std::unique_ptr<OutputProducer> SelectOutputProducer(
       fuchsia::media::AudioSampleFormat dest_format, uint32_t num_channels) {
-    fuchsia::media::AudioStreamTypePtr dest_details = fuchsia::media::AudioStreamType::New();
-    dest_details->sample_format = dest_format;
-    dest_details->channels = num_channels;
-    dest_details->frames_per_second = 48000;
+    fuchsia::media::AudioStreamType dest_details;
+    dest_details.sample_format = dest_format;
+    dest_details.channels = num_channels;
+    dest_details.frames_per_second = 48000;
 
     return OutputProducer::Select(dest_details);
   }
