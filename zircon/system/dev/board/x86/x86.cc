@@ -27,11 +27,9 @@ static zx_status_t sys_device_suspend(void* ctx, uint32_t flags) { return acpi_s
 namespace x86 {
 
 int X86::Thread() {
-  pbus_protocol_t pbus;
-  pbus_.GetProto(&pbus);
-  zx_status_t status = publish_sysmem(&pbus);
+  zx_status_t status = SysmemInit();
   if (status != ZX_OK) {
-    zxlogf(ERROR, "publish_sysmem failed: %d\n", status);
+    zxlogf(ERROR, "%s: SysmemInit() failed: %d\n", __func__, status);
     return status;
   }
   return publish_acpi_devices(parent(), sys_root_, zxdev());

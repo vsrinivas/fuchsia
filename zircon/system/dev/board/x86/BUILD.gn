@@ -67,7 +67,7 @@ zx_driver("platform-bus-x86") {
     "pciroot.cc",
     "power.c",
     "resources.c",
-    "sysmem.c",
+    "sysmem.cc",
     "util.c",
     "x86.cc",
     "x86.h",
