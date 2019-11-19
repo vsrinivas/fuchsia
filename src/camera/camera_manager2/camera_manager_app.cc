@@ -126,10 +126,10 @@ void CameraManagerApp::ConnectToStream(
   // 5: Allocate the buffer collection.  The constraints from the device must be applied, as well as
   // constraints for all the image formats being offered.  These should be checked at some point by
   // the camera manager.
-    if (sysmem_collection_.is_bound()) {
+  if (sysmem_collection_.is_bound()) {
     FX_LOGS(INFO) << "Closing previous collection.";
-      sysmem_collection_->Close();
-    }
+    sysmem_collection_->Close();
+  }
   zx_status_t status =
       sysmem_allocator_->BindSharedCollection(std::move(token), sysmem_collection_.NewRequest());
   if (status != ZX_OK) {
