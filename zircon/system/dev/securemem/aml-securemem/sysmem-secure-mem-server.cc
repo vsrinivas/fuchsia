@@ -4,6 +4,7 @@
 
 #include "sysmem-secure-mem-server.h"
 
+#include <lib/async-loop/default.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/fit/defer.h>
 
@@ -17,7 +18,7 @@ SysmemSecureMemServer::SysmemSecureMemServer(thrd_t ddk_dispatcher_thread,
                                              zx::channel tee_client_channel)
     : ddk_dispatcher_thread_(ddk_dispatcher_thread),
       tee_client_channel_(std::move(tee_client_channel)),
-      loop_(&kAsyncLoopConfigNoAttachToThread) {
+      loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
   ZX_DEBUG_ASSERT(tee_client_channel_);
 }
 
