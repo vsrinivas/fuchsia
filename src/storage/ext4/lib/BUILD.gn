@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("parser") {
+  name = "ext4_parser"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
+    "//garnet/public/rust/fuchsia-zircon",
+  ]
+
+  test_deps = [ "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc" ]
+}
+
+test_package("tests") {
+  package_name = "storage-ext4-parser-tests"
+
+  deps = [
+    ":parser_test",
+  ]
+
+  tests = [
+    {
+      name = "ext4_parser_lib_test"
+      dest = "ext4_parser_test"
+      environments = basic_envs
+    },
+  ]
+}

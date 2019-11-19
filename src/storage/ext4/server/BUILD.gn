@@ -1,0 +1,62 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "ext4_server"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//src/storage/ext4/lib:parser",
+    "//src/storage/ext4/server/fidl:ext4_server-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("ext4-server") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "ext4_server"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/ext4_server.cmx"
+      dest = "ext4_server.cmx"
+    },
+  ]
+}
+
+test_package("tests") {
+  package_name = "ext4-server-tests"
+
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "ext4_server_bin_test"
+      dest = "ext4_server_test"
+      environments = basic_envs
+    },
+  ]
+}

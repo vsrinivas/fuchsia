@@ -1,0 +1,17 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("ext4_server") {
+  name = "fuchsia.storage.ext4server"
+
+  sources = [
+    "ext4_server.fidl",
+  ]
+
+  public_deps = [
+    "//zircon/system/fidl/fuchsia-io",
+  ]
+}

@@ -1,0 +1,77 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.storage.ext4server;
+
+using fuchsia.io;
+using zx;
+
+struct Success {
+};
+
+/// Parsing of the image failed.
+struct ParseFailure {
+    // TODO(fxb/41636): This error message will need to be refined to include
+    // details in a more structured form.  In particular, we should probably
+    // be able to replace the `details` field with a `xunion` of specific
+    // error cases.
+
+    // Byte position in filesystem image.
+    uint64 position;
+
+    // Error message.
+    string:1024 details;
+};
+
+/// Result of an [`Ext4Server.MountVmo`] call.
+xunion MountVmoResult {
+    // Note: It would be better to declare `MountVmo` with a result type of
+    // `() error MountVmoError`, but FIDL currently does not support error
+    // types that are not integers or enums of integers.  And it is nice to be
+    // able to report richer error information than just an error code.
+
+    /// The server has managed to read the image far enough to load the
+    /// root directory and none of the early validation checks have failed.
+    Success success;
+
+    /// Error reading the VMO.
+    zx.status vmo_read_failure;
+
+    /// Failure during the initial parsing of the image.
+    ParseFailure parse_failure;
+};
+
+[Discoverable]
+protocol Ext4Server {
+    /// Read the VMO content as an Ext4 image and return a channel to the
+    /// root of the mounted file system.
+    ///
+    /// + request `source` is an Ext4 image to be served over the `root`
+    ///            connection.
+    /// + request `flags` is the same flags you can pass to
+    ///            [`fuchsia.io/Directory.Open`] call.  In particular
+    ///            [`OPEN_FLAG_DESCRIBE`] can be used to report mount errors.
+    ///            Note that [`MountVmoError`] will contain a better
+    ///            description of any error that may occur at the mount
+    ///            time.
+    /// + request `root` is the server end of a connection that will be
+    ///            serving the root of the mounted image.
+    /// - result `result` In case we could parse the image far enough to
+    ///           read the root directory [`MountVmoResult.success`] will be
+    ///           returned.  Note that you may pipeline requests to the
+    ///           `root` connection even before received a response.  In
+    ///           case of an error one of the other values will be returned
+    ///           and the `root` connection will be closed.
+    MountVmo(
+        handle<vmo> source,
+        uint32 flags,
+        request<fuchsia.io.Directory> root
+        ) -> (MountVmoResult result);
+};
+
+service Ext4Service {
+    /// An Ext4 server that can parse a file system image and present it
+    /// using fuchsia-io FIDL API.
+    Ext4Server server;
+};
