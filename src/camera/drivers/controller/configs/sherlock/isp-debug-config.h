@@ -12,6 +12,7 @@
 
 #include "common-util.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
+#include "src/camera/stream_utils/camera_stream_constraints.h"
 
 // This file contains static information for the ISP Debug Configuration
 // There are three streams in one configuration
@@ -42,30 +43,6 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
  *****************************
  */
 
-static constexpr fuchsia::sysmem::BufferCollectionConstraints IspDebugStreamConstraints() {
-  fuchsia::sysmem::BufferCollectionConstraints constraints;
-  constraints.min_buffer_count_for_camping = kIspStreamMinBufferForCamping;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.physically_contiguous_required = true;
-  constraints.image_format_constraints_count = 1;
-  constraints.has_buffer_memory_constraints = true;
-  constraints.buffer_memory_constraints.physically_contiguous_required = true;
-  auto& image_constraints = constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = kIspStreamPixelFormat;
-  image_constraints.min_coded_width = kIspStreamWidth;
-  image_constraints.max_coded_width = kIspStreamWidth;
-  image_constraints.min_coded_height = kIspStreamHeight;
-  image_constraints.max_coded_height = kIspStreamHeight;
-  image_constraints.min_bytes_per_row = kIspStreamStride;
-  image_constraints.max_bytes_per_row = kIspStreamStride;
-  image_constraints.layers = kIspStreamLayers;
-  image_constraints.bytes_per_row_divisor = kIspStreamBytesPerRowDivisor;
-  image_constraints.color_spaces_count = kIspStreamColorSpaceCount;
-  image_constraints.color_space[0].type = kIspStreamColorSpaceType;
-  constraints.usage.cpu = fuchsia::sysmem::cpuUsageWrite | fuchsia::sysmem::cpuUsageRead;
-  return constraints;
-}
-
 static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() {
   return {
       {
@@ -81,16 +58,12 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() 
 }
 
 static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
-  return {
-      .frame_rate =
-          {
-              .frames_per_sec_numerator = kIspStreamFrameRate,
-              .frames_per_sec_denominator = 1,
-          },
-      .constraints = IspDebugStreamConstraints(),
-      .properties = GetStreamProperties(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION),
-      .image_formats = IspDebugStreamImageFormats(),
-  };
+  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  stream.AddImageFormat(kIspStreamWidth, kIspStreamHeight, kIspStreamPixelFormat);
+  stream.set_bytes_per_row_divisor(kIspStreamBytesPerRowDivisor);
+  stream.set_contiguous(true);
+  stream.set_frames_per_second(kIspStreamFrameRate);
+  return stream.ConvertToStreamConfig();
 };
 
 /*****************************

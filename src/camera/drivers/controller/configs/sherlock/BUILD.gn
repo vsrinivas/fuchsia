@@ -14,6 +14,7 @@ source_set("controller-configs") {
     "//sdk/banjo/ddk.protocol.ge2d",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
+    "//src/camera/stream_utils:stream_configs",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fidl-utils",
     "//zircon/system/banjo/ddk.protocol.sysmem",
