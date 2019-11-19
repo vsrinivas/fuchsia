@@ -254,10 +254,10 @@ impl App {
         }
     }
 
-    /// Get the current channel name from cohort name, returns default stable-channel if no cohort
-    /// name set for the app.
+    /// Get the current channel name from cohort name, returns empty string if no cohort name set
+    /// for the app.
     pub fn get_current_channel(&self) -> &str {
-        self.cohort.name.as_ref().map(|s| s.as_str()).unwrap_or("stable-channel")
+        self.cohort.name.as_ref().map(|s| s.as_str()).unwrap_or("")
     }
 
     /// Get the target channel name from cohort hint, fallback to current channel if no hint.
@@ -310,8 +310,8 @@ impl AppSet {
         }
     }
 
-    /// Get the current channel name from cohort name, returns default stable-channel if no cohort
-    /// name set for the app.
+    /// Get the current channel name from cohort name, returns empty string if no cohort name set
+    /// for the app.
     pub async fn get_current_channel(&self) -> String {
         let apps = self.apps.lock().await;
         apps[0].get_current_channel().to_string()
@@ -720,7 +720,7 @@ mod tests {
     #[test]
     fn test_app_get_current_channel_default() {
         let app = App::new("some_id", [0, 1], Cohort::default());
-        assert_eq!("stable-channel", app.get_current_channel());
+        assert_eq!("", app.get_current_channel());
     }
 
     #[test]
@@ -740,17 +740,17 @@ mod tests {
     #[test]
     fn test_app_get_target_channel_default() {
         let app = App::new("some_id", [0, 1], Cohort::default());
-        assert_eq!("stable-channel", app.get_target_channel());
+        assert_eq!("", app.get_target_channel());
     }
 
     #[test]
     fn test_app_set_target_channel() {
         let mut app = App::new("some_id", [0, 1], Cohort::default());
-        assert_eq!("stable-channel", app.get_target_channel());
+        assert_eq!("", app.get_target_channel());
         app.set_target_channel(Some("new-target-channel".to_string()));
         assert_eq!("new-target-channel", app.get_target_channel());
         app.set_target_channel(None);
-        assert_eq!("stable-channel", app.get_target_channel());
+        assert_eq!("", app.get_target_channel());
     }
 
     #[test]
