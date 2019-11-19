@@ -63,6 +63,7 @@ class TestH264 {
     ASSERT_NE(nullptr, larger_h264);
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -71,7 +72,6 @@ class TestH264 {
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
-    video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
     std::promise<void> second_wait_valid;
@@ -133,6 +133,7 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
@@ -142,7 +143,6 @@ class TestH264 {
                                 /*hevc=*/false);
     }
     status = video->InitializeStreamBuffer(/*use_parser=*/false, PAGE_SIZE, /*is_secure=*/false);
-    video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> wait_valid;
     // Guarded by decoder lock.
@@ -205,6 +205,7 @@ class TestH264 {
 
     zx_status_t status = video->InitRegisters(TestSupport::parent_device());
     EXPECT_EQ(ZX_OK, status);
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
     auto bear_h264 = TestSupport::LoadFirmwareFile("video_test_data/bear.h264");
     ASSERT_NE(nullptr, bear_h264);
 
@@ -215,7 +216,6 @@ class TestH264 {
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
-    video->InitializeInterrupts();
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
     std::set<uint64_t> received_pts_set;

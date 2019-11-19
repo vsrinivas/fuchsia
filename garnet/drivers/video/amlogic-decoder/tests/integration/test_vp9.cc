@@ -127,6 +127,7 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -136,8 +137,6 @@ class TestVP9 {
           true);
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE, /*is_secure=*/false));
-
-    video->InitializeInterrupts();
 
     if (use_parser) {
       EXPECT_EQ(ZX_OK, video->InitializeEsParser());
@@ -229,6 +228,7 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     auto test_ivf = TestSupport::LoadFirmwareFile("video_test_data/test-25fps.vp9");
     ASSERT_NE(nullptr, test_ivf);
@@ -242,8 +242,6 @@ class TestVP9 {
 
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/true, PAGE_SIZE,
                                                    /*is_secure=*/false));
-
-    video->InitializeInterrupts();
 
     EXPECT_EQ(ZX_OK, video->InitializeEsParser());
 
@@ -303,6 +301,7 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
@@ -315,8 +314,6 @@ class TestVP9 {
     // well.
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
                                                    /*is_secure=*/false));
-
-    video->InitializeInterrupts();
 
     TestFrameProvider frame_provider(video.get(), false);
     {
@@ -375,6 +372,7 @@ class TestVP9 {
     ASSERT_TRUE(video);
 
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
+    EXPECT_EQ(ZX_OK, video->InitDecoder());
 
     TestFrameProvider frame_provider(video.get(), true);
 
@@ -409,8 +407,6 @@ class TestVP9 {
     // and write pointers, which can't be done if the parser is using them as
     // well.
     video->InitializeStreamInput(false);
-
-    video->InitializeInterrupts();
 
     uint32_t frame_count = 0;
     std::promise<void> wait_valid;
