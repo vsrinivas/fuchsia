@@ -757,7 +757,7 @@ mod tests {
             display_id: 0,
             width: size.width as u32,
             height: size.height as u32,
-            linear_stride_pixels: size.width as u32,
+            linear_stride_bytes: (size.width * 4) as u32,
             format: PixelFormat::Argb8888,
             pixel_size_bytes: 4,
         };

@@ -255,14 +255,14 @@ pub struct Config {
     pub display_id: u64,
     pub width: u32,
     pub height: u32,
-    pub linear_stride_pixels: u32,
+    pub linear_stride_bytes: u32,
     pub format: PixelFormat,
     pub pixel_size_bytes: u32,
 }
 
 impl Config {
     pub fn linear_stride_bytes(&self) -> usize {
-        self.linear_stride_pixels as usize * self.pixel_size_bytes as usize
+        self.linear_stride_bytes as usize
     }
 }
 
@@ -401,7 +401,7 @@ impl Frame {
     }
 
     pub fn linear_stride_bytes(&self) -> usize {
-        self.config.linear_stride_pixels as usize * self.config.pixel_size_bytes as usize
+        self.config.linear_stride_bytes as usize
     }
 
     pub fn pixel_size_bytes(&self) -> usize {
@@ -430,7 +430,6 @@ pub struct FrameBuffer {
 
 impl FrameBuffer {
     async fn create_config_from_event_stream(
-        proxy: &ControllerProxy,
         stream: &mut fidl_fuchsia_hardware_display::ControllerEventStream,
     ) -> Result<Config, Error> {
         let display_id;
@@ -454,12 +453,11 @@ impl FrameBuffer {
                 bail!("Timed out waiting for display controller to send a DisplaysChanged event");
             }
         }
-        let stride = proxy.compute_linear_image_stride(width, pixel_format).await?;
         Ok(Config {
             display_id: display_id,
             width: width,
             height: height,
-            linear_stride_pixels: stride,
+            linear_stride_bytes: 0,
             format: pixel_format.into(),
             pixel_size_bytes: pixel_format_bytes(pixel_format) as u32,
         })
@@ -580,7 +578,7 @@ impl FrameBuffer {
         proxy.enable_vsync(true).context("enable_vsync failed")?;
 
         let mut stream = proxy.take_event_stream();
-        let config = Self::create_config_from_event_stream(&proxy, &mut stream).await?;
+        let config = Self::create_config_from_event_stream(&mut stream).await?;
 
         if let Some(vsync_sender) = vsync_sender {
             fasync::spawn_local(
@@ -626,11 +624,11 @@ impl FrameBuffer {
         frame_count: usize,
         format: PixelFormat,
     ) -> Result<(), Error> {
-        let config = Config {
+        let mut config = Config {
             display_id: self.config.display_id,
             width: self.config.width,
             height: self.config.height,
-            linear_stride_pixels: self.config.linear_stride_pixels,
+            linear_stride_bytes: 0,
             format: format.into(),
             pixel_size_bytes: pixel_format_bytes(format.into()) as u32,
         };
@@ -645,17 +643,25 @@ impl FrameBuffer {
             ));
         }
 
-        let image_type = if buffers.settings.has_image_format_constraints
-            && buffers.settings.image_format_constraints.pixel_format.has_format_modifier
-        {
-            match buffers.settings.image_format_constraints.pixel_format.format_modifier.value {
-                fidl_fuchsia_sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED => 1,
-                _ => 0,
-            }
-        } else {
-            0
-        };
+        if !buffers.settings.has_image_format_constraints {
+            bail!("No image format constraints");
+        }
 
+        let image_type =
+            if buffers.settings.image_format_constraints.pixel_format.has_format_modifier {
+                match buffers.settings.image_format_constraints.pixel_format.format_modifier.value {
+                    fidl_fuchsia_sysmem::FORMAT_MODIFIER_INTEL_I915_X_TILED => 1,
+                    _ => 0,
+                }
+            } else {
+                0
+            };
+
+        config.linear_stride_bytes = crate::sysmem::minimum_row_bytes(
+            buffers.settings.image_format_constraints,
+            self.config.width,
+        )?;
+        self.config.linear_stride_bytes = config.linear_stride_bytes;
         self.layer_id = Self::configure_layer(&config, image_type, &self.controller).await?;
 
         // Clean close of collection in order to allow other clients to

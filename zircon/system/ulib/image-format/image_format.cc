@@ -330,6 +330,7 @@ uint32_t ImageFormatBitsPerPixel(const fuchsia_sysmem_PixelFormat* pixel_format)
 
 uint32_t ImageFormatStrideBytesPerWidthPixel(const fuchsia_sysmem_PixelFormat* pixel_format) {
   ZX_DEBUG_ASSERT(ImageFormatIsSupported(pixel_format));
+  // This list should match the one in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   switch (pixel_format->type) {
     case fuchsia_sysmem_PixelFormatType_INVALID:
     case fuchsia_sysmem_PixelFormatType_MJPEG:
@@ -494,6 +495,7 @@ bool ImageFormatMinimumRowBytes(const fuchsia_sysmem_ImageFormatConstraints* con
   if (width < constraints->min_coded_width || width > constraints->max_coded_width) {
     return false;
   }
+  // This code should match the code in garnet/public/rust/fuchsia-framebuffer/src/sysmem.rs.
   *minimum_row_bytes_out = fbl::round_up(
       fbl::max(ImageFormatStrideBytesPerWidthPixel(&constraints->pixel_format) * width,
                constraints->min_bytes_per_row),

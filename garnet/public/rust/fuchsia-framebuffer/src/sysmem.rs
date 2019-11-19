@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use crate::FrameUsage;
+use failure::{bail, Error};
 use fidl_fuchsia_sysmem::{
     BufferCollectionConstraints, BufferMemoryConstraints, BufferUsage, ColorSpace, ColorSpaceType,
     FormatModifier, HeapType, ImageFormatConstraints, PixelFormat as SysmemPixelFormat,
     PixelFormatType,
 };
+use std::cmp;
 
 pub fn linear_image_format_constraints(
     width: u32,
@@ -95,4 +97,44 @@ pub fn buffer_collection_constraints(
         image_format_constraints_count: image_format_constraints_count,
         image_format_constraints: [linear_image_format_constraints(width, height, pixel_type); 32],
     }
+}
+
+// See ImageFormatStrideBytesPerWidthPixel
+pub fn stride_bytes_per_width_pixel(pixel_type: PixelFormatType) -> Result<u32, Error> {
+    match pixel_type {
+        PixelFormatType::R8G8B8A8 => Ok(4),
+        PixelFormatType::Bgra32 => Ok(4),
+        PixelFormatType::Bgr24 => Ok(3),
+        PixelFormatType::I420 => Ok(1),
+        PixelFormatType::M420 => Ok(1),
+        PixelFormatType::Nv12 => Ok(1),
+        PixelFormatType::Yuy2 => Ok(2),
+        PixelFormatType::Yv12 => Ok(1),
+        PixelFormatType::Rgb565 => Ok(2),
+        PixelFormatType::Rgb332 => Ok(1),
+        PixelFormatType::Rgb2220 => Ok(1),
+        PixelFormatType::L8 => Ok(1),
+        _ => bail!("Unsupported format"),
+    }
+}
+
+fn round_up_to_align(x: u32, align: u32) -> u32 {
+    if align == 0 {
+        x
+    } else {
+        ((x + align - 1) / align) * align
+    }
+}
+
+// See ImageFormatMinimumRowBytes
+pub fn minimum_row_bytes(constraints: ImageFormatConstraints, width: u32) -> Result<u32, Error> {
+    if width < constraints.min_coded_width || width > constraints.max_coded_width {
+        bail!("Invalid width for constraints");
+    }
+
+    let bytes_per_pixel = stride_bytes_per_width_pixel(constraints.pixel_format.type_)?;
+    Ok(round_up_to_align(
+        cmp::max(bytes_per_pixel * width, constraints.min_bytes_per_row),
+        constraints.bytes_per_row_divisor,
+    ))
 }
