@@ -64,7 +64,7 @@ class Vp9Decoder : public VideoDecoder {
     kSwappedOut,
   };
 
-  Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output);
+  Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output, bool is_secure);
   Vp9Decoder(const Vp9Decoder&) = delete;
 
   ~Vp9Decoder() override;
@@ -119,7 +119,7 @@ class Vp9Decoder : public VideoDecoder {
   class BufferAllocator {
    public:
     void Register(WorkingBuffer* buffer);
-    zx_status_t AllocateBuffers(VideoDecoder::Owner* decoder);
+    zx_status_t AllocateBuffers(VideoDecoder::Owner* decoder, bool is_secure);
     void CheckBuffers();
 
    private:
@@ -128,7 +128,7 @@ class Vp9Decoder : public VideoDecoder {
 
   class WorkingBuffer {
    public:
-    WorkingBuffer(BufferAllocator* allocator, size_t size, const char* name);
+    WorkingBuffer(BufferAllocator* allocator, size_t size, bool can_be_protected, const char* name);
 
     ~WorkingBuffer();
 
@@ -137,11 +137,13 @@ class Vp9Decoder : public VideoDecoder {
     const char* name() const { return name_; }
     InternalBuffer& buffer() { return buffer_.value(); }
     bool has_buffer() { return buffer_.has_value(); }
+    bool can_be_protected() const { return can_be_protected_; }
 
     void SetBuffer(InternalBuffer buffer) { buffer_.emplace(std::move(buffer)); }
 
    private:
     size_t size_;
+    bool can_be_protected_;
     const char* name_;
     std::optional<InternalBuffer> buffer_;
   };
@@ -150,28 +152,29 @@ class Vp9Decoder : public VideoDecoder {
     WorkingBuffers() {}
 
 // Sizes are large enough for 4096x2304.
-#define DEF_BUFFER(name, size) WorkingBuffer name = WorkingBuffer(this, size, #name)
-    DEF_BUFFER(rpm, 0x400 * 2);
-    DEF_BUFFER(short_term_rps, 0x800);
-    DEF_BUFFER(picture_parameter_set, 0x2000);
-    DEF_BUFFER(swap, 0x800);
-    DEF_BUFFER(swap2, 0x800);
-    DEF_BUFFER(local_memory_dump, 0x400 * 2);
-    DEF_BUFFER(ipp_line_buffer, 0x4000);
-    DEF_BUFFER(sao_up, 0x2800);
-    DEF_BUFFER(scale_lut, 0x8000);
+#define DEF_BUFFER(name, can_be_protected, size) \
+  WorkingBuffer name = WorkingBuffer(this, size, can_be_protected, #name)
+    DEF_BUFFER(rpm, false, 0x400 * 2);
+    DEF_BUFFER(short_term_rps, true, 0x800);
+    DEF_BUFFER(picture_parameter_set, true, 0x2000);
+    DEF_BUFFER(swap, true, 0x800);
+    DEF_BUFFER(swap2, true, 0x800);
+    DEF_BUFFER(local_memory_dump, false, 0x400 * 2);
+    DEF_BUFFER(ipp_line_buffer, true, 0x4000);
+    DEF_BUFFER(sao_up, true, 0x2800);
+    DEF_BUFFER(scale_lut, true, 0x8000);
     // HW/firmware requires first parameters + deblock data to be adjacent in
     // that order.
     static constexpr uint32_t kDeblockParametersSize = 0x80000;
     static constexpr uint32_t kDeblockDataSize = 0x80000;
-    DEF_BUFFER(deblock_parameters, kDeblockParametersSize + kDeblockDataSize);
-    DEF_BUFFER(deblock_parameters2, 0x80000);  // Only used on G12a.
-    DEF_BUFFER(segment_map, 0xd800);
-    DEF_BUFFER(probability_buffer, 0x1000 * 5);
-    DEF_BUFFER(count_buffer, 0x300 * 4 * 4);
-    DEF_BUFFER(motion_prediction_above, 0x10000);
-    DEF_BUFFER(mmu_vbh, 0x5000);
-    DEF_BUFFER(frame_map_mmu, 0x1200 * 4);
+    DEF_BUFFER(deblock_parameters, true, kDeblockParametersSize + kDeblockDataSize);
+    DEF_BUFFER(deblock_parameters2, true, 0x80000);  // Only used on G12a.
+    DEF_BUFFER(segment_map, true, 0xd800);
+    DEF_BUFFER(probability_buffer, false, 0x1000 * 5);
+    DEF_BUFFER(count_buffer, false, 0x300 * 4 * 4);
+    DEF_BUFFER(motion_prediction_above, true, 0x10000);
+    DEF_BUFFER(mmu_vbh, true, 0x5000);
+    DEF_BUFFER(frame_map_mmu, false, 0x1200 * 4);
 #undef DEF_BUFFER
   };
 

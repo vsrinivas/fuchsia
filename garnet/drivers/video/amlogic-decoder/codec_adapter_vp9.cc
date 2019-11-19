@@ -138,6 +138,11 @@ void CodecAdapterVp9::CoreCodecInit(
   // currently, but we should do more here and less there.
 }
 
+void CodecAdapterVp9::CoreCodecSetSecureMemoryMode(
+    CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
+  secure_memory_mode_[port] = secure_memory_mode;
+}
+
 fuchsia::sysmem::BufferCollectionConstraints
 CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
     CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
@@ -203,10 +208,25 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   result.buffer_memory_constraints.max_size_bytes = per_packet_buffer_bytes_max;
   // amlogic requires physically contiguous on both input and output
   result.buffer_memory_constraints.physically_contiguous_required = true;
-  result.buffer_memory_constraints.secure_required = false;
-  result.buffer_memory_constraints.cpu_domain_supported = true;
-  result.buffer_memory_constraints.ram_domain_supported = port == kOutputPort;
+  result.buffer_memory_constraints.secure_required = IsPortSecureRequired(port);
+  result.buffer_memory_constraints.cpu_domain_supported = !IsPortSecureRequired(port);
+  result.buffer_memory_constraints.ram_domain_supported =
+      !IsPortSecureRequired(port) && (port == kOutputPort);
 
+  if (IsPortSecurePermitted(port)) {
+    result.buffer_memory_constraints.inaccessible_domain_supported = true;
+    fuchsia::sysmem::HeapType secure_heap = (port == kInputPort)
+                                                ? fuchsia::sysmem::HeapType::AMLOGIC_SECURE_VDEC
+                                                : fuchsia::sysmem::HeapType::AMLOGIC_SECURE;
+    result.buffer_memory_constraints
+        .heap_permitted[result.buffer_memory_constraints.heap_permitted_count++] = secure_heap;
+  }
+
+  if (!IsPortSecureRequired(port)) {
+    result.buffer_memory_constraints
+        .heap_permitted[result.buffer_memory_constraints.heap_permitted_count++] =
+        fuchsia::sysmem::HeapType::SYSTEM_RAM;
+  }
   if (port == kOutputPort) {
     result.image_format_constraints_count = 1;
     fuchsia::sysmem::ImageFormatConstraints& image_constraints = result.image_format_constraints[0];
@@ -310,6 +330,7 @@ void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
                     fuchsia::sysmem::PixelFormatType::NV12);
     output_buffer_collection_info_ = fidl::Clone(buffer_collection_info);
   }
+  buffer_settings_[port].emplace(buffer_collection_info.settings);
 }
 
 // TODO(dustingreen): A lot of the stuff created in this method should be able
@@ -325,8 +346,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     is_stream_failed_ = false;
   }  // ~lock
 
-  auto decoder =
-      std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased, false);
+  auto decoder = std::make_unique<Vp9Decoder>(video_, Vp9Decoder::InputType::kMultiFrameBased,
+                                              false, IsOutputSecure());
   decoder->SetFrameDataProvider(this);
   decoder->SetIsCurrentOutputBufferCollectionUsable(
       fit::bind_member(this, &CodecAdapterVp9::IsCurrentOutputBufferCollectionUsable));
@@ -402,6 +423,7 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     }
 
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
+    // The video decoder can read from non-secure buffers even in secure mode.
     status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE,
                                           /*use_parser=*/false,
                                           /*is_secure=*/false);
@@ -582,6 +604,7 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
     free_output_packets_.clear();
     output_buffer_collection_info_.reset();
   }
+  buffer_settings_[port].reset();
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConstraints>
@@ -1121,4 +1144,25 @@ CodecPacket* CodecAdapterVp9::GetFreePacket() {
   uint32_t free_index = free_output_packets_.back();
   free_output_packets_.pop_back();
   return all_output_packets_[free_index];
+}
+
+bool CodecAdapterVp9::IsPortSecureRequired(CodecPort port) {
+  return secure_memory_mode_[port] == fuchsia::mediacodec::SecureMemoryMode::ON;
+}
+
+bool CodecAdapterVp9::IsPortSecurePermitted(CodecPort port) {
+  return secure_memory_mode_[port] != fuchsia::mediacodec::SecureMemoryMode::OFF;
+}
+
+bool CodecAdapterVp9::IsPortSecure(CodecPort port) {
+  ZX_DEBUG_ASSERT(buffer_settings_[port]);
+  return buffer_settings_[port]->buffer_settings.is_secure;
+}
+
+bool CodecAdapterVp9::IsOutputSecure() {
+  // We need to know whether output is secure or not before we start accepting input, which means
+  // we need to know before output buffers are allocated, which means we can't rely on the result
+  // of sysmem BufferCollection allocation is_secure for output.
+  ZX_DEBUG_ASSERT(IsPortSecurePermitted(kOutputPort) == IsPortSecureRequired(kOutputPort));
+  return IsPortSecureRequired(kOutputPort);
 }

@@ -132,7 +132,7 @@ class TestVP9 {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
           std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream,
-                                       use_compressed_output),
+                                       use_compressed_output, false),
           true);
     }
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(use_parser, PAGE_SIZE, /*is_secure=*/false));
@@ -235,7 +235,8 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream, false),
+          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kSingleStream, false,
+                                       false),
           true);
     }
 
@@ -305,9 +306,9 @@ class TestVP9 {
 
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->SetDefaultInstance(
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream, false),
-          true);
+      video->SetDefaultInstance(std::make_unique<Vp9Decoder>(
+                                    video.get(), Vp9Decoder::InputType::kMultiStream, false, false),
+                                true);
     }
     // Don't use parser, because we need to be able to save and restore the read
     // and write pointers, which can't be done if the parser is using them as
@@ -379,8 +380,8 @@ class TestVP9 {
 
     for (uint32_t i = 0; i < 2; i++) {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      auto decoder =
-          std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream, false);
+      auto decoder = std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream,
+                                                  false, false);
       decoder->SetFrameDataProvider(&frame_provider);
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       video->swapped_out_instances_.push_back(

@@ -32,6 +32,8 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   bool IsCoreCodecHwBased() override;
 
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  void CoreCodecSetSecureMemoryMode(
+      CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
       CodecPort port, const fuchsia::media::StreamBufferConstraints& stream_buffer_constraints,
       const fuchsia::media::StreamBufferPartialSettings& partial_settings) override;
@@ -83,11 +85,18 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void OnCoreCodecEos();
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
   CodecPacket* GetFreePacket();
+  bool IsPortSecureRequired(CodecPort port);
+  bool IsPortSecurePermitted(CodecPort port);
+  bool IsPortSecure(CodecPort port);
+  bool IsOutputSecure();
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
   fuchsia::media::FormatDetails initial_input_format_details_;
+
+  fuchsia::mediacodec::SecureMemoryMode secure_memory_mode_[kPortCount] = {};
+  std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting

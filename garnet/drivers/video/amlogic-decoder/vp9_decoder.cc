@@ -84,13 +84,16 @@ constexpr uint32_t kBufferOverrunPaddingBytes = 0;
 
 void Vp9Decoder::BufferAllocator::Register(WorkingBuffer* buffer) { buffers_.push_back(buffer); }
 
-zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* owner) {
+zx_status_t Vp9Decoder::BufferAllocator::AllocateBuffers(VideoDecoder::Owner* owner,
+                                                         bool is_secure) {
   for (auto* buffer : buffers_) {
+    bool buffer_is_secure = is_secure && buffer->can_be_protected();
     uint32_t rounded_up_size = fbl::round_up(buffer->size() + kBufferOverrunPaddingBytes,
                                              static_cast<uint32_t>(PAGE_SIZE));
-    auto internal_buffer = InternalBuffer::Create(buffer->name(), &owner->SysmemAllocatorSyncPtr(),
-                                                  owner->bti(), rounded_up_size, false,
-                                                  /*is_writable=*/true, /*is_mapping_neede=*/true);
+    auto internal_buffer =
+        InternalBuffer::Create(buffer->name(), &owner->SysmemAllocatorSyncPtr(), owner->bti(),
+                               rounded_up_size, buffer_is_secure,
+                               /*is_writable=*/true, /*is_mapping_needed=*/!buffer_is_secure);
     if (!internal_buffer.is_ok()) {
       DECODE_ERROR("VP9 working buffer allocation failed: %d\n", internal_buffer.error());
       return internal_buffer.error();
@@ -133,8 +136,9 @@ void Vp9Decoder::BufferAllocator::CheckBuffers() {
   }
 }
 
-Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator, size_t size, const char* name)
-    : size_(size), name_(name) {
+Vp9Decoder::WorkingBuffer::WorkingBuffer(BufferAllocator* allocator, size_t size,
+                                         bool can_be_protected, const char* name)
+    : size_(size), can_be_protected_(can_be_protected), name_(name) {
   allocator->Register(this);
 }
 
@@ -142,10 +146,13 @@ Vp9Decoder::WorkingBuffer::~WorkingBuffer() {}
 
 uint32_t Vp9Decoder::WorkingBuffer::addr32() { return truncate_to_32(buffer_->phys_base()); }
 
-Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output)
-    : VideoDecoder(owner, /*is_secure=*/false),
+Vp9Decoder::Vp9Decoder(Owner* owner, InputType input_type, bool use_compressed_output,
+                       bool is_secure)
+    : VideoDecoder(owner, is_secure),
       input_type_(input_type),
       use_compressed_output_(use_compressed_output) {
+  // Compressed output buffers can't yet be allocated in secure memory.
+  assert(!is_secure || !use_compressed_output_);
   InitializeLoopFilterData();
 }
 
@@ -239,7 +246,7 @@ zx_status_t Vp9Decoder::Initialize() {
 }
 
 zx_status_t Vp9Decoder::InitializeBuffers() {
-  zx_status_t status = working_buffers_.AllocateBuffers(owner_);
+  zx_status_t status = working_buffers_.AllocateBuffers(owner_, is_secure());
   if (status != ZX_OK)
     return status;
   status = AllocateFrames();
@@ -252,23 +259,35 @@ zx_status_t Vp9Decoder::InitializeHardware() {
   assert(owner_->IsDecoderCurrent(this));
   working_buffers_.CheckBuffers();
   zx_status_t status =
-      owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, false);
+      owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
   if (status != ZX_OK)
     return status;
-  uint8_t* firmware;
-  uint32_t firmware_size;
   FirmwareBlob::FirmwareType firmware_type =
       IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)
           ? FirmwareBlob::FirmwareType::kDec_Vp9_G12a
           : FirmwareBlob::FirmwareType::kDec_Vp9_Mmu;
 
-  status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &firmware, &firmware_size);
-  if (status != ZX_OK)
-    return status;
-
-  status = owner_->core()->LoadFirmware(firmware, firmware_size);
-  if (status != ZX_OK)
-    return status;
+  if (owner_->is_tee_available()) {
+    status =
+        owner_->TeeSmcLoadVideoFirmware(firmware_type, FirmwareBlob::FirmwareVdecLoadMode::kHevc);
+    if (status != ZX_OK) {
+      LOG(ERROR, "owner_->TeeSmcLoadVideoFirmware() failed - status: %d", status);
+      return status;
+    }
+  } else {
+    if (is_secure()) {
+      LOG(ERROR, "VP9 secure decode requires TEE connection");
+      return ZX_ERR_NOT_SUPPORTED;
+    }
+    uint8_t* data;
+    uint32_t firmware_size;
+    status = owner_->firmware_blob()->GetFirmwareData(firmware_type, &data, &firmware_size);
+    if (status != ZX_OK)
+      return status;
+    status = owner_->core()->LoadFirmware(data, firmware_size);
+    if (status != ZX_OK)
+      return status;
+  }
 
   HevcRpmBuffer::Get().FromValue(working_buffers_.rpm.addr32()).WriteTo(owner_->dosbus());
   HevcShortTermRps::Get()
@@ -1234,7 +1253,7 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params, bool params_ch
         fbl::round_up(kLcuCount * kLcuMvBytes, static_cast<uint64_t>(PAGE_SIZE));
     auto internal_buffer = InternalBuffer::CreateAligned(
         "Vp9MpredData", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), rounded_up_size,
-        (1 << 16), false, /*is_writable=*/true, /*is_mapping_neede=*/true);
+        (1 << 16), is_secure(), /*is_writable=*/true, /*is_mapping_needed=*/false);
     if (!internal_buffer.is_ok()) {
       DECODE_ERROR("Alloc buffer error: %d\n", internal_buffer.error());
       return false;

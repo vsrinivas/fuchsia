@@ -186,6 +186,7 @@ group("media") {
     "//garnet/examples/media:use_h264_decoder_secure_output_test",
     "//garnet/examples/media:use_h264_decoder_test",
     "//garnet/examples/media:use_media_decoder",
+    "//garnet/examples/media:use_vp9_decoder_secure_output_test",
     "//garnet/examples/media:use_vp9_decoder_test",
     "//src/media:examples",
   ]
