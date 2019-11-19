@@ -128,26 +128,14 @@ void SwipeRecognizerBase::AbandonGesture() {
 void SwipeRecognizerBase::ResetState() {
   abandon_task_.Cancel();
 
-  // TODO: Refactor gesture info reset logic into a separate function in gesture utils.h.
-  // Reset GestureInfo.
-  gesture_start_info_.gesture_start_time = 0;
-  gesture_start_info_.starting_ndc_position.x = 0;
-  gesture_start_info_.starting_ndc_position.y = 0;
-  // Important! Do not set local coordinates to zero. std::optional is used here
-  // to indicate that they can be either present or not. Zero is present and may
-  // lead to errors.
-  gesture_start_info_.starting_local_position.reset();
-  gesture_start_info_.device_id = 0;
-  gesture_start_info_.pointer_id = 0;
-  gesture_start_info_.view_ref_koid = ZX_KOID_INVALID;
+  // Reset gesture start info.
+  ResetGestureInfo(&gesture_start_info_);
 
-  // Reset GestureState.
+  // Reset gesture state.
   gesture_state_ = SwipeGestureState::kNotStarted;
 
-  // Reset Gesture Context.
-  gesture_context_.view_ref_koid = 0;
-  gesture_context_.local_point->x = 0;
-  gesture_context_.local_point->y = 0;
+  // Reset gesture context.
+  ResetGestureContext(&gesture_context_);
 
   // Reset is_winner_ flag.
   is_winner_ = false;

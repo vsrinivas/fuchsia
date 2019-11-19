@@ -49,6 +49,33 @@ bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& poin
   return true;
 }
 
+void ResetGestureInfo(GestureInfo* gesture_info) {
+  gesture_info->gesture_start_time = 0;
+
+  gesture_info->starting_ndc_position.x = 0;
+  gesture_info->starting_ndc_position.y = 0;
+
+  // IMPORTANT! Do NOT set local coordinates to zero.
+  //
+  // The starting_local_position field uses a std::optional to accommodate the
+  // case in which no starting position is present.
+  gesture_info->starting_local_position.reset();
+
+  gesture_info->device_id = 0;
+  gesture_info->pointer_id = 0;
+  gesture_info->view_ref_koid = ZX_KOID_INVALID;
+}
+
+void ResetGestureContext(GestureContext* gesture_context) {
+  gesture_context->view_ref_koid = 0;
+
+  // IMPORTANT! Do NOT set local coordinates to zero.
+  //
+  // The local_point field uses a std::optional to accommodate the
+  // case in which no local position is present.
+  gesture_context->local_point.reset();
+}
+
 bool ValidatePointerEvent(const GestureInfo gesture_start_info,
                           const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   // Check if pointer_event has all the required fields.

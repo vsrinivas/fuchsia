@@ -102,25 +102,15 @@ void OneFingerTapRecognizer::AbandonGesture() {
 void OneFingerTapRecognizer::ResetState() {
   // Cancels any pending task.
   abandon_task_.Cancel();
-  // Reset GestureInfo.
-  gesture_start_info_.gesture_start_time = 0;
-  gesture_start_info_.starting_ndc_position.x = 0;
-  gesture_start_info_.starting_ndc_position.y = 0;
-  // Important! Do not set local coordinates to zero. std::optional is used here
-  // to indicate that they can be either present or not. Zero is present and may
-  // lead to errors.
-  gesture_start_info_.starting_local_position.reset();
-  gesture_start_info_.device_id = 0;
-  gesture_start_info_.pointer_id = 0;
-  gesture_start_info_.view_ref_koid = ZX_KOID_INVALID;
 
-  // Reset GestureState.
+  // Reset gesture start info.
+  ResetGestureInfo(&gesture_start_info_);
+
+  // Reset gesture state.
   gesture_state_ = TapGestureState::kNotStarted;
 
-  // Reset Gesture Context.
-  gesture_context_.view_ref_koid = 0;
-  gesture_context_.local_point->x = 0;
-  gesture_context_.local_point->y = 0;
+  // Reset gesture context.
+  ResetGestureContext(&gesture_context_);
 
   is_winner_ = false;
 }

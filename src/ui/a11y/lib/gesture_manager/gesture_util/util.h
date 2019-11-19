@@ -38,6 +38,12 @@ struct GestureInfo {
 bool InitGestureInfo(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
                      GestureInfo* gesture_start_info, GestureContext* gesture_context);
 
+// Resets GestureInfo fields to default values.
+void ResetGestureInfo(GestureInfo* gesture_info);
+
+// Resets GestureContext fields to default values.
+void ResetGestureContext(GestureContext* gesture_context);
+
 // Helper function to check if essential fields(like event time, device id, pointer id and ndc
 // point) are present in the pointer event for the current gesture. It also makes sure that device
 // id and pointer id has not changed for the gesture.
