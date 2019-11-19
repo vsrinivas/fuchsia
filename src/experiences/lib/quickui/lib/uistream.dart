@@ -26,6 +26,10 @@ class UiStream {
   /// Returns the last [Spec] returned from QuickUi server.
   Spec get spec => _spec;
 
+  /// Defines a 'null' spec, used by the service to signal the client to hide
+  /// its UI.
+  static final Spec nullSpec = Spec(title: null, groups: null);
+
   /// Start listening to the [QuickUi] server.
   void listen() {
     update(null);

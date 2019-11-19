@@ -32,7 +32,7 @@ class StatusEntry extends StatelessWidget {
                 stream: uiStream.stream,
                 initialData: uiStream.spec,
                 builder: (context, snapshot) {
-                  if (!snapshot.hasData) {
+                  if (!snapshot.hasData || snapshot.data == UiStream.nullSpec) {
                     return Offstage();
                   }
                   _lastSpec.value = snapshot.data;
