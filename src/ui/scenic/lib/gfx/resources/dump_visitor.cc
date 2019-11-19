@@ -14,7 +14,6 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
@@ -178,9 +177,6 @@ void DumpVisitor::VisitNode(Node* r) {
   }
   if (r->clip_to_self()) {
     WriteProperty("clip_to_self") << r->clip_to_self();
-  }
-  if (r->is_exported()) {
-    WriteProperty("is_exported") << r->is_exported();
   }
   if (r->transform().IsIdentity()) {
     WriteProperty("transform") << "identity";
@@ -367,29 +363,10 @@ void DumpVisitor::Visit(PointLight* r) {
   EndItem();
 }
 
-void DumpVisitor::Visit(Import* r) {
-  BeginItem("Import", r);
-  WriteProperty("import_spec") << static_cast<uint32_t>(r->import_spec());
-  WriteProperty("is_bound") << r->is_bound();
-  WriteProperty("focusable") << r->focusable();
-  BeginSection("delegate");
-  r->delegate()->Accept(this);
-  EndSection();
-  VisitResource(r);
-  EndItem();
-}
-
 void DumpVisitor::VisitResource(Resource* r) {
   if (r->event_mask()) {
     BeginSection("mask");
     WriteProperty("event_mask") << r->event_mask();
-    EndSection();
-  }
-  if (!r->imports().empty()) {
-    BeginSection("imports");
-    for (auto& import : r->imports()) {
-      import->Accept(this);
-    }
     EndSection();
   }
 

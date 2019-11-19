@@ -65,7 +65,6 @@ class DisplaySwapchainTest : public Fixture {
                                           release_fence_signaller_.get(),
                                           frame_scheduler_,
                                           SceneGraphWeakPtr(),
-                                          nullptr,
                                           nullptr};
     error_reporter_ = std::make_shared<TestErrorReporter>();
     event_reporter_ = std::make_shared<TestEventReporter>();

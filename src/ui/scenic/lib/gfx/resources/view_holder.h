@@ -42,9 +42,6 @@ class ViewHolder final : public Node {
 
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
-  // |Resource| ViewHolders don't support imports.
-  void AddImport(Import* import, ErrorReporter* error_reporter) override {}
-  void RemoveImport(Import* import) override {}
 
   // Connection management.  Call once the ViewHolder is created to initiate the
   // link to its partner View.

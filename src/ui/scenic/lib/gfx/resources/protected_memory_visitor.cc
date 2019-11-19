@@ -103,11 +103,6 @@ void ProtectedMemoryVisitor::Visit(DirectionalLight* r) {}
 
 void ProtectedMemoryVisitor::Visit(PointLight* r) {}
 
-void ProtectedMemoryVisitor::Visit(Import* r) {
-  r->delegate()->Accept(this);
-  VisitResource(r);
-}
-
 void ProtectedMemoryVisitor::VisitNode(Node* r) {
   if (!r->children().empty()) {
     for (auto& child : r->children()) {
@@ -117,13 +112,7 @@ void ProtectedMemoryVisitor::VisitNode(Node* r) {
   VisitResource(r);
 }
 
-void ProtectedMemoryVisitor::VisitResource(Resource* r) {
-  if (!r->imports().empty()) {
-    for (auto& import : r->imports()) {
-      import->Accept(this);
-    }
-  }
-}
+void ProtectedMemoryVisitor::VisitResource(Resource* r) {}
 
 }  // namespace gfx
 }  // namespace scenic_impl

@@ -20,7 +20,6 @@ class UpdateScheduler;
 class Sysmem;
 class DisplayManager;
 class SceneGraph;
-class ResourceLinker;
 class View;
 class ViewHolder;
 using ViewLinker = ObjectLinker<ViewHolder*, View*>;
@@ -42,7 +41,6 @@ struct SessionContext {
   escher::ReleaseFenceSignaller* release_fence_signaller = nullptr;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler;
   SceneGraphWeakPtr scene_graph;
-  ResourceLinker* resource_linker = nullptr;
   ViewLinker* view_linker = nullptr;
 };
 

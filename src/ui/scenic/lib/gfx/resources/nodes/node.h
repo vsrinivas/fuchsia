@@ -107,9 +107,6 @@ class Node : public Resource {
 
   bool SetEventMask(uint32_t event_mask) override;
 
-  void AddImport(Import* import, ErrorReporter* error_reporter) override;
-  void RemoveImport(Import* import) override;
-
   // Tests if the ray is clipped by the node's clip planes.
   bool ClipsRay(const escher::ray4& ray) const;
 
@@ -140,7 +137,8 @@ class Node : public Resource {
 
  private:
   // Describes the manner in which a node is related to its parent.
-  enum class ParentRelation { kNone, kChild, kImportDelegate };
+  // TODO(before-submit): if there is only kChild, delete.
+  enum class ParentRelation { kNone, kChild };
 
   // Identifies a specific spatial property.
   enum NodeProperty { kTranslation, kScale, kRotation, kAnchor };

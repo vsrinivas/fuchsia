@@ -8,7 +8,6 @@
 #include "src/ui/lib/escher/paper/paper_renderer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/node.h"
@@ -188,8 +187,6 @@ void EngineRendererVisitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); 
 void EngineRendererVisitor::Visit(MeshShape* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(Material* r) { r->UpdateEscherMaterial(gpu_uploader_); }
-
-void EngineRendererVisitor::Visit(Import* r) { FXL_CHECK(false); }
 
 void EngineRendererVisitor::Visit(Camera* r) { FXL_CHECK(false); }
 

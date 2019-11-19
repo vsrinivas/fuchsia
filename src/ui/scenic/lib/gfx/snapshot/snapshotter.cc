@@ -20,7 +20,6 @@
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer_stack.h"
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/point_light.h"
@@ -248,7 +247,6 @@ void Snapshotter::Visit(Light* r) { VisitResource(r); }
 void Snapshotter::Visit(AmbientLight* r) { VisitResource(r); }
 void Snapshotter::Visit(DirectionalLight* r) { VisitResource(r); }
 void Snapshotter::Visit(PointLight* r) { VisitResource(r); }
-void Snapshotter::Visit(Import* r) { r->delegate()->Accept(this); }
 
 void Snapshotter::VisitNode(Node* r) {
   auto parent_serializer = current_node_serializer_;
@@ -292,14 +290,7 @@ void Snapshotter::VisitNode(Node* r) {
   current_node_serializer_ = node_serializer;
 }
 
-void Snapshotter::VisitResource(Resource* r) {
-  auto node_serializer = current_node_serializer_;
-  for (auto& import : r->imports()) {
-    current_node_serializer_ = node_serializer;
-    import->Accept(this);
-  }
-  current_node_serializer_ = node_serializer;
-}
+void Snapshotter::VisitResource(Resource* r) {}
 
 void Snapshotter::VisitImage(escher::ImagePtr image) {
   if (!image) {

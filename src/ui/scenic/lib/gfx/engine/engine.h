@@ -25,11 +25,9 @@
 #include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/engine/engine_renderer.h"
 #include "src/ui/scenic/lib/gfx/engine/object_linker.h"
-#include "src/ui/scenic/lib/gfx/engine/resource_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
 #include "src/ui/scenic/lib/gfx/engine/session_manager.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/scene.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 #include "src/ui/scenic/lib/scenic/event_reporter.h"
@@ -90,7 +88,6 @@ class Engine : public scheduling::FrameRenderer {
                           release_fence_signaller(),
                           frame_scheduler_,
                           scene_graph(),
-                          &resource_linker_,
                           &view_linker_};
   }
 
@@ -146,7 +143,6 @@ class Engine : public scheduling::FrameRenderer {
 
   std::unique_ptr<EngineRenderer> engine_renderer_;
 
-  ResourceLinker resource_linker_;
   ViewLinker view_linker_;
 
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;

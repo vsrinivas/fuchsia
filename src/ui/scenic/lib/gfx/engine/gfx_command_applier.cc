@@ -17,7 +17,6 @@
 #include "src/ui/lib/escher/shape/mesh.h"
 #include "src/ui/lib/escher/shape/rounded_rect_factory.h"
 #include "src/ui/lib/escher/util/type_utils.h"
-#include "src/ui/scenic/lib/gfx/engine/resource_linker.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
@@ -465,8 +464,8 @@ bool GfxCommandApplier::ApplySetTranslationCmd(Session* session,
                                                fuchsia::ui::gfx::SetTranslationCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
-              command.value.variable_id)) {
+      if (auto variable =
+              session->resources()->FindResource<Vector3Variable>(command.value.variable_id)) {
         return node->SetTranslation(variable, session->error_reporter());
       }
     } else {
@@ -479,8 +478,8 @@ bool GfxCommandApplier::ApplySetTranslationCmd(Session* session,
 bool GfxCommandApplier::ApplySetScaleCmd(Session* session, fuchsia::ui::gfx::SetScaleCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
-              command.value.variable_id)) {
+      if (auto variable =
+              session->resources()->FindResource<Vector3Variable>(command.value.variable_id)) {
         return node->SetScale(variable, session->error_reporter());
       }
     } else {
@@ -494,8 +493,8 @@ bool GfxCommandApplier::ApplySetRotationCmd(Session* session,
                                             fuchsia::ui::gfx::SetRotationCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable = session->resources()->FindVariableResource<QuaternionVariable>(
-              command.value.variable_id)) {
+      if (auto variable =
+              session->resources()->FindResource<QuaternionVariable>(command.value.variable_id)) {
         return node->SetRotation(variable, session->error_reporter());
       }
     } else {
@@ -509,8 +508,8 @@ bool GfxCommandApplier::ApplySetAnchorCmd(Session* session,
                                           fuchsia::ui::gfx::SetAnchorCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.id)) {
     if (IsVariable(command.value)) {
-      if (auto variable = session->resources()->FindVariableResource<Vector3Variable>(
-              command.value.variable_id)) {
+      if (auto variable =
+              session->resources()->FindResource<Vector3Variable>(command.value.variable_id)) {
         return node->SetAnchor(variable, session->error_reporter());
       }
     }

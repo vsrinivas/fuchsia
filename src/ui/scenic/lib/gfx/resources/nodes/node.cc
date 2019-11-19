@@ -11,7 +11,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/geometry/intersection.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/traversal.h"
 #include "src/ui/scenic/lib/gfx/resources/view.h"
 
@@ -100,9 +99,6 @@ bool Node::Detach(ErrorReporter* error_reporter) {
       case ParentRelation::kChild:
         parent_->EraseChild(this);
         break;
-      case ParentRelation::kImportDelegate:
-        error_reporter->ERROR() << "An imported node cannot be detached.";
-        return false;
       case ParentRelation::kNone:
         FXL_NOTREACHED();
         break;
@@ -295,28 +291,6 @@ bool Node::SendSizeChangeHint(float width_change_factor, float height_change_fac
         node->SendSizeChangeHint(width_change_factor, height_change_factor);
       });
   return true;
-}
-
-void Node::AddImport(Import* import, ErrorReporter* error_reporter) {
-  Resource::AddImport(import, error_reporter);
-
-  auto delegate = static_cast<Node*>(import->delegate());
-  FXL_DCHECK(delegate->parent_relation_ == ParentRelation::kNone);
-  delegate->parent_ = this;
-  delegate->parent_relation_ = ParentRelation::kImportDelegate;
-
-  delegate->InvalidateGlobalTransform();
-}
-
-void Node::RemoveImport(Import* import) {
-  Resource::RemoveImport(import);
-
-  auto delegate = static_cast<Node*>(import->delegate());
-  FXL_DCHECK(delegate->parent_relation_ == ParentRelation::kImportDelegate);
-  delegate->parent_relation_ = ParentRelation::kNone;
-  delegate->parent_ = nullptr;
-
-  delegate->InvalidateGlobalTransform();
 }
 
 bool Node::ClipsRay(const escher::ray4& ray) const {

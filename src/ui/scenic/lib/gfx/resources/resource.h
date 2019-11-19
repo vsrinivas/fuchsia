@@ -22,8 +22,6 @@ class EventReporter;
 namespace scenic_impl {
 namespace gfx {
 
-class Import;
-class ResourceLinker;
 class Session;
 struct ResourceContext;
 
@@ -84,20 +82,6 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
     return fxl::RefPtr<T>(static_cast<T*>(this));
   }
 
-  /// The list of import resource that currently have a binding to this
-  /// resource.
-  const std::vector<Import*>& imports() const { return imports_; }
-
-  // Returns whether this resource is currently exported or available for
-  // export.
-  bool is_exported() const { return exported_; }
-
-  /// Adds the import resource to the list of importers of this resource.
-  virtual void AddImport(Import* import, ErrorReporter* error_reporter);
-
-  /// Removes the import resource from the list of importers of this resource.
-  virtual void RemoveImport(Import* import);
-
   // Detach the resource from its parent.  Return false if this fails for some
   // reason (including if this is an object for which the command makes no
   // sense).
@@ -107,19 +91,8 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   Resource(Session* session, SessionId session_id, ResourceId id,
            const ResourceTypeInfo& type_info);
 
-  friend class ResourceLinker;
+  // TODO(before-submit): necessary?
   friend class ResourceMap;
-  friend class Import;
-  /// For the given resource type info, returns the resource that will act as
-  /// the target for commands directed at this resource. Subclasses (notably the
-  /// |Import| since their binding are not mutable) may return alternate
-  /// resources to act as the recipients of commands.
-  virtual Resource* GetDelegate(const ResourceTypeInfo& type_info);
-
-  // Sets a flag that indicates if this resource is exported in ResourceLinker.
-  // If so, this resource is responsible for notifying ResourceLinker when it
-  // dies.
-  void SetExported(bool exported, const fxl::WeakPtr<ResourceLinker>& resource_linker_weak);
 
  private:
   Session* const session_DEPRECATED_;
@@ -127,11 +100,6 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   const ResourceTypeInfo& type_info_;
   std::string label_;
   uint32_t event_mask_ = 0u;
-  std::vector<Import*> imports_;
-  // If true, ResourceLinker  must be called back before this resource is
-  // destroyed.
-  bool exported_ = false;
-  fxl::WeakPtr<ResourceLinker> resource_linker_weak_;
 };
 
 using ResourcePtr = fxl::RefPtr<Resource>;

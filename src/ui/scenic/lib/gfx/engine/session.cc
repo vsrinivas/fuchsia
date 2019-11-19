@@ -84,13 +84,8 @@ Session::~Session() {
   scheduled_updates_ = {};
   fences_to_release_on_next_update_.clear();
 
-  if (resource_count_ != 0) {
-    auto exported_count = session_context_.resource_linker->NumExportsForSession(id());
-    FXL_CHECK(resource_count_ == 0)
-        << "Session::~Session(): Not all resources have been collected. "
-           "Exported resources: "
-        << exported_count << ", total outstanding resources: " << resource_count_;
-  }
+  FXL_CHECK(resource_count_ == 0) << "Session::~Session(): " << resource_count_
+                                  << " resources have not yet been destroyed.";
 }
 
 EventReporter* Session::event_reporter() const { return event_reporter_.get(); }

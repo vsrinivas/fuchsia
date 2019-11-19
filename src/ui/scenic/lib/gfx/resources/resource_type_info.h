@@ -12,9 +12,6 @@ namespace gfx {
 
 // All subclasses of Resource are represented here.
 enum ResourceType : uint64_t {
-  // Support for importing/exporting resources.
-  kImport = 1ul << 0,
-
   // Low-level resources.
   kMemory = 1ul << 1,
   kHostMemory = 1ul << 2,
@@ -38,6 +35,7 @@ enum ResourceType : uint64_t {
 
   // Views.
   kView = 1ul << 16,
+  // TODO(before-submit): put in order
   kViewNode = 1ul << 36,
   kViewHolder = 1ul << 17,
 

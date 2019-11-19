@@ -45,7 +45,6 @@ class ProtectedMemoryVisitor : public ResourceVisitor {
   void Visit(AmbientLight* r) override;
   void Visit(DirectionalLight* r) override;
   void Visit(PointLight* r) override;
-  void Visit(Import* r) override;
 
   bool HasProtectedMemoryUse() const { return has_protected_memory_use_; }
 

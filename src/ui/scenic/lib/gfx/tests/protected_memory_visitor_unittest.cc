@@ -8,7 +8,6 @@
 
 #include "src/ui/scenic/lib/gfx/resources/image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_base.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/material.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/entity_node.h"
 #include "src/ui/scenic/lib/gfx/resources/nodes/opacity_node.h"
@@ -90,6 +89,8 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForChildProtectedImage) {
   ASSERT_TRUE(visitor.HasProtectedMemoryUse());
 }
 
+// TODO(before-submit): file bug to use View/ViewHolder.
+/*
 TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForImportedProtectedImage) {
   ProtectedMemoryVisitor visitor;
 
@@ -112,5 +113,6 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForImportedProtectedImage) {
   visitor.Visit(import_node.get());
   ASSERT_TRUE(visitor.HasProtectedMemoryUse());
 }
+*/
 
 }  // namespace scenic_impl::gfx::test

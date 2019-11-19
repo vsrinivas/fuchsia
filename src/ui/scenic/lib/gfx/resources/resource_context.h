@@ -11,8 +11,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-class Import;
-class ResourceLinker;
 class Session;
 
 // Contains dependencies needed by various Resource subclasses. Used to decouple

@@ -8,7 +8,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-class Import;
 class Memory;
 class Image;
 class ImagePipeBase;
@@ -78,9 +77,6 @@ class ResourceVisitor {
   virtual void Visit(AmbientLight* r) = 0;
   virtual void Visit(DirectionalLight* r) = 0;
   virtual void Visit(PointLight* r) = 0;
-
-  // Imported resources.
-  virtual void Visit(Import* r) = 0;
 };
 
 }  // namespace gfx

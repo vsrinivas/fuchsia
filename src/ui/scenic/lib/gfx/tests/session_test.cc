@@ -45,7 +45,6 @@ SessionContext SessionTest::CreateSessionContext() {
       nullptr,           // escher::ReleaseFenceSignaller*
       frame_scheduler_,  // shared_ptr<FrameScheduler>
       nullptr,           // SceneGraphWeakPtr
-      nullptr,           // ResourceLinker*
       nullptr            // ViewLinker*
   };
   return session_context;

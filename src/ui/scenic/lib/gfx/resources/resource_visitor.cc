@@ -13,7 +13,6 @@
 #include "src/ui/scenic/lib/gfx/resources/gpu_image.h"
 #include "src/ui/scenic/lib/gfx/resources/host_image.h"
 #include "src/ui/scenic/lib/gfx/resources/image_pipe_base.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/ambient_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/directional_light.h"
 #include "src/ui/scenic/lib/gfx/resources/lights/light.h"
@@ -91,8 +90,6 @@ void AmbientLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 void DirectionalLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void PointLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
-
-void Import::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 }  // namespace gfx
 }  // namespace scenic_impl

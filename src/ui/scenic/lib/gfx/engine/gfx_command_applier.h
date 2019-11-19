@@ -12,7 +12,6 @@
 #include "src/ui/scenic/lib/gfx/engine/resource_map.h"
 #include "src/ui/scenic/lib/gfx/engine/scene_graph.h"
 #include "src/ui/scenic/lib/gfx/engine/session_context.h"
-#include "src/ui/scenic/lib/gfx/resources/import.h"
 #include "src/ui/scenic/lib/gfx/resources/memory.h"
 #include "src/ui/scenic/lib/gfx/resources/resource.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_context.h"

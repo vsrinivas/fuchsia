@@ -63,7 +63,6 @@ class DumpVisitor : public ResourceVisitor {
   void Visit(AmbientLight* r) override;
   void Visit(DirectionalLight* r) override;
   void Visit(PointLight* r) override;
-  void Visit(Import* r) override;
 
  private:
   void VisitNode(Node* r);
