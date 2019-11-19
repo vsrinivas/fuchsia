@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 #include <fuchsia/sysmem/cpp/fidl.h>
-#include <lib/fdio/directory.h>
-#include <lib/fdio/fd.h>
-#include <lib/fdio/fdio.h>
-#include <lib/fdio/io.h>
 #include <lib/zx/channel.h>
 
 #include <limits>
@@ -418,17 +414,6 @@ class ZirconPlatformSysmemConnection : public PlatformSysmemConnection {
 
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
 };
-
-// static
-std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Create() {
-  fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
-  zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
-                                            sysmem_allocator.NewRequest().TakeChannel().release());
-  if (status != ZX_OK) {
-    return DRETP(nullptr, "Failed to connect to sysmem service, status %d", status);
-  }
-  return std::make_unique<ZirconPlatformSysmemConnection>(std::move(sysmem_allocator));
-}
 
 // static
 std::unique_ptr<PlatformSysmemConnection> PlatformSysmemConnection::Import(uint32_t handle) {

@@ -122,7 +122,6 @@ source_set("connection_client") {
   deps = [
     "$magma_build_root/include:msd_abi",
     "$magma_build_root/src/magma_util",
-    "$zircon_build_root/public/lib/fdio",
     "$zircon_build_root/public/lib/zx",
     "..:connection_header",
     "..:trace",
@@ -175,7 +174,6 @@ source_set("sysmem_connection") {
     ":buffer",
     "..:sysmem_connection_header",
     "..:trace",
-    "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]

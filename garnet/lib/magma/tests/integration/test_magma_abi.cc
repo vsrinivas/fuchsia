@@ -43,27 +43,21 @@ class TestConnection {
 
   static bool is_virtmagma() { return device_name() == kDeviceNameVirt; }
 
-  TestConnection(bool use_magma_device) {
-    if (use_magma_device) {
+  TestConnection() {
 #if defined(__Fuchsia__)
-      zx::channel server_end, client_end;
-      zx::channel::create(0, &server_end, &client_end);
-      EXPECT_EQ(ZX_OK, fdio_service_connect(device_name(), server_end.release()));
+    zx::channel server_end, client_end;
+    zx::channel::create(0, &server_end, &client_end);
+    EXPECT_EQ(ZX_OK, fdio_service_connect(device_name(), server_end.release()));
 
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(client_end.release(), &device_));
 #elif defined(__linux__)
-      int fd = open(device_name(), O_RDONLY);
-      DASSERT(fd >= 0);
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
+    int fd = open(device_name(), O_RDONLY);
+    DASSERT(fd >= 0);
+    EXPECT_EQ(MAGMA_STATUS_OK, magma_device_import(fd, &device_));
 #else
 #error Unimplemented
 #endif
-      magma_create_connection2(device_, &connection_);
-    } else {
-      fd_ = open(device_name(), O_RDONLY);
-      DASSERT(fd_ >= 0);
-      magma_create_connection(fd(), &connection_);
-    }
+    magma_create_connection2(device_, &connection_);
   }
 
   ~TestConnection() {
@@ -77,18 +71,6 @@ class TestConnection {
   }
 
   int fd() { return fd_; }
-
-  void GetDeviceId() {
-    uint64_t device_id = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(fd_, MAGMA_QUERY_DEVICE_ID, &device_id));
-    EXPECT_NE(0u, device_id);
-  }
-
-  void GetVendorId() {
-    uint64_t vendor_id = 0;
-    EXPECT_EQ(MAGMA_STATUS_OK, magma_query(fd_, MAGMA_QUERY_VENDOR_ID, &vendor_id));
-    EXPECT_NE(0u, vendor_id);
-  }
 
   magma_connection_t connection() { return connection_; }
 
@@ -347,21 +329,17 @@ class TestConnection {
 #endif
   }
 
-  void Sysmem(bool use_format_modifier, bool import_connection) {
+  void Sysmem(bool use_format_modifier) {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
 #else
     magma_sysmem_connection_t connection;
-    if (import_connection) {
-      zx::channel local_endpoint, server_endpoint;
-      EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
-      EXPECT_EQ(ZX_OK,
-                fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_endpoint.release()));
-      EXPECT_EQ(MAGMA_STATUS_OK,
-                magma_sysmem_connection_import(local_endpoint.release(), &connection));
-    } else {
-      EXPECT_EQ(MAGMA_STATUS_OK, magma_sysmem_connection_create(&connection));
-    }
+    zx::channel local_endpoint, server_endpoint;
+    EXPECT_EQ(ZX_OK, zx::channel::create(0u, &local_endpoint, &server_endpoint));
+    EXPECT_EQ(ZX_OK,
+              fdio_service_connect("/svc/fuchsia.sysmem.Allocator", server_endpoint.release()));
+    EXPECT_EQ(MAGMA_STATUS_OK,
+              magma_sysmem_connection_import(local_endpoint.release(), &connection));
 
     magma_buffer_collection_t collection;
     EXPECT_EQ(MAGMA_STATUS_OK,
@@ -437,13 +415,6 @@ class TestConnection {
 #endif
   }
 
-  void QueryReturnsBuffer() {
-    uint32_t handle_out = 0;
-    // Driver's shouldn't allow this value to be queried through this entrypoint.
-    EXPECT_NE(MAGMA_STATUS_OK, magma_query_returns_buffer(fd_, MAGMA_QUERY_DEVICE_ID, &handle_out));
-    EXPECT_EQ(0u, handle_out);
-  }
-
   void TracingInit() {
 #if !defined(__Fuchsia__)
     GTEST_SKIP();
@@ -500,9 +471,7 @@ class TestConnection {
 
 class TestConnectionWithContext : public TestConnection {
  public:
-  TestConnectionWithContext() : TestConnection(true) {
-    magma_create_context(connection(), &context_id_);
-  }
+  TestConnectionWithContext() { magma_create_context(connection(), &context_id_); }
 
   ~TestConnectionWithContext() { magma_release_context(connection(), context_id_); }
 
@@ -525,135 +494,106 @@ class TestConnectionWithContext : public TestConnection {
 };
 
 TEST(MagmaAbi, DeviceId) {
-  TestConnection test(false);
-  test.GetDeviceId();
-}
-
-TEST(MagmaAbi, VendorId) {
-  TestConnection test(false);
-  test.GetVendorId();
-}
-
-TEST(MagmaAbi, QueryReturnsBuffer) {
-  TestConnection test(false);
-  test.QueryReturnsBuffer();
-}
-
-TEST(MagmaAbiImport, DeviceId) {
-  TestConnection test(true);
+  TestConnection test;
   test.GetDeviceIdImported();
 }
 
-TEST(MagmaAbiImport, VendorId) {
-  TestConnection test(true);
+TEST(MagmaAbi, VendorId) {
+  TestConnection test;
   test.GetVendorIdImported();
 }
 
-TEST(MagmaAbiImport, QueryReturnsBuffer) {
-  TestConnection test(true);
+TEST(MagmaAbi, QueryReturnsBuffer) {
+  TestConnection test;
   test.QueryReturnsBufferImported();
 }
 
 TEST(MagmaAbi, TracingInit) {
-  TestConnection test(true);
+  TestConnection test;
   test.TracingInit();
 }
 
 TEST(MagmaAbi, LoggingInit) {
-  TestConnection test(true);
+  TestConnection test;
   test.LoggingInit();
 }
 
-// Use the parameter to choose whether to use magma_device_import or an fd.
-class MagmaAbiOptionalImport : public ::testing::TestWithParam</*use_magma_device=*/bool> {};
-
-TEST_P(MagmaAbiOptionalImport, Buffer) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, Buffer) {
+  TestConnection test;
   test.Buffer();
 }
 
-TEST_P(MagmaAbiOptionalImport, Connection) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, Connection) {
+  TestConnection test;
   test.Connection();
 }
 
-TEST_P(MagmaAbiOptionalImport, Context) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, Context) {
+  TestConnection test;
   test.Context();
 }
 
-TEST_P(MagmaAbiOptionalImport, NotificationChannelHandle) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, NotificationChannelHandle) {
+  TestConnection test;
   test.NotificationChannelHandle();
 }
 
-TEST_P(MagmaAbiOptionalImport, ReadNotificationChannel) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, ReadNotificationChannel) {
+  TestConnection test;
   test.ReadNotificationChannel();
 }
 
-TEST_P(MagmaAbiOptionalImport, BufferMap) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, BufferMap) {
+  TestConnection test;
   test.BufferMap();
 }
 
-TEST_P(MagmaAbiOptionalImport, BufferRelease) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, BufferRelease) {
+  TestConnection test;
   test.BufferRelease();
 }
 
-TEST_P(MagmaAbiOptionalImport, BufferImportExport) {
-  TestConnection test1(GetParam());
-  TestConnection test2(GetParam());
+TEST(MagmaAbi, BufferImportExport) {
+  TestConnection test1;
+  TestConnection test2;
   TestConnection::BufferImportExport(&test1, &test2);
 }
 
-TEST_P(MagmaAbiOptionalImport, Semaphore) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, Semaphore) {
+  TestConnection test;
   test.Semaphore(1);
   test.Semaphore(2);
   test.Semaphore(3);
 }
 
-TEST_P(MagmaAbiOptionalImport, SemaphoreImportExport) {
-  TestConnection test1(GetParam());
-  TestConnection test2(GetParam());
+TEST(MagmaAbi, SemaphoreImportExport) {
+  TestConnection test1;
+  TestConnection test2;
   TestConnection::SemaphoreImportExport(&test1, &test2);
 }
 
-TEST_P(MagmaAbiOptionalImport, ImmediateCommands) {
-  TestConnection(GetParam()).ImmediateCommands();
-}
+TEST(MagmaAbi, ImmediateCommands) { TestConnection().ImmediateCommands(); }
 
-TEST_P(MagmaAbiOptionalImport, ImageFormat) {
-  TestConnection test(GetParam());
+TEST(MagmaAbi, ImageFormat) {
+  TestConnection test;
   test.ImageFormat();
 }
 
-TEST_P(MagmaAbiOptionalImport, Sysmem) {
-  TestConnection test(GetParam());
-  test.Sysmem(false, false);
+TEST(MagmaAbi, Sysmem) {
+  TestConnection test;
+  test.Sysmem(false);
 }
 
-TEST_P(MagmaAbiOptionalImport, SysmemLinearFormatModifier) {
-  TestConnection test(GetParam());
-  test.Sysmem(true, false);
+TEST(MagmaAbi, SysmemLinearFormatModifier) {
+  TestConnection test;
+  test.Sysmem(true);
 }
 
-TEST_P(MagmaAbiOptionalImport, SysmemImport) {
-  TestConnection test(GetParam());
-  test.Sysmem(false, true);
-}
+TEST(MagmaAbi, FromC) { EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name())); }
 
-TEST_P(MagmaAbiOptionalImport, FromC) {
-  EXPECT_TRUE(test_magma_abi_from_c(TestConnection::device_name()));
-}
-
-TEST_P(MagmaAbiOptionalImport, ExecuteCommandBufferWithResources) {
+TEST(MagmaAbi, ExecuteCommandBufferWithResources) {
   TestConnectionWithContext().ExecuteCommandBufferWithResources(5);
 }
-
-INSTANTIATE_TEST_SUITE_P(MagmaAbiOptionalImportSuite, MagmaAbiOptionalImport, ::testing::Bool());
 
 TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
   if (TestConnection::is_virtmagma())

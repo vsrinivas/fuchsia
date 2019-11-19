@@ -95,21 +95,6 @@ zx_status_t VirtioMagma::Handle_device_import(const virtio_magma_device_import_c
   return VirtioMagmaGeneric::Handle_device_import(&modified, response);
 }
 
-zx_status_t VirtioMagma::Handle_query(const virtio_magma_query_ctrl_t* request,
-                                      virtio_magma_query_resp_t* response) {
-  auto modified = *request;
-  modified.file_descriptor = device_fd_.get();
-  return VirtioMagmaGeneric::Handle_query(&modified, response);
-}
-
-zx_status_t VirtioMagma::Handle_create_connection(
-    const virtio_magma_create_connection_ctrl_t* request,
-    virtio_magma_create_connection_resp_t* response) {
-  auto modified = *request;
-  modified.file_descriptor = device_fd_.get();
-  return VirtioMagmaGeneric::Handle_create_connection(&modified, response);
-}
-
 zx_status_t VirtioMagma::Handle_create_buffer(const virtio_magma_create_buffer_ctrl_t* request,
                                               virtio_magma_create_buffer_resp_t* response) {
   zx_status_t status = VirtioMagmaGeneric::Handle_create_buffer(request, response);

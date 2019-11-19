@@ -72,21 +72,6 @@ magma_status_t magma_create_connection2(magma_device_t device, magma_connection_
   return MAGMA_STATUS_OK;
 }
 
-// TODO(fxb/13095): Remove.
-magma_status_t magma_create_connection(int32_t file_descriptor,
-                                       magma_connection_t* connection_out) {
-  uint32_t primary_channel;
-  uint32_t notification_channel;
-  if (!magma::PlatformConnectionClient::GetHandles(file_descriptor, &primary_channel,
-                                                   &notification_channel))
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "couldn't get handles from file_descriptor %d",
-                    file_descriptor);
-
-  *connection_out =
-      magma::PlatformConnectionClient::Create(primary_channel, notification_channel).release();
-  return MAGMA_STATUS_OK;
-}
-
 void magma_release_connection(magma_connection_t connection) {
   // TODO(MA-109): close the connection
   delete magma::PlatformConnectionClient::cast(connection);
@@ -94,31 +79,6 @@ void magma_release_connection(magma_connection_t connection) {
 
 magma_status_t magma_get_error(magma_connection_t connection) {
   return magma::PlatformConnectionClient::cast(connection)->GetError();
-}
-
-// TODO(fxb/13095): Remove.
-magma_status_t magma_query(int fd, uint64_t id, uint64_t* value_out) {
-  if (!value_out)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad value_out address");
-
-  if (!magma::PlatformConnectionClient::Query(fd, id, value_out))
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "magma::PlatformConnectionClient::Query failed");
-
-  DLOG("magma_query id %" PRIu64 " returned 0x%" PRIx64, id, *value_out);
-  return MAGMA_STATUS_OK;
-}
-
-// TODO(fxb/13095): Remove.
-magma_status_t magma_query_returns_buffer(int fd, uint64_t id, uint32_t* result_out) {
-  if (!result_out)
-    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "bad result_out address");
-
-  if (!magma::PlatformConnectionClient::QueryReturnsBuffer(fd, id, result_out))
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR,
-                    "magma::PlatformConnectionClient::QueryReturnsBuffer failed");
-
-  DLOG("magma_query_returns_buffer id %" PRIu64 " returned buffer 0x%x", id, *result_out);
-  return MAGMA_STATUS_OK;
 }
 
 void magma_create_context(magma_connection_t connection, uint32_t* context_id_out) {
@@ -448,15 +408,6 @@ magma_status_t magma_import_semaphore(magma_connection_t connection, uint32_t se
 
   *semaphore_out = reinterpret_cast<magma_semaphore_t>(platform_semaphore.release());
 
-  return MAGMA_STATUS_OK;
-}
-
-magma_status_t magma_sysmem_connection_create(magma_sysmem_connection_t* connection_out) {
-  auto platform_connection = magma_sysmem::PlatformSysmemConnection::Create();
-  if (!platform_connection) {
-    return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Failed to create sysmem connection");
-  }
-  *connection_out = reinterpret_cast<magma_sysmem_connection_t>(platform_connection.release());
   return MAGMA_STATUS_OK;
 }
 

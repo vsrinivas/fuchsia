@@ -18,39 +18,6 @@ extern "C" {
 #endif
 
 ///
-/// \brief Performs a query and returns a result synchronously. TODO(fxb/13095): Remove
-/// \param file_descriptor An open device of class gpu.
-/// \param id Either MAGMA_QUERY_DEVICE_ID, or a vendor-specific id starting from
-///        MAGMA_QUERY_VENDOR_PARAM_0.
-/// \param value_out Returned value.
-///
-magma_status_t magma_query(
-    int32_t file_descriptor,
-    uint64_t id,
-    uint64_t* value_out);
-
-///
-/// \brief Performs a query for a large amount of data and puts that into a buffer. Returns
-///        synchronously.  TODO(fxb/13095): Remove
-/// \param file_descriptor An open device of class gpu.
-/// \param id A vendor-specific ID.
-/// \param handle_out Handle to the returned buffer.
-///
-magma_status_t magma_query_returns_buffer(
-    int32_t file_descriptor,
-    uint64_t id,
-    magma_handle_t* handle_out);
-
-///
-/// \brief Opens a connection to a device.  TODO(fxb/13095): Remove
-/// \param file_descriptor An open device of class gpu.
-/// \param connection_out Returned connection.
-///
-magma_status_t magma_create_connection(
-    int32_t file_descriptor,
-    magma_connection_t* connection_out);
-
-///
 /// \brief Releases the given connection.
 /// \param connection An open connection.
 ///
