@@ -138,7 +138,11 @@ impl InfraBss {
         let client = get_client_mut(&mut self.clients, req.peer_sta_address)?;
         client
             .handle_mlme_deauth_req(ctx, req.reason_code)
-            .map_err(|e| make_client_error(client.addr, e))
+            .map_err(|e| make_client_error(client.addr, e))?;
+        if client.deauthenticated() {
+            self.clients.remove(&req.peer_sta_address);
+        }
+        Ok(())
     }
 
     pub fn handle_mlme_assoc_resp(
@@ -1230,6 +1234,8 @@ mod tests {
                 3, 0, // reason code
             ][..]
         );
+
+        assert!(!bss.clients.contains_key(&CLIENT_ADDR));
     }
 
     #[test]
