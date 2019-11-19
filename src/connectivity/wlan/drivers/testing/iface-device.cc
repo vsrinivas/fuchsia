@@ -23,31 +23,29 @@ static wlanmac_protocol_ops_t wlanmac_test_protocol_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
       return DEV(ctx)->Query(options, info);
     },
-    .start = [](void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie)
-        -> zx_status_t { return DEV(ctx)->Start(ifc, out_sme_channel, cookie); },
+    .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel)
+        -> zx_status_t { return DEV(ctx)->Start(ifc, out_sme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->Stop(); },
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
       return ZX_OK;
     },
-    .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
+    .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* chan) -> zx_status_t {
       return DEV(ctx)->SetChannel(options, chan);
     },
-    .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
+    .configure_bss = [](void* ctx, uint32_t options,
+                        const wlan_bss_config_t* config) -> zx_status_t { return ZX_OK; },
+    .enable_beaconing = [](void* ctx, uint32_t options,
+                           const wlan_bcn_config_t* bcn_cfg) -> zx_status_t { return ZX_OK; },
+    .configure_beacon = [](void* ctx, uint32_t options,
+                           const wlan_tx_packet_t* pkt) -> zx_status_t { return ZX_OK; },
+    .set_key = [](void* ctx, uint32_t options, const wlan_key_config_t* key_config) -> zx_status_t {
       return ZX_OK;
     },
-    .enable_beaconing = [](void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg) -> zx_status_t {
+    .configure_assoc = [](void* ctx, uint32_t options,
+                          const wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t { return ZX_OK; },
+    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*, size_t) -> zx_status_t {
       return ZX_OK;
     },
-    .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
-      return ZX_OK;
-    },
-    .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
-      return ZX_OK;
-    },
-    .configure_assoc = [](void* ctx, uint32_t options, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
-      return ZX_OK;
-    },
-    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t*) -> zx_status_t { return ZX_OK; },
 };
 #undef DEV
 
@@ -132,24 +130,23 @@ zx_status_t IfaceDevice::Query(uint32_t options, wlanmac_info_t* info) {
 void IfaceDevice::Stop() {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Stop()\n");
   std::lock_guard<std::mutex> lock(lock_);
-  ifc_ = nullptr;
-  ifc_cookie_ = nullptr;
+  ifc_.ops = nullptr;
+  ifc_.ctx = nullptr;
 }
 
-zx_status_t IfaceDevice::Start(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie) {
+zx_status_t IfaceDevice::Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::Start()\n");
   std::lock_guard<std::mutex> lock(lock_);
   *out_sme_channel = ZX_HANDLE_INVALID;
-  if (ifc_ != nullptr) {
+  if (ifc_.ops != nullptr) {
     return ZX_ERR_ALREADY_BOUND;
   } else {
-    ifc_ = ifc;
-    ifc_cookie_ = cookie;
+    ifc_ = *ifc;
   }
   return ZX_OK;
 }
 
-zx_status_t IfaceDevice::SetChannel(uint32_t options, wlan_channel_t* chan) {
+zx_status_t IfaceDevice::SetChannel(uint32_t options, const wlan_channel_t* chan) {
   zxlogf(INFO, "wlan::testing::IfaceDevice::SetChannel()  chan=%u\n", chan->primary);
   return ZX_OK;
 }

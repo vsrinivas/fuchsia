@@ -305,7 +305,7 @@ enum ieee80211_cipher_suite {
                                             // a key.
 };
 
-static inline const char* ieee80211_cipher_str(uint8_t* oui, uint8_t cipher_type) {
+static inline const char* ieee80211_cipher_str(const uint8_t* oui, uint8_t cipher_type) {
     if (oui[0] != 0 || oui[1] != 0x0f || oui[2] != 0xac) {
         return "vendor-specific OUI\n";
     }

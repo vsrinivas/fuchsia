@@ -89,15 +89,14 @@ int ath10k_mac_register(struct ath10k* ar);
 void ath10k_mac_unregister(struct ath10k* ar);
 #endif  // NEEDS PORTING
 struct ath10k_vif* ath10k_get_arvif(struct ath10k* ar, uint32_t vdev_id);
-zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
-                         void* cookie);
+zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
 zx_status_t ath10k_mac_hw_scan(struct ath10k* ar, const wlan_hw_scan_config_t* scan_config);
 void __ath10k_scan_finish(struct ath10k* ar);
 void ath10k_scan_finish(struct ath10k* ar);
 zx_status_t ath10k_mac_op_tx(struct ath10k* ar, wlan_tx_packet_t* pkt);
-zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config);
-zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx);
-zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config);
+zx_status_t ath10k_mac_set_bss(struct ath10k* ar, const wlan_bss_config_t* config);
+zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, const wlan_assoc_ctx_t* assoc_ctx);
+zx_status_t ath10k_mac_set_key(struct ath10k* ar, const wlan_key_config_t* key_config);
 #if 0   // NEEDS PORTING
 void ath10k_scan_timeout_work(struct work_struct* work);
 void ath10k_offchan_tx_purge(struct ath10k* ar);
@@ -108,7 +107,7 @@ void ath10k_halt(struct ath10k* ar);
 void ath10k_mac_vif_beacon_free(struct ath10k_vif* arvif);
 #endif  // NEEDS PORTING
 void ath10k_drain_tx(struct ath10k* ar);
-zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, wlan_channel_t* chan);
+zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* chan);
 #if 0   // NEEDS PORTING
 bool ath10k_mac_is_peer_wep_key_set(struct ath10k* ar, const uint8_t* addr,
                                     uint8_t keyidx);
@@ -172,7 +171,7 @@ static inline void ath10k_tx_h_seq_no(struct ieee80211_vif* vif,
 
 zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif);
 zx_status_t ath10k_mac_stop_ap(struct ath10k_vif* arvif);
-zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc);
+zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, const wlan_assoc_ctx_t* assoc);
 zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr);
 
 #endif  // SRC_CONNECTIVITY_WLAN_DRIVERS_THIRD_PARTY_ATHEROS_ATH10K_MAC_H_

@@ -24,12 +24,12 @@ extern "C" {
 namespace wlan::testing {
 namespace {
 
-typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t, wlan_rx_info_t*>
+typedef mock_function::MockFunction<void, void*, uint32_t, const void*, size_t, const wlan_rx_info_t*>
     recv_cb_t;
 
 // The wrapper used by wlanmac_ifc_t.recv() to call mock-up.
 void recv_wrapper(void* cookie, uint32_t flags, const void* data, size_t length,
-                  wlan_rx_info_t* info) {
+                  const wlan_rx_info_t* info) {
   auto recv = reinterpret_cast<recv_cb_t*>(cookie);
   recv->Call(cookie, flags, data, length, info);
 }
@@ -65,21 +65,22 @@ TEST_F(WlanDeviceTest, MacQuery) {
 
 TEST_F(WlanDeviceTest, MacStart) {
   // Test input null pointers
-  wlanmac_ifc_t ifc = {
+  wlanmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
+  wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
   zx_handle_t sme_channel;
-  ASSERT_EQ(wlanmac_ops.start(nullptr, &ifc, &sme_channel, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, nullptr, &sme_channel, nullptr), ZX_ERR_INVALID_ARGS);
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, nullptr, nullptr), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.start(nullptr, &ifc, &sme_channel), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, nullptr, &sme_channel), ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, nullptr), ZX_ERR_INVALID_ARGS);
 
   // Test callback function
   recv_cb_t mock_recv;  // To mock up the wlanmac_ifc_t.recv().
   mvmvif_sta_.sme_channel = sme_channel_;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel, nullptr), ZX_OK);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_OK);
   // Expect the above line would copy the 'ifc'. Then set expectation below and fire test.
   mock_recv.ExpectCall(&mock_recv, 0, nullptr, 0, nullptr);
-  mvmvif_sta_.ifc.recv(&mock_recv, 0, nullptr, 0, nullptr);
+  mvmvif_sta_.ifc.ops->recv(&mock_recv, 0, nullptr, 0, nullptr);
   mock_recv.VerifyAndClear();
 }
 
@@ -87,16 +88,17 @@ TEST_F(WlanDeviceTest, MacStartSmeChannel) {
   // The normal case. A channel will be transferred to MLME.
   constexpr zx_handle_t from_devmgr = sme_channel_;
   mvmvif_sta_.sme_channel = from_devmgr;
-  wlanmac_ifc_t ifc = {
+  wlanmac_ifc_protocol_ops_t proto_ops = {
       .recv = recv_wrapper,
   };
+  wlanmac_ifc_protocol_t ifc = {.ops = &proto_ops};
   zx_handle_t sme_channel;
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel, nullptr), ZX_OK);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_OK);
   ASSERT_EQ(sme_channel, from_devmgr);                    // The channel handle is returned.
   ASSERT_EQ(mvmvif_sta_.sme_channel, ZX_HANDLE_INVALID);  // Driver no longer holds the ownership.
 
   // Since the driver no longer owns the handle, the start should fail.
-  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel, nullptr), ZX_ERR_ALREADY_BOUND);
+  ASSERT_EQ(wlanmac_ops.start(&mvmvif_sta_, &ifc, &sme_channel), ZX_ERR_ALREADY_BOUND);
 }
 
 TEST_F(WlanDeviceTest, MacUnbind) {

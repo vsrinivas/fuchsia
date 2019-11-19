@@ -125,7 +125,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant, ast: &ast::BanjoAst) -> Str
         ast::Ty::UInt64 => String::from(format!("UINT64_C({})", size)),
         ast::Ty::USize | ast::Ty::Bool | ast::Ty::Str { .. } => size.clone(),
         ast::Ty::Identifier { id, reference: _ } => {
-            let decl = ast.id_to_decl(id).unwrap();
+            let decl = ast.id_to_decl(id).expect(format!("id: {:?}", id).as_str());
             if let Decl::Enum { ty: enum_ty, variants, .. } = decl {
                 for variant in variants {
                     if variant.name == *size {

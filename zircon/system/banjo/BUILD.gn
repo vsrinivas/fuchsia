@@ -79,6 +79,7 @@ group("banjo") {
     "ddk.protocol.usb.phy",
     "ddk.protocol.usb.request",
     "ddk.protocol.wlan.info",
+    "ddk.protocol.wlan.mac",
     "ddk.protocol.wlanif",
     "wlan.protocol.info",
     "zircon.device.audio",

@@ -77,7 +77,7 @@ class DevicePool {
 
 constexpr size_t kMaxMacDevices = 4;
 
-wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, wlan_key_config_t* config) {
+wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, const wlan_key_config_t* config) {
   auto set_key_args = wlantap::SetKeyArgs{
       .wlanmac_id = wlanmac_id,
       .config =
@@ -97,7 +97,7 @@ wlantap::SetKeyArgs ToSetKeyArgs(uint16_t wlanmac_id, wlan_key_config_t* config)
   return set_key_args;
 }
 
-wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
+wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, const wlan_tx_packet_t* pkt) {
   auto tx_args = wlantap::TxArgs{
       .wlanmac_id = wlanmac_id,
       .packet = wlantap::WlanTxPacket{.info =
@@ -114,9 +114,9 @@ wlantap::TxArgs ToTxArgs(uint16_t wlanmac_id, wlan_tx_packet_t* pkt) {
   data.clear();
   auto head = static_cast<const uint8_t*>(pkt->packet_head.data_buffer);
   std::copy_n(head, pkt->packet_head.data_size, std::back_inserter(data));
-  if (pkt->packet_tail != nullptr) {
-    auto tail = static_cast<const uint8_t*>(pkt->packet_tail->data_buffer);
-    std::copy_n(tail + pkt->tail_offset, pkt->packet_tail->data_size - pkt->tail_offset,
+  if (pkt->packet_tail_list != nullptr) {
+    auto tail = static_cast<const uint8_t*>(pkt->packet_tail_list->data_buffer);
+    std::copy_n(tail + pkt->tail_offset, pkt->packet_tail_list->data_size - pkt->tail_offset,
                 std::back_inserter(data));
   }
   return tx_args;
@@ -340,8 +340,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
       return;
     }
     size_t pkt_size = pkt->packet_head.data_size;
-    if (pkt->packet_tail != nullptr) {
-      pkt_size += pkt->packet_tail->data_size - pkt->tail_offset;
+    if (pkt->packet_tail_list != nullptr) {
+      pkt_size += pkt->packet_tail_list->data_size - pkt->tail_offset;
     }
     user_binding_.events().Tx(ToTxArgs(wlanmac_id, pkt));
     if (!phy_config_->quiet || report_tx_status_count_ < 32) {
@@ -350,7 +350,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
-  virtual void WlantapMacSetChannel(uint16_t wlanmac_id, wlan_channel_t* channel) override {
+  virtual void WlantapMacSetChannel(uint16_t wlanmac_id, const wlan_channel_t* channel) override {
     if (!phy_config_->quiet) {
       zxlogf(INFO, "%s: WlantapMacSetChannel id=%u\n", name_.c_str(), wlanmac_id);
     }
@@ -367,7 +367,8 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     }
   }
 
-  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id, wlan_bss_config_t* config) override {
+  virtual void WlantapMacConfigureBss(uint16_t wlanmac_id,
+                                      const wlan_bss_config_t* config) override {
     zxlogf(INFO, "%s: WlantapMacConfigureBss id=%u\n", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (!user_binding_.is_bound()) {
@@ -380,7 +381,7 @@ struct WlantapPhy : wlantap::WlantapPhy, WlantapMac::Listener {
     zxlogf(INFO, "%s: WlantapMacConfigureBss done\n", name_.c_str());
   }
 
-  virtual void WlantapMacSetKey(uint16_t wlanmac_id, wlan_key_config_t* key_config) override {
+  virtual void WlantapMacSetKey(uint16_t wlanmac_id, const wlan_key_config_t* key_config) override {
     zxlogf(INFO, "%s: WlantapMacSetKey id=%u\n", name_.c_str(), wlanmac_id);
     std::lock_guard<std::mutex> guard(lock_);
     if (!user_binding_.is_bound()) {

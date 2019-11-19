@@ -8,11 +8,11 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddktl/protocol/wlan/mac.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
 #include <wlan/common/channel.h>
 
 #include "utils.h"
-#include "wlanmac-ifc-proxy.h"
 
 namespace wlan {
 
@@ -49,18 +49,18 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacStart(void* ctx, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
-                                  void* cookie) {
+  static zx_status_t WlanmacStart(void* ctx, const wlanmac_ifc_protocol_t* ifc,
+                                  zx_handle_t* out_sme_channel) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     {
       std::lock_guard<std::mutex> guard(self.lock_);
-      if (self.ifc_) {
+      if (self.ifc_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
       }
       if (!self.sme_channel_.is_valid()) {
         return ZX_ERR_ALREADY_BOUND;
       }
-      self.ifc_ = WlanmacIfcClient{ifc, cookie};
+      self.ifc_ = ddk::WlanmacIfcProtocolClient(ifc);
     }
     self.listener_->WlantapMacStart(self.id_);
     *out_sme_channel = self.sme_channel_.release();
@@ -71,7 +71,7 @@ struct WlantapMacImpl : WlantapMac {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     {
       std::lock_guard<std::mutex> guard(self.lock_);
-      self.ifc_ = {};
+      self.ifc_.clear();
     }
     self.listener_->WlantapMacStop(self.id_);
   }
@@ -82,7 +82,7 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacSetChannel(void* ctx, uint32_t options, wlan_channel_t* chan) {
+  static zx_status_t WlanmacSetChannel(void* ctx, uint32_t options, const wlan_channel_t* chan) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -94,7 +94,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureBss(void* ctx, uint32_t options, wlan_bss_config_t* config) {
+  static zx_status_t WlanmacConfigureBss(void* ctx, uint32_t options,
+                                         const wlan_bss_config_t* config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -108,7 +109,7 @@ struct WlantapMacImpl : WlantapMac {
   }
 
   static zx_status_t WlanmacEnableBeaconing(void* ctx, uint32_t options,
-                                            wlan_bcn_config_t* bcn_cfg) {
+                                            const wlan_bcn_config_t* bcn_cfg) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -118,7 +119,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureBeacon(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
+  static zx_status_t WlanmacConfigureBeacon(void* ctx, uint32_t options,
+                                            const wlan_tx_packet_t* pkt) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -128,7 +130,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacSetKey(void* ctx, uint32_t options, wlan_key_config_t* key_config) {
+  static zx_status_t WlanmacSetKey(void* ctx, uint32_t options,
+                                   const wlan_key_config_t* key_config) {
     auto& self = *static_cast<WlantapMacImpl*>(ctx);
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
@@ -137,7 +140,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacConfigureAssoc(void* ctx, uint32_t options, wlan_assoc_ctx* assoc_ctx) {
+  static zx_status_t WlanmacConfigureAssoc(void* ctx, uint32_t options,
+                                           const wlan_assoc_ctx* assoc_ctx) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -148,7 +152,8 @@ struct WlantapMacImpl : WlantapMac {
     return ZX_OK;
   }
 
-  static zx_status_t WlanmacClearAssoc(void* ctx, uint32_t options, const uint8_t* mac) {
+  static zx_status_t WlanmacClearAssoc(void* ctx, uint32_t options, const uint8_t* mac,
+                                       size_t mac_len) {
     if (options != 0) {
       return ZX_ERR_INVALID_ARGS;
     }
@@ -163,7 +168,7 @@ struct WlantapMacImpl : WlantapMac {
 
   virtual void Rx(const std::vector<uint8_t>& data, const wlantap::WlanRxInfo& rx_info) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_) {
+    if (ifc_.is_valid()) {
       wlan_rx_info_t converted_info = {.rx_flags = rx_info.rx_flags,
                                        .valid_fields = rx_info.valid_fields,
                                        .phy = rx_info.phy,
@@ -181,14 +186,14 @@ struct WlantapMacImpl : WlantapMac {
 
   virtual void Status(uint32_t status) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_) {
+    if (ifc_.is_valid()) {
       ifc_.Status(status);
     }
   }
 
   virtual void ReportTxStatus(const wlantap::WlanTxStatus& ts) override {
     std::lock_guard<std::mutex> guard(lock_);
-    if (ifc_) {
+    if (ifc_.is_valid()) {
       wlan_tx_status_t converted_tx_status = ConvertTxStatus(ts);
       ifc_.ReportTxStatus(&converted_tx_status);
     }
@@ -197,7 +202,7 @@ struct WlantapMacImpl : WlantapMac {
   virtual void RemoveDevice() override {
     {
       std::lock_guard<std::mutex> guard(lock_);
-      ifc_ = {};
+      ifc_.clear();
     }
     device_remove_deprecated(device_);
   }
@@ -206,7 +211,7 @@ struct WlantapMacImpl : WlantapMac {
   uint16_t id_;
   wlan_device::MacRole role_;
   std::mutex lock_;
-  WlanmacIfcClient ifc_ __TA_GUARDED(lock_);
+  ddk::WlanmacIfcProtocolClient ifc_ __TA_GUARDED(lock_);
   const wlantap::WlantapPhyConfig* phy_config_;
   Listener* listener_;
   zx::channel sme_channel_;

@@ -21,7 +21,6 @@ driver_module("wlan_driver") {
     "minstrel.h",
     "probe_sequence.cc",
     "probe_sequence.h",
-    "proxy_helpers.h",
   ]
 
   deps = [

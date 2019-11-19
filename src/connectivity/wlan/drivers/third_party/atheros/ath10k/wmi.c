@@ -2265,7 +2265,7 @@ zx_status_t ath10k_wmi_event_mgmt_rx(struct ath10k* ar, struct ath10k_msg_buf* b
              buf->used, fc & IEEE80211_FRAME_TYPE_MASK, fc & IEEE80211_FRAME_SUBTYPE_MASK);
 
   void* frame_data = ath10k_msg_buf_get_payload(buf) + buf->rx.frame_offset;
-  ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, frame_data, arg.buf_len, &rx_info);
+  wlanmac_ifc_recv(&ar->wlanmac, 0, frame_data, arg.buf_len, &rx_info);
 
 maybe_free_buf:
   if (free_buf) {

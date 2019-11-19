@@ -765,10 +765,7 @@ struct ath10k {
     const struct ath10k_hif_ops* ops;
   } hif;
 
-  struct {
-    wlanmac_ifc_t* ifc;
-    void* cookie;
-  } wlanmac;
+  wlanmac_ifc_protocol_t wlanmac;
 
   // Now we only support one interface. Need to review the below variables when supporting
   // multiple interfaces. TODO(WLAN-641)

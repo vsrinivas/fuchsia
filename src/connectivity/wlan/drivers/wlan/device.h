@@ -18,6 +18,8 @@
 
 #include <ddk/driver.h>
 #include <ddktl/protocol/ethernet.h>
+#include <wlan/protocol/info.h>
+#include <ddktl/protocol/wlan/mac.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/slab_allocator.h>
@@ -29,7 +31,6 @@
 #include <wlan/protocol/mac.h>
 
 #include "minstrel.h"
-#include "proxy_helpers.h"
 
 typedef struct zx_port_packet zx_port_packet_t;
 
@@ -48,7 +49,7 @@ class Device : public DeviceInterface {
 
   // ddk wlanmac_ifc_t methods
   void WlanmacStatus(uint32_t status);
-  void WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info);
+  void WlanmacRecv(uint32_t flags, const void* data, size_t length, const wlan_rx_info_t* info);
   void WlanmacCompleteTx(wlan_tx_packet_t* pkt, zx_status_t status);
   void WlanmacIndication(uint32_t ind);
   void WlanmacReportTxStatus(const wlan_tx_status_t* tx_status);
@@ -139,8 +140,8 @@ class Device : public DeviceInterface {
   zx_device_t* parent_ = nullptr;
   zx_device_t* ethdev_ = nullptr;
 
-  WlanmacProxy wlanmac_proxy_;
-  ddk::EthernetIfcProtocolClient ethernet_proxy_{};
+  ddk::WlanmacProtocolClient wlanmac_proxy_;
+  ddk::EthernetIfcProtocolClient ethernet_proxy_;
 
   wlanmac_info_t wlanmac_info_ = {};
   fbl::RefPtr<DeviceState> state_;

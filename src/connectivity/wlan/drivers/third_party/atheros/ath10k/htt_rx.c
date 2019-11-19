@@ -1343,8 +1343,8 @@ static void ath10k_htt_rx_h_deliver(struct ath10k* ar, list_node_t* amsdu) {
     memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
     // TODO(gbonik): fill in rx_info from rx_desc
 
-    ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, msdu->vaddr + msdu->rx.frame_offset,
-                          msdu->rx.frame_size, &rx_info);
+    wlanmac_ifc_recv(&ar->wlanmac, 0, msdu->vaddr + msdu->rx.frame_offset,
+                     msdu->rx.frame_size, &rx_info);
     ath10k_msg_buf_free(msdu);
   }
 }
@@ -1757,7 +1757,7 @@ static zx_status_t ath10k_htt_rx_in_ord_ind(struct ath10k* ar, struct ath10k_msg
     wlan_rx_info_t rx_info = {};
     memcpy(&rx_info.chan, &ar->rx_channel, sizeof(wlan_channel_t));
     // TODO: fill in rx_info from rx_desc
-    ar->wlanmac.ifc->recv(ar->wlanmac.cookie, 0, rx_desc->msdu_payload, msdu_len, &rx_info);
+    wlanmac_ifc_recv(&ar->wlanmac, 0, rx_desc->msdu_payload, msdu_len, &rx_info);
     ath10k_msg_buf_free(msdu);
   }
 

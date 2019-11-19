@@ -385,7 +385,7 @@ zx_status_t ath10k_mac_ext_resource_config(struct ath10k* ar, uint32_t val) {
 /* Crypto */
 /**********/
 
-static zx_status_t ath10k_send_key(struct ath10k_vif* arvif, wlan_key_config_t* key_config,
+static zx_status_t ath10k_send_key(struct ath10k_vif* arvif, const wlan_key_config_t* key_config,
                                    const uint8_t* macaddr, uint32_t flags) {
   struct wmi_vdev_install_key_arg arg = {
       .vdev_id = arvif->vdev_id,
@@ -427,7 +427,7 @@ static zx_status_t ath10k_send_key(struct ath10k_vif* arvif, wlan_key_config_t* 
   return ath10k_wmi_vdev_install_key(arvif->ar, &arg);
 }
 
-static zx_status_t ath10k_install_key(struct ath10k_vif* arvif, wlan_key_config_t* key_config,
+static zx_status_t ath10k_install_key(struct ath10k_vif* arvif, const wlan_key_config_t* key_config,
                                       const uint8_t* macaddr, uint32_t flags) {
   struct ath10k* ar = arvif->ar;
   zx_status_t ret;
@@ -1506,8 +1506,8 @@ static inline zx_status_t set_center_freq_and_phymode(const wlan_channel_t* chan
 }
 
 // Restart the vdev. After this function is done successfully, the vdev will be on started state.
-static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_channel_t* chandef,
-                                             bool restart) {
+static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif,
+                                             const wlan_channel_t* chandef, bool restart) {
   struct ath10k* ar = arvif->ar;
 
   ASSERT_MTX_HELD(&ar->conf_mutex);
@@ -1604,11 +1604,11 @@ static zx_status_t ath10k_vdev_start_restart(struct ath10k_vif* arvif, wlan_chan
   return status;
 }
 
-static zx_status_t ath10k_vdev_start(struct ath10k_vif* arvif, wlan_channel_t* def) {
+static zx_status_t ath10k_vdev_start(struct ath10k_vif* arvif, const wlan_channel_t* def) {
   return ath10k_vdev_start_restart(arvif, def, false);
 }
 
-static zx_status_t ath10k_vdev_restart(struct ath10k_vif* arvif, wlan_channel_t* def) {
+static zx_status_t ath10k_vdev_restart(struct ath10k_vif* arvif, const wlan_channel_t* def) {
   return ath10k_vdev_start_restart(arvif, def, true);
 }
 
@@ -2268,7 +2268,7 @@ static void ath10k_mac_vif_sta_connection_loss_work(struct work_struct* work) {
 /* Station management */
 /**********************/
 
-static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, wlan_assoc_ctx_t* assoc) {
+static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, const wlan_assoc_ctx_t* assoc) {
   /* Some firmware revisions have unstable STA powersave when listen
    * interval is set too high (e.g. 5). The symptoms are firmware doesn't
    * generate NullFunc frames properly even if buffered frames have been
@@ -2284,7 +2284,8 @@ static uint32_t ath10k_peer_assoc_h_listen_intval(struct ath10k* ar, wlan_assoc_
   return assoc->listen_interval;
 }
 
-static void ath10k_peer_assoc_h_basic(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_basic(struct ath10k* ar,
+                                      const wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
   struct ath10k_vif* arvif = &ar->arvif;
 
@@ -2299,7 +2300,8 @@ static void ath10k_peer_assoc_h_basic(struct ath10k* ar, wlan_assoc_ctx_t* assoc
   arg->peer_caps = assoc->cap_info[0] | (assoc->cap_info[1] << 8);
 }
 
-static void ath10k_peer_assoc_h_crypto(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_crypto(struct ath10k* ar,
+                                       const wlan_assoc_ctx_t* assoc,
                                        struct wmi_peer_assoc_complete_arg* arg) {
   // TODO(WLAN-493): Come back later when we want to enable the security feature on AP mode.
 #if 0   // NEEDS PORTING
@@ -2351,7 +2353,8 @@ static void ath10k_peer_assoc_h_crypto(struct ath10k* ar, wlan_assoc_ctx_t* asso
 #endif  // NEEDS PORTING
 }
 
-static void ath10k_peer_assoc_h_rates(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_rates(struct ath10k* ar,
+                                      const wlan_assoc_ctx_t* assoc,
                                       struct wmi_peer_assoc_complete_arg* arg) {
   struct wmi_rate_set_arg* rateset = &arg->peer_legacy_rates;
   size_t i;
@@ -2365,7 +2368,8 @@ static void ath10k_peer_assoc_h_rates(struct ath10k* ar, wlan_assoc_ctx_t* assoc
   }
 }
 
-static void ath10k_peer_assoc_h_ht(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_ht(struct ath10k* ar,
+                                   const wlan_assoc_ctx_t* assoc,
                                    struct wmi_peer_assoc_complete_arg* arg) {
   const ieee80211_ht_capabilities_t* ht_cap = &assoc->ht_cap;
   size_t i, n;
@@ -2573,7 +2577,8 @@ ath10k_peer_assoc_h_vht_limit(uint16_t tx_mcs_set,
 }
 #endif  // NEEDS PORTING
 
-static void ath10k_peer_assoc_h_vht(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_vht(struct ath10k* ar,
+                                    const wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
   if (!assoc->has_vht_cap) {
     return;
@@ -2656,7 +2661,8 @@ static void ath10k_peer_assoc_h_vht(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
   }
 }
 
-static void ath10k_peer_assoc_h_qos(struct ath10k* ar, wlan_assoc_ctx_t* assoc,
+static void ath10k_peer_assoc_h_qos(struct ath10k* ar,
+                                    const wlan_assoc_ctx_t* assoc,
                                     struct wmi_peer_assoc_complete_arg* arg) {
   struct ath10k_vif* arvif = &ar->arvif;
   if (assoc->qos) {
@@ -2689,7 +2695,7 @@ static enum wmi_phy_mode ath10k_mac_get_phymode_vht(wlan_channel_bandwidth_t cbw
   return MODE_UNKNOWN;
 }
 
-static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(wlan_assoc_ctx_t* assoc) {
+static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(const wlan_assoc_ctx_t* assoc) {
   enum wmi_phy_mode phymode = MODE_UNKNOWN;
   wlan_info_band_t band = chan_to_band(assoc->chan.primary);
   wlan_channel_bandwidth_t cbw = assoc->chan.cbw;
@@ -2747,7 +2753,7 @@ static enum wmi_phy_mode ath10k_peer_assoc_h_phymode(wlan_assoc_ctx_t* assoc) {
 }
 
 static zx_status_t ath10k_peer_assoc_prepare(struct ath10k* ar, struct ath10k_vif* arvif,
-                                             wlan_assoc_ctx_t* assoc,
+                                             const wlan_assoc_ctx_t* assoc,
                                              struct wmi_peer_assoc_complete_arg* arg) {
   ASSERT_MTX_HELD(&ar->conf_mutex);
 
@@ -2772,7 +2778,7 @@ static const uint32_t ath10k_smps_map[] = {
 };
 
 static zx_status_t ath10k_setup_peer_smps(struct ath10k* ar, struct ath10k_vif* arvif,
-                                          wlan_assoc_ctx_t* assoc) {
+                                          const wlan_assoc_ctx_t* assoc) {
   size_t smps;
 
   if (!assoc->has_ht_cap) {
@@ -2913,7 +2919,7 @@ static zx_status_t ath10k_mac_bss_disassoc(struct ath10k* ar) {
 }
 
 // As a client role, prepare to connect to a BSS.
-zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
+zx_status_t ath10k_mac_set_bss(struct ath10k* ar, const wlan_bss_config_t* config) {
   struct ath10k_vif* arvif = &ar->arvif;
 
   mtx_lock(&ar->conf_mutex);
@@ -2957,7 +2963,7 @@ out:
 }
 
 // As a client role, tell the firmware we have associated with a BSS.
-zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc_ctx) {
+zx_status_t ath10k_mac_bss_assoc(struct ath10k* ar, const wlan_assoc_ctx_t* assoc_ctx) {
   zx_status_t ret;
 
   mtx_lock(&ar->conf_mutex);
@@ -3081,7 +3087,9 @@ static void ath10k_bss_disassoc(struct ieee80211_hw* hw,
 #endif  // NEEDS PORTING
 
 // Used by AP role to add a remote client.
-static zx_status_t ath10k_station_assoc(struct ath10k* ar, wlan_assoc_ctx_t* assoc, bool reassoc) {
+static zx_status_t ath10k_station_assoc(struct ath10k* ar,
+                                        const wlan_assoc_ctx_t* assoc,
+                                        bool reassoc) {
   struct ath10k_vif* arvif = &ar->arvif;
   struct wmi_peer_assoc_complete_arg peer_arg;
   zx_status_t ret;
@@ -3150,7 +3158,7 @@ static zx_status_t ath10k_station_assoc(struct ath10k* ar, wlan_assoc_ctx_t* ass
 
 // Used by an AP after accepted a station's association request.
 // Keys will be added by ath10k_mac_set_key().
-zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc) {
+zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, const wlan_assoc_ctx_t* assoc) {
   struct ath10k_vif* arvif = &ar->arvif;
   zx_status_t ret;
 
@@ -4036,7 +4044,7 @@ void __ath10k_scan_finish(struct ath10k* ar) {
         wlan_hw_scan_result_t result = {.code = (ar->scan.state == ATH10K_SCAN_ABORTING)
                                                     ? WLAN_HW_SCAN_ABORTED
                                                     : WLAN_HW_SCAN_SUCCESS};
-        ar->wlanmac.ifc->hw_scan_complete(ar->wlanmac.cookie, &result);
+        wlanmac_ifc_hw_scan_complete(&ar->wlanmac, &result);
       } else if (ar->scan.roc_notify) {
 #if 0   // NEEDS PORTING
             ieee80211_remain_on_channel_expired(ar->hw);
@@ -4203,7 +4211,7 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
 
   struct ath10k_msg_buf* tx_buf;
   size_t head_size = pkt->packet_head.data_size;
-  size_t tail_size = pkt->packet_tail ? (pkt->packet_tail->data_size - pkt->tail_offset) : 0;
+  size_t tail_size = pkt->packet_tail_list ? (pkt->packet_tail_list->data_size - pkt->tail_offset) : 0;
   // This 64 gives us headroom to add fields. It would be nice if we could be more specific...
   size_t extra_bytes = head_size + tail_size + 64;
 
@@ -4218,7 +4226,7 @@ static zx_status_t ath10k_mac_build_tx_pkt(struct ath10k* ar, struct ath10k_msg_
   memcpy(next_data, pkt->packet_head.data_buffer, head_size);
   next_data += head_size;
   if (tail_size > 0) {
-    memcpy(next_data, (pkt->packet_tail->data_buffer + pkt->tail_offset), tail_size);
+    memcpy(next_data, (pkt->packet_tail_list->data_buffer + pkt->tail_offset), tail_size);
   }
 
   *tx_buf_ptr = tx_buf;
@@ -4452,8 +4460,8 @@ static zx_status_t ath10k_set_antenna(struct ieee80211_hw* hw, uint32_t tx_ant, 
 enum { IEEE80211_AC_VO, IEEE80211_AC_VI, IEEE80211_AC_BE, IEEE80211_AC_BK };
 static int ath10k_conf_tx(struct ath10k* ar, uint16_t ac, struct wmi_wmm_params_arg* params);
 
-zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel,
-                         void* cookie) {
+zx_status_t ath10k_start(struct ath10k* ar, const wlanmac_ifc_protocol_t* ifc,
+                         zx_handle_t* out_sme_channel) {
   zx_status_t ret = ZX_OK;
 
   mtx_lock(&ar->conf_mutex);
@@ -4462,8 +4470,7 @@ zx_status_t ath10k_start(struct ath10k* ar, wlanmac_ifc_t* ifc, zx_handle_t* out
     goto err;
   }
 
-  ar->wlanmac.ifc = ifc;
-  ar->wlanmac.cookie = cookie;
+  ar->wlanmac = *ifc;
 
   /*
    * This makes sense only when restarting hw. It is harmless to call
@@ -5614,7 +5621,7 @@ static void ath10k_cancel_hw_scan(struct ieee80211_hw* hw,
 }
 #endif  // NEEDS PORTING
 
-static void ath10k_set_key_h_def_keyidx(struct ath10k* ar, wlan_key_config_t* key_config) {
+static void ath10k_set_key_h_def_keyidx(struct ath10k* ar, const wlan_key_config_t* key_config) {
   struct ath10k_vif* arvif = &ar->arvif;
   uint32_t vdev_param = arvif->ar->wmi.vdev_param->def_keyid;
   zx_status_t status;
@@ -5655,7 +5662,7 @@ static void ath10k_set_key_h_def_keyidx(struct ath10k* ar, wlan_key_config_t* ke
   }
 }
 
-zx_status_t ath10k_mac_set_key(struct ath10k* ar, wlan_key_config_t* key_config) {
+zx_status_t ath10k_mac_set_key(struct ath10k* ar, const wlan_key_config_t* key_config) {
   struct ath10k_vif* arvif = &ar->arvif;
   const uint8_t* peer_addr;
   zx_status_t ret = ZX_OK;
@@ -7394,7 +7401,7 @@ unlock:
 // want to support continued association transferring to a new channel (likely
 // ath10k_mac_update_vif_channel). Upon successful completion, we will be in a started,
 // but not up, state.
-zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, wlan_channel_t* chan) {
+zx_status_t ath10k_mac_assign_vif_chanctx(struct ath10k* ar, const wlan_channel_t* chan) {
   struct ath10k_vif* arvif = &ar->arvif;
   zx_status_t ret;
 

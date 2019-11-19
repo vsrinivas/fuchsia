@@ -33,7 +33,7 @@ wlan_tx_packet_t Packet::AsWlanTxPacket() {
   tx_pkt.packet_head.data_buffer = data();
   tx_pkt.packet_head.data_size = static_cast<uint16_t>(len());
   if (has_ext_data()) {
-    tx_pkt.packet_tail = ext_data()->operation();
+    tx_pkt.packet_tail_list = ext_data()->operation();
     tx_pkt.tail_offset = ext_offset();
   }
   if (has_ctrl_data<wlan_tx_info_t>()) {

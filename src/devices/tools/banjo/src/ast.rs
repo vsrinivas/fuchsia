@@ -628,7 +628,7 @@ impl BanjoAst {
             None => &self.primary_namespace,
         };
 
-        for decl in self.namespaces[namespace].iter() {
+        for decl in self.namespaces[dbg!(namespace)].iter() {
             match decl {
                 Decl::Protocol { name, .. } => {
                     if name.name() == ident {

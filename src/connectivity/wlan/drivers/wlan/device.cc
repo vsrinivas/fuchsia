@@ -60,10 +60,10 @@ static zx_protocol_device_t eth_device_ops = {
     .release = [](void* ctx) { DEV(ctx)->EthRelease(); },
 };
 
-static wlanmac_ifc_t wlanmac_ifc_ops = {
+static wlanmac_ifc_protocol_ops_t wlanmac_ifc_ops = {
     .status = [](void* cookie, uint32_t status) { DEV(cookie)->WlanmacStatus(status); },
     .recv = [](void* cookie, uint32_t flags, const void* data, size_t length,
-               wlan_rx_info_t* info) { DEV(cookie)->WlanmacRecv(flags, data, length, info); },
+               const wlan_rx_info_t* info) { DEV(cookie)->WlanmacRecv(flags, data, length, info); },
     .complete_tx = [](void* cookie, wlan_tx_packet_t* pkt,
                       zx_status_t status) { DEV(cookie)->WlanmacCompleteTx(pkt, status); },
     .indication = [](void* cookie, uint32_t ind) { DEV(cookie)->WlanmacIndication(ind); },
@@ -96,7 +96,7 @@ static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
 
 Device::Device(zx_device_t* device, wlanmac_protocol_t wlanmac_proto)
     : parent_(device),
-      wlanmac_proxy_(wlanmac_proto),
+      wlanmac_proxy_(&wlanmac_proto),
       fidl_msg_buf_(ZX_CHANNEL_MAX_MSG_BYTES),
       timer_scheduler_(this) {
   debugfn();
@@ -135,8 +135,8 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
     return status;
   }
 
-  zx_handle_t sme_channel = ZX_HANDLE_INVALID;
-  status = wlanmac_proxy_.Start(&wlanmac_ifc_ops, &sme_channel, this);
+  zx::channel sme_channel;
+  status = wlanmac_proxy_.Start(this, &wlanmac_ifc_ops, &sme_channel);
   if (status != ZX_OK) {
     errorf("failed to start wlanmac device: %s\n", zx_status_get_string(status));
     return status;
@@ -186,7 +186,7 @@ zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   if (status != ZX_OK) {
     errorf("could not add eth device: %s\n", zx_status_get_string(status));
   } else {
-    status = Connect(zx::channel(sme_channel));
+    status = Connect(std::move(sme_channel));
   }
 
   // Clean up if either device add failed.
@@ -406,7 +406,8 @@ void Device::WlanmacStatus(uint32_t status) {
   SetStatusLocked(status);
 }
 
-void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
+void Device::WlanmacRecv(uint32_t flags, const void* data, size_t length,
+                         const wlan_rx_info_t* info) {
   // no debugfn() because it's too noisy
   auto packet = PreparePacket(data, length, Packet::Peer::kWlan, *info);
   if (packet == nullptr) {
@@ -663,7 +664,7 @@ zx_status_t Device::ClearAssoc(const wlan::common::MacAddr& peer_addr) {
 
   uint8_t mac[wlan::common::kMacAddrLen];
   peer_addr.CopyTo(mac);
-  return wlanmac_proxy_.ClearAssoc(0u, mac);
+  return wlanmac_proxy_.ClearAssoc(0u, mac, sizeof(mac));
 }
 
 fbl::RefPtr<DeviceState> Device::GetState() { return state_; }

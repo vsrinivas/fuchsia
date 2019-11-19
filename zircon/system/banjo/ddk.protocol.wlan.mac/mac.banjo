@@ -1,0 +1,307 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library ddk.protocol.wlan.mac;
+
+using ddk.hw.wlan.wlaninfo;
+using ddk.protocol.ethernet;
+using ddk.protocol.wlan.info;
+using zx;
+
+struct WlanmacInfo {
+    /// Interface capabilities information
+    ddk.hw.wlan.wlaninfo.WlanInfo ifc_info;
+};
+
+enum WlanRxInfoFlags : uint32 {
+    /// The FCS for the received frame was invalid.
+    FCS_INVALID = 0x1;
+    /// Padding was added after the MAC header to align the frame body to 4 bytes.
+    FRAME_BODY_PADDING_4 = 0x2;
+    // Bits 2-31 reserved
+};
+
+const int8 WLAN_RSSI_DBM_MIN = -97;
+const int8 WLAN_RSSI_DBM_MAX = -10;
+const int16 WLAN_RCPI_DBMH_MIN = -194; // -97 * 2
+const int16 WLAN_RCPI_DBMH_MAX = -20; //-10 * 2
+const int16 WLAN_RSNI_DBH_MIN = 1;
+const int16 WLAN_RSNI_DBH_MAX = 120; // 60 * 2
+
+const int8 WLAN_RSSI_DBM_INVALID = 0;
+const int16 WLAN_RCPI_DBMH_INVALID = 0;
+const int16 WLAN_RSNI_DBH_INVALID = 0;
+// LINT.ThenChange(//src/connectivity/wlan/lib/common/cpp/include/wlan/common/energy.h)
+
+struct WlanRxInfo {
+    /// Receive flags. These represent boolean flags as opposed to enums or value-based info which
+    /// are represented below. Values should be taken from the WLAN_RX_INFO_FLAGS_* enum.
+    uint32 rx_flags;
+
+    /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
+    /// must be zero.
+    uint32 valid_fields;
+    /// The PHY format of the device at the time of the operation.
+    uint16 phy;
+    /// The data rate of the device, measured in units of 0.5 Mb/s.
+    uint32 data_rate;
+    /// The channel of the device at the time of the operation. This field must be included.
+    ddk.protocol.wlan.info.WlanChannel chan;
+    /// The modulation and coding scheme index of the device at the time of the operation. Depends
+    /// on the PHY format and channel width.
+    uint8 mcs;
+
+    /// Received Signal Strength Indicator.
+    int8 rssi_dbm;
+    /// Received Channel Power Indicator, in 0.5 dBm. IEEE Std 802.11-2016, 17.3.10.7.
+    /// Do not use encoding in 15.4.6.6
+    int16 rcpi_dbmh;
+    /// Signal-to-Noise Ratio, in 0.5 dB.
+    int16 snr_dbh;
+};
+
+enum WlanTxInfoFlags : uint8 {
+    PROTECTED = 0x1;
+    /// For rate control: indicate an important data frame, such as EAPOL, which should be sent
+    /// _reliably_ rather than fast, and is exempt from rate probing
+    FAVOR_RELIABILITY = 0x2;
+    /// Indicate that this packet should be sent out with QoS header when possible (11n+).
+    // TODO(WLAN-1002): remove this when MLME supports QoS tag.
+    QOS = 0x4;
+};
+
+enum WlanTxInfoValid : uint8 {
+    DATA_RATE = 0x1;
+    TX_VECTOR_IDX = 0x2;
+    PHY = 0x4;
+    CHAN_WIDTH = 0x4;
+    MCS = 0x8;
+    // Bits 5-31 reserved
+};
+
+struct WlanTxInfo {
+    /// Transmit flags. These represent boolean options as opposed to enums or other value-based
+    /// info which are represented below. Values should be taken from the WLAN_TX_INFO_FLAGS_* enum.
+    uint32 tx_flags;
+
+    /// Bitmask indicating which of the following fields are valid in this struct. Reserved flags
+    /// must be zero. Values for fields not indicated by a flag may be chosen at the discretion of
+    /// the wlanmac driver.
+    uint32 valid_fields;
+    // Will be sent back in wlan_tx_status_t if Minstrel is enabled for the device, indicated by
+    // WLAN_TX_INFO_VALID_TX_VECTOR_IDX.
+    uint16 tx_vector_idx;
+    // The PHY format to be used to transmit this packet.
+    uint16 phy;
+    // The channel width to be used to transmit this packet.
+    ddk.protocol.wlan.info.WlanChannelBandwidth cbw;
+    /// The modulation and coding scheme index for this packet. Depends on the PHY format and
+    /// channel width.
+    uint8 mcs;
+};
+
+const uint16 WLAN_TX_VECTOR_IDX_INVALID = 0;
+const usize WLAN_TX_STATUS_MAX_ENTRY = 8;
+
+struct WlanTxStatusEntry {
+    uint16 tx_vector_idx;
+    /// Number of total attempts with this specific tx vector, including successful attempts.
+    /// DDK assumes the number of attempts per packet will not exceed 255. (usually <= 8)
+    uint8 attempts;
+};
+
+struct WlanTxStatus {
+    /// up to 8 different tx_vector for one PPDU frame.
+    /// WLAN_TX_VECTOR_IDX_INVALID indicates no more entries.
+    array<WlanTxStatusEntry>:WLAN_TX_STATUS_MAX_ENTRY tx_status_entry;
+    /// Destination mac address, or addr1 in packet header.
+    array<uint8>:6 peer_addr;
+    /// Outcome of packet transmission. True iff ACK was received from peer.
+    bool success;
+};
+
+enum WlanProtection : uint8 {
+    NONE = 0;
+    RX = 1;
+    TX = 2;
+    RX_TX = 3;
+};
+
+struct WlanKeyConfig {
+    /// The BSSID for which this key is relevant.
+    uint8 bssid;
+    /// Which path to protect: None, TX, RX, or TX and RX.
+    WlanProtection protection;
+    /// IEEE Cipher suite selector.
+    /// See IEEE Std 802.11-2016, 9.4.2.25.2, Table 9-131
+    array<uint8>:3 cipher_oui;
+    uint8 cipher_type;
+    /// Whether this key is a pairwise, group or peer key.
+    ddk.protocol.wlan.info.WlanKeyType key_type;
+    /// The peer MAC address for pairwise and peer keys.
+    /// For group keys this value is always the broadcast address.
+    array<uint8>:6 peer_addr;
+    /// Index for rotating keys, e.g. group keys.
+    /// This value is always 0 for key types which aren't rotating, e.g. pairwise keys.
+    uint8 key_idx;
+    // Length of the supplied key.
+    uint8 key_len;
+    // They key's actual bytes.
+    array<uint8>:32 key;
+    /// Receive Sequence Counter for group keys only.
+    /// In all other cases the RSC will be 0.
+    uint64 rsc;
+};
+
+struct WlanTxPacket {
+    /// Leading bytes of the packet to transmit. Any 802.11 frame headers must be in the packet_head.
+    ddk.protocol.ethernet.EthernetNetbuf? packet_head;
+    /// Trailing bytes of the packet to transmit. May be NULL if all bytes to be transmitted are in
+    /// the packet_head. Typically used to transport ethernet frames from a higher layer.
+    vector<ddk.protocol.ethernet.EthernetNetbuf>? packet_tail;
+    /// If packet_tail is not NULL, the offset into the packet tail that should be used before
+    /// transmitting. The ethernet_netbuf_t len field will reflect the original packet length without
+    /// the offset.
+    uint16 tail_offset;
+    /// Additional data needed to transmit the packet.
+    WlanTxInfo info;
+};
+
+enum WlanIndication : uint8 {
+    PRE_TBTT = 1;
+    BCN_TX_COMPLETE = 2;
+    HW_SCAN_COMPLETE = 3;
+    HW_SCAN_ABORTED = 4;
+};
+
+enum WlanHwScanType : uint8 {
+    ACTIVE = 1;
+    PASSIVE = 2;
+};
+
+struct WlanHwScanConfig {
+    WlanHwScanType scan_type;
+    /// Number of channels in the |channels| array. Must be at least 1
+    uint8 num_channels;
+    /// Channel numbers to scan
+    array<uint8>:WLAN_INFO_CHANNEL_LIST_MAX_CHANNELS channels;
+    /// SSID for directed probe requests
+    ddk.protocol.wlan.info.WlanSsid ssid;
+};
+
+enum WlanHwScan : uint8 {
+    SUCCESS = 0;
+    ABORTED = 1;
+};
+
+struct WlanHwScanResult {
+    WlanHwScan code;
+};
+
+/// Includes the information about beacon template.
+struct WlanBcnConfig {
+    /// Points to the beacon template. Since this is just the template, some packet content can
+    /// contain only minimum valid info. They will be changed later by hardware/firmware or software.
+    /// Note that the driver must copy the packet content into its own memory and cannot rely on
+    /// the pointers in the struct.
+    WlanTxPacket tmpl;
+
+    /// TIM offset (in bytes) to the start of |bcn_tmpl|. This points to the first byte of TIM IE,
+    /// which is the tag ID.
+    usize tim_ele_offset;
+
+    /// in TU
+    uint16 beacon_interval;
+};
+
+[Layout = "ddk-interface"]
+protocol WlanmacIfc {
+    /// Report the status of the wlanmac device.
+    Status(uint32 status) -> ();
+
+    /// Submit received data to the next driver. info must not be NULL.
+    Recv(uint32 flags, vector<voidptr> data, WlanRxInfo info);
+
+    /// complete_tx() is called to return ownership of a packet to the wlan driver.
+    /// Return status indicates queue state:
+    ///   ZX_OK: Packet has been enqueued.
+    ///   Other: Packet could not be enqueued.
+    ///
+    /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
+    /// the completion state of the transmission itself.
+    CompleteTx(WlanTxPacket? packet, zx.status status) -> ();
+
+    /// Reports an indication of a status, state or action to the wlan driver.
+    Indication(uint32 ind);
+
+    /// Reports the status of an attempted transmission.
+    /// |tx_status|: contains status info of one transmitted packet to one peer at one specific rate.
+    ReportTxStatus(WlanTxStatus tx_status);
+
+    /// Reports completion of a hardware scan
+    HwScanComplete(WlanHwScanResult result);
+};
+
+[Layout = "ddk-protocol"]
+protocol Wlanmac {
+    /// Obtain information about the device and supported features
+    /// Safe to call at any time.
+    Query(uint32 options) -> (zx.status status, WlanmacInfo info);
+
+    /// Start wlanmac running with ifc_virt
+    /// Callbacks on ifc may be invoked from now until stop() is called
+    Start(WlanmacIfc ifc) -> (zx.status status, handle<channel> sme_channel);
+
+    /// Shut down a running wlanmac
+    /// Safe to call if the wlanmac is already stopped.
+    Stop() -> ();
+
+    /// Queue the data for transmit. Return status indicates queue state:
+    ///   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
+    ///   ZX_OK: Packet has been enqueued.
+    ///   Other: Packet could not be enqueued.
+    ///
+    /// In the SHOULD_WAIT case the driver takes ownership of the wlan_tx_packet_t and must call
+    /// complete_tx() to return it once the enqueue is complete. complete_tx() may be used to return
+    /// the packet before transmission itself completes, and MUST NOT be called from within the
+    /// queue_tx() implementation.
+    ///
+    /// queue_tx() may be called at any time after start() is called including from multiple threads
+    /// simultaneously.
+    QueueTx(uint32 options, WlanTxPacket? pkt) -> (zx.status status);
+
+    // Set the radio channel
+    SetChannel(uint32 options, ddk.protocol.wlan.info.WlanChannel chan) -> (zx.status status);
+
+    // Configures a BSS which the STA is either joining or managing.
+    ConfigureBss(uint32 options, ddk.protocol.wlan.info.WlanBssConfig config) -> (zx.status st);
+
+    // Enables or disables hardware Beaconing.
+    // * |bcn_cfg|: Pass `nullptr` to disable hardware Beacons. Used by hardware beacon offload.
+    EnableBeaconing(uint32 options, WlanBcnConfig bcn_cfg) -> (zx.status st);
+
+    /// Configures a Beacon frame in hardware to announce the BSS' existence.
+    /// * pkt: Pass `nullptr` to disable hardware Beacons. Used by software generated beacon.
+    /// TODO(NET-1565): Rename to update_beacon.
+    ConfigureBeacon(uint32 options, WlanTxPacket pkt) -> (zx.status st);
+
+    /// Specify a key for frame protection.
+    SetKey(uint32 options, WlanKeyConfig key_config) -> (zx.status st);
+
+    /// Notifies MAC and PHY parameters negotiated through a successful association
+    ConfigureAssoc(uint32 options, ddk.protocol.wlan.info.WlanAssocCtx assoc_ctx) -> (zx.status st);
+
+    /// Notifies MAC and PHY that the peer has been de-associated.
+    ClearAssoc(uint32 options, vector<uint8> peer_addr) -> (zx.status st);
+
+    /// Initiate a hardware scan
+    ///
+    /// Once the scan starts, scan results will be delivered as beacon and probe response frames
+    /// via the regular rx path.
+    ///
+    /// Unless an error is returned immediately, the driver will eventually
+    /// call wlanmac_ifc->hw_scan_complete()
+    StartHwScan(WlanHwScanConfig scan_config) -> (zx.status st);
+};
+

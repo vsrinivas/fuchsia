@@ -26,16 +26,15 @@ class IfaceDevice {
 
   zx_status_t Query(uint32_t options, wlanmac_info_t* info);
   void Stop();
-  zx_status_t Start(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie);
-  zx_status_t SetChannel(uint32_t options, wlan_channel_t* chan);
+  zx_status_t Start(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
+  zx_status_t SetChannel(uint32_t options, const wlan_channel_t* chan);
 
  private:
   zx_device_t* zxdev_;
   zx_device_t* parent_;
 
   std::mutex lock_;
-  wlanmac_ifc_t* ifc_ = nullptr;
-  void* ifc_cookie_ = nullptr;
+  wlanmac_ifc_protocol_t ifc_ = {};
 
   // One of the WLAN_MAC_ROLE_* constants from lib/wlan/protocol/mac.h
   uint16_t role_;

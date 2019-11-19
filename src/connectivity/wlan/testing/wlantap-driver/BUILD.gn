@@ -11,7 +11,6 @@ driver_module("wlantap_driver") {
   sources = [
     "utils.cc",
     "utils.h",
-    "wlanmac-ifc-proxy.h",
     "wlantap-ctl.cc",
     "wlantap-mac.cc",
     "wlantap-mac.h",

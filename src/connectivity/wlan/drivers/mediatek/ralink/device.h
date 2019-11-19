@@ -28,6 +28,7 @@
 #include <ddk/hw/wlan/wlaninfo.h>
 #include <ddk/protocol/usb.h>
 #include <ddk/protocol/wlanphyimpl.h>
+#include <ddktl/protocol/wlan/mac.h>
 #include <usb/usb.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/protocol/mac.h>
@@ -53,27 +54,6 @@ struct BulkoutAggregation;
 class TxStatFifo;
 class TxStatFifoExt;
 
-class WlanmacIfcClient {
- public:
-  WlanmacIfcClient(wlanmac_ifc_t* ifc, void* cookie) : ifc_(ifc), cookie_(cookie) {}
-
-  void Status(uint32_t status) { ifc_->status(cookie_, status); }
-  void Recv(uint32_t flags, const void* data, size_t length, wlan_rx_info_t* info) {
-    ifc_->recv(cookie_, flags, data, length, info);
-  }
-  void CompleteTx(wlan_tx_packet_t* pkt, zx_status_t status) {
-    ifc_->complete_tx(cookie_, pkt, status);
-  }
-  void Indication(uint32_t ind) { ifc_->indication(cookie_, ind); }
-  void ReportTxStatus(const wlan_tx_status_t* tx_status) {
-    ifc_->report_tx_status(cookie_, tx_status);
-  }
-
- private:
-  wlanmac_ifc_t* ifc_;
-  void* cookie_;
-};
-
 class Device {
  public:
   Device(zx_device_t* device, usb_protocol_t usb, uint8_t bulk_in, std::vector<uint8_t>&& bulk_out,
@@ -96,15 +76,15 @@ class Device {
 
   // ddk wlanmac_protocol_ops methods
   zx_status_t WlanmacQuery(uint32_t options, wlanmac_info_t* info);
-  zx_status_t WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie);
+  zx_status_t WlanmacStart(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel);
   void WlanmacStop();
   zx_status_t WlanmacQueueTx(uint32_t options, wlan_tx_packet_t* pkt);
-  zx_status_t WlanmacSetChannel(uint32_t options, wlan_channel_t* chan);
-  zx_status_t WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config);
+  zx_status_t WlanmacSetChannel(uint32_t options, const wlan_channel_t* chan);
+  zx_status_t WlanmacConfigureBss(uint32_t options, const wlan_bss_config_t* config);
   zx_status_t WlanmacEnableBeaconing(uint32_t options, bool enabled);
-  zx_status_t WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* pkt);
-  zx_status_t WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config);
-  zx_status_t WlanmacClearAssoc(uint32_t options, const uint8_t* bssid);
+  zx_status_t WlanmacConfigureBeacon(uint32_t options, const wlan_tx_packet_t* pkt);
+  zx_status_t WlanmacSetKey(uint32_t options, const wlan_key_config_t* key_config);
+  zx_status_t WlanmacClearAssoc(uint32_t options, const uint8_t* bssid, size_t bssid_len);
 
   zx_status_t Query(wlan_info_t* info);
 
@@ -269,8 +249,8 @@ class Device {
                                   const TxStatFifoExt& stat_fifo_ext, wlan_tx_status* report)
       __TA_REQUIRES(lock_);
 
-  zx_status_t FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt, int packet_id,
-                              size_t aggr_payload_len);
+  zx_status_t FillAggregation(BulkoutAggregation* aggr, const wlan_tx_packet_t* wlan_pkt,
+                              int packet_id, size_t aggr_payload_len);
 
   zx::duration RemainingTbttTime();
   zx_status_t EnableHwBcn(bool active);
@@ -304,7 +284,7 @@ class Device {
     IFC_RUNNING,
     IFC_DESTROYING
   } iface_state_ __TA_GUARDED(lock_) = IFC_NONE;
-  std::unique_ptr<WlanmacIfcClient> wlanmac_proxy_ __TA_GUARDED(lock_);
+  ddk::WlanmacIfcProtocolClient wlanmac_proxy_ __TA_GUARDED(lock_);
 
   constexpr static size_t kEepromSize = 0x0100;
   std::array<uint16_t, kEepromSize> eeprom_ = {};

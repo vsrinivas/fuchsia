@@ -149,34 +149,31 @@ static wlanmac_protocol_ops_t wlanmac_ops = {
     .query = [](void* ctx, uint32_t options, wlanmac_info_t* info) -> zx_status_t {
       return DEV(ctx)->WlanmacQuery(options, info);
     },
-    .start = [](void* ctx, wlanmac_ifc_t* info, zx_handle_t* out_sme_channel, void* cookie)
-        -> zx_status_t { return DEV(ctx)->WlanmacStart(info, out_sme_channel, cookie); },
+    .start = [](void* ctx, const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel)
+        -> zx_status_t { return DEV(ctx)->WlanmacStart(ifc, out_sme_channel); },
     .stop = [](void* ctx) { DEV(ctx)->WlanmacStop(); },
     .queue_tx = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
       return DEV(ctx)->WlanmacQueueTx(options, pkt);
     },
-    .set_channel = [](void* ctx, uint32_t options, wlan_channel_t* chan) -> zx_status_t {
+    .set_channel = [](void* ctx, uint32_t options, const wlan_channel_t* chan) -> zx_status_t {
       return DEV(ctx)->WlanmacSetChannel(options, chan);
     },
-    .configure_bss = [](void* ctx, uint32_t options, wlan_bss_config_t* config) -> zx_status_t {
-      return DEV(ctx)->WlanmacConfigureBss(options, config);
-    },
-    .enable_beaconing = [](void* ctx, uint32_t options, wlan_bcn_config_t* bcn_cfg) -> zx_status_t {
-      return DEV(ctx)->WlanmacEnableBeaconing(options, bcn_cfg != nullptr);
-    },
-    .configure_beacon = [](void* ctx, uint32_t options, wlan_tx_packet_t* pkt) -> zx_status_t {
-      return DEV(ctx)->WlanmacConfigureBeacon(options, pkt);
-    },
-    .set_key = [](void* ctx, uint32_t options, wlan_key_config_t* key_config) -> zx_status_t {
+    .configure_bss = [](void* ctx, uint32_t options, const wlan_bss_config_t* config)
+        -> zx_status_t { return DEV(ctx)->WlanmacConfigureBss(options, config); },
+    .enable_beaconing = [](void* ctx, uint32_t options, const wlan_bcn_config_t* bcn_cfg)
+        -> zx_status_t { return DEV(ctx)->WlanmacEnableBeaconing(options, bcn_cfg != nullptr); },
+    .configure_beacon = [](void* ctx, uint32_t options, const wlan_tx_packet_t* pkt)
+        -> zx_status_t { return DEV(ctx)->WlanmacConfigureBeacon(options, pkt); },
+    .set_key = [](void* ctx, uint32_t options, const wlan_key_config_t* key_config) -> zx_status_t {
       return DEV(ctx)->WlanmacSetKey(options, key_config);
     },
-    .configure_assoc = [](void* ctx, uint32_t options, wlan_assoc_ctx* assoc_ctx) -> zx_status_t {
+    .configure_assoc = [](void* ctx, uint32_t options,
+                          const wlan_assoc_ctx* assoc_ctx) -> zx_status_t {
       // TODO(NET-1265): Configure the chipset for this association
       return ZX_OK;
     },
-    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t* mac) -> zx_status_t {
-      return DEV(ctx)->WlanmacClearAssoc(options, mac);
-    },
+    .clear_assoc = [](void* ctx, uint32_t options, const uint8_t* mac, size_t mac_len)
+        -> zx_status_t { return DEV(ctx)->WlanmacClearAssoc(options, mac, mac_len); },
 };
 #undef DEV
 
@@ -3445,7 +3442,7 @@ void Device::HandleRxComplete(usb_request_t* request) {
     RxDesc rx_desc(*(uint32_t*)(data + 4 + rx_info.usb_dma_rx_pkt_len()));
 
     dump_rx(request, rx_info, rx_desc, rxwi0, rxwi1, rxwi2, rxwi3);
-    if (wlanmac_proxy_ != nullptr) {
+    if (wlanmac_proxy_.is_valid()) {
       wlan_rx_info_t wlan_rx_info = {};
       fill_rx_info(&wlan_rx_info, rx_desc, rxwi1, rxwi2, rxwi3, bg_rssi_offset_, lna_gain_);
 
@@ -3460,9 +3457,8 @@ void Device::HandleRxComplete(usb_request_t* request) {
       uint16_t mpdu_len_ota = rxwi0.mpdu_total_byte_count();
       uint16_t l2pad_len = rx_desc.l2pad() ? 2 : 0;  // 2 bytes if padded, by Ralink spec.
       uint16_t mpdu_len = mpdu_len_ota + l2pad_len;
-      wlanmac_proxy_->Recv(0u, data + rx_hdr_size, mpdu_len, &wlan_rx_info);
+      wlanmac_proxy_.Recv(0u, data + rx_hdr_size, mpdu_len, &wlan_rx_info);
     }
-
   } else {
     if (request->response.status != ZX_ERR_IO_REFUSED) {
       errorf("rx req status %d\n", request->response.status);
@@ -3793,14 +3789,14 @@ zx_status_t Device::WlanmacQuery(uint32_t options, wlanmac_info_t* info) {
   return status;
 }
 
-zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channel, void* cookie) {
+zx_status_t Device::WlanmacStart(const wlanmac_ifc_protocol_t* ifc, zx_handle_t* out_sme_channel) {
   debugfn();
   std::lock_guard<std::mutex> guard(lock_);
 
   if (phy_state_ != PHY_RUNNING) {
     return ZX_ERR_PEER_CLOSED;
   }
-  if (wlanmac_proxy_ != nullptr) {
+  if (wlanmac_proxy_.is_valid()) {
     return ZX_ERR_ALREADY_BOUND;
   }
   if (!iface_sme_channel_.is_valid()) {
@@ -3913,7 +3909,7 @@ zx_status_t Device::WlanmacStart(wlanmac_ifc_t* ifc, zx_handle_t* out_sme_channe
     return status;
   }
 
-  wlanmac_proxy_.reset(new WlanmacIfcClient(ifc, cookie));
+  wlanmac_proxy_ = ddk::WlanmacIfcProtocolClient(ifc);
 
   wlan_channel_t chan;
   chan.primary = 1;
@@ -4027,11 +4023,11 @@ zx_status_t Device::OnTxReportInterruptTimer() {
     }
 
     --tx_status_report_pending_;
-    if (wlanmac_proxy_ != nullptr) {
+    if (wlanmac_proxy_.is_valid()) {
       wlan_tx_status report{};
       status = BuildTxStatusReport(entry, stat_fifo, stat_fifo_ext, &report);
       if (status == ZX_OK) {
-        wlanmac_proxy_->ReportTxStatus(&report);
+        wlanmac_proxy_.ReportTxStatus(&report);
       } else {
         warnf("cannot build tx status report: %s.\n", zx_status_get_string(status));
       }
@@ -4066,8 +4062,8 @@ zx_status_t Device::OnTbttInterruptTimer() {
   if (pre_tbtt_interrupt) {
     {
       std::lock_guard<std::mutex> guard(lock_);
-      if (wlanmac_proxy_ != nullptr) {
-        wlanmac_proxy_->Indication(WLAN_INDICATION_PRE_TBTT);
+      if (wlanmac_proxy_.is_valid()) {
+        wlanmac_proxy_.Indication(WLAN_INDICATION_PRE_TBTT);
       }
     }
 
@@ -4082,31 +4078,30 @@ zx_status_t Device::OnTbttInterruptTimer() {
     tbtt_interrupt_timer_.set(zx::deadline_after(tbtt), zx::usec(1));
     return ZX_OK;
   }
-
   const bool tbtt_interrupt = intStatus.mac_int_0();
   if (tbtt_interrupt) {
     {
       // Due to Ralinks limitation of not being able to report actual beacon transmission,
       // TBTT is used instead.
       std::lock_guard<std::mutex> guard(lock_);
-      if (wlanmac_proxy_ != nullptr) {
-        wlanmac_proxy_->Indication(WLAN_INDICATION_BCN_TX_COMPLETE);
+      if (wlanmac_proxy_.is_valid()) {
+        wlanmac_proxy_.Indication(WLAN_INDICATION_BCN_TX_COMPLETE);
       }
     }
 
-    // Clear the TBTT interrupts.
+    // clear the tbtt interrupts.
     intStatus.clear();
     intStatus.set_mac_int_0(1);
     status = WriteRegister(intStatus);
     CHECK_WRITE(INT_STATUS, status);
 
-    // Wait for next Pre-TBTT.
+    // wait for next pre-tbtt.
     const zx::duration pre_tbtt = RemainingTbttTime() - kPreTbttLeadTime;
     tbtt_interrupt_timer_.set(zx::deadline_after(pre_tbtt), zx::usec(1));
     return ZX_OK;
   }
 
-  // Pre-TBTT or TBTT interrupt is about to happen very soon, poll.
+  // pre-tbtt or tbtt interrupt is about to happen very soon, poll.
   tbtt_interrupt_timer_.set(zx::deadline_after(kTbttInterruptPollInterval), zx::usec(1));
   return ZX_OK;
 }
@@ -4176,7 +4171,7 @@ void Device::WlanmacStop() {
   std::lock_guard<std::mutex> guard(lock_);
   StopInterruptPolling();
   // This is safe even if we're already unbound.
-  wlanmac_proxy_.reset();
+  wlanmac_proxy_.clear();
 
   // TODO(tkilbourn) disable radios, stop queues, etc.
 }
@@ -4253,8 +4248,8 @@ size_t Device::WriteBulkout(uint8_t* dest, const wlan_tx_packet_t& wlan_pkt) {
 
   uint16_t tail_len_eff = 0;
 
-  if (wlan_pkt.packet_tail != nullptr) {
-    auto tail = wlan_pkt.packet_tail;
+  if (wlan_pkt.packet_tail_list != nullptr) {
+    auto tail = wlan_pkt.packet_tail_list;
     uint16_t tail_offset = wlan_pkt.tail_offset;
     const uint8_t* tail_data = static_cast<const uint8_t*>(tail->data_buffer) + tail_offset;
     tail_len_eff = tail->data_size - tail_offset;
@@ -4299,7 +4294,7 @@ zx_status_t Device::WlanmacEnableBeaconing(uint32_t options, bool enabled) {
   return EnableHwBcn(enabled);
 }
 
-zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, wlan_tx_packet_t* bcn_pkt) {
+zx_status_t Device::WlanmacConfigureBeacon(uint32_t options, const wlan_tx_packet_t* bcn_pkt) {
   ZX_DEBUG_ASSERT(bcn_pkt != nullptr);
   if (bcn_pkt == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -4558,7 +4553,7 @@ zx_status_t Device::BuildTxStatusReport(const TxStatsFifoEntry& entry, const TxS
   return FillTxStatusEntries(idx_first, idx_last, stat_fifo, num_retries, report->tx_status_entry);
 }
 
-zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, wlan_tx_packet_t* wlan_pkt,
+zx_status_t Device::FillAggregation(BulkoutAggregation* aggr, const wlan_tx_packet_t* wlan_pkt,
                                     int packet_id, size_t aggr_payload_len) {
   // FillAggregation() fills up Aggregation Header, Payload, and its Tail marker.
   // Header is in the form of TxInfo. Its length field is to carry the length
@@ -4686,8 +4681,8 @@ zx_status_t Device::EnableHwBcn(bool active) {
   return ZX_OK;
 }
 
-zx_status_t Device::WlanmacSetChannel(uint32_t options, wlan_channel_t* chan) {
-  // Beware the multiple different return paths with different recovery requirements.
+zx_status_t Device::WlanmacSetChannel(uint32_t options, const wlan_channel_t* chan) {
+    // Beware the multiple different return paths with different recovery requirements.
 
   ZX_DEBUG_ASSERT(chan != nullptr);
   debugf("channel change: from %s to %s attempting..\n", wlan::common::ChanStr(cfg_chan_).c_str(),
@@ -4777,7 +4772,7 @@ zx_status_t Device::SetBss(const uint8_t* bssid) {
   return ZX_OK;
 }
 
-zx_status_t Device::WlanmacConfigureBss(uint32_t options, wlan_bss_config_t* config) {
+zx_status_t Device::WlanmacConfigureBss(uint32_t options, const wlan_bss_config_t* config) {
   if (options != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -5079,7 +5074,7 @@ zx_status_t Device::RemovePeer(const wlan::common::MacAddr& addr) {
   return ZX_OK;
 }
 
-zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_config) {
+zx_status_t Device::WlanmacSetKey(uint32_t options, const wlan_key_config_t* key_config) {
   if (options != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -5180,7 +5175,7 @@ zx_status_t Device::WlanmacSetKey(uint32_t options, wlan_key_config_t* key_confi
   return status;
 }
 
-zx_status_t Device::WlanmacClearAssoc(uint32_t options, const uint8_t* bssid) {
+zx_status_t Device::WlanmacClearAssoc(uint32_t options, const uint8_t* bssid, size_t bssid_len) {
   if (options != 0) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -5231,11 +5226,11 @@ uint8_t Device::GetRxAckPolicy(const wlan_tx_packet_t& wlan_pkt) {
 
 size_t Device::GetMpduLen(const wlan_tx_packet_t& wlan_pkt) {
   auto len = wlan_pkt.packet_head.data_size;
-  if (wlan_pkt.packet_tail != nullptr) {
-    if (wlan_pkt.packet_tail->data_size < wlan_pkt.tail_offset) {
+  if (wlan_pkt.packet_tail_list != nullptr) {
+    if (wlan_pkt.packet_tail_list->data_size < wlan_pkt.tail_offset) {
       return ZX_ERR_INVALID_ARGS;
     }
-    len += wlan_pkt.packet_tail->data_size - wlan_pkt.tail_offset;
+    len += wlan_pkt.packet_tail_list->data_size - wlan_pkt.tail_offset;
   }
   return len;
 }
@@ -5254,10 +5249,10 @@ size_t Device::GetBulkoutAggrPayloadLen(const wlan_tx_packet_t& wlan_pkt) {
 
   const auto head_data = static_cast<const uint8_t*>(wlan_pkt.packet_head.data_buffer);
   auto head_len = wlan_pkt.packet_head.data_size;
-  auto has_tail = wlan_pkt.packet_tail != nullptr;
+  auto has_tail = wlan_pkt.packet_tail_list != nullptr;
   uint16_t tail_len_eff = 0;
   if (has_tail) {
-    auto tail = wlan_pkt.packet_tail;
+    auto tail = wlan_pkt.packet_tail_list;
     uint16_t tail_offset = wlan_pkt.tail_offset;
     tail_len_eff = tail->data_size - tail_offset;
   }
@@ -5296,8 +5291,8 @@ void Device::DumpLengths(const wlan_tx_packet_t& wlan_pkt, BulkoutAggregation* u
   {  // wlan_pkt
     uint16_t wlan_pkt_head_len = wlan_pkt.packet_head.data_size;
     uint16_t wlan_pkt_tail_offset = wlan_pkt.tail_offset;
-    bool has_wlan_pkt_tail = (wlan_pkt.packet_tail != nullptr);
-    uint16_t wlan_pkt_tail_len = has_wlan_pkt_tail ? wlan_pkt.packet_tail->data_size : 0;
+    bool has_wlan_pkt_tail = (wlan_pkt.packet_tail_list != nullptr);
+    uint16_t wlan_pkt_tail_len = has_wlan_pkt_tail ? wlan_pkt.packet_tail_list->data_size : 0;
     debugf("        mpdu_len:%zu wlan_pkt head:%u\n", GetMpduLen(wlan_pkt), wlan_pkt_head_len);
     if (has_wlan_pkt_tail) {
       debugf("        wlan_pkt tail:%u offset:%u\n", wlan_pkt_tail_len, wlan_pkt_tail_offset);
