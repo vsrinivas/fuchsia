@@ -67,6 +67,7 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = this,
+      .now = [](void* cookie) -> zx_time_t { return BSS(cookie)->timer_mgr_.Now().get(); },
       .schedule = [](void* cookie, int64_t deadline) -> wlan_scheduler_event_id_t {
         TimeoutId id = {};
         BSS(cookie)->timer_mgr_.Schedule(zx::time(deadline), RustEvent{}, &id);
