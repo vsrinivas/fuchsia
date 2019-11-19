@@ -15,6 +15,8 @@
 
 #include <stdint.h>
 
+#include "spinel/spinel_types.h"
+
 //
 //
 //
@@ -44,14 +46,6 @@ typedef float transform_stack_float_t;
 //
 typedef double transform_stack_float_t;
 #endif
-
-//
-//
-//
-
-typedef uint64_t transform_stack_weakref_t;
-
-#define TRANSFORM_STACK_WEAKREF_INVALID UINT64_MAX;
 
 //
 //
@@ -91,7 +85,7 @@ transform_stack_restore(struct transform_stack * const ts, uint32_t const restor
 transform_stack_float_t *
 transform_stack_top_transform(struct transform_stack * const ts);
 
-transform_stack_weakref_t *
+spn_transform_weakref_t *
 transform_stack_top_weakref(struct transform_stack * const ts);
 
 //

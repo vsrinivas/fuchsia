@@ -105,7 +105,7 @@ struct transform_stack
   uint32_t                      size;
   uint32_t                      count;
 
-  transform_stack_weakref_t   * weakrefs;
+  spn_transform_weakref_t     * weakrefs;
   union transform_stack_3x3_u * transforms;
 };
 
@@ -248,7 +248,7 @@ transform_stack_top_transform(struct transform_stack * const ts)
   return transform_stack_tos(ts)->a8;
 }
 
-transform_stack_weakref_t *
+spn_transform_weakref_t *
 transform_stack_top_weakref(struct transform_stack * const ts)
 {
   return ts->weakrefs + ts->count - 1;
@@ -329,7 +329,7 @@ transform_stack_store_matrix_8(struct transform_stack * const ts,
   t->w0  = w0;
   t->w1  = w1;
 
-  ts->weakrefs[idx] = TRANSFORM_STACK_WEAKREF_INVALID;
+  ts->weakrefs[idx] = SPN_TRANSFORM_WEAKREF_INVALID;
 }
 
 //
