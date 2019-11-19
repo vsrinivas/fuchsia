@@ -329,24 +329,6 @@ TEST_F(CoreDisplayTest, CoreDisplayAlreadyBoundTest) {
   EXPECT_EQ(ZX_ERR_ALREADY_BOUND, open_status.value().s);
 }
 
-// This test assumes we have a valid VMO. Let's create this using the
-// allocate VMO function.
-TEST_F(CoreDisplayTest, ImportVmoImage) {
-  auto alloc_status = dc_client_->AllocateVmo(1024 * 600 * 4);
-  ASSERT_TRUE(alloc_status.ok());
-  ASSERT_EQ(ZX_OK, alloc_status.value().res);
-
-  fhd::ImageConfig image_config = {};
-  image_config.type = IMAGE_TYPE_SIMPLE;
-  image_config.pixel_format = ZX_PIXEL_FORMAT_RGB_x888;
-  zx::vmo local_vmo;
-  auto import_image_status =
-      dc_client_->ImportVmoImage(image_config, std::move(alloc_status.value().vmo), 0);
-
-  EXPECT_TRUE(import_image_status.ok());
-  EXPECT_EQ(ZX_OK, import_image_status.value().res);
-}
-
 TEST_F(CoreDisplayTest, CreateLayer) {
   auto resp = dc_client_->CreateLayer();
   EXPECT_TRUE(resp.ok());
@@ -570,8 +552,6 @@ TEST_F(CoreDisplayTest, ApplyConfig) { EXPECT_OK(ZX_OK); }
 TEST_F(CoreDisplayTest, EnableVsync) { EXPECT_OK(ZX_OK); }
 
 TEST_F(CoreDisplayTest, SetVirtconMode) { EXPECT_OK(ZX_OK); }
-
-TEST_F(CoreDisplayTest, ComputeLinearImageStride) { EXPECT_OK(ZX_OK); }
 
 TEST_F(CoreDisplayTest, ImportBufferCollection) { EXPECT_OK(ZX_OK); }
 

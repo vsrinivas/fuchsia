@@ -1360,14 +1360,6 @@ extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipC
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerImportBufferCollectionRequestTable;
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerImportBufferCollectionResponseTable;
@@ -1918,80 +1910,6 @@ class Controller final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
-  struct ComputeLinearImageStrideResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t stride;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct ComputeLinearImageStrideRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint32_t width;
-    uint32_t pixel_format;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = ComputeLinearImageStrideResponse;
-  };
-
-  struct AllocateVmoResponse final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    int32_t res;
-    ::zx::vmo vmo;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-    static constexpr uint32_t MaxNumHandles = 1;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kResponse;
-  };
-  struct AllocateVmoRequest final {
-    FIDL_ALIGNDECL
-    fidl_message_header_t _hdr;
-    uint64_t size;
-
-    static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
-    static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
-    static constexpr uint32_t MaxNumHandles = 0;
-    static constexpr uint32_t PrimarySize = 24;
-    static constexpr uint32_t MaxOutOfLine = 0;
-    static constexpr uint32_t AltPrimarySize = 24;
-    static constexpr uint32_t AltMaxOutOfLine = 0;
-    static constexpr bool HasFlexibleEnvelope = false;
-    static constexpr bool ContainsUnion = false;
-    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
-        ::fidl::internal::TransactionalMessageKind::kRequest;
-    using ResponseType = AllocateVmoResponse;
-  };
-
   struct ImportBufferCollectionResponse final {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -2504,38 +2422,6 @@ class Controller final {
       using Super::ok;
     };
     template <typename ResponseType>
-    class ComputeLinearImageStride_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      ComputeLinearImageStride_Impl(zx::unowned_channel _client_end, uint32_t width, uint32_t pixel_format);
-      ~ComputeLinearImageStride_Impl() = default;
-      ComputeLinearImageStride_Impl(ComputeLinearImageStride_Impl&& other) = default;
-      ComputeLinearImageStride_Impl& operator=(ComputeLinearImageStride_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class AllocateVmo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
-     public:
-      AllocateVmo_Impl(zx::unowned_channel _client_end, uint64_t size);
-      ~AllocateVmo_Impl() = default;
-      AllocateVmo_Impl(AllocateVmo_Impl&& other) = default;
-      AllocateVmo_Impl& operator=(AllocateVmo_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class ImportBufferCollection_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -2681,8 +2567,6 @@ class Controller final {
     using ApplyConfig = ApplyConfig_Impl;
     using EnableVsync = EnableVsync_Impl;
     using SetVirtconMode = SetVirtconMode_Impl;
-    using ComputeLinearImageStride = ComputeLinearImageStride_Impl<ComputeLinearImageStrideResponse>;
-    using AllocateVmo = AllocateVmo_Impl<AllocateVmoResponse>;
     using ImportBufferCollection = ImportBufferCollection_Impl<ImportBufferCollectionResponse>;
     using ReleaseBufferCollection = ReleaseBufferCollection_Impl;
     using SetBufferCollectionConstraints = SetBufferCollectionConstraints_Impl<SetBufferCollectionConstraintsResponse>;
@@ -2950,38 +2834,6 @@ class Controller final {
       using Super::ok;
     };
     template <typename ResponseType>
-    class ComputeLinearImageStride_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      ComputeLinearImageStride_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer);
-      ~ComputeLinearImageStride_Impl() = default;
-      ComputeLinearImageStride_Impl(ComputeLinearImageStride_Impl&& other) = default;
-      ComputeLinearImageStride_Impl& operator=(ComputeLinearImageStride_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
-    class AllocateVmo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
-      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
-     public:
-      AllocateVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer);
-      ~AllocateVmo_Impl() = default;
-      AllocateVmo_Impl(AllocateVmo_Impl&& other) = default;
-      AllocateVmo_Impl& operator=(AllocateVmo_Impl&& other) = default;
-      using Super::status;
-      using Super::error;
-      using Super::ok;
-      using Super::Unwrap;
-      using Super::value;
-      using Super::operator->;
-      using Super::operator*;
-    };
-    template <typename ResponseType>
     class ImportBufferCollection_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -3127,8 +2979,6 @@ class Controller final {
     using ApplyConfig = ApplyConfig_Impl;
     using EnableVsync = EnableVsync_Impl;
     using SetVirtconMode = SetVirtconMode_Impl;
-    using ComputeLinearImageStride = ComputeLinearImageStride_Impl<ComputeLinearImageStrideResponse>;
-    using AllocateVmo = AllocateVmo_Impl<AllocateVmoResponse>;
     using ImportBufferCollection = ImportBufferCollection_Impl<ImportBufferCollectionResponse>;
     using ReleaseBufferCollection = ReleaseBufferCollection_Impl;
     using SetBufferCollectionConstraints = SetBufferCollectionConstraints_Impl<SetBufferCollectionConstraintsResponse>;
@@ -3273,18 +3123,6 @@ class Controller final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::SetVirtconMode SetVirtconMode(::fidl::BytePart _request_buffer, uint8_t mode);
-
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::ComputeLinearImageStride ComputeLinearImageStride(uint32_t width, uint32_t pixel_format);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::ComputeLinearImageStride ComputeLinearImageStride(::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer);
-
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    ResultOf::AllocateVmo AllocateVmo(uint64_t size);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    UnownedResultOf::AllocateVmo AllocateVmo(::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ImportBufferCollection ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token);
@@ -3500,18 +3338,6 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::SetVirtconMode SetVirtconMode(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint8_t mode);
 
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::ComputeLinearImageStride ComputeLinearImageStride(zx::unowned_channel _client_end, uint32_t width, uint32_t pixel_format);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::ComputeLinearImageStride ComputeLinearImageStride(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer);
-
-    // Allocates 48 bytes of message buffer on the stack. No heap allocation necessary.
-    static ResultOf::AllocateVmo AllocateVmo(zx::unowned_channel _client_end, uint64_t size);
-
-    // Caller provides the backing storage for FIDL message via request and response buffers.
-    static UnownedResultOf::AllocateVmo AllocateVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer);
-
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ImportBufferCollection ImportBufferCollection(zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token);
 
@@ -3642,10 +3468,6 @@ class Controller final {
     static ::fidl::internal::StatusAndError EnableVsync(zx::unowned_channel _client_end, ::fidl::DecodedMessage<EnableVsyncRequest> params);
 
     static ::fidl::internal::StatusAndError SetVirtconMode(zx::unowned_channel _client_end, ::fidl::DecodedMessage<SetVirtconModeRequest> params);
-
-    static ::fidl::DecodeResult<ComputeLinearImageStrideResponse> ComputeLinearImageStride(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ComputeLinearImageStrideRequest> params, ::fidl::BytePart response_buffer);
-
-    static ::fidl::DecodeResult<AllocateVmoResponse> AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<ImportBufferCollectionResponse> ImportBufferCollection(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportBufferCollectionRequest> params, ::fidl::BytePart response_buffer);
 
@@ -3810,34 +3632,6 @@ class Controller final {
     using SetVirtconModeCompleter = ::fidl::Completer<>;
 
     virtual void SetVirtconMode(uint8_t mode, SetVirtconModeCompleter::Sync _completer) = 0;
-
-    class ComputeLinearImageStrideCompleterBase : public _Base {
-     public:
-      void Reply(uint32_t stride);
-      void Reply(::fidl::BytePart _buffer, uint32_t stride);
-      void Reply(::fidl::DecodedMessage<ComputeLinearImageStrideResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using ComputeLinearImageStrideCompleter = ::fidl::Completer<ComputeLinearImageStrideCompleterBase>;
-
-    virtual void ComputeLinearImageStride(uint32_t width, uint32_t pixel_format, ComputeLinearImageStrideCompleter::Sync _completer) = 0;
-
-    class AllocateVmoCompleterBase : public _Base {
-     public:
-      void Reply(int32_t res, ::zx::vmo vmo);
-      void Reply(::fidl::BytePart _buffer, int32_t res, ::zx::vmo vmo);
-      void Reply(::fidl::DecodedMessage<AllocateVmoResponse> params);
-
-     protected:
-      using ::fidl::CompleterBase::CompleterBase;
-    };
-
-    using AllocateVmoCompleter = ::fidl::Completer<AllocateVmoCompleterBase>;
-
-    virtual void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync _completer) = 0;
 
     class ImportBufferCollectionCompleterBase : public _Base {
      public:
@@ -4030,10 +3824,6 @@ class Controller final {
     static void VsyncResponse(const ::fidl::DecodedMessage<Controller::VsyncResponse>& _msg);
     static void SetVirtconModeRequest(const ::fidl::DecodedMessage<Controller::SetVirtconModeRequest>& _msg);
     static void ClientOwnershipChangeResponse(const ::fidl::DecodedMessage<Controller::ClientOwnershipChangeResponse>& _msg);
-    static void ComputeLinearImageStrideRequest(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideRequest>& _msg);
-    static void ComputeLinearImageStrideResponse(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideResponse>& _msg);
-    static void AllocateVmoRequest(const ::fidl::DecodedMessage<Controller::AllocateVmoRequest>& _msg);
-    static void AllocateVmoResponse(const ::fidl::DecodedMessage<Controller::AllocateVmoResponse>& _msg);
     static void ImportBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionRequest>& _msg);
     static void ImportBufferCollectionResponse(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionResponse>& _msg);
     static void ReleaseBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ReleaseBufferCollectionRequest>& _msg);
@@ -4434,40 +4224,6 @@ struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ClientOwne
 static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ClientOwnershipChangeResponse)
     == ::llcpp::fuchsia::hardware::display::Controller::ClientOwnershipChangeResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ClientOwnershipChangeResponse, has_ownership) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest)
-    == ::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest, width) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideRequest, pixel_format) == 20);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideResponse)
-    == ::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::ComputeLinearImageStrideResponse, stride) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::AllocateVmoRequest> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::AllocateVmoRequest> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::AllocateVmoRequest)
-    == ::llcpp::fuchsia::hardware::display::Controller::AllocateVmoRequest::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::AllocateVmoRequest, size) == 16);
-
-template <>
-struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse> : public std::true_type {};
-template <>
-struct IsFidlMessage<::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse> : public std::true_type {};
-static_assert(sizeof(::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse)
-    == ::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse::PrimarySize);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse, res) == 16);
-static_assert(offsetof(::llcpp::fuchsia::hardware::display::Controller::AllocateVmoResponse, vmo) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::hardware::display::Controller::ImportBufferCollectionRequest> : public std::true_type {};

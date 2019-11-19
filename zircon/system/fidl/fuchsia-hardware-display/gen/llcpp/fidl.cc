@@ -705,20 +705,6 @@ extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipC
 extern "C" const fidl_type_t fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerClientOwnershipChangeEventTable;
 [[maybe_unused]]
-constexpr uint64_t kController_ComputeLinearImageStride_Ordinal = 0x6ac90cda00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kController_ComputeLinearImageStride_GenOrdinal = 0x1ed33802ba2d797clu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-[[maybe_unused]]
-constexpr uint64_t kController_AllocateVmo_Ordinal = 0x6fb5bafa00000000lu;
-[[maybe_unused]]
-constexpr uint64_t kController_AllocateVmo_GenOrdinal = 0x589658048f8d398blu;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoRequestTable;
-extern "C" const fidl_type_t fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-extern "C" const fidl_type_t v1_fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-[[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_Ordinal = 0x605b9d0d00000000lu;
 [[maybe_unused]]
 constexpr uint64_t kController_ImportBufferCollection_GenOrdinal = 0x1cdf9cc2e60832d1lu;
@@ -2132,132 +2118,6 @@ Controller::UnownedResultOf::SetVirtconMode Controller::Call::SetVirtconMode(zx:
 }
 
 template <>
-Controller::ResultOf::ComputeLinearImageStride_Impl<Controller::ComputeLinearImageStrideResponse>::ComputeLinearImageStride_Impl(zx::unowned_channel _client_end, uint32_t width, uint32_t pixel_format) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ComputeLinearImageStrideRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, ComputeLinearImageStrideRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ComputeLinearImageStrideRequest*>(_write_bytes);
-  _request.width = std::move(width);
-  _request.pixel_format = std::move(pixel_format);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(ComputeLinearImageStrideRequest));
-  ::fidl::DecodedMessage<ComputeLinearImageStrideRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Controller::InPlace::ComputeLinearImageStride(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Controller::ResultOf::ComputeLinearImageStride Controller::SyncClient::ComputeLinearImageStride(uint32_t width, uint32_t pixel_format) {
-  return ResultOf::ComputeLinearImageStride(zx::unowned_channel(this->channel_), std::move(width), std::move(pixel_format));
-}
-
-Controller::ResultOf::ComputeLinearImageStride Controller::Call::ComputeLinearImageStride(zx::unowned_channel _client_end, uint32_t width, uint32_t pixel_format) {
-  return ResultOf::ComputeLinearImageStride(std::move(_client_end), std::move(width), std::move(pixel_format));
-}
-
-template <>
-Controller::UnownedResultOf::ComputeLinearImageStride_Impl<Controller::ComputeLinearImageStrideResponse>::ComputeLinearImageStride_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < ComputeLinearImageStrideRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<ComputeLinearImageStrideResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, ComputeLinearImageStrideRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<ComputeLinearImageStrideRequest*>(_request_buffer.data());
-  _request.width = std::move(width);
-  _request.pixel_format = std::move(pixel_format);
-  _request_buffer.set_actual(sizeof(ComputeLinearImageStrideRequest));
-  ::fidl::DecodedMessage<ComputeLinearImageStrideRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Controller::InPlace::ComputeLinearImageStride(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Controller::UnownedResultOf::ComputeLinearImageStride Controller::SyncClient::ComputeLinearImageStride(::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ComputeLinearImageStride(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(width), std::move(pixel_format), std::move(_response_buffer));
-}
-
-Controller::UnownedResultOf::ComputeLinearImageStride Controller::Call::ComputeLinearImageStride(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint32_t width, uint32_t pixel_format, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::ComputeLinearImageStride(std::move(_client_end), std::move(_request_buffer), std::move(width), std::move(pixel_format), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Controller::ComputeLinearImageStrideResponse> Controller::InPlace::ComputeLinearImageStride(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ComputeLinearImageStrideRequest> params, ::fidl::BytePart response_buffer) {
-  Controller::SetTransactionHeaderFor::ComputeLinearImageStrideRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::ComputeLinearImageStrideResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<ComputeLinearImageStrideRequest, ComputeLinearImageStrideResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::ComputeLinearImageStrideResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
-Controller::ResultOf::AllocateVmo_Impl<Controller::AllocateVmoResponse>::AllocateVmo_Impl(zx::unowned_channel _client_end, uint64_t size) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoRequest, ::fidl::MessageDirection::kSending>();
-  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
-  auto& _write_bytes_array = _write_bytes_inlined;
-  uint8_t* _write_bytes = _write_bytes_array.view().data();
-  memset(_write_bytes, 0, AllocateVmoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<AllocateVmoRequest*>(_write_bytes);
-  _request.size = std::move(size);
-  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateVmoRequest));
-  ::fidl::DecodedMessage<AllocateVmoRequest> _decoded_request(std::move(_request_bytes));
-  Super::SetResult(
-      Controller::InPlace::AllocateVmo(std::move(_client_end), std::move(_decoded_request), Super::response_buffer()));
-}
-
-Controller::ResultOf::AllocateVmo Controller::SyncClient::AllocateVmo(uint64_t size) {
-  return ResultOf::AllocateVmo(zx::unowned_channel(this->channel_), std::move(size));
-}
-
-Controller::ResultOf::AllocateVmo Controller::Call::AllocateVmo(zx::unowned_channel _client_end, uint64_t size) {
-  return ResultOf::AllocateVmo(std::move(_client_end), std::move(size));
-}
-
-template <>
-Controller::UnownedResultOf::AllocateVmo_Impl<Controller::AllocateVmoResponse>::AllocateVmo_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer) {
-  if (_request_buffer.capacity() < AllocateVmoRequest::PrimarySize) {
-    Super::SetFailure(::fidl::DecodeResult<AllocateVmoResponse>(ZX_ERR_BUFFER_TOO_SMALL, ::fidl::internal::kErrorRequestBufferTooSmall));
-    return;
-  }
-  memset(_request_buffer.data(), 0, AllocateVmoRequest::PrimarySize);
-  auto& _request = *reinterpret_cast<AllocateVmoRequest*>(_request_buffer.data());
-  _request.size = std::move(size);
-  _request_buffer.set_actual(sizeof(AllocateVmoRequest));
-  ::fidl::DecodedMessage<AllocateVmoRequest> _decoded_request(std::move(_request_buffer));
-  Super::SetResult(
-      Controller::InPlace::AllocateVmo(std::move(_client_end), std::move(_decoded_request), std::move(_response_buffer)));
-}
-
-Controller::UnownedResultOf::AllocateVmo Controller::SyncClient::AllocateVmo(::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AllocateVmo(zx::unowned_channel(this->channel_), std::move(_request_buffer), std::move(size), std::move(_response_buffer));
-}
-
-Controller::UnownedResultOf::AllocateVmo Controller::Call::AllocateVmo(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t size, ::fidl::BytePart _response_buffer) {
-  return UnownedResultOf::AllocateVmo(std::move(_client_end), std::move(_request_buffer), std::move(size), std::move(_response_buffer));
-}
-
-::fidl::DecodeResult<Controller::AllocateVmoResponse> Controller::InPlace::AllocateVmo(zx::unowned_channel _client_end, ::fidl::DecodedMessage<AllocateVmoRequest> params, ::fidl::BytePart response_buffer) {
-  Controller::SetTransactionHeaderFor::AllocateVmoRequest(params);
-  auto _encode_request_result = ::fidl::Encode(std::move(params));
-  if (_encode_request_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::AllocateVmoResponse>::FromFailure(
-        std::move(_encode_request_result));
-  }
-  auto _call_result = ::fidl::Call<AllocateVmoRequest, AllocateVmoResponse>(
-    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
-  if (_call_result.status != ZX_OK) {
-    return ::fidl::DecodeResult<Controller::AllocateVmoResponse>::FromFailure(
-        std::move(_call_result));
-  }
-  return ::fidl::Decode(std::move(_call_result.message));
-}
-
-template <>
 Controller::ResultOf::ImportBufferCollection_Impl<Controller::ImportBufferCollectionResponse>::ImportBufferCollection_Impl(zx::unowned_channel _client_end, uint64_t collection_id, ::zx::channel collection_token) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ImportBufferCollectionRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -3156,32 +3016,6 @@ bool Controller::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transacti
           Interface::SetVirtconModeCompleter::Sync(txn));
       return true;
     }
-    case kController_ComputeLinearImageStride_Ordinal:
-    case kController_ComputeLinearImageStride_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<ComputeLinearImageStrideRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->ComputeLinearImageStride(std::move(message->width), std::move(message->pixel_format),
-          Interface::ComputeLinearImageStrideCompleter::Sync(txn));
-      return true;
-    }
-    case kController_AllocateVmo_Ordinal:
-    case kController_AllocateVmo_GenOrdinal:
-    {
-      auto result = ::fidl::DecodeAs<AllocateVmoRequest>(msg);
-      if (result.status != ZX_OK) {
-        txn->Close(ZX_ERR_INVALID_ARGS);
-        return true;
-      }
-      auto message = result.message.message();
-      impl->AllocateVmo(std::move(message->size),
-          Interface::AllocateVmoCompleter::Sync(txn));
-      return true;
-    }
     case kController_ImportBufferCollection_Ordinal:
     case kController_ImportBufferCollection_GenOrdinal:
     {
@@ -3586,80 +3420,6 @@ zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _ch
 zx_status_t Controller::SendClientOwnershipChangeEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<ClientOwnershipChangeResponse> params) {
   Controller::SetTransactionHeaderFor::ClientOwnershipChangeResponse(params);
   return ::fidl::Write(zx::unowned_channel(_chan), std::move(params));
-}
-
-
-void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(uint32_t stride) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ComputeLinearImageStrideResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<ComputeLinearImageStrideResponse*>(_write_bytes);
-  Controller::SetTransactionHeaderFor::ComputeLinearImageStrideResponse(
-      ::fidl::DecodedMessage<ComputeLinearImageStrideResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              ComputeLinearImageStrideResponse::PrimarySize,
-              ComputeLinearImageStrideResponse::PrimarySize)));
-  _response.stride = std::move(stride);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ComputeLinearImageStrideResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ComputeLinearImageStrideResponse>(std::move(_response_bytes)));
-}
-
-void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(::fidl::BytePart _buffer, uint32_t stride) {
-  if (_buffer.capacity() < ComputeLinearImageStrideResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<ComputeLinearImageStrideResponse*>(_buffer.data());
-  Controller::SetTransactionHeaderFor::ComputeLinearImageStrideResponse(
-      ::fidl::DecodedMessage<ComputeLinearImageStrideResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              ComputeLinearImageStrideResponse::PrimarySize,
-              ComputeLinearImageStrideResponse::PrimarySize)));
-  _response.stride = std::move(stride);
-  _buffer.set_actual(sizeof(ComputeLinearImageStrideResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<ComputeLinearImageStrideResponse>(std::move(_buffer)));
-}
-
-void Controller::Interface::ComputeLinearImageStrideCompleterBase::Reply(::fidl::DecodedMessage<ComputeLinearImageStrideResponse> params) {
-  Controller::SetTransactionHeaderFor::ComputeLinearImageStrideResponse(params);
-  CompleterBase::SendReply(std::move(params));
-}
-
-
-void Controller::Interface::AllocateVmoCompleterBase::Reply(int32_t res, ::zx::vmo vmo) {
-  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<AllocateVmoResponse, ::fidl::MessageDirection::kSending>();
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
-  auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_write_bytes);
-  Controller::SetTransactionHeaderFor::AllocateVmoResponse(
-      ::fidl::DecodedMessage<AllocateVmoResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              AllocateVmoResponse::PrimarySize,
-              AllocateVmoResponse::PrimarySize)));
-  _response.res = std::move(res);
-  _response.vmo = std::move(vmo);
-  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(AllocateVmoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AllocateVmoResponse>(std::move(_response_bytes)));
-}
-
-void Controller::Interface::AllocateVmoCompleterBase::Reply(::fidl::BytePart _buffer, int32_t res, ::zx::vmo vmo) {
-  if (_buffer.capacity() < AllocateVmoResponse::PrimarySize) {
-    CompleterBase::Close(ZX_ERR_INTERNAL);
-    return;
-  }
-  auto& _response = *reinterpret_cast<AllocateVmoResponse*>(_buffer.data());
-  Controller::SetTransactionHeaderFor::AllocateVmoResponse(
-      ::fidl::DecodedMessage<AllocateVmoResponse>(
-          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
-              AllocateVmoResponse::PrimarySize,
-              AllocateVmoResponse::PrimarySize)));
-  _response.res = std::move(res);
-  _response.vmo = std::move(vmo);
-  _buffer.set_actual(sizeof(AllocateVmoResponse));
-  CompleterBase::SendReply(::fidl::DecodedMessage<AllocateVmoResponse>(std::move(_buffer)));
-}
-
-void Controller::Interface::AllocateVmoCompleterBase::Reply(::fidl::DecodedMessage<AllocateVmoResponse> params) {
-  Controller::SetTransactionHeaderFor::AllocateVmoResponse(params);
-  CompleterBase::SendReply(std::move(params));
 }
 
 
@@ -4082,20 +3842,6 @@ void Controller::SetTransactionHeaderFor::SetVirtconModeRequest(const ::fidl::De
 
 void Controller::SetTransactionHeaderFor::ClientOwnershipChangeResponse(const ::fidl::DecodedMessage<Controller::ClientOwnershipChangeResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ClientOwnershipChange_GenOrdinal);
-}
-
-void Controller::SetTransactionHeaderFor::ComputeLinearImageStrideRequest(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ComputeLinearImageStride_GenOrdinal);
-}
-void Controller::SetTransactionHeaderFor::ComputeLinearImageStrideResponse(const ::fidl::DecodedMessage<Controller::ComputeLinearImageStrideResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_ComputeLinearImageStride_GenOrdinal);
-}
-
-void Controller::SetTransactionHeaderFor::AllocateVmoRequest(const ::fidl::DecodedMessage<Controller::AllocateVmoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AllocateVmo_GenOrdinal);
-}
-void Controller::SetTransactionHeaderFor::AllocateVmoResponse(const ::fidl::DecodedMessage<Controller::AllocateVmoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kController_AllocateVmo_GenOrdinal);
 }
 
 void Controller::SetTransactionHeaderFor::ImportBufferCollectionRequest(const ::fidl::DecodedMessage<Controller::ImportBufferCollectionRequest>& _msg) {

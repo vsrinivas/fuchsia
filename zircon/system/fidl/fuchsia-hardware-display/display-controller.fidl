@@ -445,18 +445,6 @@ protocol Controller {
     // until this event informs them otherwise.
     -> ClientOwnershipChange(bool has_ownership);
 
-    // DEPRECATED: Do not use this in new code.
-    //
-    // Computes the stride (in pixels) necessary for a linear image with the
-    // given width and pixel format. Returns 0 on error.
-    ComputeLinearImageStride(uint32 width, uint32 pixel_format) -> (uint32 stride);
-
-    // DEPRECATED: Use either ImportBufferCollection or GetSingleBufferFramebuffer in new code.
-    //
-    // Allocates a VMO of the requested size which can be used for images.
-    // TODO: move this into a separate video buffer management system.
-    AllocateVmo(uint64 size) -> (zx.status res, handle<vmo>? vmo);
-
     // Import a sysmem buffer collection token. `collection_id` must not
     // already be in use.
     ImportBufferCollection(uint64 collection_id,

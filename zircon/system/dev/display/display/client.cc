@@ -73,8 +73,6 @@ zx_status_t decode_message(fidl::Message* msg) {
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerApplyConfig);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerEnableVsync);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetVirtconMode);
-  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerComputeLinearImageStride);
-  SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerAllocateVmo);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportBufferCollection);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetBufferCollectionConstraints);
   SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseBufferCollection);
@@ -213,7 +211,6 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
   HANDLE_REQUEST_CASE(ApplyConfig);
   HANDLE_REQUEST_CASE(EnableVsync);
   HANDLE_REQUEST_CASE(SetVirtconMode);
-  HANDLE_REQUEST_CASE(ComputeLinearImageStride);
   HANDLE_REQUEST_CASE(ImportBufferCollection);
   HANDLE_REQUEST_CASE(ReleaseBufferCollection);
   HANDLE_REQUEST_CASE(SetBufferCollectionConstraints);
@@ -222,12 +219,6 @@ void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase
   HANDLE_REQUEST_CASE(StartCapture);
   HANDLE_REQUEST_CASE(ReleaseCapture);
   END_TABLE_CASE
-  else if (ordinal == fuchsia_hardware_display_ControllerAllocateVmoOrdinal ||
-           ordinal == fuchsia_hardware_display_ControllerAllocateVmoGenOrdinal) {
-    auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
-        msg.bytes().data());
-    HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
-  }
   else if (ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferOrdinal ||
            ordinal == fuchsia_hardware_display_ControllerGetSingleBufferFramebufferGenOrdinal) {
     auto r = reinterpret_cast<
@@ -1155,28 +1146,6 @@ void Client::HandleSetVirtconMode(
     return;
   }
   controller_->SetVcMode(req->mode);
-}
-
-void Client::HandleComputeLinearImageStride(
-    const fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest* req,
-    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
-  auto resp =
-      resp_builder->New<fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse>();
-  *resp_table = &fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
-  resp->stride = controller_->dc()->ComputeLinearStride(req->width, req->pixel_format);
-}
-
-void Client::HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocateVmoRequest* req,
-                               fidl::Builder* resp_builder, zx_handle_t* handle_out,
-                               bool* has_handle_out, const fidl_type_t** resp_table) {
-  auto resp = resp_builder->New<fuchsia_hardware_display_ControllerAllocateVmoResponse>();
-  *resp_table = &fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
-
-  zx::vmo vmo;
-  resp->res = controller_->dc()->AllocateVmo(req->size, &vmo);
-  *has_handle_out = resp->res == ZX_OK;
-  *handle_out = vmo.release();
-  resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
 }
 
 void Client::HandleGetSingleBufferFramebuffer(

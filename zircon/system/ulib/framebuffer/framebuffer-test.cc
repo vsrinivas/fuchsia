@@ -185,15 +185,6 @@ class StubDisplayController : public fhd::Controller::Interface {
     EXPECT_TRUE(false);
   }
 
-  void ComputeLinearImageStride(uint32_t width, uint32_t pixel_format,
-                                ComputeLinearImageStrideCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-
-  void AllocateVmo(uint64_t size, AllocateVmoCompleter::Sync _completer) override {
-    EXPECT_TRUE(false);
-  }
-
   void ImportBufferCollection(uint64_t collection_id, ::zx::channel collection_token,
                               ImportBufferCollectionCompleter::Sync _completer) override {
     zx::channel server, client;
