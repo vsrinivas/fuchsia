@@ -56,13 +56,7 @@ void OptionsLineInputBase::HandleLine(const std::string& line, bool canceled) {
 
 // OptionsLineInputStdout --------------------------------------------------------------------------
 
-bool OptionsLineInputStdout::OnInput(char c) {
-  if (!LineInputStdout::OnInput(c))
-    return false;
-
-  bool canceled = IsEof();
-  HandleLine(GetLine(), canceled);
-  return true;
-}
+OptionsLineInputStdout::OptionsLineInputStdout(const std::string& prompt)
+    : LineInputStdout([this](const std::string& s) { HandleLine(s, IsEof()); }, prompt) {}
 
 }  // namespace line_input

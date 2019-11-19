@@ -69,9 +69,7 @@ class OptionsLineInputBase {
 // });
 class OptionsLineInputStdout : public OptionsLineInputBase, public LineInputStdout {
  public:
-  OptionsLineInputStdout(const std::string& prompt) : LineInputStdout(prompt) {}
-
-  bool OnInput(char c) override;
+  OptionsLineInputStdout(const std::string& prompt);
 };
 
 }  // namespace line_input

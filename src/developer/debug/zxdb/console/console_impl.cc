@@ -84,7 +84,7 @@ void PreserveStdoutTermios() {}
 
 ConsoleImpl::ConsoleImpl(Session* session)
     : Console(session),
-      line_input_("[zxdb] "),
+      line_input_([this](const std::string& s) { OnLineInput(s); }, "[zxdb] "),
       options_line_input_("> "),
       impl_weak_factory_(this) {
   // Set the line input completion callback that can know about our context.
@@ -192,6 +192,30 @@ void ConsoleImpl::Clear() {
   line_input_.Show();
 }
 
+void ConsoleImpl::OnLineInput(const std::string& line) {
+  // Getting here means that there is a line to be processed. Options line input would've
+  // triggered the callback by now, so the line is already handled. This means that there is no
+  // need to actually process the line.
+  if (options_line_input_.is_active()) {
+    current_line_input_->BeginReadLine();
+    return;
+  }
+
+  // EOF (ctrl-d) should exit gracefully.
+  if (current_line_input_->IsEof()) {
+    current_line_input_->EnsureNoRawMode();
+    Console::Output("\n");
+    debug_ipc::MessageLoop::Current()->QuitNow();
+    return;
+  }
+
+  Result result = ProcessInputLine(line);
+  if (result == Result::kQuit)
+    return;
+
+  current_line_input_->BeginReadLine();
+}
+
 Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandCallback callback) {
   Command cmd;
   Err err;
@@ -237,39 +261,12 @@ Console::Result ConsoleImpl::ProcessInputLine(const std::string& line, CommandCa
 }
 
 void ConsoleImpl::OnFDReady(int fd, bool readable, bool, bool) {
-  if (!readable) {
+  if (!readable)
     return;
-  }
 
   char ch;
-  while (read(STDIN_FILENO, &ch, 1) > 0) {
-    bool reading_options = options_line_input_.is_active();
-    if (!current_line_input_->OnInput(ch))
-      continue;
-
-    // Getting here means that there is a line to be processed. Options line input would've
-    // triggered the callback by now, so the line is already handled. This means that there is no
-    // need to actually process the line.
-    if (reading_options) {
-      current_line_input_->BeginReadLine();
-      continue;
-    }
-
-    // EOF (ctrl-d) should exit gracefully.
-    if (current_line_input_->IsEof()) {
-      current_line_input_->EnsureNoRawMode();
-      Console::Output("\n");
-      debug_ipc::MessageLoop::Current()->QuitNow();
-      return;
-    }
-
-    std::string line = current_line_input_->GetLine();
-    Result result = ProcessInputLine(line);
-    if (result == Result::kQuit)
-      return;
-
-    current_line_input_->BeginReadLine();
-  }
+  while (read(STDIN_FILENO, &ch, 1) > 0)
+    current_line_input_->OnInput(ch);
 }
 
 void ConsoleImpl::PromptOptions(const std::vector<std::string>& options,

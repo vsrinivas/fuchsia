@@ -38,6 +38,7 @@ class ConsoleImpl : public Console, public debug_ipc::FDWatcher {
                      line_input::OptionsCallback callback) override;
 
  private:
+  void OnLineInput(const std::string& line);
   Result DispatchInputLine(const std::string& line, CommandCallback callback = nullptr);
 
   // FDWatcher implementation.

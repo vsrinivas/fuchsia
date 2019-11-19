@@ -52,7 +52,8 @@ size_t GetTerminalMaxCols(int fileno) {
 
 }  // namespace
 
-LineInputEditor::LineInputEditor(const std::string& prompt) : prompt_(prompt) {
+LineInputEditor::LineInputEditor(AcceptCallback accept_cb, const std::string& prompt)
+    : accept_callback_(std::move(accept_cb)), prompt_(prompt) {
   // Start with a blank item at [0] which is where editing will take place.
   history_.emplace_front();
 }
@@ -78,26 +79,26 @@ void LineInputEditor::BeginReadLine() {
   RepaintLine();
 }
 
-bool LineInputEditor::OnInput(char c) {
+void LineInputEditor::OnInput(char c) {
   FXL_DCHECK(editing_);  // BeginReadLine not called.
   FXL_DCHECK(visible_);  // Don't call while hidden.
 
   // Reverse history mode does its own input handling.
   if (reverse_history_mode_) {
     HandleReverseHistory(c);
-    return false;
+    return;
   }
 
   if (reading_escaped_input_) {
     HandleEscapedInput(c);
-    return false;
+    return;
   }
 
   if (completion_mode_) {
     // Special keys for completion mode.
     if (c == SpecialCharacters::kKeyTab) {
       HandleTab();
-      return false;
+      return;
     }
     // We don't handle escape here to cancel because that's ambiguous with
     // escape sequences like arrow keys.
@@ -118,7 +119,7 @@ bool LineInputEditor::OnInput(char c) {
     case SpecialCharacters::kKeyControlD:
       if (cur_line().empty()) {
         HandleEndOfFile();
-        return true;
+        return;
       } else {
         HandleDelete();
       }
@@ -141,7 +142,7 @@ bool LineInputEditor::OnInput(char c) {
     case SpecialCharacters::kKeyNewline:  // == Ctrl + J
     case SpecialCharacters::kKeyEnter:    // == Ctrl + M
       HandleEnter();
-      return true;
+      return;
     case SpecialCharacters::kKeyControlN:
       MoveDown();
       break;
@@ -171,7 +172,6 @@ bool LineInputEditor::OnInput(char c) {
       Insert(c);
       break;
   }
-  return false;
 }
 
 void LineInputEditor::AddToHistory(const std::string& line) {
@@ -293,6 +293,8 @@ void LineInputEditor::HandleEnter() {
   history_[0] = new_line;
   EnsureNoRawMode();
   editing_ = false;
+
+  accept_callback_(GetLine());
 }
 
 void LineInputEditor::HandleTab() {
@@ -362,6 +364,7 @@ void LineInputEditor::HandleEndOfTransimission() {
 void LineInputEditor::HandleEndOfFile() {
   eof_ = true;
   editing_ = false;
+  accept_callback_(std::string());
 }
 
 void LineInputEditor::HandleReverseHistory(char c) {
@@ -653,7 +656,8 @@ void LineInputEditor::ResetLineState() {
 
 // LineInputStdout ---------------------------------------------------------------------------------
 
-LineInputStdout::LineInputStdout(const std::string& prompt) : LineInputEditor(prompt) {
+LineInputStdout::LineInputStdout(AcceptCallback accept_cb, const std::string& prompt)
+    : LineInputEditor(std::move(accept_cb), prompt) {
   SetMaxCols(GetTerminalMaxCols(STDIN_FILENO));
 }
 LineInputStdout::~LineInputStdout() {}
@@ -708,20 +712,6 @@ void LineInputStdout::EnsureNoRawMode() {
     raw_mode_enabled_ = false;
   }
 #endif
-}
-
-LineInputBlockingStdio::LineInputBlockingStdio(const std::string& prompt)
-    : LineInputStdout(prompt) {}
-
-std::string LineInputBlockingStdio::ReadLine() {
-  BeginReadLine();
-
-  char read_buf;
-  while (read(STDIN_FILENO, &read_buf, 1) == 1) {
-    if (OnInput(read_buf))
-      break;
-  }
-  return GetLine();
 }
 
 }  // namespace line_input

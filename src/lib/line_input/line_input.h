@@ -54,13 +54,17 @@ struct SpecialCharacters {
 // state and remembers the prompt. When you want to read a line:
 //
 //  1. Call BeginReadLine().
-//  2. Push data to it via OnInput() until it returns true.
-//  3. Check IsEof() and get the input from GetLine().
-//  4. Add line to history if desired.
-//  5. Repeat.
+//  2. Push data to it via OnInput().
+//  3. On an accept callback:
+//     3a. Check IsEof() and get the input from GetLine().
+//     3b. Add line to history if desired.
+//  4. Repeat.
 class LineInput {
  public:
   virtual ~LineInput() = default;
+
+  // Called with the user input when the user acceps a line.
+  using AcceptCallback = fit::function<void(const std::string&)>;
 
   // Given some typing, returns a prioritized list of completions.
   using AutocompleteCallback = fit::function<std::vector<std::string>(const std::string&)>;
@@ -91,9 +95,9 @@ class LineInput {
   // Call to initialize reading a new line.
   virtual void BeginReadLine() = 0;
 
-  // Provides one character of input to the editor. Returns true if the line is complete (the user
-  // has pressed enter).
-  virtual bool OnInput(char c) = 0;
+  // Provides one character of input to the editor. Callbacks for autocomplete or line done will be
+  // issued from within this function.
+  virtual void OnInput(char c) = 0;
 
   // Adds the given line to history. If the history is longer than max_history_, the oldest thing
   // will be deleted.
@@ -119,7 +123,7 @@ class LineInput {
 // allow for output to different places.
 class LineInputEditor : public LineInput {
  public:
-  explicit LineInputEditor(const std::string& prompt);
+  explicit LineInputEditor(AcceptCallback accept_cb, const std::string& prompt);
   virtual ~LineInputEditor();
 
   // LineInput implementation.
@@ -129,7 +133,7 @@ class LineInputEditor : public LineInput {
   const std::string& GetLine() const override;
   const std::deque<std::string>& GetHistory() const override;
   void BeginReadLine() override;
-  bool OnInput(char c) override;
+  void OnInput(char c) override;
   void AddToHistory(const std::string& line) override;
   void Hide() override;
   void Show() override;
@@ -200,6 +204,7 @@ class LineInputEditor : public LineInput {
 
   void ResetLineState();
 
+  AcceptCallback accept_callback_;
   std::string prompt_;
 
   size_t max_cols_ = 0;
@@ -264,7 +269,7 @@ class LineInputEditor : public LineInput {
 // stdout (if any).
 class LineInputStdout : public LineInputEditor {
  public:
-  LineInputStdout(const std::string& prompt);
+  LineInputStdout(AcceptCallback accept_cb, const std::string& prompt);
   ~LineInputStdout() override;
 
   // LineInput implementation.
@@ -285,14 +290,6 @@ class LineInputStdout : public LineInputEditor {
   std::unique_ptr<termios> raw_termios_;
   std::unique_ptr<termios> original_termios_;
 #endif
-};
-
-// A blocking implementation that reads from stdin and writes to stdout.
-class LineInputBlockingStdio : public LineInputStdout {
- public:
-  LineInputBlockingStdio(const std::string& prompt);
-
-  std::string ReadLine();
 };
 
 }  // namespace line_input

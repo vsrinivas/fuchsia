@@ -4,6 +4,8 @@
 
 #include "src/lib/line_input/line_input.h"
 
+#include <optional>
+
 #include "gtest/gtest.h"
 
 namespace line_input {
@@ -28,22 +30,29 @@ std::vector<std::string> AutocompleteCallback(const std::string& line) {
 
 class TestLineInput : public LineInputEditor {
  public:
-  TestLineInput(const std::string& prompt) : LineInputEditor(prompt) {}
+  TestLineInput(const std::string& prompt)
+      : LineInputEditor([this](const std::string& s) { accept_ = s; }, prompt) {}
+
+  // The "accept" value is the result of the most recent callback issuance.
+  const std::optional<std::string>& accept() const { return accept_; }
+  void ClearAccept() { accept_ = std::nullopt; }
 
   void ClearOutput() { output_.clear(); }
+
   std::string GetAndClearOutput() {
     std::string ret = output_;
     ClearOutput();
     return ret;
   }
 
-  // This input takes a string instead of one character at a time, returning
-  // the result of the last one.
+  // This input takes a string instead of one character at a time, returning true if the
+  // callback was issued for the *last* character.
   bool OnInputStr(const std::string& input) {
-    bool result = false;
-    for (char c : input)
-      result = OnInput(c);
-    return result;
+    for (char c : input) {
+      ClearAccept();
+      OnInput(c);
+    }
+    return !!accept();
   }
 
   void SetLine(const std::string& input) {
@@ -58,6 +67,9 @@ class TestLineInput : public LineInputEditor {
 
  private:
   std::string output_;
+
+  // The parameter from the most recent "accept" call, or none if not called.
+  std::optional<std::string> accept_;
 };
 
 TEST(LineInput, CursorCommands) {
@@ -69,9 +81,12 @@ TEST(LineInput, CursorCommands) {
   EXPECT_EQ("\rPrompt \x1b[0K\r\x1B[7C", input.GetAndClearOutput());
 
   // Basic input with enter.
-  EXPECT_FALSE(input.OnInput('a'));
-  EXPECT_FALSE(input.OnInput('b'));
-  EXPECT_TRUE(input.OnInput('\r'));
+  input.OnInput('a');
+  input.OnInput('b');
+  EXPECT_FALSE(input.accept());
+  input.OnInput('\r');
+  ASSERT_TRUE(input.accept());
+  EXPECT_EQ("ab", *input.accept());
   EXPECT_EQ("ab", input.GetLine());
 
   input.BeginReadLine();
@@ -79,38 +94,38 @@ TEST(LineInput, CursorCommands) {
   EXPECT_EQ(4u, input.pos());
 
   // Basic cursor movement.
-  EXPECT_FALSE(input.OnInput(2));  // Control-B = left.
+  input.OnInput(2);  // Control-B = left.
   EXPECT_EQ(3u, input.pos());
-  EXPECT_FALSE(input.OnInput(6));  // Control-F = right.
+  input.OnInput(6);  // Control-F = right.
   EXPECT_EQ(4u, input.pos());
-  EXPECT_FALSE(input.OnInput(1));  // Control-A = home.
+  input.OnInput(1);  // Control-A = home.
   EXPECT_EQ(0u, input.pos());
-  EXPECT_FALSE(input.OnInput(5));  // Control-E = end.
+  input.OnInput(5);  // Control-E = end.
   EXPECT_EQ(4u, input.pos());
 
   // Longer escaped sequences.
-  EXPECT_FALSE(input.OnInputStr("\x1b[D"));  // Left.
+  input.OnInputStr("\x1b[D");  // Left.
   EXPECT_EQ(3u, input.pos());
-  EXPECT_FALSE(input.OnInputStr("\x1b[C"));  // Right.
+  input.OnInputStr("\x1b[C");  // Right.
   EXPECT_EQ(4u, input.pos());
-  EXPECT_FALSE(input.OnInputStr("\x1b[H"));  // Home.
+  input.OnInputStr("\x1b[H");  // Home.
   EXPECT_EQ(0u, input.pos());
-  EXPECT_FALSE(input.OnInputStr("\x1b[F"));  // End.
+  input.OnInputStr("\x1b[F");  // End.
   EXPECT_EQ(4u, input.pos());
-  EXPECT_FALSE(input.OnInputStr("\x1b[1~"));  // Home. Alternate.
+  input.OnInputStr("\x1b[1~");  // Home. Alternate.
   EXPECT_EQ(0u, input.pos());
-  EXPECT_FALSE(input.OnInputStr("\x1b[4~"));  // End. Alternate.
+  input.OnInputStr("\x1b[4~");  // End. Alternate.
   EXPECT_EQ(4u, input.pos());
 
   // Backspace.
-  EXPECT_FALSE(input.OnInput(127));  // Backspace.
+  input.OnInput(127);  // Backspace.
   EXPECT_EQ(3u, input.pos());
   EXPECT_EQ("abc", input.GetLine());
 
   // Delete. This one also tests the line refresh commands.
-  EXPECT_FALSE(input.OnInput(1));  // Home.
+  input.OnInput(1);  // Home.
   input.ClearOutput();
-  EXPECT_FALSE(input.OnInputStr("\x1b[3~"));
+  input.OnInputStr("\x1b[3~");
   EXPECT_EQ("bc", input.GetLine());
   // "7C" at the end means cursor is at the 7th character (the "b").
   EXPECT_EQ("\rPrompt bc\x1b[0K\r\x1B[7C", input.GetAndClearOutput());
@@ -131,17 +146,17 @@ TEST(LineInput, CtrlD) {
   // "ab|cd"
   EXPECT_EQ(2u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   // "ab|d"
   EXPECT_EQ("abd", input.GetLine());
   EXPECT_EQ(2u, input.pos());
 
-  EXPECT_FALSE(input.OnInputStr("\x1b[C"));  // Right.
+  input.OnInputStr("\x1b[C");  // Right.
   // "abd|"
   EXPECT_EQ(3u, input.pos());
   EXPECT_EQ("abd", input.GetLine());
 
-  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   // No change when hit Ctrl+D at the end of the line.
   EXPECT_EQ("abd", input.GetLine());
   EXPECT_EQ(3u, input.pos());
@@ -152,24 +167,24 @@ TEST(LineInput, CtrlD) {
   // "|abd"
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   // "|bd"
   EXPECT_EQ("bd", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   // "|d"
   EXPECT_EQ("d", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
-  EXPECT_FALSE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   // "|"
   EXPECT_EQ("", input.GetLine());
   EXPECT_EQ(0u, input.pos());
 
   // Ctrl+D on an empty line is exit.
 
-  EXPECT_TRUE(input.OnInput(4));  // Ctrl+D
+  input.OnInput(4);  // Ctrl+D
   EXPECT_TRUE(input.IsEof());
 }
 
@@ -299,11 +314,11 @@ TEST(LineInput, Scroll) {
 
   // Add a 10th character. The whole line should scroll one to the left,
   // leaving the cursor at the last column (column offset 9 = "9C" at the end).
-  EXPECT_FALSE(input.OnInput('J'));
+  input.OnInput('J');
   EXPECT_EQ("\rBCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
 
   // Move left, the line should scroll back.
-  EXPECT_FALSE(input.OnInput(2));  // 2 = Control-B.
+  input.OnInput(2);  // 2 = Control-B.
   EXPECT_EQ("\rABCDEFGHIJ\x1b[0K\r\x1B[9C", input.GetAndClearOutput());
 }
 
@@ -312,12 +327,12 @@ TEST(LineInput, NegAck) {
   input.BeginReadLine();
 
   // Empty should remain with them prompt.
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
+  input.OnInput(SpecialCharacters::kKeyControlU);
   EXPECT_EQ(input.GetLine(), "");
 
   // Adding characters and then Control-U should clear.
   input.OnInputStr("12345");
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
+  input.OnInput(SpecialCharacters::kKeyControlU);
   EXPECT_EQ(input.GetLine(), "");
 
   // In the middle of the line should clear until the cursor.
@@ -326,7 +341,7 @@ TEST(LineInput, NegAck) {
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
+  input.OnInput(SpecialCharacters::kKeyControlU);
   EXPECT_EQ(input.GetLine(), "6789");
   EXPECT_EQ(input.pos(), 0u);
 }
@@ -338,42 +353,42 @@ TEST(LineInput, EndOfTransimission) {
   //             v
   input.SetLine("First Second Third");
   input.SetPos(0);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "rst Second Third");
 
   //                  v
   input.SetLine("First Second Third");
   input.SetPos(5);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), " Second Third");
 
   //                     v
   input.SetLine("First Second Third");
   input.SetPos(8);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First cond Third");
 
   //                         v
   input.SetLine("First Second Third");
   input.SetPos(12);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First  Third");
 
   //                            v
   input.SetLine("First Second Third");
   input.SetPos(15);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First Second ird");
 
   //                               v
   input.SetLine("First Second Third");
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  input.OnInput(SpecialCharacters::kKeyControlW);
   EXPECT_EQ(input.GetLine(), "First Second ");
 }
 
@@ -384,25 +399,25 @@ TEST(LineInput, Transpose) {
   //             v
   input.SetLine("First Second Third");
   input.SetPos(0);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  input.OnInput(SpecialCharacters::kKeyControlT);
   EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //              v
   input.SetLine("First Second Third");
   input.SetPos(1);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  input.OnInput(SpecialCharacters::kKeyControlT);
   EXPECT_EQ(input.GetLine(), "First Second Third");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  input.OnInput(SpecialCharacters::kKeyControlT);
   EXPECT_EQ(input.GetLine(), "iFrst Second Third");
 
   //                               v
   input.SetLine("First Second Third");
   input.SetPos(18);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlT));
+  input.OnInput(SpecialCharacters::kKeyControlT);
   EXPECT_EQ(input.GetLine(), "First Second Thidr");
 }
 
@@ -413,36 +428,36 @@ TEST(LineInput, DeleteEnd) {
   //             v
   input.SetLine("First Second Third");
   input.SetPos(0);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "Fi");
 
   //                  v
   input.SetLine("First Second Third");
   input.SetPos(5);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "First");
 
   //                     v
   input.SetLine("First Second Third");
   input.SetPos(8);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "First Se");
 
   //                         v
   input.SetLine("First Second Third");
   input.SetPos(12);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "First Second");
 
   //                               v
   input.SetLine("First Second Third");
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlK));
+  input.OnInput(SpecialCharacters::kKeyControlK);
   EXPECT_EQ(input.GetLine(), "First Second Third");
 }
 
@@ -453,19 +468,19 @@ TEST(LineInput, CancelCommand) {
   //             v
   input.SetLine("First Second Third");
   input.SetPos(0);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  input.OnInput(SpecialCharacters::kKeyControlC);
   EXPECT_EQ(input.GetLine(), "");
 
   //               v
   input.SetLine("First Second Third");
   input.SetPos(2);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  input.OnInput(SpecialCharacters::kKeyControlC);
   EXPECT_EQ(input.GetLine(), "");
 
   //                               v
   input.SetLine("First Second Third");
   input.SetPos(18);
-  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlC));
+  input.OnInput(SpecialCharacters::kKeyControlC);
   EXPECT_EQ(input.GetLine(), "");
 }
 
@@ -480,7 +495,7 @@ TEST(LineInput, ReverseHistory_Select) {
   input.AddToHistory("different");        // Index 1.
 
   input.BeginReadLine();
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
 
   EXPECT_FALSE(input.OnInputStr("post"));
@@ -492,7 +507,7 @@ TEST(LineInput, ReverseHistory_Select) {
   EXPECT_EQ(input.pos(), 7u);
 
   // Selecting should get this suggestion out.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyEnter));
+  input.OnInput(SpecialCharacters::kKeyEnter);
   ASSERT_FALSE(input.in_reverse_history_mode());
   // Pos:                 |               v
   EXPECT_EQ(input.GetLine(), "prefix postfix3");
@@ -511,10 +526,10 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
 
   input.BeginReadLine();
 
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
 
-  ASSERT_FALSE(input.OnInput('f'));
+  input.OnInput('f');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 1u);
@@ -522,7 +537,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "different");
   EXPECT_EQ(input.pos(), 2u);
 
-  ASSERT_FALSE(input.OnInput('i'));
+  input.OnInput('i');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fi': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
@@ -530,7 +545,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
   EXPECT_EQ(input.pos(), 9u);
 
-  ASSERT_FALSE(input.OnInput('x'));
+  input.OnInput('x');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
@@ -538,7 +553,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
   EXPECT_EQ(input.pos(), 9u);
 
-  ASSERT_FALSE(input.OnInput('3'));
+  input.OnInput('3');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix3': ");
   EXPECT_EQ(input.reverse_history_index(), 3u);
@@ -546,7 +561,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "prefix postfix3");
   EXPECT_EQ(input.pos(), 11u);
 
-  ASSERT_FALSE(input.OnInput('3'));
+  input.OnInput('3');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix33': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
@@ -554,7 +569,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   EXPECT_EQ(input.pos(), 0u);
 
   // Deleting should return to the suggestion.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyBackspace));
+  input.OnInput(SpecialCharacters::kKeyBackspace);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`fix3': ");
   EXPECT_EQ(input.reverse_history_index(), 3u);
@@ -576,7 +591,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   input.BeginReadLine();
   ASSERT_FALSE(input.in_reverse_history_mode());
 
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
 
   // We should be in reverse history mode, but no suggestion should be made.
   ASSERT_TRUE(input.in_reverse_history_mode());
@@ -586,7 +601,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.pos(), 0u);
 
   // Start writing should match.
-  ASSERT_FALSE(input.OnInput('f'));
+  input.OnInput('f');
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 1u);
@@ -595,7 +610,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.pos(), 2u);
 
   // Ctrl-R should move to the next suggestion.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
@@ -603,8 +618,8 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.GetReverseHistorySuggestion(), "other prefix");
   EXPECT_EQ(input.pos(), 9u);
 
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 4u);
@@ -613,8 +628,8 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.pos(), 3u);
 
   // More Ctrl-R should roll-over.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
@@ -622,8 +637,8 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.pos(), 0u);
 
   // One more should start again.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyControlR));
+  input.OnInput(SpecialCharacters::kKeyControlR);
+  input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`f': ");
   EXPECT_EQ(input.reverse_history_index(), 2u);
@@ -632,7 +647,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   EXPECT_EQ(input.pos(), 9u);
 
   // Deleting should show no suggestion.
-  ASSERT_FALSE(input.OnInput(SpecialCharacters::kKeyBackspace));
+  input.OnInput(SpecialCharacters::kKeyBackspace);
   ASSERT_TRUE(input.in_reverse_history_mode());
   EXPECT_EQ(input.GetReverseHistoryPrompt(), "(reverse-i-search)`': ");
   EXPECT_EQ(input.reverse_history_index(), 0u);
