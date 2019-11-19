@@ -181,6 +181,6 @@ UNITTEST("NonThreadSafeMode", non_thread_safe_prng_same_behavior)
 UNITTEST("Reseed", reseed)
 UNITTEST("Test Output", prng_output)
 UNITTEST("Test RandInt", prng_randint)
-UNITTEST_END_TESTCASE(prng_tests, "prng", "Test pseudo-random number generator implementation.");
+UNITTEST_END_TESTCASE(prng_tests, "prng", "Test pseudo-random number generator implementation.")
 
 }  // namespace crypto

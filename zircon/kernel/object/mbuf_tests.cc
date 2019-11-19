@@ -572,4 +572,4 @@ UNITTEST("datagram_peek", datagram_peek)
 UNITTEST("datagram_peek_empty", datagram_peek_empty)
 UNITTEST("datagram_peek_zero", datagram_peek_zero)
 UNITTEST("datagram_peek_underflow", datagram_peek_underflow)
-UNITTEST_END_TESTCASE(mbuf_tests, "mbuf", "MBuf test");
+UNITTEST_END_TESTCASE(mbuf_tests, "mbuf", "MBuf test")

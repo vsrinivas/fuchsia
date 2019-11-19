@@ -263,4 +263,4 @@ UNITTEST("create large unaligned region without mapping and ensure it can be unm
          test_large_unaligned_region_without_map)
 UNITTEST("creating large vm region, and change permissions", test_large_region_protect)
 UNITTEST("trigger oom failures when creating a mapping", test_mapping_oom)
-UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests");
+UNITTEST_END_TESTCASE(mmu_tests, "mmu", "mmu tests")

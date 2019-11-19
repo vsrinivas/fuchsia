@@ -302,9 +302,9 @@ LK_PDEV_INIT(arm_generic_timer_pdev_init, KDRV_ARM_GENERIC_TIMER, arm_generic_ti
 
 namespace {
 
-constexpr uint32_t kMinTestFreq = 1;
-constexpr uint32_t kMaxTestFreq = ktl::numeric_limits<uint32_t>::max();
-constexpr uint32_t kCurTestFreq = 0;
+[[maybe_unused]] constexpr uint32_t kMinTestFreq = 1;
+[[maybe_unused]] constexpr uint32_t kMaxTestFreq = ktl::numeric_limits<uint32_t>::max();
+[[maybe_unused]] constexpr uint32_t kCurTestFreq = 0;
 
 inline uint64_t abs_int64(int64_t a) { return (a > 0) ? a : -a; }
 
@@ -415,4 +415,4 @@ UNITTEST("Time --> CNTPCT (cur freq)", []() -> bool { return test_time_to_cntpct
 UNITTEST("CNTPCT --> Time (min freq)", []() -> bool { return test_cntpct_to_time(kMinTestFreq); })
 UNITTEST("CNTPCT --> Time (max freq)", []() -> bool { return test_cntpct_to_time(kMaxTestFreq); })
 UNITTEST("CNTPCT --> Time (cur freq)", []() -> bool { return test_cntpct_to_time(kCurTestFreq); })
-UNITTEST_END_TESTCASE(arm_clock_tests, "arm_clock", "Tests for ARM tick count and current time");
+UNITTEST_END_TESTCASE(arm_clock_tests, "arm_clock", "Tests for ARM tick count and current time")

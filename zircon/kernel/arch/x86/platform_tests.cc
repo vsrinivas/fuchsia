@@ -689,4 +689,4 @@ UNITTEST("test Intel x86 microcode patch loader mechanism", test_x64_intel_ucode
 UNITTEST("test pkg power limit change", test_x64_power_limits)
 UNITTEST("test amd_platform_init", test_amd_platform_init)
 UNITTEST("test HWP init", test_hwp_init)
-UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "");
+UNITTEST_END_TESTCASE(x64_platform_tests, "x64_platform_tests", "")

@@ -151,4 +151,4 @@ UNITTEST("create_zero", create_zero)
 UNITTEST("create_too_many_handles", create_too_many_handles)
 UNITTEST("create_bad_mem", create_bad_mem)
 UNITTEST("copy_bad_mem", copy_bad_mem)
-UNITTEST_END_TESTCASE(message_packet_tests, "message_packet", "MessagePacket tests");
+UNITTEST_END_TESTCASE(message_packet_tests, "message_packet", "MessagePacket tests")

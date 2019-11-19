@@ -1361,4 +1361,4 @@ UNITTEST("multiple waiters", pi_test_multi_waiter<29>)
 UNITTEST("multiple owned queues", pi_test_multi_owned_queues<29>)
 UNITTEST("cycles", pi_test_cycle<29>)
 UNITTEST("ZX-4153", pi_test_zx4153)
-UNITTEST_END_TESTCASE(pi_tests, "pi", "Priority inheritance tests for OwnedWaitQueues");
+UNITTEST_END_TESTCASE(pi_tests, "pi", "Priority inheritance tests for OwnedWaitQueues")

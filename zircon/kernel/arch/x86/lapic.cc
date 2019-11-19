@@ -502,7 +502,5 @@ void apic_local_debug(void) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("apic", "apic commands", &cmd_apic)
-#endif
 STATIC_COMMAND_END(apic)

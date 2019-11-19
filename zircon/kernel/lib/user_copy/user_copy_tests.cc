@@ -164,4 +164,4 @@ USER_COPY_UNITTEST(fault_copy_in)
 USER_COPY_UNITTEST(capture_faults_copy_out_success)
 USER_COPY_UNITTEST(capture_faults_copy_in_success)
 USER_COPY_UNITTEST(capture_faults_test_capture)
-UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test");
+UNITTEST_END_TESTCASE(user_copy_tests, "user_copy_tests", "User Copy test")

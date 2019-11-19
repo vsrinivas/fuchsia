@@ -2338,7 +2338,7 @@ VM_UNITTEST(vmo_zero_scan_test)
 VM_UNITTEST(arch_noncontiguous_map)
 // Uncomment for debugging
 // VM_UNITTEST(dump_all_aspaces)  // Run last
-UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests");
+UNITTEST_END_TESTCASE(vm_tests, "vm", "Virtual memory tests")
 
 UNITTEST_START_TESTCASE(pmm_tests)
 VM_UNITTEST(pmm_smoke_test)
@@ -2356,7 +2356,7 @@ VM_UNITTEST(pmm_node_delayed_alloc_swap_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_swap_late_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_early_test)
 VM_UNITTEST(pmm_node_delayed_alloc_clear_late_test)
-UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests");
+UNITTEST_END_TESTCASE(pmm_tests, "pmm", "Physical memory manager tests")
 
 UNITTEST_START_TESTCASE(vm_page_list_tests)
 VM_UNITTEST(vmpl_add_remove_page_test)
@@ -2375,4 +2375,4 @@ VM_UNITTEST(vmpl_merge_offset_test)
 VM_UNITTEST(vmpl_merge_overlap_test)
 VM_UNITTEST(vmpl_for_every_page_test)
 VM_UNITTEST(vmpl_merge_onto_test)
-UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests");
+UNITTEST_END_TESTCASE(vm_page_list_tests, "vmpl", "VmPageList tests")

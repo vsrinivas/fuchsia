@@ -184,4 +184,4 @@ UNITTEST("Select an idle state using data from a Kabylake CPU, respecting a mask
          test_kbl_statemask)
 UNITTEST("Enter each supported idle state using MWAIT/MONITOR.", test_enter_idle_states)
 UNITTEST_END_TESTCASE(x86_idle_states_tests, "x86_idle_states",
-                      "Test idle state enumeration and selection (x86 only).");
+                      "Test idle state enumeration and selection (x86 only).")

@@ -77,4 +77,4 @@ static bool TestConcurrentIntEventDispatcherTeardown() {
 UNITTEST_START_TESTCASE(interrupt_event_dispatcher_tests)
 UNITTEST("ConcurrentIntEventDispatcherTeardown", TestConcurrentIntEventDispatcherTeardown)
 UNITTEST_END_TESTCASE(interrupt_event_dispatcher_tests, "interrupt_event_dispatcher_tests",
-                      "InterruptEventDispatcher tests");
+                      "InterruptEventDispatcher tests")

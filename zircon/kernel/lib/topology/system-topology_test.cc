@@ -168,7 +168,7 @@ UNITTEST("Fail validation if there is a cycle.", test_validate_cycle)
 UNITTEST("Fail validation if a cycle with a shared parent.", test_validate_cycle_shared_parent)
 UNITTEST("Fail validation if storage order is incorrect.", test_validate_hierarchical_storage)
 UNITTEST_END_TESTCASE(system_topology_tests, "system-topology",
-                      "Test parsing and validation of the flat system topology.");
+                      "Test parsing and validation of the flat system topology.")
 
 // Generic ARM big.LITTLE layout.
 //   [cluster]       [cluster]

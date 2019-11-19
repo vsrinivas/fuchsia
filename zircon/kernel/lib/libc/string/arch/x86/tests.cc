@@ -169,4 +169,4 @@ UNITTEST("memcpy_erms tests", memcpy_erms_test)
 UNITTEST("memset tests", memset_test)
 UNITTEST("memset_quad tests", memset_quad_test)
 UNITTEST("memset_erms tests", memset_erms_test)
-UNITTEST_END_TESTCASE(memops_tests, "memops_tests", "memcpy/memset tests");
+UNITTEST_END_TESTCASE(memops_tests, "memops_tests", "memcpy/memset tests")

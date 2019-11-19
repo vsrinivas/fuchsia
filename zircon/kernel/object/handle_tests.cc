@@ -254,4 +254,4 @@ UNITTEST("KernelHandleMoveConstructorUpcast", KernelHandleMoveConstructorUpcast)
 UNITTEST("KernelHandleMoveAssignment", KernelHandleMoveAssignment)
 UNITTEST("KernelHandleMoveAssignmentUpcast", KernelHandleMoveAssignmentUpcast)
 UNITTEST("KernelHandleUpgrade", KernelHandleUpgrade)
-UNITTEST_END_TESTCASE(handle_tests, "handle", "Handle test");
+UNITTEST_END_TESTCASE(handle_tests, "handle", "Handle test")

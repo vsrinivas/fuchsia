@@ -21,4 +21,4 @@ bool GetMessageTest() {
 
 UNITTEST_START_TESTCASE(unittest_tests)
 UNITTEST("get_message", GetMessageTest)
-UNITTEST_END_TESTCASE(unittest_tests, "unittest", "unittest tests");
+UNITTEST_END_TESTCASE(unittest_tests, "unittest", "unittest tests")

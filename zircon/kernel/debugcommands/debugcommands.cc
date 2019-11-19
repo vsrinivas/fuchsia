@@ -36,7 +36,6 @@ static int cmd_recurse(int argc, const cmd_args *argv, uint32_t flags);
 static int cmd_cmdline(int argc, const cmd_args *argv, uint32_t flags);
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND_MASKED("dd", "display memory in dwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("dw", "display memory in words", &cmd_display_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("dh", "display memory in halfwords", &cmd_display_mem, CMD_AVAIL_ALWAYS)
@@ -48,13 +47,10 @@ STATIC_COMMAND_MASKED("fw", "fill range of memory by word", &cmd_fill_mem, CMD_A
 STATIC_COMMAND_MASKED("fh", "fill range of memory by halfword", &cmd_fill_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("fb", "fill range of memory by byte", &cmd_fill_mem, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("mc", "copy a range of memory", &cmd_copy_mem, CMD_AVAIL_ALWAYS)
-#endif
-#if LK_DEBUGLEVEL > 1
 STATIC_COMMAND("mtest", "simple memory test", &cmd_memtest)
 STATIC_COMMAND("crash", "intentionally crash", &cmd_crash)
 STATIC_COMMAND("crash_stackstomp", "intentionally overrun the stack", &cmd_stackstomp)
 STATIC_COMMAND("crash_recurse", "intentionally overrun the stack by recursing", &cmd_recurse)
-#endif
 STATIC_COMMAND("cmdline", "display kernel commandline", &cmd_cmdline)
 STATIC_COMMAND("sleep", "sleep number of seconds", &cmd_sleep)
 STATIC_COMMAND("sleepm", "sleep number of milliseconds", &cmd_sleep)

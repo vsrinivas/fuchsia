@@ -19,4 +19,4 @@ static bool bits_test(void) {
 
 UNITTEST_START_TESTCASE(bits_tests)
 UNITTEST("bits lib tests", bits_test)
-UNITTEST_END_TESTCASE(bits_tests, "bits", "bits lib tests");
+UNITTEST_END_TESTCASE(bits_tests, "bits", "bits lib tests")

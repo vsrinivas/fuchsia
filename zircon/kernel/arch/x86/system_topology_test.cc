@@ -205,4 +205,4 @@ UNITTEST("Enumerate cpus using data from HP z840.", test_cpus_z840)
 UNITTEST("Enumerate cpus using data from ThreadRipper 2970wx/X399.", test_cpus_2970wx_x399)
 UNITTEST("Enumerate cpus using data triggering fallback.", test_cpus_fallback)
 UNITTEST_END_TESTCASE(x86_topology_tests, "x86_topology",
-                      "Test determining x86 topology through CPUID/APIC.");
+                      "Test determining x86 topology through CPUID/APIC.")

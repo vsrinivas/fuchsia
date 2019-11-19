@@ -343,7 +343,5 @@ static int cmd_page_source(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm_page_source", "page source debug commands", &cmd_page_source)
-#endif
 STATIC_COMMAND_END(ps_object)

@@ -165,4 +165,4 @@ UNITTEST("Enumerate interrupt_source_overrides.", test_interrupt_source_override
 UNITTEST("Lookup HPET.", test_hpet)
 UNITTEST("Enumerate NUMA regions using HP z840 data.", test_numa_z840)
 UNITTEST("Enumerate NUMA regions using Threadripper 2970 data.", test_numa_2970wx)
-UNITTEST_END_TESTCASE(acpi_tables_tests, "acpi_tables", "Test parsing of acpi tables.");
+UNITTEST_END_TESTCASE(acpi_tables_tests, "acpi_tables", "Test parsing of acpi tables.")

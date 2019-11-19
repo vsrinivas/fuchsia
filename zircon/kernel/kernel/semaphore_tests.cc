@@ -96,4 +96,4 @@ UNITTEST("smoke_test", smoke_test)
 UNITTEST("timeout_test", timeout_test)
 UNITTEST("kill_signal_test", signal_test<1>)
 UNITTEST("suspend_signal_test", signal_test<2>)
-UNITTEST_END_TESTCASE(semaphore_tests, "semaphore", "Semaphore tests");
+UNITTEST_END_TESTCASE(semaphore_tests, "semaphore", "Semaphore tests")

@@ -71,4 +71,4 @@ UNITTEST_START_TESTCASE(libc_atomic_tests)
 UNITTEST("load_16", Load16Test)
 UNITTEST("store_16", Store16Test)
 UNITTEST("compare_exchange_16", CompareExchange16Test)
-UNITTEST_END_TESTCASE(libc_atomic_tests, "libc_atomic", "libc/atomic tests");
+UNITTEST_END_TESTCASE(libc_atomic_tests, "libc_atomic", "libc/atomic tests")

@@ -54,4 +54,4 @@ bool overwrite_invalid_channel_succeeds() {
 UNITTEST_START_TESTCASE(exception_tests)
 UNITTEST("overwrite_valid_channel_fails", overwrite_valid_channel_fails)
 UNITTEST("overwrite_invalid_channel_succeeds", overwrite_invalid_channel_succeeds)
-UNITTEST_END_TESTCASE(exception_tests, "exception", "Exception tests");
+UNITTEST_END_TESTCASE(exception_tests, "exception", "Exception tests")

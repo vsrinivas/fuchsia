@@ -492,4 +492,4 @@ UNITTEST("cancel_from_callback", cancel_from_callback)
 UNITTEST("set_from_callback", set_from_callback)
 UNITTEST("trylock_or_cancel_canceled", trylock_or_cancel_canceled)
 UNITTEST("trylock_or_cancel_get_lock", trylock_or_cancel_get_lock)
-UNITTEST_END_TESTCASE(timer_tests, "timer", "timer tests");
+UNITTEST_END_TESTCASE(timer_tests, "timer", "timer tests")

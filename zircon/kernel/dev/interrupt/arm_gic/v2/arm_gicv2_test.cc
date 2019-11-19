@@ -70,4 +70,4 @@ UNITTEST_START_TESTCASE(gicv2_tests)
 UNITTEST("Set and lookup translations.", test_gic_translator_translate)
 UNITTEST("Translate full cpu masks.", test_gic_translator_translate_mask)
 UNITTEST("Determine local mask from target registers.", test_determine_local_mask)
-UNITTEST_END_TESTCASE(gicv2_tests, "gicv2", "Tests relating to ARM GICv2 handling.");
+UNITTEST_END_TESTCASE(gicv2_tests, "gicv2", "Tests relating to ARM GICv2 handling.")

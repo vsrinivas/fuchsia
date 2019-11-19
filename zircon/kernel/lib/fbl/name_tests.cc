@@ -186,8 +186,8 @@ bool output_buffer_size() {
 }
 
 // Test the smallest size and a typical size.
-constexpr size_t kSmallestNameSize = 2;
-constexpr size_t kTypicalNameSize = 32;
+[[maybe_unused]] constexpr size_t kSmallestNameSize = 2;
+[[maybe_unused]] constexpr size_t kTypicalNameSize = 32;
 
 }  // namespace
 
@@ -226,4 +226,4 @@ NAME_UNITTEST((output_buffer_size<kTypicalNameSize, kTypicalNameSize>))
 // Don't bother testing a larger output buffer, since most of the
 // earlier tests use larger output buffers.
 
-UNITTEST_END_TESTCASE(name_tests, "nametests", "Name test");
+UNITTEST_END_TESTCASE(name_tests, "nametests", "Name test")

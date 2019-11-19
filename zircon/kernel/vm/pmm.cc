@@ -196,7 +196,5 @@ static int cmd_pmm(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND_MASKED("pmm", "physical memory manager", &cmd_pmm, CMD_AVAIL_ALWAYS)
-#endif
 STATIC_COMMAND_END(pmm)

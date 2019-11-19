@@ -284,7 +284,5 @@ static int cmd_vm(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm", "vm commands", &cmd_vm)
-#endif
 STATIC_COMMAND_END(vm)

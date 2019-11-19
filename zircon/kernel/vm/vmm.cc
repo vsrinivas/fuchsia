@@ -223,7 +223,5 @@ static int cmd_vmm(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vmm", "virtual memory manager", &cmd_vmm)
-#endif
 STATIC_COMMAND_END(vmm)

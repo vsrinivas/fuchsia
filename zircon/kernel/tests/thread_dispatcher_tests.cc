@@ -66,4 +66,4 @@ static bool test_create_init_destroy_thread() {
 UNITTEST_START_TESTCASE(thread_dispatcher)
 UNITTEST("test create destroy thread", test_create_destroy_thread_no_init)
 UNITTEST("test create init destroy thread", test_create_init_destroy_thread)
-UNITTEST_END_TESTCASE(thread_dispatcher, "thread_dispatcher", "Dispatcher objec tests");
+UNITTEST_END_TESTCASE(thread_dispatcher, "thread_dispatcher", "Dispatcher objec tests")

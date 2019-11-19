@@ -360,4 +360,4 @@ UNITTEST("test_interrupt_clears_preempt_pending", test_interrupt_clears_preempt_
 UNITTEST("test_interrupt_with_preempt_disable", test_interrupt_with_preempt_disable)
 UNITTEST("test_interrupt_with_resched_disable", test_interrupt_with_resched_disable)
 UNITTEST("test_auto_preempt_disabler", test_auto_preempt_disabler)
-UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests");
+UNITTEST_END_TESTCASE(preempt_disable_tests, "preempt_disable_tests", "preempt_disable_tests")

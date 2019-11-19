@@ -114,4 +114,4 @@ UNITTEST_START_TESTCASE(popcount_tests)
 UNITTEST("32 bit", popcount32_test)
 UNITTEST("64 bit", popcount64_test)
 UNITTEST("disallowed_types", popcount_disallowed_types_test)
-UNITTEST_END_TESTCASE(popcount_tests, "popcount", "Unit tests for popcount");
+UNITTEST_END_TESTCASE(popcount_tests, "popcount", "Unit tests for popcount")

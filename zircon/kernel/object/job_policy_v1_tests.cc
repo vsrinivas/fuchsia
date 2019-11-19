@@ -216,4 +216,4 @@ UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_
 UNITTEST("add_basic_policy_deny_any_new", add_basic_policy_deny_any_new)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST("increment_counters", increment_counters)
-UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests");
+UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests")

@@ -126,7 +126,5 @@ static int cmd_vm_page(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm_page", "vm_page debug commands", &cmd_vm_page)
-#endif
 STATIC_COMMAND_END(vm_page)

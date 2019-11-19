@@ -598,4 +598,4 @@ HYPERVISOR_UNITTEST(guest_physical_address_space_uncached)
 HYPERVISOR_UNITTEST(guest_physical_address_space_uncached_device)
 HYPERVISOR_UNITTEST(guest_physical_address_space_write_combining)
 HYPERVISOR_UNITTEST(interrupt_bitmap)
-UNITTEST_END_TESTCASE(hypervisor, "hypervisor", "Hypervisor unit tests.");
+UNITTEST_END_TESTCASE(hypervisor, "hypervisor", "Hypervisor unit tests.")

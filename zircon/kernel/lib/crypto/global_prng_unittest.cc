@@ -27,6 +27,6 @@ bool identical() {
 
 UNITTEST_START_TESTCASE(global_prng_tests)
 UNITTEST("Identical", identical)
-UNITTEST_END_TESTCASE(global_prng_tests, "global_prng", "Validate global PRNG singleton");
+UNITTEST_END_TESTCASE(global_prng_tests, "global_prng", "Validate global PRNG singleton")
 
 }  // namespace crypto

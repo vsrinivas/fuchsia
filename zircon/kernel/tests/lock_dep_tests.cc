@@ -884,6 +884,6 @@ static bool lock_dep_static_analysis_tests() {
 UNITTEST_START_TESTCASE(lock_dep_tests)
 UNITTEST("lock_dep_dynamic_analysis_tests", lock_dep_dynamic_analysis_tests)
 UNITTEST("lock_dep_static_analysis_tests", lock_dep_static_analysis_tests)
-UNITTEST_END_TESTCASE(lock_dep_tests, "lock_dep_tests", "lock_dep_tests");
+UNITTEST_END_TESTCASE(lock_dep_tests, "lock_dep_tests", "lock_dep_tests")
 
 #endif

@@ -281,4 +281,4 @@ GPARENA_UNITTEST(does_preserve)
 GPARENA_UNITTEST(committed_monotonic)
 GPARENA_UNITTEST(parallel_alloc)
 GPARENA_UNITTEST(parallel_grow_memory)
-UNITTEST_END_TESTCASE(gparena_tests, "gparena_tests", "GPArena test");
+UNITTEST_END_TESTCASE(gparena_tests, "gparena_tests", "GPArena test")

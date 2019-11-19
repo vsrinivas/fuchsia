@@ -8,6 +8,7 @@
 #ifndef ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_
 #define ZIRCON_KERNEL_LIB_CONSOLE_INCLUDE_LIB_CONSOLE_H_
 
+#include <debug.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <sys/types.h>
@@ -48,6 +49,15 @@ typedef struct {
 #define ENABLE_PANIC_SHELL 1
 #endif
 
+#if LK_DEBUGLEVEL == 0
+
+#define STATIC_COMMAND_START
+#define STATIC_COMMAND_END(name)
+#define STATIC_COMMAND(command_str, help_str, func)
+#define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask)
+
+#else  // LK_DEBUGLEVEL != 0
+
 #define STATIC_COMMAND_START \
   __USED __SECTION(".data.rel.ro.commands") static const cmd _cmd_list[] = {
 #define STATIC_COMMAND_END(name) \
@@ -57,6 +67,8 @@ typedef struct {
 #define STATIC_COMMAND(command_str, help_str, func) {command_str, help_str, func, CMD_AVAIL_NORMAL},
 #define STATIC_COMMAND_MASKED(command_str, help_str, func, availability_mask) \
   {command_str, help_str, func, availability_mask},
+
+#endif  // LK_DEBUGLEVEL == 0
 
 /* external api */
 int console_run_script(const char* string);

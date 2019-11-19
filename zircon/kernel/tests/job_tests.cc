@@ -211,4 +211,4 @@ bool oom_job_kill_ordering() {
 UNITTEST_START_TESTCASE(job_tests)
 UNITTEST("test trivial oom kill", oom_job_kill_trivial)
 UNITTEST("test ordering of oom kill", oom_job_kill_ordering)
-UNITTEST_END_TESTCASE(job_tests, "job", "Tests for jobs");
+UNITTEST_END_TESTCASE(job_tests, "job", "Tests for jobs")

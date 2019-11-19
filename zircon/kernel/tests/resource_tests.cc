@@ -145,4 +145,4 @@ UNITTEST("test setting up allocators", allocators_configured)
 UNITTEST("test exclusive then shared overlap", exclusive_then_shared)
 UNITTEST("test shared then exclusive overlap", shared_then_exclusive)
 UNITTEST("test allocating out of range", out_of_allocator_range)
-UNITTEST_END_TESTCASE(resources, "resource", "Tests for Resource bookkeeping");
+UNITTEST_END_TESTCASE(resources, "resource", "Tests for Resource bookkeeping")

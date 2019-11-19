@@ -73,4 +73,4 @@ static bool test_dpc_queue() {
 
 UNITTEST_START_TESTCASE(dpc_tests)
 UNITTEST("basic test of dpc_queue", test_dpc_queue)
-UNITTEST_END_TESTCASE(dpc_tests, "dpc_tests", "Tests of DPCs");
+UNITTEST_END_TESTCASE(dpc_tests, "dpc_tests", "Tests of DPCs")

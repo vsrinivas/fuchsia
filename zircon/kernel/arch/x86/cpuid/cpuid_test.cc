@@ -294,4 +294,4 @@ UNITTEST("Parse topology from static data, using leaf4.", test_intel_topology_le
 UNITTEST("Parse topology from static AMD data.", test_amd_topology)
 UNITTEST("Parse cache information from static Intel data.", test_intel_highest_cache)
 UNITTEST("Parse cache information from static AMD data.", test_amd_highest_cache)
-UNITTEST_END_TESTCASE(cpuid_tests, "cpuid", "Test parsing of cpuid values.");
+UNITTEST_END_TESTCASE(cpuid_tests, "cpuid", "Test parsing of cpuid values.")

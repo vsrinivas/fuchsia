@@ -78,11 +78,9 @@ static int cmd_history(int argc, const cmd_args* argv, uint32_t flags);
 STATIC_COMMAND_START
 STATIC_COMMAND_MASKED("help", "this list", &cmd_help, CMD_AVAIL_ALWAYS)
 STATIC_COMMAND_MASKED("echo", NULL, &cmd_echo, CMD_AVAIL_ALWAYS)
-#if LK_DEBUGLEVEL > 1
 STATIC_COMMAND_MASKED("test", "test the command processor", &cmd_test, CMD_AVAIL_ALWAYS)
 #if CONSOLE_ENABLE_HISTORY
 STATIC_COMMAND_MASKED("history", "command history", &cmd_history, CMD_AVAIL_ALWAYS)
-#endif
 #endif
 STATIC_COMMAND_END(help)
 
@@ -785,7 +783,6 @@ void panic_shell_start(void) {
   }
 }
 
-#if LK_DEBUGLEVEL > 1
 static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
   int i;
 
@@ -796,7 +793,6 @@ static int cmd_test(int argc, const cmd_args* argv, uint32_t flags) {
 
   return 0;
 }
-#endif
 
 static void kernel_shell_init(uint level) {
   if (gCmdline.GetBool("kernel.shell", false)) {

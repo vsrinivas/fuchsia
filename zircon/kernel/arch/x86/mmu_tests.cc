@@ -86,4 +86,4 @@ static bool x86_arch_vmaspace_usermmu_tests() {
 
 UNITTEST_START_TESTCASE(x86_mmu_tests)
 UNITTEST("user-aspace page table tests", x86_arch_vmaspace_usermmu_tests)
-UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests");
+UNITTEST_END_TESTCASE(x86_mmu_tests, "x86_mmu", "x86 mmu tests")

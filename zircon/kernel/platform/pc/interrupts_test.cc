@@ -262,4 +262,4 @@ UNITTEST("RegisterInterruptHandlerTwice", TestRegisterInterruptHandlerTwice)
 UNITTEST("UnregisterInterruptHandlerNotRegistered", TestUnregisterInterruptHandlerNotRegistered)
 UNITTEST("RegisterInterruptHandlerTooMany", TestRegisterInterruptHandlerTooMany)
 UNITTEST("HandlerAllocationAlignment", TestHandlerAllocationAlignment)
-UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts");
+UNITTEST_END_TESTCASE(pc_interrupt_tests, "pc_interrupt", "Tests for external interrupts")

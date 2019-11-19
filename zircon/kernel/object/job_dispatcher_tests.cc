@@ -101,4 +101,4 @@ static bool TestJobEnumerator() {
 
 UNITTEST_START_TESTCASE(job_dispatcher_tests)
 UNITTEST("JobDispatcherJobEnumerator", TestJobEnumerator)
-UNITTEST_END_TESTCASE(job_dispatcher_tests, "job_dispatcher_tests", "JobDispatcher tests");
+UNITTEST_END_TESTCASE(job_dispatcher_tests, "job_dispatcher_tests", "JobDispatcher tests")

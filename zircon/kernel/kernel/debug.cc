@@ -38,15 +38,12 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags);
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags);
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 1
 STATIC_COMMAND_MASKED("thread", "manipulate kernel threads", &cmd_thread, CMD_AVAIL_ALWAYS)
-#endif
 STATIC_COMMAND("threadstats", "thread level statistics", &cmd_threadstats)
 STATIC_COMMAND("threadload", "toggle thread load display", &cmd_threadload)
 STATIC_COMMAND("threadq", "toggle thread queue display", &cmd_threadq)
 STATIC_COMMAND_END(kernel)
 
-#if LK_DEBUGLEVEL > 1
 static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
   if (argc < 2) {
   notenoughargs:
@@ -115,7 +112,6 @@ static int cmd_thread(int argc, const cmd_args* argv, uint32_t flags) {
 
   return 0;
 }
-#endif
 
 static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
   for (uint i = 0; i < percpu::processor_count(); i++) {

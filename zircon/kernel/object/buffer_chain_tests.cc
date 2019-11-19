@@ -143,4 +143,4 @@ static bool copy_in_copy_out() {
 UNITTEST_START_TESTCASE(buffer_chain_tests)
 UNITTEST("alloc_free_basic", alloc_free_basic)
 UNITTEST("copy_in_copy_out", copy_in_copy_out)
-UNITTEST_END_TESTCASE(buffer_chain_tests, "buffer_chain", "BufferChain tests");
+UNITTEST_END_TESTCASE(buffer_chain_tests, "buffer_chain", "BufferChain tests")

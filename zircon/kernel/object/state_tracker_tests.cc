@@ -181,4 +181,4 @@ ST_UNITTEST(removal::on_state_change_via_update_state)
 ST_UNITTEST(removal::on_cancel)
 ST_UNITTEST(removal::on_cancel_by_key)
 
-UNITTEST_END_TESTCASE(state_tracker_tests, "statetracker", "StateTracker test");
+UNITTEST_END_TESTCASE(state_tracker_tests, "statetracker", "StateTracker test")

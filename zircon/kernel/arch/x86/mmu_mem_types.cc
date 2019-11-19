@@ -313,7 +313,5 @@ static int cmd_memtype(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("memtype", "memory type commands", &cmd_memtype)
-#endif
 STATIC_COMMAND_END(memtype)

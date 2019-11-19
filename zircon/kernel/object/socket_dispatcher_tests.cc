@@ -96,4 +96,4 @@ bool TestCreateWriteReadClose() {
 UNITTEST_START_TESTCASE(socket_dispatcher_tests)
 UNITTEST("TestCreateDestroyManySockets", TestCreateDestroyManySockets)
 UNITTEST("TestCreateWriteReadClose", TestCreateWriteReadClose)
-UNITTEST_END_TESTCASE(socket_dispatcher_tests, "socket_dispatcher_tests", "SocketDispatcher tests");
+UNITTEST_END_TESTCASE(socket_dispatcher_tests, "socket_dispatcher_tests", "SocketDispatcher tests")

@@ -182,4 +182,4 @@ UNITTEST("parallel readers(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<8, 0, 0>)
 UNITTEST("single writer(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<0, 4, 0>))
 UNITTEST("readers and writer(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<4, 2, 0>))
 UNITTEST("upgraders(No PI)", (BrwLockTest<BrwLockNoPi>::RunTest<2, 0, 3>))
-UNITTEST_END_TESTCASE(brwlock_tests, "brwlock", "brwlock tests");
+UNITTEST_END_TESTCASE(brwlock_tests, "brwlock", "brwlock tests")

@@ -157,4 +157,4 @@ bool mutex_spin_time_test(void) {
 
 UNITTEST_START_TESTCASE(mutex_spin_time_tests)
 UNITTEST("Mutex spin timeouts", (mutex_spin_time_test))
-UNITTEST_END_TESTCASE(mutex_spin_time_tests, "mutex_spin_time", "mutex_spin_time tests");
+UNITTEST_END_TESTCASE(mutex_spin_time_tests, "mutex_spin_time", "mutex_spin_time tests")

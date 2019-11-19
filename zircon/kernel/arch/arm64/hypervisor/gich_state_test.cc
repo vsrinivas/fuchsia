@@ -115,4 +115,4 @@ static bool get_interrupt_state() {
 UNITTEST_START_TESTCASE(gich_state)
 GICH_STATE_UNITTEST(has_pending_interrupt)
 GICH_STATE_UNITTEST(get_interrupt_state)
-UNITTEST_END_TESTCASE(gich_state, "gich_state", "Tests for hypervisor GICH state.");
+UNITTEST_END_TESTCASE(gich_state, "gich_state", "Tests for hypervisor GICH state.")

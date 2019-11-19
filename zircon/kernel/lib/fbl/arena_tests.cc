@@ -492,4 +492,4 @@ ARENA_UNITTEST(committing_tests)
 ARENA_UNITTEST(uncommitting_tests)
 ARENA_UNITTEST(memory_cleanup)
 ARENA_UNITTEST(content_preservation)
-UNITTEST_END_TESTCASE(arena_tests, "arenatests", "Arena allocator test");
+UNITTEST_END_TESTCASE(arena_tests, "arenatests", "Arena allocator test")

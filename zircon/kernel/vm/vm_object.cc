@@ -441,7 +441,5 @@ static int cmd_vm_object(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 0
 STATIC_COMMAND("vm_object", "vm object debug commands", &cmd_vm_object)
-#endif
 STATIC_COMMAND_END(vm_object)

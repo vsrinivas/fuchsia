@@ -560,8 +560,6 @@ static int cmd_timers(int argc, const cmd_args* argv, uint32_t flags) {
 }
 
 STATIC_COMMAND_START
-#if LK_DEBUGLEVEL > 1
 STATIC_COMMAND_MASKED("timers", "dump the current kernel timer queues", &cmd_timers,
                       CMD_AVAIL_NORMAL)
-#endif
 STATIC_COMMAND_END(kernel)

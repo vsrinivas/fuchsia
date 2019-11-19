@@ -170,4 +170,4 @@ UNITTEST_START_TESTCASE(printf_tests)
 UNITTEST("printf_tests", printf_tests)
 UNITTEST("printf_field_width_tests", printf_field_width_test)
 UNITTEST("snprintf_truncation_test", snprintf_truncation_test)
-UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests");
+UNITTEST_END_TESTCASE(printf_tests, "printf_tests", "printf_tests")

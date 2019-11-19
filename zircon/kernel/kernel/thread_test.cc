@@ -361,4 +361,4 @@ UNITTEST("thread_last_cpu_new_thread", thread_last_cpu_new_thread)
 UNITTEST("thread_last_cpu_running_thread", thread_last_cpu_running_thread)
 UNITTEST("thread_empty_soft_affinity_mask", thread_empty_soft_affinity_mask)
 UNITTEST("thread_conflicting_soft_and_hard_affinity", thread_conflicting_soft_and_hard_affinity)
-UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests");
+UNITTEST_END_TESTCASE(thread_tests, "thread", "thread tests")

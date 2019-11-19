@@ -184,4 +184,4 @@ UNITTEST("alloc checker new", alloc_checker_new)
 UNITTEST("alloc checker new fails", alloc_checker_new_fails)
 UNITTEST("test array size overflow check", test_array_size_overflow_check)
 UNITTEST("test negative array size", test_negative_array_size)
-UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker");
+UNITTEST_END_TESTCASE(alloc_checker, "alloc_cpp", "Tests of the C++ AllocChecker")

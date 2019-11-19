@@ -56,6 +56,7 @@
  * MODULE_DEPS += \
  *         lib/unittest   \
  */
+#include <debug.h>
 #include <stdarg.h>
 #include <stdbool.h>
 #include <stddef.h>
@@ -342,6 +343,14 @@ typedef struct unitest_testcase_registration {
   size_t test_cnt;
 } unittest_testcase_registration_t;
 
+#if LK_DEBUGLEVEL == 0
+
+#define UNITTEST_START_TESTCASE(_global_id)
+#define UNITTEST(_name, _fn)
+#define UNITTEST_END_TESTCASE(_global_id, _name, _desc)
+
+#else  // LK_DEBUGLEVEL != 0
+
 #define UNITTEST_START_TESTCASE(_global_id) \
   static const unittest_registration_t __unittest_table_##_global_id[] = {
 #define UNITTEST(_name, _fn) {.name = _name, .fn = _fn},
@@ -357,6 +366,8 @@ typedef struct unitest_testcase_registration {
           .desc = _desc,                                                               \
           .tests = __unittest_table_##_global_id,                                      \
           .test_cnt = countof(__unittest_table_##_global_id),                          \
-  }
+  };
+
+#endif  // LK_DEBUGLEVEL == 0
 
 #endif  // ZIRCON_KERNEL_LIB_UNITTEST_INCLUDE_LIB_UNITTEST_UNITTEST_H_

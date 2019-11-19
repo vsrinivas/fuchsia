@@ -90,4 +90,4 @@ UNITTEST("mutex_lock_unlock", mutex_lock_unlock)
 UNITTEST("mutex_is_held", mutex_is_held)
 UNITTEST("mutex_assert_held", mutex_assert_held)
 UNITTEST("mutex_assert_held_compile_test", mutex_assert_held_compile_test)
-UNITTEST_END_TESTCASE(mutex_tests, "mutex", "Mutex tests");
+UNITTEST_END_TESTCASE(mutex_tests, "mutex", "Mutex tests")
