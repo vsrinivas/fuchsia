@@ -22,7 +22,7 @@ use {
         stream::FuturesUnordered,
     },
     hyper::{body::Payload, Body, Request, StatusCode},
-    std::{convert::TryInto, hash::Hash, num::TryFromIntError, sync::Arc},
+    std::{convert::TryInto, hash::Hash, num::TryFromIntError, sync::Arc, time::Duration},
     url::Url,
 };
 
@@ -570,13 +570,38 @@ async fn fetch_blob(
     // TODO try the other mirrors depending on the errors encountered trying this one.
     let blob_url = make_blob_url(mirrors[0].blob_mirror_url(), &merkle)?;
 
-    if let Some(blob) =
-        cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
-    {
-        download_blob(client, blob_url, blob_kind, expected_len, blob).await?;
+    const MAX_FETCH_RETRIES: usize = 1;
+
+    struct RetryNetworkErrors {
+        remaining: usize,
     }
 
-    Ok(())
+    impl fuchsia_backoff::Backoff<FetchError> for RetryNetworkErrors {
+        fn next_backoff(&mut self, err: &FetchError) -> Option<Duration> {
+            if !err.should_retry() || self.remaining == 0 {
+                return None;
+            }
+
+            self.remaining -= 1;
+            Some(Duration::from_secs(0))
+        }
+    }
+
+    fuchsia_backoff::retry_or_first_error(
+        RetryNetworkErrors { remaining: MAX_FETCH_RETRIES },
+        || {
+            async {
+                if let Some(blob) =
+                    cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+                {
+                    download_blob(client, &blob_url, blob_kind, expected_len, blob).await?;
+                }
+
+                Ok(())
+            }
+        },
+    )
+    .await
 }
 
 fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<Url, url::ParseError> {
@@ -599,7 +624,7 @@ fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<Url, url::Par
 
 async fn download_blob(
     client: &fuchsia_hyper::HttpsClient,
-    url: Url,
+    url: &Url,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
     dest: FileProxy,
@@ -733,6 +758,15 @@ pub enum FetchError {
 
     #[fail(display = "io error: {}", _0)]
     Io(#[cause] Status),
+}
+
+impl FetchError {
+    fn should_retry(&self) -> bool {
+        match self {
+            FetchError::Hyper(_) | FetchError::Http(_) | FetchError::BadHttpStatus(_) => true,
+            _ => false,
+        }
+    }
 }
 
 impl From<url::ParseError> for FetchError {

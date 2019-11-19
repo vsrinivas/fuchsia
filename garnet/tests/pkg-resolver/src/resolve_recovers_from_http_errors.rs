@@ -8,53 +8,24 @@
 use {
     super::*,
     fuchsia_merkle::MerkleTree,
-    fuchsia_pkg_testing::{serve::UriPathHandler, RepositoryBuilder},
-    futures::future::{ready, BoxFuture},
+    fuchsia_pkg_testing::{
+        serve::{handler, AtomicToggle, UriPathHandler},
+        RepositoryBuilder,
+    },
+    futures::future::BoxFuture,
     hyper::{header::CONTENT_LENGTH, Body, Response},
     matches::assert_matches,
-    parking_lot::Mutex,
-    std::{
-        path::{Path, PathBuf},
-        sync::Arc,
-    },
+    std::{path::Path, sync::Arc},
 };
 
-struct OverrideOnceUriPathHandler {
-    already_overridden: Mutex<bool>,
-    path_to_override: PathBuf,
-    path_handler: Box<dyn UriPathHandler>,
-}
-
-impl OverrideOnceUriPathHandler {
-    fn new(path_to_override: impl Into<PathBuf>, path_handler: impl UriPathHandler) -> Self {
-        Self {
-            already_overridden: Mutex::new(false),
-            path_to_override: path_to_override.into(),
-            path_handler: Box::new(path_handler),
-        }
-    }
-}
-
-impl UriPathHandler for OverrideOnceUriPathHandler {
-    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
-        if uri_path != self.path_to_override {
-            return ready(response).boxed();
-        }
-        let mut already_overridden = self.already_overridden.lock();
-        if *already_overridden {
-            return ready(response).boxed();
-        }
-        *already_overridden = true;
-        self.path_handler.handle(uri_path, response)
-    }
-}
-
-async fn verify_resolve_fails_then_succeeds(
+async fn verify_resolve_fails_then_succeeds<H: UriPathHandler>(
     pkg: Package,
-    uri_handler: OverrideOnceUriPathHandler,
+    handler: H,
     failure_status: Status,
 ) {
     let env = TestEnv::new();
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
     let repo = Arc::new(
         RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
             .add_package(&pkg)
@@ -62,32 +33,25 @@ async fn verify_resolve_fails_then_succeeds(
             .await
             .unwrap(),
     );
-    let served_repository =
-        repo.build_server().uri_path_override_handler(uri_handler).start().unwrap();
-    let repo_url = "fuchsia-pkg://test".parse().unwrap();
-    let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
 
+    let should_fail = AtomicToggle::new(true);
+    let served_repository = repo
+        .build_server()
+        .uri_path_override_handler(handler::Toggleable::new(&should_fail, handler))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+
+    // First resolve fails with the expected error.
     assert_matches!(env.resolve_package(&pkg_url).await, Err(status) if status == failure_status);
+
+    // Disabling the custom URI path handler allows the subsequent resolves to succeed.
+    should_fail.unset();
     let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
-
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
-    env.stop().await;
-}
 
-struct NotFoundUriPathHandler;
-impl UriPathHandler for NotFoundUriPathHandler {
-    fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<Response<Body>> {
-        ready(
-            Response::builder()
-                .status(hyper::StatusCode::NOT_FOUND)
-                .body(Body::empty())
-                .expect("valid response"),
-        )
-        .boxed()
-    }
+    env.stop().await;
 }
 
 #[fasync::run_singlethreaded(test)]
@@ -97,7 +61,7 @@ async fn second_resolve_succeeds_when_far_404() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, NotFoundUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::StaticResponseCode::not_found()),
         Status::UNAVAILABLE,
     )
     .await
@@ -113,7 +77,7 @@ async fn second_resolve_succeeds_when_blob_404() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, NotFoundUriPathHandler),
+        handler::ForPath::new(path_to_override, handler::StaticResponseCode::not_found()),
         Status::UNAVAILABLE,
     )
     .await
@@ -139,7 +103,7 @@ impl UriPathHandler for OneByteShortThenErrorUriPathHandler {
                 ))
                 .expect("valid response")
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -164,7 +128,7 @@ async fn second_resolve_succeeds_when_far_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteShortThenErrorUriPathHandler),
         Status::UNAVAILABLE,
     )
     .await
@@ -185,7 +149,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenErrorUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteShortThenErrorUriPathHandler),
         Status::UNAVAILABLE,
     )
     .await
@@ -207,7 +171,7 @@ impl UriPathHandler for OneByteShortThenDisconnectUriPathHandler {
                 ))
                 .expect("valid response")
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -225,7 +189,7 @@ async fn second_resolve_succeeds_disconnect_before_far_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
         Status::UNAVAILABLE,
     )
     .await
@@ -246,7 +210,7 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteShortThenDisconnectUriPathHandler),
         Status::UNAVAILABLE,
     )
     .await
@@ -266,7 +230,7 @@ impl UriPathHandler for OneByteFlippedUriPathHandler {
                 .body(bytes.into())
                 .expect("valid response")
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -277,7 +241,7 @@ async fn second_resolve_succeeds_when_far_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteFlippedUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteFlippedUriPathHandler),
         Status::IO,
     )
     .await
@@ -294,7 +258,7 @@ async fn second_resolve_succeeds_when_blob_corrupted() {
 
     verify_resolve_fails_then_succeeds(
         pkg,
-        OverrideOnceUriPathHandler::new(path_to_override, OneByteFlippedUriPathHandler),
+        handler::ForPath::new(path_to_override, OneByteFlippedUriPathHandler),
         Status::IO,
     )
     .await

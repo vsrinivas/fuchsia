@@ -17,7 +17,9 @@ use {
         task::SpawnExt,
     },
     hyper::{header, service::service_fn, Body, Method, Request, Response, Server, StatusCode},
+    parking_lot::Mutex,
     std::{
+        collections::HashSet,
         net::{Ipv4Addr, SocketAddr},
         path::{Path, PathBuf},
         sync::{
@@ -40,13 +42,6 @@ pub trait UriPathHandler: 'static + Send + Sync {
     fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>>;
 }
 
-struct PassThroughUriPathHandler;
-impl UriPathHandler for PassThroughUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
-        ready(response).boxed()
-    }
-}
-
 impl ServedRepositoryBuilder {
     pub(crate) fn new(repo: Arc<Repository>) -> Self {
         ServedRepositoryBuilder { repo, uri_path_override_handlers: vec![] }
@@ -59,38 +54,6 @@ impl ServedRepositoryBuilder {
     pub fn uri_path_override_handler(mut self, handler: impl UriPathHandler) -> Self {
         self.uri_path_override_handlers.push(Arc::new(handler));
         self
-    }
-
-    /// Add a new path handler to reject all incoming requests while the given toggle switch is
-    /// set.
-    pub fn inject_500_toggle(self, should_fail: &AtomicToggle) -> Self {
-        struct FailSwitchUriPathHandler {
-            should_fail: Arc<AtomicBool>,
-        }
-
-        impl UriPathHandler for FailSwitchUriPathHandler {
-            fn handle(
-                &self,
-                _uri_path: &Path,
-                response: Response<Body>,
-            ) -> BoxFuture<Response<Body>> {
-                async move {
-                    if self.should_fail.load(Ordering::SeqCst) {
-                        Response::builder()
-                            .status(StatusCode::INTERNAL_SERVER_ERROR)
-                            .body(Body::empty())
-                            .unwrap()
-                    } else {
-                        response
-                    }
-                }
-                .boxed()
-            }
-        }
-
-        self.uri_path_override_handler(FailSwitchUriPathHandler {
-            should_fail: Arc::clone(&should_fail.0),
-        })
     }
 
     /// Spawn the server on the current executor, returning a handle to manage the server.
@@ -235,6 +198,136 @@ impl AtomicToggle {
     /// Atomically sets this toggle to false.
     pub fn unset(&self) {
         self.0.store(false, Ordering::SeqCst);
+    }
+}
+
+/// UriPathHandler implementations
+pub mod handler {
+    use super::*;
+
+    /// Handler that always responds with the given status code
+    pub struct StaticResponseCode(StatusCode);
+
+    impl UriPathHandler for StaticResponseCode {
+        fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<Response<Body>> {
+            ready(Response::builder().status(self.0).body(Body::empty()).unwrap()).boxed()
+        }
+    }
+
+    impl StaticResponseCode {
+        /// Creates handler that always responds with the given status code
+        pub fn new(status: StatusCode) -> Self {
+            Self(status)
+        }
+
+        /// Creates handler that always responds with 200 OK
+        pub fn ok() -> Self {
+            Self(StatusCode::OK)
+        }
+
+        /// Creates handler that always responds with 404 NOT_FOUND
+        pub fn not_found() -> Self {
+            Self(StatusCode::NOT_FOUND)
+        }
+
+        /// Creates handler that always responds with 500 INTERNAL_SERVER_ERROR
+        pub fn server_error() -> Self {
+            Self(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+    }
+
+    /// Handler that overrides requests with the given handler only when enabled
+    pub struct Toggleable<H: UriPathHandler> {
+        enabled: Arc<AtomicBool>,
+        handler: H,
+    }
+
+    impl<H: UriPathHandler> UriPathHandler for Toggleable<H> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+            if self.enabled.load(Ordering::SeqCst) {
+                self.handler.handle(uri_path, response)
+            } else {
+                ready(response).boxed()
+            }
+        }
+    }
+
+    impl<H: UriPathHandler> Toggleable<H> {
+        /// Creates handler that overrides requests when should_override is set.
+        pub fn new(should_override: &AtomicToggle, handler: H) -> Self {
+            Self { enabled: Arc::clone(&should_override.0), handler }
+        }
+    }
+
+    /// Handler that overrides the given request path using the given handler.
+    pub struct ForPath<H: UriPathHandler> {
+        path: PathBuf,
+        handler: H,
+    }
+
+    impl<H: UriPathHandler> UriPathHandler for ForPath<H> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+            if self.path == uri_path {
+                self.handler.handle(uri_path, response)
+            } else {
+                ready(response).boxed()
+            }
+        }
+    }
+
+    impl<H: UriPathHandler> ForPath<H> {
+        /// Creates handler that overrides the given request path using the given handler.
+        pub fn new(path: impl Into<PathBuf>, handler: H) -> Self {
+            Self { path: path.into(), handler }
+        }
+    }
+
+    /// Handler that overrides the all requests that start with the given request path using the
+    /// given handler.
+    pub struct ForPathPrefix<H: UriPathHandler> {
+        prefix: PathBuf,
+        handler: H,
+    }
+
+    impl<H: UriPathHandler> UriPathHandler for ForPathPrefix<H> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+            if uri_path.starts_with(&self.prefix) {
+                self.handler.handle(uri_path, response)
+            } else {
+                ready(response).boxed()
+            }
+        }
+    }
+
+    impl<H: UriPathHandler> ForPathPrefix<H> {
+        /// Creates handler that overrides the all requests that start with the given request path
+        /// using the given handler.
+        pub fn new(prefix: impl Into<PathBuf>, handler: H) -> Self {
+            Self { prefix: prefix.into(), handler }
+        }
+    }
+
+    /// Handler that passes responses through the given handler once per unique path.
+    pub struct OncePerPath<H: UriPathHandler> {
+        handler: H,
+        failed_paths: Mutex<HashSet<PathBuf>>,
+    }
+
+    impl<H: UriPathHandler> UriPathHandler for OncePerPath<H> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+            if self.failed_paths.lock().insert(uri_path.to_owned()) {
+                self.handler.handle(uri_path, response)
+            } else {
+                ready(response).boxed()
+            }
+        }
+    }
+
+    impl<H: UriPathHandler> OncePerPath<H> {
+        /// Creates handler that passes responses through the given handler once per unique path.
+        pub fn new(handler: H) -> Self {
+            Self { handler, failed_paths: Mutex::new(HashSet::new()) }
+        }
     }
 }
 

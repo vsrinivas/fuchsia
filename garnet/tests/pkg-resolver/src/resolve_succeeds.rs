@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{
-        serve::{AtomicToggle, UriPathHandler},
+        serve::{handler, AtomicToggle, UriPathHandler},
         RepositoryBuilder, VerificationError,
     },
     futures::{
@@ -270,6 +270,7 @@ async fn download_blob_experiment_identity() {
 #[fasync::run_singlethreaded(test)]
 async fn download_blob_experiment_identity_hyper() {
     let env = TestEnv::new();
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     let pkg = Package::identity().await.unwrap();
     let repo = Arc::new(
@@ -280,17 +281,45 @@ async fn download_blob_experiment_identity_hyper() {
             .unwrap(),
     );
     let served_repository = repo.build_server().start().unwrap();
-    let repo_url = "fuchsia-pkg://test".parse().unwrap();
-    let repo_config = served_repository.make_repo_config(repo_url);
-
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
-
-    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+    env.register_repo(&served_repository).await;
 
     let pkg_url = format!("fuchsia-pkg://test/{}", pkg.name());
     let package_dir = env.resolve_package(&pkg_url).await.expect("package to resolve");
 
     pkg.verify_contents(&package_dir).await.expect("correct package contents");
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn download_blob_experiment_retries() {
+    let env = TestEnv::new();
+
+    let pkg = PackageBuilder::new("try-hard")
+        .add_resource_at("data/foo", "bar".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = repo
+        .build_server()
+        .uri_path_override_handler(handler::ForPathPrefix::new(
+            "/blobs",
+            handler::OncePerPath::new(handler::StaticResponseCode::server_error()),
+        ))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
+    pkg.verify_contents(&package_dir).await.unwrap();
 
     env.stop().await;
 }
@@ -312,10 +341,14 @@ async fn download_blob_experiment_uses_cached_package() {
             .unwrap(),
     );
     let fail_requests = AtomicToggle::new(true);
-    let served_repository = repo.build_server().inject_500_toggle(&fail_requests).start().unwrap();
-
-    let repo_url = "fuchsia-pkg://test".parse().unwrap();
-    let repo_config = served_repository.make_repo_config(repo_url);
+    let served_repository = repo
+        .build_server()
+        .uri_path_override_handler(handler::Toggleable::new(
+            &fail_requests,
+            handler::StaticResponseCode::server_error(),
+        ))
+        .start()
+        .unwrap();
 
     env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
@@ -325,7 +358,7 @@ async fn download_blob_experiment_uses_cached_package() {
         Err(Status::NOT_FOUND)
     );
 
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    env.register_repo(&served_repository).await;
 
     // the package can't be resolved before the repository can be updated without error.
     assert_matches!(
@@ -545,8 +578,7 @@ async fn test_concurrent_blob_writes() {
     );
     let served_repository =
         repo.build_server().uri_path_override_handler(blocking_uri_path_handler).start().unwrap();
-    let repo_config = served_repository.make_repo_config("fuchsia-pkg://test".parse().unwrap());
-    env.proxies.repo_manager.add(repo_config.into()).await.unwrap();
+    env.register_repo(&served_repository).await;
     env.set_experiment_state(Experiment::DownloadBlob, true).await;
 
     // Construct the resolver proxies (clients)
@@ -705,9 +737,7 @@ async fn download_blob_experiment_dedups_concurrent_content_blob_fetches() {
         .start()
         .expect("repo to serve");
 
-    let repo_url = "fuchsia-pkg://test".parse().unwrap();
-    let repo_config = served_repository.make_repo_config(repo_url);
-    env.proxies.repo_manager.add(repo_config.into()).await.expect("repo to configure");
+    env.register_repo(&served_repository).await;
 
     // Start resolving both packages using distinct proxies, which should block waiting for the
     // meta FAR responses.

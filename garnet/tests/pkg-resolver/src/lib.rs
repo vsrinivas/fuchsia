@@ -23,7 +23,7 @@ use {
         client::{App, AppBuilder},
         server::{NestedEnvironment, ServiceFs},
     },
-    fuchsia_pkg_testing::{pkgfs::TestPkgFs, Package, PackageBuilder},
+    fuchsia_pkg_testing::{pkgfs::TestPkgFs, serve::ServedRepository, Package, PackageBuilder},
     fuchsia_zircon::{self as zx, Status},
     futures::{compat::Stream01CompatExt, prelude::*},
     hyper::Body,
@@ -250,6 +250,13 @@ impl<P: PkgFs> TestEnv<P> {
             .set_experiment_state(experiment, state)
             .await
             .expect("experiment state to toggle");
+    }
+
+    pub async fn register_repo(&self, repo: &ServedRepository) {
+        let repo_url = "fuchsia-pkg://test".parse().unwrap();
+        let repo_config = repo.make_repo_config(repo_url);
+
+        self.proxies.repo_manager.add(repo_config.into()).await.unwrap();
     }
 
     fn resolve_package(&self, url: &str) -> impl Future<Output = Result<DirectoryProxy, Status>> {
