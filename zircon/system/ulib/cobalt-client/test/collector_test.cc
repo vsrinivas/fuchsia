@@ -60,10 +60,6 @@ MetricInfo MakeMetricInfo(uint32_t metric_id = kMetricId, uint32_t event_code_0 
 CollectorOptions MakeCollectorOptions() {
   CollectorOptions options = CollectorOptions::Debug();
   // Just create a dummy vmo.
-  options.load_config = [](zx::vmo* vmo, size_t* size) {
-    *size = 1;
-    return zx::vmo::create(1, 0, vmo) == ZX_OK;
-  };
   return options;
 }
 
@@ -146,23 +142,6 @@ bool TestGeneralAvailability() {
 bool ConstructFromOptionsTest() {
   BEGIN_TEST;
   CollectorOptions options = MakeCollectorOptions();
-  Collector collector = Collector(std::move(options));
-  // Sanity check nothing crashes.
-  auto histogram = Histogram<kBuckets>(MakeHistogramOptionsWithDefault(), &collector);
-  auto counter = Counter(MakeMetricOptionsWithDefault(), &collector);
-
-  histogram.Add(1);
-  counter.Increment();
-
-  collector.Flush();
-  END_TEST;
-}
-
-// Sanity Check
-bool ConstructFromOptionsWithProjectNameTest() {
-  BEGIN_TEST;
-  CollectorOptions options = MakeCollectorOptions();
-  options.load_config = nullptr;
   options.project_name = kProjectName;
   Collector collector = Collector(std::move(options));
   // Sanity check nothing crashes.
@@ -492,7 +471,6 @@ END_TEST_CASE(CollectorOptionsTest)
 
 BEGIN_TEST_CASE(CollectorTest)
 RUN_TEST(ConstructFromOptionsTest)
-RUN_TEST(ConstructFromOptionsWithProjectNameTest)
 RUN_TEST(AddCounterTest)
 RUN_TEST(AddCounterMultipleTest)
 RUN_TEST(AddHistogramTest)

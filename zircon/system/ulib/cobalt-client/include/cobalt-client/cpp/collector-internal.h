@@ -25,18 +25,6 @@ struct CobaltOptions {
   // Service path to LoggerFactory interface.
   std::string service_path;
 
-  // Maximum time to wait for Cobalt Service to respond for the CreateLogger request.
-  // Unless the channel is closed, we will keep checking if the channel is readable.
-  zx::duration logger_deadline;
-
-  // The maximum time to wait, after the request has been written to the channel.
-  // This allows amortizing the wait time in future calls.
-  zx::duration logger_deadline_first_attempt;
-
-  // Sets the input VMO to point to the serialized config for this logger and the size
-  // of the serialized data.
-  fit::function<bool(zx::vmo*, size_t*)> config_reader = nullptr;
-
   // Performs a connection to a service at a given path.
   fit::function<zx_status_t(const char* service_path, zx::channel service)> service_connect =
       nullptr;

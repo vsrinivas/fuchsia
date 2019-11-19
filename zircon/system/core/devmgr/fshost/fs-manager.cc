@@ -41,8 +41,6 @@ namespace devmgr {
 cobalt_client::CollectorOptions FsManager::CollectorOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
   options.project_name = "local_storage";
-  options.initial_response_deadline = zx::msec(10);
-  options.response_deadline = zx::usec(10);
   return options;
 }
 

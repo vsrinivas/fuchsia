@@ -34,22 +34,6 @@ struct CollectorOptions {
   // Returns a |Collector| whose data will be logged for Debug release stage.
   static CollectorOptions Debug();
 
-  // Callback used when reading the config to create a cobalt logger.
-  // Returns true when the write was successful. The VMO will be transferred
-  // to the cobalt service.
-  fit::function<bool(zx::vmo*, size_t*)> load_config = nullptr;
-
-  // Configuration for RPC behavior for remote metrics.
-  // Only set if you plan to interact with cobalt service.
-
-  // When registering with cobalt, will block for this amount of time, each
-  // time we need to reach cobalt, until the response is received.
-  zx::duration response_deadline = zx::duration(0);
-
-  // When registering with cobalt, will block for this amount of time, the first
-  // time we need to wait for a response.
-  zx::duration initial_response_deadline = zx::duration(0);
-
   // The name used to register the project with cobalt. This will be used to route the metrics
   // to the right project.
   std::string project_name;

@@ -22,16 +22,12 @@ size_t TicksToMs(const zx::ticks& ticks) { return fzl::TicksToNs(ticks) / zx::ms
 
 }  // namespace
 
-BlobfsMetrics::~BlobfsMetrics() {
-  Dump();
-}
+BlobfsMetrics::~BlobfsMetrics() { Dump(); }
 
 cobalt_client::CollectorOptions BlobfsMetrics::GetBlobfsOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::GeneralAvailability();
   // Filesystems project name as defined in cobalt-analytics projects.yaml.
   options.project_name = "local_storage";
-  options.initial_response_deadline = zx::usec(0);
-  options.response_deadline = zx::nsec(0);
   return options;
 }
 
@@ -63,10 +59,12 @@ void BlobfsMetrics::Dump() const {
 
 void BlobfsMetrics::ScheduleMetricFlush() {
   async::PostDelayedTask(
-      flush_loop_.dispatcher(), [this]() {
+      flush_loop_.dispatcher(),
+      [this]() {
         mutable_collector()->Flush();
         ScheduleMetricFlush();
-      }, kCobaltFlushTimer);
+      },
+      kCobaltFlushTimer);
 }
 
 void BlobfsMetrics::Collect() {

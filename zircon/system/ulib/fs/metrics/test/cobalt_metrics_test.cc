@@ -25,9 +25,7 @@ constexpr uint32_t kBuckets = 20;
 
 cobalt_client::CollectorOptions MakeOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
-  options.load_config = [](zx::vmo*, size_t*) { return false; };
-  options.initial_response_deadline = zx::duration(0);
-  options.response_deadline = zx::duration(0);
+  options.project_name = "FsHostProjectName";
   return options;
 }
 
