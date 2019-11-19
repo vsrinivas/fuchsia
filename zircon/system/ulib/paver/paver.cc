@@ -420,7 +420,8 @@ void Paver::ReadAsset(Configuration configuration, Asset asset,
                       ReadAssetCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
   if (!InitializePartitioner(&partitioner_)) {
-    result.set_err(ZX_ERR_BAD_STATE);
+    zx_status_t status = ZX_ERR_BAD_STATE;
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
@@ -428,9 +429,9 @@ void Paver::ReadAsset(Configuration configuration, Asset asset,
   zx_status_t status = PartitionRead(*partitioner_, PartitionType(configuration, asset),
                                      &response.asset.vmo, &response.asset.size);
   if (status != ZX_OK) {
-    result.set_err(status);
+    result.set_err(&status);
   } else {
-    result.set_response(std::move(response));
+    result.set_response(&response);
   }
   completer.Reply(std::move(result));
 }
@@ -757,7 +758,7 @@ void Paver::InitializeAbr(InitializeAbrCompleter::Sync completer) {
 void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result;
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    result.set_err(status);
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
@@ -766,9 +767,10 @@ void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync com
   if (config) {
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
     response.configuration = *config;
-    result.set_response(response);
+    result.set_response(&response);
   } else {
-    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -777,7 +779,7 @@ void Paver::QueryConfigurationStatus(Configuration configuration,
                                      QueryConfigurationStatusCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result;
   if (zx_status_t status = InitializeAbrClient(); status != ZX_OK) {
-    result.set_err(status);
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
@@ -791,7 +793,8 @@ void Paver::QueryConfigurationStatus(Configuration configuration,
       break;
     default:
       ERROR("Unexpected configuration: %d\n", static_cast<uint32_t>(configuration));
-      result.set_err(ZX_ERR_INVALID_ARGS);
+      zx_status_t status = ZX_ERR_INVALID_ARGS;
+      result.set_err(&status);
       completer.Reply(std::move(result));
       return;
   }
@@ -805,7 +808,7 @@ void Paver::QueryConfigurationStatus(Configuration configuration,
     response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
   }
 
-  result.set_response(response);
+  result.set_response(&response);
   completer.Reply(std::move(result));
 }
 

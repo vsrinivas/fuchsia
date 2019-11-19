@@ -44,12 +44,13 @@ void PayloadStreamer::RegisterVmo(zx::vmo vmo, RegisterVmoCompleter::Sync comple
 void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   ::llcpp::fuchsia::paver::ReadResult result = {};
   if (!vmo_) {
-    result.set_err(ZX_ERR_BAD_STATE);
+    zx_status_t status = ZX_ERR_BAD_STATE;
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
   if (eof_reached_) {
-    result.set_eof(true);
+    result.set_eof(&eof_reached_);
     completer.Reply(std::move(result));
     return;
   }
@@ -57,9 +58,10 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   ssize_t n = read(payload_.get(), mapper_.start(), mapper_.size());
   if (n == 0) {
     eof_reached_ = true;
-    result.set_eof(true);
+    result.set_eof(&eof_reached_);
   } else if (n < 0) {
-    result.set_err(ZX_ERR_IO);
+    zx_status_t status = ZX_ERR_IO;
+    result.set_err(&status);
   } else {
     result.mutable_info().offset = 0;
     result.mutable_info().size = n;

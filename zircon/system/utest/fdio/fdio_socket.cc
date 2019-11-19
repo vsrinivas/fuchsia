@@ -57,7 +57,7 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
       return completer.Close(status);
     }
     llcpp::fuchsia::io::NodeInfo info;
-    info.set_socket(std::move(socket));
+    info.set_socket(&socket);
     return completer.Reply(std::move(info));
   }
 

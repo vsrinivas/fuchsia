@@ -42,14 +42,16 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
 
   void ReadError(ReadDataCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::ReadResult result;
-    result.set_err(ZX_ERR_INTERNAL);
+    zx_status_t status = ZX_ERR_INTERNAL;
+    result.set_err(&status);
 
     completer.Reply(std::move(result));
   }
 
   void ReadEof(ReadDataCompleter::Sync completer) {
     ::llcpp::fuchsia::paver::ReadResult result;
-    result.set_eof(true);
+    bool eof = true;
+    result.set_eof(&eof);
 
     completer.Reply(std::move(result));
   }
@@ -57,7 +59,8 @@ class FakePayloadStream : public ::llcpp::fuchsia::paver::PayloadStream::Interfa
   void ReadData(ReadDataCompleter::Sync completer) {
     if (!vmo_) {
       ::llcpp::fuchsia::paver::ReadResult result;
-      result.set_err(ZX_ERR_BAD_STATE);
+      zx_status_t status = ZX_ERR_BAD_STATE;
+      result.set_err(&status);
       completer.Reply(std::move(result));
       return;
     }
