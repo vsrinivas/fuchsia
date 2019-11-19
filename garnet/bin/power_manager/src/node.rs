@@ -21,7 +21,7 @@ pub trait Node {
     ///
     /// All nodes must implement this message to support communication between nodes. This
     /// is the entry point for a Node to receive new messages.
-    async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error>;
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error>;
 
     /// Send a message to another node
     ///
@@ -31,7 +31,7 @@ pub trait Node {
     async fn send_message(
         &self,
         node: &Rc<dyn Node>,
-        msg: &Message<'_>,
+        msg: &Message,
     ) -> Result<MessageReturn, Error> {
         let result = node.handle_message(msg).await;
         match result.as_ref() {

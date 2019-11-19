@@ -43,7 +43,7 @@ impl Node for CpuControlHandler {
         "CpuControlHandler"
     }
 
-    async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
         match msg {
             Message::SetMaxPowerConsumption(p) => self.handle_set_max_power_consumption(p),
             _ => Err(format_err!("Unsupported message: {:?}", msg)),

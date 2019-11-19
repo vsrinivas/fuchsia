@@ -38,8 +38,9 @@ impl PowerManager {
     }
 
     fn init_astro(&mut self) -> Result<(), Error> {
-        let temperature_node = temperature_handler::TemperatureHandler::new();
-        self.nodes.push(temperature_node.clone());
+        let cpu_temperature =
+            temperature_handler::TemperatureHandler::new("/dev/class/thermal/000".to_string())?;
+        self.nodes.push(cpu_temperature.clone());
 
         let cpu_stats_node = cpu_stats_handler::CpuStatsHandler::new()?;
         self.nodes.push(cpu_stats_node);
@@ -48,8 +49,7 @@ impl PowerManager {
         self.nodes.push(cpu_control_node.clone());
 
         let thermal_config = thermal_policy::ThermalConfig {
-            temperature_driver: "/dev/class/thermal/000".to_string(),
-            temperature_node,
+            temperature_node: cpu_temperature,
             cpu_control_node,
 
             // TODO(fxb/41452): these are just placeholder ThermalParams. The real params should be
@@ -80,18 +80,12 @@ impl PowerManager {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fuchsia_async as fasync;
 
-    fn test_expected_nodes(board: &'static str, expected: Vec<&'static str>) {
-        let mut pm = PowerManager::new(board.to_string()).unwrap();
-        pm.init().unwrap();
-        assert!(expected.iter().eq(pm.list_nodes().iter()));
-    }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_expected_nodes_astro() {
-        let expected_nodes =
-            vec!["TemperatureHandler", "CpuStatsHandler", "CpuControlHandler", "ThermalPolicy"];
-        test_expected_nodes("astro", expected_nodes);
+    #[test]
+    fn test_create_power_manager() {
+        let board_name = "astro";
+        let power_manager = PowerManager::new(board_name.to_string()).unwrap();
+        assert_eq!(power_manager.board, board_name);
+        assert_eq!(power_manager.list_nodes().len(), 0);
     }
 }

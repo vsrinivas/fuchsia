@@ -62,11 +62,4 @@ mod tests {
         let board = get_board_name().await.context("Failed to get board name").unwrap();
         assert_ne!(board, "");
     }
-
-    #[fasync::run_singlethreaded(test)]
-    async fn test_power_manager_init() {
-        let board = get_board_name().await.context("Failed to get board name").unwrap();
-        let mut pm = PowerManager::new(board).context("Failed to create PowerManager").unwrap();
-        assert!(pm.init().is_ok());
-    }
 }

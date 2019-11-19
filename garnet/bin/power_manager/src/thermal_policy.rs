@@ -33,17 +33,6 @@ pub struct ThermalPolicy {
 
 /// A struct to store all configurable aspects of the ThermalPolicy node
 pub struct ThermalConfig {
-    // TODO (pshickel): We need to store this String to include in the ReadTemperature message
-    // later. There is currently one TemperatureHandler node that interfaces with all required
-    // thermal drivers so when we send the ReadTemperature message to the node, it needs to know
-    // which driver to read from. I think a better approach might be to have a separate
-    // TemperatureHandler node for each thermal driver, where each one knows the path to its
-    // corresponding driver. If that's the case, then we don't need to store the driver path here,
-    // only a reference to the correct TemperatureHandler node.
-    /// The path of the thermal driver to read to provide temperature input to the thermal control
-    /// loop
-    pub temperature_driver: String,
-
     /// The node to provide temperature readings for the thermal control loop. It is expected that
     /// this node responds to the ReadTemperature message.
     pub temperature_node: Rc<dyn Node>,
@@ -179,8 +168,7 @@ impl ThermalPolicy {
     }
 
     async fn get_temperature(&self) -> Result<Celsius, Error> {
-        let message = Message::ReadTemperature(&self.config.temperature_driver);
-        match self.send_message(&self.config.temperature_node, &message).await {
+        match self.send_message(&self.config.temperature_node, &Message::ReadTemperature).await {
             Ok(MessageReturn::ReadTemperature(t)) => Ok(t),
             Ok(r) => Err(format_err!("ReadTemperature had unexpected return value: {:?}", r)),
             Err(e) => Err(format_err!("ReadTemperature failed: {:?}", e)),
@@ -238,7 +226,7 @@ impl Node for ThermalPolicy {
         "ThermalPolicy"
     }
 
-    async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
         match msg {
             _ => Err(format_err!("Unsupported message: {:?}", msg)),
         }
@@ -255,16 +243,11 @@ mod tests {
     // algorithm and connections to required nodes.
     #[allow(dead_code)]
     fn setup_test_node(temperature_readings: Vec<f32>) -> Rc<ThermalPolicy> {
-        let temperature_driver_path = "/dev/class/thermal/fake";
-        let temperature_node = temperature_handler::tests::setup_test_node(
-            temperature_driver_path,
-            temperature_readings,
-        );
+        let temperature_node = temperature_handler::tests::setup_test_node(temperature_readings);
         let cpu_control_node = cpu_control_handler::tests::setup_test_node();
         let thermal_config = ThermalConfig {
             temperature_node,
             cpu_control_node,
-            temperature_driver: temperature_driver_path.to_string(),
             thermal_params: ThermalParams {
                 sample_interval: Seconds(0.0),
                 filter_time_constant: Seconds(0.0),

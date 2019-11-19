@@ -7,10 +7,9 @@ use crate::types::{Celsius, Watts};
 /// Defines the message types and arguments to be used for inter-node communication
 #[derive(Debug)]
 #[allow(dead_code)]
-pub enum Message<'a> {
-    /// Read the temperature from a given temperature driver
-    /// Arg: a string specifying the complete driver path to read
-    ReadTemperature(&'a str),
+pub enum Message {
+    /// Read the temperature
+    ReadTemperature,
 
     /// Get the number of CPUs in the system
     GetNumCpus,

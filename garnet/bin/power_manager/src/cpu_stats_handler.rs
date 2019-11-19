@@ -53,13 +53,13 @@ struct CpuIdleStats {
 
 impl CpuStatsHandler {
     pub fn new() -> Result<Rc<Self>, Error> {
-        Ok(Rc::new(Self::new_with_svc_handle(Self::connect_stats_service()?)))
+        Ok(Self::new_with_proxy(Self::connect_stats_service()?))
     }
 
     /// Create the node with an existing Kernel Stats proxy (test configuration can use this
     /// to pass a proxy which connects to a fake stats service)
-    fn new_with_svc_handle(stats_svc: fstats::StatsProxy) -> Self {
-        Self { stats_svc, cpu_idle_stats: RefCell::new(Default::default()) }
+    fn new_with_proxy(stats_svc: fstats::StatsProxy) -> Rc<Self> {
+        Rc::new(Self { stats_svc, cpu_idle_stats: RefCell::new(Default::default()) })
     }
 
     fn connect_stats_service() -> Result<fstats::StatsProxy, Error> {
@@ -171,7 +171,7 @@ impl Node for CpuStatsHandler {
         "CpuStatsHandler"
     }
 
-    async fn handle_message(&self, msg: &Message<'_>) -> Result<MessageReturn, Error> {
+    async fn handle_message(&self, msg: &Message) -> Result<MessageReturn, Error> {
         match msg {
             Message::GetNumCpus => self.handle_get_num_cpus().await,
             Message::GetTotalCpuLoad => self.handle_get_total_cpu_load().await,
@@ -235,8 +235,8 @@ mod tests {
         proxy
     }
 
-    fn setup_test_node() -> CpuStatsHandler {
-        CpuStatsHandler::new_with_svc_handle(setup_fake_service())
+    fn setup_test_node() -> Rc<CpuStatsHandler> {
+        CpuStatsHandler::new_with_proxy(setup_fake_service())
     }
 
     /// This test creates a CpuStatsHandler node and sends it the 'GetNumCpus' message. The
@@ -311,8 +311,7 @@ mod tests {
     #[fasync::run_singlethreaded(test)]
     async fn test_unsupported_msg() {
         let node = setup_test_node();
-        let message = Message::ReadTemperature("");
-        let result = node.handle_message(&message).await;
+        let result = node.handle_message(&Message::ReadTemperature).await;
         assert!(result.is_err());
     }
 }
