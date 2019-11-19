@@ -226,8 +226,8 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethernet_netbuf_t* etherne
     goto done;
   }
 
-  netbuf = brcmf_netbuf_allocate(ethernet_netbuf->data_size + drvr->hdrlen);
-  brcmf_netbuf_grow_tail(netbuf, ethernet_netbuf->data_size + drvr->hdrlen);
+  netbuf = brcmf_netbuf_allocate((ethernet_netbuf->data_size + drvr->hdrlen + 3) & ~3);
+  brcmf_netbuf_grow_tail(netbuf, (ethernet_netbuf->data_size + drvr->hdrlen + 3) & ~3);
   brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
   memcpy(netbuf->data, ethernet_netbuf->data_buffer, ethernet_netbuf->data_size);
 

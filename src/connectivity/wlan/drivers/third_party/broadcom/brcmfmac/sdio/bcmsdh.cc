@@ -381,23 +381,24 @@ zx_status_t brcmf_sdiod_write(struct brcmf_sdio_dev* sdiodev, uint8_t func, uint
 }
 
 static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint32_t func,
-                                           uint32_t addr, struct brcmf_netbuf* netbuf) {
-  unsigned int req_sz;
+                                           uint32_t addr, uint8_t* data, size_t size) {
   zx_status_t err;
   TRACE_DURATION("brcmfmac:isr", "netbuf_read", "func", TA_UINT32((uint32_t)func), "len",
-                 TA_UINT32(netbuf->len));
+                 TA_UINT32(size));
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
-  req_sz = netbuf->len + 3;
-  req_sz &= (uint)~3;
+  if ((size & 3u) != 0) {
+    BRCMF_ERR("Unaligned SDIO read size %zu\n", size);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
   switch (func) {
     case SDIO_FN_1:
-      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, netbuf->data, req_sz, false);
+      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, false);
       break;
     case SDIO_FN_2:
-      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, netbuf->data, req_sz, true);
+      err = brcmf_sdiod_transfer(sdiodev, func, addr, false, data, size, true);
       break;
     default:
       /* bail out as things are really fishy here */
@@ -413,19 +414,20 @@ static zx_status_t brcmf_sdiod_netbuf_read(struct brcmf_sdio_dev* sdiodev, uint3
 }
 
 static zx_status_t brcmf_sdiod_netbuf_write(struct brcmf_sdio_dev* sdiodev, uint32_t func,
-                                            uint32_t addr, struct brcmf_netbuf* netbuf) {
-  unsigned int req_sz;
+                                            uint32_t addr, uint8_t* data, size_t size) {
   zx_status_t err;
 
   TRACE_DURATION("brcmfmac:isr", "sdiod_netbuf_write", "func", TA_UINT32((uint32_t)func), "len",
-                 TA_UINT32(netbuf->len));
+                 TA_UINT32(size));
 
   SBSDIO_FORMAT_ADDR(addr);
   /* Single netbuf use the standard mmc interface */
-  req_sz = netbuf->len + 3;
-  req_sz &= (uint)~3;
+  if ((size & 3u) != 0) {
+    BRCMF_ERR("Unaligned SDIO write size %zu\n", size);
+    return ZX_ERR_INVALID_ARGS;
+  }
 
-  err = brcmf_sdiod_transfer(sdiodev, func, addr, true, netbuf->data, req_sz, false);
+  err = brcmf_sdiod_transfer(sdiodev, func, addr, true, data, size, false);
 
   if (err == ZX_ERR_IO_REFUSED) {
     brcmf_sdiod_change_state(sdiodev, BRCMF_SDIOD_NOMEDIUM);
@@ -465,7 +467,7 @@ zx_status_t brcmf_sdiod_recv_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
     goto done;
   }
 
-  err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, pkt);
+  err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, pkt->data, pkt->len);
 
 done:
   return err;
@@ -489,13 +491,14 @@ zx_status_t brcmf_sdiod_recv_chain(struct brcmf_sdio_dev* sdiodev, struct brcmf_
   }
 
   if (list_len == 1) {
-    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, brcmf_netbuf_list_peek_head(pktq));
+    netbuf = brcmf_netbuf_list_peek_head(pktq);
+    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, netbuf->data, netbuf->len);
   } else {
     glom_netbuf = brcmu_pkt_buf_get_netbuf(totlen);
     if (!glom_netbuf) {
       return ZX_ERR_NO_MEMORY;
     }
-    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, glom_netbuf);
+    err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_2, addr, glom_netbuf->data, glom_netbuf->len);
     if (err != ZX_OK) {
       goto done;
     }
@@ -554,7 +557,7 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
   }
 
   brcmf_netbuf_list_for_every(pktq, netbuf) {
-    err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_2, addr, netbuf);
+    err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_2, addr, netbuf->data, netbuf->len);
     if (err != ZX_OK) {
       break;
     }
@@ -566,24 +569,9 @@ zx_status_t brcmf_sdiod_send_pkt(struct brcmf_sdio_dev* sdiodev, struct brcmf_ne
 zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32_t address,
                               void* data, size_t data_size) {
   zx_status_t err = ZX_OK;
-  struct brcmf_netbuf* pkt;
   // SBSDIO_SB_OFT_ADDR_LIMIT is the max transfer limit a single chunk.
-  uint32_t alloc_size = std::min<uint>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   uint32_t transfer_address = address & SBSDIO_SB_OFT_ADDR_MASK;
   uint32_t transfer_size;
-
-  if (!write) {
-    // Must round up the allocation size to match brcmf_sdiod_netbuf_read.
-    alloc_size += 3;
-    alloc_size &= (uint)~3;
-  }
-
-  pkt = brcmf_netbuf_allocate(alloc_size);
-  if (!pkt) {
-    BRCMF_ERR("brcmf_netbuf_allocate failed: len %d\n", alloc_size);
-    return ZX_ERR_IO;
-  }
-  pkt->priority = 0;
 
   /* Determine initial transfer parameters */
   sdio_claim_host(sdiodev->func1);
@@ -604,24 +592,18 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
       break;
     }
 
-    brcmf_netbuf_grow_tail(pkt, transfer_size);
-
     if (write) {
-      if (data)
-        memcpy(pkt->data, data, transfer_size);
-      err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, transfer_address, pkt);
+      err = brcmf_sdiod_netbuf_write(sdiodev, SDIO_FN_1, transfer_address, (uint8_t*)data,
+                                     transfer_size);
     } else {
-      err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, transfer_address, pkt);
+      err = brcmf_sdiod_netbuf_read(sdiodev, SDIO_FN_1, transfer_address, (uint8_t*)data,
+                                    transfer_size);
     }
 
     if (err != ZX_OK) {
       BRCMF_ERR("membytes transfer failed\n");
       break;
     }
-    if (!write) {
-      memcpy(data, pkt->data, transfer_size);
-    }
-    brcmf_netbuf_reduce_length_to(pkt, 0);
 
     /* Adjust for next transfer (if any) */
     data_size -= transfer_size;
@@ -631,8 +613,6 @@ zx_status_t brcmf_sdiod_ramrw(struct brcmf_sdio_dev* sdiodev, bool write, uint32
     transfer_address += transfer_size;
     transfer_size = std::min<uint>(SBSDIO_SB_OFT_ADDR_LIMIT, data_size);
   }
-
-  brcmf_netbuf_free(pkt);
 
   sdio_release_host(sdiodev->func1);
 
