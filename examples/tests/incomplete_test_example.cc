@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include "test_suite.h"
@@ -14,7 +15,7 @@ int main() {
       {.name = "Example.Test2", .status = fuchsia::test::Status::PASSED},
       {.name = "Example.Test3", .status = fuchsia::test::Status::PASSED, .incomplete_test = true}};
 
-  async::Loop loop(&kAsyncLoopConfigAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
 
   example::TestSuite suite(&loop, std::move(inputs));
