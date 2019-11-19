@@ -435,14 +435,42 @@ impl RealmState {
         self.live_child_realms.get(m).map(|(_, v)| v.clone())
     }
 
+    /// Return all child realms that match the `PartialMoniker` regardless of
+    /// whether that child is live.
+    pub fn get_all_child_realms_by_name(&self, m: &PartialMoniker) -> Vec<Arc<Realm>> {
+        self.child_realms
+            .iter()
+            .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
+            .map(|(_, realm)| realm.clone())
+            .collect()
+    }
+
     /// Returns a live child's instance id.
     pub fn get_live_child_instance_id(&self, m: &PartialMoniker) -> Option<InstanceId> {
         self.live_child_realms.get(m).map(|(i, _)| *i)
     }
 
+    /// Given a `PartialMoniker` returns the `ChildMoniker`
+    pub fn get_live_child_moniker(&self, m: &PartialMoniker) -> Option<ChildMoniker> {
+        self.live_child_realms.get(m).map(|(i, _)| ChildMoniker::from_partial(m, *i))
+    }
+
+    pub fn get_all_child_monikers(&self, m: &PartialMoniker) -> Vec<ChildMoniker> {
+        self.child_realms
+            .iter()
+            .filter(|(child, _)| m.name() == child.name() && m.collection() == child.collection())
+            .map(|(child, _)| child.clone())
+            .collect()
+    }
+
     /// Returns a reference to the list of all child realms.
     pub fn all_child_realms(&self) -> &HashMap<ChildMoniker, Arc<Realm>> {
         &self.child_realms
+    }
+
+    /// Returns a child `Realm`. The child may or may not be live.
+    pub fn get_child_instance(&self, cm: &ChildMoniker) -> Option<Arc<Realm>> {
+        self.child_realms.get(cm).map(|i| i.clone())
     }
 
     /// Extends an absolute moniker with the live child with partial moniker `p`. Returns `None`

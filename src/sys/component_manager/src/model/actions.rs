@@ -171,65 +171,11 @@ impl Action {
                     do_delete_child(model, realm.clone(), moniker.clone()).await
                 }
                 Action::Destroy => do_destroy(model, realm.clone()).await,
-                Action::Shutdown => do_shutdown(model, realm.clone()).await,
+                Action::Shutdown => shutdown::do_shutdown(model, realm.clone()).await,
             };
             Realm::finish_action(realm, &action, res).await;
         });
     }
-}
-
-async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), ModelError> {
-    enum Result {
-        // Component was resolved, return notifications for the Shutdown actions on children.
-        Resolved(Vec<Notification>),
-        // Component was not resolved.
-        NotResolved,
-    }
-    let result = {
-        let mut state = realm.lock_state().await;
-        if let Some(state) = state.as_mut() {
-            // Stop children before stopping the parent.
-            let mut nfs = vec![];
-            for child_realm in state.live_child_realms().map(|(_, r)| r.clone()) {
-                let nf =
-                    Realm::register_action(child_realm.clone(), model.clone(), Action::Shutdown)
-                        .await?;
-                nfs.push(nf);
-            }
-            Result::Resolved(nfs)
-        } else {
-            // The component was never resolved. Shut down the component now, which will prevent any
-            // children from starting.
-            // TODO: Actually implement not allowing child to start if parent is shut down.
-            let (was_running, nfs) =
-                Realm::stop_instance(model.clone(), realm.clone(), state.as_mut(), true).await?;
-            assert!(!was_running, "unresolved component was running");
-            assert!(
-                nfs.is_empty(),
-                "nonempty destroy notifications when stopping unresolved component"
-            );
-            Result::NotResolved
-        }
-    };
-    match result {
-        Result::Resolved(futures) => {
-            let results = join_all(futures).await;
-            ok_or_first_error(results)?;
-
-            // Now that all children have shut down, shut down the parent.
-            let (was_running, nfs) = {
-                let mut state = realm.lock_state().await;
-                Realm::stop_instance(model, realm.clone(), state.as_mut(), true).await?
-            };
-            join_all(nfs).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
-            if was_running {
-                let event = Event::StopInstance { realm: realm.clone() };
-                realm.hooks.dispatch(&event).await?;
-            }
-        }
-        Result::NotResolved => {}
-    };
-    Ok(())
 }
 
 async fn do_delete_child(
@@ -302,10 +248,15 @@ mod tests {
         crate::klog,
         crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
         crate::startup::{self, Arguments},
-        cm_rust::{ChildDecl, CollectionDecl, ComponentDecl, NativeIntoFidl},
+        cm_rust::{
+            CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
+            ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, NativeIntoFidl, OfferDecl,
+            OfferLegacyServiceDecl, OfferServiceSource, OfferTarget, UseDecl, UseLegacyServiceDecl,
+            UseSource,
+        },
         fidl::endpoints,
         fidl_fuchsia_sys2 as fsys,
-        std::{sync::Weak, task::Context},
+        std::{convert::TryFrom, sync::Weak, task::Context},
     };
 
     macro_rules! results_eq {
@@ -838,7 +789,6 @@ mod tests {
                     _ => None,
                 })
                 .collect();
-            // The leaves could be stopped in any order.
             let mut first: Vec<_> = events.drain(0..2).collect();
             first.sort_unstable();
             let expected: Vec<_> = vec![
@@ -853,6 +803,128 @@ mod tests {
                     Lifecycle::Stop(vec!["a:0"].into())
                 ]
             );
+        }
+    }
+
+    /// Shut down `a`:
+    ///  a
+    ///   \
+    ///    b
+    ///   / \
+    ///  c-->d
+    /// In this case D uses a resource exposed by C
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_dependency() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                        source: OfferServiceSource::Child("c".to_string()),
+                        source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        target: OfferTarget::Child("d".to_string()),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "d",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceC").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up and dependency order.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter_map(|e| match e {
+                    Lifecycle::Stop(_) => Some(e),
+                    _ => None,
+                })
+                .collect();
+            let expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                Lifecycle::Stop(vec!["a:0"].into()),
+            ];
+            assert_eq!(events, expected);
         }
     }
 
