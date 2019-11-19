@@ -1,0 +1,72 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_binary("bin") {
+  name = "bt_a2dp_source"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.bluetooth.bredr:fuchsia.bluetooth.bredr-rustc",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediacodec:fuchsia.mediacodec-rustc",
+    "//src/connectivity/bluetooth/lib/bt-a2dp",
+    "//src/connectivity/bluetooth/lib/bt-avdtp",
+    "//src/connectivity/bluetooth/lib/fuchsia-audio-device-output",
+    "//src/connectivity/bluetooth/lib/fuchsia-audio-encoder",
+    "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
+    "//src/lib/argh",
+    "//third_party/rust_crates:bitfield",
+    "//third_party/rust_crates:byteorder",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:parking_lot",
+  ]
+
+  test_deps = [
+    "//garnet/public/rust/mundane",
+    "//third_party/rust_crates:hex",
+    "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+  ]
+}
+
+package("bt-a2dp-source") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "bt_a2dp_source"
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-a2dp-source.cmx")
+      dest = "bt-a2dp-source.cmx"
+    },
+  ]
+}
+
+test_package("bt-a2dp-source-tests") {
+  deps = [
+    ":bin_test",
+  ]
+
+  tests = [
+    {
+      name = "bt_a2dp_source_bin_test"
+      dest = "bt-a2dp-source-unittests"
+      environments = basic_envs
+    },
+  ]
+}
