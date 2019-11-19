@@ -483,14 +483,14 @@ int getpeername(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict 
 __EXPORT
 int getsockopt(int fd, int level, int optname, void* __restrict optval,
                socklen_t* __restrict optlen) {
+  if (optval == NULL || optlen == NULL) {
+    return ERRNO(EFAULT);
+  }
+
   zxio_socket_t* socket;
   fdio_t* io = fd_to_socket(fd, &socket);
   if (io == NULL) {
     return ERRNO(EBADF);
-  }
-
-  if (optval == NULL || optlen == NULL) {
-    return ERRNO(EFAULT);
   }
 
   // Handle client-maintained socket options.
@@ -534,21 +534,40 @@ int getsockopt(int fd, int level, int optname, void* __restrict optval,
   }
   auto out = response->optval;
   socklen_t copy_len = MIN(*optlen, static_cast<socklen_t>(out.count()));
-  switch (optname) {
-    case IP_TOS:
-      // On Linux, when the optlen is < sizeof(int), only a single byte is
-      // copied. As the TOS size is just a byte value, we are not losing
-      // any information here.
-      if (*optlen > 0 && *optlen < sizeof(int)) {
-        copy_len = 1;
+  bool do_optlen_check = true;
+  // The following code block is to just keep up with Linux parity.
+  switch (level) {
+    case IPPROTO_IP:
+      switch (optname) {
+        case IP_TOS:
+          // On Linux, when the optlen is < sizeof(int), only a single byte is
+          // copied. As the TOS size is just a byte value, we are not losing
+          // any information here.
+          if (*optlen > 0 && *optlen < sizeof(int)) {
+            copy_len = 1;
+          }
+          do_optlen_check = false;
+          break;
+        default:
+          break;
       }
       break;
-    case IPV6_TCLASS:
+    case IPPROTO_IPV6:
+      switch (optname) {
+        case IPV6_TCLASS:
+          do_optlen_check = false;
+          break;
+        default:
+          break;
+      }
       break;
     default:
-      if (out.count() > *optlen) {
-        return ERRNO(EINVAL);
-      }
+      break;
+  }
+  if (do_optlen_check) {
+    if (out.count() > *optlen) {
+      return ERRNO(EINVAL);
+    }
   }
   memcpy(optval, out.data(), copy_len);
   *optlen = copy_len;
@@ -563,42 +582,54 @@ int setsockopt(int fd, int level, int optname, const void* optval, socklen_t opt
     return ERRNO(EBADF);
   }
 
-  // Handle client-maintained socket options.
-  if (level == SOL_SOCKET) {
-    zx::duration* timeout = nullptr;
-    switch (optname) {
-      case SO_RCVTIMEO:
-        timeout = fdio_get_rcvtimeo(io);
-        break;
-      case SO_SNDTIMEO:
-        timeout = fdio_get_sndtimeo(io);
-        break;
-    }
-    if (timeout) {
-      if (optlen < sizeof(struct timeval)) {
-        return ERRNO(EINVAL);
+  switch (level) {
+    case SOL_SOCKET: {
+      // Handle client-maintained socket options.
+      zx::duration* timeout = nullptr;
+      switch (optname) {
+        case SO_RCVTIMEO:
+          timeout = fdio_get_rcvtimeo(io);
+          break;
+        case SO_SNDTIMEO:
+          timeout = fdio_get_sndtimeo(io);
+          break;
       }
-      const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
-      if (duration_tv->tv_sec || duration_tv->tv_usec) {
-        *timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
-      } else {
-        *timeout = zx::duration::infinite();
-      }
-      return 0;
-    }
-  }
-
-  // For each option, Linux handles the optval checks differently.
-  // ref: net/ipv4/ip_sockglue.c, net/ipv6/ipv6_sockglue.c
-  switch (optname) {
-    case IP_TOS:
-      if (optval == NULL) {
-        return ERRNO(EFAULT);
+      if (timeout) {
+        if (optlen < sizeof(struct timeval)) {
+          return ERRNO(EINVAL);
+        }
+        const struct timeval* duration_tv = static_cast<const struct timeval*>(optval);
+        if (duration_tv->tv_sec || duration_tv->tv_usec) {
+          *timeout = zx::sec(duration_tv->tv_sec) + zx::usec(duration_tv->tv_usec);
+        } else {
+          *timeout = zx::duration::infinite();
+        }
+        return 0;
       }
       break;
-    case IPV6_TCLASS:
-      if (optval == NULL) {
-        return 0;
+    }
+    case IPPROTO_IP:
+      // For each option, Linux handles the optval checks differently.
+      // ref: net/ipv4/ip_sockglue.c, net/ipv6/ipv6_sockglue.c
+      switch (optname) {
+        case IP_TOS:
+          if (optval == NULL) {
+            return ERRNO(EFAULT);
+          }
+          break;
+        default:
+          break;
+      }
+      break;
+    case IPPROTO_IPV6:
+      switch (optname) {
+        case IPV6_TCLASS:
+          if (optval == NULL) {
+            return 0;
+          }
+          break;
+        default:
+          break;
       }
       break;
     default:
