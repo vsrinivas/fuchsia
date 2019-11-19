@@ -4,29 +4,16 @@
 
 #include "lib/fidl/cpp/internal/proxy_controller.h"
 
-#include <lib/fidl/internal.h>
-#include <lib/fidl/transformer.h>
-#include <zircon/errors.h>
-#include <zircon/types.h>
-
 #include <utility>
 
 #include "lib/fidl/cpp/internal/logging.h"
+#include "lib/fidl/cpp/internal/proxy_controller_util.h"
 
 namespace fidl {
 namespace internal {
 namespace {
 
 constexpr uint32_t kUserspaceTxidMask = 0x7FFFFFFF;
-
-// RAII managed heap allocated storage for raw message bytes. Used to hold
-// the temporary output of fidl_transform (see ProxyController::Send)
-struct HeapAllocatedMessage {
-  HeapAllocatedMessage() : data(static_cast<uint8_t*>(malloc(ZX_CHANNEL_MAX_MSG_BYTES))) {}
-  ~HeapAllocatedMessage() { free(data); }
-
-  uint8_t* data;
-};
 
 }  // namespace
 
@@ -68,28 +55,7 @@ zx_status_t ProxyController::Send(const fidl_type_t* type, Message message,
       return status;
     }
   } else {
-    // When the FIDL bindings are configured to write wire format v1, the Message
-    // bytes and coding table passed to ProxyController::Send are not in a format
-    // that can be validated using fidl_validate. To get around this, we call
-    // fidl_transform to write the message bytes into the old format and then call
-    // fidl_validate on it, which also serves to validate the message bytes in the v1
-    // format.
-    HeapAllocatedMessage old_bytes;
-    if (!old_bytes.data) {
-      return ZX_ERR_BAD_STATE;
-    }
-    uint32_t actual_old_bytes;
-    fidl_type_t v1_type = get_alt_type(type);
-    zx_status_t status = fidl_transform(
-        FIDL_TRANSFORMATION_V1_TO_OLD, &v1_type, message.bytes().data(), message.bytes().actual(),
-        old_bytes.data, ZX_CHANNEL_MAX_MSG_BYTES, &actual_old_bytes, &error_msg);
-    if (status != ZX_OK) {
-      FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
-      return status;
-    }
-
-    status = fidl_validate(type, old_bytes.data, actual_old_bytes, message.handles().actual(),
-                           &error_msg);
+    zx_status_t status = ValidateV1Bytes(type, message, error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
       return status;

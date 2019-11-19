@@ -107,6 +107,8 @@ sdk_source_set("cpp_base") {
     "encoder.h",
     "internal/logging.cc",
     "internal/logging.h",
+    "internal/proxy_controller_util.cc",
+    "internal/proxy_controller_util.h",
     "object_coding.h",
     "string.h",
     "traits.h",
