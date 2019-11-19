@@ -81,7 +81,7 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
     if (!args->power_states) {
       // TODO(fxb/34081): Remove when all drivers declare power states
       // Temporarily allocate working and non-working power states
-      device_power_state_info_t power_states[2];
+      device_power_state_info_t power_states[2] = {};
       power_states[0].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D0;
       power_states[1].state_id = fuchsia_device_DevicePowerState_DEVICE_POWER_STATE_D3COLD;
       r = dev->SetPowerStates(power_states, 2);
