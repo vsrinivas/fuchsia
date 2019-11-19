@@ -60,7 +60,7 @@ zx_status_t Message::TryInitializeParameters(
         status = TryInitializeValue(zx_param.value(), &optee_param);
         break;
       case fuchsia_tee::Parameter::Tag::kBuffer:
-        status = TryInitializeBuffer(&zx_param.buffer(), temp_memory_pool, &optee_param);
+        status = TryInitializeBuffer(&zx_param.mutable_buffer(), temp_memory_pool, &optee_param);
         break;
       default:
         return ZX_ERR_INVALID_ARGS;

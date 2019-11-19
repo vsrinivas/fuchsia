@@ -467,7 +467,11 @@ struct Parameter {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::llcpp::fuchsia::tee::None& none() const {
+  ::llcpp::fuchsia::tee::None& mutable_none() {
+    ZX_ASSERT(ordinal_ == Tag::kNone);
+    return *static_cast<::llcpp::fuchsia::tee::None*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::tee::None& none() const {
     ZX_ASSERT(ordinal_ == Tag::kNone);
     return *static_cast<::llcpp::fuchsia::tee::None*>(envelope_.data);
   }
@@ -485,7 +489,11 @@ struct Parameter {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::llcpp::fuchsia::tee::Buffer& buffer() const {
+  ::llcpp::fuchsia::tee::Buffer& mutable_buffer() {
+    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    return *static_cast<::llcpp::fuchsia::tee::Buffer*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::tee::Buffer& buffer() const {
     ZX_ASSERT(ordinal_ == Tag::kBuffer);
     return *static_cast<::llcpp::fuchsia::tee::Buffer*>(envelope_.data);
   }
@@ -503,7 +511,11 @@ struct Parameter {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::llcpp::fuchsia::tee::Value& value() const {
+  ::llcpp::fuchsia::tee::Value& mutable_value() {
+    ZX_ASSERT(ordinal_ == Tag::kValue);
+    return *static_cast<::llcpp::fuchsia::tee::Value*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::tee::Value& value() const {
     ZX_ASSERT(ordinal_ == Tag::kValue);
     return *static_cast<::llcpp::fuchsia::tee::Value*>(envelope_.data);
   }

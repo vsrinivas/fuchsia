@@ -58,7 +58,11 @@ struct StrictSimpleXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  int32_t& i() const {
+  int32_t& mutable_i() {
+    ZX_ASSERT(ordinal_ == Tag::kI);
+    return *static_cast<int32_t*>(envelope_.data);
+  }
+  const int32_t& i() const {
     ZX_ASSERT(ordinal_ == Tag::kI);
     return *static_cast<int32_t*>(envelope_.data);
   }
@@ -76,7 +80,11 @@ struct StrictSimpleXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  float& f() const {
+  float& mutable_f() {
+    ZX_ASSERT(ordinal_ == Tag::kF);
+    return *static_cast<float*>(envelope_.data);
+  }
+  const float& f() const {
     ZX_ASSERT(ordinal_ == Tag::kF);
     return *static_cast<float*>(envelope_.data);
   }
@@ -94,7 +102,11 @@ struct StrictSimpleXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::fidl::StringView& s() const {
+  ::fidl::StringView& mutable_s() {
+    ZX_ASSERT(ordinal_ == Tag::kS);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
+  }
+  const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == Tag::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
@@ -142,7 +154,11 @@ struct StrictBoundedXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::fidl::VectorView<uint8_t>& v() const {
+  ::fidl::VectorView<uint8_t>& mutable_v() {
+    ZX_ASSERT(ordinal_ == Tag::kV);
+    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
+  }
+  const ::fidl::VectorView<uint8_t>& v() const {
     ZX_ASSERT(ordinal_ == Tag::kV);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
@@ -191,7 +207,11 @@ struct OlderSimpleUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  int64_t& i() const {
+  int64_t& mutable_i() {
+    ZX_ASSERT(ordinal_ == Tag::kI);
+    return *static_cast<int64_t*>(envelope_.data);
+  }
+  const int64_t& i() const {
     ZX_ASSERT(ordinal_ == Tag::kI);
     return *static_cast<int64_t*>(envelope_.data);
   }
@@ -209,7 +229,11 @@ struct OlderSimpleUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  float& f() const {
+  float& mutable_f() {
+    ZX_ASSERT(ordinal_ == Tag::kF);
+    return *static_cast<float*>(envelope_.data);
+  }
+  const float& f() const {
     ZX_ASSERT(ordinal_ == Tag::kF);
     return *static_cast<float*>(envelope_.data);
   }
@@ -259,7 +283,11 @@ struct NewerSimpleUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  int64_t& i() const {
+  int64_t& mutable_i() {
+    ZX_ASSERT(ordinal_ == Tag::kI);
+    return *static_cast<int64_t*>(envelope_.data);
+  }
+  const int64_t& i() const {
     ZX_ASSERT(ordinal_ == Tag::kI);
     return *static_cast<int64_t*>(envelope_.data);
   }
@@ -277,7 +305,11 @@ struct NewerSimpleUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::fidl::StringView& s() const {
+  ::fidl::StringView& mutable_s() {
+    ZX_ASSERT(ordinal_ == Tag::kS);
+    return *static_cast<::fidl::StringView*>(envelope_.data);
+  }
+  const ::fidl::StringView& s() const {
     ZX_ASSERT(ordinal_ == Tag::kS);
     return *static_cast<::fidl::StringView*>(envelope_.data);
   }
@@ -295,7 +327,11 @@ struct NewerSimpleUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::fidl::VectorView<::fidl::StringView>& v() const {
+  ::fidl::VectorView<::fidl::StringView>& mutable_v() {
+    ZX_ASSERT(ordinal_ == Tag::kV);
+    return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
+  }
+  const ::fidl::VectorView<::fidl::StringView>& v() const {
     ZX_ASSERT(ordinal_ == Tag::kV);
     return *static_cast<::fidl::VectorView<::fidl::StringView>*>(envelope_.data);
   }
@@ -344,7 +380,11 @@ struct ExplicitXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  int64_t& i() const {
+  int64_t& mutable_i() {
+    ZX_ASSERT(ordinal_ == Tag::kI);
+    return *static_cast<int64_t*>(envelope_.data);
+  }
+  const int64_t& i() const {
     ZX_ASSERT(ordinal_ == Tag::kI);
     return *static_cast<int64_t*>(envelope_.data);
   }
@@ -362,7 +402,11 @@ struct ExplicitXUnion {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  float& f() const {
+  float& mutable_f() {
+    ZX_ASSERT(ordinal_ == Tag::kF);
+    return *static_cast<float*>(envelope_.data);
+  }
+  const float& f() const {
     ZX_ASSERT(ordinal_ == Tag::kF);
     return *static_cast<float*>(envelope_.data);
   }
@@ -410,7 +454,11 @@ struct XUnionContainingEmptyStruct {
     envelope_.data = static_cast<void*>(elem);
   }
 
-  ::llcpp::test::name::Empty& empty() const {
+  ::llcpp::test::name::Empty& mutable_empty() {
+    ZX_ASSERT(ordinal_ == Tag::kEmpty);
+    return *static_cast<::llcpp::test::name::Empty*>(envelope_.data);
+  }
+  const ::llcpp::test::name::Empty& empty() const {
     ZX_ASSERT(ordinal_ == Tag::kEmpty);
     return *static_cast<::llcpp::test::name::Empty*>(envelope_.data);
   }

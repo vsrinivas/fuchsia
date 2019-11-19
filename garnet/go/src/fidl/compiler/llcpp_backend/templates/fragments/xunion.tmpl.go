@@ -47,7 +47,11 @@ struct {{ .Name }} {
   {{- range .DocComments }}
   //{{ . }}
   {{- end }}
-  {{ .Type.LLDecl }}& {{ .Name }}() const {
+  {{ .Type.LLDecl }}& mutable_{{ .Name }}() {
+    ZX_ASSERT(ordinal_ == Tag::{{ .TagName }});
+    return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
+  }
+  const {{ .Type.LLDecl }}& {{ .Name }}() const {
     ZX_ASSERT(ordinal_ == Tag::{{ .TagName }});
     return *static_cast<{{ .Type.LLDecl }}*>(envelope_.data);
   }

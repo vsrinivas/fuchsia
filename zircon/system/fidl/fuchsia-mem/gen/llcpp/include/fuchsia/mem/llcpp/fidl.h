@@ -59,7 +59,11 @@ struct Data {
   }
 
   // The binary data provided inline in the message.
-  ::fidl::VectorView<uint8_t>& bytes() const {
+  ::fidl::VectorView<uint8_t>& mutable_bytes() {
+    ZX_ASSERT(ordinal_ == Tag::kBytes);
+    return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
+  }
+  const ::fidl::VectorView<uint8_t>& bytes() const {
     ZX_ASSERT(ordinal_ == Tag::kBytes);
     return *static_cast<::fidl::VectorView<uint8_t>*>(envelope_.data);
   }
@@ -79,7 +83,11 @@ struct Data {
   }
 
   // The binary data provided out-of-line in a `Buffer`.
-  ::llcpp::fuchsia::mem::Buffer& buffer() const {
+  ::llcpp::fuchsia::mem::Buffer& mutable_buffer() {
+    ZX_ASSERT(ordinal_ == Tag::kBuffer);
+    return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
+  }
+  const ::llcpp::fuchsia::mem::Buffer& buffer() const {
     ZX_ASSERT(ordinal_ == Tag::kBuffer);
     return *static_cast<::llcpp::fuchsia::mem::Buffer*>(envelope_.data);
   }
