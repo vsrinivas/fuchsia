@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs/metrics/composite_latency_event.h>
-
 #include <lib/inspect/cpp/inspect.h>
 #include <zircon/types.h>
 
@@ -14,6 +12,7 @@
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in-memory-logger.h>
 #include <fs/metrics/cobalt_metrics.h>
+#include <fs/metrics/composite_latency_event.h>
 #include <fs/metrics/events.h>
 #include <fs/metrics/histograms.h>
 #include <zxtest/zxtest.h>

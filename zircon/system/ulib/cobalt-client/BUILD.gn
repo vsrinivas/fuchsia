@@ -23,8 +23,8 @@ source_set("collector") {
   ]
   include_dirs = [ "./include/" ]
   deps = [
-    "$zx/system/fidl/fuchsia-cobalt:llcpp",
     ":types-internal",
+    "$zx/system/fidl/fuchsia-cobalt:llcpp",
     "$zx/system/fidl/fuchsia-cobalt:llcpp",
     "$zx/system/public",
     "$zx/system/ulib/fdio",

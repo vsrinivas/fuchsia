@@ -2,13 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/types-internal.h>
-
 #include <lib/sync/completion.h>
 #include <lib/zx/time.h>
 #include <threads.h>
 
 #include <cobalt-client/cpp/metric-options.h>
+#include <cobalt-client/cpp/types-internal.h>
 #include <fbl/string.h>
 #include <unittest/unittest.h>
 

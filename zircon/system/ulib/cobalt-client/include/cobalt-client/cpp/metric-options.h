@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef COBALT_CLIENT_CPP_METRIC_OPTIONS_H_
+#define COBALT_CLIENT_CPP_METRIC_OPTIONS_H_
 
 #include <array>
 #include <cstdint>
@@ -163,3 +164,5 @@ struct HistogramOptions : public MetricOptions {
 };
 
 }  // namespace cobalt_client
+
+#endif  // COBALT_CLIENT_CPP_METRIC_OPTIONS_H_
