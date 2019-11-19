@@ -13,7 +13,7 @@
 //
 //
 
-#include "spinel_assert.h"
+#include "spinel/spinel_assert.h"
 
 //
 //

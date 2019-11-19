@@ -37,7 +37,7 @@
 
 #include <stdint.h>
 
-#include "spinel_result.h"
+#include "spinel/spinel_result.h"
 
 //
 //

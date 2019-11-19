@@ -6,10 +6,6 @@ import("../gn/build_rules.gni")
 
 config("spinel_public_config") {
   include_dirs = [ "include" ]
-
-  # The clients should use spinel/spinel_xxx.h, but some still use spinel_xxx.h
-  # directly.
-  include_dirs += [ "include/spinel" ]  # TO BE REMOVED.
 }
 
 source_set("spinel_headers") {
@@ -36,19 +32,6 @@ static_library("spinel") {
   friend = [
     "platforms/vk",
     "platforms/vk/tests",
-  ]
-
-  # The source files include "spinel_xxx.h" directly.
-  include_dirs = [ "include/spinel" ]
-  public = [
-    "include/spinel/spinel.h",
-    "include/spinel/spinel_assert.h",
-    "include/spinel/spinel_result.h",
-    "include/spinel/spinel_types.h",
-
-    # FIXME(digit): Should we include the public vulkan headers
-    # here... or create a GN file in include/spinel... or just mimic
-    # this in spinel/platforms/vk?
   ]
   sources = [
     "allocator_host.c",

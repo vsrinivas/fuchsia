@@ -10,7 +10,7 @@
 
 #include <stdlib.h>
 
-#include "spinel.h"
+#include "spinel/spinel.h"
 
 //
 //

@@ -13,7 +13,7 @@
 
 #include "allocator_host.h"
 #include "common/macros.h"
-#include "spinel_assert.h"
+#include "spinel/spinel_assert.h"
 #include "trace.h"
 
 //

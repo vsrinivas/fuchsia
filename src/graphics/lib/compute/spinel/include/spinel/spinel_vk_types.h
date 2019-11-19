@@ -44,8 +44,8 @@ struct spn_vk_environment
   VkAllocationCallbacks const *    ac;
   VkPipelineCache                  pc;
   VkPhysicalDevice                 pd;
-  VkPhysicalDeviceMemoryProperties pdmp; // FIXME(allanmac): get rid of this member
-  uint32_t                         qfi;  // FIXME(allanmac): get rid of this member
+  VkPhysicalDeviceMemoryProperties pdmp;  // FIXME(allanmac): get rid of this member
+  uint32_t                         qfi;   // FIXME(allanmac): get rid of this member
 };
 
 struct spn_vk_context_create_info

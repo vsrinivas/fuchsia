@@ -46,7 +46,7 @@
 //      power.
 //
 
-#include "spinel_types.h"
+#include "spinel/spinel_types.h"
 
 //
 // Two 32-bit dwords form a 64-bit counter with 32-bit alignment.

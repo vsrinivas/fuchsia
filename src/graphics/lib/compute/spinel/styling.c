@@ -8,7 +8,7 @@
 #include <memory.h>
 
 #include "core_c.h"
-#include "spinel.h"
+#include "spinel/spinel.h"
 
 //
 //

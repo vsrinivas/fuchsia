@@ -9,7 +9,7 @@
 //
 //
 
-#include "spinel.h"
+#include "spinel/spinel.h"
 #include "state_assert.h"
 
 //

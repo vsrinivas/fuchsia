@@ -9,8 +9,8 @@
 //
 //
 
-#include "spinel_result.h"
-#include "spinel_types.h"
+#include "spinel/spinel_result.h"
+#include "spinel/spinel_types.h"
 
 //
 //
