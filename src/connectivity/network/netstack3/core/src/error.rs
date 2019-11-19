@@ -182,14 +182,21 @@ impl<S: Serializer> From<S> for NetstackError {
     }
 }
 
+/// Error type for connection errors.
 #[derive(Fail, Debug, PartialEq)]
 pub enum ConnectError {
+    /// No route to host.
     #[fail(display = "no route to host")]
     NoRouteToHost,
+    /// Cannot bind to address.
     #[fail(display = "can't bind to address")]
     CannotBindToAddress,
+
+    /// Failed to allocate local port.
     #[fail(display = "failed to allocate local port")]
     FailedToAllocateLocalPort,
+
+    /// Connection in use.
     #[fail(display = "Connection in use")]
     ConnectionInUse,
 }

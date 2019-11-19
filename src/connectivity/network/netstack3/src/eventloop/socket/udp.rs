@@ -19,7 +19,7 @@ use log::{debug, error, trace};
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
     connect_udp, get_udp_conn_info, listen_udp, remove_udp_conn, remove_udp_listener, send_udp,
-    send_udp_conn, send_udp_listener, IdMapCollection, UdpConnId, UdpEventDispatcher,
+    send_udp_conn, send_udp_listener, ConnectError, IdMapCollection, UdpConnId, UdpEventDispatcher,
     UdpListenerId,
 };
 use packet::{serialize::Buf, BufferView};
@@ -474,7 +474,8 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
         // for `connect`.
         let conn_id =
             connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port)
-                .expect("connect_udp failed");
+                .map_err(ConnectError::into_errno)?;
+
         self.info.state = SocketState::BoundConnect { conn_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
             .conns
@@ -708,6 +709,25 @@ fn make_datagram<A: SockAddr>(addr: A::AddrType, port: u16, body: &[u8]) -> Vec<
     data
 }
 
+/// Trait expressing the conversion of error types into `libc::c_int` errno-like errors for the
+/// POSIX-lite wrappers.
+trait IntoErrno {
+    /// Returns the most equivalent POSIX error code for `self`.
+    fn into_errno(self) -> libc::c_int;
+}
+
+impl IntoErrno for ConnectError {
+    /// Converts Fuchsia `ConnectError` errors into the most equivalent POSIX error.
+    fn into_errno(self) -> libc::c_int {
+        match self {
+            ConnectError::NoRouteToHost => libc::ENETUNREACH,
+            ConnectError::CannotBindToAddress => libc::EADDRNOTAVAIL,
+            ConnectError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
+            ConnectError::ConnectionInUse => libc::EADDRINUSE,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -798,6 +818,11 @@ mod tests {
         });
         let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
         assert_eq!(res, libc::ECONNREFUSED);
+
+        // pass an unreachable address (tests error forwarding from `udp_connect`):
+        let addr = A::create(A::UNREACHABLE_ADDR, 1010);
+        let res = stack.run_future(proxy.connect(&mut addr.into_iter())).await.unwrap() as i32;
+        assert_eq!(res, libc::ENETUNREACH);
     }
 
     #[fasync::run_singlethreaded(test)]

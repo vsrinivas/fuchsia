@@ -360,6 +360,9 @@ mod testutil {
         const REMOTE_ADDR: Self::AddrType;
         /// An alternate remote address used for tests.
         const REMOTE_ADDR_2: Self::AddrType;
+        /// An non-local address which is unreachable, used for tests.
+        const UNREACHABLE_ADDR: Self::AddrType;
+
         /// The default subnet prefix used for tests.
         const DEFAULT_PREFIX: u8;
 
@@ -423,6 +426,8 @@ mod testutil {
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 2]);
         const REMOTE_ADDR_2: Ipv6Addr =
             Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 192, 168, 0, 3]);
+        const UNREACHABLE_ADDR: Ipv6Addr =
+            Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 42, 0, 0, 0, 0, 192, 168, 0, 1]);
         const DEFAULT_PREFIX: u8 = 64;
     }
 
@@ -430,6 +435,7 @@ mod testutil {
         const LOCAL_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 1]);
         const REMOTE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 2]);
         const REMOTE_ADDR_2: Ipv4Addr = Ipv4Addr::new([192, 168, 0, 3]);
+        const UNREACHABLE_ADDR: Ipv4Addr = Ipv4Addr::new([192, 168, 42, 1]);
         const DEFAULT_PREFIX: u8 = 24;
     }
 }
