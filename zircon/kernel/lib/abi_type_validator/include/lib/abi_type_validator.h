@@ -24,10 +24,18 @@
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 #endif
 
+#include <zircon/syscalls/clock.h>
+#include <zircon/syscalls/debug.h>
 #include <zircon/syscalls/exception.h>
+#include <zircon/syscalls/hypervisor.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/pci.h>
+#include <zircon/syscalls/policy.h>
 #include <zircon/syscalls/port.h>
+#include <zircon/syscalls/profile.h>
+#include <zircon/syscalls/scheduler.h>
+#include <zircon/syscalls/smc.h>
+#include <zircon/syscalls/system.h>
 #include <zircon/types.h>
 
 #include <cstddef>
@@ -48,6 +56,33 @@
 // TODO(maniscalco): Expand the set of types validated. Validate all the ABI types, not just those
 // with implicit padding that are copied out to usermode.
 
+#if defined(__aarch64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(perfmon::Arm64PmuConfig, 104, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, timebase_event, 0, 2);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, fixed_events, 2, 2);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, programmable_events, 4, 12);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, fixed_initial_value, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, programmable_initial_value, 24, 24);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, fixed_flags, 48, 4);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, programmable_flags, 52, 24);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::Arm64PmuConfig, programmable_hw_events, 76, 24);
+#elif defined(__x86_64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(perfmon::X86PmuConfig, 344, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, global_ctrl, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, fixed_ctrl, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, debug_ctrl, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, timebase_event, 24, 2);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, fixed_events, 26, 6);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, programmable_events, 32, 16);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, misc_events, 48, 32);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, fixed_initial_value, 80, 24);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, programmable_initial_value, 104, 64);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, fixed_flags, 168, 12);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, programmable_flags, 180, 32);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, misc_flags, 212, 64);
+VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuConfig, programmable_hw_events, 280, 64);
+#endif
+
 VALIDATE_TYPE_SIZE_ALIGNMENT(perfmon::PmuCommonProperties, 14, 2);
 VALIDATE_FIELD_OFFSET_SIZE(perfmon::PmuCommonProperties, pm_version, 0, 2);
 VALIDATE_FIELD_OFFSET_SIZE(perfmon::PmuCommonProperties, pm_version, 0, 2);
@@ -67,6 +102,37 @@ VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuProperties, common, 0, 14);
 VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuProperties, perf_capabilities, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(perfmon::X86PmuProperties, lbr_stack_size, 24, 4);
 #endif
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_clock_rate_t, 8, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_rate_t, synthetic_ticks, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_rate_t, reference_ticks, 4, 4);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_clock_transformation_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_transformation_t, reference_offset, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_transformation_t, synthetic_offset, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_transformation_t, rate, 16, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_clock_details_v1_t, 112, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, options, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, backstop_time, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, ticks_to_synthetic, 16, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, mono_to_synthetic, 40, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, error_bound, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, query_ticks, 72, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, last_value_update_ticks, 80, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, last_rate_adjust_update_ticks, 88, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, last_error_bounds_update_ticks, 96, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_details_v1_t, generation_counter, 104, 4);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_clock_update_args_v1_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_update_args_v1_t, rate_adjust, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_update_args_v1_t, value, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_clock_update_args_v1_t, error_bound, 16, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_info_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, pid, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, tid, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_exception_info_t, type, 16, 4);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_exception_report_t, 32, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_exception_report_t, header, 0, 8);
@@ -166,6 +232,19 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_pci_bar_t, size, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pci_bar_t, addr, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pci_bar_t, handle, 16, 4);
 
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_pci_init_arg_t, 5896, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, dev_pin_to_global_irq, 0, 4096);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, num_irqs, 4096, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, irqs, 4100, 1792);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_window_count, 5892, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0], 5896, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].base, 5896, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].size, 5904, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].bus_start, 5912, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].bus_end, 5913, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].cfg_space_type, 5914, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_pci_init_arg_t, addr_windows[0].has_ecam, 5915, 1);
+
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_pcie_device_info_t, 12, 2);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, vendor_id, 0, 2);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, device_id, 2, 2);
@@ -176,6 +255,10 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, revision_id, 7, 1);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, bus_id, 8, 1);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, dev_id, 9, 1);
 VALIDATE_FIELD_OFFSET_SIZE(zx_pcie_device_info_t, func_id, 10, 1);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_policy_timer_slack_t, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_policy_timer_slack_t, min_slack, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_policy_timer_slack_t, default_mode, 8, 4);
 
 VALIDATE_TYPE_SIZE_ALIGNMENT(zx_port_packet_t, 48, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_port_packet_t, key, 0, 8);
@@ -267,6 +350,123 @@ VALIDATE_FIELD_OFFSET_SIZE(zx_packet_page_request_t, reserved0, 4, 4);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_page_request_t, offset, 8, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_page_request_t, length, 16, 8);
 VALIDATE_FIELD_OFFSET_SIZE(zx_packet_page_request_t, reserved1, 24, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_sched_deadline_params_t, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_sched_deadline_params_t, capacity, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_sched_deadline_params_t, relative_deadline, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_sched_deadline_params_t, period, 16, 8);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_cpu_set_t, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_cpu_set_t, mask, 0, 64);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_profile_info_t, 96, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_profile_info_t, flags, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_profile_info_t, priority, 8, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_profile_info_t, deadline_params, 8, 24);
+VALIDATE_FIELD_OFFSET_SIZE(zx_profile_info_t, cpu_affinity_mask, 32, 64);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_smc_parameters_t, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, func_id, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg1, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg2, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg3, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg4, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg5, 40, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, arg6, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, client_id, 56, 2);
+VALIDATE_FIELD_OFFSET_SIZE(zx_smc_parameters_t, secure_os_id, 58, 2);
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_system_powerctl_arg_t, 12, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, acpi_transition_s_state, 0, 3);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, acpi_transition_s_state.target_s_state, 0, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, acpi_transition_s_state.sleep_type_a, 1, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, acpi_transition_s_state.sleep_type_b, 2, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, x86_power_limit, 0, 12);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, x86_power_limit.power_limit, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, x86_power_limit.time_window, 4, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, x86_power_limit.clamp, 8, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_system_powerctl_arg_t, x86_power_limit.enable, 9, 1);
+
+#if defined(__aarch64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_debug_regs_t, 528, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps, 0, 256);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps[0].dbgbcr, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps[0].dbgbvr, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_bps_count, 256, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps, 264, 256);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, hw_wps_count, 520, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, esr, 524, 4);
+#elif defined(__x86_64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_debug_regs_t, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, dr, 0, 32);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, dr6, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_debug_regs_t, dr7, 40, 8);
+#endif
+
+#if defined(__aarch64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_fp_regs_t, 4, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, unused, 0, 4);
+#elif defined(__x86_64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_fp_regs_t, 160, 16);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, fcw, 0, 2);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, fsw, 2, 2);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, ftw, 4, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, reserved, 5, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, fop, 6, 2);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, fip, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, fdp, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, st, 32, 128);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, st[0].low, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_fp_regs_t, st[0].high, 40, 8);
+#endif
+
+#if defined(__aarch64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_vector_regs_t, 520, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, fpcr, 0, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, fpsr, 4, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, v, 8, 512);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, v[0].low, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, v[0].high, 16, 8);
+#elif defined(__x86_64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_thread_state_vector_regs_t, 2120, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, zmm, 0, 2048);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, zmm[0].v, 0, 64);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, opmask, 2048, 64);
+VALIDATE_FIELD_OFFSET_SIZE(zx_thread_state_vector_regs_t, mxcsr, 2112, 4);
+#endif
+
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_vcpu_io_t, 8, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_io_t, access_size, 0, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_io_t, u8, 4, 1);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_io_t, u16, 4, 2);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_io_t, u32, 4, 4);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_io_t, data, 4, 4);
+
+#if defined(__aarch64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_vcpu_state_t, 264, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, x, 0, 248);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, sp, 248, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, cpsr, 256, 4);
+#elif defined(__x86_64__)
+VALIDATE_TYPE_SIZE_ALIGNMENT(zx_vcpu_state_t, 136, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rax, 0, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rcx, 8, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rdx, 16, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rbx, 24, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rsp, 32, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rbp, 40, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rsi, 48, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rdi, 56, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r8, 64, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r9, 72, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r10, 80, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r11, 88, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r12, 96, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r13, 104, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r14, 112, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, r15, 120, 8);
+VALIDATE_FIELD_OFFSET_SIZE(zx_vcpu_state_t, rflags, 128, 8);
+#endif
 
 #undef VALIDATE_TYPE_SIZE_ALIGNMENT
 #undef VALIDATE_FIELD_OFFSET_SIZE
