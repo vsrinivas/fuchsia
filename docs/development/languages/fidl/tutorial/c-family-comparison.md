@@ -81,7 +81,7 @@ Category                           | Simple C                          | Low-lev
 **calling protocol methods**       | free functions                    | free functions or proxy                       | call through proxies, register callbacks
 **implementing protocol methods**  | manual dispatch or via ops table  | manual dispatch or implement stub interface   | implement stub object, invoke callbacks
 **async client**                   | no                                | no (planned)                                  | yes
-**async server**                   | limited [2]                       | limited [2]                                   | yes (unbounded)
+**async server**                   | limited [2]                       | yes (unbounded) [3]                           | yes (unbounded)
 **generated code footprint**       | small                             | moderate                                      | large
 
 Notes:
@@ -91,6 +91,7 @@ Notes:
    pointer goes away. In thoses cases, the bindings provide a
    `fidl::DecodedMessage` object to manage all handles associated with a call.
 2. The bindings library can dispatch at most one in-flight transaction.
+3. The bindings library defined in [lib/fidl-async](/zircon/system/ulib/fidl-async) can dispatch an unbounded number of in-flight transactions via `fidl::AsyncBind` defined in [lib/fidl-async/cpp/async_bind.h](/zircon/system/ulib/fidl-async/include/lib/fidl-async/cpp/async_bind.h).
 
 ## Migrating From C Bindings To Low-Level C++
 
