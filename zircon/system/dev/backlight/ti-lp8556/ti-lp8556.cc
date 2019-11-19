@@ -109,9 +109,10 @@ void Lp8556Device::GetStateNormalized(GetStateNormalizedCompleter::Sync complete
 
   FidlBacklight::Device_GetStateNormalized_Result result;
   if (status == ZX_OK) {
-    result.set_response(FidlBacklight::Device_GetStateNormalized_Response{.state = state});
+    FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -122,9 +123,10 @@ void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
 
   FidlBacklight::Device_SetStateNormalized_Result result;
   if (status == ZX_OK) {
-    result.set_response(FidlBacklight::Device_SetStateNormalized_Response{});
+    FidlBacklight::Device_SetStateNormalized_Response response;
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -132,7 +134,8 @@ void Lp8556Device::SetStateNormalized(FidlBacklight::State state,
 void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
   if (!max_absolute_brightness_nits_.has_value()) {
-    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
@@ -141,9 +144,10 @@ void Lp8556Device::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   auto status = GetBacklightState(&state.backlight_on, &state.brightness);
   if (status == ZX_OK) {
     state.brightness *= max_absolute_brightness_nits_.value();
-    result.set_response(FidlBacklight::Device_GetStateAbsolute_Response{.state = state});
+    FidlBacklight::Device_GetStateAbsolute_Response response{.state = state};
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -160,9 +164,10 @@ void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
   auto status = SetBacklightState(state.backlight_on,
                                   state.brightness / max_absolute_brightness_nits_.value());
   if (status == ZX_OK) {
-    result.set_response(FidlBacklight::Device_SetStateAbsolute_Response{});
+    FidlBacklight::Device_SetStateAbsolute_Response response;
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -170,10 +175,12 @@ void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
 void Lp8556Device::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
   FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
   if (max_absolute_brightness_nits_.has_value()) {
-    result.set_response(FidlBacklight::Device_GetMaxAbsoluteBrightness_Response{
-        .max_brightness = max_absolute_brightness_nits_.value()});
+    FidlBacklight::Device_GetMaxAbsoluteBrightness_Response response{
+        .max_brightness = max_absolute_brightness_nits_.value()};
+    result.set_response(&response);
   } else {
-    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }

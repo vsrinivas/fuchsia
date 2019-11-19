@@ -108,7 +108,7 @@ void SysmemSecureMemServer::GetPhysicalSecureHeaps(
   zx_status_t status = GetPhysicalSecureHeapsInternal(&result.mutable_response().heaps);
   if (status != ZX_OK) {
     LOG(ERROR, "GetPhysicalSecureHeapsInternal() failed - status: %d", status);
-    result.set_err(status);
+    result.set_err(&status);
     return;
   }
   ZX_DEBUG_ASSERT(result.is_response());
@@ -126,10 +126,11 @@ void SysmemSecureMemServer::SetPhysicalSecureHeaps(
   zx_status_t status = SetPhysicalSecureHeapsInternal(heaps);
   if (status != ZX_OK) {
     LOG(ERROR, "SetPhysicalSecureHeapsInternal() failed - status: %d", status);
-    result.set_err(status);
+    result.set_err(&status);
     return;
   }
-  result.set_response(llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response{});
+  llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response response;
+  result.set_response(&response);
 }
 
 void SysmemSecureMemServer::PostToLoop(fit::closure to_run) {

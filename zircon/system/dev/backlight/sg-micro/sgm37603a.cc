@@ -117,9 +117,10 @@ void Sgm37603a::GetStateNormalized(GetStateNormalizedCompleter::Sync completer) 
 
   FidlBacklight::Device_GetStateNormalized_Result result;
   if (status == ZX_OK) {
-    result.set_response(FidlBacklight::Device_GetStateNormalized_Response{.state = state});
+    FidlBacklight::Device_GetStateNormalized_Response response{.state = state};
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
@@ -130,29 +131,33 @@ void Sgm37603a::SetStateNormalized(FidlBacklight::State state,
 
   FidlBacklight::Device_SetStateNormalized_Result result;
   if (status == ZX_OK) {
-    result.set_response(FidlBacklight::Device_SetStateNormalized_Response{});
+    FidlBacklight::Device_SetStateNormalized_Response response;
+    result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }
 
 void Sgm37603a::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_GetStateAbsolute_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  result.set_err(&status);
   completer.Reply(std::move(result));
 }
 
 void Sgm37603a::SetStateAbsolute(FidlBacklight::State state,
                                  SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  result.set_err(&status);
   completer.Reply(std::move(result));
 }
 
 void Sgm37603a::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
   FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
-  result.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  result.set_err(&status);
   completer.Reply(std::move(result));
 }
 

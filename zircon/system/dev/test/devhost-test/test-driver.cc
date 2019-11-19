@@ -39,7 +39,8 @@ zx_status_t TestDevhostDriver::Bind() { return DdkAdd("devhost-test-parent"); }
 
 void TestDevhostDriver::AddChildDevice(AddChildDeviceCompleter::Sync completer) {
   ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result response;
-  response.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  response.set_err(&status);
   completer.Reply(std::move(response));
 }
 

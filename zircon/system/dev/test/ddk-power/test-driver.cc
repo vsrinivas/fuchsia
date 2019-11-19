@@ -66,42 +66,40 @@ void TestPowerDriver::AddDeviceWithPowerArgs(
     bool add_invisible,
     AddDeviceWithPowerArgsCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result response;
-  response.set_err(ZX_ERR_NOT_SUPPORTED);
+  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+  response.set_err(&status);
   completer.Reply(std::move(response));
 }
 
 void TestPowerDriver::GetCurrentDevicePowerState(
     GetCurrentDevicePowerStateCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result;
-  result.set_response(
-      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response{
+      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response{
           .cur_state = current_power_state_,
-      });
-
+      };
+  result.set_response(&response);
   completer.Reply(std::move(result));
 }
 
 void TestPowerDriver::GetCurrentDevicePerformanceState(
     GetCurrentDevicePerformanceStateCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result;
-  result.set_response(
-      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response{
+  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response response{
           .cur_state = static_cast<int32_t>(current_performance_state_),
-      });
-
+      };
+  result.set_response(&response);
   completer.Reply(std::move(result));
 }
 
 void TestPowerDriver::GetCurrentDeviceAutoSuspendConfig(
     GetCurrentDeviceAutoSuspendConfigCompleter::Sync completer) {
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
-  result.set_response(
-      llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response{
+  llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response{
           .enabled = auto_suspend_enabled_,
           .deepest_sleep_state = static_cast<llcpp::fuchsia::device::DevicePowerState>(
               deepest_autosuspend_sleep_state_),
-      });
-
+      };
+  result.set_response(&response);
   completer.Reply(std::move(result));
 }
 
