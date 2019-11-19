@@ -181,3 +181,15 @@ impl<S: Serializer> From<S> for NetstackError {
         NetstackError::SendFrame(SendFrameError::UnknownSendFrameError)
     }
 }
+
+#[derive(Fail, Debug, PartialEq)]
+pub enum ConnectError {
+    #[fail(display = "no route to host")]
+    NoRouteToHost,
+    #[fail(display = "can't bind to address")]
+    CannotBindToAddress,
+    #[fail(display = "failed to allocate local port")]
+    FailedToAllocateLocalPort,
+    #[fail(display = "Connection in use")]
+    ConnectionInUse,
+}

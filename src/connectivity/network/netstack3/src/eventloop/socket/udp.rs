@@ -14,9 +14,7 @@ use failure::{format_err, Error};
 use fidl_fuchsia_posix_socket as psocket;
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, prelude::HandleBased};
-use futures::{
-    channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt,
-};
+use futures::{channel::mpsc, channel::oneshot, future::Either, TryFutureExt, TryStreamExt};
 use log::{debug, error, trace};
 use net_types::ip::{Ip, IpAddress, IpVersion, Ipv4, Ipv6};
 use netstack3_core::{
@@ -472,8 +470,11 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
             }
         };
 
+        // TODO(maufflick): convert connect_udp result response to appropriate libc::c_int values
+        // for `connect`.
         let conn_id =
-            connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port);
+            connect_udp(&mut event_loop.ctx, local_addr, local_port, remote_addr, remote_port)
+                .expect("connect_udp failed");
         self.info.state = SocketState::BoundConnect { conn_id };
         I::get_collection_mut(&mut event_loop.ctx.dispatcher_mut().udp_sockets)
             .conns
