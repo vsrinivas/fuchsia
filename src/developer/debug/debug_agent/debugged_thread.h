@@ -24,6 +24,7 @@ class DebugAgent;
 class DebuggedProcess;
 class ObjectProvider;
 class ProcessBreakpoint;
+class Watchpoint;
 
 enum class ThreadCreationOption {
   // Already running, don't do anything
@@ -191,6 +192,7 @@ class DebuggedThread {
   void HandleGeneralException(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
   void HandleSoftwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
   void HandleHardwareBreakpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
+  void HandleWatchpoint(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
 
   void SendExceptionNotification(debug_ipc::NotifyException*, zx_thread_state_general_regs*);
 
@@ -212,6 +214,8 @@ class DebuggedThread {
                                      ProcessBreakpoint* process_breakpoint,
                                      zx_thread_state_general_regs* regs,
                                      std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
+  void UpdateForHitWatchpoint(Watchpoint* watchpoint,
+                              std::vector<debug_ipc::BreakpointStats>* hit_breakpoints);
 
   // Sets or clears the single step bit on the thread.
   void SetSingleStep(bool single_step);

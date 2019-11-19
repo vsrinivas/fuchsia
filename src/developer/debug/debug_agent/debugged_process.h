@@ -134,6 +134,7 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher {
   // Looks for breakpoints at the given address. Null if no breakpoints are at that address.
   virtual SoftwareBreakpoint* FindSoftwareBreakpoint(uint64_t address) const;
   virtual HardwareBreakpoint* FindHardwareBreakpoint(uint64_t address) const;
+  virtual Watchpoint* FindWatchpoint(const debug_ipc::AddressRange&) const;
 
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);

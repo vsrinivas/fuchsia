@@ -70,8 +70,11 @@ class ArchProvider {
 
   uint64_t NextInstructionForWatchpointHit(uint64_t exception_addr);
 
-  // Address of the instruction that caused the watchpoint exception.
-  uint64_t InstructionForWatchpointHit(const DebuggedThread&);
+  // Address of the instruction that caused the watchpoint exception. Also returns the slot (which
+  // register triggered it).
+  //
+  // Returns {0, -1} on error or not found.
+  virtual std::pair<uint64_t, int> InstructionForWatchpointHit(const DebuggedThread&) const;
 
   // Returns true if there is a breakpoint instruction at the given address.
   // This doesn't just check equality of kBreakInstruction which is guaranteed

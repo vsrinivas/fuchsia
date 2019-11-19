@@ -149,9 +149,9 @@ uint64_t ArchProvider::NextInstructionForWatchpointHit(uint64_t) {
   return 0;
 }
 
-uint64_t ArchProvider::InstructionForWatchpointHit(const DebuggedThread&) {
+std::pair<uint64_t, int> ArchProvider::InstructionForWatchpointHit(const DebuggedThread&) const {
   FXL_NOTREACHED() << "Not implemented.";
-  return 0;
+  return {0, -1};
 }
 
 bool ArchProvider::IsBreakpointInstruction(zx::process& process, uint64_t address) {

@@ -21,6 +21,7 @@
 #include "src/developer/debug/debug_agent/process_info.h"
 #include "src/developer/debug/debug_agent/software_breakpoint.h"
 #include "src/developer/debug/debug_agent/unwind.h"
+#include "src/developer/debug/debug_agent/watchpoint.h"
 #include "src/developer/debug/ipc/agent_protocol.h"
 #include "src/developer/debug/ipc/message_reader.h"
 #include "src/developer/debug/ipc/message_writer.h"
@@ -177,8 +178,7 @@ void DebuggedThread::OnException(zx::exception exception_handle,
     case debug_ipc::ExceptionType::kHardware:
       return HandleHardwareBreakpoint(&exception, &regs);
     case debug_ipc::ExceptionType::kWatchpoint:
-      FXL_NOTREACHED() << "Not implemented.";
-      break;
+      return HandleWatchpoint(&exception, &regs);
     case debug_ipc::ExceptionType::kNone:
     case debug_ipc::ExceptionType::kLast:
       break;
@@ -287,6 +287,24 @@ void DebuggedThread::HandleHardwareBreakpoint(debug_ipc::NotifyException* except
   // The ProcessBreakpoint could've been deleted if it was a one-shot, so must
   // not be derefereced below this.
   found_bp = nullptr;
+  SendExceptionNotification(exception, regs);
+}
+
+void DebuggedThread::HandleWatchpoint(debug_ipc::NotifyException* exception,
+                                      zx_thread_state_general_regs* regs) {
+  auto [watchpoint_address, slot] = arch_provider_->InstructionForWatchpointHit(*this);
+
+  // Comparison is by the base of the address range.
+  Watchpoint* watchpoint = process_->FindWatchpoint({watchpoint_address, watchpoint_address + 1});
+
+  // If no process matches this watchpoint, we send the exception notification and let the client
+  // handle it.
+  if (!watchpoint) {
+    SendExceptionNotification(exception, regs);
+    return;
+  }
+
+  UpdateForHitWatchpoint(watchpoint, &exception->hit_breakpoints);
   SendExceptionNotification(exception, regs);
 }
 
@@ -618,6 +636,20 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
   current_breakpoint_ = process_breakpoint;
 
   process_breakpoint->OnHit(exception_type, hit_breakpoints);
+
+  // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
+  // (some one-shot, some not) referring to the current ProcessBreakpoint,
+  // this operation could delete the ProcessBreakpoint or it could not. If it
+  // does, our observer will be told and current_breakpoint_ will be cleared.
+  for (const auto& stats : *hit_breakpoints) {
+    if (stats.should_delete)
+      process_->debug_agent()->RemoveBreakpoint(stats.id);
+  }
+}
+
+void DebuggedThread::UpdateForHitWatchpoint(
+    Watchpoint* watchpoint, std::vector<debug_ipc::BreakpointStats>* hit_breakpoints) {
+  watchpoint->OnHit(debug_ipc::BreakpointType::kWatchpoint, hit_breakpoints);
 
   // Delete any one-shot breakpoints. Since there can be multiple Breakpoints
   // (some one-shot, some not) referring to the current ProcessBreakpoint,

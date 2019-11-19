@@ -422,6 +422,19 @@ HardwareBreakpoint* DebuggedProcess::FindHardwareBreakpoint(uint64_t address) co
   return it->second.get();
 }
 
+Watchpoint* DebuggedProcess::FindWatchpoint(const debug_ipc::AddressRange& range) const {
+  auto it = watchpoints_.lower_bound(range);
+  if (it == watchpoints_.end())
+    return nullptr;
+
+  for (; it != watchpoints_.end(); it++) {
+    if (it->first.Contains(range))
+      return it->second.get();
+  }
+
+  return nullptr;
+}
+
 zx_status_t DebuggedProcess::RegisterBreakpoint(Breakpoint* bp, uint64_t address) {
   LogRegisterBreakpoint(FROM_HERE, this, bp, address);
 
