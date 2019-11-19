@@ -39,7 +39,6 @@ executable("root_presenter_unittests") {
     "activity_notifier_test.cc",
     "display_configuration_unittest.cc",
     "factory_reset_manager_test.cc",
-    "input_util_unittest.cc",
     "media_buttons_handler_unittest.cc",
   ]
 
@@ -62,9 +61,9 @@ executable("root_presenter_unittests") {
     "//src/ui/bin/root_presenter:accessibility",
     "//src/ui/bin/root_presenter:displays",
     "//src/ui/bin/root_presenter:factory_reset_manager",
-    "//src/ui/bin/root_presenter:key_util",
     "//src/ui/bin/root_presenter:lib",
     "//src/ui/bin/root_presenter/tests/fakes",
+    "//src/ui/lib/key_util",
     "//src/ui/testing:mock_input_device",
   ]
 }

@@ -8,5 +8,6 @@ group("tests") {
   deps = [
     "hid-input-report:test",
     "input_reader/tests",
+    "key_util:test",
   ]
 }

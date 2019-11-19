@@ -13,7 +13,7 @@
 
 #include "src/lib/fxl/logging.h"
 #include "src/ui/bin/root_presenter/displays/display_configuration.h"
-#include "src/ui/bin/root_presenter/key_util.h"
+#include "src/ui/lib/key_util/key_util.h"
 
 using fuchsia::ui::policy::MediaButtonsListenerPtr;
 
@@ -593,7 +593,7 @@ void Presentation::OnEvent(fuchsia::ui::input::InputEvent event) {
       // legacy flow (see handled_callback):
       // 1. CaptureKeyboardEventHACK FIDL
       // 2. session->Enqueue
-      if (auto key_event = into_key_event(kbd)) {
+      if (auto key_event = key_util::into_key_event(kbd)) {
         fuchsia::ui::input2::KeyEvent clone;
         fidl::Clone(*key_event, &clone);
         // Send keyboard event to IME manager for input2.KeyboardService

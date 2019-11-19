@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/ui/bin/root_presenter/key_util.h"
+#include "src/ui/lib/key_util/key_util.h"
 
-namespace root_presenter {
+#include "hid-parser/usages.h"
+#include "hid/usages.h"
+
+namespace key_util {
 
 constexpr std::pair<uint32_t, fuchsia::ui::input2::Key> key_map[] = {
     {HID_USAGE_KEY_A, fuchsia::ui::input2::Key::A},
@@ -120,7 +123,8 @@ std::optional<fuchsia::ui::input2::KeyEvent> into_key_event(
     const fuchsia::ui::input::KeyboardEvent& event) {
   fuchsia::ui::input2::KeyEvent key_event;
 
-  if (auto key = into_key(event.hid_usage)) {
+  hid::Usage hid_usage = hid::USAGE(hid::usage::Page::kKeyboardKeypad, event.hid_usage);
+  if (auto key = hid_key_to_fuchsia_key(hid_usage)) {
     key_event.set_key(*key);
   } else {
     return {};
@@ -176,13 +180,15 @@ std::optional<fuchsia::ui::input2::KeyEvent> into_key_event(
   return key_event;
 }
 
-std::optional<fuchsia::ui::input2::Key> into_key(uint32_t hid) {
-  for (const auto& mapping : key_map) {
-    if (std::get<0>(mapping) == hid) {
-      return std::get<1>(mapping);
+std::optional<fuchsia::ui::input2::Key> hid_key_to_fuchsia_key(hid::Usage usage) {
+  if (usage.page == hid::usage::Page::kKeyboardKeypad) {
+    for (const auto& mapping : key_map) {
+      if (std::get<0>(mapping) == usage.usage) {
+        return std::get<1>(mapping);
+      }
     }
   }
   return {};
 }
 
-}  // namespace root_presenter
+}  // namespace key_util

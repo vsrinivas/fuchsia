@@ -98,7 +98,6 @@ source_set("lib") {
     ":accessibility",
     ":displays",
     ":factory_reset_manager",
-    ":key_util",
     ":renderer_params",
     "//sdk/fidl/fuchsia.accessibility",
     "//sdk/fidl/fuchsia.recovery",
@@ -113,23 +112,11 @@ source_set("lib") {
     "//src/lib/fxl",
     "//src/lib/ui/input",
     "//src/ui/lib/input_reader",
+    "//src/ui/lib/key_util",
     "//src/ui/scenic/lib/scenic/util:rk4_spring_simulation",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/hid",
     "//zircon/public/lib/trace",
-  ]
-}
-
-source_set("key_util") {
-  sources = [
-    "key_util.cc",
-    "key_util.h",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.ui.input",
-    "//sdk/fidl/fuchsia.ui.input2",
-    "//zircon/public/lib/hid",
   ]
 }
 

@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("key_util") {
+  sources = [
+    "key_util.cc",
+    "key_util.h",
+  ]
+  public_deps = [
+    "//sdk/fidl/fuchsia.ui.input",
+    "//sdk/fidl/fuchsia.ui.input2",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/hid-parser",
+  ]
+}
+
+test("key_util_test") {
+  sources = [
+    "key_util_unittest.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/ui/lib/key_util",
+  ]
+}
+
+unittest_package("test") {
+  package_name = "key_util_test"
+  deps = [
+    ":key_util_test",
+  ]
+  tests = [
+    {
+      name = "key_util_test"
+      environments = basic_envs
+    },
+  ]
+}
