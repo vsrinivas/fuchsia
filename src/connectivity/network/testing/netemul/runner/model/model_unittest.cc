@@ -49,6 +49,9 @@ TEST_F(ModelTest, ParseTest) {
           "networks": ["test-net"],
           "files": {
             "/pkg/data/test.sh": "/root/test_copy.sh"
+          },
+          "macs": {
+            "01:02:03:04:05:06": "test-net"
           }
         }
       ],
@@ -164,6 +167,7 @@ TEST_F(ModelTest, ParseTest) {
             "fuchsia-pkg://fuchsia.com/test_guest#meta/test_guest.cmx");
   EXPECT_EQ(config.guests()[0].networks().size(), 1ul);
   EXPECT_EQ(config.guests()[0].files().size(), 1ul);
+  EXPECT_EQ(config.guests()[0].macs().size(), 1ul);
 
   // check the devices
   EXPECT_EQ(root_env.devices()[0], "ep0");
@@ -436,6 +440,10 @@ TEST_F(ModelTest, InvalidGuestConfig) {
                     "Guest model accepted non-string network name");
   ExpectFailedParse(R"({"guest" : [{"bogus_key" : []}]})",
                     "Guest model accepted too many ethertap networks");
+  ExpectFailedParse(R"({"guest" : [{"macs": []}]})",
+                    "Guest model accepted non-object macs definition");
+  ExpectFailedParse(R"({"guest" : [{"macs": {"00:11:22:33:44:55": {}}}]})",
+                    "Guest model accepted non-string mac mapping");
 }
 
 }  // namespace testing

@@ -13,6 +13,7 @@ static const char* kLabel = "label";
 static const char* kUrl = "url";
 static const char* kFiles = "files";
 static const char* kNetworks = "networks";
+static const char* kMacAddrs = "macs";
 
 bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parser) {
   if (!value.IsObject()) {
@@ -25,6 +26,7 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
   guest_label_ = "debian_guest";
   networks_.clear();
   files_.clear();
+  macs_.clear();
 
   for (auto i = value.MemberBegin(); i != value.MemberEnd(); i++) {
     if (i->name == kLabel) {
@@ -67,6 +69,18 @@ bool Guest::ParseFromJSON(const rapidjson::Value& value, json::JSONParser* parse
         parser->ReportError("NET-2468: guest networks can only have one entry");
         return false;
       }
+    } else if (i->name == kMacAddrs) {
+      if (!i->value.IsObject()) {
+        parser->ReportError("guest macs must be an object mapping MAC to ethertap network");
+        return false;
+      }
+      for (auto f = i->value.MemberBegin(); f != i->value.MemberEnd(); f++) {
+        if (!f->value.IsString()) {
+          parser->ReportError("guest macs must map to strings representing ethertap networks");
+          return false;
+        }
+        macs_[f->name.GetString()] = f->value.GetString();
+      }
     } else {
       parser->ReportError(
           fxl::StringPrintf("Unrecognized guest member \"%s\"", i->name.GetString()));
@@ -84,6 +98,8 @@ const std::string& Guest::guest_label() const { return guest_label_; };
 const std::vector<std::string>& Guest::networks() const { return networks_; };
 
 const std::map<std::string, std::string>& Guest::files() const { return files_; };
+
+const std::map<std::string, std::string>& Guest::macs() const { return macs_; };
 
 }  // namespace config
 }  // namespace netemul

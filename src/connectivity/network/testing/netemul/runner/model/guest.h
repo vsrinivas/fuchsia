@@ -26,12 +26,14 @@ class Guest {
   const std::string& guest_label() const;
   const std::vector<std::string>& networks() const;
   const std::map<std::string, std::string>& files() const;
+  const std::map<std::string, std::string>& macs() const;
 
  private:
   std::string guest_image_url_;
   std::string guest_label_;
   std::vector<std::string> networks_;
   std::map<std::string, std::string> files_;
+  std::map<std::string, std::string> macs_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Guest);
 };
