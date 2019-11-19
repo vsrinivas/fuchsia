@@ -649,7 +649,7 @@ __NO_SAFESTACK NO_ASAN static void assign_module_id(struct dso* dso) {
 __NO_SAFESTACK NO_ASAN static bool find_buildid_note(struct dso* dso, const Phdr* seg) {
   const char* end = laddr(dso, seg->p_vaddr + seg->p_filesz);
   for (const struct gnu_note* n = laddr(dso, seg->p_vaddr); (const char*)n < end;
-       n = (const void*)(n->name.name + ((n->nhdr.n_namesz + 3) & -4) +
+       n = (const void*)((const char*)&n->name + ((n->nhdr.n_namesz + 3) & -4) +
                          ((n->nhdr.n_descsz + 3) & -4))) {
     if (n->nhdr.n_type == NT_GNU_BUILD_ID && n->nhdr.n_namesz == sizeof(GNU_NOTE_NAME) &&
         n->name.word == GNU_NOTE_NAME.word) {
