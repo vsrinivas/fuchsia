@@ -58,6 +58,29 @@ void CheckCircularBufferContents(const zx::vmo& buffer, size_t buffer_blocks, si
   }
 }
 
+void CopyBytes(const zx::vmo& source, const zx::vmo& destination,
+               uint64_t offset, uint64_t length) {
+  std::vector<uint8_t> buffer(length, 0);
+  EXPECT_OK(source.read(buffer.data(), offset, length));
+  EXPECT_OK(destination.write(buffer.data(), offset, length));
+}
+
+// The collection of all behaviors which are used by the journaling subsystem,
+// and which are registered with the underlying block device.
+struct JournalBuffers {
+  zx::vmo journal_vmo;
+  zx::vmo writeback_vmo;
+  zx::vmo info_vmo;
+};
+
+// Identifies if the buffer is the in-memory version of the buffer (accessed
+// directly by the journal code) or the on-disk representation (used by the
+// test to represent all operations which have been transacted to disk).
+enum class BufferType {
+  kDiskBuffer,
+  kMemoryBuffer,
+};
+
 // A mock VMO reigstry, which acts as the holder for all VMOs used by the journaling
 // codebase to interact with the underlying device.
 //
@@ -81,16 +104,22 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
 
   // Verifies that "replaying the journal" would result in the provided set of
   // |expected_operations|, with the corresponding |expected_sequence_number|.
-  //
-  // Precondition: The journal and info VMOs must have been registered for this function
-  // to be usable. Rather than replaying from a mock disk, this method uses the same VMOs
-  // originally registered, but parses them separately using the replay code.
   void VerifyReplay(const std::vector<storage::UnbufferedOperation>& expected_operations,
                     uint64_t expected_sequence_number);
 
-  const zx::vmo& journal() { return journal_vmo_; }
-  const zx::vmo& writeback() { return writeback_vmo_; }
-  const zx::vmo& info() { return info_vmo_; }
+  // Access VMOs by registered VMO ID.
+  //
+  // Callers may request the "in-memory" version or the "disk-based" version,
+  // storing the results of all transacted write operations.
+  const zx::vmo& GetVmo(vmoid_t vmoid, BufferType buffer);
+
+  // Initializes |disk_buffers_| by copying the in-memory copies.
+  void CreateDiskVmos();
+
+  // Access the "disk-based" version of each buffer.
+  const zx::vmo& journal() { return disk_buffers_.journal_vmo; }
+  const zx::vmo& writeback() { return disk_buffers_.writeback_vmo; }
+  const zx::vmo& info() { return disk_buffers_.info_vmo; }
 
   // storage::VmoidRegistry interface:
 
@@ -99,16 +128,15 @@ class MockVmoidRegistry : public storage::VmoidRegistry {
   zx_status_t DetachVmo(vmoid_t vmoid) final { return ZX_OK; }
 
  private:
-  // Using the journal and info buffers attached to the registry, parse their contents
-  // as if executing a replay operation.
+  // Using the disk-based journal and info buffers attached to the registry, parse their contents as
+  // if executing a replay operation.
   //
   // This allows us to exercise the integration of the "journal writeback" and the on
   // reboot "journal replay".
   void Replay(fbl::Vector<storage::BufferedOperation>* operations, uint64_t* sequence_number);
 
-  zx::vmo journal_vmo_;
-  zx::vmo writeback_vmo_;
-  zx::vmo info_vmo_;
+  JournalBuffers memory_buffers_;
+  JournalBuffers disk_buffers_;
   vmoid_t next_vmoid_ = BLOCK_VMOID_INVALID;
 };
 
@@ -134,27 +162,53 @@ void MockVmoidRegistry::VerifyReplay(
 zx_status_t MockVmoidRegistry::AttachVmo(const zx::vmo& vmo, vmoid_t* out) {
   switch (next_vmoid_) {
     case kJournalVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &journal_vmo_));
+      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.journal_vmo));
       break;
     case kWritebackVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &writeback_vmo_));
+      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.writeback_vmo));
       break;
     case kInfoVmoid:
-      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo_));
+      EXPECT_OK(vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &memory_buffers_.info_vmo));
       break;
   }
   *out = next_vmoid_;
   return ZX_OK;
 }
 
+const zx::vmo& MockVmoidRegistry::GetVmo(vmoid_t vmoid, BufferType buffer) {
+  switch (vmoid) {
+  case kJournalVmoid:
+    return buffer == BufferType::kDiskBuffer ? disk_buffers_.journal_vmo :
+        memory_buffers_.journal_vmo;
+  case kWritebackVmoid:
+    return buffer == BufferType::kDiskBuffer ? disk_buffers_.writeback_vmo :
+        memory_buffers_.writeback_vmo;
+  case kInfoVmoid:
+    return buffer == BufferType::kDiskBuffer ? disk_buffers_.info_vmo : memory_buffers_.info_vmo;
+  default:
+    ZX_ASSERT(false);
+  }
+}
+
+void MockVmoidRegistry::CreateDiskVmos() {
+  size_t size = 0;
+  EXPECT_OK(memory_buffers_.journal_vmo.get_size(&size));
+  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.journal_vmo));
+  CopyBytes(memory_buffers_.journal_vmo, disk_buffers_.journal_vmo, 0, size);
+
+  EXPECT_OK(memory_buffers_.writeback_vmo.get_size(&size));
+  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.writeback_vmo));
+  CopyBytes(memory_buffers_.writeback_vmo, disk_buffers_.writeback_vmo, 0, size);
+
+  EXPECT_OK(memory_buffers_.info_vmo.get_size(&size));
+  EXPECT_OK(zx::vmo::create(size, 0, &disk_buffers_.info_vmo));
+  CopyBytes(memory_buffers_.info_vmo, disk_buffers_.info_vmo, 0, size);
+}
+
 void MockVmoidRegistry::Replay(fbl::Vector<storage::BufferedOperation>* operations,
                                uint64_t* sequence_number) {
-  // We are "cheating" by using the same vmo / vmoids in a new storage::VmoBuffer object.
-  // This would normally cause problems by deregistering from the registry when going
-  // out of scope, but since deregistering is a no-op, this just provides a limited
-  // view of the existing buffers with no changes.
   zx::vmo info_vmo;
-  ASSERT_OK(info_vmo_.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo));
+  ASSERT_OK(disk_buffers_.info_vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &info_vmo));
   fzl::OwnedVmoMapper mapper;
   ASSERT_OK(mapper.Map(std::move(info_vmo), kBlockSize));
   auto info_buffer =
@@ -165,7 +219,8 @@ void MockVmoidRegistry::Replay(fbl::Vector<storage::BufferedOperation>* operatio
   // the "clone" to be modified while leaving the original journal untouched.
   zx::vmo journal_vmo;
   uint64_t length = kBlockSize * kJournalLength;
-  ASSERT_OK(journal_vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length, &journal_vmo));
+  ASSERT_OK(disk_buffers_.journal_vmo.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length,
+                                                   &journal_vmo));
   ASSERT_OK(mapper.Map(std::move(journal_vmo), length));
   storage::VmoBuffer journal_buffer(this, std::move(mapper), kJournalVmoid, kJournalLength,
                                     kBlockSize);
@@ -187,9 +242,10 @@ class MockTransactionHandler final : public fs::TransactionHandler {
   using TransactionCallback =
       fit::function<zx_status_t(const block_fifo_request_t* requests, size_t count)>;
 
-  MockTransactionHandler() = default;
-  MockTransactionHandler(TransactionCallback* callbacks, size_t transactions_expected)
-      : callbacks_(callbacks), transactions_expected_(transactions_expected) {}
+  MockTransactionHandler(MockVmoidRegistry* registry,
+                         TransactionCallback* callbacks = nullptr,
+                         size_t transactions_expected = 0)
+      : registry_(registry), callbacks_(callbacks), transactions_expected_(transactions_expected) {}
 
   ~MockTransactionHandler() { EXPECT_EQ(transactions_expected_, transactions_seen_); }
 
@@ -215,10 +271,23 @@ class MockTransactionHandler final : public fs::TransactionHandler {
     if (transactions_seen_ == transactions_expected_) {
       return ZX_ERR_BAD_STATE;
     }
+
+    // Transfer all bytes from the in-memory representation of data to
+    // the "on-disk" representation of data.
+    for (size_t request_index = 0; request_index < count; request_index++) {
+      const auto request = requests[request_index];
+      if (request.opcode & BLOCKIO_WRITE) {
+        CopyBytes(registry_->GetVmo(request.vmoid, BufferType::kMemoryBuffer),
+                  registry_->GetVmo(request.vmoid, BufferType::kDiskBuffer),
+                  request.vmo_offset * kBlockSize,
+                  request.length * kBlockSize);
+      }
+    }
     return callbacks_[transactions_seen_++](requests, count);
   }
 
  private:
+  MockVmoidRegistry* registry_ = nullptr;
   TransactionCallback* callbacks_ = nullptr;
   size_t transactions_expected_ = 0;
   size_t transactions_seen_ = 0;
@@ -246,6 +315,8 @@ class JournalTest : public zxtest::Test {
                                             "info-block"));
     info_block_ = JournalSuperblock(std::move(info_block_buffer));
     info_block_.Update(0, 0);
+
+    ASSERT_NO_FAILURES(registry_.CreateDiskVmos());
   }
 
   MockVmoidRegistry* registry() { return &registry_; }
@@ -521,7 +592,7 @@ void JournalRequestVerifier::VerifyInfoBlockWrite(uint64_t sequence_number,
 // Tests the constructor of the journal doesn't bother updating the info block on a zero-filled
 // journal.
 TEST_F(JournalTest, JournalConstructor) {
-  MockTransactionHandler handler;
+  MockTransactionHandler handler(registry());
   Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
   CheckInfoBlock(registry()->info(), /* start= */ 0, /* sequence_number= */ 0);
   uint64_t sequence_number = 0;
@@ -531,7 +602,7 @@ TEST_F(JournalTest, JournalConstructor) {
 // Tests that calling |journal.Sync| will wait for the journal to complete, while
 // generating no additional work (without concurrent metadata writes).
 TEST_F(JournalTest, NoWorkSyncCompletesBeforeJournalDestruction) {
-  MockTransactionHandler handler;
+  MockTransactionHandler handler(registry());
   Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
   sync_completion_t sync_completion;
@@ -553,7 +624,7 @@ TEST_F(JournalTest, NoWorkSyncCompletesOnDestruction) {
   bool sync_completed = false;
 
   {
-    MockTransactionHandler handler;
+    MockTransactionHandler handler(registry());
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.Sync().and_then([&] {
       sync_completed = true;
@@ -587,7 +658,7 @@ TEST_F(JournalTest, WriteDataObserveTransaction) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -642,7 +713,7 @@ TEST_F(JournalTest, WriteMetadataObserveTransactions) {
         return ZX_OK;
       }};
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -709,7 +780,7 @@ TEST_F(JournalTest, WriteMultipleMetadataOperationsObserveTransactions) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -742,7 +813,7 @@ TEST_F(JournalTest, TrimDataObserveTransaction) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -817,7 +888,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlock) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -903,7 +974,7 @@ TEST_F(JournalTest, WriteExactlyFullJournalDoesNotUpdateInfoBlockUntilNewOperati
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -994,7 +1065,7 @@ TEST_F(JournalTest, WriteToOverfilledJournalUpdatesInfoBlock) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1081,7 +1152,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitBlockWraparound) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1169,7 +1240,7 @@ TEST_F(JournalTest, JournalWritesCausingCommitAndEntryWraparound) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1238,7 +1309,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrder) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
@@ -1360,7 +1431,7 @@ TEST_F(JournalTest, MetadataOnDiskOrderNotMatchingInMemoryOrderWraparound) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
@@ -1467,7 +1538,7 @@ TEST_F(JournalTest, MetadataOnDiskAndInMemoryWraparoundAtDifferentOffsets) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   std::unique_ptr<storage::BlockingRingBuffer> journal_buffer = take_journal_buffer();
   internal::JournalWriter writer(&handler, take_info(), kJournalStartBlock,
                                  journal_buffer->capacity());
@@ -1548,7 +1619,7 @@ TEST_F(JournalTest, WriteSameBlockMetadataThenDataRevokesBlock) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1612,7 +1683,7 @@ TEST_F(JournalTest, WriteDifferentBlockMetadataThenDataDoesNotRevoke) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1700,7 +1771,7 @@ TEST_F(JournalTest, JournalWritesCausingEntireEntryWraparound) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1770,7 +1841,7 @@ TEST_F(JournalTest, MetadataOperationsAreOrderedGlobally) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -1826,7 +1897,7 @@ TEST_F(JournalTest, DataOperationsAreNotOrderedGlobally) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -1913,7 +1984,7 @@ TEST_F(JournalTest, DataOperationsCanBeOrderedAroundMetadata) {
         registry()->VerifyReplay({}, sequence_number);
         return ZX_OK;
       }};
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -1978,7 +2049,7 @@ TEST_F(JournalTest, WritingDataToFullBufferBlocksCaller) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -2031,7 +2102,7 @@ TEST_F(JournalTest, SyncAfterWritingDataWaitsForData) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
@@ -2088,7 +2159,7 @@ TEST_F(JournalTest, SyncAfterWritingMetadataWaitsForMetadata) {
         metadata_written = true;
         return ZX_OK;
       }};
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto metadata_promise = journal.WriteMetadata({operation});
@@ -2124,7 +2195,7 @@ TEST_F(JournalTest, DataOperationTooLargeToFitInWritebackFails) {
   };
 
   zx_status_t data_status = ZX_OK;
-  MockTransactionHandler handler;
+  MockTransactionHandler handler(registry());
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteData({operations[0]}).or_else([&](zx_status_t& status) {
@@ -2153,7 +2224,7 @@ TEST_F(JournalTest, MetadataOperationTooLargeToFitInJournalFails) {
   };
 
   zx_status_t metadata_status = ZX_OK;
-  MockTransactionHandler handler;
+  MockTransactionHandler handler(registry());
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise = journal.WriteMetadata({operations[0]}).or_else([&](zx_status_t& status) {
@@ -2205,7 +2276,7 @@ TEST_F(JournalTest, InactiveJournalTreatsMetdataLikeData) {
         return ZX_OK;
       },
   };
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
 
   {
     Journal journal(&handler, take_data_buffer());
@@ -2253,7 +2324,7 @@ TEST_F(JournalTest, DataWriteFailureFailsSubsequentRequests) {
   std::atomic<bool> first_operation_failed = false;
   std::atomic<bool> second_operation_failed = false;
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
     auto promise =
@@ -2302,7 +2373,7 @@ TEST_F(JournalTest, DataWriteFailureStillLetsSyncComplete) {
   };
 
   std::atomic<bool> sync_done = false;
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(), 0);
 
@@ -2360,7 +2431,7 @@ TEST_F(JournalTest, JournalWriteFailureFailsSubsequentRequests) {
   std::atomic<bool> first_operation_failed = false;
   std::atomic<bool> second_operation_failed = false;
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -2430,7 +2501,7 @@ TEST_F(JournalTest, MetadataWriteFailureFailsSubsequentRequests) {
   std::atomic<bool> first_operation_failed = false;
   std::atomic<bool> second_operation_failed = false;
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -2510,7 +2581,7 @@ TEST_F(JournalTest, InfoBlockWriteFailureFailsSubsequentRequests) {
   std::atomic<bool> sync_failed = false;
   std::atomic<bool> second_write_failed = false;
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
@@ -2629,7 +2700,7 @@ TEST_F(JournalTest, PayloadBlocksWithJournalMagicAreEscaped) {
         return ZX_OK;
       }};
 
-  MockTransactionHandler handler(callbacks, std::size(callbacks));
+  MockTransactionHandler handler(registry(), callbacks, std::size(callbacks));
   {
     Journal journal(&handler, take_info(), take_journal_buffer(), take_data_buffer(),
                     kJournalStartBlock);
