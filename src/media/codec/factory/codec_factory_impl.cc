@@ -54,10 +54,9 @@ const EncoderSupportSpec kAacEncoderSupportSpec = {
         [](const fuchsia::media::EncoderSettings& settings) { return settings.is_aac(); },
 };
 
-const std::vector<EncoderSupportSpec> supported_encoders = {kSbcEncoderSupportSpec,
-                                                            kAacEncoderSupportSpec};
+const EncoderSupportSpec supported_encoders[] = {kSbcEncoderSupportSpec, kAacEncoderSupportSpec};
 
-const std::vector<std::string> kFfmpegDecoderMimeTypes = {"video/h264"};
+const std::string kFfmpegDecoderMimeTypes[] = {"video/h264"};
 
 bool FfmpegDecoderSupportsFormat(std::string mime_type) {
   for (auto& supported : kFfmpegDecoderMimeTypes) {
@@ -71,12 +70,12 @@ bool FfmpegDecoderSupportsFormat(std::string mime_type) {
 
 std::optional<std::string> FindEncoder(const std::string& mime_type,
                                        const fuchsia::media::EncoderSettings& settings) {
-  auto encoder = std::find_if(supported_encoders.begin(), supported_encoders.end(),
+  auto encoder = std::find_if(std::begin(supported_encoders), std::end(supported_encoders),
                               [&mime_type, &settings](const EncoderSupportSpec& encoder) {
                                 return encoder.supports(mime_type, settings);
                               });
 
-  if (encoder == supported_encoders.end()) {
+  if (encoder == std::end(supported_encoders)) {
     return std::nullopt;
   }
 
@@ -169,6 +168,10 @@ void CodecFactoryImpl::OwnSelf(std::unique_ptr<CodecFactoryImpl> self) {
     // this will also ~this
     binding_ = nullptr;
   });
+
+  // The app already has all hardware codecs loaded by the time we get to talk
+  // to it, so we don't need to wait for it now.
+  binding_->events().OnCodecList(app_->MakeCodecList());
 }
 
 void CodecFactoryImpl::CreateDecoder(

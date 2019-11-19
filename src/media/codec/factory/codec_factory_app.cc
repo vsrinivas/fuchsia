@@ -10,6 +10,9 @@
 #include <lib/svc/cpp/services.h>
 #include <zircon/status.h>
 
+#include <algorithm>
+#include <random>
+
 #include <trace-provider/provider.h>
 
 #include "codec_factory_impl.h"
@@ -20,6 +23,10 @@ namespace codec_factory {
 namespace {
 
 constexpr char kDeviceClass[] = "/dev/class/media-codec";
+
+const std::string kAllSwDecoderMimeTypes[] = {
+    "video/h264",  // VIDEO_ENCODING_H264
+};
 
 }  // namespace
 
@@ -63,6 +70,36 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
         // channel closes or an error occurs.
         CodecFactoryImpl::CreateSelfOwned(this, startup_context_.get(), std::move(request));
       });
+}
+
+// All of the current supported hardware and software decoders, randomly shuffled
+// so as to avoid clients depending on the order.
+// TODO(schottm): send encoders as well
+std::vector<fuchsia::mediacodec::CodecDescription> CodecFactoryApp::MakeCodecList() const {
+  std::vector<fuchsia::mediacodec::CodecDescription> codecs;
+  for (const auto& mime_type : kAllSwDecoderMimeTypes) {
+    codecs.push_back({
+        .codec_type = fuchsia::mediacodec::CodecType::DECODER,
+        .mime_type = mime_type,
+
+        // TODO(schottm): can some of these be true?
+        .can_stream_bytes_input = false,
+        .can_find_start = false,
+        .can_re_sync = false,
+        .will_report_all_detected_errors = false,
+
+        .is_hw = false,
+        .split_header_handling = true,
+    });
+  }
+
+  for (const auto& entry : hw_codecs_) {
+    codecs.push_back(entry->description);
+  }
+  auto rng = std::default_random_engine();
+  std::shuffle(codecs.begin(), codecs.end(), rng);
+
+  return codecs;
 }
 
 const fuchsia::mediacodec::CodecFactoryPtr* CodecFactoryApp::FindHwDecoder(
