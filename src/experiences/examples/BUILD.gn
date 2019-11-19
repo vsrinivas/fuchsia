@@ -21,8 +21,14 @@ group("tests") {
 group("dart_unittests") {
   testonly = true
 
-  deps = [
-    "localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
-    "hello_experiences:hello_experiences_unittests($host_toolchain)",
-  ]
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
+      "hello_experiences:hello_experiences_unittests($host_toolchain)",
+    ]
+  }
+
+  deps = _flutter_tester_tests
 }

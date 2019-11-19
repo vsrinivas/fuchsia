@@ -21,8 +21,14 @@ group("dart_target_tests") {
 group("dart_unittests") {
   testonly = true
 
-  deps = [
-    "simple_browser:simple_browser_unittests($host_toolchain)",
-    "terminal_settings:terminal_settings_unittests($host_toolchain)",
-  ]
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [
+      "simple_browser:simple_browser_unittests($host_toolchain)",
+      "terminal_settings:terminal_settings_unittests($host_toolchain)",
+    ]
+  }
+
+  deps = _flutter_tester_tests
 }

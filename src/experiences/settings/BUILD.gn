@@ -4,20 +4,33 @@
 
 group("settings") {
   testonly = true
-  public_deps = [
-    "//src/experiences/settings/accessibility:accessibility_settings",
-    "//src/experiences/settings/bin:settings",
-    "//src/experiences/settings/bluetooth:bluetooth_settings",
-    "//src/experiences/settings/datetime:datetime_settings",
-    "//src/experiences/settings/display:display_settings",
-    "//src/experiences/settings/wifi:wifi_settings",
-  ]
+
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [ "//src/experiences/settings/bin:settings" ]
+  }
+
+  public_deps =
+      [
+        "//src/experiences/settings/accessibility:accessibility_settings",
+        "//src/experiences/settings/bluetooth:bluetooth_settings",
+        "//src/experiences/settings/datetime:datetime_settings",
+        "//src/experiences/settings/display:display_settings",
+        "//src/experiences/settings/wifi:wifi_settings",
+      ] + _flutter_tester_tests
 }
 
 group("dart_unittests") {
   testonly = true
-  public_deps = [
-    "//src/experiences/settings/bin:settings_tests($host_toolchain)",
-    "//src/experiences/settings/device:device_settings_tests($host_toolchain)",
-  ]
+
+  # TODO(fxb/41505): Temporarily disable flutter_tester tests on mac hosts.
+  _flutter_tester_tests = []
+  if (host_os != "mac") {
+    _flutter_tester_tests += [ "//src/experiences/settings/device:device_settings_tests($host_toolchain)" ]
+  }
+
+  public_deps =
+      [ "//src/experiences/settings/bin:settings_tests($host_toolchain)" ] +
+      _flutter_tester_tests
 }
