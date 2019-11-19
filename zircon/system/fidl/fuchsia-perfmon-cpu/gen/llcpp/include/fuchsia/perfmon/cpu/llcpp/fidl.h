@@ -314,14 +314,21 @@ struct Controller_Start_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Start_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response&& val) {
     Controller_Start_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static Controller_Start_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response* val) {
+    Controller_Start_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -329,23 +336,43 @@ struct Controller_Start_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Start_Result WithErr(int32_t&& val) {
     Controller_Start_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static Controller_Start_Result WithErr(int32_t* val) {
+    Controller_Start_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -353,9 +380,22 @@ struct Controller_Start_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -431,14 +471,21 @@ struct Controller_StageConfig_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_StageConfig_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response&& val) {
     Controller_StageConfig_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static Controller_StageConfig_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response* val) {
+    Controller_StageConfig_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -446,23 +493,43 @@ struct Controller_StageConfig_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_StageConfig_Result WithErr(int32_t&& val) {
     Controller_StageConfig_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static Controller_StageConfig_Result WithErr(int32_t* val) {
+    Controller_StageConfig_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -470,9 +537,22 @@ struct Controller_StageConfig_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -548,14 +628,21 @@ struct Controller_Initialize_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response&& val) {
     Controller_Initialize_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response* val) {
+    Controller_Initialize_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -563,23 +650,43 @@ struct Controller_Initialize_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Initialize_Result WithErr(int32_t&& val) {
     Controller_Initialize_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static Controller_Initialize_Result WithErr(int32_t* val) {
+    Controller_Initialize_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -587,9 +694,22 @@ struct Controller_Initialize_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }

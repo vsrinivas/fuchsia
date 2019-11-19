@@ -84,14 +84,21 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePowerState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response&& val) {
     TestDevice_GetCurrentDevicePowerState_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDevicePowerState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response* val) {
+    TestDevice_GetCurrentDevicePowerState_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -99,23 +106,43 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePowerState_Result WithErr(int32_t&& val) {
     TestDevice_GetCurrentDevicePowerState_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDevicePowerState_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentDevicePowerState_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -123,9 +150,22 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -203,14 +243,21 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response&& val) {
     TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response* val) {
+    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -218,23 +265,43 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithErr(int32_t&& val) {
     TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -242,9 +309,22 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -320,14 +400,21 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePerformanceState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response&& val) {
     TestDevice_GetCurrentDevicePerformanceState_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDevicePerformanceState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response* val) {
+    TestDevice_GetCurrentDevicePerformanceState_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -335,23 +422,43 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePerformanceState_Result WithErr(int32_t&& val) {
     TestDevice_GetCurrentDevicePerformanceState_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static TestDevice_GetCurrentDevicePerformanceState_Result WithErr(int32_t* val) {
+    TestDevice_GetCurrentDevicePerformanceState_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -359,9 +466,22 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -437,14 +557,21 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response&& val) {
     TestDevice_AddDeviceWithPowerArgs_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response* val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -452,23 +579,43 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t&& val) {
     TestDevice_AddDeviceWithPowerArgs_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t* val) {
+    TestDevice_AddDeviceWithPowerArgs_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -476,9 +623,22 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }

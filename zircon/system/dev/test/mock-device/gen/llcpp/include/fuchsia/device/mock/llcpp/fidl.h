@@ -146,9 +146,15 @@ struct Action {
 
   bool is_return_status() const { return tag_ == Tag::kReturnStatus; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithReturnStatus(int32_t&& val) {
     Action result;
     result.set_return_status(std::move(val));
+    return result;
+  }
+  static Action WithReturnStatus(int32_t* val) {
+    Action result;
+    result.set_return_status(val);
     return result;
   }
 
@@ -156,6 +162,7 @@ struct Action {
   int32_t& mutable_return_status();
 
   // Return this status.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_return_status(const T& v) {
@@ -164,9 +171,24 @@ struct Action {
 
   // Return this status.
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_return_status(const T* v) {
+    mutable_return_status() = *v;
+  }
+
+  // Return this status.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_return_status(T&& v) {
     mutable_return_status() = std::move(v);
+  }
+
+  // Return this status.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_return_status(T* v) {
+    mutable_return_status() = std::move(*v);
   }
 
   // Return this status.
@@ -174,9 +196,15 @@ struct Action {
 
   bool is_write() const { return tag_ == Tag::kWrite; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithWrite(::fidl::VectorView<uint8_t>&& val) {
     Action result;
     result.set_write(std::move(val));
+    return result;
+  }
+  static Action WithWrite(::fidl::VectorView<uint8_t>* val) {
+    Action result;
+    result.set_write(val);
     return result;
   }
 
@@ -184,6 +212,7 @@ struct Action {
   ::fidl::VectorView<uint8_t>& mutable_write();
 
   // Write these bytes to the buffer associated with the hook.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_copy_assignable<T>::value>
   set_write(const T& v) {
@@ -192,9 +221,24 @@ struct Action {
 
   // Write these bytes to the buffer associated with the hook.
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_copy_assignable<T>::value>
+  set_write(const T* v) {
+    mutable_write() = *v;
+  }
+
+  // Write these bytes to the buffer associated with the hook.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_move_assignable<T>::value>
   set_write(T&& v) {
     mutable_write() = std::move(v);
+  }
+
+  // Write these bytes to the buffer associated with the hook.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<uint8_t>>::value && std::is_move_assignable<T>::value>
+  set_write(T* v) {
+    mutable_write() = std::move(*v);
   }
 
   // Write these bytes to the buffer associated with the hook.
@@ -202,9 +246,15 @@ struct Action {
 
   bool is_create_thread() const { return tag_ == Tag::kCreateThread; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithCreateThread(::zx::channel&& val) {
     Action result;
     result.set_create_thread(std::move(val));
+    return result;
+  }
+  static Action WithCreateThread(::zx::channel* val) {
+    Action result;
+    result.set_create_thread(val);
     return result;
   }
 
@@ -212,6 +262,7 @@ struct Action {
   ::zx::channel& mutable_create_thread();
 
   // Create a new thread with a processing loop.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_copy_assignable<T>::value>
   set_create_thread(const T& v) {
@@ -220,9 +271,24 @@ struct Action {
 
   // Create a new thread with a processing loop.
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_copy_assignable<T>::value>
+  set_create_thread(const T* v) {
+    mutable_create_thread() = *v;
+  }
+
+  // Create a new thread with a processing loop.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_move_assignable<T>::value>
   set_create_thread(T&& v) {
     mutable_create_thread() = std::move(v);
+  }
+
+  // Create a new thread with a processing loop.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::zx::channel>::value && std::is_move_assignable<T>::value>
+  set_create_thread(T* v) {
+    mutable_create_thread() = std::move(*v);
   }
 
   // Create a new thread with a processing loop.
@@ -230,9 +296,15 @@ struct Action {
 
   bool is_async_remove_device() const { return tag_ == Tag::kAsyncRemoveDevice; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithAsyncRemoveDevice(bool&& val) {
     Action result;
     result.set_async_remove_device(std::move(val));
+    return result;
+  }
+  static Action WithAsyncRemoveDevice(bool* val) {
+    Action result;
+    result.set_async_remove_device(val);
     return result;
   }
 
@@ -240,6 +312,7 @@ struct Action {
   bool& mutable_async_remove_device();
 
   // Invoke device_async_remove() on our device.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
   set_async_remove_device(const T& v) {
@@ -248,9 +321,24 @@ struct Action {
 
   // Invoke device_async_remove() on our device.
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_copy_assignable<T>::value>
+  set_async_remove_device(const T* v) {
+    mutable_async_remove_device() = *v;
+  }
+
+  // Invoke device_async_remove() on our device.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, bool>::value && std::is_move_assignable<T>::value>
   set_async_remove_device(T&& v) {
     mutable_async_remove_device() = std::move(v);
+  }
+
+  // Invoke device_async_remove() on our device.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, bool>::value && std::is_move_assignable<T>::value>
+  set_async_remove_device(T* v) {
+    mutable_async_remove_device() = std::move(*v);
   }
 
   // Invoke device_async_remove() on our device.
@@ -258,9 +346,15 @@ struct Action {
 
   bool is_unbind_reply() const { return tag_ == Tag::kUnbindReply; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction&& val) {
     Action result;
     result.set_unbind_reply(std::move(val));
+    return result;
+  }
+  static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction* val) {
+    Action result;
+    result.set_unbind_reply(val);
     return result;
   }
 
@@ -268,6 +362,7 @@ struct Action {
   ::llcpp::fuchsia::device::mock::UnbindReplyAction& mutable_unbind_reply();
 
   // Signal that the unbind has completed.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_copy_assignable<T>::value>
   set_unbind_reply(const T& v) {
@@ -276,9 +371,24 @@ struct Action {
 
   // Signal that the unbind has completed.
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_copy_assignable<T>::value>
+  set_unbind_reply(const T* v) {
+    mutable_unbind_reply() = *v;
+  }
+
+  // Signal that the unbind has completed.
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_move_assignable<T>::value>
   set_unbind_reply(T&& v) {
     mutable_unbind_reply() = std::move(v);
+  }
+
+  // Signal that the unbind has completed.
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::UnbindReplyAction>::value && std::is_move_assignable<T>::value>
+  set_unbind_reply(T* v) {
+    mutable_unbind_reply() = std::move(*v);
   }
 
   // Signal that the unbind has completed.
@@ -286,9 +396,15 @@ struct Action {
 
   bool is_add_device() const { return tag_ == Tag::kAddDevice; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction&& val) {
     Action result;
     result.set_add_device(std::move(val));
+    return result;
+  }
+  static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction* val) {
+    Action result;
+    result.set_add_device(val);
     return result;
   }
 
@@ -296,6 +412,7 @@ struct Action {
   ::llcpp::fuchsia::device::mock::AddDeviceAction& mutable_add_device();
 
   // Create a new child device
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_copy_assignable<T>::value>
   set_add_device(const T& v) {
@@ -304,9 +421,24 @@ struct Action {
 
   // Create a new child device
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_copy_assignable<T>::value>
+  set_add_device(const T* v) {
+    mutable_add_device() = *v;
+  }
+
+  // Create a new child device
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_move_assignable<T>::value>
   set_add_device(T&& v) {
     mutable_add_device() = std::move(v);
+  }
+
+  // Create a new child device
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::device::mock::AddDeviceAction>::value && std::is_move_assignable<T>::value>
+  set_add_device(T* v) {
+    mutable_add_device() = std::move(*v);
   }
 
   // Create a new child device

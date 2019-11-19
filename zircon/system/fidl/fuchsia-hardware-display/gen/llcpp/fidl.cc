@@ -3792,10 +3792,10 @@ void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(bool s
   Controller_IsCaptureSupported_Response response;
   response.supported = std::move(supported);
 
-  Reply(Controller_IsCaptureSupported_Result::WithResponse(std::move(response)));
+  Reply(Controller_IsCaptureSupported_Result::WithResponse(&response));
 }
 void Controller::Interface::IsCaptureSupportedCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_IsCaptureSupported_Result::WithErr(std::move(error)));
+  Reply(Controller_IsCaptureSupported_Result::WithErr(&error));
 }
 
 void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result result) {
@@ -3817,7 +3817,7 @@ void Controller::Interface::IsCaptureSupportedCompleterBase::ReplySuccess(::fidl
   Controller_IsCaptureSupported_Response response;
   response.supported = std::move(supported);
 
-  Reply(std::move(_buffer), Controller_IsCaptureSupported_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_IsCaptureSupported_Result::WithResponse(&response));
 }
 
 void Controller::Interface::IsCaptureSupportedCompleterBase::Reply(::fidl::DecodedMessage<IsCaptureSupportedResponse> params) {
@@ -3843,10 +3843,10 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(uin
   Controller_ImportImageForCapture_Response response;
   response.image_id = std::move(image_id);
 
-  Reply(Controller_ImportImageForCapture_Result::WithResponse(std::move(response)));
+  Reply(Controller_ImportImageForCapture_Result::WithResponse(&response));
 }
 void Controller::Interface::ImportImageForCaptureCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_ImportImageForCapture_Result::WithErr(std::move(error)));
+  Reply(Controller_ImportImageForCapture_Result::WithErr(&error));
 }
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result result) {
@@ -3868,7 +3868,7 @@ void Controller::Interface::ImportImageForCaptureCompleterBase::ReplySuccess(::f
   Controller_ImportImageForCapture_Response response;
   response.image_id = std::move(image_id);
 
-  Reply(std::move(_buffer), Controller_ImportImageForCapture_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_ImportImageForCapture_Result::WithResponse(&response));
 }
 
 void Controller::Interface::ImportImageForCaptureCompleterBase::Reply(::fidl::DecodedMessage<ImportImageForCaptureResponse> params) {
@@ -3893,10 +3893,10 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::llcpp::fuchsia::h
 void Controller::Interface::StartCaptureCompleterBase::ReplySuccess() {
   Controller_StartCapture_Response response;
 
-  Reply(Controller_StartCapture_Result::WithResponse(std::move(response)));
+  Reply(Controller_StartCapture_Result::WithResponse(&response));
 }
 void Controller::Interface::StartCaptureCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_StartCapture_Result::WithErr(std::move(error)));
+  Reply(Controller_StartCapture_Result::WithErr(&error));
 }
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result result) {
@@ -3917,7 +3917,7 @@ void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::BytePart _b
 void Controller::Interface::StartCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_StartCapture_Response response;
 
-  Reply(std::move(_buffer), Controller_StartCapture_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_StartCapture_Result::WithResponse(&response));
 }
 
 void Controller::Interface::StartCaptureCompleterBase::Reply(::fidl::DecodedMessage<StartCaptureResponse> params) {
@@ -3942,10 +3942,10 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::llcpp::fuchsia:
 void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess() {
   Controller_ReleaseCapture_Response response;
 
-  Reply(Controller_ReleaseCapture_Result::WithResponse(std::move(response)));
+  Reply(Controller_ReleaseCapture_Result::WithResponse(&response));
 }
 void Controller::Interface::ReleaseCaptureCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_ReleaseCapture_Result::WithErr(std::move(error)));
+  Reply(Controller_ReleaseCapture_Result::WithErr(&error));
 }
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result result) {
@@ -3966,7 +3966,7 @@ void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::BytePart 
 void Controller::Interface::ReleaseCaptureCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_ReleaseCapture_Response response;
 
-  Reply(std::move(_buffer), Controller_ReleaseCapture_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_ReleaseCapture_Result::WithResponse(&response));
 }
 
 void Controller::Interface::ReleaseCaptureCompleterBase::Reply(::fidl::DecodedMessage<ReleaseCaptureResponse> params) {

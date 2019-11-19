@@ -759,10 +759,10 @@ void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::llcpp::f
   Device_GetStateNormalized_Response response;
   response.state = std::move(state);
 
-  Reply(Device_GetStateNormalized_Result::WithResponse(std::move(response)));
+  Reply(Device_GetStateNormalized_Result::WithResponse(&response));
 }
 void Device::Interface::GetStateNormalizedCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_GetStateNormalized_Result::WithErr(std::move(error)));
+  Reply(Device_GetStateNormalized_Result::WithErr(&error));
 }
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result result) {
@@ -784,7 +784,7 @@ void Device::Interface::GetStateNormalizedCompleterBase::ReplySuccess(::fidl::By
   Device_GetStateNormalized_Response response;
   response.state = std::move(state);
 
-  Reply(std::move(_buffer), Device_GetStateNormalized_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_GetStateNormalized_Result::WithResponse(&response));
 }
 
 void Device::Interface::GetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<GetStateNormalizedResponse> params) {
@@ -809,10 +809,10 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::llcpp::fuchsia:
 void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess() {
   Device_SetStateNormalized_Response response;
 
-  Reply(Device_SetStateNormalized_Result::WithResponse(std::move(response)));
+  Reply(Device_SetStateNormalized_Result::WithResponse(&response));
 }
 void Device::Interface::SetStateNormalizedCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_SetStateNormalized_Result::WithErr(std::move(error)));
+  Reply(Device_SetStateNormalized_Result::WithErr(&error));
 }
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result result) {
@@ -833,7 +833,7 @@ void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::BytePart 
 void Device::Interface::SetStateNormalizedCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Device_SetStateNormalized_Response response;
 
-  Reply(std::move(_buffer), Device_SetStateNormalized_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_SetStateNormalized_Result::WithResponse(&response));
 }
 
 void Device::Interface::SetStateNormalizedCompleterBase::Reply(::fidl::DecodedMessage<SetStateNormalizedResponse> params) {
@@ -859,10 +859,10 @@ void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::llcpp::fuc
   Device_GetStateAbsolute_Response response;
   response.state = std::move(state);
 
-  Reply(Device_GetStateAbsolute_Result::WithResponse(std::move(response)));
+  Reply(Device_GetStateAbsolute_Result::WithResponse(&response));
 }
 void Device::Interface::GetStateAbsoluteCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_GetStateAbsolute_Result::WithErr(std::move(error)));
+  Reply(Device_GetStateAbsolute_Result::WithErr(&error));
 }
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result result) {
@@ -884,7 +884,7 @@ void Device::Interface::GetStateAbsoluteCompleterBase::ReplySuccess(::fidl::Byte
   Device_GetStateAbsolute_Response response;
   response.state = std::move(state);
 
-  Reply(std::move(_buffer), Device_GetStateAbsolute_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_GetStateAbsolute_Result::WithResponse(&response));
 }
 
 void Device::Interface::GetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<GetStateAbsoluteResponse> params) {
@@ -909,10 +909,10 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::llcpp::fuchsia::h
 void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess() {
   Device_SetStateAbsolute_Response response;
 
-  Reply(Device_SetStateAbsolute_Result::WithResponse(std::move(response)));
+  Reply(Device_SetStateAbsolute_Result::WithResponse(&response));
 }
 void Device::Interface::SetStateAbsoluteCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_SetStateAbsolute_Result::WithErr(std::move(error)));
+  Reply(Device_SetStateAbsolute_Result::WithErr(&error));
 }
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result result) {
@@ -933,7 +933,7 @@ void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::BytePart _b
 void Device::Interface::SetStateAbsoluteCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Device_SetStateAbsolute_Response response;
 
-  Reply(std::move(_buffer), Device_SetStateAbsolute_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_SetStateAbsolute_Result::WithResponse(&response));
 }
 
 void Device::Interface::SetStateAbsoluteCompleterBase::Reply(::fidl::DecodedMessage<SetStateAbsoluteResponse> params) {
@@ -959,10 +959,10 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(doub
   Device_GetMaxAbsoluteBrightness_Response response;
   response.max_brightness = std::move(max_brightness);
 
-  Reply(Device_GetMaxAbsoluteBrightness_Result::WithResponse(std::move(response)));
+  Reply(Device_GetMaxAbsoluteBrightness_Result::WithResponse(&response));
 }
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_GetMaxAbsoluteBrightness_Result::WithErr(std::move(error)));
+  Reply(Device_GetMaxAbsoluteBrightness_Result::WithErr(&error));
 }
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result result) {
@@ -984,7 +984,7 @@ void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::ReplySuccess(::fi
   Device_GetMaxAbsoluteBrightness_Response response;
   response.max_brightness = std::move(max_brightness);
 
-  Reply(std::move(_buffer), Device_GetMaxAbsoluteBrightness_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_GetMaxAbsoluteBrightness_Result::WithResponse(&response));
 }
 
 void Device::Interface::GetMaxAbsoluteBrightnessCompleterBase::Reply(::fidl::DecodedMessage<GetMaxAbsoluteBrightnessResponse> params) {

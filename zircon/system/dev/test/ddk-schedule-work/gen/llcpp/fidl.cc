@@ -703,10 +703,10 @@ void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::llcpp::fuchsia::d
 void TestDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess() {
   TestDevice_ScheduleWork_Response response;
 
-  Reply(TestDevice_ScheduleWork_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_ScheduleWork_Result::WithResponse(&response));
 }
 void TestDevice::Interface::ScheduleWorkCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_ScheduleWork_Result::WithErr(std::move(error)));
+  Reply(TestDevice_ScheduleWork_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result result) {
@@ -727,7 +727,7 @@ void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::BytePart _b
 void TestDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_ScheduleWork_Response response;
 
-  Reply(std::move(_buffer), TestDevice_ScheduleWork_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_ScheduleWork_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::DecodedMessage<ScheduleWorkResponse> params) {
@@ -752,10 +752,10 @@ void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::ll
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::ReplySuccess() {
   TestDevice_ScheduleWorkDifferentThread_Response response;
 
-  Reply(TestDevice_ScheduleWorkDifferentThread_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_ScheduleWorkDifferentThread_Result::WithResponse(&response));
 }
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_ScheduleWorkDifferentThread_Result::WithErr(std::move(error)));
+  Reply(TestDevice_ScheduleWorkDifferentThread_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result result) {
@@ -776,7 +776,7 @@ void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::fi
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_ScheduleWorkDifferentThread_Response response;
 
-  Reply(std::move(_buffer), TestDevice_ScheduleWorkDifferentThread_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_ScheduleWorkDifferentThread_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::ScheduleWorkDifferentThreadCompleterBase::Reply(::fidl::DecodedMessage<ScheduleWorkDifferentThreadResponse> params) {
@@ -802,10 +802,10 @@ void TestDevice::Interface::GetDoneEventCompleterBase::ReplySuccess(::zx::event 
   TestDevice_GetDoneEvent_Response response;
   response.event = std::move(event);
 
-  Reply(TestDevice_GetDoneEvent_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_GetDoneEvent_Result::WithResponse(&response));
 }
 void TestDevice::Interface::GetDoneEventCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_GetDoneEvent_Result::WithErr(std::move(error)));
+  Reply(TestDevice_GetDoneEvent_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::GetDoneEventCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result result) {
@@ -827,7 +827,7 @@ void TestDevice::Interface::GetDoneEventCompleterBase::ReplySuccess(::fidl::Byte
   TestDevice_GetDoneEvent_Response response;
   response.event = std::move(event);
 
-  Reply(std::move(_buffer), TestDevice_GetDoneEvent_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_GetDoneEvent_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::GetDoneEventCompleterBase::Reply(::fidl::DecodedMessage<GetDoneEventResponse> params) {
@@ -890,10 +890,10 @@ void TestDevice::Interface::GetChannelCompleterBase::Reply(::llcpp::fuchsia::dev
 void TestDevice::Interface::GetChannelCompleterBase::ReplySuccess() {
   TestDevice_GetChannel_Response response;
 
-  Reply(TestDevice_GetChannel_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_GetChannel_Result::WithResponse(&response));
 }
 void TestDevice::Interface::GetChannelCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_GetChannel_Result::WithErr(std::move(error)));
+  Reply(TestDevice_GetChannel_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result result) {
@@ -914,7 +914,7 @@ void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::BytePart _buf
 void TestDevice::Interface::GetChannelCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_GetChannel_Response response;
 
-  Reply(std::move(_buffer), TestDevice_GetChannel_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_GetChannel_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::GetChannelCompleterBase::Reply(::fidl::DecodedMessage<GetChannelResponse> params) {
@@ -1153,10 +1153,10 @@ void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::ll
   OwnedChannelDevice_ScheduleWork_Response response;
   response.histogram = std::move(histogram);
 
-  Reply(OwnedChannelDevice_ScheduleWork_Result::WithResponse(std::move(response)));
+  Reply(OwnedChannelDevice_ScheduleWork_Result::WithResponse(&response));
 }
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::ReplyError(int32_t error) {
-  Reply(OwnedChannelDevice_ScheduleWork_Result::WithErr(std::move(error)));
+  Reply(OwnedChannelDevice_ScheduleWork_Result::WithErr(&error));
 }
 
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result result) {
@@ -1178,7 +1178,7 @@ void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::ReplySuccess(::fi
   OwnedChannelDevice_ScheduleWork_Response response;
   response.histogram = std::move(histogram);
 
-  Reply(std::move(_buffer), OwnedChannelDevice_ScheduleWork_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), OwnedChannelDevice_ScheduleWork_Result::WithResponse(&response));
 }
 
 void OwnedChannelDevice::Interface::ScheduleWorkCompleterBase::Reply(::fidl::DecodedMessage<ScheduleWorkResponse> params) {

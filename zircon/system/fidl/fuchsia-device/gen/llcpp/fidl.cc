@@ -203,10 +203,10 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::ReplySuccess(::fidl::S
   NameProvider_GetDeviceName_Response response;
   response.name = std::move(name);
 
-  Reply(NameProvider_GetDeviceName_Result::WithResponse(std::move(response)));
+  Reply(NameProvider_GetDeviceName_Result::WithResponse(&response));
 }
 void NameProvider::Interface::GetDeviceNameCompleterBase::ReplyError(int32_t error) {
-  Reply(NameProvider_GetDeviceName_Result::WithErr(std::move(error)));
+  Reply(NameProvider_GetDeviceName_Result::WithErr(&error));
 }
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result) {
@@ -232,7 +232,7 @@ void NameProvider::Interface::GetDeviceNameCompleterBase::ReplySuccess(::fidl::B
   NameProvider_GetDeviceName_Response response;
   response.name = std::move(name);
 
-  Reply(std::move(_buffer), NameProvider_GetDeviceName_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), NameProvider_GetDeviceName_Result::WithResponse(&response));
 }
 
 void NameProvider::Interface::GetDeviceNameCompleterBase::Reply(::fidl::DecodedMessage<GetDeviceNameResponse> params) {
@@ -2404,10 +2404,10 @@ void Controller::Interface::BindCompleterBase::Reply(::llcpp::fuchsia::device::C
 void Controller::Interface::BindCompleterBase::ReplySuccess() {
   Controller_Bind_Response response;
 
-  Reply(Controller_Bind_Result::WithResponse(std::move(response)));
+  Reply(Controller_Bind_Result::WithResponse(&response));
 }
 void Controller::Interface::BindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Bind_Result::WithErr(std::move(error)));
+  Reply(Controller_Bind_Result::WithErr(&error));
 }
 
 void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Bind_Result result) {
@@ -2428,7 +2428,7 @@ void Controller::Interface::BindCompleterBase::Reply(::fidl::BytePart _buffer, :
 void Controller::Interface::BindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Bind_Response response;
 
-  Reply(std::move(_buffer), Controller_Bind_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Bind_Result::WithResponse(&response));
 }
 
 void Controller::Interface::BindCompleterBase::Reply(::fidl::DecodedMessage<BindResponse> params) {
@@ -2453,10 +2453,10 @@ void Controller::Interface::RebindCompleterBase::Reply(::llcpp::fuchsia::device:
 void Controller::Interface::RebindCompleterBase::ReplySuccess() {
   Controller_Rebind_Response response;
 
-  Reply(Controller_Rebind_Result::WithResponse(std::move(response)));
+  Reply(Controller_Rebind_Result::WithResponse(&response));
 }
 void Controller::Interface::RebindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Rebind_Result::WithErr(std::move(error)));
+  Reply(Controller_Rebind_Result::WithErr(&error));
 }
 
 void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Rebind_Result result) {
@@ -2477,7 +2477,7 @@ void Controller::Interface::RebindCompleterBase::Reply(::fidl::BytePart _buffer,
 void Controller::Interface::RebindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Rebind_Response response;
 
-  Reply(std::move(_buffer), Controller_Rebind_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Rebind_Result::WithResponse(&response));
 }
 
 void Controller::Interface::RebindCompleterBase::Reply(::fidl::DecodedMessage<RebindResponse> params) {
@@ -2502,10 +2502,10 @@ void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::llcpp::fuchsia:
 void Controller::Interface::ScheduleUnbindCompleterBase::ReplySuccess() {
   Controller_ScheduleUnbind_Response response;
 
-  Reply(Controller_ScheduleUnbind_Result::WithResponse(std::move(response)));
+  Reply(Controller_ScheduleUnbind_Result::WithResponse(&response));
 }
 void Controller::Interface::ScheduleUnbindCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_ScheduleUnbind_Result::WithErr(std::move(error)));
+  Reply(Controller_ScheduleUnbind_Result::WithErr(&error));
 }
 
 void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result result) {
@@ -2526,7 +2526,7 @@ void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::BytePart 
 void Controller::Interface::ScheduleUnbindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_ScheduleUnbind_Response response;
 
-  Reply(std::move(_buffer), Controller_ScheduleUnbind_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_ScheduleUnbind_Result::WithResponse(&response));
 }
 
 void Controller::Interface::ScheduleUnbindCompleterBase::Reply(::fidl::DecodedMessage<ScheduleUnbindResponse> params) {
@@ -2650,10 +2650,10 @@ void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl
   Controller_GetTopologicalPath_Response response;
   response.path = std::move(path);
 
-  Reply(Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
+  Reply(Controller_GetTopologicalPath_Result::WithResponse(&response));
 }
 void Controller::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_GetTopologicalPath_Result::WithErr(std::move(error)));
+  Reply(Controller_GetTopologicalPath_Result::WithErr(&error));
 }
 
 void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result result) {
@@ -2679,7 +2679,7 @@ void Controller::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fidl
   Controller_GetTopologicalPath_Response response;
   response.path = std::move(path);
 
-  Reply(std::move(_buffer), Controller_GetTopologicalPath_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_GetTopologicalPath_Result::WithResponse(&response));
 }
 
 void Controller::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {
@@ -2925,10 +2925,10 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl
   Controller_GetDevicePowerCaps_Response response;
   response.dpstates = std::move(dpstates);
 
-  Reply(Controller_GetDevicePowerCaps_Result::WithResponse(std::move(response)));
+  Reply(Controller_GetDevicePowerCaps_Result::WithResponse(&response));
 }
 void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_GetDevicePowerCaps_Result::WithErr(std::move(error)));
+  Reply(Controller_GetDevicePowerCaps_Result::WithErr(&error));
 }
 
 void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result result) {
@@ -2950,7 +2950,7 @@ void Controller::Interface::GetDevicePowerCapsCompleterBase::ReplySuccess(::fidl
   Controller_GetDevicePowerCaps_Response response;
   response.dpstates = std::move(dpstates);
 
-  Reply(std::move(_buffer), Controller_GetDevicePowerCaps_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_GetDevicePowerCaps_Result::WithResponse(&response));
 }
 
 void Controller::Interface::GetDevicePowerCapsCompleterBase::Reply(::fidl::DecodedMessage<GetDevicePowerCapsResponse> params) {
@@ -3013,10 +3013,10 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::llcpp:
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplySuccess() {
   Controller_UpdatePowerStateMapping_Response response;
 
-  Reply(Controller_UpdatePowerStateMapping_Result::WithResponse(std::move(response)));
+  Reply(Controller_UpdatePowerStateMapping_Result::WithResponse(&response));
 }
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_UpdatePowerStateMapping_Result::WithErr(std::move(error)));
+  Reply(Controller_UpdatePowerStateMapping_Result::WithErr(&error));
 }
 
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result result) {
@@ -3037,7 +3037,7 @@ void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_UpdatePowerStateMapping_Response response;
 
-  Reply(std::move(_buffer), Controller_UpdatePowerStateMapping_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_UpdatePowerStateMapping_Result::WithResponse(&response));
 }
 
 void Controller::Interface::UpdatePowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<UpdatePowerStateMappingResponse> params) {
@@ -3063,10 +3063,10 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fi
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 
-  Reply(Controller_GetPowerStateMapping_Result::WithResponse(std::move(response)));
+  Reply(Controller_GetPowerStateMapping_Result::WithResponse(&response));
 }
 void Controller::Interface::GetPowerStateMappingCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_GetPowerStateMapping_Result::WithErr(std::move(error)));
+  Reply(Controller_GetPowerStateMapping_Result::WithErr(&error));
 }
 
 void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result result) {
@@ -3088,7 +3088,7 @@ void Controller::Interface::GetPowerStateMappingCompleterBase::ReplySuccess(::fi
   Controller_GetPowerStateMapping_Response response;
   response.mapping = std::move(mapping);
 
-  Reply(std::move(_buffer), Controller_GetPowerStateMapping_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_GetPowerStateMapping_Result::WithResponse(&response));
 }
 
 void Controller::Interface::GetPowerStateMappingCompleterBase::Reply(::fidl::DecodedMessage<GetPowerStateMappingResponse> params) {
@@ -3152,10 +3152,10 @@ void Controller::Interface::ResumeCompleterBase::ReplySuccess(::llcpp::fuchsia::
   Controller_Resume_Response response;
   response.out_state = std::move(out_state);
 
-  Reply(Controller_Resume_Result::WithResponse(std::move(response)));
+  Reply(Controller_Resume_Result::WithResponse(&response));
 }
 void Controller::Interface::ResumeCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Resume_Result::WithErr(std::move(error)));
+  Reply(Controller_Resume_Result::WithErr(&error));
 }
 
 void Controller::Interface::ResumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::Controller_Resume_Result result) {
@@ -3177,7 +3177,7 @@ void Controller::Interface::ResumeCompleterBase::ReplySuccess(::fidl::BytePart _
   Controller_Resume_Response response;
   response.out_state = std::move(out_state);
 
-  Reply(std::move(_buffer), Controller_Resume_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Resume_Result::WithResponse(&response));
 }
 
 void Controller::Interface::ResumeCompleterBase::Reply(::fidl::DecodedMessage<ResumeResponse> params) {

@@ -308,14 +308,21 @@ struct ProcessLimbo_RemoveFilters_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response&& val) {
     ProcessLimbo_RemoveFilters_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static ProcessLimbo_RemoveFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response* val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -323,23 +330,43 @@ struct ProcessLimbo_RemoveFilters_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_RemoveFilters_Result WithErr(int32_t&& val) {
     ProcessLimbo_RemoveFilters_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static ProcessLimbo_RemoveFilters_Result WithErr(int32_t* val) {
+    ProcessLimbo_RemoveFilters_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -347,9 +374,22 @@ struct ProcessLimbo_RemoveFilters_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -425,14 +465,21 @@ struct ProcessLimbo_ReleaseProcess_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response&& val) {
     ProcessLimbo_ReleaseProcess_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static ProcessLimbo_ReleaseProcess_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response* val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -440,23 +487,43 @@ struct ProcessLimbo_ReleaseProcess_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t&& val) {
     ProcessLimbo_ReleaseProcess_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static ProcessLimbo_ReleaseProcess_Result WithErr(int32_t* val) {
+    ProcessLimbo_ReleaseProcess_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -464,9 +531,22 @@ struct ProcessLimbo_ReleaseProcess_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -542,14 +622,21 @@ struct ProcessLimbo_AppendFilters_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response&& val) {
     ProcessLimbo_AppendFilters_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static ProcessLimbo_AppendFilters_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response* val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -557,23 +644,43 @@ struct ProcessLimbo_AppendFilters_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_AppendFilters_Result WithErr(int32_t&& val) {
     ProcessLimbo_AppendFilters_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static ProcessLimbo_AppendFilters_Result WithErr(int32_t* val) {
+    ProcessLimbo_AppendFilters_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -581,9 +688,22 @@ struct ProcessLimbo_AppendFilters_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -918,14 +1038,21 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response&& val) {
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response* val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -933,23 +1060,43 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t&& val) {
     ProcessLimbo_WatchProcessesWaitingOnException_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static ProcessLimbo_WatchProcessesWaitingOnException_Result WithErr(int32_t* val) {
+    ProcessLimbo_WatchProcessesWaitingOnException_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -957,9 +1104,22 @@ struct ProcessLimbo_WatchProcessesWaitingOnException_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }
@@ -1035,14 +1195,21 @@ struct ProcessLimbo_RetrieveException_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response&& val) {
     ProcessLimbo_RetrieveException_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static ProcessLimbo_RetrieveException_Result WithResponse(::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response* val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -1050,23 +1217,43 @@ struct ProcessLimbo_RetrieveException_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ProcessLimbo_RetrieveException_Result WithErr(int32_t&& val) {
     ProcessLimbo_RetrieveException_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static ProcessLimbo_RetrieveException_Result WithErr(int32_t* val) {
+    ProcessLimbo_RetrieveException_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -1074,9 +1261,22 @@ struct ProcessLimbo_RetrieveException_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }

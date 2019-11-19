@@ -90,14 +90,21 @@ struct Value {
 
   bool is_string_value() const { return tag_ == Tag::kStringValue; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithStringValue(::fidl::StringView&& val) {
     Value result;
     result.set_string_value(std::move(val));
     return result;
   }
+  static Value WithStringValue(::fidl::StringView* val) {
+    Value result;
+    result.set_string_value(val);
+    return result;
+  }
 
   ::fidl::StringView& mutable_string_value();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
   set_string_value(const T& v) {
@@ -105,23 +112,43 @@ struct Value {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_string_value(const T* v) {
+    mutable_string_value() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
   set_string_value(T&& v) {
     mutable_string_value() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_string_value(T* v) {
+    mutable_string_value() = std::move(*v);
   }
 
   ::fidl::StringView const & string_value() const { return string_value_; }
 
   bool is_int_value() const { return tag_ == Tag::kIntValue; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithIntValue(int64_t&& val) {
     Value result;
     result.set_int_value(std::move(val));
     return result;
   }
+  static Value WithIntValue(int64_t* val) {
+    Value result;
+    result.set_int_value(val);
+    return result;
+  }
 
   int64_t& mutable_int_value();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
   set_int_value(const T& v) {
@@ -129,23 +156,43 @@ struct Value {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
+  set_int_value(const T* v) {
+    mutable_int_value() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
   set_int_value(T&& v) {
     mutable_int_value() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
+  set_int_value(T* v) {
+    mutable_int_value() = std::move(*v);
   }
 
   int64_t const & int_value() const { return int_value_; }
 
   bool is_double_value() const { return tag_ == Tag::kDoubleValue; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithDoubleValue(double&& val) {
     Value result;
     result.set_double_value(std::move(val));
     return result;
   }
+  static Value WithDoubleValue(double* val) {
+    Value result;
+    result.set_double_value(val);
+    return result;
+  }
 
   double& mutable_double_value();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, double>::value && std::is_copy_assignable<T>::value>
   set_double_value(const T& v) {
@@ -153,23 +200,43 @@ struct Value {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, double>::value && std::is_copy_assignable<T>::value>
+  set_double_value(const T* v) {
+    mutable_double_value() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, double>::value && std::is_move_assignable<T>::value>
   set_double_value(T&& v) {
     mutable_double_value() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, double>::value && std::is_move_assignable<T>::value>
+  set_double_value(T* v) {
+    mutable_double_value() = std::move(*v);
   }
 
   double const & double_value() const { return double_value_; }
 
   bool is_index_value() const { return tag_ == Tag::kIndexValue; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithIndexValue(uint32_t&& val) {
     Value result;
     result.set_index_value(std::move(val));
     return result;
   }
+  static Value WithIndexValue(uint32_t* val) {
+    Value result;
+    result.set_index_value(val);
+    return result;
+  }
 
   uint32_t& mutable_index_value();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_index_value(const T& v) {
@@ -177,9 +244,22 @@ struct Value {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_index_value(const T* v) {
+    mutable_index_value() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
   set_index_value(T&& v) {
     mutable_index_value() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_index_value(T* v) {
+    mutable_index_value() = std::move(*v);
   }
 
   uint32_t const & index_value() const { return index_value_; }
@@ -3811,14 +3891,21 @@ struct EventPayload {
 
   bool is_event() const { return tag_ == Tag::kEvent; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithEvent(::llcpp::fuchsia::cobalt::Event&& val) {
     EventPayload result;
     result.set_event(std::move(val));
     return result;
   }
+  static EventPayload WithEvent(::llcpp::fuchsia::cobalt::Event* val) {
+    EventPayload result;
+    result.set_event(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::cobalt::Event& mutable_event();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::Event>::value && std::is_copy_assignable<T>::value>
   set_event(const T& v) {
@@ -3826,23 +3913,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::Event>::value && std::is_copy_assignable<T>::value>
+  set_event(const T* v) {
+    mutable_event() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::Event>::value && std::is_move_assignable<T>::value>
   set_event(T&& v) {
     mutable_event() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::Event>::value && std::is_move_assignable<T>::value>
+  set_event(T* v) {
+    mutable_event() = std::move(*v);
   }
 
   ::llcpp::fuchsia::cobalt::Event const & event() const { return event_; }
 
   bool is_event_count() const { return tag_ == Tag::kEventCount; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithEventCount(::llcpp::fuchsia::cobalt::CountEvent&& val) {
     EventPayload result;
     result.set_event_count(std::move(val));
     return result;
   }
+  static EventPayload WithEventCount(::llcpp::fuchsia::cobalt::CountEvent* val) {
+    EventPayload result;
+    result.set_event_count(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::cobalt::CountEvent& mutable_event_count();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::CountEvent>::value && std::is_copy_assignable<T>::value>
   set_event_count(const T& v) {
@@ -3850,23 +3957,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::CountEvent>::value && std::is_copy_assignable<T>::value>
+  set_event_count(const T* v) {
+    mutable_event_count() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::CountEvent>::value && std::is_move_assignable<T>::value>
   set_event_count(T&& v) {
     mutable_event_count() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::cobalt::CountEvent>::value && std::is_move_assignable<T>::value>
+  set_event_count(T* v) {
+    mutable_event_count() = std::move(*v);
   }
 
   ::llcpp::fuchsia::cobalt::CountEvent const & event_count() const { return event_count_; }
 
   bool is_elapsed_micros() const { return tag_ == Tag::kElapsedMicros; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithElapsedMicros(int64_t&& val) {
     EventPayload result;
     result.set_elapsed_micros(std::move(val));
     return result;
   }
+  static EventPayload WithElapsedMicros(int64_t* val) {
+    EventPayload result;
+    result.set_elapsed_micros(val);
+    return result;
+  }
 
   int64_t& mutable_elapsed_micros();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
   set_elapsed_micros(const T& v) {
@@ -3874,23 +4001,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
+  set_elapsed_micros(const T* v) {
+    mutable_elapsed_micros() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
   set_elapsed_micros(T&& v) {
     mutable_elapsed_micros() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
+  set_elapsed_micros(T* v) {
+    mutable_elapsed_micros() = std::move(*v);
   }
 
   int64_t const & elapsed_micros() const { return elapsed_micros_; }
 
   bool is_fps() const { return tag_ == Tag::kFps; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithFps(float&& val) {
     EventPayload result;
     result.set_fps(std::move(val));
     return result;
   }
+  static EventPayload WithFps(float* val) {
+    EventPayload result;
+    result.set_fps(val);
+    return result;
+  }
 
   float& mutable_fps();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, float>::value && std::is_copy_assignable<T>::value>
   set_fps(const T& v) {
@@ -3898,23 +4045,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, float>::value && std::is_copy_assignable<T>::value>
+  set_fps(const T* v) {
+    mutable_fps() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, float>::value && std::is_move_assignable<T>::value>
   set_fps(T&& v) {
     mutable_fps() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, float>::value && std::is_move_assignable<T>::value>
+  set_fps(T* v) {
+    mutable_fps() = std::move(*v);
   }
 
   float const & fps() const { return fps_; }
 
   bool is_memory_bytes_used() const { return tag_ == Tag::kMemoryBytesUsed; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithMemoryBytesUsed(int64_t&& val) {
     EventPayload result;
     result.set_memory_bytes_used(std::move(val));
     return result;
   }
+  static EventPayload WithMemoryBytesUsed(int64_t* val) {
+    EventPayload result;
+    result.set_memory_bytes_used(val);
+    return result;
+  }
 
   int64_t& mutable_memory_bytes_used();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
   set_memory_bytes_used(const T& v) {
@@ -3922,23 +4089,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_copy_assignable<T>::value>
+  set_memory_bytes_used(const T* v) {
+    mutable_memory_bytes_used() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
   set_memory_bytes_used(T&& v) {
     mutable_memory_bytes_used() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int64_t>::value && std::is_move_assignable<T>::value>
+  set_memory_bytes_used(T* v) {
+    mutable_memory_bytes_used() = std::move(*v);
   }
 
   int64_t const & memory_bytes_used() const { return memory_bytes_used_; }
 
   bool is_string_event() const { return tag_ == Tag::kStringEvent; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithStringEvent(::fidl::StringView&& val) {
     EventPayload result;
     result.set_string_event(std::move(val));
     return result;
   }
+  static EventPayload WithStringEvent(::fidl::StringView* val) {
+    EventPayload result;
+    result.set_string_event(val);
+    return result;
+  }
 
   ::fidl::StringView& mutable_string_event();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
   set_string_event(const T& v) {
@@ -3946,23 +4133,43 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_copy_assignable<T>::value>
+  set_string_event(const T* v) {
+    mutable_string_event() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
   set_string_event(T&& v) {
     mutable_string_event() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::StringView>::value && std::is_move_assignable<T>::value>
+  set_string_event(T* v) {
+    mutable_string_event() = std::move(*v);
   }
 
   ::fidl::StringView const & string_event() const { return string_event_; }
 
   bool is_int_histogram() const { return tag_ == Tag::kIntHistogram; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithIntHistogram(::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>&& val) {
     EventPayload result;
     result.set_int_histogram(std::move(val));
     return result;
   }
+  static EventPayload WithIntHistogram(::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>* val) {
+    EventPayload result;
+    result.set_int_histogram(val);
+    return result;
+  }
 
   ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>& mutable_int_histogram();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>>::value && std::is_copy_assignable<T>::value>
   set_int_histogram(const T& v) {
@@ -3970,9 +4177,22 @@ struct EventPayload {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>>::value && std::is_copy_assignable<T>::value>
+  set_int_histogram(const T* v) {
+    mutable_int_histogram() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>>::value && std::is_move_assignable<T>::value>
   set_int_histogram(T&& v) {
     mutable_int_histogram() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>>::value && std::is_move_assignable<T>::value>
+  set_int_histogram(T* v) {
+    mutable_int_histogram() = std::move(*v);
   }
 
   ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> const & int_histogram() const { return int_histogram_; }

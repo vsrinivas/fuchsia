@@ -1423,10 +1423,10 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::l
   SecureMem_GetPhysicalSecureHeaps_Response response;
   response.heaps = std::move(heaps);
 
-  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(&response));
 }
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplyError(int32_t error) {
-  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
+  Reply(SecureMem_GetPhysicalSecureHeaps_Result::WithErr(&error));
 }
 
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result result) {
@@ -1448,7 +1448,7 @@ void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::ReplySuccess(::f
   SecureMem_GetPhysicalSecureHeaps_Response response;
   response.heaps = std::move(heaps);
 
-  Reply(std::move(_buffer), SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), SecureMem_GetPhysicalSecureHeaps_Result::WithResponse(&response));
 }
 
 void SecureMem::Interface::GetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<GetPhysicalSecureHeapsResponse> params) {
@@ -1473,10 +1473,10 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::llcpp::f
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess() {
   SecureMem_SetPhysicalSecureHeaps_Response response;
 
-  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(&response));
 }
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplyError(int32_t error) {
-  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithErr(std::move(error)));
+  Reply(SecureMem_SetPhysicalSecureHeaps_Result::WithErr(&error));
 }
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result result) {
@@ -1497,7 +1497,7 @@ void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::By
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   SecureMem_SetPhysicalSecureHeaps_Response response;
 
-  Reply(std::move(_buffer), SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), SecureMem_SetPhysicalSecureHeaps_Result::WithResponse(&response));
 }
 
 void SecureMem::Interface::SetPhysicalSecureHeapsCompleterBase::Reply(::fidl::DecodedMessage<SetPhysicalSecureHeapsResponse> params) {

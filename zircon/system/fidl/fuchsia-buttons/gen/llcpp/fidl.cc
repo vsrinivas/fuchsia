@@ -401,10 +401,10 @@ void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::llcpp::fuchsia::bu
 void Buttons::Interface::RegisterNotifyCompleterBase::ReplySuccess() {
   Buttons_RegisterNotify_Response response;
 
-  Reply(Buttons_RegisterNotify_Result::WithResponse(std::move(response)));
+  Reply(Buttons_RegisterNotify_Result::WithResponse(&response));
 }
 void Buttons::Interface::RegisterNotifyCompleterBase::ReplyError(int32_t error) {
-  Reply(Buttons_RegisterNotify_Result::WithErr(std::move(error)));
+  Reply(Buttons_RegisterNotify_Result::WithErr(&error));
 }
 
 void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result result) {
@@ -425,7 +425,7 @@ void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::fidl::BytePart _bu
 void Buttons::Interface::RegisterNotifyCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Buttons_RegisterNotify_Response response;
 
-  Reply(std::move(_buffer), Buttons_RegisterNotify_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Buttons_RegisterNotify_Result::WithResponse(&response));
 }
 
 void Buttons::Interface::RegisterNotifyCompleterBase::Reply(::fidl::DecodedMessage<RegisterNotifyResponse> params) {

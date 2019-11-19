@@ -534,10 +534,10 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::llcpp::fuchsia::h
 void Device::Interface::SetConfigurationCompleterBase::ReplySuccess() {
   Device_SetConfiguration_Response response;
 
-  Reply(Device_SetConfiguration_Result::WithResponse(std::move(response)));
+  Reply(Device_SetConfiguration_Result::WithResponse(&response));
 }
 void Device::Interface::SetConfigurationCompleterBase::ReplyError(int32_t error) {
-  Reply(Device_SetConfiguration_Result::WithErr(std::move(error)));
+  Reply(Device_SetConfiguration_Result::WithErr(&error));
 }
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result result) {
@@ -558,7 +558,7 @@ void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::BytePart _b
 void Device::Interface::SetConfigurationCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Device_SetConfiguration_Response response;
 
-  Reply(std::move(_buffer), Device_SetConfiguration_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Device_SetConfiguration_Result::WithResponse(&response));
 }
 
 void Device::Interface::SetConfigurationCompleterBase::Reply(::fidl::DecodedMessage<SetConfigurationResponse> params) {

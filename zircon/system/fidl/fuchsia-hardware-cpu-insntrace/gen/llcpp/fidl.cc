@@ -1299,10 +1299,10 @@ void Controller::Interface::InitializeCompleterBase::Reply(::llcpp::fuchsia::har
 void Controller::Interface::InitializeCompleterBase::ReplySuccess() {
   Controller_Initialize_Response response;
 
-  Reply(Controller_Initialize_Result::WithResponse(std::move(response)));
+  Reply(Controller_Initialize_Result::WithResponse(&response));
 }
 void Controller::Interface::InitializeCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Initialize_Result::WithErr(std::move(error)));
+  Reply(Controller_Initialize_Result::WithErr(&error));
 }
 
 void Controller::Interface::InitializeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result result) {
@@ -1323,7 +1323,7 @@ void Controller::Interface::InitializeCompleterBase::Reply(::fidl::BytePart _buf
 void Controller::Interface::InitializeCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Initialize_Response response;
 
-  Reply(std::move(_buffer), Controller_Initialize_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Initialize_Result::WithResponse(&response));
 }
 
 void Controller::Interface::InitializeCompleterBase::Reply(::fidl::DecodedMessage<InitializeResponse> params) {
@@ -1348,10 +1348,10 @@ void Controller::Interface::TerminateCompleterBase::Reply(::llcpp::fuchsia::hard
 void Controller::Interface::TerminateCompleterBase::ReplySuccess() {
   Controller_Terminate_Response response;
 
-  Reply(Controller_Terminate_Result::WithResponse(std::move(response)));
+  Reply(Controller_Terminate_Result::WithResponse(&response));
 }
 void Controller::Interface::TerminateCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Terminate_Result::WithErr(std::move(error)));
+  Reply(Controller_Terminate_Result::WithErr(&error));
 }
 
 void Controller::Interface::TerminateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result result) {
@@ -1372,7 +1372,7 @@ void Controller::Interface::TerminateCompleterBase::Reply(::fidl::BytePart _buff
 void Controller::Interface::TerminateCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Terminate_Response response;
 
-  Reply(std::move(_buffer), Controller_Terminate_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Terminate_Result::WithResponse(&response));
 }
 
 void Controller::Interface::TerminateCompleterBase::Reply(::fidl::DecodedMessage<TerminateResponse> params) {
@@ -1443,10 +1443,10 @@ void Controller::Interface::AllocateBufferCompleterBase::ReplySuccess(uint32_t d
   Controller_AllocateBuffer_Response response;
   response.descriptor = std::move(descriptor);
 
-  Reply(Controller_AllocateBuffer_Result::WithResponse(std::move(response)));
+  Reply(Controller_AllocateBuffer_Result::WithResponse(&response));
 }
 void Controller::Interface::AllocateBufferCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_AllocateBuffer_Result::WithErr(std::move(error)));
+  Reply(Controller_AllocateBuffer_Result::WithErr(&error));
 }
 
 void Controller::Interface::AllocateBufferCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result result) {
@@ -1468,7 +1468,7 @@ void Controller::Interface::AllocateBufferCompleterBase::ReplySuccess(::fidl::By
   Controller_AllocateBuffer_Response response;
   response.descriptor = std::move(descriptor);
 
-  Reply(std::move(_buffer), Controller_AllocateBuffer_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_AllocateBuffer_Result::WithResponse(&response));
 }
 
 void Controller::Interface::AllocateBufferCompleterBase::Reply(::fidl::DecodedMessage<AllocateBufferResponse> params) {
@@ -1493,10 +1493,10 @@ void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::llcpp::fuch
 void Controller::Interface::AssignThreadBufferCompleterBase::ReplySuccess() {
   Controller_AssignThreadBuffer_Response response;
 
-  Reply(Controller_AssignThreadBuffer_Result::WithResponse(std::move(response)));
+  Reply(Controller_AssignThreadBuffer_Result::WithResponse(&response));
 }
 void Controller::Interface::AssignThreadBufferCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_AssignThreadBuffer_Result::WithErr(std::move(error)));
+  Reply(Controller_AssignThreadBuffer_Result::WithErr(&error));
 }
 
 void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result result) {
@@ -1517,7 +1517,7 @@ void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::fidl::ByteP
 void Controller::Interface::AssignThreadBufferCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_AssignThreadBuffer_Response response;
 
-  Reply(std::move(_buffer), Controller_AssignThreadBuffer_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_AssignThreadBuffer_Result::WithResponse(&response));
 }
 
 void Controller::Interface::AssignThreadBufferCompleterBase::Reply(::fidl::DecodedMessage<AssignThreadBufferResponse> params) {
@@ -1542,10 +1542,10 @@ void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::llcpp::fuc
 void Controller::Interface::ReleaseThreadBufferCompleterBase::ReplySuccess() {
   Controller_ReleaseThreadBuffer_Response response;
 
-  Reply(Controller_ReleaseThreadBuffer_Result::WithResponse(std::move(response)));
+  Reply(Controller_ReleaseThreadBuffer_Result::WithResponse(&response));
 }
 void Controller::Interface::ReleaseThreadBufferCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_ReleaseThreadBuffer_Result::WithErr(std::move(error)));
+  Reply(Controller_ReleaseThreadBuffer_Result::WithErr(&error));
 }
 
 void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result result) {
@@ -1566,7 +1566,7 @@ void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::fidl::Byte
 void Controller::Interface::ReleaseThreadBufferCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_ReleaseThreadBuffer_Response response;
 
-  Reply(std::move(_buffer), Controller_ReleaseThreadBuffer_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_ReleaseThreadBuffer_Result::WithResponse(&response));
 }
 
 void Controller::Interface::ReleaseThreadBufferCompleterBase::Reply(::fidl::DecodedMessage<ReleaseThreadBufferResponse> params) {

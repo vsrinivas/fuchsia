@@ -1841,10 +1841,10 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::llc
   Paver_QueryActiveConfiguration_Response response;
   response.configuration = std::move(configuration);
 
-  Reply(Paver_QueryActiveConfiguration_Result::WithResponse(std::move(response)));
+  Reply(Paver_QueryActiveConfiguration_Result::WithResponse(&response));
 }
 void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_QueryActiveConfiguration_Result::WithErr(std::move(error)));
+  Reply(Paver_QueryActiveConfiguration_Result::WithErr(&error));
 }
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result result) {
@@ -1866,7 +1866,7 @@ void Paver::Interface::QueryActiveConfigurationCompleterBase::ReplySuccess(::fid
   Paver_QueryActiveConfiguration_Response response;
   response.configuration = std::move(configuration);
 
-  Reply(std::move(_buffer), Paver_QueryActiveConfiguration_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Paver_QueryActiveConfiguration_Result::WithResponse(&response));
 }
 
 void Paver::Interface::QueryActiveConfigurationCompleterBase::Reply(::fidl::DecodedMessage<QueryActiveConfigurationResponse> params) {
@@ -1892,10 +1892,10 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::llc
   Paver_QueryConfigurationStatus_Response response;
   response.status = std::move(status);
 
-  Reply(Paver_QueryConfigurationStatus_Result::WithResponse(std::move(response)));
+  Reply(Paver_QueryConfigurationStatus_Result::WithResponse(&response));
 }
 void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_QueryConfigurationStatus_Result::WithErr(std::move(error)));
+  Reply(Paver_QueryConfigurationStatus_Result::WithErr(&error));
 }
 
 void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result result) {
@@ -1917,7 +1917,7 @@ void Paver::Interface::QueryConfigurationStatusCompleterBase::ReplySuccess(::fid
   Paver_QueryConfigurationStatus_Response response;
   response.status = std::move(status);
 
-  Reply(std::move(_buffer), Paver_QueryConfigurationStatus_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Paver_QueryConfigurationStatus_Result::WithResponse(&response));
 }
 
 void Paver::Interface::QueryConfigurationStatusCompleterBase::Reply(::fidl::DecodedMessage<QueryConfigurationStatusResponse> params) {
@@ -2051,10 +2051,10 @@ void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::llcpp::fuchsia::me
   Paver_ReadAsset_Response response;
   response.asset = std::move(asset);
 
-  Reply(Paver_ReadAsset_Result::WithResponse(std::move(response)));
+  Reply(Paver_ReadAsset_Result::WithResponse(&response));
 }
 void Paver::Interface::ReadAssetCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_ReadAsset_Result::WithErr(std::move(error)));
+  Reply(Paver_ReadAsset_Result::WithErr(&error));
 }
 
 void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result) {
@@ -2076,7 +2076,7 @@ void Paver::Interface::ReadAssetCompleterBase::ReplySuccess(::fidl::BytePart _bu
   Paver_ReadAsset_Response response;
   response.asset = std::move(asset);
 
-  Reply(std::move(_buffer), Paver_ReadAsset_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Paver_ReadAsset_Result::WithResponse(&response));
 }
 
 void Paver::Interface::ReadAssetCompleterBase::Reply(::fidl::DecodedMessage<ReadAssetResponse> params) {
@@ -2246,10 +2246,10 @@ void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::zx::channel volum
   Paver_WipeVolume_Response response;
   response.volume = std::move(volume);
 
-  Reply(Paver_WipeVolume_Result::WithResponse(std::move(response)));
+  Reply(Paver_WipeVolume_Result::WithResponse(&response));
 }
 void Paver::Interface::WipeVolumeCompleterBase::ReplyError(int32_t error) {
-  Reply(Paver_WipeVolume_Result::WithErr(std::move(error)));
+  Reply(Paver_WipeVolume_Result::WithErr(&error));
 }
 
 void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::paver::Paver_WipeVolume_Result result) {
@@ -2271,7 +2271,7 @@ void Paver::Interface::WipeVolumeCompleterBase::ReplySuccess(::fidl::BytePart _b
   Paver_WipeVolume_Response response;
   response.volume = std::move(volume);
 
-  Reply(std::move(_buffer), Paver_WipeVolume_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Paver_WipeVolume_Result::WithResponse(&response));
 }
 
 void Paver::Interface::WipeVolumeCompleterBase::Reply(::fidl::DecodedMessage<WipeVolumeResponse> params) {

@@ -600,10 +600,10 @@ void NameLookup::Interface::LookupIpCompleterBase::ReplySuccess(::llcpp::fuchsia
   NameLookup_LookupIp_Response response;
   response.addr = std::move(addr);
 
-  Reply(NameLookup_LookupIp_Result::WithResponse(std::move(response)));
+  Reply(NameLookup_LookupIp_Result::WithResponse(&response));
 }
 void NameLookup::Interface::LookupIpCompleterBase::ReplyError(LookupError error) {
-  Reply(NameLookup_LookupIp_Result::WithErr(std::move(error)));
+  Reply(NameLookup_LookupIp_Result::WithErr(&error));
 }
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::net::NameLookup_LookupIp_Result result) {
@@ -629,7 +629,7 @@ void NameLookup::Interface::LookupIpCompleterBase::ReplySuccess(::fidl::BytePart
   NameLookup_LookupIp_Response response;
   response.addr = std::move(addr);
 
-  Reply(std::move(_buffer), NameLookup_LookupIp_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), NameLookup_LookupIp_Result::WithResponse(&response));
 }
 
 void NameLookup::Interface::LookupIpCompleterBase::Reply(::fidl::DecodedMessage<LookupIpResponse> params) {
@@ -660,10 +660,10 @@ void NameLookup::Interface::LookupHostnameCompleterBase::ReplySuccess(::fidl::St
   NameLookup_LookupHostname_Response response;
   response.hostname = std::move(hostname);
 
-  Reply(NameLookup_LookupHostname_Result::WithResponse(std::move(response)));
+  Reply(NameLookup_LookupHostname_Result::WithResponse(&response));
 }
 void NameLookup::Interface::LookupHostnameCompleterBase::ReplyError(LookupError error) {
-  Reply(NameLookup_LookupHostname_Result::WithErr(std::move(error)));
+  Reply(NameLookup_LookupHostname_Result::WithErr(&error));
 }
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result result) {
@@ -689,7 +689,7 @@ void NameLookup::Interface::LookupHostnameCompleterBase::ReplySuccess(::fidl::By
   NameLookup_LookupHostname_Response response;
   response.hostname = std::move(hostname);
 
-  Reply(std::move(_buffer), NameLookup_LookupHostname_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), NameLookup_LookupHostname_Result::WithResponse(&response));
 }
 
 void NameLookup::Interface::LookupHostnameCompleterBase::Reply(::fidl::DecodedMessage<LookupHostnameResponse> params) {

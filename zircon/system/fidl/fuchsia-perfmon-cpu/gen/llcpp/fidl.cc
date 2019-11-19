@@ -960,10 +960,10 @@ void Controller::Interface::InitializeCompleterBase::Reply(::llcpp::fuchsia::per
 void Controller::Interface::InitializeCompleterBase::ReplySuccess() {
   Controller_Initialize_Response response;
 
-  Reply(Controller_Initialize_Result::WithResponse(std::move(response)));
+  Reply(Controller_Initialize_Result::WithResponse(&response));
 }
 void Controller::Interface::InitializeCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Initialize_Result::WithErr(std::move(error)));
+  Reply(Controller_Initialize_Result::WithErr(&error));
 }
 
 void Controller::Interface::InitializeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result result) {
@@ -984,7 +984,7 @@ void Controller::Interface::InitializeCompleterBase::Reply(::fidl::BytePart _buf
 void Controller::Interface::InitializeCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Initialize_Response response;
 
-  Reply(std::move(_buffer), Controller_Initialize_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Initialize_Result::WithResponse(&response));
 }
 
 void Controller::Interface::InitializeCompleterBase::Reply(::fidl::DecodedMessage<InitializeResponse> params) {
@@ -1068,10 +1068,10 @@ void Controller::Interface::StageConfigCompleterBase::Reply(::llcpp::fuchsia::pe
 void Controller::Interface::StageConfigCompleterBase::ReplySuccess() {
   Controller_StageConfig_Response response;
 
-  Reply(Controller_StageConfig_Result::WithResponse(std::move(response)));
+  Reply(Controller_StageConfig_Result::WithResponse(&response));
 }
 void Controller::Interface::StageConfigCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_StageConfig_Result::WithErr(std::move(error)));
+  Reply(Controller_StageConfig_Result::WithErr(&error));
 }
 
 void Controller::Interface::StageConfigCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result result) {
@@ -1092,7 +1092,7 @@ void Controller::Interface::StageConfigCompleterBase::Reply(::fidl::BytePart _bu
 void Controller::Interface::StageConfigCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_StageConfig_Response response;
 
-  Reply(std::move(_buffer), Controller_StageConfig_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_StageConfig_Result::WithResponse(&response));
 }
 
 void Controller::Interface::StageConfigCompleterBase::Reply(::fidl::DecodedMessage<StageConfigResponse> params) {
@@ -1198,10 +1198,10 @@ void Controller::Interface::StartCompleterBase::Reply(::llcpp::fuchsia::perfmon:
 void Controller::Interface::StartCompleterBase::ReplySuccess() {
   Controller_Start_Response response;
 
-  Reply(Controller_Start_Result::WithResponse(std::move(response)));
+  Reply(Controller_Start_Result::WithResponse(&response));
 }
 void Controller::Interface::StartCompleterBase::ReplyError(int32_t error) {
-  Reply(Controller_Start_Result::WithErr(std::move(error)));
+  Reply(Controller_Start_Result::WithErr(&error));
 }
 
 void Controller::Interface::StartCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result result) {
@@ -1222,7 +1222,7 @@ void Controller::Interface::StartCompleterBase::Reply(::fidl::BytePart _buffer, 
 void Controller::Interface::StartCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Controller_Start_Response response;
 
-  Reply(std::move(_buffer), Controller_Start_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Controller_Start_Result::WithResponse(&response));
 }
 
 void Controller::Interface::StartCompleterBase::Reply(::fidl::DecodedMessage<StartResponse> params) {

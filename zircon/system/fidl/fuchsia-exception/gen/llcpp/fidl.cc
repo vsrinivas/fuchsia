@@ -1185,10 +1185,10 @@ void ProcessLimbo::Interface::WatchProcessesWaitingOnExceptionCompleterBase::Rep
   ProcessLimbo_WatchProcessesWaitingOnException_Response response;
   response.exception_list = std::move(exception_list);
 
-  Reply(ProcessLimbo_WatchProcessesWaitingOnException_Result::WithResponse(std::move(response)));
+  Reply(ProcessLimbo_WatchProcessesWaitingOnException_Result::WithResponse(&response));
 }
 void ProcessLimbo::Interface::WatchProcessesWaitingOnExceptionCompleterBase::ReplyError(int32_t error) {
-  Reply(ProcessLimbo_WatchProcessesWaitingOnException_Result::WithErr(std::move(error)));
+  Reply(ProcessLimbo_WatchProcessesWaitingOnException_Result::WithErr(&error));
 }
 
 void ProcessLimbo::Interface::WatchProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result result) {
@@ -1214,7 +1214,7 @@ void ProcessLimbo::Interface::WatchProcessesWaitingOnExceptionCompleterBase::Rep
   ProcessLimbo_WatchProcessesWaitingOnException_Response response;
   response.exception_list = std::move(exception_list);
 
-  Reply(std::move(_buffer), ProcessLimbo_WatchProcessesWaitingOnException_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), ProcessLimbo_WatchProcessesWaitingOnException_Result::WithResponse(&response));
 }
 
 void ProcessLimbo::Interface::WatchProcessesWaitingOnExceptionCompleterBase::Reply(::fidl::DecodedMessage<WatchProcessesWaitingOnExceptionResponse> params) {
@@ -1246,10 +1246,10 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::llc
   ProcessLimbo_RetrieveException_Response response;
   response.process_exception = std::move(process_exception);
 
-  Reply(ProcessLimbo_RetrieveException_Result::WithResponse(std::move(response)));
+  Reply(ProcessLimbo_RetrieveException_Result::WithResponse(&response));
 }
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplyError(int32_t error) {
-  Reply(ProcessLimbo_RetrieveException_Result::WithErr(std::move(error)));
+  Reply(ProcessLimbo_RetrieveException_Result::WithErr(&error));
 }
 
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result result) {
@@ -1275,7 +1275,7 @@ void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::ReplySuccess(::fid
   ProcessLimbo_RetrieveException_Response response;
   response.process_exception = std::move(process_exception);
 
-  Reply(std::move(_buffer), ProcessLimbo_RetrieveException_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), ProcessLimbo_RetrieveException_Result::WithResponse(&response));
 }
 
 void ProcessLimbo::Interface::RetrieveExceptionCompleterBase::Reply(::fidl::DecodedMessage<RetrieveExceptionResponse> params) {
@@ -1300,10 +1300,10 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::llcpp::fuchsi
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess() {
   ProcessLimbo_ReleaseProcess_Response response;
 
-  Reply(ProcessLimbo_ReleaseProcess_Result::WithResponse(std::move(response)));
+  Reply(ProcessLimbo_ReleaseProcess_Result::WithResponse(&response));
 }
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplyError(int32_t error) {
-  Reply(ProcessLimbo_ReleaseProcess_Result::WithErr(std::move(error)));
+  Reply(ProcessLimbo_ReleaseProcess_Result::WithErr(&error));
 }
 
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result result) {
@@ -1324,7 +1324,7 @@ void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::BytePar
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_ReleaseProcess_Response response;
 
-  Reply(std::move(_buffer), ProcessLimbo_ReleaseProcess_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), ProcessLimbo_ReleaseProcess_Result::WithResponse(&response));
 }
 
 void ProcessLimbo::Interface::ReleaseProcessCompleterBase::Reply(::fidl::DecodedMessage<ReleaseProcessResponse> params) {
@@ -1349,10 +1349,10 @@ void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::llcpp::fuchsia
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess() {
   ProcessLimbo_AppendFilters_Response response;
 
-  Reply(ProcessLimbo_AppendFilters_Result::WithResponse(std::move(response)));
+  Reply(ProcessLimbo_AppendFilters_Result::WithResponse(&response));
 }
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplyError(int32_t error) {
-  Reply(ProcessLimbo_AppendFilters_Result::WithErr(std::move(error)));
+  Reply(ProcessLimbo_AppendFilters_Result::WithErr(&error));
 }
 
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result result) {
@@ -1373,7 +1373,7 @@ void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::BytePart
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_AppendFilters_Response response;
 
-  Reply(std::move(_buffer), ProcessLimbo_AppendFilters_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), ProcessLimbo_AppendFilters_Result::WithResponse(&response));
 }
 
 void ProcessLimbo::Interface::AppendFiltersCompleterBase::Reply(::fidl::DecodedMessage<AppendFiltersResponse> params) {
@@ -1398,10 +1398,10 @@ void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::llcpp::fuchsia
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess() {
   ProcessLimbo_RemoveFilters_Response response;
 
-  Reply(ProcessLimbo_RemoveFilters_Result::WithResponse(std::move(response)));
+  Reply(ProcessLimbo_RemoveFilters_Result::WithResponse(&response));
 }
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplyError(int32_t error) {
-  Reply(ProcessLimbo_RemoveFilters_Result::WithErr(std::move(error)));
+  Reply(ProcessLimbo_RemoveFilters_Result::WithErr(&error));
 }
 
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result result) {
@@ -1422,7 +1422,7 @@ void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::BytePart
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   ProcessLimbo_RemoveFilters_Response response;
 
-  Reply(std::move(_buffer), ProcessLimbo_RemoveFilters_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), ProcessLimbo_RemoveFilters_Result::WithResponse(&response));
 }
 
 void ProcessLimbo::Interface::RemoveFiltersCompleterBase::Reply(::fidl::DecodedMessage<RemoveFiltersResponse> params) {

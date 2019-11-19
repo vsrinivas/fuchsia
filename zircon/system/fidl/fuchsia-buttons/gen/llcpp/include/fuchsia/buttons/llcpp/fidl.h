@@ -83,14 +83,21 @@ struct Buttons_RegisterNotify_Result {
 
   bool is_response() const { return tag_ == Tag::kResponse; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Buttons_RegisterNotify_Result WithResponse(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response&& val) {
     Buttons_RegisterNotify_Result result;
     result.set_response(std::move(val));
     return result;
   }
+  static Buttons_RegisterNotify_Result WithResponse(::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response* val) {
+    Buttons_RegisterNotify_Result result;
+    result.set_response(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response& mutable_response();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_copy_assignable<T>::value>
   set_response(const T& v) {
@@ -98,23 +105,43 @@ struct Buttons_RegisterNotify_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_copy_assignable<T>::value>
+  set_response(const T* v) {
+    mutable_response() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_move_assignable<T>::value>
   set_response(T&& v) {
     mutable_response() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response>::value && std::is_move_assignable<T>::value>
+  set_response(T* v) {
+    mutable_response() = std::move(*v);
   }
 
   ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response const & response() const { return response_; }
 
   bool is_err() const { return tag_ == Tag::kErr; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Buttons_RegisterNotify_Result WithErr(int32_t&& val) {
     Buttons_RegisterNotify_Result result;
     result.set_err(std::move(val));
     return result;
   }
+  static Buttons_RegisterNotify_Result WithErr(int32_t* val) {
+    Buttons_RegisterNotify_Result result;
+    result.set_err(val);
+    return result;
+  }
 
   int32_t& mutable_err();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
   set_err(const T& v) {
@@ -122,9 +149,22 @@ struct Buttons_RegisterNotify_Result {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_copy_assignable<T>::value>
+  set_err(const T* v) {
+    mutable_err() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
   set_err(T&& v) {
     mutable_err() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, int32_t>::value && std::is_move_assignable<T>::value>
+  set_err(T* v) {
+    mutable_err() = std::move(*v);
   }
 
   int32_t const & err() const { return err_; }

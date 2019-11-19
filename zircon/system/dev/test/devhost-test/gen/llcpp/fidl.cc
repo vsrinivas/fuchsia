@@ -199,10 +199,10 @@ void TestDevice::Interface::AddChildDeviceCompleterBase::Reply(::llcpp::fuchsia:
 void TestDevice::Interface::AddChildDeviceCompleterBase::ReplySuccess() {
   TestDevice_AddChildDevice_Response response;
 
-  Reply(TestDevice_AddChildDevice_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_AddChildDevice_Result::WithResponse(&response));
 }
 void TestDevice::Interface::AddChildDeviceCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_AddChildDevice_Result::WithErr(std::move(error)));
+  Reply(TestDevice_AddChildDevice_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::AddChildDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result result) {
@@ -223,7 +223,7 @@ void TestDevice::Interface::AddChildDeviceCompleterBase::Reply(::fidl::BytePart 
 void TestDevice::Interface::AddChildDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_AddChildDevice_Response response;
 
-  Reply(std::move(_buffer), TestDevice_AddChildDevice_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_AddChildDevice_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::AddChildDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddChildDeviceResponse> params) {

@@ -701,14 +701,21 @@ struct NodeInfo {
 
   bool is_service() const { return tag_ == Tag::kService; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithService(::llcpp::fuchsia::io::Service&& val) {
     NodeInfo result;
     result.set_service(std::move(val));
     return result;
   }
+  static NodeInfo WithService(::llcpp::fuchsia::io::Service* val) {
+    NodeInfo result;
+    result.set_service(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Service& mutable_service();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_copy_assignable<T>::value>
   set_service(const T& v) {
@@ -716,23 +723,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_copy_assignable<T>::value>
+  set_service(const T* v) {
+    mutable_service() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_move_assignable<T>::value>
   set_service(T&& v) {
     mutable_service() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Service>::value && std::is_move_assignable<T>::value>
+  set_service(T* v) {
+    mutable_service() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Service const & service() const { return service_; }
 
   bool is_file() const { return tag_ == Tag::kFile; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject&& val) {
     NodeInfo result;
     result.set_file(std::move(val));
     return result;
   }
+  static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject* val) {
+    NodeInfo result;
+    result.set_file(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::FileObject& mutable_file();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_copy_assignable<T>::value>
   set_file(const T& v) {
@@ -740,23 +767,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_copy_assignable<T>::value>
+  set_file(const T* v) {
+    mutable_file() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_move_assignable<T>::value>
   set_file(T&& v) {
     mutable_file() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::FileObject>::value && std::is_move_assignable<T>::value>
+  set_file(T* v) {
+    mutable_file() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::FileObject const & file() const { return file_; }
 
   bool is_directory() const { return tag_ == Tag::kDirectory; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject&& val) {
     NodeInfo result;
     result.set_directory(std::move(val));
     return result;
   }
+  static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject* val) {
+    NodeInfo result;
+    result.set_directory(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::DirectoryObject& mutable_directory();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_copy_assignable<T>::value>
   set_directory(const T& v) {
@@ -764,23 +811,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_copy_assignable<T>::value>
+  set_directory(const T* v) {
+    mutable_directory() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_move_assignable<T>::value>
   set_directory(T&& v) {
     mutable_directory() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::DirectoryObject>::value && std::is_move_assignable<T>::value>
+  set_directory(T* v) {
+    mutable_directory() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::DirectoryObject const & directory() const { return directory_; }
 
   bool is_pipe() const { return tag_ == Tag::kPipe; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe&& val) {
     NodeInfo result;
     result.set_pipe(std::move(val));
     return result;
   }
+  static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe* val) {
+    NodeInfo result;
+    result.set_pipe(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Pipe& mutable_pipe();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_copy_assignable<T>::value>
   set_pipe(const T& v) {
@@ -788,23 +855,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_copy_assignable<T>::value>
+  set_pipe(const T* v) {
+    mutable_pipe() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_move_assignable<T>::value>
   set_pipe(T&& v) {
     mutable_pipe() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Pipe>::value && std::is_move_assignable<T>::value>
+  set_pipe(T* v) {
+    mutable_pipe() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Pipe const & pipe() const { return pipe_; }
 
   bool is_vmofile() const { return tag_ == Tag::kVmofile; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile&& val) {
     NodeInfo result;
     result.set_vmofile(std::move(val));
     return result;
   }
+  static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile* val) {
+    NodeInfo result;
+    result.set_vmofile(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Vmofile& mutable_vmofile();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_copy_assignable<T>::value>
   set_vmofile(const T& v) {
@@ -812,23 +899,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_copy_assignable<T>::value>
+  set_vmofile(const T* v) {
+    mutable_vmofile() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_move_assignable<T>::value>
   set_vmofile(T&& v) {
     mutable_vmofile() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Vmofile>::value && std::is_move_assignable<T>::value>
+  set_vmofile(T* v) {
+    mutable_vmofile() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Vmofile const & vmofile() const { return vmofile_; }
 
   bool is_device() const { return tag_ == Tag::kDevice; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithDevice(::llcpp::fuchsia::io::Device&& val) {
     NodeInfo result;
     result.set_device(std::move(val));
     return result;
   }
+  static NodeInfo WithDevice(::llcpp::fuchsia::io::Device* val) {
+    NodeInfo result;
+    result.set_device(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Device& mutable_device();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_copy_assignable<T>::value>
   set_device(const T& v) {
@@ -836,23 +943,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_copy_assignable<T>::value>
+  set_device(const T* v) {
+    mutable_device() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_move_assignable<T>::value>
   set_device(T&& v) {
     mutable_device() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Device>::value && std::is_move_assignable<T>::value>
+  set_device(T* v) {
+    mutable_device() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Device const & device() const { return device_; }
 
   bool is_tty() const { return tag_ == Tag::kTty; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithTty(::llcpp::fuchsia::io::Tty&& val) {
     NodeInfo result;
     result.set_tty(std::move(val));
     return result;
   }
+  static NodeInfo WithTty(::llcpp::fuchsia::io::Tty* val) {
+    NodeInfo result;
+    result.set_tty(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Tty& mutable_tty();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_copy_assignable<T>::value>
   set_tty(const T& v) {
@@ -860,23 +987,43 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_copy_assignable<T>::value>
+  set_tty(const T* v) {
+    mutable_tty() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_move_assignable<T>::value>
   set_tty(T&& v) {
     mutable_tty() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Tty>::value && std::is_move_assignable<T>::value>
+  set_tty(T* v) {
+    mutable_tty() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Tty const & tty() const { return tty_; }
 
   bool is_socket() const { return tag_ == Tag::kSocket; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket&& val) {
     NodeInfo result;
     result.set_socket(std::move(val));
     return result;
   }
+  static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket* val) {
+    NodeInfo result;
+    result.set_socket(val);
+    return result;
+  }
 
   ::llcpp::fuchsia::io::Socket& mutable_socket();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_copy_assignable<T>::value>
   set_socket(const T& v) {
@@ -884,9 +1031,22 @@ struct NodeInfo {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_copy_assignable<T>::value>
+  set_socket(const T* v) {
+    mutable_socket() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_move_assignable<T>::value>
   set_socket(T&& v) {
     mutable_socket() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::fuchsia::io::Socket>::value && std::is_move_assignable<T>::value>
+  set_socket(T* v) {
+    mutable_socket() = std::move(*v);
   }
 
   ::llcpp::fuchsia::io::Socket const & socket() const { return socket_; }

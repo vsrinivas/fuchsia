@@ -627,10 +627,10 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::llcpp::
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess() {
   TestDevice_AddDeviceWithPowerArgs_Response response;
 
-  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(&response));
 }
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithErr(std::move(error)));
+  Reply(TestDevice_AddDeviceWithPowerArgs_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result result) {
@@ -651,7 +651,7 @@ void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::B
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   TestDevice_AddDeviceWithPowerArgs_Response response;
 
-  Reply(std::move(_buffer), TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_AddDeviceWithPowerArgs_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::AddDeviceWithPowerArgsCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceWithPowerArgsResponse> params) {
@@ -677,10 +677,10 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySucces
   TestDevice_GetCurrentDevicePowerState_Response response;
   response.cur_state = std::move(cur_state);
 
-  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithResponse(&response));
 }
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithErr(std::move(error)));
+  Reply(TestDevice_GetCurrentDevicePowerState_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result result) {
@@ -702,7 +702,7 @@ void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::ReplySucces
   TestDevice_GetCurrentDevicePowerState_Response response;
   response.cur_state = std::move(cur_state);
 
-  Reply(std::move(_buffer), TestDevice_GetCurrentDevicePowerState_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_GetCurrentDevicePowerState_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::GetCurrentDevicePowerStateCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDevicePowerStateResponse> params) {
@@ -728,10 +728,10 @@ void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply
   TestDevice_GetCurrentDevicePerformanceState_Response response;
   response.cur_state = std::move(cur_state);
 
-  Reply(TestDevice_GetCurrentDevicePerformanceState_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_GetCurrentDevicePerformanceState_Result::WithResponse(&response));
 }
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_GetCurrentDevicePerformanceState_Result::WithErr(std::move(error)));
+  Reply(TestDevice_GetCurrentDevicePerformanceState_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result result) {
@@ -753,7 +753,7 @@ void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply
   TestDevice_GetCurrentDevicePerformanceState_Response response;
   response.cur_state = std::move(cur_state);
 
-  Reply(std::move(_buffer), TestDevice_GetCurrentDevicePerformanceState_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_GetCurrentDevicePerformanceState_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::GetCurrentDevicePerformanceStateCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDevicePerformanceStateResponse> params) {
@@ -780,10 +780,10 @@ void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Repl
   response.enabled = std::move(enabled);
   response.deepest_sleep_state = std::move(deepest_sleep_state);
 
-  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(std::move(response)));
+  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(&response));
 }
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::ReplyError(int32_t error) {
-  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithErr(std::move(error)));
+  Reply(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithErr(&error));
 }
 
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result result) {
@@ -806,7 +806,7 @@ void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Repl
   response.enabled = std::move(enabled);
   response.deepest_sleep_state = std::move(deepest_sleep_state);
 
-  Reply(std::move(_buffer), TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::WithResponse(&response));
 }
 
 void TestDevice::Interface::GetCurrentDeviceAutoSuspendConfigCompleterBase::Reply(::fidl::DecodedMessage<GetCurrentDeviceAutoSuspendConfigResponse> params) {

@@ -2513,10 +2513,10 @@ void DeviceController::Interface::UnbindCompleterBase::Reply(::llcpp::fuchsia::d
 void DeviceController::Interface::UnbindCompleterBase::ReplySuccess() {
   DeviceController_Unbind_Response response;
 
-  Reply(DeviceController_Unbind_Result::WithResponse(std::move(response)));
+  Reply(DeviceController_Unbind_Result::WithResponse(&response));
 }
 void DeviceController::Interface::UnbindCompleterBase::ReplyError(int32_t error) {
-  Reply(DeviceController_Unbind_Result::WithErr(std::move(error)));
+  Reply(DeviceController_Unbind_Result::WithErr(&error));
 }
 
 void DeviceController::Interface::UnbindCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result) {
@@ -2537,7 +2537,7 @@ void DeviceController::Interface::UnbindCompleterBase::Reply(::fidl::BytePart _b
 void DeviceController::Interface::UnbindCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   DeviceController_Unbind_Response response;
 
-  Reply(std::move(_buffer), DeviceController_Unbind_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), DeviceController_Unbind_Result::WithResponse(&response));
 }
 
 void DeviceController::Interface::UnbindCompleterBase::Reply(::fidl::DecodedMessage<UnbindResponse> params) {
@@ -2562,10 +2562,10 @@ void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::llcpp::f
 void DeviceController::Interface::CompleteRemovalCompleterBase::ReplySuccess() {
   DeviceController_CompleteRemoval_Response response;
 
-  Reply(DeviceController_CompleteRemoval_Result::WithResponse(std::move(response)));
+  Reply(DeviceController_CompleteRemoval_Result::WithResponse(&response));
 }
 void DeviceController::Interface::CompleteRemovalCompleterBase::ReplyError(int32_t error) {
-  Reply(DeviceController_CompleteRemoval_Result::WithErr(std::move(error)));
+  Reply(DeviceController_CompleteRemoval_Result::WithErr(&error));
 }
 
 void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result) {
@@ -2586,7 +2586,7 @@ void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::fidl::By
 void DeviceController::Interface::CompleteRemovalCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   DeviceController_CompleteRemoval_Response response;
 
-  Reply(std::move(_buffer), DeviceController_CompleteRemoval_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), DeviceController_CompleteRemoval_Result::WithResponse(&response));
 }
 
 void DeviceController::Interface::CompleteRemovalCompleterBase::Reply(::fidl::DecodedMessage<CompleteRemovalResponse> params) {
@@ -4045,10 +4045,10 @@ void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(uint64_t local
   Coordinator_AddDevice_Response response;
   response.local_device_id = std::move(local_device_id);
 
-  Reply(Coordinator_AddDevice_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_AddDevice_Result::WithResponse(&response));
 }
 void Coordinator::Interface::AddDeviceCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_AddDevice_Result::WithErr(std::move(error)));
+  Reply(Coordinator_AddDevice_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result result) {
@@ -4070,7 +4070,7 @@ void Coordinator::Interface::AddDeviceCompleterBase::ReplySuccess(::fidl::BytePa
   Coordinator_AddDevice_Response response;
   response.local_device_id = std::move(local_device_id);
 
-  Reply(std::move(_buffer), Coordinator_AddDevice_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_AddDevice_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::AddDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceResponse> params) {
@@ -4096,10 +4096,10 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(uint6
   Coordinator_AddDeviceInvisible_Response response;
   response.local_device_id = std::move(local_device_id);
 
-  Reply(Coordinator_AddDeviceInvisible_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_AddDeviceInvisible_Result::WithResponse(&response));
 }
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_AddDeviceInvisible_Result::WithErr(std::move(error)));
+  Reply(Coordinator_AddDeviceInvisible_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result result) {
@@ -4121,7 +4121,7 @@ void Coordinator::Interface::AddDeviceInvisibleCompleterBase::ReplySuccess(::fid
   Coordinator_AddDeviceInvisible_Response response;
   response.local_device_id = std::move(local_device_id);
 
-  Reply(std::move(_buffer), Coordinator_AddDeviceInvisible_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_AddDeviceInvisible_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::AddDeviceInvisibleCompleterBase::Reply(::fidl::DecodedMessage<AddDeviceInvisibleResponse> params) {
@@ -4146,10 +4146,10 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::llcpp::fuchsia::d
 void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess() {
   Coordinator_MakeVisible_Response response;
 
-  Reply(Coordinator_MakeVisible_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_MakeVisible_Result::WithResponse(&response));
 }
 void Coordinator::Interface::MakeVisibleCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_MakeVisible_Result::WithErr(std::move(error)));
+  Reply(Coordinator_MakeVisible_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result result) {
@@ -4170,7 +4170,7 @@ void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::BytePart _b
 void Coordinator::Interface::MakeVisibleCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_MakeVisible_Response response;
 
-  Reply(std::move(_buffer), Coordinator_MakeVisible_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_MakeVisible_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::MakeVisibleCompleterBase::Reply(::fidl::DecodedMessage<MakeVisibleResponse> params) {
@@ -4195,10 +4195,10 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::llcpp::fuchsia::de
 void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess() {
   Coordinator_BindDevice_Response response;
 
-  Reply(Coordinator_BindDevice_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_BindDevice_Result::WithResponse(&response));
 }
 void Coordinator::Interface::BindDeviceCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_BindDevice_Result::WithErr(std::move(error)));
+  Reply(Coordinator_BindDevice_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result result) {
@@ -4219,7 +4219,7 @@ void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::BytePart _bu
 void Coordinator::Interface::BindDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_BindDevice_Response response;
 
-  Reply(std::move(_buffer), Coordinator_BindDevice_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_BindDevice_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::BindDeviceCompleterBase::Reply(::fidl::DecodedMessage<BindDeviceResponse> params) {
@@ -4251,10 +4251,10 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fid
   Coordinator_GetTopologicalPath_Response response;
   response.path = std::move(path);
 
-  Reply(Coordinator_GetTopologicalPath_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_GetTopologicalPath_Result::WithResponse(&response));
 }
 void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_GetTopologicalPath_Result::WithErr(std::move(error)));
+  Reply(Coordinator_GetTopologicalPath_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result result) {
@@ -4280,7 +4280,7 @@ void Coordinator::Interface::GetTopologicalPathCompleterBase::ReplySuccess(::fid
   Coordinator_GetTopologicalPath_Response response;
   response.path = std::move(path);
 
-  Reply(std::move(_buffer), Coordinator_GetTopologicalPath_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_GetTopologicalPath_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::GetTopologicalPathCompleterBase::Reply(::fidl::DecodedMessage<GetTopologicalPathResponse> params) {
@@ -4307,10 +4307,10 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::zx::vmo v
   response.vmo = std::move(vmo);
   response.size = std::move(size);
 
-  Reply(Coordinator_LoadFirmware_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_LoadFirmware_Result::WithResponse(&response));
 }
 void Coordinator::Interface::LoadFirmwareCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_LoadFirmware_Result::WithErr(std::move(error)));
+  Reply(Coordinator_LoadFirmware_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result result) {
@@ -4333,7 +4333,7 @@ void Coordinator::Interface::LoadFirmwareCompleterBase::ReplySuccess(::fidl::Byt
   response.vmo = std::move(vmo);
   response.size = std::move(size);
 
-  Reply(std::move(_buffer), Coordinator_LoadFirmware_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_LoadFirmware_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::LoadFirmwareCompleterBase::Reply(::fidl::DecodedMessage<LoadFirmwareResponse> params) {
@@ -4365,10 +4365,10 @@ void Coordinator::Interface::GetMetadataCompleterBase::ReplySuccess(::fidl::Vect
   Coordinator_GetMetadata_Response response;
   response.data = std::move(data);
 
-  Reply(Coordinator_GetMetadata_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_GetMetadata_Result::WithResponse(&response));
 }
 void Coordinator::Interface::GetMetadataCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_GetMetadata_Result::WithErr(std::move(error)));
+  Reply(Coordinator_GetMetadata_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result result) {
@@ -4394,7 +4394,7 @@ void Coordinator::Interface::GetMetadataCompleterBase::ReplySuccess(::fidl::Byte
   Coordinator_GetMetadata_Response response;
   response.data = std::move(data);
 
-  Reply(std::move(_buffer), Coordinator_GetMetadata_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_GetMetadata_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::GetMetadataCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataResponse> params) {
@@ -4420,10 +4420,10 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(uint64_t
   Coordinator_GetMetadataSize_Response response;
   response.size = std::move(size);
 
-  Reply(Coordinator_GetMetadataSize_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_GetMetadataSize_Result::WithResponse(&response));
 }
 void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_GetMetadataSize_Result::WithErr(std::move(error)));
+  Reply(Coordinator_GetMetadataSize_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result result) {
@@ -4445,7 +4445,7 @@ void Coordinator::Interface::GetMetadataSizeCompleterBase::ReplySuccess(::fidl::
   Coordinator_GetMetadataSize_Response response;
   response.size = std::move(size);
 
-  Reply(std::move(_buffer), Coordinator_GetMetadataSize_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_GetMetadataSize_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::GetMetadataSizeCompleterBase::Reply(::fidl::DecodedMessage<GetMetadataSizeResponse> params) {
@@ -4470,10 +4470,10 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::llcpp::fuchsia::d
 void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess() {
   Coordinator_AddMetadata_Response response;
 
-  Reply(Coordinator_AddMetadata_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_AddMetadata_Result::WithResponse(&response));
 }
 void Coordinator::Interface::AddMetadataCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_AddMetadata_Result::WithErr(std::move(error)));
+  Reply(Coordinator_AddMetadata_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result result) {
@@ -4494,7 +4494,7 @@ void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::BytePart _b
 void Coordinator::Interface::AddMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_AddMetadata_Response response;
 
-  Reply(std::move(_buffer), Coordinator_AddMetadata_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_AddMetadata_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::AddMetadataCompleterBase::Reply(::fidl::DecodedMessage<AddMetadataResponse> params) {
@@ -4519,10 +4519,10 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::llcpp::fuchsi
 void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess() {
   Coordinator_PublishMetadata_Response response;
 
-  Reply(Coordinator_PublishMetadata_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_PublishMetadata_Result::WithResponse(&response));
 }
 void Coordinator::Interface::PublishMetadataCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_PublishMetadata_Result::WithErr(std::move(error)));
+  Reply(Coordinator_PublishMetadata_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result result) {
@@ -4543,7 +4543,7 @@ void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::BytePar
 void Coordinator::Interface::PublishMetadataCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_PublishMetadata_Response response;
 
-  Reply(std::move(_buffer), Coordinator_PublishMetadata_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_PublishMetadata_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::PublishMetadataCompleterBase::Reply(::fidl::DecodedMessage<PublishMetadataResponse> params) {
@@ -4568,10 +4568,10 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::llcpp::fuc
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess() {
   Coordinator_AddCompositeDevice_Response response;
 
-  Reply(Coordinator_AddCompositeDevice_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_AddCompositeDevice_Result::WithResponse(&response));
 }
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_AddCompositeDevice_Result::WithErr(std::move(error)));
+  Reply(Coordinator_AddCompositeDevice_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result result) {
@@ -4592,7 +4592,7 @@ void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::Byte
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_AddCompositeDevice_Response response;
 
-  Reply(std::move(_buffer), Coordinator_AddCompositeDevice_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_AddCompositeDevice_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::AddCompositeDeviceCompleterBase::Reply(::fidl::DecodedMessage<AddCompositeDeviceResponse> params) {
@@ -4617,10 +4617,10 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::llcpp::fuchsia
 void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess() {
   Coordinator_DirectoryWatch_Response response;
 
-  Reply(Coordinator_DirectoryWatch_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_DirectoryWatch_Result::WithResponse(&response));
 }
 void Coordinator::Interface::DirectoryWatchCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_DirectoryWatch_Result::WithErr(std::move(error)));
+  Reply(Coordinator_DirectoryWatch_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result result) {
@@ -4641,7 +4641,7 @@ void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::BytePart
 void Coordinator::Interface::DirectoryWatchCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_DirectoryWatch_Response response;
 
-  Reply(std::move(_buffer), Coordinator_DirectoryWatch_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_DirectoryWatch_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::DirectoryWatchCompleterBase::Reply(::fidl::DecodedMessage<DirectoryWatchResponse> params) {
@@ -4666,10 +4666,10 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::llcpp::
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess() {
   Coordinator_RunCompatibilityTests_Response response;
 
-  Reply(Coordinator_RunCompatibilityTests_Result::WithResponse(std::move(response)));
+  Reply(Coordinator_RunCompatibilityTests_Result::WithResponse(&response));
 }
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplyError(int32_t error) {
-  Reply(Coordinator_RunCompatibilityTests_Result::WithErr(std::move(error)));
+  Reply(Coordinator_RunCompatibilityTests_Result::WithErr(&error));
 }
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result result) {
@@ -4690,7 +4690,7 @@ void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::B
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   Coordinator_RunCompatibilityTests_Response response;
 
-  Reply(std::move(_buffer), Coordinator_RunCompatibilityTests_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), Coordinator_RunCompatibilityTests_Result::WithResponse(&response));
 }
 
 void Coordinator::Interface::RunCompatibilityTestsCompleterBase::Reply(::fidl::DecodedMessage<RunCompatibilityTestsResponse> params) {

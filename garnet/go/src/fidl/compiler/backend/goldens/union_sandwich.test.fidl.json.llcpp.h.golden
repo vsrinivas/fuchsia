@@ -62,14 +62,21 @@ struct UnionSize8Alignment4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize8Alignment4 WithVariant(uint32_t&& val) {
     UnionSize8Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
+  static UnionSize8Alignment4 WithVariant(uint32_t* val) {
+    UnionSize8Alignment4 result;
+    result.set_variant(val);
+    return result;
+  }
 
   uint32_t& mutable_variant();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
   set_variant(const T& v) {
@@ -77,9 +84,22 @@ struct UnionSize8Alignment4 {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_copy_assignable<T>::value>
+  set_variant(const T* v) {
+    mutable_variant() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
   set_variant(T&& v) {
     mutable_variant() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, uint32_t>::value && std::is_move_assignable<T>::value>
+  set_variant(T* v) {
+    mutable_variant() = std::move(*v);
   }
 
   uint32_t const & variant() const { return variant_; }
@@ -157,14 +177,21 @@ struct UnionSize36Alignment4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>&& val) {
     UnionSize36Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
+  static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>* val) {
+    UnionSize36Alignment4 result;
+    result.set_variant(val);
+    return result;
+  }
 
   ::fidl::Array<uint8_t, 32>& mutable_variant();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_copy_assignable<T>::value>
   set_variant(const T& v) {
@@ -172,9 +199,22 @@ struct UnionSize36Alignment4 {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_copy_assignable<T>::value>
+  set_variant(const T* v) {
+    mutable_variant() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_move_assignable<T>::value>
   set_variant(T&& v) {
     mutable_variant() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 32>>::value && std::is_move_assignable<T>::value>
+  set_variant(T* v) {
+    mutable_variant() = std::move(*v);
   }
 
   ::fidl::Array<uint8_t, 32> const & variant() const { return variant_; }
@@ -252,14 +292,21 @@ struct UnionSize12Alignment4 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>&& val) {
     UnionSize12Alignment4 result;
     result.set_variant(std::move(val));
     return result;
   }
+  static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>* val) {
+    UnionSize12Alignment4 result;
+    result.set_variant(val);
+    return result;
+  }
 
   ::fidl::Array<uint8_t, 6>& mutable_variant();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 6>>::value && std::is_copy_assignable<T>::value>
   set_variant(const T& v) {
@@ -267,9 +314,22 @@ struct UnionSize12Alignment4 {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 6>>::value && std::is_copy_assignable<T>::value>
+  set_variant(const T* v) {
+    mutable_variant() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 6>>::value && std::is_move_assignable<T>::value>
   set_variant(T&& v) {
     mutable_variant() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::fidl::Array<uint8_t, 6>>::value && std::is_move_assignable<T>::value>
+  set_variant(T* v) {
+    mutable_variant() = std::move(*v);
   }
 
   ::fidl::Array<uint8_t, 6> const & variant() const { return variant_; }
@@ -366,14 +426,21 @@ struct UnionSize24Alignment8 {
 
   bool is_variant() const { return tag_ == Tag::kVariant; }
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize24Alignment8 WithVariant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8&& val) {
     UnionSize24Alignment8 result;
     result.set_variant(std::move(val));
     return result;
   }
+  static UnionSize24Alignment8 WithVariant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8* val) {
+    UnionSize24Alignment8 result;
+    result.set_variant(val);
+    return result;
+  }
 
   ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8& mutable_variant();
 
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
   template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>::value && std::is_copy_assignable<T>::value>
   set_variant(const T& v) {
@@ -381,9 +448,22 @@ struct UnionSize24Alignment8 {
   }
 
   template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>::value && std::is_copy_assignable<T>::value>
+  set_variant(const T* v) {
+    mutable_variant() = *v;
+  }
+
+  // TODO(fxb/41475) Remove this in favor of the pointer version.
+  template <typename T>
   std::enable_if_t<std::is_convertible<T, ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>::value && std::is_move_assignable<T>::value>
   set_variant(T&& v) {
     mutable_variant() = std::move(v);
+  }
+
+  template <typename T>
+  std::enable_if_t<std::is_convertible<T, ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8>::value && std::is_move_assignable<T>::value>
+  set_variant(T* v) {
+    mutable_variant() = std::move(*v);
   }
 
   ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8 const & variant() const { return variant_; }

@@ -990,10 +990,10 @@ void NewDevice::Interface::ReadCompleterBase::ReplySuccess(::fidl::VectorView<ui
   NewDevice_Read_Response response;
   response.data = std::move(data);
 
-  Reply(NewDevice_Read_Result::WithResponse(std::move(response)));
+  Reply(NewDevice_Read_Result::WithResponse(&response));
 }
 void NewDevice::Interface::ReadCompleterBase::ReplyError(int32_t error) {
-  Reply(NewDevice_Read_Result::WithErr(std::move(error)));
+  Reply(NewDevice_Read_Result::WithErr(&error));
 }
 
 void NewDevice::Interface::ReadCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result result) {
@@ -1019,7 +1019,7 @@ void NewDevice::Interface::ReadCompleterBase::ReplySuccess(::fidl::BytePart _buf
   NewDevice_Read_Response response;
   response.data = std::move(data);
 
-  Reply(std::move(_buffer), NewDevice_Read_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), NewDevice_Read_Result::WithResponse(&response));
 }
 
 void NewDevice::Interface::ReadCompleterBase::Reply(::fidl::DecodedMessage<ReadResponse> params) {
@@ -1044,10 +1044,10 @@ void NewDevice::Interface::WriteCompleterBase::Reply(::llcpp::fuchsia::hardware:
 void NewDevice::Interface::WriteCompleterBase::ReplySuccess() {
   NewDevice_Write_Response response;
 
-  Reply(NewDevice_Write_Result::WithResponse(std::move(response)));
+  Reply(NewDevice_Write_Result::WithResponse(&response));
 }
 void NewDevice::Interface::WriteCompleterBase::ReplyError(int32_t error) {
-  Reply(NewDevice_Write_Result::WithErr(std::move(error)));
+  Reply(NewDevice_Write_Result::WithErr(&error));
 }
 
 void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result result) {
@@ -1068,7 +1068,7 @@ void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::BytePart _buffer, :
 void NewDevice::Interface::WriteCompleterBase::ReplySuccess(::fidl::BytePart _buffer) {
   NewDevice_Write_Response response;
 
-  Reply(std::move(_buffer), NewDevice_Write_Result::WithResponse(std::move(response)));
+  Reply(std::move(_buffer), NewDevice_Write_Result::WithResponse(&response));
 }
 
 void NewDevice::Interface::WriteCompleterBase::Reply(::fidl::DecodedMessage<WriteResponse> params) {

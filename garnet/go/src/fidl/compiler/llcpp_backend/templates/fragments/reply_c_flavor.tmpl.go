@@ -54,7 +54,7 @@ void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ templ
   response.{{ .Name }} = std::move({{ .Name }});
   {{- end }}
 
-  Reply({{ .Result.ResultDecl }}::WithResponse(std::move(response)));
+  Reply({{ .Result.ResultDecl }}::WithResponse(&response));
 }
 {{- end }}
 
@@ -64,7 +64,7 @@ ReplyError({{ .Result.ErrorDecl }} error)
 
 {{- define "ReplyCFlavorResultErrorMethodDefinition" }}
 void {{ .LLProps.InterfaceName }}::Interface::{{ .Name }}CompleterBase::{{ template "ReplyCFlavorResultErrorMethodSignature" . }} {
-  Reply({{ .Result.ResultDecl }}::WithErr(std::move(error)));
+  Reply({{ .Result.ResultDecl }}::WithErr(&error));
 }
 {{- end }}
 `
