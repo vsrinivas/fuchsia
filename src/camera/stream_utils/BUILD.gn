@@ -31,7 +31,5 @@ source_set("stream_configs") {
   deps = [
     "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
-    "//zircon/public/lib/fbl",
-    "//zircon/public/lib/image-format",
   ]
 }
