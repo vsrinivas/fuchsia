@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
+#include <zircon/errors.h>
 
 #include <memory>
 #include <utility>
 
+#include <fvm-host/container.h>
 #include <safemath/checked_math.h>
-
-#include "fvm-host/container.h"
 
 constexpr size_t kLz4HeaderSize = 15;
 
@@ -23,12 +23,13 @@ static LZ4F_preferences_t lz4_prefs = {
 };
 
 zx_status_t CompressionContext::Setup(size_t max_len) {
-  LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx_, LZ4F_VERSION);
-  if (LZ4F_isError(errc)) {
-    fprintf(stderr, "Could not create compression context: %s\n", LZ4F_getErrorName(errc));
-    return ZX_ERR_INTERNAL;
+  if (!cctx_) {
+    LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx_, LZ4F_VERSION);
+    if (LZ4F_isError(errc)) {
+      fprintf(stderr, "Could not create compression context: %s\n", LZ4F_getErrorName(errc));
+      return ZX_ERR_INTERNAL;
+    }
   }
-
   Reset(kLz4HeaderSize + LZ4F_compressBound(max_len, &lz4_prefs));
 
   size_t r = LZ4F_compressBegin(cctx_, GetBuffer(), GetRemaining(), &lz4_prefs);
@@ -47,7 +48,6 @@ zx_status_t CompressionContext::Compress(const void* data, size_t length) {
     fprintf(stderr, "Could not compress data: %s\n", LZ4F_getErrorName(r));
     return ZX_ERR_INTERNAL;
   }
-
   IncreaseOffset(r);
   return ZX_OK;
 }
@@ -62,13 +62,6 @@ zx_status_t CompressionContext::Finish() {
   } else {
     IncreaseOffset(r);
   }
-
-  LZ4F_errorCode_t errc = LZ4F_freeCompressionContext(cctx_);
-  if (LZ4F_isError(errc)) {
-    fprintf(stderr, "Could not free compression context: %s\n", LZ4F_getErrorName(errc));
-    result = ZX_ERR_INTERNAL;
-  }
-
   return result;
 }
 
@@ -407,7 +400,6 @@ zx_status_t SparseContainer::Commit() {
   for (unsigned i = 0; i < image_.partition_count; i++) {
     fvm::partition_descriptor_t partition = partitions_[i].descriptor;
     Format* format = partitions_[i].format.get();
-
     vslice_info_t vslice_info;
     // Write out each extent in the partition
     for (unsigned j = 0; j < partition.extent_count; j++) {
@@ -581,10 +573,15 @@ zx_status_t SparseContainer::AllocatePartition(std::unique_ptr<Format> format,
 
   vslice_info_t vslice_info;
   unsigned i = 0;
+  uint64_t extent_length;
+
   while ((status = format->GetVsliceRange(i++, &vslice_info)) == ZX_OK) {
+    if (mul_overflow(vslice_info.block_count, format->BlockSize(), &extent_length)) {
+      fprintf(stderr, "Multiplication overflow when getting extent length\n");
+      return ZX_ERR_OUT_OF_RANGE;
+    }
     if ((status = AllocateExtent(part_index, vslice_info.vslice_start / format->BlocksPerSlice(),
-                                 vslice_info.slice_count,
-                                 vslice_info.block_count * format->BlockSize())) != ZX_OK) {
+                                 vslice_info.slice_count, extent_length)) != ZX_OK) {
       return status;
     }
   }

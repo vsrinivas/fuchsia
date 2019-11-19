@@ -139,7 +139,13 @@ class FvmContainer final : public Container {
 class CompressionContext {
  public:
   CompressionContext() {}
-  ~CompressionContext() {}
+  ~CompressionContext() {
+    // Perform a final freeing of the compression context to make sure memory is deallocated.
+    LZ4F_errorCode_t errc = LZ4F_freeCompressionContext(cctx_);
+    if (LZ4F_isError(errc)) {
+      fprintf(stderr, "Could not free compression context: %s\n", LZ4F_getErrorName(errc));
+    }
+  }
   zx_status_t Setup(size_t max_len);
   zx_status_t Compress(const void* data, size_t length);
   zx_status_t Finish();
