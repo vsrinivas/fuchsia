@@ -19,7 +19,6 @@ group("compute") {
     "spinel-rs-sys",
     "spinel/platforms/vk",
     "svg",
-    "tests/vk/vk_subgroup_info",  # TODO: Not a test, move to tools/
   ]
 }
 
@@ -90,8 +89,8 @@ group("all_tests") {
 graphics_compute_unittests_package("graphics_compute_unittests") {
   deps = [
     "common:common_unittests",
-    "svg:svg_unittests",
     "spinel-mold:mold_c_unittests",
+    "svg:svg_unittests",
     "tests:common_unittests",
   ]
 }
