@@ -13,7 +13,7 @@ use {
         types::le::Peer,
     },
     futures::future::{self, BoxFuture},
-    futures::{FutureExt, TryStreamExt},
+    futures::{FutureExt, TryFutureExt, TryStreamExt},
     parking_lot::MappedRwLockWriteGuard,
     std::convert::TryInto,
 };
@@ -84,7 +84,7 @@ impl TestHarness for PeripheralHarness {
             // Create a task to process the state update watcher
             let watch_adv = watch_advertising_states(harness.clone());
             let watch_conn = watch_connections(harness.clone());
-            let run_peripheral = future::join(watch_adv, watch_conn).map(|(a, b)| a.and(b)).boxed();
+            let run_peripheral = future::try_join(watch_adv, watch_conn).map_ok(|((), ())| ()).boxed();
 
             Ok((harness, host, run_peripheral))
         }
