@@ -69,4 +69,3 @@ if (current_toolchain != default_toolchain) {
     ]
   }
 }
-

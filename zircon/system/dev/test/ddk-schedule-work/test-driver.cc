@@ -4,6 +4,7 @@
 
 #include <fuchsia/device/schedule/work/test/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/loop.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/clock.h>
@@ -38,7 +39,7 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
   };
 
   TestScheduleWorkDriver(zx_device_t* parent)
-      : DeviceType(parent), loop_(&kAsyncLoopConfigNoAttachToThread) {
+      : DeviceType(parent), loop_(&kAsyncLoopConfigNeverAttachToThread) {
     loop_.StartThread("schedule-work-test-loop");
   }
 
@@ -109,7 +110,6 @@ class TestScheduleWorkDriver : public DeviceType, public TestDevice::Interface {
 
   class Connection : public OwnedChannelDevice::Interface {
    public:
-
     struct WorkItemCtx {
       zx::time start;
       Connection* parent;
