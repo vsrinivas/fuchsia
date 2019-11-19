@@ -16,7 +16,14 @@
 
 namespace media::audio::mixer {
 
-static constexpr size_t kDataCacheLength = 1000;  // or more
+// Note that this value directly determines the maximum downsampling ratio: the ratio's numerator is
+// (kDataCacheLength/28). For example, if kDataCacheLength is 280, max downsampling ratio is 10:1.
+//
+// Using 'audio_fidelity_tests --profile', the performance of various lengths was measured. The
+// length 680 had better performance than other measured lengths (280, 560, 640, 700, 720, 1000,
+// 1344), presumably because of cache/locality effects. This length allows a downsampling ratio
+// greater than 24:1 -- even with 192kHz input hardware, we can produce 8kHz streams to capturers.
+static constexpr size_t kDataCacheLength = 680;
 
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 class SincSamplerImpl : public SincSampler {
@@ -35,7 +42,8 @@ class SincSamplerImpl : public SincSampler {
     num_prev_frames_needed_ = RightIdx(neg_filter_width());
     total_frames_needed_ = num_prev_frames_needed_ + RightIdx(pos_filter_width());
 
-    FX_DCHECK(kDataCacheLength > total_frames_needed_);
+    FX_DCHECK(kDataCacheLength > total_frames_needed_)
+        << "source rate " << source_frame_rate << ", dest rate " << dest_frame_rate;
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset, const void* src,
