@@ -1,0 +1,26 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/testing/test_spec.gni")
+
+group("fdb") {
+  testonly = true
+  deps = [
+    ":bin($host_toolchain)",
+  ]
+}
+
+rustc_binary("bin") {
+  name = "fdb"
+  edition = "2018"
+
+  deps = [
+    "//src/connectivity/overnet/lib/hoist",
+    "//src/lib/argh",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:log",
+  ]
+  non_rust_deps = [ "//third_party/boringssl" ]
+}
