@@ -11,20 +11,20 @@
 #
 # Parameters
 #
-#   target (required)
-#     [label] The target to generate a manifest for.
+#   deps (required)
+#     [list of labels] The targets to generate a manifest for.
 #
 #   testonly (optional)
 #     Same as for any GN target.
 template("migrated_manifest") {
   assert(is_fuchsia, "Migrated manifests only target Fuchsia")
-  assert(defined(invoker.target), "Need a target to generated a manifest for")
+  assert(defined(invoker.deps) && invoker.deps != [],
+      "Need deps to generate a manifest for")
 
   generated_file(target_name) {
-    forward_variables_from(invoker, [ "testonly" ])
+    forward_variables_from(invoker, [ "deps", "testonly" ])
 
-    deps = [
-      invoker.target,
+    deps += [
       # Add sysroot-provided elements by default.
       "//build/config/fuchsia:sysroot_metadata",
     ]

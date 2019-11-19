@@ -37,10 +37,43 @@ template("test") {
   }
 
   executable(target_name) {
-    forward_variables_from(invoker, "*")
-    testonly = true
+    # TODO(3367): remove `test_group` once all ZN tests are using test packages
+    # instead.
+    forward_variables_from(invoker, "*", [ "test_group" ])
+    # TODO(3367): always force `testonly` once all ZN tests are moved to
+    # packages.
+    if (!defined(testonly)) {
+      testonly = true
+    }
     if (is_linux || is_mac) {
       deps += [ ":${target_name}_spec" ]
+    }
+
+    if (!defined(output_dir)) {
+      output_dir = root_out_dir
+    }
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    if (!defined(output_extension)) {
+      output_extension = ""
+    }
+
+    _output_name = output_name
+    if (output_extension != "") {
+      _output_name += ".$output_extension"
+    }
+    _output_file = rebase_path("$output_dir/$_output_name", root_build_dir)
+    if (defined(invoker.test_group)) {
+      _test_group = invoker.test_group
+    } else {
+      _test_group = "sys"
+    }
+
+    metadata = {
+      migrated_manifest_lines = [
+        "test/$_test_group/$_output_name=$_output_file",
+      ]
     }
   }
 }

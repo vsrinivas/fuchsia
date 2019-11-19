@@ -1008,7 +1008,6 @@ template("executable") {
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
-    rebased_output_file = rebase_path(output_file, root_build_dir)
     link_output_file = "$output_dir/exe.unstripped/$output_name"
 
     deps += default_executable_deps
@@ -1019,6 +1018,16 @@ template("executable") {
     # the bug for more info/discussion.
     if (current_toolchain == host_toolchain) {
       deps += [ "//zircon/public/lib/zx-panic-libc" ]
+    }
+
+    add_migration_metadata = is_fuchsia
+    if (add_migration_metadata && defined(invoker.metadata)) {
+      meta = invoker.metadata
+      add_migration_metadata = !defined(meta.migrated_manifest_lines)
+      not_needed([ "meta" ])
+    }
+    if (add_migration_metadata) {
+      rebased_output_file = rebase_path(output_file, root_build_dir)
     }
 
     metadata = {
@@ -1046,7 +1055,9 @@ template("executable") {
         },
       ]
 
-      migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
+      if (add_migration_metadata) {
+        migrated_manifest_lines = [ "bin/$output_name=$rebased_output_file" ]
+      }
     }
   }
 }
