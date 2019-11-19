@@ -4,6 +4,8 @@
 
 #include "sim-fake-ap.h"
 
+#include <zircon/assert.h>
+
 #include "src/connectivity/wlan/lib/common/cpp/include/wlan/common/status_code.h"
 
 namespace wlan::simulation {
@@ -16,22 +18,32 @@ bool FakeAp::CanReceiveChannel(const wlan_channel_t& channel) {
 
 void FakeAp::ScheduleNextBeacon() {
   auto beacon_handler = new std::function<void()>;
-  *beacon_handler = std::bind(&FakeAp::HandleBeaconNotification, this, beacon_index_);
-  environment_->ScheduleNotification(this, beacon_interval_, static_cast<void*>(beacon_handler));
+  *beacon_handler = std::bind(&FakeAp::HandleBeaconNotification, this);
+  environment_->ScheduleNotification(this, beacon_state_.beacon_interval,
+                                     static_cast<void*>(beacon_handler),
+                                     &beacon_state_.beacon_notification_id);
 }
 
 void FakeAp::EnableBeacon(zx::duration beacon_period) {
+  if (beacon_state_.is_beaconing) {
+    // If we're already beaconing, we want to cancel any pending scheduled beacons before
+    // restarting with the new beacon period.
+    DisableBeacon();
+  }
+
   // First beacon is sent out immediately
   environment_->TxBeacon(this, chan_, ssid_, bssid_);
 
-  is_beaconing_ = true;
-  beacon_interval_ = beacon_period;
-  beacon_index_++;
+  beacon_state_.is_beaconing = true;
+  beacon_state_.beacon_interval = beacon_period;
 
   ScheduleNextBeacon();
 }
 
-void FakeAp::DisableBeacon() { is_beaconing_ = false; }
+void FakeAp::DisableBeacon() {
+  beacon_state_.is_beaconing = false;
+  ZX_ASSERT(environment_->CancelNotification(this, beacon_state_.beacon_notification_id) == ZX_OK);
+}
 
 void FakeAp::ScheduleAssocResp(uint16_t status, const common::MacAddr& dst) {
   auto handler = new std::function<void()>;
@@ -79,15 +91,9 @@ void FakeAp::RxProbeReq(const wlan_channel_t& channel, const common::MacAddr& sr
   ScheduleProbeResp(src);
 }
 
-void FakeAp::HandleBeaconNotification(uint64_t beacon_id) {
-  // Check the beacon index to verify that this was not an event that was scheduled for another
-  // beacon.
-  if (!is_beaconing_ || (beacon_id != beacon_index_)) {
-    return;
-  }
-
+void FakeAp::HandleBeaconNotification() {
+  ZX_ASSERT(beacon_state_.is_beaconing);
   environment_->TxBeacon(this, chan_, ssid_, bssid_);
-
   ScheduleNextBeacon();
 }
 

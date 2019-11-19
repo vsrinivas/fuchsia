@@ -87,7 +87,7 @@ class FakeAp : public StationIfc {
   void ScheduleProbeResp(const common::MacAddr& dst);
 
   // Event handlers
-  void HandleBeaconNotification(uint64_t beacon_id);
+  void HandleBeaconNotification();
   void HandleAssocRespNotification(uint16_t status, common::MacAddr dst);
   void HandleProbeRespNotification(common::MacAddr dst);
 
@@ -99,15 +99,15 @@ class FakeAp : public StationIfc {
   wlan_ssid_t ssid_;
   struct Security security_ = {.cipher_suite = IEEE80211_CIPHER_SUITE_NONE};
 
-  // Are we currently emitting beacons?
-  bool is_beaconing_ = false;
+  struct BeaconState {
+    // Are we currently emitting beacons?
+    bool is_beaconing = false;
 
-  zx::duration beacon_interval_;
+    zx::duration beacon_interval;
 
-  // A unique identifier used for each request to beacon. Since we can't (currently) disable an
-  // event once it's been set, we need a way to identify the beacons we are currently emitting
-  // from any that may have been set previously.
-  uint64_t beacon_index_ = 0;
+    // Unique value that is associated with the next beacon event
+    uint64_t beacon_notification_id;
+  } beacon_state_;
 
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);

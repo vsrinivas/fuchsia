@@ -144,7 +144,6 @@ TEST_F(BeaconTest, StartStop) {
 
 // Starts a beacon, then starts another beacon (which will replace the previous one), then stops
 // beaconing. Verifies that none of the old beacons are emitted after the new beacon starts
-// (even though there will be a pending event for the next scheduled old beacon).
 
 constexpr zx::duration kUpdateTime = zx::sec(1);
 constexpr zx::duration kNewBeaconPeriod = zx::msec(42);
