@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/ui/input2/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fake_ddk/fake_ddk.h>
@@ -12,7 +13,9 @@
 
 #include <ddktl/protocol/hiddevice.h>
 #include <hid/ambient-light.h>
+#include <hid/boot.h>
 #include <hid/paradise.h>
+#include <hid/usages.h>
 #include <zxtest/zxtest.h>
 
 #include "input-report.h"
@@ -390,4 +393,50 @@ TEST_F(HidDevTest, GetTouchReportTest) {
   dev_ops.ops->close(dev_ops.ctx, 0);
 }
 
+TEST_F(HidDevTest, KeyboardTest) {
+  size_t keyboard_descriptor_size;
+  const uint8_t* keyboard_descriptor = get_boot_kbd_report_desc(&keyboard_descriptor_size);
+  std::vector<uint8_t> desc(keyboard_descriptor, keyboard_descriptor + keyboard_descriptor_size);
+
+  fake_hid_.SetReportDesc(desc);
+  device_->Bind();
+
+  // Open an instance device.
+  zx_device_t* open_dev;
+  ASSERT_OK(device_->DdkOpen(&open_dev, 0));
+  // Opening the device created an instance device to be created, and we can
+  // get its arguments here.
+  ProtocolDeviceOps dev_ops = ddk_.GetLastDeviceOps();
+
+  auto sync_client = llcpp_report::InputDevice::SyncClient(std::move(ddk_.FidlClient()));
+  // Spoof send a report.
+  hid_boot_kbd_report keyboard_report = {};
+  keyboard_report.usage[0] = HID_USAGE_KEY_A;
+  keyboard_report.usage[1] = HID_USAGE_KEY_UP;
+  keyboard_report.usage[2] = HID_USAGE_KEY_B;
+
+  std::vector<uint8_t> sent_report(
+      reinterpret_cast<uint8_t*>(&keyboard_report),
+      reinterpret_cast<uint8_t*>(&keyboard_report) + sizeof(keyboard_report));
+  fake_hid_.SetReport(sent_report);
+  fake_hid_.SendReport();
+
+  // Get the report.
+  llcpp_report::InputDevice::ResultOf::GetReports result = sync_client.GetReports();
+  ASSERT_OK(result.status());
+  auto& reports = result->reports;
+
+  ASSERT_EQ(1, reports.count());
+
+  auto& report = reports[0];
+  auto& keyboard = report.keyboard();
+  ASSERT_TRUE(keyboard.has_pressed_keys());
+  ASSERT_EQ(3, keyboard.pressed_keys().count());
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::A, keyboard.pressed_keys()[0]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::UP, keyboard.pressed_keys()[1]);
+  EXPECT_EQ(llcpp::fuchsia::ui::input2::Key::B, keyboard.pressed_keys()[2]);
+
+  // Close the instance device.
+  dev_ops.ops->close(dev_ops.ctx, 0);
+}
 }  // namespace hid_input_report_dev

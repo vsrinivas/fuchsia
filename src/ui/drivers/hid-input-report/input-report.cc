@@ -24,6 +24,7 @@
 
 #include "src/ui/lib/hid-input-report/descriptors.h"
 #include "src/ui/lib/hid-input-report/device.h"
+#include "src/ui/lib/hid-input-report/keyboard.h"
 #include "src/ui/lib/hid-input-report/mouse.h"
 #include "src/ui/lib/hid-input-report/sensor.h"
 #include "src/ui/lib/hid-input-report/touch.h"
@@ -109,6 +110,9 @@ bool InputReport::ParseHidInputReportDescriptor(const hid::ReportDescriptor* rep
   } else if (collection->usage.page == ::hid::usage::Page::kDigitizer &&
              (collection->usage.usage == ::hid::usage::Digitizer::kTouchScreen)) {
     parse_device = std::make_unique<hid_input_report::Touch>();
+  } else if (collection->usage.page == ::hid::usage::Page::kGenericDesktop &&
+             (collection->usage.usage == ::hid::usage::GenericDesktop::kKeyboard)) {
+    parse_device = std::make_unique<hid_input_report::Keyboard>();
   }
 
   if (!parse_device) {
