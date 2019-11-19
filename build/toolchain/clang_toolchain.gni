@@ -252,7 +252,7 @@ template("clang_toolchain") {
       rspfile = "$outfile.rsp"
       pool = "//build/toolchain:link($default_toolchain)"
       if (use_strip) {
-        unstripped_outfile = "{{root_out_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
       } else {
         unstripped_outfile = outfile
       }
@@ -296,7 +296,7 @@ template("clang_toolchain") {
       pool = "//build/toolchain:link($default_toolchain)"
       unstripped_outfile = outfile
       if (use_strip) {
-        unstripped_outfile = "{{root_out_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
+        unstripped_outfile = "{{output_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
       }
       if (invoker.toolchain_os == "mac") {
         command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}}"
