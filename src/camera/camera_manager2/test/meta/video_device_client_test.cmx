@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/video_device_client_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

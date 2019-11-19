@@ -84,3 +84,30 @@ source_set("camera-fakes") {
     "//zircon/public/lib/fzl",
   ]
 }
+
+executable("video_device_client_test") {
+  testonly = true
+
+  sources = [
+    "video_device_client_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/fidl/fuchsia.camera2:fuchsia.camera2",
+    "//sdk/fidl/fuchsia.camera2.hal:fuchsia.camera2.hal",
+    "//src/camera/camera_manager2:lib",
+    "//src/camera/camera_manager2/test:camera-fakes",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
+  ]
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fzl",
+  ]
+}

@@ -10,6 +10,8 @@ source_set("lib") {
     "camera_manager_app.h",
     "camera_plug_detector.cc",
     "camera_plug_detector.h",
+    "video_device_client.cc",
+    "video_device_client.h",
   ]
 
   deps = [

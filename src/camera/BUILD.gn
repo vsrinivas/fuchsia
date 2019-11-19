@@ -40,6 +40,7 @@ test_package("camera_tests") {
     "//src/camera/calibration/blc/test:blc_test",
     "//src/camera/camera_manager2/test:camera-manager-test",
     "//src/camera/camera_manager2/test:camera_plug_detector_test",
+    "//src/camera/camera_manager2/test:video_device_client_test",
     "//src/camera/drivers/controller/test:controller-allocator-test",
     "//src/camera/drivers/controller/test:controller-protocol-test",
     "//src/camera/drivers/controller/test:controller-test",
@@ -170,6 +171,11 @@ test_package("camera_tests") {
       name = "stream_provider_test"
       manifest = "examples/demo/stream_provider/test/test.cmx"
       environments = [ sherlock_env ]
+    },
+    {
+      name = "video_device_client_test"
+      manifest = "camera_manager2/test/meta/video_device_client_test.cmx"
+      environments = basic_envs
     },
 
     # Put additional camera tests here
