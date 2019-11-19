@@ -134,7 +134,7 @@ func (cmd *devFinderCmd) SetCommonFlags(f *flag.FlagSet) {
 	f.BoolVar(&cmd.acceptUnicast, "accept-unicast", false, "Accepts unicast responses. For if the receiving device responds from a different subnet or behind port forwarding.")
 	f.IntVar(&cmd.deviceLimit, "device-limit", 0, "Exits before the timeout at this many devices per resolution (zero means no limit).")
 	f.IntVar(&cmd.ttl, "ttl", -1, "Sets the TTL for outgoing mcast messages. Primarily for debugging and testing. Setting this to zero limits messages to the localhost.")
-	f.BoolVar(&cmd.netboot, "netboot", true, "Determines whether to use netboot protocol")
+	f.BoolVar(&cmd.netboot, "netboot", false, "Determines whether to use netboot protocol")
 	f.BoolVar(&cmd.mdns, "mdns", true, "Determines whether to use mDNS protocol")
 	f.BoolVar(&cmd.useNetsvcAddress, "netsvc-address", false, "Determines whether to use the Fuchsia netsvc address. Ignored if |netboot| is set to false.")
 }
