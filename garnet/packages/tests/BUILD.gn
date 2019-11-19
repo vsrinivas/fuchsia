@@ -349,6 +349,7 @@ group("all") {
     ":pkg_resolver",
     ":pkg_url",
     ":pmd",
+    ":power_manager",
     ":process",
     ":profiler",
     ":run_test_component",
@@ -786,6 +787,14 @@ group("telephony") {
   public_deps = [
     "//src/connectivity/telephony:tests",
     "//src/connectivity/telephony/lib/qmi-protocol:tests",
+  ]
+}
+
+group("power_manager") {
+  testonly = true
+  public_deps = [
+    "//garnet/bin/power_manager:power_manager_tests",
+    "//garnet/bin/power_manager/rkf45:rkf45_tests",
   ]
 }
 
