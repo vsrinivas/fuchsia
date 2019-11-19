@@ -22,11 +22,14 @@
 #include "src/ui/scenic/lib/gfx/swapchain/swapchain.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
 
-
 #include <vulkan/vulkan.hpp>
 
 namespace scenic_impl {
 namespace gfx {
+
+namespace test {
+class DisplaySwapchainTest;
+}
 
 // DisplaySwapchain implements the Swapchain interface by using a Vulkan
 // swapchain to present images to a physical display using the Zircon
@@ -71,6 +74,8 @@ class DisplaySwapchain : public Swapchain {
   void SetUseProtectedMemory(bool use_protected_memory) override;
 
  private:
+  friend class test::DisplaySwapchainTest;
+
   struct Framebuffer {
     zx::vmo vmo;
     escher::GpuMemPtr device_memory;
