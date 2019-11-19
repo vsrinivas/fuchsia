@@ -3,13 +3,15 @@
 // found in the LICENSE file.
 
 use {
-    crate::error::Error,
+    crate::{error::Error, RatesWriter},
     wlan_common::{
         appendable::Appendable,
         data_writer,
+        ie::{self, *},
         mac::{self, Aid, Bssid, MacAddr, StatusCode},
         mgmt_writer,
         sequence::SequenceManager,
+        TimeUnit,
     },
 };
 
@@ -97,6 +99,61 @@ pub fn write_disassoc_frame<B: Appendable>(
     )?;
     buf.append_value(&mac::DisassocHdr { reason_code })?;
     Ok(())
+}
+
+pub struct BeaconTemplate {
+    pub buf: Vec<u8>,
+    pub tim_ele_offset: usize,
+}
+
+pub fn make_beacon_template(
+    bssid: Bssid,
+    beacon_interval: TimeUnit,
+    capabilities: mac::CapabilityInfo,
+    ssid: &[u8],
+    rates: &[u8],
+    channel: u8,
+    rsne: &[u8],
+) -> Result<BeaconTemplate, Error> {
+    let mut buf = vec![];
+
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::BEACON);
+    mgmt_writer::write_mgmt_hdr(
+        &mut buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, mac::BCAST_ADDR, bssid, mac::SequenceControl(0)),
+        None,
+    )?;
+    buf.append_value(&mac::BeaconHdr { timestamp: 0, beacon_interval, capabilities })?;
+    let rates_writer = RatesWriter::try_new(rates)?;
+
+    // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27, numbered
+    // below.
+
+    // 4. Service Set Identifier (SSID)
+    write_ssid(&mut buf, ssid)?;
+
+    // 5. Supported Rates and BSS Membership Selectors
+    rates_writer.write_supported_rates(&mut buf);
+
+    // 6. DSSS Parameter Set
+    write_dsss_param_set(&mut buf, &DsssParamSet { current_chan: channel })?;
+
+    // 9. Traffic indication map (TIM)
+    // Write a placeholder TIM element, which the firmware will fill in. We only support hardware
+    // with hardware offload beaconing for now (e.g. ath10k).
+    let tim_ele_offset = buf.len();
+    buf.append_value(&ie::Header { id: Id::TIM, body_len: 0 })?;
+
+    // 17. Extended Supported Rates and BSS Membership Selectors
+    rates_writer.write_ext_supported_rates(&mut buf);
+
+    // 18. RSN
+    // |rsne| already contains the IE prefix.
+    buf.append_bytes(rsne)?;
+
+    Ok(BeaconTemplate { buf, tim_ele_offset })
 }
 
 pub fn write_data_frame<B: Appendable>(
@@ -241,6 +298,82 @@ mod tests {
             ][..],
             &buf[..]
         );
+    }
+
+    #[test]
+    fn beacon_template() {
+        let template = make_beacon_template(
+            Bssid([2; 6]),
+            10.into(),
+            mac::CapabilityInfo(33),
+            &[1, 2, 3, 4, 5],
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            2,
+            &[48, 2, 77, 88][..],
+        )
+        .expect("failed making beacon template");
+
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                10, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Supported rates
+                3, 1, 2, // DSSS parameter set
+                5, 0, // TIM
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
+            ][..],
+            &template.buf[..]
+        );
+        assert_eq!(template.tim_ele_offset, 56);
+    }
+
+    #[test]
+    fn beacon_template_no_extended_rates() {
+        let template = make_beacon_template(
+            Bssid([2; 6]),
+            10.into(),
+            mac::CapabilityInfo(33),
+            &[1, 2, 3, 4, 5],
+            &[1, 2, 3, 4, 5, 6][..],
+            2,
+            &[48, 2, 77, 88][..],
+        )
+        .expect("failed making beacon template");
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b10000000, 0, // Frame Control
+                0, 0, // Duration
+                255, 255, 255, 255, 255, 255, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0, 0, // Sequence Control
+                // Beacon header:
+                0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+                10, 0, // Beacon interval
+                33, 0, // Capabilities
+                // IEs:
+                0, 5, 1, 2, 3, 4, 5, // SSID
+                1, 6, 1, 2, 3, 4, 5, 6, // Supported rates
+                3, 1, 2, // DSSS parameter set
+                5, 0, // TIM
+                48, 2, 77, 88, // RSNE
+            ][..],
+            &template.buf[..]
+        );
+        assert_eq!(template.tim_ele_offset, 54);
     }
 
     #[test]

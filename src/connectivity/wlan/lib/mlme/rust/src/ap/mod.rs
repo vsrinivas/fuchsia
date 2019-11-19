@@ -22,9 +22,11 @@ use {
         buffer_writer::BufferWriter,
         frame_len,
         mac::{
-            self, Aid, AuthAlgorithmNumber, Bssid, MacAddr, OptionalField, Presence, StatusCode,
+            self, Aid, AuthAlgorithmNumber, Bssid, CapabilityInfo, MacAddr, OptionalField,
+            Presence, StatusCode,
         },
         sequence::SequenceManager,
+        TimeUnit,
     },
     zerocopy::ByteSlice,
 };
@@ -82,9 +84,11 @@ impl From<failure::Error> for Rejection {
 }
 
 pub struct InfraBss {
-    // TODO(37891): Consider removing this, as only the SME really needs to know about it.
     pub ssid: Vec<u8>,
-    pub is_rsn: bool,
+    pub rsne: Option<Vec<u8>>,
+    pub beacon_interval: TimeUnit,
+    pub rates: Vec<u8>,
+    pub channel: u8,
     pub clients: HashMap<MacAddr, RemoteClient>,
 }
 
@@ -115,8 +119,41 @@ fn make_client_error(addr: MacAddr, e: Error) -> Error {
 }
 
 impl InfraBss {
-    fn new(ssid: Vec<u8>, is_rsn: bool) -> Self {
-        Self { ssid, is_rsn, clients: HashMap::new() }
+    fn try_new(
+        ctx: &mut Context,
+        ssid: Vec<u8>,
+        beacon_interval: TimeUnit,
+        rates: Vec<u8>,
+        channel: u8,
+        rsne: Option<Vec<u8>>,
+    ) -> Result<Self, Error> {
+        let bss = Self { ssid, rsne, beacon_interval, rates, channel, clients: HashMap::new() };
+
+        ctx.device
+            .set_channel(WlanChannel {
+                primary: channel,
+
+                // TODO(40917): Correctly support this.
+                cbw: WlanChannelBandwidth::_20,
+                secondary80: 0,
+            })
+            .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
+
+        // TODO(37891): Support DTIM.
+
+        // We only support drivers that perform beaconing in hardware, for now.
+        let beacon_template = bss.make_beacon_template(ctx.bssid)?;
+        ctx.device
+            .enable_beaconing(&beacon_template.buf, beacon_template.tim_ele_offset, beacon_interval)
+            .map_err(|s| Error::Status(format!("failed to enable beaconing"), s))?;
+
+        Ok(bss)
+    }
+
+    pub fn stop(&self, ctx: &mut Context) -> Result<(), Error> {
+        ctx.device
+            .disable_beaconing()
+            .map_err(|s| Error::Status(format!("failed to disable beaconing"), s))
     }
 
     pub fn handle_mlme_auth_resp(
@@ -154,7 +191,7 @@ impl InfraBss {
         client
             .handle_mlme_assoc_resp(
                 ctx,
-                self.is_rsn,
+                self.rsne.is_some(),
                 // TODO(37891): Actually implement capability negotiation.
                 mac::CapabilityInfo(0),
                 resp.result_code,
@@ -197,29 +234,33 @@ impl InfraBss {
             .map_err(|e| make_client_error(client.addr, e))
     }
 
+    fn make_beacon_template(&self, bssid: Bssid) -> Result<BeaconTemplate, Error> {
+        make_beacon_template(
+            bssid,
+            self.beacon_interval,
+            CapabilityInfo(0)
+                // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the ESS subfield to 1 and the IBSS
+                // subfield to 0 within transmitted Beacon or Probe Response frames.
+                .with_ess(true)
+                .with_ibss(false)
+                // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+                // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+                // confidentiality is required for all Data frames exchanged within the BSS.
+                .with_privacy(self.rsne.is_some()),
+            &self.ssid,
+            &self.rates,
+            self.channel,
+            self.rsne.as_ref().map_or(&[], |rsne| &rsne),
+        )
+    }
+
     fn handle_mgmt_frame<B: ByteSlice>(
         &mut self,
         ctx: &mut Context,
         mgmt_hdr: mac::MgmtHdr,
         body: B,
     ) -> Result<(), Rejection> {
-        let mgmt_subtype = *&{ mgmt_hdr.frame_ctrl }.mgmt_subtype();
-
-        let to_bss = mgmt_hdr.addr1 == ctx.bssid.0 && mgmt_hdr.addr3 == ctx.bssid.0;
-
-        // IEEE Std 802.11-2016, 11.1.4.3.4: Probe requests may be sent either directly to us or to
-        // broadcast.
-        if mgmt_subtype == mac::MgmtSubtype::PROBE_REQ {
-            if !to_bss && (mgmt_hdr.addr1 != mac::BCAST_ADDR || mgmt_hdr.addr3 != mac::BCAST_ADDR) {
-                // Probe request is not for this BSS.
-                return Err(Rejection::OtherBss);
-            }
-
-            // TODO(37891): Respond to probes.
-            return Ok(());
-        }
-
-        if !to_bss {
+        if mgmt_hdr.addr1 != ctx.bssid.0 || mgmt_hdr.addr3 != ctx.bssid.0 {
             // Frame is not for this BSS.
             return Err(Rejection::OtherBss);
         }
@@ -327,10 +368,6 @@ impl InfraBss {
         event: TimedEvent,
     ) -> Result<(), Rejection> {
         match event {
-            TimedEvent::Beacon => {
-                // TODO(37891): Handle this.
-                Ok(())
-            }
             TimedEvent::ClientEvent(addr, event) => {
                 let client = self.clients.get_mut(&addr).ok_or(Rejection::NoSuchClient(addr))?;
 
@@ -352,9 +389,6 @@ pub enum ClientEvent {
 
 #[derive(Debug)]
 pub enum TimedEvent {
-    /// Event to send a beacon frame.
-    Beacon,
-
     /// Events that are destined for a client to handle.
     ClientEvent(MacAddr, ClientEvent),
 }
@@ -712,20 +746,14 @@ impl Ap {
             return Ok(());
         }
 
-        self.bss.replace(InfraBss::new(req.ssid.clone(), req.rsne.is_some()));
-
-        self.ctx
-            .device
-            .set_channel(WlanChannel {
-                primary: req.channel,
-
-                // TODO(40917): Correctly support this.
-                cbw: WlanChannelBandwidth::_20,
-                secondary80: 0,
-            })
-            .map_err(|s| Error::Status(format!("failed to set channel"), s))?;
-
-        // TODO(37891): Support DTIM.
+        self.bss.replace(InfraBss::try_new(
+            &mut self.ctx,
+            req.ssid.clone(),
+            req.beacon_period.into(),
+            req.rates,
+            req.channel,
+            req.rsne,
+        )?);
 
         self.ctx.send_mlme_start_conf(fidl_mlme::StartResultCodes::Success)?;
 
@@ -734,10 +762,11 @@ impl Ap {
 
     /// Handles MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2) from the SME.
     fn handle_mlme_stop_req(&mut self, _req: fidl_mlme::StopRequest) -> Result<(), Error> {
-        if self.bss.is_none() {
+        if let Some(bss) = self.bss.take() {
+            bss.stop(&mut self.ctx)?;
+        } else {
             info!("MLME-STOP.request: BSS not started");
         }
-        self.bss = None;
         Ok(())
     }
 
@@ -863,7 +892,7 @@ mod tests {
             timer::FakeScheduler,
         },
         fidl_fuchsia_wlan_common as fidl_common,
-        wlan_common::assert_variant,
+        wlan_common::{assert_variant, test_utils::fake_frames::fake_wpa2_rsne},
     };
     const CLIENT_ADDR: MacAddr = [1u8; 6];
     const BSSID: Bssid = Bssid([2u8; 6]);
@@ -979,8 +1008,14 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let event_id = ctx.schedule_after(zx::Duration::from_seconds(5), TimedEvent::Beacon);
-        assert_variant!(ctx.timer.triggered(&event_id), Some(TimedEvent::Beacon));
+        let event_id = ctx.schedule_after(
+            zx::Duration::from_seconds(5),
+            TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout),
+        );
+        assert_variant!(
+            ctx.timer.triggered(&event_id),
+            Some(TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout))
+        );
         assert_variant!(ctx.timer.triggered(&event_id), None);
     }
 
@@ -989,7 +1024,10 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let event_id = ctx.schedule_after(zx::Duration::from_seconds(5), TimedEvent::Beacon);
+        let event_id = ctx.schedule_after(
+            zx::Duration::from_seconds(5),
+            TimedEvent::ClientEvent([1, 1, 1, 1, 1, 1], ClientEvent::BssIdleTimeout),
+        );
         ctx.cancel_event(event_id);
         assert_variant!(ctx.timer.triggered(&event_id), None);
     }
@@ -1145,11 +1183,86 @@ mod tests {
     }
 
     #[test]
+    fn bss_try_new() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        InfraBss::try_new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
+
+        assert_eq!(
+            fake_device.wlan_channel,
+            WlanChannel {
+                primary: 1,
+                cbw: WlanChannelBandwidth::_20,
+                secondary80: 0,
+            }
+        );
+
+        let beacon_tmpl = vec![
+            // Mgmt header
+            0b10000000, 0, // Frame Control
+            0, 0, // Duration
+            255, 255, 255, 255, 255, 255, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0, 0, // Sequence Control
+            // Beacon header:
+            0, 0, 0, 0, 0, 0, 0, 0, // Timestamp
+            100, 0, // Beacon interval
+            1, 0, // Capabilities
+            // IEs:
+            0, 5, 1, 2, 3, 4, 5, // SSID
+            1, 1, 0b11111000, // Basic rates
+            3, 1, 1, // DSSS parameter set
+            5, 0, // TIM
+        ];
+
+        assert_eq!(
+            fake_device.bcn_cfg.expect("expected bcn_cfg"),
+            (beacon_tmpl, 49, TimeUnit::DEFAULT_BEACON_INTERVAL)
+        );
+    }
+
+    #[test]
+    fn bss_stop() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let bss = InfraBss::try_new(
+            &mut ctx,
+            vec![1, 2, 3, 4, 5],
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
+        bss.stop(&mut ctx).expect("expected InfraBss::stop ok");
+        assert!(fake_device.bcn_cfg.is_none());
+    }
+
+    #[test]
     fn bss_handle_mlme_auth_resp() {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1185,7 +1298,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_eq!(
             zx::Status::from(
@@ -1207,7 +1328,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1243,7 +1372,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1280,7 +1417,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1314,7 +1459,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            Some(fake_wpa2_rsne()),
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1340,7 +1493,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
@@ -1378,7 +1539,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.handle_mgmt_frame(
             &mut ctx,
@@ -1420,7 +1589,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1455,7 +1632,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1490,7 +1675,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1522,7 +1715,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_mgmt_frame(
@@ -1553,7 +1754,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1615,7 +1824,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_data_frame(
@@ -1652,7 +1869,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1713,7 +1938,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_data_frame(
@@ -1766,7 +1999,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1830,7 +2071,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1877,7 +2126,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), false);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::try_new ok");
 
         assert_variant!(
             bss.handle_eth_frame(&mut ctx, CLIENT_ADDR, CLIENT_ADDR2, 0x1234, &[1, 2, 3, 4, 5][..])
@@ -1893,7 +2150,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            Some(fake_wpa2_rsne()),
+        )
+        .expect("expected InfraBss::try_new ok");
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1924,7 +2189,15 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        let mut bss = InfraBss::new(b"coolnet".to_vec(), true);
+        let mut bss = InfraBss::try_new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            Some(fake_wpa2_rsne()),
+        )
+        .expect("expected InfraBss::try_new ok");
         bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -1980,7 +2253,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         let client = ap.bss.as_mut().unwrap().clients.get_mut(&CLIENT_ADDR).unwrap();
@@ -2031,7 +2314,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.handle_eth_frame(CLIENT_ADDR2, CLIENT_ADDR, 0x1234, &[1, 2, 3, 4, 5][..]);
     }
 
@@ -2045,7 +2338,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.handle_mac_frame(
             &[
                 // Mgmt header
@@ -2087,7 +2390,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.handle_mac_frame(
             &[
                 // Mgmt header
@@ -2116,7 +2429,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.handle_mac_frame(&[0][..], false);
     }
 
@@ -2136,7 +2459,7 @@ mod tests {
             beacon_period: 5,
             dtim_period: 1,
             channel: 2,
-            rates: vec![],
+            rates: vec![0b11111000],
             country: fidl_mlme::Country { alpha2: *b"xx", suffix: fidl_mlme::COUNTRY_ENVIRON_ALL },
             mesh_id: vec![],
             rsne: None,
@@ -2174,7 +2497,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
 
         ap.handle_mlme_start_req(fidl_mlme::StartRequest {
             ssid: b"coolnet".to_vec(),
@@ -2211,7 +2544,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
 
         ap.handle_mlme_stop_req(fidl_mlme::StopRequest { ssid: b"coolnet".to_vec() })
             .expect("expected Ap::handle_mlme_stop_request OK");
@@ -2271,7 +2614,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
@@ -2337,7 +2690,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
 
         assert_eq!(
             zx::Status::from(
@@ -2364,7 +2727,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
@@ -2404,7 +2777,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
@@ -2445,7 +2828,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
@@ -2483,7 +2876,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), true));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                Some(fake_wpa2_rsne()),
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]
@@ -2518,7 +2921,17 @@ mod tests {
             fake_scheduler.as_scheduler(),
             BSSID,
         );
-        ap.bss.replace(InfraBss::new(b"coolnet".to_vec(), false));
+        ap.bss.replace(
+            InfraBss::try_new(
+                &mut ap.ctx,
+                b"coolnet".to_vec(),
+                TimeUnit::DEFAULT_BEACON_INTERVAL,
+                vec![0b11111000],
+                1,
+                None,
+            )
+            .expect("expected InfraBss::try_new ok"),
+        );
         ap.bss.as_mut().unwrap().clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
 
         #[allow(deprecated)]

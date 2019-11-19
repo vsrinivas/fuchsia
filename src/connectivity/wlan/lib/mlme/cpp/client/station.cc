@@ -4,6 +4,7 @@
 
 #include <inttypes.h>
 #include <zircon/status.h>
+#include <zircon/types.h>
 
 #include <algorithm>
 #include <cstring>
@@ -78,6 +79,15 @@ Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config
       },
       .configure_bss = [](void* sta, wlan_bss_config_t* cfg) -> zx_status_t {
         return STA(sta)->device_->ConfigureBss(cfg);
+      },
+      .enable_beaconing = [](void* sta, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
+                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+        // The client never needs to enable beaconing.
+        return ZX_ERR_NOT_SUPPORTED;
+      },
+      .disable_beaconing = [](void* sta) -> zx_status_t {
+        // The client never needs to disable beaconing.
+        return ZX_ERR_NOT_SUPPORTED;
       },
   };
   wlan_scheduler_ops_t scheduler = {

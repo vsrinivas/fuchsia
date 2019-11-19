@@ -92,6 +92,16 @@ typedef struct {
    * |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
    */
   int32_t (*configure_bss)(void *device, wlan_bss_config_t *cfg);
+  /**
+   * Enable hardware offload of beaconing on the device.
+   */
+  int32_t (*enable_beaconing)(void *device, const uint8_t *beacon_tmpl_data,
+                              uintptr_t beacon_tmpl_len, uintptr_t tim_ele_offset,
+                              uint16_t beacon_interval);
+  /**
+   * Disable beaconing on the device.
+   */
+  int32_t (*disable_beaconing)(void *device);
 } mlme_device_ops_t;
 
 /**

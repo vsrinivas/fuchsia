@@ -8,6 +8,7 @@ use {
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
+    wlan_common::TimeUnit,
 };
 
 pub struct TxFlags(u32);
@@ -41,6 +42,16 @@ pub struct Device {
     /// Configure the device's BSS.
     /// |cfg| is mutable because the underlying API does not take a const wlan_bss_config_t.
     configure_bss: extern "C" fn(device: *mut c_void, cfg: *mut WlanBssConfig) -> i32,
+    /// Enable hardware offload of beaconing on the device.
+    enable_beaconing: extern "C" fn(
+        device: *mut c_void,
+        beacon_tmpl_data: *const u8,
+        beacon_tmpl_len: usize,
+        tim_ele_offset: usize,
+        beacon_interval: u16,
+    ) -> i32,
+    /// Disable beaconing on the device.
+    disable_beaconing: extern "C" fn(device: *mut c_void) -> i32,
 }
 
 impl Device {
@@ -92,6 +103,27 @@ impl Device {
         let status = (self.configure_bss)(self.device, &mut cfg as *mut WlanBssConfig);
         zx::ok(status)
     }
+
+    pub fn enable_beaconing(
+        &self,
+        beacon_tmpl: &[u8],
+        tim_ele_offset: usize,
+        beacon_interval: TimeUnit,
+    ) -> Result<(), zx::Status> {
+        let status = (self.enable_beaconing)(
+            self.device,
+            beacon_tmpl.as_ptr(),
+            beacon_tmpl.len(),
+            tim_ele_offset,
+            beacon_interval.into(),
+        );
+        zx::ok(status)
+    }
+
+    pub fn disable_beaconing(&self) -> Result<(), zx::Status> {
+        let status = (self.disable_beaconing)(self.device);
+        zx::ok(status)
+    }
 }
 
 #[cfg(test)]
@@ -102,6 +134,7 @@ pub struct FakeDevice {
     pub wlan_channel: WlanChannel,
     pub keys: Vec<key::KeyConfig>,
     pub bss_cfg: Option<WlanBssConfig>,
+    pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
 }
 
 #[cfg(test)]
@@ -119,6 +152,7 @@ impl FakeDevice {
             },
             keys: vec![],
             bss_cfg: None,
+            bcn_cfg: None,
         }
     }
 
@@ -179,6 +213,30 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
+    pub extern "C" fn enable_beaconing(
+        device: *mut c_void,
+        beacon_tmpl_data: *const u8,
+        beacon_tmpl_len: usize,
+        tim_ele_offset: usize,
+        beacon_interval: u16,
+    ) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).bcn_cfg = Some((
+                std::slice::from_raw_parts(beacon_tmpl_data, beacon_tmpl_len).to_vec(),
+                tim_ele_offset,
+                beacon_interval.into(),
+            ));
+        }
+        zx::sys::ZX_OK
+    }
+
+    pub extern "C" fn disable_beaconing(device: *mut c_void) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).bcn_cfg = None;
+        }
+        zx::sys::ZX_OK
+    }
+
     pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -210,6 +268,8 @@ impl FakeDevice {
             set_wlan_channel: Self::set_wlan_channel,
             set_key: Self::set_key,
             configure_bss: Self::configure_bss,
+            enable_beaconing: Self::enable_beaconing,
+            disable_beaconing: Self::disable_beaconing,
         }
     }
 
@@ -223,6 +283,8 @@ impl FakeDevice {
             get_wlan_channel: Self::get_wlan_channel,
             set_key: Self::set_key,
             configure_bss: Self::configure_bss,
+            enable_beaconing: Self::enable_beaconing,
+            disable_beaconing: Self::disable_beaconing,
         }
     }
 }
@@ -270,6 +332,8 @@ mod tests {
             set_wlan_channel: FakeDevice::set_wlan_channel,
             set_key: FakeDevice::set_key,
             configure_bss: FakeDevice::configure_bss,
+            enable_beaconing: FakeDevice::enable_beaconing,
+            disable_beaconing: FakeDevice::disable_beaconing,
         };
 
         let result = dev.access_sme_sender(|sender| {
@@ -358,5 +422,15 @@ mod tests {
         })
         .expect("error setting key");
         assert!(fake_device.bss_cfg.is_some());
+    }
+
+    #[test]
+    fn enable_disable_beaconing() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        dev.enable_beaconing(&[1, 2, 3, 4][..], 1, 2.into()).expect("error enabling beaconing");
+        assert!(fake_device.bcn_cfg.is_some());
+        dev.disable_beaconing().expect("error disabling beaconing");
+        assert!(fake_device.bcn_cfg.is_none());
     }
 }

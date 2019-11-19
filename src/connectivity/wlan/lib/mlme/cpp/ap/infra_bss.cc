@@ -64,6 +64,25 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
       .configure_bss = [](void* bss, wlan_bss_config_t* cfg) -> zx_status_t {
         return BSS(bss)->device_->ConfigureBss(cfg);
       },
+      .enable_beaconing = [](void* bss, const uint8_t* beacon_tmpl_data, size_t beacon_tmpl_len,
+                             size_t tim_ele_offset, uint16_t beacon_interval) -> zx_status_t {
+        wlan_bcn_config_t bcn_cfg = {
+            .tmpl =
+                {
+                    .packet_head =
+                        {
+                            .data_buffer = beacon_tmpl_data,
+                            .data_size = beacon_tmpl_len,
+                        },
+                },
+            .tim_ele_offset = tim_ele_offset,
+            .beacon_interval = beacon_interval,
+        };
+        return BSS(bss)->device_->EnableBeaconing(&bcn_cfg);
+      },
+      .disable_beaconing = [](void* bss) -> zx_status_t {
+        return BSS(bss)->device_->EnableBeaconing(nullptr);
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = this,
@@ -274,7 +293,6 @@ zx_status_t InfraBss::HandleTimeout() {
   zx_status_t status = timer_mgr_.HandleTimeout([&](auto _now, auto event, auto timeout_id) {
     std::visit([&](auto const& event) {
       using Event = std::decay_t<decltype(event)>;
-
       if constexpr (std::is_same_v<Event, common::MacAddr>) {
         if (auto client = GetClient(event)) {
           client->HandleTimeout(timeout_id);

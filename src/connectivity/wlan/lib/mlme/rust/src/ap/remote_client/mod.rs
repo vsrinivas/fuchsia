@@ -570,6 +570,7 @@ impl RemoteClient {
             FrameClass::Class3 => ReasonCode::INVALID_CLASS3FRAME,
         };
 
+        // Safe: |state| is never None and always replaced with Some(..).
         match self.state.as_ref() {
             State::Deauthenticated | State::Authenticating => {
                 ctx.send_deauth_frame(self.addr, reason_code)
