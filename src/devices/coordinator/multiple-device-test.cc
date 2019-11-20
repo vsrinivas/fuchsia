@@ -134,7 +134,6 @@ TEST_F(MultipleDeviceTestCase, SuspendFidlMexec) {
   ASSERT_FALSE(suspend_task_sys.is_pending());
 }
 
-// Disable the test as it is flaking fxb/37462. Lets repro with multiply.
 TEST_F(MultipleDeviceTestCase, SuspendFidlMexecFail) {
   ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
   set_coordinator_loop_thread_running(true);
@@ -366,4 +365,44 @@ TEST_F(MultipleDeviceTestCase, ResumeThenSuspend) {
   ASSERT_FALSE(DeviceHasPendingMessages(device(child_index)->controller_remote));
   ASSERT_EQ(device(parent_index)->device->state(), devmgr::Device::State::kActive);
   ASSERT_EQ(device(child_index)->device->state(), devmgr::Device::State::kActive);
+}
+
+TEST_F(MultipleDeviceTestCase, ResumeTimeout) {
+  ASSERT_OK(coordinator_loop()->StartThread("DevCoordLoop"));
+  set_coordinator_loop_thread_running(true);
+
+  async::Loop devhost_loop{&kAsyncLoopConfigNoAttachToCurrentThread};
+  ASSERT_OK(devhost_loop.StartThread("DevHostLoop"));
+
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+
+  bool resume_callback_executed = false;
+  zx::event resume_received_event;
+  zx::event::create(0, &resume_received_event);
+
+  devmgr::ResumeCallback callback = [&resume_callback_executed,
+                                     &resume_received_event](zx_status_t status) {
+    ASSERT_EQ(status, ZX_ERR_TIMED_OUT);
+    resume_callback_executed = true;
+    resume_received_event.signal(0, ZX_USER_SIGNAL_0);
+  };
+
+  ASSERT_NO_FATAL_FAILURES(
+      DoResume(SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, std::move(callback)));
+
+  // Dont reply for sys proxy resume. we should timeout
+  async::Wait resume_task_sys_proxy(
+      sys_proxy_controller_remote_.get(), ZX_CHANNEL_READABLE, 0,
+      [this](async_dispatcher_t*, async::Wait*, zx_status_t, const zx_packet_signal_t*) {
+        zx_txid_t txid;
+        ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+            sys_proxy_controller_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, &txid));
+      });
+  ASSERT_OK(resume_task_sys_proxy.Begin(devhost_loop.dispatcher()));
+
+  // Wait for the event that the callback sets, otherwise the test will quit.
+  resume_received_event.wait_one(ZX_USER_SIGNAL_0, zx::time(ZX_TIME_INFINITE), nullptr);
+  ASSERT_TRUE(resume_callback_executed);
 }

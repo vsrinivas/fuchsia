@@ -388,6 +388,7 @@ class Device : public fbl::RefCounted<Device>,
   fbl::RefPtr<SuspendTask> RequestSuspendTask(uint32_t suspend_flags);
 
   fbl::RefPtr<ResumeTask> GetActiveResume() { return active_resume_; }
+  void SetActiveResume(fbl::RefPtr<ResumeTask> resume_task) { active_resume_ = resume_task; }
 
   // Request Resume task
   fbl::RefPtr<ResumeTask> RequestResumeTask(uint32_t system_resume_state);

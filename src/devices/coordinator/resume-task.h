@@ -26,13 +26,13 @@ class ResumeTask final : public Task {
 
  private:
   void Run() final;
-  bool AddChildResumeTasks();
+  bool AddParentResumeTask();
+  bool AddProxyResumeTask();
 
   // The device being resumeed
   fbl::RefPtr<Device> device_;
   // Target system resume state
   uint32_t target_system_state_;
-  bool child_resume_tasks_not_issued_ = false;
 };
 
 }  // namespace devmgr

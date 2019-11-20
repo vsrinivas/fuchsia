@@ -229,11 +229,7 @@ fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
 }
 
 fbl::RefPtr<ResumeTask> Device::RequestResumeTask(uint32_t target_system_state) {
-  if (active_resume_) {
-    // We don't support different types of resumes concurrently, and
-    // shouldn't be able to reach this state.
-    ZX_ASSERT(target_system_state == active_resume_->target_system_state());
-  } else {
+  if (!active_resume_) {
     active_resume_ = ResumeTask::Create(fbl::RefPtr(this), target_system_state);
   }
   return active_resume_;

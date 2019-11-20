@@ -423,7 +423,9 @@ void MultipleDeviceTestCase::DoResume(
   }
 }
 
-void MultipleDeviceTestCase::DoResume(SystemPowerState target_state) {
-  DoResume(target_state,
-           [this](SystemPowerState target_state) { coordinator()->Resume(target_state); });
+void MultipleDeviceTestCase::DoResume(SystemPowerState target_state,
+                                      devmgr::ResumeCallback callback) {
+  DoResume(target_state, [this, callback = std::move(callback)](SystemPowerState target_state) {
+    coordinator()->Resume(target_state, callback);
+  });
 }

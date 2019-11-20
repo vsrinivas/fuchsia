@@ -84,17 +84,18 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
   }
 
   ASSERT_NO_FATAL_FAILURES(DoResume(target_state));
+  coordinator_loop()->RunUntilIdle();
 
   ASSERT_TRUE(DeviceHasPendingMessages(sys_proxy_controller_remote_));
   ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(sys_proxy_controller_remote_, target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_EQ(coordinator_.sys_device()->state(), devmgr::Device::State::kResumed);
+  ASSERT_EQ(coordinator_.sys_device()->state(), devmgr::Device::State::kActive);
 
   ASSERT_TRUE(DeviceHasPendingMessages(platform_bus_controller_remote()));
   ASSERT_NO_FATAL_FAILURES(
       CheckResumeReceived(platform_bus_controller_remote(), target_state, ZX_OK));
   coordinator_loop()->RunUntilIdle();
-  ASSERT_EQ(platform_bus()->state(), devmgr::Device::State::kResumed);
+  ASSERT_EQ(platform_bus()->state(), devmgr::Device::State::kActive);
 
   size_t num_to_resume = fbl::count_of(devices);
   while (num_to_resume > 0) {
@@ -111,13 +112,22 @@ void ResumeTestCase::ResumeTest(SystemPowerState target_state) {
       ASSERT_NO_FATAL_FAILURES(
           CheckResumeReceived(device(desc.index)->controller_remote, target_state, ZX_OK));
       coordinator_loop()->RunUntilIdle();
+
+      size_t parent_index = devices[i].parent_desc_index;
       // Make sure all descendants of this device are not resumed yet.
       // We just need to check immediate children since this will
       // recursively enforce that property.
       for (auto& other_desc : devices) {
-        if (other_desc.parent_desc_index == i) {
-          // if it has children, its state should be Resumed but not Active.
-          ASSERT_EQ(device(desc.index)->device->state(), devmgr::Device::State::kResumed);
+        if (parent_index == UINT32_MAX) {
+          // Make sure platform bus is resumed.
+          ASSERT_EQ(platform_bus()->state(), devmgr::Device::State::kActive);
+        } else if (other_desc.index == parent_index) {
+          // Make sure parent is resumed.
+          ASSERT_EQ(device(desc.index)->device->state(), devmgr::Device::State::kActive);
+          ASSERT_TRUE(other_desc.resumed);
+        } else if (other_desc.parent_desc_index == i) {
+          // if it has children, its state should be Suspended but not Active.
+          ASSERT_NE(device(other_desc.index)->device->state(), devmgr::Device::State::kActive);
           ASSERT_FALSE(other_desc.resumed);
         }
       }

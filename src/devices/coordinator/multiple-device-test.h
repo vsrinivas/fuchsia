@@ -49,7 +49,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void DoSuspend(uint32_t flags);
   void DoSuspend(uint32_t flags, fit::function<void(uint32_t)> suspend_cb);
 
-  void DoResume(SystemPowerState target_state);
+  void DoResume(
+      SystemPowerState target_state, devmgr::ResumeCallback callback = [](zx_status_t) {});
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
 
   void CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid);

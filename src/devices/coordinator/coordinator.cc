@@ -53,6 +53,7 @@
 #include "fdio.h"
 #include "fidl.h"
 #include "fidl_txn.h"
+#include "lib/zx/time.h"
 #include "log.h"
 #include "vmo-writer.h"
 
@@ -1331,33 +1332,66 @@ void Coordinator::Resume(ResumeContext ctx, std::function<void(zx_status_t)> cal
   }
 
   resume_context() = std::move(ctx);
+  for (auto& dev : devices_) {
+    auto completion = [this, &dev, callback](zx_status_t status) {
+      auto& ctx = resume_context();
+      if (status != ZX_OK) {
+        log(ERROR, "devcoordinator: failed to resume: %s\n", zx_status_get_string(status));
+        ctx.set_flags(devmgr::ResumeContext::Flags::kSuspended);
+        auto task = ctx.take_pending_task(dev);
+        callback(status);
+        return;
+      }
+      dev.clear_active_resume();
+      std::optional<fbl::RefPtr<ResumeTask>> task = ctx.take_pending_task(dev);
+      if (task.has_value()) {
+        ctx.push_completed_task(std::move(task.value()));
+      } else {
+        // Something went wrong
+        log(ERROR, "devcoordinator: failed to resume. Cant find matching pending task\n");
+        callback(ZX_ERR_INTERNAL);
+        return;
+      }
+      if (ctx.pending_tasks_is_empty()) {
+        async::PostTask(dispatcher(), [this, callback] {
+          resume_context().reset_completed_tasks();
+          callback(ZX_OK);
+        });
+      }
+    };
+    auto task = ResumeTask::Create(fbl::RefPtr(&dev),
+                                   static_cast<uint32_t>(resume_context().target_state()),
+                                   std::move(completion));
+    resume_context().push_pending_task(task);
+    dev.SetActiveResume(std::move(task));
+  }
 
-  auto completion = [this, callback](zx_status_t status) {
-    auto& ctx = resume_context();
-    if (status != ZX_OK) {
-      // do not continue to resume as this indicates a driver resume
-      // problem and should show as a bug.
-      log(ERROR, "devcoordinator: failed to resume: %s\n", zx_status_get_string(status));
-      ctx.set_flags(devmgr::ResumeContext::Flags::kSuspended);
-      callback(status);
-      return;
-    }
-    callback(status);
-  };
-
-  // We don't need to resume anything except sys_device and it's children,
-  // since we do not run suspend hooks for children of test or misc
-  auto task = ResumeTask::Create(sys_device(), static_cast<uint32_t>(ctx.target_state()),
-                                 std::move(completion));
-  resume_context().set_task(std::move(task));
+  // Post a delayed task in case drivers do not complete the resume.
+  auto status = async::PostDelayedTask(
+      dispatcher(),
+      [this, callback] {
+        if (!InResume()) {
+          return;
+        }
+        log(ERROR, "devcoordinator: SYSTEM RESUME TIMED OUT\n");
+        callback(ZX_ERR_TIMED_OUT);
+        // TODO(ravoorir): Figure out what is the best strategy of
+        // for recovery here. Should we put back all devices in
+        // suspend? In future, this could be more interactive with
+        // the UI.
+      },
+      config_.resume_timeout);
+  if (status != ZX_OK) {
+    log(ERROR, "devcoordinator: Failure to create resume timeout watchdog\n");
+  }
 }
 
 void Coordinator::Suspend(uint32_t flags) {
   Suspend(SuspendContext(SuspendContext::Flags::kSuspend, flags), [](zx_status_t) {});
 }
 
-void Coordinator::Resume(SystemPowerState target_state) {
-  Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), [](zx_status_t) {});
+void Coordinator::Resume(SystemPowerState target_state, ResumeCallback callback) {
+  Resume(ResumeContext(ResumeContext::Flags::kResume, target_state), std::move(callback));
 }
 
 std::unique_ptr<Driver> Coordinator::ValidateDriver(std::unique_ptr<Driver> drv) {

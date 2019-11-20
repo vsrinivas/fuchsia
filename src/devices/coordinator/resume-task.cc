@@ -4,17 +4,19 @@
 
 #include "resume-task.h"
 
+#include <zircon/errors.h>
+
 #include "coordinator.h"
 
 namespace devmgr {
 
 ResumeTask::ResumeTask(fbl::RefPtr<Device> device, uint32_t target_system_state,
                        Completion completion)
-    : Task(device->coordinator->dispatcher(), std::move(completion)),
+    : Task(device->coordinator->dispatcher(), std::move(completion), true),
       device_(std::move(device)),
       target_system_state_(target_system_state) {}
 
-ResumeTask::~ResumeTask() = default;
+ResumeTask::~ResumeTask(){};
 
 fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t target_system_state,
                                            Completion completion) {
@@ -22,33 +24,65 @@ fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t 
                                          std::move(completion));
 }
 
-bool ResumeTask::AddChildResumeTasks() {
-  bool found_more_dependencies = false;
-  child_resume_tasks_not_issued_ = false;
-  for (auto& child : device_->children()) {
-    // Use a switch statement here so that this gets reconsidered if we add
-    // more states.
-    switch (child.state()) {
-      // If the device is dead, any existing resume task would have been forcibly completed.
-      case Device::State::kDead:
-      case Device::State::kActive:
-        continue;
-      case Device::State::kUnbinding:
-      case Device::State::kSuspending:
-      case Device::State::kResuming:
-      case Device::State::kResumed:
-      case Device::State::kSuspended:
-        AddDependency(child.RequestResumeTask(target_system_state_));
-        found_more_dependencies = true;
-        break;
-    }
+bool ResumeTask::AddParentResumeTask() {
+  if (device_->parent() == nullptr) {
+    // TODO(fxb/38111) Composite devices also fail in this case.
+    // We need an iterator for a composite device to get all its components.
+    return false;
   }
-  return found_more_dependencies;
+
+  switch (device_->parent()->state()) {
+    case Device::State::kDead:
+      // If parent is dead, we cant resume the device.
+      // Complete this task.
+      Complete(ZX_ERR_NOT_CONNECTED);
+      return false;
+    case Device::State::kActive:
+      return false;
+    case Device::State::kUnbinding:
+    case Device::State::kSuspending:
+    case Device::State::kResuming:
+    case Device::State::kResumed:
+    case Device::State::kSuspended:
+      AddDependency(device_->parent()->RequestResumeTask(target_system_state_));
+      return true;
+  }
+  return false;
+}
+
+bool ResumeTask::AddProxyResumeTask() {
+  if (device_->flags & DEV_CTX_PROXY) {
+    return false;
+  }
+  if (device_->parent() == nullptr) {
+    return false;
+  }
+  if (device_->parent()->proxy() == nullptr) {
+    return false;
+  }
+  switch (device_->parent()->proxy()->state()) {
+    case Device::State::kDead:
+      // If parent is dead, we cant resume the device.
+      // Complete this task.
+      Complete(ZX_ERR_NOT_CONNECTED);
+      return false;
+    case Device::State::kActive:
+      return false;
+    case Device::State::kUnbinding:
+    case Device::State::kSuspending:
+    case Device::State::kResuming:
+    case Device::State::kResumed:
+    case Device::State::kSuspended:
+      AddDependency(device_->parent()->proxy()->RequestResumeTask(target_system_state_));
+      return true;
+  }
+  return false;
 }
 
 void ResumeTask::Run() {
   switch (device_->state()) {
     case Device::State::kDead:
+      return Complete(ZX_ERR_NOT_CONNECTED);
     case Device::State::kActive:
       return Complete(ZX_OK);
     case Device::State::kSuspending:
@@ -77,68 +111,39 @@ void ResumeTask::Run() {
     return;
   }
 
-  auto completion = [this](zx_status_t status) {
-    if (status != ZX_OK) {
-      return Complete(status);
-    }
-    // Handle the device proxy, if it exists, before children. They might
-    // depend on it.
-    if (device_->proxy() != nullptr) {
-      switch (device_->proxy()->state()) {
-        case Device::State::kDead:
-          // Proxy is dead. We cannot resume devices under. Complete with ZX_OK.
-          // We should not consider this error.
-          return Complete(ZX_OK);
-        case Device::State::kActive:
-          // Proxy is already active. Proceed to add resume tasks for children(if any).
-          break;
-        case Device::State::kSuspending:
-        case Device::State::kUnbinding:
-        case Device::State::kSuspended:
-        case Device::State::kResumed:
-        case Device::State::kResuming:
-          AddDependency(device_->proxy()->RequestResumeTask(target_system_state_));
-          child_resume_tasks_not_issued_ = true;
-          return;
-      }
-    }
-    if (AddChildResumeTasks()) {
-      return;
-    }
+  // Handle the device proxy, if it exists, before the parent
+  if (AddProxyResumeTask()) {
+    return;
+  }
 
+  // Add a dependent resume task on parent.
+  if (AddParentResumeTask()) {
+    return;
+  }
+  // Check if this device is not in a devhost.  This happens for the
+  // top-level devices like /sys provided by devcoordinator,
+  // or the device is already dead.
+  if (device_->host() == nullptr) {
+    // pretend this completed successfully.
     device_->set_state(Device::State::kActive);
-    device_->clear_active_resume();
     return Complete(ZX_OK);
+  }
+
+  auto completion = [this](zx_status_t status) {
+    if (status == ZX_OK) {
+      device_->set_state(Device::State::kActive);
+    } else {
+      device_->set_state(Device::State::kSuspended);
+    }
+    Complete(status);
+    return;
   };
 
-  if (device_->state() == Device::State::kSuspended) {
-    if (device_->host() == nullptr) {
-      // pretend this completed successfully.
-      device_->set_state(Device::State::kResumed);
-      child_resume_tasks_not_issued_ = true;
-      completion(ZX_OK);
-      return;
-    } else {
-      zx_status_t status = device_->SendResume(target_system_state_, std::move(completion));
-      if (status != ZX_OK) {
-        device_->clear_active_resume();
-        return Complete(status);
-      }
-    }
-  }
-
-  // This means this device's resume is complete and we need to handle the children.
-  if (device_->state() == Device::State::kResumed) {
-    if (child_resume_tasks_not_issued_) {
-      if (AddChildResumeTasks()) {
-        return;
-      }
-    }
-    // We have completed all dependencies. The children are all resumed successfully.
-    // If resume of any of the children failed, we would have completed with failure.
-    device_->set_state(Device::State::kActive);
-    device_->clear_active_resume();
-    Complete(ZX_OK);
+  zx_status_t status = device_->SendResume(target_system_state_, std::move(completion));
+  if (status != ZX_OK) {
+    device_->set_state(Device::State::kSuspended);
+    return Complete(status);
   }
 }
+
 }  // namespace devmgr

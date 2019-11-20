@@ -41,6 +41,8 @@ namespace devmgr {
 class DevhostLoaderService;
 class FsProvider;
 
+constexpr zx::duration kDefaultResumeTimeout = zx::sec(30);
+
 class SuspendContext {
  public:
   enum class Flags : uint32_t {
@@ -93,14 +95,33 @@ class ResumeContext {
 
   Flags flags() const { return flags_; }
   void set_flags(Flags flags) { flags_ = flags; }
-  void set_task(fbl::RefPtr<ResumeTask> task) { task_ = std::move(task); }
+  void push_pending_task(fbl::RefPtr<ResumeTask> task) {
+    pending_resume_tasks_.push_back(std::move(task));
+  }
+  void push_completed_task(fbl::RefPtr<ResumeTask> task) {
+    completed_resume_tasks_.push_back(std::move(task));
+  }
 
-  const ResumeTask& task() const { return *task_; }
+  bool pending_tasks_is_empty() { return pending_resume_tasks_.is_empty(); }
+  bool completed_tasks_is_empty() { return completed_resume_tasks_.is_empty(); }
+
+  std::optional<fbl::RefPtr<ResumeTask>> take_pending_task(devmgr::Device& dev) {
+    for (size_t i = 0; i < pending_resume_tasks_.size(); i++) {
+      if (&pending_resume_tasks_[i]->device() == &dev) {
+        auto task = pending_resume_tasks_.erase(i);
+        return std::move(task);
+      }
+    }
+    return {};
+  }
+
+  void reset_completed_tasks() { completed_resume_tasks_.reset(); }
 
   SystemPowerState target_state() const { return target_state_; }
 
  private:
-  fbl::RefPtr<ResumeTask> task_;
+  fbl::Vector<fbl::RefPtr<ResumeTask>> pending_resume_tasks_;
+  fbl::Vector<fbl::RefPtr<ResumeTask>> completed_resume_tasks_;
   SystemPowerState target_state_;
   Flags flags_ = Flags::kSuspended;
 };
@@ -148,11 +169,14 @@ struct CoordinatorConfig {
   bool asan_drivers;
   // Whether to reboot the device when suspend does not finish on time.
   bool suspend_fallback;
+  // Timeout for resume
+  zx::duration resume_timeout = kDefaultResumeTimeout;
   // Something to clone a handle from the environment to pass to a Devhost.
   FsProvider* fs_provider;
 };
 
 using LoaderServiceConnector = fit::function<zx_status_t(zx::channel*)>;
+using ResumeCallback = std::function<void(zx_status_t)>;
 
 class Coordinator {
  public:
@@ -272,7 +296,8 @@ class Coordinator {
   const fbl::RefPtr<Device>& test_device() { return test_device_; }
 
   void Suspend(uint32_t flags);
-  void Resume(SystemPowerState target_state);
+  void Resume(
+      SystemPowerState target_state, ResumeCallback callback = [](zx_status_t) {});
 
   SuspendContext& suspend_context() { return suspend_context_; }
   const SuspendContext& suspend_context() const { return suspend_context_; }
