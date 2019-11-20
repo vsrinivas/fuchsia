@@ -7,6 +7,7 @@
 #include <endian.h>
 
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <hw/sdmmc.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -46,8 +47,18 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 
     EXPECT_OK(dut_.ProbeMmc());
 
+    EXPECT_OK(dut_.AddDevice());
+
+    user_ = dut_.GetBlockClient(USER_DATA_PARTITION);
+    boot1_ = dut_.GetBlockClient(BOOT_PARTITION_1);
+    boot2_ = dut_.GetBlockClient(BOOT_PARTITION_2);
+
+    ASSERT_TRUE(user_.is_valid());
+    ASSERT_TRUE(boot1_.is_valid());
+    ASSERT_TRUE(boot2_.is_valid());
+
     block_info_t info;
-    dut_.BlockImplQuery(&info, &block_op_size_);
+    user_.Query(&info, &block_op_size_);
   }
 
   void TearDown() override { dut_.StopWorkerThread(); }
@@ -144,6 +155,9 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
   FakeSdmmcDevice sdmmc_;
   SdmmcBlockDevice dut_;
   size_t block_op_size_ = 0;
+  ddk::BlockImplProtocolClient user_;
+  ddk::BlockImplProtocolClient boot1_;
+  ddk::BlockImplProtocolClient boot2_;
 
  private:
   static constexpr uint8_t kTestData[] = {
@@ -162,15 +176,13 @@ class SdmmcBlockDeviceTest : public zxtest::Test {
 TEST_F(SdmmcBlockDeviceTest, BlockImplQuery) {
   size_t _;
   block_info_t info;
-  dut_.BlockImplQuery(&info, &_);
+  user_.Query(&info, &_);
 
   EXPECT_EQ(info.block_count, kBlockCount);
   EXPECT_EQ(info.block_size, FakeSdmmcDevice::kBlockSize);
 }
 
 TEST_F(SdmmcBlockDeviceTest, BlockImplQueue) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
 
@@ -193,11 +205,11 @@ TEST_F(SdmmcBlockDeviceTest, BlockImplQueue) {
   FillSdmmc(1, 0x400);
   FillSdmmc(10, 0x2000);
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -220,8 +232,6 @@ TEST_F(SdmmcBlockDeviceTest, BlockImplQueue) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, BlockImplQueueOutOfRange) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0x100000, &op1));
 
@@ -245,13 +255,13 @@ TEST_F(SdmmcBlockDeviceTest, BlockImplQueueOutOfRange) {
 
   CallbackContext ctx(7, block_op_size_);
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op6->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op7->operation(), OperationCallback, &ctx);
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op6->operation(), OperationCallback, &ctx);
+  user_.Queue(op7->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -273,8 +283,6 @@ TEST_F(SdmmcBlockDeviceTest, BlockImplQueueOutOfRange) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, MultiBlockACmd12) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   sdmmc_.set_host_info({
       .caps = SDMMC_HOST_CAP_AUTO_CMD12,
       .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
@@ -307,11 +315,11 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockACmd12) {
     EXPECT_TRUE(req->cmd_flags & SDMMC_CMD_AUTO12);
   });
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -320,8 +328,6 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockACmd12) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, MultiBlockNoACmd12) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   sdmmc_.set_host_info({
       .caps = 0,
       .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
@@ -354,11 +360,11 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockNoACmd12) {
     EXPECT_FALSE(req->cmd_flags & SDMMC_CMD_AUTO12);
   });
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -366,8 +372,6 @@ TEST_F(SdmmcBlockDeviceTest, MultiBlockNoACmd12) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, ErrorsPropagate) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op1));
 
@@ -388,11 +392,11 @@ TEST_F(SdmmcBlockDeviceTest, ErrorsPropagate) {
 
   CallbackContext ctx(5, block_op_size_);
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-  dut_.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
+  user_.Queue(op1->operation(), OperationCallback, &ctx);
+  user_.Queue(op2->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op4->operation(), OperationCallback, &ctx);
+  user_.Queue(op5->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -410,8 +414,6 @@ TEST_F(SdmmcBlockDeviceTest, ErrorsPropagate) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
-  EXPECT_OK(dut_.StartWorkerThread());
-
   sdmmc_.set_host_info({
       .caps = 0,
       .max_transfer_size = BLOCK_MAX_TRANSFER_UNBOUNDED,
@@ -424,7 +426,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op1));
   CallbackContext ctx1(1, block_op_size_);
 
-  dut_.BlockImplQueue(op1->operation(), OperationCallback, &ctx1);
+  user_.Queue(op1->operation(), OperationCallback, &ctx1);
 
   EXPECT_OK(sync_completion_wait(&ctx1.completion, zx::duration::infinite().get()));
   EXPECT_TRUE(op1->private_storage()->completed);
@@ -442,7 +444,7 @@ TEST_F(SdmmcBlockDeviceTest, SendCmd12OnCommandFailure) {
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, FakeSdmmcDevice::kBadRegionStart, &op2));
   CallbackContext ctx2(1, block_op_size_);
 
-  dut_.BlockImplQueue(op2->operation(), OperationCallback, &ctx2);
+  user_.Queue(op2->operation(), OperationCallback, &ctx2);
 
   EXPECT_OK(sync_completion_wait(&ctx2.completion, zx::duration::infinite().get()));
   EXPECT_TRUE(op2->private_storage()->completed);
@@ -466,7 +468,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
   dut.DdkUnbindDeprecated();
   dut.StopWorkerThread();
   ASSERT_NO_FATAL_FAILURES(ddk.Ok());
-  EXPECT_EQ(ddk.total_children(), 0);
+  EXPECT_EQ(ddk.total_children(), 1);
 }
 
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
@@ -486,7 +488,7 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
   dut.DdkUnbindDeprecated();
   dut.StopWorkerThread();
   ASSERT_NO_FATAL_FAILURES(ddk.Ok());
-  EXPECT_EQ(ddk.total_children(), 2);
+  EXPECT_EQ(ddk.total_children(), 3);
 }
 
 TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
@@ -509,12 +511,18 @@ TEST_F(SdmmcBlockDeviceTest, CompleteTransactions) {
 
   {
     SdmmcBlockDevice dut(nullptr, SdmmcDevice(sdmmc_.GetClient()));
+    EXPECT_OK(dut.AddDevice());
 
-    dut.BlockImplQueue(op1->operation(), OperationCallback, &ctx);
-    dut.BlockImplQueue(op2->operation(), OperationCallback, &ctx);
-    dut.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
-    dut.BlockImplQueue(op4->operation(), OperationCallback, &ctx);
-    dut.BlockImplQueue(op5->operation(), OperationCallback, &ctx);
+    fbl::AutoCall stop_threads([&]() { dut.StopWorkerThread(); });
+
+    ddk::BlockImplProtocolClient user = dut.GetBlockClient(USER_DATA_PARTITION);
+    ASSERT_TRUE(user.is_valid());
+
+    user.Queue(op1->operation(), OperationCallback, &ctx);
+    user.Queue(op2->operation(), OperationCallback, &ctx);
+    user.Queue(op3->operation(), OperationCallback, &ctx);
+    user.Queue(op4->operation(), OperationCallback, &ctx);
+    user.Queue(op5->operation(), OperationCallback, &ctx);
   }
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
@@ -561,18 +569,10 @@ TEST_F(SdmmcBlockDeviceTest, ProbeMmcSendStatusFail) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, QueryBootPartitions) {
-  EXPECT_OK(dut_.AddDevice());
-
-  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
-  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
-
-  ASSERT_TRUE(boot1.is_valid());
-  ASSERT_TRUE(boot2.is_valid());
-
   size_t boot1_op_size, boot2_op_size;
   block_info_t boot1_info, boot2_info;
-  boot1.Query(&boot1_info, &boot1_op_size);
-  boot2.Query(&boot2_info, &boot2_op_size);
+  boot1_.Query(&boot1_info, &boot1_op_size);
+  boot2_.Query(&boot2_info, &boot2_op_size);
 
   EXPECT_EQ(boot1_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
   EXPECT_EQ(boot2_info.block_count, (0x10 * 128'000) / FakeSdmmcDevice::kBlockSize);
@@ -585,14 +585,6 @@ TEST_F(SdmmcBlockDeviceTest, QueryBootPartitions) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
-  EXPECT_OK(dut_.AddDevice());
-
-  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
-  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
-
-  ASSERT_TRUE(boot1.is_valid());
-  ASSERT_TRUE(boot2.is_valid());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 0, &op1));
 
@@ -615,7 +607,7 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
     EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_1);
   });
 
-  boot1.Queue(op1->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op1->operation(), OperationCallback, &ctx);
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
   ctx.expected_operations = 1;
@@ -628,7 +620,7 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
     EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_2);
   });
 
-  boot2.Queue(op2->operation(), OperationCallback, &ctx);
+  boot2_.Queue(op2->operation(), OperationCallback, &ctx);
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
   ctx.expected_operations = 1;
@@ -641,7 +633,7 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
     EXPECT_EQ(value, 0xa8 | USER_DATA_PARTITION);
   });
 
-  dut_.BlockImplQueue(op3->operation(), OperationCallback, &ctx);
+  user_.Queue(op3->operation(), OperationCallback, &ctx);
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
   EXPECT_TRUE(op1->private_storage()->completed);
@@ -658,12 +650,6 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitions) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, BootPartitionRepeatedAccess) {
-  EXPECT_OK(dut_.AddDevice());
-
-  ddk::BlockImplProtocolClient boot2 = dut_.GetBootBlockClient(1);
-
-  ASSERT_TRUE(boot2.is_valid());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_READ, 1, 0, &op1));
 
@@ -686,7 +672,7 @@ TEST_F(SdmmcBlockDeviceTest, BootPartitionRepeatedAccess) {
     EXPECT_EQ(value, 0xa8 | BOOT_PARTITION_2);
   });
 
-  boot2.Queue(op1->operation(), OperationCallback, &ctx);
+  boot2_.Queue(op1->operation(), OperationCallback, &ctx);
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
   ctx.expected_operations = 2;
@@ -695,8 +681,8 @@ TEST_F(SdmmcBlockDeviceTest, BootPartitionRepeatedAccess) {
   // Repeated accesses to one partition should not generate more than one MMC_SWITCH command.
   sdmmc_.set_command_callback(MMC_SWITCH, [](sdmmc_req_t* req) { FAIL(); });
 
-  boot2.Queue(op2->operation(), OperationCallback, &ctx);
-  boot2.Queue(op3->operation(), OperationCallback, &ctx);
+  boot2_.Queue(op2->operation(), OperationCallback, &ctx);
+  boot2_.Queue(op3->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 
@@ -714,12 +700,6 @@ TEST_F(SdmmcBlockDeviceTest, BootPartitionRepeatedAccess) {
 }
 
 TEST_F(SdmmcBlockDeviceTest, AccessBootPartitionOutOfRange) {
-  EXPECT_OK(dut_.AddDevice());
-
-  ddk::BlockImplProtocolClient boot1 = dut_.GetBootBlockClient(0);
-
-  ASSERT_TRUE(boot1.is_valid());
-
   std::optional<block::Operation<OperationContext>> op1;
   ASSERT_NO_FATAL_FAILURES(MakeBlockOp(BLOCK_OP_WRITE, 1, 4000, &op1));
 
@@ -740,12 +720,12 @@ TEST_F(SdmmcBlockDeviceTest, AccessBootPartitionOutOfRange) {
 
   CallbackContext ctx(6, block_op_size_);
 
-  boot1.Queue(op1->operation(), OperationCallback, &ctx);
-  boot1.Queue(op2->operation(), OperationCallback, &ctx);
-  boot1.Queue(op3->operation(), OperationCallback, &ctx);
-  boot1.Queue(op4->operation(), OperationCallback, &ctx);
-  boot1.Queue(op5->operation(), OperationCallback, &ctx);
-  boot1.Queue(op6->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op1->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op2->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op3->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op4->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op5->operation(), OperationCallback, &ctx);
+  boot1_.Queue(op6->operation(), OperationCallback, &ctx);
 
   EXPECT_OK(sync_completion_wait(&ctx.completion, zx::duration::infinite().get()));
 

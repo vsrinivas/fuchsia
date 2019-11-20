@@ -27,17 +27,20 @@ constexpr uint32_t kBootSizeMultiplier = 128'000;
 
 namespace sdmmc {
 
-zx_status_t BootPartitionDevice::AddDevice() {
-  if (partition_ == BOOT_PARTITION_1) {
-    return DdkAdd("boot1");
-  } else if (partition_ == BOOT_PARTITION_2) {
-    return DdkAdd("boot2");
-  } else {
-    return ZX_ERR_NOT_SUPPORTED;
+zx_status_t PartitionDevice::AddDevice() {
+  switch (partition_) {
+    case USER_DATA_PARTITION:
+      return DdkAdd("user");
+    case BOOT_PARTITION_1:
+      return DdkAdd("boot1");
+    case BOOT_PARTITION_2:
+      return DdkAdd("boot2");
+    default:
+      return ZX_ERR_NOT_SUPPORTED;
   }
 }
 
-void BootPartitionDevice::DdkUnbindDeprecated() {
+void PartitionDevice::DdkUnbindDeprecated() {
   if (dead_) {
     return;
   }
@@ -45,16 +48,14 @@ void BootPartitionDevice::DdkUnbindDeprecated() {
   DdkRemoveDeprecated();
 }
 
-void BootPartitionDevice::DdkRelease() {
+void PartitionDevice::DdkRelease() {
   dead_ = true;
   __UNUSED bool dummy = Release();
 }
 
-zx_off_t BootPartitionDevice::DdkGetSize() {
-  return block_info_.block_count * block_info_.block_size;
-}
+zx_off_t PartitionDevice::DdkGetSize() { return block_info_.block_count * block_info_.block_size; }
 
-zx_status_t BootPartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
+zx_status_t PartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
   auto* proto = reinterpret_cast<ddk::AnyProtocol*>(out);
   switch (proto_id) {
     case ZX_PROTOCOL_BLOCK_IMPL: {
@@ -63,6 +64,10 @@ zx_status_t BootPartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
       return ZX_OK;
     }
     case ZX_PROTOCOL_BLOCK_PARTITION: {
+      if (partition_ == USER_DATA_PARTITION) {
+        return ZX_ERR_NOT_SUPPORTED;
+      }
+
       proto->ops = &block_partition_protocol_ops_;
       proto->ctx = this;
       return ZX_OK;
@@ -72,19 +77,21 @@ zx_status_t BootPartitionDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
   }
 }
 
-void BootPartitionDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+void PartitionDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
   memcpy(info_out, &block_info_, sizeof(*info_out));
   *block_op_size_out = BlockOperation::OperationSize(sizeof(block_op_t));
 }
 
-void BootPartitionDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
-                                         void* cookie) {
+void PartitionDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
+                                     void* cookie) {
   BlockOperation txn(btxn, completion_cb, cookie, sizeof(block_op_t));
   *txn.private_storage() = partition_;
-  sdmmc_parent_->BlockQueueInternal(std::move(txn));
+  sdmmc_parent_->Queue(std::move(txn));
 }
 
-zx_status_t BootPartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
+zx_status_t PartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
+  ZX_DEBUG_ASSERT(partition_ != USER_DATA_PARTITION);
+
   constexpr uint8_t kGuidEmmcBoot1Value[] = GUID_EMMC_BOOT1_VALUE;
   constexpr uint8_t kGuidEmmcBoot2Value[] = GUID_EMMC_BOOT2_VALUE;
 
@@ -103,7 +110,8 @@ zx_status_t BootPartitionDevice::BlockPartitionGetGuid(guidtype_t guid_type, gui
   }
 }
 
-zx_status_t BootPartitionDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
+zx_status_t PartitionDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
+  ZX_DEBUG_ASSERT(partition_ != USER_DATA_PARTITION);
   if (capacity <= strlen(name())) {
     return ZX_ERR_BUFFER_TOO_SMALL;
   }
@@ -126,14 +134,6 @@ zx_status_t SdmmcBlockDevice::Create(zx_device_t* parent, const SdmmcDevice& sdm
   return ZX_OK;
 }
 
-zx_status_t SdmmcBlockDevice::StartWorkerThread() {
-  int rc = thrd_create_with_name(
-      &worker_thread_,
-      [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
-      this, "sdmmc-block-worker");
-  return thrd_status_to_zx_status(rc);
-}
-
 zx_status_t SdmmcBlockDevice::AddDevice() {
   // Device must be in TRAN state at this point
   zx_status_t st = WaitForTran();
@@ -142,15 +142,31 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
     return ZX_ERR_TIMED_OUT;
   }
 
-  st = StartWorkerThread();
-  if (st != thrd_success) {
+  int rc = thrd_create_with_name(
+      &worker_thread_,
+      [](void* ctx) -> int { return reinterpret_cast<SdmmcBlockDevice*>(ctx)->WorkerThread(); },
+      this, "sdmmc-block-worker");
+  if (rc != thrd_success) {
     zxlogf(ERROR, "sdmmc: Failed to start worker thread, retcode = %d\n", st);
+    return thrd_status_to_zx_status(rc);
+  }
+
+  st = DdkAdd(is_sd_ ? "sdmmc-sd" : "sdmmc-mmc", DEVICE_ADD_NON_BINDABLE);
+  if (st != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: Failed to add block device, retcode = %d\n", st);
     return st;
   }
 
-  st = DdkAdd(is_sd_ ? "sdmmc-sd" : "sdmmc-mmc");
-  if (st != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: Failed to add block device, retcode = %d\n", st);
+  fbl::AllocChecker ac;
+  partitions_[USER_DATA_PARTITION] = fbl::MakeRefCountedChecked<PartitionDevice>(
+      &ac, zxdev(), this, block_info_, USER_DATA_PARTITION);
+  if (!ac.check()) {
+    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
+    return ZX_ERR_NO_MEMORY;
+  }
+
+  if ((st = partitions_[USER_DATA_PARTITION]->AddDevice()) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to add user partition device: %d\n", st);
     return st;
   }
 
@@ -170,32 +186,39 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
 
   fbl::AutoCall remove_device_on_error([&]() {
     if (!dead_) {
+      if (partitions_[USER_DATA_PARTITION]) {
+        partitions_[USER_DATA_PARTITION]->DdkRemoveDeprecated();
+        partitions_[USER_DATA_PARTITION].reset();
+      }
       DdkRemoveDeprecated();
     }
   });
 
-  fbl::AllocChecker ac;
-  boot_partitions_[0] = fbl::MakeRefCountedChecked<BootPartitionDevice>(
-      &ac, zxdev(), this, boot_info, BOOT_PARTITION_1);
+  partitions_[BOOT_PARTITION_1] =
+      fbl::MakeRefCountedChecked<PartitionDevice>(&ac, zxdev(), this, boot_info, BOOT_PARTITION_1);
   if (!ac.check()) {
     zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  boot_partitions_[1] = fbl::MakeRefCountedChecked<BootPartitionDevice>(
-      &ac, zxdev(), this, boot_info, BOOT_PARTITION_2);
+  partitions_[BOOT_PARTITION_2] =
+      fbl::MakeRefCountedChecked<PartitionDevice>(&ac, zxdev(), this, boot_info, BOOT_PARTITION_2);
   if (!ac.check()) {
     zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  if ((st = boot_partitions_[0]->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot device: %d\n", st);
+  if ((st = partitions_[BOOT_PARTITION_1]->AddDevice()) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d\n", st);
     return st;
   }
 
-  if ((st = boot_partitions_[1]->AddDevice()) != ZX_OK) {
-    zxlogf(ERROR, "sdmmc: failed to add boot device: %d\n", st);
+  if ((st = partitions_[BOOT_PARTITION_2]->AddDevice()) != ZX_OK) {
+    zxlogf(ERROR, "sdmmc: failed to add boot partition device: %d\n", st);
+    if (!dead_ && partitions_[BOOT_PARTITION_1]) {
+      partitions_[BOOT_PARTITION_1]->DdkRemoveDeprecated();
+      partitions_[BOOT_PARTITION_1].reset();
+    }
     return st;
   }
 
@@ -210,7 +233,7 @@ void SdmmcBlockDevice::DdkUnbindDeprecated() {
   }
   dead_ = true;
 
-  for (auto& partition : boot_partitions_) {
+  for (auto& partition : partitions_) {
     if (partition) {
       partition->DdkRemoveDeprecated();
       partition.reset();
@@ -387,21 +410,7 @@ void SdmmcBlockDevice::DoTxn(BlockOperation* txn) {
   zxlogf(TRACE, "sdmmc: do_txn complete\n");
 }
 
-zx_off_t SdmmcBlockDevice::DdkGetSize() { return block_info_.block_count * block_info_.block_size; }
-
-void SdmmcBlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
-  memcpy(info_out, &block_info_, sizeof(*info_out));
-  *block_op_size_out = BlockOperation::OperationSize(sizeof(block_op_t));
-}
-
-void SdmmcBlockDevice::BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb,
-                                      void* cookie) {
-  BlockOperation txn(btxn, completion_cb, cookie, sizeof(block_op_t));
-  *txn.private_storage() = USER_DATA_PARTITION;
-  BlockQueueInternal(std::move(txn));
-}
-
-void SdmmcBlockDevice::BlockQueueInternal(BlockOperation txn) {
+void SdmmcBlockDevice::Queue(BlockOperation txn) {
   trace_async_id_t async_id = async_id_;
   block_op_t* btxn = txn.operation();
 

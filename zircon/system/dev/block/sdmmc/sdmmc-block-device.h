@@ -29,25 +29,25 @@ enum EmmcPartition : uint8_t {
   USER_DATA_PARTITION = 0x0,
   BOOT_PARTITION_1 = 0x1,
   BOOT_PARTITION_2 = 0x2,
-  RPMB_PARTITION = 0x3,
+  PARTITION_COUNT,
 };
 
 using BlockOperation = block::BorrowedOperation<EmmcPartition>;
 
 class SdmmcBlockDevice;
-class BootPartitionDevice;
+class PartitionDevice;
 
-using BootPartitionDeviceType = ddk::Device<BootPartitionDevice, ddk::GetSizable,
-                                            ddk::GetProtocolable, ddk::UnbindableDeprecated>;
+using PartitionDeviceType =
+    ddk::Device<PartitionDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::UnbindableDeprecated>;
 
-class BootPartitionDevice : public BootPartitionDeviceType,
-                            public ddk::BlockImplProtocol<BootPartitionDevice, ddk::base_protocol>,
-                            public ddk::BlockPartitionProtocol<BootPartitionDevice>,
-                            public fbl::RefCounted<BootPartitionDevice> {
+class PartitionDevice : public PartitionDeviceType,
+                        public ddk::BlockImplProtocol<PartitionDevice, ddk::base_protocol>,
+                        public ddk::BlockPartitionProtocol<PartitionDevice>,
+                        public fbl::RefCounted<PartitionDevice> {
  public:
-  BootPartitionDevice(zx_device_t* parent, SdmmcBlockDevice* sdmmc_parent,
-                      const block_info_t& block_info, EmmcPartition partition)
-      : BootPartitionDeviceType(parent),
+  PartitionDevice(zx_device_t* parent, SdmmcBlockDevice* sdmmc_parent,
+                  const block_info_t& block_info, EmmcPartition partition)
+      : PartitionDeviceType(parent),
         sdmmc_parent_(sdmmc_parent),
         block_info_(block_info),
         partition_(partition) {}
@@ -74,12 +74,9 @@ class BootPartitionDevice : public BootPartitionDeviceType,
 };
 
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType =
-    ddk::Device<SdmmcBlockDevice, ddk::GetSizable, ddk::UnbindableDeprecated>;
+using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableDeprecated>;
 
-class SdmmcBlockDevice : public SdmmcBlockDeviceType,
-                         public ddk::BlockImplProtocol<SdmmcBlockDevice, ddk::base_protocol>,
-                         public fbl::RefCounted<SdmmcBlockDevice> {
+class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<SdmmcBlockDevice> {
  public:
   SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
       : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
@@ -98,33 +95,21 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   void DdkUnbindDeprecated();
   void DdkRelease();
 
-  zx_off_t DdkGetSize();
-
-  void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
-  void BlockImplQueue(block_op_t* btxn, block_impl_queue_callback completion_cb, void* cookie);
-
   // Called by children of this device.
-  void BlockQueueInternal(BlockOperation txn);
+  void Queue(BlockOperation txn);
 
   // Visible for testing.
   zx_status_t Init() { return sdmmc_.Init(); }
   zx_status_t StartWorkerThread();
   void StopWorkerThread();
 
-  ddk::BlockImplProtocolClient GetBootBlockClient(size_t index) {
+  ddk::BlockImplProtocolClient GetBlockClient(size_t index) {
     block_impl_protocol_t proto = {};
-    if (boot_partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_IMPL, &proto) == ZX_OK) {
+    if (partitions_[index] &&
+        partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_IMPL, &proto) == ZX_OK) {
       return ddk::BlockImplProtocolClient(&proto);
     }
     return ddk::BlockImplProtocolClient();
-  }
-
-  ddk::BlockPartitionProtocolClient GetBootPartitionClient(size_t index) {
-    block_partition_protocol_t proto = {};
-    if (boot_partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_PARTITION, &proto) == ZX_OK) {
-      return ddk::BlockPartitionProtocolClient(&proto);
-    }
-    return ddk::BlockPartitionProtocolClient();
   }
 
  private:
@@ -177,7 +162,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType,
   bool is_sd_ = false;
 
   uint64_t boot_partition_block_count_ = 0;
-  std::array<fbl::RefPtr<BootPartitionDevice>, 2> boot_partitions_;
+  std::array<fbl::RefPtr<PartitionDevice>, PARTITION_COUNT> partitions_;
   EmmcPartition current_partition_ = EmmcPartition::USER_DATA_PARTITION;
 };
 
