@@ -31,13 +31,22 @@ std::vector<std::string> AutocompleteCallback(const std::string& line) {
 class TestLineInput : public LineInputEditor {
  public:
   TestLineInput(const std::string& prompt)
-      : LineInputEditor([this](const std::string& s) { accept_ = s; }, prompt) {}
+      : LineInputEditor(
+            [this](const std::string& s) {
+              if (accept_goes_to_history_)
+                AddToHistory(s);
+              accept_ = s;
+            },
+            prompt) {}
 
   // The "accept" value is the result of the most recent callback issuance.
   const std::optional<std::string>& accept() const { return accept_; }
   void ClearAccept() { accept_ = std::nullopt; }
 
   void ClearOutput() { output_.clear(); }
+
+  // See variable below.
+  void set_accept_goes_to_history(bool a) { accept_goes_to_history_ = a; }
 
   std::string GetAndClearOutput() {
     std::string ret = output_;
@@ -68,6 +77,9 @@ class TestLineInput : public LineInputEditor {
  private:
   std::string output_;
 
+  // When set, the accept callback will automatically add the new line to history.
+  bool accept_goes_to_history_ = false;
+
   // The parameter from the most recent "accept" call, or none if not called.
   std::optional<std::string> accept_;
 };
@@ -77,7 +89,7 @@ TEST(LineInput, CursorCommands) {
   TestLineInput input(prompt);
 
   // Basic prompt. "7C" at the end means cursor is @ 7th character.
-  input.BeginReadLine();
+  input.Show();
   EXPECT_EQ("\rPrompt \x1b[0K\r\x1B[7C", input.GetAndClearOutput());
 
   // Basic input with enter.
@@ -87,9 +99,7 @@ TEST(LineInput, CursorCommands) {
   input.OnInput('\r');
   ASSERT_TRUE(input.accept());
   EXPECT_EQ("ab", *input.accept());
-  EXPECT_EQ("ab", input.GetLine());
 
-  input.BeginReadLine();
   EXPECT_FALSE(input.OnInputStr("abcd"));
   EXPECT_EQ(4u, input.pos());
 
@@ -135,8 +145,7 @@ TEST(LineInput, CursorCommands) {
 TEST(LineInput, CtrlD) {
   std::string prompt("Prompt ");
   TestLineInput input(prompt);
-
-  input.BeginReadLine();
+  input.Show();
 
   EXPECT_FALSE(input.OnInputStr("abcd"));
   // "abcd|"
@@ -184,19 +193,22 @@ TEST(LineInput, CtrlD) {
 
   // Ctrl+D on an empty line is exit.
 
+  bool got_eof = false;
+  input.SetEofCallback([&got_eof]() { got_eof = true; });
   input.OnInput(4);  // Ctrl+D
-  EXPECT_TRUE(input.IsEof());
+  EXPECT_TRUE(got_eof);
 }
 
 TEST(LineInput, History) {
   TestLineInput input("");
+  input.set_accept_goes_to_history(true);
+  input.Show();
 
   // Make some history.
-  input.AddToHistory("one");
-  input.AddToHistory("two");
+  input.OnInputStr("one\r");
+  input.OnInputStr("two\r");
 
   // Go up twice.
-  input.BeginReadLine();
   EXPECT_FALSE(input.OnInputStr(TERM_UP TERM_UP));
 
   // Should have selected the first line and the cursor should be at the end.
@@ -205,10 +217,8 @@ TEST(LineInput, History) {
 
   // Append a letter and accept it.
   input.OnInputStr("s\r");
-  input.AddToHistory(input.GetLine());
 
   // Start editing a new line with some input.
-  input.BeginReadLine();
   input.OnInputStr("three");
 
   // Check history. Should be:
@@ -259,7 +269,7 @@ TEST(LineInput, Completions) {
   TestLineInput input("");
   input.SetAutocompleteCallback(&AutocompleteCallback);
 
-  input.BeginReadLine();
+  input.Show();
   input.OnInput('z');
 
   // Send one tab, should get the first suggestion.
@@ -303,7 +313,7 @@ TEST(LineInput, Scroll) {
   TestLineInput input("ABCDE");
   input.SetMaxCols(10);
 
-  input.BeginReadLine();
+  input.Show();
   input.ClearOutput();
 
   // Write up to the 9th character, which should be the last character printed
@@ -324,7 +334,7 @@ TEST(LineInput, Scroll) {
 
 TEST(LineInput, NegAck) {
   TestLineInput input("ABCDE");
-  input.BeginReadLine();
+  input.Show();
 
   // Empty should remain with them prompt.
   input.OnInput(SpecialCharacters::kKeyControlU);
@@ -348,7 +358,7 @@ TEST(LineInput, NegAck) {
 
 TEST(LineInput, EndOfTransimission) {
   TestLineInput input("[prompt] ");
-  input.BeginReadLine();
+  input.Show();
 
   //             v
   input.SetLine("First Second Third");
@@ -394,7 +404,7 @@ TEST(LineInput, EndOfTransimission) {
 
 TEST(LineInput, Transpose) {
   TestLineInput input("[prompt] ");
-  input.BeginReadLine();
+  input.Show();
 
   //             v
   input.SetLine("First Second Third");
@@ -423,7 +433,7 @@ TEST(LineInput, Transpose) {
 
 TEST(LineInput, DeleteEnd) {
   TestLineInput input("[prompt] ");
-  input.BeginReadLine();
+  input.Show();
 
   //             v
   input.SetLine("First Second Third");
@@ -463,7 +473,7 @@ TEST(LineInput, DeleteEnd) {
 
 TEST(LineInput, CancelCommand) {
   TestLineInput input("[prompt] ");
-  input.BeginReadLine();
+  input.Show();
 
   //             v
   input.SetLine("First Second Third");
@@ -494,7 +504,7 @@ TEST(LineInput, ReverseHistory_Select) {
   input.AddToHistory("other prefix");     // Index 2.
   input.AddToHistory("different");        // Index 1.
 
-  input.BeginReadLine();
+  input.Show();
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
 
@@ -524,7 +534,7 @@ TEST(LineInput, ReverseHistory_SpecificSearch) {
   input.AddToHistory("other prefix");     // Index 2.
   input.AddToHistory("different");        // Index 1.
 
-  input.BeginReadLine();
+  input.Show();
 
   input.OnInput(SpecialCharacters::kKeyControlR);
   ASSERT_TRUE(input.in_reverse_history_mode());
@@ -588,7 +598,7 @@ TEST(LineInput, ReverseHistory_RepeatedSearch) {
   input.AddToHistory("other prefix");     // Index 2.
   input.AddToHistory("different");        // Index 1.
 
-  input.BeginReadLine();
+  input.Show();
   ASSERT_FALSE(input.in_reverse_history_mode());
 
   input.OnInput(SpecialCharacters::kKeyControlR);

@@ -57,6 +57,6 @@ void OptionsLineInputBase::HandleLine(const std::string& line, bool canceled) {
 // OptionsLineInputStdout --------------------------------------------------------------------------
 
 OptionsLineInputStdout::OptionsLineInputStdout(const std::string& prompt)
-    : LineInputStdout([this](const std::string& s) { HandleLine(s, IsEof()); }, prompt) {}
+    : LineInputStdout([this](const std::string& s) { HandleLine(s, false); }, prompt) {}
 
 }  // namespace line_input

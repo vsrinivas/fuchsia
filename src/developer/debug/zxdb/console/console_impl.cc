@@ -97,6 +97,12 @@ ConsoleImpl::ConsoleImpl(Session* session)
     return GetCommandCompletions(prefix, fill_command_context);
   });
 
+  // EOF (ctrl-d) should exit gracefully.
+  line_input_.SetEofCallback([this]() {
+    current_line_input_->Hide();
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+
   // Set stdin to async mode or OnStdinReadable will block.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
 
@@ -112,12 +118,12 @@ fxl::WeakPtr<ConsoleImpl> ConsoleImpl::GetImplWeakPtr() { return impl_weak_facto
 
 void ConsoleImpl::Init() {
   PreserveStdoutTermios();
-  line_input_.BeginReadLine();
 
   stdio_watch_ = debug_ipc::MessageLoop::Current()->WatchFD(
       debug_ipc::MessageLoop::WatchMode::kRead, STDIN_FILENO, this);
 
   LoadHistoryFile();
+  line_input_.Show();
 }
 
 void ConsoleImpl::LoadHistoryFile() {
@@ -196,24 +202,14 @@ void ConsoleImpl::OnLineInput(const std::string& line) {
   // Getting here means that there is a line to be processed. Options line input would've
   // triggered the callback by now, so the line is already handled. This means that there is no
   // need to actually process the line.
-  if (options_line_input_.is_active()) {
-    current_line_input_->BeginReadLine();
+  if (options_line_input_.is_active())
     return;
-  }
-
-  // EOF (ctrl-d) should exit gracefully.
-  if (current_line_input_->IsEof()) {
-    current_line_input_->EnsureNoRawMode();
-    Console::Output("\n");
-    debug_ipc::MessageLoop::Current()->QuitNow();
-    return;
-  }
 
   Result result = ProcessInputLine(line);
-  if (result == Result::kQuit)
+  if (result == Result::kQuit) {
+    current_line_input_->Hide();
     return;
-
-  current_line_input_->BeginReadLine();
+  }
 }
 
 Console::Result ConsoleImpl::DispatchInputLine(const std::string& line, CommandCallback callback) {

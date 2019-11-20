@@ -64,23 +64,15 @@ void LineInputEditor::SetAutocompleteCallback(AutocompleteCallback cb) {
   autocomplete_callback_ = std::move(cb);
 }
 
-void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
+void LineInputEditor::SetEofCallback(EofCallback cb) { eof_callback_ = std::move(cb); }
 
-bool LineInputEditor::IsEof() const { return eof_; }
+void LineInputEditor::SetMaxCols(size_t max) { max_cols_ = max; }
 
 const std::string& LineInputEditor::GetLine() const { return history_[history_index_]; }
 
 const std::deque<std::string>& LineInputEditor::GetHistory() const { return history_; }
 
-void LineInputEditor::BeginReadLine() {
-  FXL_DCHECK(!editing_);  // Two BeginReadLine calls with no enter input.
-
-  ResetLineState();
-  RepaintLine();
-}
-
 void LineInputEditor::OnInput(char c) {
-  FXL_DCHECK(editing_);  // BeginReadLine not called.
   FXL_DCHECK(visible_);  // Don't call while hidden.
 
   // Reverse history mode does its own input handling.
@@ -191,11 +183,9 @@ void LineInputEditor::AddToHistory(const std::string& line) {
 }
 
 void LineInputEditor::Hide() {
-  FXL_DCHECK(visible_);  // Hide() called more than once.
+  if (!visible_)
+    return;  // Already hidden.
   visible_ = false;
-
-  if (!editing_)
-    return;
 
   std::string cmd;
   cmd += SpecialCharacters::kTermBeginningOfLine;
@@ -206,10 +196,9 @@ void LineInputEditor::Hide() {
 }
 
 void LineInputEditor::Show() {
-  FXL_DCHECK(!visible_);  // Show() called more than once.
+  if (visible_)
+    return;  // Already shown.
   visible_ = true;
-  if (!editing_)
-    return;
   RepaintLine();
 }
 
@@ -292,9 +281,12 @@ void LineInputEditor::HandleEnter() {
   std::string new_line = cur_line();
   history_[0] = new_line;
   EnsureNoRawMode();
-  editing_ = false;
 
   accept_callback_(GetLine());
+
+  ResetLineState();
+  if (visible_)
+    RepaintLine();
 }
 
 void LineInputEditor::HandleTab() {
@@ -362,9 +354,13 @@ void LineInputEditor::HandleEndOfTransimission() {
 }
 
 void LineInputEditor::HandleEndOfFile() {
-  eof_ = true;
-  editing_ = false;
-  accept_callback_(std::string());
+  Write("\r\n");
+  if (eof_callback_)
+    eof_callback_();
+
+  ResetLineState();
+  if (visible_)
+    RepaintLine();
 }
 
 void LineInputEditor::HandleReverseHistory(char c) {
@@ -645,9 +641,7 @@ std::string LineInputEditor::GetReverseHistorySuggestion() const {
 }
 
 void LineInputEditor::ResetLineState() {
-  editing_ = true;
   pos_ = 0;
-  eof_ = false;
   history_index_ = 0;
   completion_mode_ = false;
 

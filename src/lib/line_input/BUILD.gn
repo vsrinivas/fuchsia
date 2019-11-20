@@ -39,6 +39,17 @@ if (current_toolchain == host_toolchain) {
       "//third_party/googletest:gtest",
     ]
   }
+
+  # Currently compiled for the host only, but could be packaged for the target if desired.
+  executable("line_input_example") {
+    sources = [
+      "line_input_example.cc",
+    ]
+
+    deps = [
+      ":line_input",
+    ]
+  }
 } else {
   executable("line_input_tests_bin") {
     testonly = true
@@ -70,6 +81,7 @@ group("tests") {
   testonly = true
 
   deps = [
+    ":line_input_example($host_toolchain)",
     ":line_input_tests",
     ":line_input_tests($host_toolchain)",
   ]
