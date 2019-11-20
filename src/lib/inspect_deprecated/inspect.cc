@@ -363,11 +363,12 @@ ChildrenCallback Node::CreateChildrenCallback(ChildrenCallbackFunction callback)
 
 fit::deferred_callback Node::SetChildrenManager(ChildrenManager* children_manager) {
   FX_CHECK(children_manager) << "children_manager must be non-null!";
-  FX_CHECK(object_.index() == kComponentVariant)
-      << "SetChildrenManager not yet implemented in VMO-world!";
-  auto object = object_.template get<kComponentVariant>().object();
-  object->SetChildrenManager(children_manager);
-  return fit::defer_callback([object] { object->SetChildrenManager(nullptr); });
+  if (object_.index() == kComponentVariant) {
+    auto object = object_.template get<kComponentVariant>().object();
+    object->SetChildrenManager(children_manager);
+    return fit::defer_callback([object] { object->SetChildrenManager(nullptr); });
+  }
+  return fit::defer_callback([] {});
 }
 
 const TreeSettings kDefaultTreeSettings = {.initial_size = 4096, .maximum_size = 256 * 1024};
