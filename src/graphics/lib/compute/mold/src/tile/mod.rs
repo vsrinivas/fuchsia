@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use std::{
-    cell::{Cell, RefCell},
+    cell::RefCell,
     collections::BTreeMap,
     mem,
     ops::{Index, IndexMut, Range},
@@ -27,6 +27,7 @@ pub(crate) mod painter;
 use painter::{Context, Painter};
 
 // TODO(dragostis): Remove in later CL.
+pub use crate::layer::Layer;
 pub use painter::{ColorBuffer, PixelFormat};
 
 pub(crate) const TILE_SIZE: usize = 32;
@@ -423,20 +424,6 @@ impl TileContour {
             Self::Tiles(tiles) => tiles.clone(),
             Self::Maxed => vec![],
         }
-    }
-}
-
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub struct Layer {
-    raster: Raster,
-    ops: Vec<TileOp>,
-    new_segments: Cell<bool>,
-    is_partial: Cell<bool>,
-}
-
-impl Layer {
-    pub fn new(raster: Raster, ops: Vec<TileOp>) -> Self {
-        Self { raster, ops, new_segments: Cell::new(true), is_partial: Cell::new(false) }
     }
 }
 
