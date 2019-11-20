@@ -23,10 +23,9 @@ ACPI_STATUS acpi_evaluate_integer(ACPI_HANDLE handle, const char* name, uint64_t
 }
 
 ACPI_STATUS acpi_evaluate_method_intarg(ACPI_HANDLE handle, const char* name, uint64_t arg) {
-  ACPI_OBJECT obj = {
-      .Integer.Type = ACPI_TYPE_INTEGER,
-      .Integer.Value = arg,
-  };
+  ACPI_OBJECT obj = {};
+  obj.Integer.Type = ACPI_TYPE_INTEGER;
+  obj.Integer.Value = arg;
   ACPI_OBJECT_LIST params = {
       .Count = 1,
       .Pointer = &obj,

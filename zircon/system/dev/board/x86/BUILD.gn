@@ -68,7 +68,7 @@ zx_driver("platform-bus-x86") {
     "power.c",
     "resources.c",
     "sysmem.cc",
-    "util.c",
+    "util.cc",
     "x86.cc",
     "x86.h",
   ]
