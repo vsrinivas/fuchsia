@@ -43,21 +43,3 @@ protocol Presentation {
     [Transitional]
     InjectPointerEventHACK(fuchsia.ui.input.PointerEvent event);
 };
-
-/// Screen modes that can be detected via sensor data.
-/// N.B. We use accelerometers to measure gravity when at rest, so detection is
-/// limited to earth-relative orientations.
-enum PresentationMode {
-    CLOSED = 0;
-    LAPTOP = 1;
-    TABLET = 2;
-    TENT = 3;
-};
-
-/// Tell client that the screen mode has changed, according to sensors.
-/// N.B. There can be a race where the actual mode continues to change, after
-/// the listener has been notified. The client must call GetPresentationMode(),
-/// which will return the latest detected mode.
-protocol PresentationModeListener {
-    OnModeChanged();
-};
