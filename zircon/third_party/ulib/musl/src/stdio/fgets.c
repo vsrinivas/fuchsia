@@ -22,15 +22,20 @@ char* fgets(char* restrict s, int n, FILE* restrict f) {
   }
 
   while (n) {
-    z = memchr(f->rpos, '\n', f->rend - f->rpos);
-    k = z ? z - f->rpos + 1 : f->rend - f->rpos;
-    k = MIN(k, n);
-    memcpy(p, f->rpos, k);
-    f->rpos += k;
-    p += k;
-    n -= k;
-    if (z || !n)
-      break;
+    if (f->rpos != f->rend) {
+      // The buffer is nonempty, drain it up to the newline.
+      // If the buffer doesn't contain a newline, then let
+      // getc_unlocked do the heavy lifting and keep trying.
+      z = memchr(f->rpos, '\n', f->rend - f->rpos);
+      k = z ? z - f->rpos + 1 : f->rend - f->rpos;
+      k = MIN(k, n);
+      memcpy(p, f->rpos, k);
+      f->rpos += k;
+      p += k;
+      n -= k;
+      if (z || !n)
+        break;
+    }
     if ((c = getc_unlocked(f)) < 0) {
       if (p == s || !feof(f))
         s = 0;
