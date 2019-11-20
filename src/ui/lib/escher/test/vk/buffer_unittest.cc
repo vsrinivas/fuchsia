@@ -34,17 +34,25 @@ VK_TEST_F(BufferTest, CreateWithPreExistingMemory) {
   // that we can test creating a buffer with pre-existing memory.
   auto mem1 = allocator->AllocateMemory(reqs, kMemoryPropertyFlags);
 
-  // Suballocate some memory.
+  // Suballocate some memory. But before sub-allocation, we need to get the
+  // memory requirements of the "smaller" buffer as well.
   constexpr vk::DeviceSize kBufferSize = 1000;
   constexpr vk::DeviceSize kOffset = 512;
-  auto mem2 = mem1->Suballocate(kBufferSize, kOffset);
+  auto dummy_buffer_2 =
+      allocator->AllocateBuffer(recycler, kBufferSize, kBufferUsageFlags, kMemoryPropertyFlags);
+  vk::MemoryRequirements reqs_2 =
+      escher->vk_device().getBufferMemoryRequirements(dummy_buffer_2->vk());
+  vk::DeviceSize sub_alloc_size = reqs_2.size;
+  auto mem2 = mem1->Suballocate(sub_alloc_size, kOffset);
   EXPECT_EQ(mem1->mapped_ptr() + kOffset, mem2->mapped_ptr());
 
   // Allocate 2 buffers, one from the original allocation, and one from the
   // sub-allocation.
   auto buf1 = impl::NaiveBuffer::New(recycler, mem1, kBufferUsageFlags);
   auto buf2 = impl::NaiveBuffer::New(recycler, mem2, kBufferUsageFlags);
+  ASSERT_TRUE(buf1);
   EXPECT_EQ(mem1->mapped_ptr(), buf1->host_ptr());
+  ASSERT_TRUE(buf2);
   EXPECT_EQ(mem2->mapped_ptr(), buf2->host_ptr());
 }
 
