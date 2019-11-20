@@ -134,6 +134,21 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
 
+#define WRITE_ABORTED_TEST_CONTENT(errno, expected)                                                \
+  PerformAbortedTest("zx_channel_write@plt",                                                       \
+                     ZxChannelWrite(errno, #errno, kHandle, 0, data().bytes(), data().num_bytes(), \
+                                    data().handles(), data().num_handles()),                       \
+                     expected)
+
+#define WRITE_ABORTED_TEST(name, errno, expected)    \
+  TEST_F(InterceptionWorkflowTestX64Aborted, name) { \
+    WRITE_ABORTED_TEST_CONTENT(errno, expected);     \
+  }                                                  \
+  TEST_F(InterceptionWorkflowTestArmAborted, name) { WRITE_ABORTED_TEST_CONTENT(errno, expected); }
+
+WRITE_ABORTED_TEST(ZxChannelWriteAborted, ZX_OK,
+                   "\x1B[32m\nStop monitoring process with koid \x1B[31m3141\x1B[0m\n");
+
 // zx_channel_read tests.
 
 std::unique_ptr<SystemCallTest> ZxChannelRead(int64_t result, std::string_view result_name,

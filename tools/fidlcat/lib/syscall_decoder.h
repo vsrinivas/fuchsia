@@ -119,11 +119,12 @@ class SyscallDecoderBuffer {
 class SyscallDecoder {
  public:
   SyscallDecoder(SyscallDecoderDispatcher* dispatcher, InterceptingThreadObserver* thread_observer,
-                 zxdb::Thread* thread, uint64_t thread_id, const Syscall* syscall,
-                 std::unique_ptr<SyscallUse> use)
+                 zxdb::Thread* thread, uint64_t process_id, uint64_t thread_id,
+                 const Syscall* syscall, std::unique_ptr<SyscallUse> use)
       : dispatcher_(dispatcher),
         thread_observer_(thread_observer),
         thread_(thread->GetWeakPtr()),
+        process_id_(process_id),
         thread_id_(thread_id),
         syscall_(syscall),
         arch_(thread->session()->arch()),
@@ -131,14 +132,24 @@ class SyscallDecoder {
 
   SyscallDecoderDispatcher* dispatcher() const { return dispatcher_; }
   zxdb::Thread* thread() const { return thread_.get(); }
+  uint64_t process_id() const { return process_id_; }
   uint64_t thread_id() const { return thread_id_; }
   const Syscall* syscall() const { return syscall_; }
   debug_ipc::Arch arch() const { return arch_; }
   const std::vector<zxdb::Location>& caller_locations() const { return caller_locations_; }
   uint64_t return_address() const { return return_address_; }
   uint64_t syscall_return_value() const { return syscall_return_value_; }
+  int pending_request_count() const { return pending_request_count_; }
 
-  std::stringstream& Error(DecoderError::Type type) { return error_.Set(type); }
+  // True if the decoder has been aborted. That means that the process for this decoder
+  // terminated but we have still some pending requests.
+  bool aborted() const { return aborted_; }
+  void set_aborted() { aborted_ = true; }
+
+  std::stringstream& Error(DecoderError::Type type) {
+    aborted_ = true;
+    return error_.Set(type);
+  }
 
   // Load the value for a buffer or a struct (field or argument).
   void LoadMemory(uint64_t address, size_t size, std::vector<uint8_t>* destination);
@@ -233,6 +244,7 @@ class SyscallDecoder {
   SyscallDecoderDispatcher* const dispatcher_;
   InterceptingThreadObserver* const thread_observer_;
   const fxl::WeakPtr<zxdb::Thread> thread_;
+  const uint64_t process_id_;
   const uint64_t thread_id_;
   const Syscall* const syscall_;
   const debug_ipc::Arch arch_;
@@ -245,6 +257,7 @@ class SyscallDecoder {
   uint64_t syscall_return_value_ = 0;
   int pending_request_count_ = 0;
   bool input_arguments_loaded_ = false;
+  bool aborted_ = false;
   DecoderError error_;
 };
 

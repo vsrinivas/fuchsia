@@ -82,19 +82,25 @@ void SyscallDecoder::LoadMemory(uint64_t address, size_t size, std::vector<uint8
       address, size,
       [this, address, size, destination](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
-        if (!err.ok()) {
-          Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load memory at " << address << ": " << err.msg();
-        } else if ((dump.size() != size) || !dump.AllValid()) {
-          Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load memory at " << address << ": not enough data";
+        if (aborted()) {
+          if (pending_request_count_ == 0) {
+            Destroy();
+          }
         } else {
-          MemoryDumpToVector(dump, destination);
-        }
-        if (input_arguments_loaded_) {
-          LoadOutputs();
-        } else {
-          LoadInputs();
+          if (!err.ok()) {
+            Error(DecoderError::Type::kCantReadMemory)
+                << "Can't load memory at " << address << ": " << err.msg();
+          } else if ((dump.size() != size) || !dump.AllValid()) {
+            Error(DecoderError::Type::kCantReadMemory)
+                << "Can't load memory at " << address << ": not enough data";
+          } else {
+            MemoryDumpToVector(dump, destination);
+          }
+          if (input_arguments_loaded_) {
+            LoadOutputs();
+          } else {
+            LoadInputs();
+          }
         }
       });
 }
@@ -121,6 +127,10 @@ void SyscallDecoder::LoadBuffer(Stage stage, uint64_t address, size_t size) {
 }
 
 void SyscallDecoder::Decode() {
+  if (aborted_) {
+    Destroy();
+    return;
+  }
   if (dispatcher_->decode_options().stack_level >= kFullStack) {
     thread_->GetStack().SyncFrames([this](const zxdb::Err& /*err*/) { DoDecode(); });
   } else {
@@ -129,6 +139,10 @@ void SyscallDecoder::Decode() {
 }
 
 void SyscallDecoder::DoDecode() {
+  if (aborted_) {
+    Destroy();
+    return;
+  }
   const zxdb::Stack& stack = thread_->GetStack();
   // Don't keep the inner frame which is the syscall and is not useful.
   for (size_t i = stack.size() - 1; i > 0; --i) {
@@ -164,7 +178,9 @@ void SyscallDecoder::DoDecode() {
     return_address_ = GetRegisterValue(*general_registers, debug_ipc::RegisterID::kARMv8_lr);
   } else {
     Error(DecoderError::Type::kUnknownArchitecture) << "Unknown architecture";
-    use_->SyscallDecodingError(error_, this);
+    if (pending_request_count_ == 0) {
+      use_->SyscallDecodingError(error_, this);
+    }
     return;
   }
 
@@ -179,6 +195,10 @@ void SyscallDecoder::DoDecode() {
 }
 
 void SyscallDecoder::LoadStack() {
+  if (aborted_) {
+    Destroy();
+    return;
+  }
   size_t stack_size = (syscall_->arguments().size() - decoded_arguments_.size()) * sizeof(uint64_t);
   if (arch_ == debug_ipc::Arch::kX64) {
     stack_size += sizeof(uint64_t);
@@ -193,26 +213,32 @@ void SyscallDecoder::LoadStack() {
       address, stack_size,
       [this, address, stack_size](const zxdb::Err& err, zxdb::MemoryDump dump) {
         --pending_request_count_;
-        if (!err.ok()) {
-          Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load stack at " << address << '/' << stack_size << ": " << err.msg();
-        } else if ((dump.size() != stack_size) || !dump.AllValid()) {
-          Error(DecoderError::Type::kCantReadMemory)
-              << "Can't load stack at " << address << '/' << stack_size << ": not enough data";
+        if (aborted()) {
+          if (pending_request_count_ == 0) {
+            Destroy();
+          }
         } else {
-          std::vector<uint8_t> data;
-          MemoryDumpToVector(dump, &data);
-          size_t offset = 0;
-          if (arch_ == debug_ipc::Arch::kX64) {
-            return_address_ = GetValueFromBytes<uint64_t>(data, 0);
-            offset += sizeof(uint64_t);
+          if (!err.ok()) {
+            Error(DecoderError::Type::kCantReadMemory)
+                << "Can't load stack at " << address << '/' << stack_size << ": " << err.msg();
+          } else if ((dump.size() != stack_size) || !dump.AllValid()) {
+            Error(DecoderError::Type::kCantReadMemory)
+                << "Can't load stack at " << address << '/' << stack_size << ": not enough data";
+          } else {
+            std::vector<uint8_t> data;
+            MemoryDumpToVector(dump, &data);
+            size_t offset = 0;
+            if (arch_ == debug_ipc::Arch::kX64) {
+              return_address_ = GetValueFromBytes<uint64_t>(data, 0);
+              offset += sizeof(uint64_t);
+            }
+            while (offset < data.size()) {
+              decoded_arguments_.emplace_back(GetValueFromBytes<uint64_t>(data, offset));
+              offset += sizeof(uint64_t);
+            }
           }
-          while (offset < data.size()) {
-            decoded_arguments_.emplace_back(GetValueFromBytes<uint64_t>(data, offset));
-            offset += sizeof(uint64_t);
-          }
+          LoadInputs();
         }
-        LoadInputs();
       });
 }
 

@@ -48,6 +48,8 @@ constexpr uint64_t kKoid2 = 5242;
 constexpr zx_futex_t kFutex = 56789;
 constexpr zx_futex_t kFutex2 = 98765;
 
+extern SyscallDecoderDispatcher* global_dispatcher;
+
 class SystemCallTest {
  public:
   SystemCallTest(const char* name, int64_t result, std::string_view result_name)
@@ -235,7 +237,7 @@ class DataForSyscallTest {
 // Provides the infrastructure needed to provide the data above.
 class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
  public:
-  explicit InterceptionRemoteAPI(DataForSyscallTest& data) : data_(data) {}
+  InterceptionRemoteAPI(DataForSyscallTest& data, bool aborted) : data_(data), aborted_(aborted) {}
 
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
@@ -260,6 +262,10 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
 
   void ReadMemory(const debug_ipc::ReadMemoryRequest& request,
                   fit::callback<void(const zxdb::Err&, debug_ipc::ReadMemoryReply)> cb) override {
+    if (aborted_) {
+      aborted_ = false;
+      global_dispatcher->StopMonitoring(kFirstPid);
+    }
     debug_ipc::ReadMemoryReply reply;
     data_.PopulateMemoryBlockForAddress(request.address, request.size, reply.blocks.emplace_back());
     debug_ipc::MessageLoop::Current()->PostTask(
@@ -299,11 +305,12 @@ class InterceptionRemoteAPI : public zxdb::MockRemoteAPI {
  private:
   std::map<uint32_t, debug_ipc::BreakpointSettings> breakpoints_;
   DataForSyscallTest& data_;
+  bool aborted_;
 };
 
 class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
  public:
-  explicit InterceptionWorkflowTest(debug_ipc::Arch arch) : data_(arch) {
+  InterceptionWorkflowTest(debug_ipc::Arch arch, bool aborted) : data_(arch), aborted_(aborted) {
     display_options_.pretty_print = true;
     display_options_.columns = 132;
     display_options_.needs_colors = true;
@@ -313,7 +320,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
   InterceptionRemoteAPI& mock_remote_api() { return *mock_remote_api_; }
 
   std::unique_ptr<zxdb::RemoteAPI> GetRemoteAPIImpl() override {
-    auto remote_api = std::make_unique<InterceptionRemoteAPI>(data_);
+    auto remote_api = std::make_unique<InterceptionRemoteAPI>(data_, aborted_);
     mock_remote_api_ = remote_api.get();
     return std::move(remote_api);
   }
@@ -344,6 +351,9 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher, bool interleaved_test,
                    bool multi_thread);
 
+  void PerformAbortedTest(const char* syscall_name, std::unique_ptr<SystemCallTest> syscall,
+                          const char* expected);
+
   void SimulateSyscall(std::unique_ptr<SystemCallTest> syscall, ProcessController* controller,
                        bool interleaved_test, bool multi_thread);
   std::vector<std::unique_ptr<zxdb::Frame>> FillBreakpoint(debug_ipc::NotifyException* notification,
@@ -362,6 +372,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
  protected:
   DataForSyscallTest data_;
+  bool aborted_;
   InterceptionRemoteAPI* mock_remote_api_;  // Owned by the session.
   DecodeOptions decode_options_;
   DisplayOptions display_options_;
@@ -373,7 +384,7 @@ class InterceptionWorkflowTest : public zxdb::RemoteAPITest {
 
 class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
  public:
-  InterceptionWorkflowTestX64() : InterceptionWorkflowTest(GetArch()) {}
+  InterceptionWorkflowTestX64() : InterceptionWorkflowTest(GetArch(), false) {}
   ~InterceptionWorkflowTestX64() override = default;
 
   virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kX64; }
@@ -381,8 +392,24 @@ class InterceptionWorkflowTestX64 : public InterceptionWorkflowTest {
 
 class InterceptionWorkflowTestArm : public InterceptionWorkflowTest {
  public:
-  InterceptionWorkflowTestArm() : InterceptionWorkflowTest(GetArch()) {}
+  InterceptionWorkflowTestArm() : InterceptionWorkflowTest(GetArch(), false) {}
   ~InterceptionWorkflowTestArm() override = default;
+
+  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kArm64; }
+};
+
+class InterceptionWorkflowTestX64Aborted : public InterceptionWorkflowTest {
+ public:
+  InterceptionWorkflowTestX64Aborted() : InterceptionWorkflowTest(GetArch(), true) {}
+  ~InterceptionWorkflowTestX64Aborted() override = default;
+
+  virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kX64; }
+};
+
+class InterceptionWorkflowTestArmAborted : public InterceptionWorkflowTest {
+ public:
+  InterceptionWorkflowTestArmAborted() : InterceptionWorkflowTest(GetArch(), true) {}
+  ~InterceptionWorkflowTestArmAborted() override = default;
 
   virtual debug_ipc::Arch GetArch() const override { return debug_ipc::Arch::kArm64; }
 };
@@ -516,10 +543,11 @@ class SyscallDecoderDispatcherTest : public SyscallDecoderDispatcher {
       : SyscallDecoderDispatcher(decode_options), controller_(controller) {}
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, uint64_t thread_id,
+                                                zxdb::Thread* thread, uint64_t process_id,
+                                                uint64_t thread_id,
                                                 const Syscall* syscall) override {
-    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, thread_id, syscall,
-                                            std::make_unique<SyscallCheck>(controller_));
+    return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
+                                            syscall, std::make_unique<SyscallCheck>(controller_));
   }
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,
@@ -547,9 +575,10 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   SyscallDisplayDispatcherTest(fidl_codec::LibraryLoader* loader,
                                const DecodeOptions& decode_options,
                                const DisplayOptions& display_options, std::ostream& os,
-                               ProcessController* controller)
+                               ProcessController* controller, bool aborted)
       : SyscallDisplayDispatcher(loader, decode_options, display_options, os),
-        controller_(controller) {}
+        controller_(controller),
+        aborted_(aborted) {}
 
   ProcessController* controller() const { return controller_; }
 
@@ -568,10 +597,15 @@ class SyscallDisplayDispatcherTest : public SyscallDisplayDispatcher {
   void ProcessMonitored(std::string_view name, zx_koid_t koid,
                         std::string_view error_message) override {}
 
-  void StopMonitoring(zx_koid_t koid) override {}
+  void StopMonitoring(zx_koid_t koid) override {
+    if (aborted_) {
+      SyscallDisplayDispatcher::StopMonitoring(koid);
+    }
+  }
 
  private:
   ProcessController* controller_;
+  bool aborted_;
 };
 
 }  // namespace fidlcat

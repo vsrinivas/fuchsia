@@ -1455,7 +1455,8 @@ class SyscallDecoderDispatcher {
 
   // Create the object which will decode the syscall.
   virtual std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                        zxdb::Thread* thread, uint64_t thread_id,
+                                                        zxdb::Thread* thread, uint64_t process_id,
+                                                        uint64_t thread_id,
                                                         const Syscall* syscall) = 0;
 
   // Delete a decoder created by DecodeSyscall. Called when the syscall is
@@ -1481,7 +1482,7 @@ class SyscallDecoderDispatcher {
                                 std::string_view error_message) {}
 
   // Called when a process is no longer monitored.
-  virtual void StopMonitoring(zx_koid_t koid) {}
+  virtual void StopMonitoring(zx_koid_t koid);
 
  private:
   // Feeds syscalls_ with all the syscalls we can decode.
@@ -1557,7 +1558,8 @@ class SyscallDisplayDispatcher : public SyscallDecoderDispatcher {
   }
 
   std::unique_ptr<SyscallDecoder> CreateDecoder(InterceptingThreadObserver* thread_observer,
-                                                zxdb::Thread* thread, uint64_t thread_id,
+                                                zxdb::Thread* thread, uint64_t process_id,
+                                                uint64_t thread_id,
                                                 const Syscall* syscall) override;
 
   std::unique_ptr<ExceptionDecoder> CreateDecoder(InterceptionWorkflow* workflow,

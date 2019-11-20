@@ -34,6 +34,8 @@ static std::vector<debug_ipc::RegisterID> amd64_regs = {
     debug_ipc::RegisterID::kX64_rdx, debug_ipc::RegisterID::kX64_rcx,
     debug_ipc::RegisterID::kX64_r8,  debug_ipc::RegisterID::kX64_r9};
 
+SyscallDecoderDispatcher* global_dispatcher = nullptr;
+
 DataForSyscallTest::DataForSyscallTest(debug_ipc::Arch arch) : arch_(arch) {
   param_regs_ = (arch_ == debug_ipc::Arch::kArm64) ? &aarch64_regs : &amd64_regs;
   header_.txid = kTxId;
@@ -69,7 +71,7 @@ void InterceptionWorkflowTest::PerformDisplayTest(const char* syscall_name,
 
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  nullptr, decode_options_, display_options_, result_, &controller),
+                  nullptr, decode_options_, display_options_, result_, &controller, aborted_),
               /*interleaved_test=*/false, /*multi_thread=*/true);
   std::string both_results = result_.str();
   // The second output starts with "test_2718"
@@ -117,7 +119,7 @@ void InterceptionWorkflowTest::PerformOneThreadDisplayTest(const char* syscall_n
 
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  nullptr, decode_options_, display_options_, result_, &controller),
+                  nullptr, decode_options_, display_options_, result_, &controller, aborted_),
               /*interleaved_test=*/false, /*multi_thread=*/false);
   ASSERT_EQ(expected, result_.str());
 }
@@ -128,7 +130,7 @@ void InterceptionWorkflowTest::PerformInterleavedDisplayTest(
 
   PerformTest(syscall_name, std::move(syscall), nullptr, &controller,
               std::make_unique<SyscallDisplayDispatcherTest>(
-                  nullptr, decode_options_, display_options_, result_, &controller),
+                  nullptr, decode_options_, display_options_, result_, &controller, aborted_),
               /*interleaved_test=*/true, /*multi_thread=*/true);
   ASSERT_EQ(expected, result_.str());
 }
@@ -137,10 +139,11 @@ void InterceptionWorkflowTest::PerformNoReturnDisplayTest(const char* syscall_na
                                                           std::unique_ptr<SystemCallTest> syscall,
                                                           const char* expected) {
   ProcessController controller(this, session(), loop());
-  controller.Initialize(session(),
-                        std::make_unique<SyscallDisplayDispatcherTest>(
-                            nullptr, decode_options_, display_options_, result_, &controller),
-                        syscall_name);
+  controller.Initialize(
+      session(),
+      std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_,
+                                                     result_, &controller, aborted_),
+      syscall_name);
 
   data_.set_syscall(std::move(syscall));
   data_.load_syscall_data();
@@ -168,6 +171,19 @@ void InterceptionWorkflowTest::PerformTest(const char* syscall_name,
     data_.set_use_alternate_data();
     SimulateSyscall(std::move(syscall2), controller, interleaved_test, multi_thread);
   }
+}
+
+void InterceptionWorkflowTest::PerformAbortedTest(const char* syscall_name,
+                                                  std::unique_ptr<SystemCallTest> syscall,
+                                                  const char* expected) {
+  ProcessController controller(this, session(), loop());
+  auto decoder = std::make_unique<SyscallDisplayDispatcherTest>(
+      nullptr, decode_options_, display_options_, result_, &controller, aborted_);
+  controller.Initialize(session(), std::move(decoder), syscall_name);
+  data_.set_syscall(std::move(syscall));
+  data_.load_syscall_data();
+  TriggerSyscallBreakpoint(kFirstPid, kFirstThreadKoid);
+  ASSERT_EQ(expected, result_.str());
 }
 
 void InterceptionWorkflowTest::SimulateSyscall(std::unique_ptr<SystemCallTest> syscall,
@@ -245,7 +261,9 @@ void InterceptionWorkflowTest::TriggerSyscallBreakpoint(uint64_t process_koid,
 
   InjectExceptionWithStack(notification, std::move(frames), /*has_all_frames=*/true);
 
-  debug_ipc::MessageLoop::Current()->Run();
+  if (!aborted_) {
+    debug_ipc::MessageLoop::Current()->Run();
+  }
 }
 
 void InterceptionWorkflowTest::TriggerCallerBreakpoint(uint64_t process_koid,
@@ -275,10 +293,11 @@ void InterceptionWorkflowTest::PerformExceptionDisplayTest(debug_ipc::ExceptionT
                                                            const char* expected) {
   ProcessController controller(this, session(), loop());
 
-  PerformExceptionTest(&controller,
-                       std::make_unique<SyscallDisplayDispatcherTest>(
-                           nullptr, decode_options_, display_options_, result_, &controller),
-                       type);
+  PerformExceptionTest(
+      &controller,
+      std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_,
+                                                     result_, &controller, aborted_),
+      type);
   ASSERT_EQ(result_.str(), expected);
 }
 
@@ -336,10 +355,11 @@ void InterceptionWorkflowTest::TriggerException(uint64_t process_koid, uint64_t 
 void InterceptionWorkflowTest::PerformFunctionTest(ProcessController* controller,
                                                    const char* syscall_name,
                                                    std::unique_ptr<SystemCallTest> syscall) {
-  controller->Initialize(session(),
-                         std::make_unique<SyscallDisplayDispatcherTest>(
-                             nullptr, decode_options_, display_options_, result_, controller),
-                         syscall_name);
+  controller->Initialize(
+      session(),
+      std::make_unique<SyscallDisplayDispatcherTest>(nullptr, decode_options_, display_options_,
+                                                     result_, controller, aborted_),
+      syscall_name);
   data_.set_syscall(std::move(syscall));
   data_.load_syscall_data();
 
@@ -390,6 +410,7 @@ void ProcessController::InjectProcesses(zxdb::Session& session) {
 void ProcessController::Initialize(zxdb::Session& session,
                                    std::unique_ptr<SyscallDecoderDispatcher> dispatcher,
                                    const char* syscall_name) {
+  global_dispatcher = dispatcher.get();
   std::vector<std::string> blank;
   workflow_.Initialize(blank, blank, std::move(dispatcher));
 

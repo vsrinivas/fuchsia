@@ -191,10 +191,12 @@ void SyscallDecoderDispatcher::DecodeSyscall(InterceptingThreadObserver* thread_
   uint64_t thread_id = thread->GetKoid();
   auto current = syscall_decoders_.find(thread_id);
   if (current != syscall_decoders_.end()) {
-    FXL_LOG(INFO) << "internal error: already decoding thread " << thread_id;
+    FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+                   << ':' << thread_id << ": Internal error: already decoding the thread";
     return;
   }
-  auto decoder = CreateDecoder(thread_observer, thread, thread_id, syscall);
+  uint64_t process_id = thread->GetProcess()->GetKoid();
+  auto decoder = CreateDecoder(thread_observer, thread, process_id, thread_id, syscall);
   auto tmp = decoder.get();
   syscall_decoders_[thread_id] = std::move(decoder);
   tmp->Decode();
@@ -205,7 +207,9 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
   uint64_t thread_id = thread->GetKoid();
   auto current = exception_decoders_.find(thread_id);
   if (current != exception_decoders_.end()) {
-    FXL_LOG(INFO) << "internal error: already decoding an exception for thread " << thread_id;
+    FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+                   << ':' << thread_id
+                   << ": Internal error: already decoding an exception for the thread";
     return;
   }
   auto decoder = CreateDecoder(workflow, thread, thread_id);
@@ -215,7 +219,9 @@ void SyscallDecoderDispatcher::DecodeException(InterceptionWorkflow* workflow,
 }
 
 void SyscallDecoderDispatcher::DeleteDecoder(SyscallDecoder* decoder) {
-  decoder->thread()->Continue();
+  if (!decoder->aborted()) {
+    decoder->thread()->Continue();
+  }
   syscall_decoders_.erase(decoder->thread_id());
 }
 
@@ -224,11 +230,19 @@ void SyscallDecoderDispatcher::DeleteDecoder(ExceptionDecoder* decoder) {
   exception_decoders_.erase(decoder->thread_id());
 }
 
+void SyscallDecoderDispatcher::StopMonitoring(zx_koid_t koid) {
+  for (const auto& decoder : syscall_decoders_) {
+    if (decoder.second->process_id() == koid) {
+      decoder.second->set_aborted();
+    }
+  }
+}
+
 std::unique_ptr<SyscallDecoder> SyscallDisplayDispatcher::CreateDecoder(
-    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, uint64_t thread_id,
-    const Syscall* syscall) {
-  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, thread_id, syscall,
-                                          std::make_unique<SyscallDisplay>(this, os_));
+    InterceptingThreadObserver* thread_observer, zxdb::Thread* thread, uint64_t process_id,
+    uint64_t thread_id, const Syscall* syscall) {
+  return std::make_unique<SyscallDecoder>(this, thread_observer, thread, process_id, thread_id,
+                                          syscall, std::make_unique<SyscallDisplay>(this, os_));
 }
 
 std::unique_ptr<ExceptionDecoder> SyscallDisplayDispatcher::CreateDecoder(
@@ -275,6 +289,7 @@ void SyscallDisplayDispatcher::StopMonitoring(zx_koid_t koid) {
   last_displayed_syscall_ = nullptr;
   os_ << colors().green << "\nStop monitoring process with koid ";
   os_ << colors().red << koid << colors().reset << '\n';
+  SyscallDecoderDispatcher::StopMonitoring(koid);
 }
 
 }  // namespace fidlcat
