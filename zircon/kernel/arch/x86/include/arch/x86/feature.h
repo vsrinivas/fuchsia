@@ -350,6 +350,16 @@ static inline bool x86_cpu_should_mitigate_ssb(void) {
   return g_ssb_mitigated;
 }
 
+static inline bool x86_cpu_should_l1d_flush_on_vmentry(void) {
+  extern bool g_l1d_flush_on_vmentry;
+  return g_l1d_flush_on_vmentry;
+}
+
+static inline bool x86_cpu_should_md_clear_on_user_return(void) {
+  extern bool g_md_clear_on_user_return;
+  return g_md_clear_on_user_return;
+}
+
 // Vendor-specific per-cpu init functions, in amd.cpp/intel.cpp
 void x86_amd_init_percpu(void);
 void x86_intel_init_percpu(void);

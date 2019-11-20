@@ -40,6 +40,7 @@ bool g_x86_feature_pcid_good;
 bool g_x86_feature_has_smap;
 bool g_has_meltdown;
 bool g_has_l1tf;
+bool g_l1d_flush_on_vmentry;
 bool g_has_mds_taa;
 bool g_has_swapgs_bug;
 bool g_swapgs_bug_mitigated;
@@ -164,6 +165,8 @@ void x86_feature_init(void) {
   if (x86_vendor == X86_VENDOR_INTEL) {
     g_has_meltdown = x86_intel_cpu_has_meltdown(&cpuid, &msr);
     g_has_l1tf = x86_intel_cpu_has_l1tf(&cpuid, &msr);
+    g_l1d_flush_on_vmentry = ((x86_get_disable_spec_mitigations() == false)) &&
+                             g_has_l1tf && x86_feature_test(X86_FEATURE_L1D_FLUSH);
     g_has_mds_taa = x86_intel_cpu_has_mds_taa(&cpuid, &msr);
     g_has_md_clear = cpuid.ReadFeatures().HasFeature(cpu_id::Features::MD_CLEAR);
     g_md_clear_on_user_return = ((x86_get_disable_spec_mitigations() == false)) &&
@@ -402,6 +405,8 @@ void x86_feature_debug(void) {
     printf("ssb_mitigated ");
   if (g_has_ibpb)
     printf("ibpb ");
+  if (g_l1d_flush_on_vmentry)
+    printf("l1d_flush_on_vmentry ");
   printf("\n");
 }
 

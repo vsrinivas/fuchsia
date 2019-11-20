@@ -416,6 +416,8 @@ void x86_monitor(volatile void* addr);
 void x86_mwait(uint32_t hints);
 void x86_idle(void);
 
+void mds_buff_overwrite(void);
+
 __END_CDECLS
 
 #endif  // ZIRCON_KERNEL_ARCH_X86_INCLUDE_ARCH_X86_H_

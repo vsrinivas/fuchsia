@@ -823,6 +823,15 @@ zx_status_t Vcpu::Resume(zx_port_packet_t* packet) {
     // Updates guest system time if the guest subscribed to updates.
     pvclock_update_system_time(&pvclock_state_, guest_->AddressSpace());
 
+    if (x86_cpu_should_l1d_flush_on_vmentry()) {
+      // L1TF: Flush L1D$ before entering vCPU. If the CPU is affected by MDS, also flush
+      // microarchitectural buffers.
+      write_msr(X86_MSR_IA32_FLUSH_CMD, 1);
+    } else if (x86_cpu_should_md_clear_on_user_return()) {
+      // MDS: If the processor is not affected by L1TF but is affected by MDS or TAA,
+      // flush microarchitectural buffers.
+      mds_buff_overwrite();
+    }
     ktrace(TAG_VCPU_ENTER, 0, 0, 0, 0);
     running_.store(true);
     status = vmx_enter(&vmx_state_);
