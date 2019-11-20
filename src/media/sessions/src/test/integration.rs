@@ -297,16 +297,18 @@ async fn watch_filter_active() -> Result<()> {
         service.new_watcher(WatchOptions { only_active: Some(true), ..Decodable::new_empty() })?;
 
     player1.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
-    let updates = active_watcher.wait_for_n_updates(2).await?;
-    assert_eq!(updates.len(), 2);
-    assert_eq!(updates[0].1.is_locally_active, Some(true), "Update: {:?}", updates[0]);
-    assert_eq!(updates[1].1.is_locally_active, Some(true), "Update: {:?}", updates[1]);
-
-    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
     let updates = active_watcher.wait_for_n_updates(1).await?;
     assert_eq!(updates.len(), 1);
-    assert_eq!(updates[0].1.is_locally_active, Some(false));
+    assert_eq!(updates[0].1.is_locally_active, Some(true), "Update: {:?}", updates[0]);
+    let player1_id = updates[0].0;
+
+    player2.emit_delta(delta_with_state(PlayerState::Playing)).await?;
+    let updates = active_watcher.wait_for_n_updates(1).await?;
+    assert_eq!(updates.len(), 1);
+    assert_eq!(updates[0].1.is_locally_active, Some(true), "Update: {:?}", updates[1]);
+
+    player1.emit_delta(delta_with_state(PlayerState::Paused)).await?;
+    assert_eq!(active_watcher.wait_for_removal().await?, player1_id);
 
     Ok(())
 }
