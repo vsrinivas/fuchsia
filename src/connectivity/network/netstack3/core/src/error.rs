@@ -39,6 +39,10 @@ pub enum NetstackError {
     /// Errors related to sending frames.
     #[fail(display = "{}", _0)]
     SendFrame(#[cause] SendFrameError),
+
+    /// Errors related to connections.
+    #[fail(display = "{}", _0)]
+    Connect(#[cause] ConnectError),
     // Add error types here as we add more to the stack
 }
 

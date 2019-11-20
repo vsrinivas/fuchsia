@@ -606,7 +606,7 @@ impl<I: UdpSocketIpExt> SocketWorkerInner<I> {
                         addr,
                         port,
                         body,
-                    );
+                    )?;
                 }
                 (None, None) => {
                     // this is not a "sendto" call, just use the existing conn:

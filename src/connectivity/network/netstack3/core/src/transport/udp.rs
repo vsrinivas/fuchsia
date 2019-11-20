@@ -18,7 +18,7 @@ use zerocopy::ByteSlice;
 use crate::algorithm::{PortAlloc, PortAllocImpl, ProtocolFlowId};
 use crate::context::{RngContext, RngContextExt, StateContext};
 use crate::data_structures::IdMapCollectionKey;
-use crate::error::{ConnectError, Result};
+use crate::error::{ConnectError, NetstackError, Result};
 use crate::ip::{
     BufferTransportIpContext, IpPacketFromArgs, IpProto, IpVersionMarker, TransportIpContext,
 };
@@ -569,15 +569,17 @@ pub fn send_udp<A: IpAddress, B: BufferMut, C: BufferUdpContext<A::Version, B>>(
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
     body: B,
-) {
+) -> Result<()> {
     // TODO(brunodalbo) this can be faster if we just perform the checks but
     // don't actually create a UDP connection.
-    // TODO(maufflick): Forward the result failure.
     let tmp_conn = connect_udp(ctx, local_addr, local_port, remote_addr, remote_port)
-        .expect("connect_udp failed");
-    // TODO(maufflick): Forward the result failure.
-    send_udp_conn(ctx, tmp_conn, body).expect("send_udp_conn failed");
+        .map_err(|e| NetstackError::Connect(e))?;
+
+    // Not using `?` here since we need to `remove_udp_conn` even in the case of failure.
+    let ret = send_udp_conn(ctx, tmp_conn, body);
     remove_udp_conn(ctx, tmp_conn);
+
+    ret
 }
 
 /// Send a UDP packet on an existing connection.
@@ -888,7 +890,7 @@ mod tests {
     use specialize_ip_macro::ip_test;
 
     use super::*;
-    use crate::error::{NetstackError, SendFrameError};
+    use crate::error::SendFrameError;
     use crate::ip::IpProto;
     use crate::testutil::{get_other_ip_address, set_logger_for_test};
 
@@ -1289,6 +1291,9 @@ mod tests {
         let local_ip = local_addr::<I>();
         let remote_ip = remote_addr::<I>();
 
+        // UDP connection count should be zero before and after `send_udp` call.
+        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+
         let body = [1, 2, 3, 4, 5];
         // Try to send something with send_udp
         send_udp(
@@ -1298,8 +1303,11 @@ mod tests {
             remote_ip,
             NonZeroU16::new(200).unwrap(),
             Buf::new(body.to_vec(), ..),
-        );
+        )
+        .expect("send_udp failed");
 
+        // UDP connection count should be zero before and after `send_udp` call.
+        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
         let frames = ctx.frames();
         assert_eq!(frames.len(), 1);
 
@@ -1319,11 +1327,74 @@ mod tests {
         assert_eq!(packet.body(), &body[..]);
     }
 
+    /// Tests that `send_udp` propogates errors.
+    #[ip_test]
+    fn test_send_udp_errors<I: Ip>() {
+        set_logger_for_test();
+
+        let mut ctx = DummyContext::<I>::default();
+
+        // use invalid local ip to force a CannotBindToAddress error.
+        let local_ip = remote_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+
+        let body = [1, 2, 3, 4, 5];
+        // Try to send something with send_udp
+        let send_error = send_udp(
+            &mut ctx,
+            Some(local_ip),
+            NonZeroU16::new(100),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+            Buf::new(body.to_vec(), ..),
+        )
+        .expect_err("send_udp unexpectedly succeeded");
+
+        assert_eq!(send_error, NetstackError::Connect(ConnectError::CannotBindToAddress));
+    }
+
+    /// Tests that `send_udp` cleans up after errors.
+    #[ip_test]
+    fn test_send_udp_errors_cleanup<I: Ip>() {
+        set_logger_for_test();
+
+        let mut ctx = DummyContext::<I>::default();
+
+        let local_ip = local_addr::<I>();
+        let remote_ip = remote_addr::<I>();
+
+        // UDP connection count should be zero before and after `send_udp` call.
+        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+
+        // Instruct the dummy frame context to throw errors.
+        let frames: &mut crate::context::testutil::DummyFrameContext<IpPacketFromArgs<I::Addr>> =
+            ctx.as_mut();
+        frames.set_should_error_for_frame(|_frame_meta| true);
+
+        let body = [1, 2, 3, 4, 5];
+        // Try to send something with send_udp
+        let send_error = send_udp(
+            &mut ctx,
+            Some(local_ip),
+            NonZeroU16::new(100),
+            remote_ip,
+            NonZeroU16::new(200).unwrap(),
+            Buf::new(body.to_vec(), ..),
+        )
+        .expect_err("send_udp unexpectedly succeeded");
+
+        assert_eq!(send_error, NetstackError::SendFrame(SendFrameError::UnknownSendFrameError));
+
+        // UDP connection count should be zero before and after `send_udp` call (even in the case
+        // of errors).
+        assert_eq!(ctx.get_state().conn_state.conns.addr_to_id.keys().len(), 0);
+    }
+
     /// Tests that UDP send failures are propagated as errors.
     ///
     /// Only tests with specified local port and address bounds.
     #[ip_test]
-    fn test_udp_conn_failure<I: Ip>() {
+    fn test_send_udp_conn_failure<I: Ip>() {
         set_logger_for_test();
         let mut ctx = DummyContext::<I>::default();
         let local_ip = local_addr::<I>();
