@@ -12,12 +12,15 @@ use omaha_client::{
     protocol::request::InstallSource,
     request_builder::RequestParams,
 };
+use std::cmp::max;
 use std::time::Duration;
 
 /// We do periodic update check roughly every 5 hours.
 const PERIODIC_INTERVAL: Duration = Duration::from_secs(5 * 60 * 60);
 /// Wait at least one minute before checking for updates after startup.
 const STARTUP_DELAY: Duration = Duration::from_secs(60);
+/// Wait 5 minutes before retrying after failed update checks.
+const RETRY_DELAY: Duration = Duration::from_secs(5 * 60);
 
 /// The policy implementation for Fuchsia.
 pub struct FuchsiaPolicy;
@@ -32,11 +35,17 @@ impl Policy for FuchsiaPolicy {
         // Use server dictated interval if exists, otherwise default to 5 hours.
         let interval = protocol_state.server_dictated_poll_interval.unwrap_or(PERIODIC_INTERVAL);
         let mut next_update_time = scheduling.last_update_time + interval;
-        // If the scheduled next update time is in the past or within a minute, set it to one
-        // minute after the current time to avoid checking for updates right after startup.
-        if next_update_time < policy_data.current_time + STARTUP_DELAY {
-            next_update_time = policy_data.current_time + STARTUP_DELAY;
-        }
+        // If we didn't talk to Omaha in the last update check, the `last_update_time` won't be
+        // updated, and we need to have to a minimum delay time based on number of consecutive
+        // failed update checks.
+        let min_delay = if protocol_state.consecutive_failed_update_checks > 3 {
+            interval
+        } else if protocol_state.consecutive_failed_update_checks > 0 {
+            RETRY_DELAY
+        } else {
+            STARTUP_DELAY
+        };
+        next_update_time = max(next_update_time, policy_data.current_time + min_delay);
         UpdateCheckSchedule {
             last_update_time: scheduling.last_update_time,
             next_update_window_start: next_update_time,
@@ -169,6 +178,52 @@ mod tests {
             &ProtocolState::default(),
         );
         let next_update_time = now + STARTUP_DELAY;
+        let expected = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: next_update_time,
+            next_update_time,
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compute_next_update_time_single_failure() {
+        let now = clock::now();
+        let policy_data = PolicyData { current_time: now };
+        let last_update_time = now - Duration::from_secs(123456);
+        let schedule = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: SystemTime::UNIX_EPOCH,
+            next_update_time: SystemTime::UNIX_EPOCH,
+        };
+        let mut protocol_state = ProtocolState::default();
+        protocol_state.consecutive_failed_update_checks = 1;
+        let result =
+            FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
+        let next_update_time = now + RETRY_DELAY;
+        let expected = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: next_update_time,
+            next_update_time,
+        };
+        assert_eq!(result, expected);
+    }
+
+    #[test]
+    fn test_compute_next_update_time_consecutive_failures() {
+        let now = clock::now();
+        let policy_data = PolicyData { current_time: now };
+        let last_update_time = now - Duration::from_secs(123456);
+        let schedule = UpdateCheckSchedule {
+            last_update_time,
+            next_update_window_start: SystemTime::UNIX_EPOCH,
+            next_update_time: SystemTime::UNIX_EPOCH,
+        };
+        let mut protocol_state = ProtocolState::default();
+        protocol_state.consecutive_failed_update_checks = 4;
+        let result =
+            FuchsiaPolicy::compute_next_update_time(&policy_data, &[], &schedule, &protocol_state);
+        let next_update_time = now + PERIODIC_INTERVAL;
         let expected = UpdateCheckSchedule {
             last_update_time,
             next_update_window_start: next_update_time,

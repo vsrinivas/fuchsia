@@ -34,7 +34,7 @@ mod mock {
     /// A mocked timer that will assert expected durations.
     #[derive(Debug)]
     pub struct MockTimer {
-        expected_durations: VecDeque<Duration>,
+        expected_durations: VecDeque<(Duration, Duration)>,
     }
 
     impl MockTimer {
@@ -44,14 +44,25 @@ mod mock {
 
         /// Add a new duration to the end of the expected durations.
         pub fn expect(&mut self, duration: Duration) {
-            self.expected_durations.push_back(duration);
+            self.expect_range(duration, duration);
+        }
+
+        /// Add a new duration range to the end of the expected durations.
+        pub fn expect_range(&mut self, min_duration: Duration, max_duration: Duration) {
+            self.expected_durations.push_back((min_duration, max_duration));
         }
     }
 
     impl Timer for MockTimer {
-        fn wait(&mut self, delay: Duration) -> BoxFuture<'static, ()> {
-            if let Some(duration) = self.expected_durations.pop_front() {
-                assert_eq!(duration, delay);
+        fn wait(&mut self, duration: Duration) -> BoxFuture<'static, ()> {
+            if let Some((min_duration, max_duration)) = self.expected_durations.pop_front() {
+                assert!(
+                    duration >= min_duration && duration <= max_duration,
+                    "{:?} out of range [{:?}, {:?}]",
+                    duration,
+                    min_duration,
+                    max_duration
+                );
                 future::ready(()).boxed()
             } else {
                 // No more expected durations left, blocking the Timer forever.

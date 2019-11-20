@@ -69,6 +69,7 @@ pub struct RequestParams {
 ///
 /// This struct has ownership over it's members, so that they may later be moved out when the
 /// request itself is built.
+#[derive(Clone)]
 struct AppEntry {
     /// The identifying data for the application.
     app: App,
@@ -206,15 +207,15 @@ impl<'a> RequestBuilder<'a> {
 
     /// This function constructs the protocol::request::Request object from this Builder.
     ///
-    /// Note that the builder is consumed in the process, and cannot be used afterward.
-    pub fn build(self) -> Result<http::Request<hyper::Body>> {
+    /// Note that the builder is not consumed in the process, and can be used afterward.
+    pub fn build(&self) -> Result<http::Request<hyper::Body>> {
         let intermediate = self.build_intermediate();
         info!("Building Request: {}", intermediate);
         intermediate.into()
     }
 
     /// Helper function that constructs the request body from the builder.
-    fn build_intermediate(self) -> Intermediate {
+    fn build_intermediate(&self) -> Intermediate {
         let mut headers = vec![
             // Set the content-type to be JSON.
             (http::header::CONTENT_TYPE.as_str(), "application/json".to_string()),
@@ -236,7 +237,7 @@ impl<'a> RequestBuilder<'a> {
             headers.push((HEADER_APP_ID, main_app.app.id.clone()));
         }
 
-        let apps = self.app_entries.into_iter().map(|entry| ProtocolApp::from(entry)).collect();
+        let apps = self.app_entries.iter().cloned().map(|entry| ProtocolApp::from(entry)).collect();
 
         Intermediate {
             uri: self.config.service_url.clone(),

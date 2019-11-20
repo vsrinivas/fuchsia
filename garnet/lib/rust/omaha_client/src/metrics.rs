@@ -27,7 +27,7 @@ pub enum Metrics {
     FailedUpdateDuration(Duration),
     /// Why an update check failed (network, omaha, proxy, etc).
     UpdateCheckFailureReason(UpdateCheckFailureReason),
-    /// Number of retries within a single update check attempt.
+    /// Number of omaha request attempts within a single update check attempt.
     UpdateCheckRetries(u64),
     /// Number of update check attempts to get an update to succeed.
     AttemptsToSucceed(u64),

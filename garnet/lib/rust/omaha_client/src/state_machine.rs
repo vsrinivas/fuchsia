@@ -28,7 +28,7 @@ use std::fmt;
 use std::pin::Pin;
 use std::rc::Rc;
 use std::str::Utf8Error;
-use std::time::{Instant, SystemTime};
+use std::time::{Duration, Instant, SystemTime};
 
 mod time;
 pub mod update_check;
@@ -451,35 +451,53 @@ where
         }
 
         let update_check_start_time = Instant::now();
-        let (_parts, data) = match Self::do_omaha_request(&mut self.http, request_builder).await {
-            Ok(res) => res,
-            Err(OmahaRequestError::Json(e)) => {
-                error!("Unable to construct request body! {:?}", e);
-                self.set_state(State::EncounteredError).await;
-                return Err(UpdateCheckError::OmahaRequest(e.into()));
+        let mut omaha_request_attempt = 1;
+        let max_omaha_request_attempts = 3;
+        let (_parts, data) = loop {
+            match Self::do_omaha_request(&mut self.http, &request_builder).await {
+                Ok(res) => {
+                    break res;
+                }
+                Err(OmahaRequestError::Json(e)) => {
+                    error!("Unable to construct request body! {:?}", e);
+                    self.set_state(State::EncounteredError).await;
+                    return Err(UpdateCheckError::OmahaRequest(e.into()));
+                }
+                Err(OmahaRequestError::HttpBuilder(e)) => {
+                    error!("Unable to construct HTTP request! {:?}", e);
+                    self.set_state(State::EncounteredError).await;
+                    return Err(UpdateCheckError::OmahaRequest(e.into()));
+                }
+                Err(OmahaRequestError::Hyper(e)) => {
+                    warn!("Unable to contact Omaha: {:?}", e);
+                    // Don't retry if the error was caused by user code, which means we weren't
+                    // using the library correctly.
+                    if omaha_request_attempt >= max_omaha_request_attempts || e.is_user() {
+                        self.set_state(State::EncounteredError).await;
+                        return Err(UpdateCheckError::OmahaRequest(e.into()));
+                    }
+                }
+                Err(OmahaRequestError::HttpStatus(e)) => {
+                    warn!("Unable to contact Omaha: {:?}", e);
+                    if omaha_request_attempt >= max_omaha_request_attempts {
+                        self.set_state(State::EncounteredError).await;
+                        return Err(UpdateCheckError::OmahaRequest(e.into()));
+                    }
+                }
             }
-            Err(OmahaRequestError::HttpBuilder(e)) => {
-                error!("Unable to construct HTTP request! {:?}", e);
-                self.set_state(State::EncounteredError).await;
-                return Err(UpdateCheckError::OmahaRequest(e.into()));
-            }
-            Err(OmahaRequestError::Hyper(e)) => {
-                warn!("Unable to contact Omaha: {:?}", e);
-                self.set_state(State::EncounteredError).await;
-                // TODO:  Parse for proper retry behavior
-                return Err(UpdateCheckError::OmahaRequest(e.into()));
-            }
-            Err(OmahaRequestError::HttpStatus(e)) => {
-                warn!("Unable to contact Omaha: {:?}", e);
-                self.set_state(State::EncounteredError).await;
-                // TODO:  Parse for proper retry behavior
-                return Err(UpdateCheckError::OmahaRequest(e.into()));
-            }
+
+            // TODO(41738): Move this to Policy.
+            // Randomized exponential backoff of 1, 2, 4, ... seconds.
+            let backoff_time_secs = 1 << (omaha_request_attempt - 1);
+            let backoff_time = randomize(backoff_time_secs * 1000, 1000);
+            info!("Waiting {} ms before retrying...", backoff_time);
+            self.timer.wait(Duration::from_millis(backoff_time)).await;
+
+            omaha_request_attempt += 1;
         };
 
         self.report_metrics(Metrics::UpdateCheckResponseTime(update_check_start_time.elapsed()));
-        // TODO(39759): Report the real number of retries when we implement retries.
-        self.report_metrics(Metrics::UpdateCheckRetries(1));
+        self.report_metrics(Metrics::UpdateCheckRetries(omaha_request_attempt));
 
         let response = match Self::parse_omaha_response(&data) {
             Ok(res) => res,
@@ -639,7 +657,7 @@ where
         for app in apps {
             request_builder = request_builder.add_event(app, &event);
         }
-        if let Err(e) = Self::do_omaha_request(&mut self.http, request_builder).await {
+        if let Err(e) = Self::do_omaha_request(&mut self.http, &request_builder).await {
             warn!("Unable to report event to Omaha: {:?}", e);
         }
     }
@@ -655,7 +673,7 @@ where
     /// error handling paths instead of the Ok() path.
     async fn do_omaha_request<'a>(
         http: &'a mut HR,
-        builder: RequestBuilder<'a>,
+        builder: &RequestBuilder<'a>,
     ) -> Result<(Parts, Vec<u8>), OmahaRequestError> {
         let (parts, body) = Self::make_request(http, builder.build()?).await?;
         if !parts.status.is_success() {
@@ -811,6 +829,11 @@ impl
     }
 }
 
+/// Return a random number in [n - range / 2, n - range / 2 + range).
+fn randomize(n: u64, range: u64) -> u64 {
+    n - range / 2 + rand::random::<u64>() % range
+}
+
 #[cfg(test)]
 mod tests {
     use super::time::time_to_i64;
@@ -830,6 +853,7 @@ mod tests {
     use futures::executor::{block_on, LocalPool};
     use futures::task::LocalSpawnExt;
     use log::info;
+    use matches::assert_matches;
     use pretty_assertions::assert_eq;
     use serde_json::json;
     use std::time::{Duration, SystemTime};
@@ -849,7 +873,7 @@ mod tests {
 
         let context = update_check::Context {
             schedule: UpdateCheckSchedule {
-                last_update_time: clock::now() - std::time::Duration::new(500, 0),
+                last_update_time: clock::now() - Duration::new(500, 0),
                 next_update_time: clock::now(),
                 next_update_window_start: clock::now(),
             },
@@ -1360,7 +1384,7 @@ mod tests {
                         let mut actual_states = actual_states.borrow_mut();
                         actual_states.push(state);
                     }
-                        .boxed_local()
+                    .boxed_local()
                 });
             }
             state_machine.start_update_check(CheckOptions::default()).await;
@@ -1394,6 +1418,56 @@ mod tests {
                 Metrics::UpdateCheckResponseTime(_) => {} // expected
                 metric => panic!("Unexpected metric {:?}", metric),
             }
+        });
+    }
+
+    #[test]
+    fn test_metrics_report_update_check_retries() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                StubHttpRequest,
+                StubInstaller::default(),
+                &config,
+                MockTimer::new(),
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+            let _result = do_update_check(&mut state_machine).await;
+
+            assert!(state_machine
+                .metrics_reporter
+                .metrics
+                .contains(&Metrics::UpdateCheckRetries(1)));
+        });
+    }
+
+    #[test]
+    fn test_update_check_retries_backoff() {
+        block_on(async {
+            let config = config_generator();
+            let mut timer = MockTimer::new();
+            timer.expect_range(Duration::from_millis(500), Duration::from_millis(1500));
+            timer.expect_range(Duration::from_millis(1500), Duration::from_millis(2500));
+            let mut state_machine = StateMachine::new(
+                StubPolicyEngine,
+                MockHttpRequest::empty(),
+                StubInstaller::default(),
+                &config,
+                timer,
+                MockMetricsReporter::new(false),
+                Rc::new(Mutex::new(MemStorage::new())),
+                make_test_app_set(),
+            )
+            .await;
+
+            assert_matches!(
+                do_update_check(&mut state_machine).await,
+                Err(UpdateCheckError::OmahaRequest(OmahaRequestError::HttpStatus(_)))
+            );
         });
     }
 
@@ -1660,7 +1734,7 @@ mod tests {
                         clock::mock::set(time::i64_to_time(222222222))
                     }
                 }
-                    .boxed_local()
+                .boxed_local()
             });
             state_machine.start_update_check(CheckOptions::default()).await;
 
@@ -1798,5 +1872,15 @@ mod tests {
                 vec![Metrics::AttemptsToSucceed(1), Metrics::AttemptsToSucceed(3)]
             );
         });
+    }
+
+    #[test]
+    fn test_randomize() {
+        let n = randomize(10, 10);
+        assert!(n >= 5 && n < 15, "n = {}", n);
+        let n = randomize(1000, 100);
+        assert!(n >= 950 && n < 1050, "n = {}", n);
+        // only one integer in [123456, 123457)
+        assert_eq!(randomize(123456, 1), 123456);
     }
 }
