@@ -6,8 +6,10 @@
 #define SRC_UI_A11Y_LIB_GESTURE_MANAGER_RECOGNIZERS_ONE_FINGER_TAP_RECOGNIZER_H_
 
 #include <lib/async/cpp/task.h>
+#include <lib/fit/function.h>
+#include <lib/zx/time.h>
 
-#include "lib/zx/time.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
@@ -25,18 +27,10 @@ namespace a11y {
 //
 // This class, schedules a delayed task on default dispatcher, when gesture starts. This task
 // declares defeat for the current recognizer. The time used for scheduling this task is the tap
-// timeout. If gesture is recognized in this timeout period, then the scehduled task is cancelled.
+// timeout. If gesture is recognized in this timeout period, then the scheduled task is cancelled.
 // If not recognized, scheduled task will get executed.
 class OneFingerTapRecognizer : public GestureRecognizer {
  public:
-  // Various states of Gesture Recognizer state machine.
-  enum class TapGestureState {
-    kNotStarted,          // No pointer ID detected yet
-    kDownFingerDetected,  // One pointer ID made contact with the screen.
-    kGestureDetected,     // The gesture was detected.
-    kDone,                // End state, the recnogizer is finished for this contending.
-  };
-
   // Max value by which pointer events can move(relative to first point of contact), and still are
   // valid for tap gestures, in NDC.
   static constexpr float kGestureMoveThreshold = 1.f / 16;
@@ -66,13 +60,10 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // It resets the state of the recognizer.
   void OnDefeat() override;
 
-  void OnContestStarted() override;
+  void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
 
   // A human-readable string name for the recognizer to be used in logs only.
   std::string DebugName() const override;
-
-  // Returns current state of the gesture recognizer.
-  TapGestureState GetGestureState() { return gesture_state_; }
 
  private:
   // Helper function to Reset the state of all the variables.
@@ -92,8 +83,8 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   bool ValidatePointerEventForTap(
       const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Stores the current state of the Gesture State Machine.
-  TapGestureState gesture_state_ = TapGestureState::kNotStarted;
+  // Indicates that a down event has been detected.
+  bool in_progress_ = false;
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
@@ -101,19 +92,18 @@ class OneFingerTapRecognizer : public GestureRecognizer {
   // Callback which will be executed when gesture is executed.
   OnOneFingerTap one_finger_tap_callback_;
 
-  // Async task used to scheduled gesture timeout.
+  // Async task used to schedule gesture timeout.
   async::TaskClosureMethod<OneFingerTapRecognizer, &OneFingerTapRecognizer::AbandonGesture>
       abandon_task_;
 
-  // Maximum time a tap can be performed.
+  // Maximum time a tap can take.
   const zx::duration tap_timeout_;
-
-  // Flag to declare if GestureArena has declared this recognizer a winner.
-  bool is_winner_ = false;
 
   // GestureInfo which is used to store the initial state of the gesture which is currently being
   // performed.
   GestureInfo gesture_start_info_;
+
+  std::unique_ptr<ContestMember> contest_member_;
 };
 
 }  // namespace a11y

@@ -16,6 +16,7 @@ source_set("recognizers") {
     "//sdk/fidl/fuchsia.ui.input.accessibility",
     "//src/ui/a11y/lib/gesture_manager/arena",
     "//src/ui/a11y/lib/gesture_manager/gesture_util",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [

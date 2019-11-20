@@ -6,8 +6,9 @@
 #define SRC_UI_A11Y_LIB_GESTURE_MANAGER_RECOGNIZERS_SWIPE_RECOGNIZER_BASE_H_
 
 #include <lib/async/cpp/task.h>
+#include <lib/zx/time.h>
 
-#include "lib/zx/time.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
@@ -22,9 +23,6 @@ namespace a11y {
 // method, in which the directional differentiation logic is encapsulated.
 class SwipeRecognizerBase : public GestureRecognizer {
  public:
-  // Various states of Gesture Recognizer state machine.
-  enum class SwipeGestureState { kNotStarted, kDownFingerDetected, kGestureDetected, kDone };
-
   // Minimum distance (in NDC) between finger down and finger up events for gesture to be
   // considered a swipe.
   static constexpr float kMinSwipeDistance = 3.f / 8;
@@ -34,7 +32,7 @@ class SwipeRecognizerBase : public GestureRecognizer {
   static constexpr float kMaxSwipeDistance = 3.f / 4;
 
   // Maximum duration of swipe (in milliseconds).
-  static constexpr zx::duration kSwipeGestureTimeout = zx::msec(500);
+  static constexpr zx::duration kDefaultSwipeGestureTimeout = zx::msec(500);
 
   // Callback which will be invoked when swipe gesture has been recognized.
   using SwipeGestureCallback = fit::function<void(GestureContext)>;
@@ -44,29 +42,17 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // gesture arena.
   SwipeRecognizerBase(SwipeGestureCallback callback, zx::duration swipe_gesture_timeout);
 
-  // Initializes pointer to Arena Member.
-  void AddArenaMember(ArenaMember* new_arena_member);
-
   // Processes incoming pointer events.
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
-
-  // This method gets called when the recognizer has won the arena.
-  // If gesture is already detected then calls the callback.
-  // If gesture is not yet detected then, mark the state of gesture recognizer as won and waiting
-  // for the gesture to complete.
-  void OnWin() override;
 
   // This method gets called when the recognizer has lost the arena.
   // It resets the state of the recognizer.
   void OnDefeat() override;
 
-  void OnContestStarted() override;
+  void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
 
   // A human-readable string name for the recognizer to be used in logs only.
   std::string DebugName() const override = 0;
-
-  // Returns current state of the gesture recognizer.
-  SwipeGestureState GetGestureState() { return gesture_state_; }
 
  protected:
   // Swipe gestures are directional (up, down, right, or left). In order to be recognized as a
@@ -82,10 +68,6 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // Helper function to Reset the state of all the variables.
   void ResetState();
 
-  // Helper function which will be executed when recognizer is a winner.
-  // Calls swipe_gesture_callback_ on gesture_context_ at time win is declared.
-  void ExecuteOnWin();
-
   // Helper function to reject a gesture in the arena and reset the state of the recognizer.
   void AbandonGesture();
 
@@ -97,8 +79,8 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // range.
   bool ValidateSwipeDistance(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
-  // Stores the current state of the Gesture State Machine.
-  SwipeGestureState gesture_state_ = SwipeGestureState::kNotStarted;
+  // Indicates that a down event has been detected.
+  bool in_progress_ = false;
 
   // Stores the Gesture Context which is required to execute the callback.
   GestureContext gesture_context_;
@@ -106,19 +88,18 @@ class SwipeRecognizerBase : public GestureRecognizer {
   // Callback which will be executed when gesture is executed.
   SwipeGestureCallback swipe_gesture_callback_;
 
-  // Async task used to scheduled gesture timeout.
+  // Async task used to schedule gesture timeout.
   async::TaskClosureMethod<SwipeRecognizerBase, &SwipeRecognizerBase::AbandonGesture> abandon_task_;
 
-  // Swipe gesture timeout(in mili seconds). If the gesture is not completed within this time
+  // Swipe gesture timeout(in milliseconds). If the gesture is not completed within this time
   // period, then it won't be recognized.
   const zx::duration swipe_gesture_timeout_;
-
-  // Flag to declare if GestureArena has declared this recognizer a winner.
-  bool is_winner_ = false;
 
   // GestureInfo which is used to store the initial state of the gesture which is currently being
   // performed.
   GestureInfo gesture_start_info_;
+
+  std::unique_ptr<ContestMember> contest_member_;
 };
 
 }  // namespace a11y

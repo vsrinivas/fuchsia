@@ -36,10 +36,7 @@ void GestureHandler::BindOneFingerTapAction(OnGestureCallback callback) {
           OnGesture(kOneFingerTap,
                     {.viewref_koid = context.view_ref_koid, .coordinates = context.local_point});
         });
-    // (TODO:fxb/40879): Solve circular outlive dependency in a11y gesture arena
-    auto* recognizer = gesture_recognizers_[kOneFingerTap].get();
-    auto* member = arena_->Add(recognizer);
-    recognizer->AddArenaMember(member);
+    arena_->Add(gesture_recognizers_[kOneFingerTap].get());
   }
 }
 

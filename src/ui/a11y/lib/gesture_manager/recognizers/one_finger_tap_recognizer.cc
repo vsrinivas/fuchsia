@@ -25,48 +25,49 @@ void OneFingerTapRecognizer::HandleEvent(
     FX_LOGS(ERROR) << "Pointer event is missing phase information.";
     return;
   }
+
   switch (pointer_event.phase()) {
-    case fuchsia::ui::input::PointerEventPhase::ADD:
-      break;
     case fuchsia::ui::input::PointerEventPhase::DOWN:
       if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
         FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
         AbandonGesture();
-        break;
-      }
-      if ((gesture_state_ != TapGestureState::kNotStarted) ||
-          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
-          !ValidatePointerEventForTap(pointer_event)) {
+      } else if (in_progress_ || !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
+                 !ValidatePointerEventForTap(pointer_event)) {
         AbandonGesture();
-        break;
+      } else {
+        // Posts a timeout to catch long presses. If the gesture is performed before it executes,
+        // the task is canceled.
+        abandon_task_.PostDelayed(async_get_default_dispatcher(), tap_timeout_);
+        in_progress_ = true;
       }
-      // Posts a tasks. If the gesture is performed before it executes, the task is canceled.
-      abandon_task_.PostDelayed(async_get_default_dispatcher(), tap_timeout_);
-      gesture_state_ = TapGestureState::kDownFingerDetected;
       break;
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      if ((gesture_state_ != TapGestureState::kDownFingerDetected) ||
-          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
-          !ValidatePointerEventForTap(pointer_event)) {
+      if (!in_progress_) {
+        FX_LOGS(ERROR) << "Pointer MOVE event received without preceding DOWN event.";
+      } else if (!(ValidatePointerEvent(gesture_start_info_, pointer_event) &&
+                   ValidatePointerEventForTap(pointer_event))) {
         AbandonGesture();
-        break;
       }
       break;
     case fuchsia::ui::input::PointerEventPhase::UP:
-      if ((gesture_state_ != TapGestureState::kDownFingerDetected) ||
-          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
-          !ValidatePointerEventForTap(pointer_event)) {
+      if (!in_progress_) {
+        FX_LOGS(ERROR) << "Pointer UP event received without preceding DOWN event.";
+      } else if (!(ValidatePointerEvent(gesture_start_info_, pointer_event) &&
+                   ValidatePointerEventForTap(pointer_event))) {
         AbandonGesture();
-        break;
-      }
-      // The gesture was detected, cancels the task.
-      abandon_task_.Cancel();
+      } else {
+        // The gesture was detected.
 
-      // The gesture was detected. Please note as this is a passive gesture, it
-      // never forces the win on the arena. It waits to win by the last standing
-      // rule.
-      gesture_state_ = TapGestureState::kGestureDetected;
-      ExecuteOnWin();
+        abandon_task_.Cancel();
+
+        // If we'd already won by default, we need to handle it now.
+        if (contest_member_->status() == ContestMember::Status::kWinner) {
+          ExecuteOnWin();
+        }
+        // As this is a passive gesture, it never forces the win on the arena. It waits to win by
+        // the last standing rule. Release the member to become passive.
+        contest_member_.reset();
+      }
       break;
     default:
       break;
@@ -74,45 +75,32 @@ void OneFingerTapRecognizer::HandleEvent(
 }
 
 void OneFingerTapRecognizer::OnWin() {
-  is_winner_ = true;
-  if (gesture_state_ == TapGestureState::kGestureDetected) {
+  // If we've received the win after having released the contest member, we're in passive
+  // waiting-for-the-win mode.
+  if (!contest_member_) {
     ExecuteOnWin();
   }
+  // If we haven't released the contest member, we're still verifying the gesture.
 }
 
-void OneFingerTapRecognizer::ExecuteOnWin() {
-  if (is_winner_) {
-    one_finger_tap_callback_(gesture_context_);
-    gesture_state_ = TapGestureState::kDone;
-  }
-}
+void OneFingerTapRecognizer::ExecuteOnWin() { one_finger_tap_callback_(gesture_context_); }
 
-void OneFingerTapRecognizer::OnDefeat() { gesture_state_ = TapGestureState::kDone; }
+void OneFingerTapRecognizer::OnDefeat() {
+  abandon_task_.Cancel();
+  contest_member_.reset();
+}
 
 void OneFingerTapRecognizer::AbandonGesture() {
-  if (!arena_member_) {
-    FX_LOGS(ERROR) << "Arena member is not initialized.";
-    return;
-  }
-  arena_member_->Reject();
-  abandon_task_.Cancel();
-  gesture_state_ = TapGestureState::kDone;
+  FX_DCHECK(contest_member_) << "No active contest.";
+
+  contest_member_->Reject();
+  // Remaining cleanup happens in |OnDefeat|.
 }
 
 void OneFingerTapRecognizer::ResetState() {
-  // Cancels any pending task.
-  abandon_task_.Cancel();
-
-  // Reset gesture start info.
   ResetGestureInfo(&gesture_start_info_);
-
-  // Reset gesture state.
-  gesture_state_ = TapGestureState::kNotStarted;
-
-  // Reset gesture context.
+  in_progress_ = false;
   ResetGestureContext(&gesture_context_);
-
-  is_winner_ = false;
 }
 
 bool OneFingerTapRecognizer::ValidatePointerEventForTap(
@@ -129,7 +117,10 @@ bool OneFingerTapRecognizer::ValidatePointerEventForTap(
   return true;
 }
 
-void OneFingerTapRecognizer::OnContestStarted() { ResetState(); }
+void OneFingerTapRecognizer::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
+  ResetState();
+  contest_member_ = std::move(contest_member);
+}
 
 std::string OneFingerTapRecognizer::DebugName() const { return "one_finger_tap_recognizer"; }
 

@@ -10,13 +10,7 @@ namespace a11y {
 
 GestureRecognizer::~GestureRecognizer() = default;
 
-void GestureRecognizer::AddArenaMember(ArenaMember* arena_member) {
-  FX_DCHECK(arena_member);
-  arena_member_ = arena_member;
-}
-
 void GestureRecognizer::OnWin() {}
 void GestureRecognizer::OnDefeat() {}
-void GestureRecognizer::OnContestStarted() {}
 
 }  // namespace a11y

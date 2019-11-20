@@ -56,15 +56,18 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
     if (is_zoom_temporary_) {
       view_->TransitionOutOfZoom();
     }
+    if (!trigger()->is_primed()) {
+      view_->contest_member_.reset();
+    }
   }
 
  private:
   Trigger* trigger() { return &view_->trigger_; }
   async::TaskBase* reset_taps() { return &view_->reset_taps_; }
 
-  ArenaMember* arena_member() {
-    FX_DCHECK(view_->arena_member_);
-    return view_->arena_member_;
+  ContestMember* contest_member() {
+    FX_DCHECK(view_->contest_member_);
+    return view_->contest_member_.get();
   }
 
   // Returns whether this interaction can become a pan/zoom gesture, i.e. whether the view is
@@ -104,7 +107,6 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
     if (!PerformTapChecks()) {
       reset_taps()->Cancel();
       reset_taps()->PostDelayed(async_get_default_dispatcher(), kTriggerMaxDelay);
-      arena_member()->Hold();
     }
   }
 
@@ -190,8 +192,7 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
 
   void AcceptGesture() {
     reset_taps()->Cancel();
-    arena_member()->Accept();
-    arena_member()->Release();
+    contest_member()->Accept();
   }
 
   // Caution: this may result in this |Interaction| being freed due to arena defeat. Members should
@@ -200,7 +201,7 @@ class Magnifier::Interaction : public input::GestureDetector::Interaction {
     // Notably it's easier if this happens before |Reject| in case |Reject| frees this
     // |Interaction|.
     reset_taps()->Cancel();
-    arena_member()->Reject();
+    contest_member()->Reject();
   }
 
   Magnifier* const view_;
@@ -226,11 +227,6 @@ Magnifier::Magnifier() : gesture_detector_(this, kDragThreshold), reset_taps_(th
 
 Magnifier::~Magnifier() = default;
 
-void Magnifier::arena_member(ArenaMember* arena_member) {
-  ResetRecognizer();
-  arena_member_ = arena_member;
-}
-
 void Magnifier::RegisterHandler(
     fidl::InterfaceHandle<fuchsia::accessibility::MagnificationHandler> handler) {
   handler_scope_.Reset();
@@ -246,10 +242,12 @@ void Magnifier::ZoomOutIfMagnified() {
 }
 
 void Magnifier::OnDefeat() {
-  FX_DCHECK(arena_member_);
   // Indicate that we don't want to receive further events until the next contest.
-  arena_member_->Reject();
   ResetRecognizer();
+}
+
+void Magnifier::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
+  contest_member_ = std::move(contest_member);
 }
 
 void Magnifier::HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& event) {
@@ -264,15 +262,16 @@ std::unique_ptr<input::GestureDetector::Interaction> Magnifier::BeginInteraction
 }
 
 void Magnifier::ResetRecognizer() {
-  gesture_detector_.Reset();
-  trigger_.Reset();
   reset_taps_.Cancel();
+  ResetTaps();
+  gesture_detector_.Reset();
 }
 
 void Magnifier::ResetTaps() {
-  FX_DCHECK(arena_member_);
-  arena_member_->Reject();
   trigger_.Reset();
+  FX_DCHECK(contest_member_);
+  contest_member_->Reject();
+  contest_member_.reset();
 }
 
 void Magnifier::FocusOn(const glm::vec2& focus) {

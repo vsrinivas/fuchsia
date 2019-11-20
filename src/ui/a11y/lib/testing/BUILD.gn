@@ -45,3 +45,17 @@ source_set("input") {
     "//src/ui/lib/glm_workaround",
   ]
 }
+
+source_set("main") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gtest",
+  ]
+}

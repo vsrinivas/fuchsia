@@ -4,6 +4,7 @@
 
 source_set("arena") {
   sources = [
+    "contest_member.h",
     "gesture_arena.cc",
     "gesture_arena.h",
     "recognizer.cc",
@@ -12,13 +13,14 @@ source_set("arena") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.ui.input.accessibility",
+    "//src/lib/fxl",
+    "//zircon/public/lib/fit",
   ]
 
   deps = [
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
-    "//src/lib/fxl",
     "//src/lib/syslog/cpp",
   ]
 }

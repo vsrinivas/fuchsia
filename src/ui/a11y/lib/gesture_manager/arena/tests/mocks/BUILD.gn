@@ -6,14 +6,15 @@ source_set("mocks") {
   testonly = true
 
   sources = [
-    "mock_arena_member.cc",
-    "mock_arena_member.h",
+    "mock_contest_member.cc",
+    "mock_contest_member.h",
   ]
 
-  public_deps = []
+  public_deps = [
+    "//src/ui/a11y/lib/gesture_manager/arena",
+  ]
 
   deps = [
-    "//garnet/public/lib/gtest",
-    "//src/ui/a11y/lib/gesture_manager/arena",
+    "//src/lib/syslog/cpp",
   ]
 }

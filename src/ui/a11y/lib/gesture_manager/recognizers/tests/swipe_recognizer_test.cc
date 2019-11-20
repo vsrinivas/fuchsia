@@ -9,1024 +9,359 @@
 #include <memory>
 
 #include "gtest/gtest.h"
-#include "lib/fit/single_threaded_executor.h"
-#include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_arena_member.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/tests/mocks/mock_contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/gesture_util/util.h"
 #include "src/ui/a11y/lib/gesture_manager/recognizers/directional_swipe_recognizers.h"
+#include "src/ui/a11y/lib/testing/input.h"
+#include "src/ui/lib/glm_workaround/glm_workaround.h"
 
 namespace accessibility_test {
 
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using Phase = fuchsia::ui::input::PointerEventPhase;
-using SwipeRecognizerTest = gtest::TestLoopFixture;
 
-// Returns a default Accessibility Pointer Event.
-AccessibilityPointerEvent GetDefaultSwipePointerEvent() {
-  AccessibilityPointerEvent event;
-  event.set_event_time(0);
-  event.set_device_id(1);
-  event.set_pointer_id(1);
-  event.set_type(fuchsia::ui::input::PointerEventType::TOUCH);
-  event.set_phase(Phase::ADD);
-  event.set_ndc_point({0, 0});
-  event.set_viewref_koid(100);
-  event.set_local_point({0, 0});
-  return event;
-}
+template <typename Recognizer>
+class SwipeRecognizerTest : public gtest::TestLoopFixture {
+ public:
+  SwipeRecognizerTest()
+      : recognizer_([this](a11y::GestureContext context) {
+          gesture_won_ = true;
+          gesture_context_ = context;
+        }) {}
+
+  bool gesture_won() const { return gesture_won_; }
+  a11y::GestureContext& gesture_context() const { return gesture_context_; }
+  Recognizer* recognizer() { return &recognizer_; }
+
+  void SendPointerEvents(const std::vector<PointerParams>& events) {
+    for (const auto& event : events) {
+      SendPointerEvent(event);
+    }
+  }
+
+  void SendPointerEvent(const PointerParams& event) {
+    recognizer_.HandleEvent(ToPointerEvent(event, 0));
+  }
+
+ private:
+  Recognizer recognizer_;
+  bool gesture_won_ = false;
+  a11y::GestureContext gesture_context_;
+};
+
+class UpSwipeRecognizerTest : public SwipeRecognizerTest<a11y::UpSwipeGestureRecognizer> {};
+class DownSwipeRecognizerTest : public SwipeRecognizerTest<a11y::DownSwipeGestureRecognizer> {};
+class LeftSwipeRecognizerTest : public SwipeRecognizerTest<a11y::LeftSwipeGestureRecognizer> {};
+class RightSwipeRecognizerTest : public SwipeRecognizerTest<a11y::RightSwipeGestureRecognizer> {};
 
 // Tests up swipe detection case.
-TEST_F(SwipeRecognizerTest, WonAfterUpGestureDetected) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, WonAfterGestureDetected) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {0, -.7f}));
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_FALSE(gesture_won());
 
-  // Check initial state of arena member.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {0, -.7f}});
+
+  EXPECT_FALSE(member);
+  EXPECT_TRUE(member.IsAcceptCalled());
   EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_TRUE(gesture_won());
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({0, -.7f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
-  }
-
-  {
-    // Wait for the timeout, to make sure Scheduled task has not executed.
-    RunLoopFor(a11y::SwipeRecognizerBase::kSwipeGestureTimeout);
-
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_TRUE(gesture_won);
-  }
+  // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 }
 
 // Tests down swipe detection case.
-TEST_F(SwipeRecognizerTest, WonAfterDownGestureDetected) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(DownSwipeRecognizerTest, WonAfterGestureDetected) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::DownSwipeGestureRecognizer down_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {0, .7f}));
 
-  MockArenaMember member(&down_swipe_recognizer);
-  down_swipe_recognizer.AddArenaMember(&member);
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_FALSE(gesture_won());
 
-  // Check initial state of arena member.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {0, .7f}});
+
+  EXPECT_FALSE(member);
+  EXPECT_TRUE(member.IsAcceptCalled());
   EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_TRUE(gesture_won());
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({0, .7f});
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
-  }
-
-  {
-    // Wait for the timeout, to make sure Scheduled task has not executed.
-    RunLoopFor(a11y::SwipeRecognizerBase::kSwipeGestureTimeout);
-
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_TRUE(gesture_won);
-  }
+  // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 }
 
 // Tests right swipe detection case.
-TEST_F(SwipeRecognizerTest, WonAfterRightGestureDetected) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(RightSwipeRecognizerTest, WonAfterGestureDetected) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::RightSwipeGestureRecognizer right_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {.7f, 0}));
 
-  MockArenaMember member(&right_swipe_recognizer);
-  right_swipe_recognizer.AddArenaMember(&member);
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_FALSE(gesture_won());
 
-  // Check initial state of arena member.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {.7f, 0}});
+
+  EXPECT_FALSE(member);
+  EXPECT_TRUE(member.IsAcceptCalled());
   EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_TRUE(gesture_won());
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({.1f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({.7f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
-  }
-
-  {
-    // Wait for the timeout, to make sure Scheduled task has not executed.
-    RunLoopFor(a11y::SwipeRecognizerBase::kSwipeGestureTimeout);
-
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_TRUE(gesture_won);
-  }
+  // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 }
 
 // Tests left swipe detection case.
-TEST_F(SwipeRecognizerTest, WonAfterLeftGestureDetected) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(LeftSwipeRecognizerTest, WonAfterGestureDetected) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::LeftSwipeGestureRecognizer left_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {-.7f, 0}));
 
-  MockArenaMember member(&left_swipe_recognizer);
-  left_swipe_recognizer.AddArenaMember(&member);
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_FALSE(gesture_won());
 
-  // Check initial state of arena member.
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {-.7f, 0}});
+
+  EXPECT_FALSE(member);
+  EXPECT_TRUE(member.IsAcceptCalled());
   EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_TRUE(gesture_won());
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({-.1f, 0});
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // up event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({-.7f, 0});
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
-  }
-
-  {
-    // Wait for the timeout, to make sure Scheduled task has not executed.
-    RunLoopFor(a11y::SwipeRecognizerBase::kSwipeGestureTimeout);
-
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_TRUE(gesture_won);
-  }
+  // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 }
 
 // Tests rejection case in which swipe gesture does not cover long enough distance.
-TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooSmall) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, RejectWhenDistanceTooSmall) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}) + MoveEvents(1, {}, {0, -.2f}));
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {0, -.2f}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({0, -.2f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-    EXPECT_FALSE(gesture_won);
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case in which swipe gesture covers too large a distance.
-TEST_F(SwipeRecognizerTest, RejectWhenDistanceTooLarge) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, RejectWhenDistanceTooLarge) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {0, -1}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({0, -2.f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case in which swipe gesture exceeds timeout.
-TEST_F(SwipeRecognizerTest, RejectWhenTimeoutExceeded) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, RejectWhenTimeoutExceeded) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  RunLoopFor(a11y::SwipeRecognizerBase::kSwipeGestureTimeout);
-
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_FALSE(member.IsAcceptCalled());
   EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for upward swipe in which up gesture ends too far from vertical.
-TEST_F(SwipeRecognizerTest, RejectUpSwipeOnInvalidEndLocation) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {.5f, -.5f}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({.5f, -.5f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for upward swipe in which gesture takes invalid path.
-TEST_F(SwipeRecognizerTest, RejectUpSwipeOnInvalidPath) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(UpSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::UpSwipeGestureRecognizer up_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {0, .1f}});
 
-  MockArenaMember member(&up_swipe_recognizer);
-  up_swipe_recognizer.AddArenaMember(&member);
-
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
-    up_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(up_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for downward swipe in which gesture ends in an invalid location.
-TEST_F(SwipeRecognizerTest, RejectDownSwipeOnInvalidEndLocation) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(DownSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::DownSwipeGestureRecognizer down_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&down_swipe_recognizer);
-  down_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {-.5f, .5f}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, .1f});
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    event.set_ndc_point({-.5f, .5f});
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for downward swipe in which gesture takes invalid path.
-TEST_F(SwipeRecognizerTest, RejectDownSwipeOnInvalidPath) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(DownSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::DownSwipeGestureRecognizer down_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {0, -.1f}});
 
-  MockArenaMember member(&down_swipe_recognizer);
-  down_swipe_recognizer.AddArenaMember(&member);
-
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({0, -.1f});
-    down_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(down_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for right swipe in which gesture ends in an invalid location.
-TEST_F(SwipeRecognizerTest, RejectRightSwipeOnInvalidEndLocation) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(RightSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::RightSwipeGestureRecognizer right_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&right_swipe_recognizer);
-  right_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {.5f, .5f}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({.1f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    event.set_ndc_point({.5f, .5f});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for right swipe in which gesture takes invalid path.
-TEST_F(SwipeRecognizerTest, RejectRightSwipeOnInvalidPath) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(RightSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::RightSwipeGestureRecognizer right_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {-.1f, 0}});
 
-  MockArenaMember member(&right_swipe_recognizer);
-  right_swipe_recognizer.AddArenaMember(&member);
-
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({-.1f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for left swipe in which gesture ends in an invalid location.
-TEST_F(SwipeRecognizerTest, RejectLeftSwipeOnInvalidEndLocation) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(LeftSwipeRecognizerTest, RejectSwipeOnInvalidEndLocation) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::LeftSwipeGestureRecognizer left_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&left_swipe_recognizer);
-  left_swipe_recognizer.AddArenaMember(&member);
+  // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
+  // a swipe.
+  SendPointerEvent({1, Phase::UP, {-.5f, -.5f}});
 
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({-.1f, 0});
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    event.set_ndc_point({-.5f, .5f});
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests rejection case for left swipe in which gesture takes invalid path.
-TEST_F(SwipeRecognizerTest, RejectLeftSwipeOnInvalidPath) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(LeftSwipeRecognizerTest, RejectSwipeOnInvalidPath) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::LeftSwipeGestureRecognizer left_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
+  SendPointerEvent({1, Phase::MOVE, {.1f, 0}});
 
-  MockArenaMember member(&left_swipe_recognizer);
-  left_swipe_recognizer.AddArenaMember(&member);
-
-  // Check initial state of arena member.
-  EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({.1f, 0});
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-    EXPECT_TRUE(member.IsRejectCalled());
-  }
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests Gesture Detection failure when multiple fingers are detected.
-TEST_F(SwipeRecognizerTest, MultiFingerDetected) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(LeftSwipeRecognizerTest, MultiFingerDetected) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::LeftSwipeGestureRecognizer left_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&left_swipe_recognizer);
-  left_swipe_recognizer.AddArenaMember(&member);
+  // New pointer ID added, but it did not make contact with the screen yet.
+  SendPointerEvent({2, Phase::ADD, {}});
+  EXPECT_FALSE(member.IsRejectCalled());
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsOnWinCalled());
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
-
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // New pointer ID added, but it did not make contact with the screen yet.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_pointer_id(2);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
-
-  {
-    // Sends a down event with the second pointer ID, causing the gesture to be rejected.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    event.set_pointer_id(2);
-    left_swipe_recognizer.HandleEvent(event);
-    EXPECT_TRUE(member.IsRejectCalled());
-    EXPECT_EQ(left_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
+  // Sends a down event with the second pointer ID, causing the gesture to be rejected.
+  SendPointerEvent({2, Phase::DOWN, {}});
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_TRUE(member.IsRejectCalled());
+  EXPECT_FALSE(gesture_won());
 }
 
 // Tests right swipe detection after member is declared winner.
-TEST_F(SwipeRecognizerTest, RecognizeAfterWin) {
-  a11y::GestureContext gesture_context;
-  bool gesture_won = false;
+TEST_F(RightSwipeRecognizerTest, RecognizeAfterWin) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  a11y::RightSwipeGestureRecognizer right_swipe_recognizer(
-      [&gesture_won, &gesture_context](a11y::GestureContext context) {
-        gesture_won = true;
-        gesture_context = context;
-      });
+  SendPointerEvents(DownEvents(1, {}));
 
-  MockArenaMember member(&right_swipe_recognizer);
-  right_swipe_recognizer.AddArenaMember(&member);
+  // Calling OnWin() before gesture is recognized should not affect state.
+  recognizer()->OnWin();
+  EXPECT_TRUE(member);
+  EXPECT_FALSE(member.IsAcceptCalled());
+  EXPECT_FALSE(gesture_won());
 
-  // Check initial state of arena member.
+  SendPointerEvent({1, Phase::UP, {.5f, 0}});
+  EXPECT_FALSE(member);
+  EXPECT_TRUE(member.IsAcceptCalled());
   EXPECT_FALSE(member.IsRejectCalled());
-  EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-            a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
+  EXPECT_TRUE(gesture_won());
+}
 
-  {
-    auto event = GetDefaultSwipePointerEvent();
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kNotStarted);
-  }
+// Tests right swipe loss.
+TEST_F(RightSwipeRecognizerTest, Loss) {
+  MockContestMember member;
+  recognizer()->OnContestStarted(member.TakeInterface());
 
-  {
-    // Sends a Down event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::DOWN);
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
+  SendPointerEvents(DownEvents(1, {}));
 
-  {
-    // Calling OnWin() before gesture is recognized should not affect state.
-    member.CallOnWin();
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_FALSE(gesture_won);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
+  // Calling OnDefeat() before gesture is recognized abandons the gesture.
+  recognizer()->OnDefeat();
+  EXPECT_FALSE(member);
+  EXPECT_FALSE(member.IsAcceptCalled());
 
-  {
-    // Sends a Move event, and expects the state of Gesture to stay the same.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::MOVE);
-    event.set_ndc_point({.1f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_FALSE(member.IsRejectCalled());
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDownFingerDetected);
-  }
+  // Wait for the timeout, to make sure the scheduled task doesn't execute and crash us.
+  RunLoopFor(a11y::SwipeRecognizerBase::kDefaultSwipeGestureTimeout);
 
-  {
-    // Sends an UP event, and expects the state of Gesture to change.
-    auto event = GetDefaultSwipePointerEvent();
-    event.set_phase(Phase::UP);
-
-    // UP event must be between .375 and .75 NDC from DOWN event for gesture to be considered
-    // a swipe.
-    event.set_ndc_point({.5f, 0});
-    right_swipe_recognizer.HandleEvent(event);
-    EXPECT_EQ(right_swipe_recognizer.GetGestureState(),
-              a11y::SwipeRecognizerBase::SwipeGestureState::kDone);
-  }
+  EXPECT_FALSE(gesture_won());
 }
 
 }  // namespace accessibility_test

@@ -142,7 +142,7 @@ void App::AddPointerEventListener() {
   if (pointer_event_clients_++ == 0) {
     gesture_manager_ = std::make_unique<a11y::GestureManager>();
     pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
-    magnifier_.arena_member(gesture_manager_->arena()->Add(&magnifier_));
+    gesture_manager_->arena()->Add(&magnifier_);
   }
 }
 
@@ -150,7 +150,6 @@ void App::ReleasePointerEventListener() {
   FX_DCHECK(pointer_event_clients_ > 0);
 
   if (--pointer_event_clients_ == 0) {
-    magnifier_.arena_member(nullptr);
     gesture_manager_.reset();
   }
 }

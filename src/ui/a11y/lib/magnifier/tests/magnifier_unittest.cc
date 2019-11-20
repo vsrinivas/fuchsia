@@ -14,6 +14,7 @@
 
 #include "src/lib/syslog/cpp/logger.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/a11y/lib/magnifier/tests/mocks/mock_handler.h"
@@ -41,16 +42,37 @@ static_assert(kFramePeriod > kFrameEpsilon);
 // A passive recognizer to obtain an arena member to inspect/affect arena state.
 class TestRecognizer : public a11y::GestureRecognizer {
  public:
+  // |GestureRecognizer|
+  void OnContestStarted(std::unique_ptr<a11y::ContestMember> contest_member) override {
+    contest_member_ = std::move(contest_member);
+  }
+  // |GestureRecognizer|
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent&) override {}
+  // |GestureRecognizer|
   std::string DebugName() const override { return "TestRecognizer"; }
+
+  const a11y::ContestMember* contest_member() const {
+    FX_CHECK(contest_member_);
+    return contest_member_.get();
+  }
+
+  a11y::ContestMember* contest_member() {
+    FX_CHECK(contest_member_);
+    return contest_member_.get();
+  }
+
+  void Reset() { contest_member_.reset(); }
+
+ private:
+  std::unique_ptr<a11y::ContestMember> contest_member_;
 };
 
 class MagnifierTest : public gtest::TestLoopFixture {
  public:
   MagnifierTest()
       : arena_([this](auto, auto, EventHandling handled) { input_handling_ = handled; }) {
-    magnifier_.arena_member(arena_.Add(&magnifier_));
-    test_arena_member_ = arena_.Add(&test_recognizer_);
+    arena_.Add(&magnifier_);
+    arena_.Add(&test_recognizer_);
   }
 
   a11y::Magnifier* magnifier() { return &magnifier_; }
@@ -58,20 +80,17 @@ class MagnifierTest : public gtest::TestLoopFixture {
   std::optional<EventHandling>& input_handling() { return input_handling_; }
 
   bool is_arena_contending() const {
-    return test_arena_member_->status() == a11y::ArenaMember::Status::kContending;
+    return test_recognizer_.contest_member()->status() == a11y::ContestMember::Status::kContending;
   }
 
   bool is_arena_ceded() const {
-    return test_arena_member_->status() == a11y::ArenaMember::Status::kWinner;
+    return test_recognizer_.contest_member()->status() == a11y::ContestMember::Status::kWinner;
   }
 
   // Causes the test arena member to win the arena, denying the gesture to Magnifier.
-  void DenyArena() {
-    test_arena_member_->Hold();
-    test_arena_member_->Accept();
-  }
+  void DenyArena() { test_recognizer_.contest_member()->Accept(); }
 
-  void ResetArena() { test_arena_member_->Release(); }
+  void ResetArena() { test_recognizer_.Reset(); }
 
   void SendPointerEvents(const std::vector<PointerParams>& events) {
     for (const auto& params : events) {
@@ -94,7 +113,6 @@ class MagnifierTest : public gtest::TestLoopFixture {
   a11y::GestureArena arena_;
 
   a11y::Magnifier magnifier_;
-  a11y::ArenaMember* test_arena_member_;
 
   // We don't actually use these times. If we did, we'd want to more closely correlate them with
   // fake time.

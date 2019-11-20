@@ -23,7 +23,7 @@ class UpSwipeGestureRecognizer : public SwipeRecognizerBase {
 
   UpSwipeGestureRecognizer(
       SwipeGestureCallback callback,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kSwipeGestureTimeout)
+      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
       : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "up_swipe_gesture_recognizer"; };
@@ -45,7 +45,7 @@ class DownSwipeGestureRecognizer : public SwipeRecognizerBase {
 
   DownSwipeGestureRecognizer(
       SwipeGestureCallback callback,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kSwipeGestureTimeout)
+      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
       : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "down_swipe_gesture_recognizer"; };
@@ -68,7 +68,7 @@ class RightSwipeGestureRecognizer : public SwipeRecognizerBase {
 
   RightSwipeGestureRecognizer(
       SwipeGestureCallback callback,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kSwipeGestureTimeout)
+      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
       : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "right_swipe_gesture_recognizer"; };
@@ -91,7 +91,7 @@ class LeftSwipeGestureRecognizer : public SwipeRecognizerBase {
 
   LeftSwipeGestureRecognizer(
       SwipeGestureCallback callback,
-      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kSwipeGestureTimeout)
+      zx::duration swipe_gesture_timeout = SwipeRecognizerBase::kDefaultSwipeGestureTimeout)
       : SwipeRecognizerBase(std::move(callback), swipe_gesture_timeout) {}
 
   std::string DebugName() const override { return "left_swipe_gesture_recognizer"; };

@@ -5,6 +5,7 @@
 #include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
 
 #include "src/lib/syslog/cpp/logger.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 
 namespace a11y {
 
@@ -13,55 +14,25 @@ namespace {
 using AccessibilityPointerEvent = fuchsia::ui::input::accessibility::PointerEvent;
 using Phase = fuchsia::ui::input::PointerEventPhase;
 
-// Holds pointers to arena members in different states.
-// If winner is not nullptr, contending is empty. If contending is not empty, winner is nullptr.
-struct ClassifiedArenaMembers {
-  ArenaMember* winner = nullptr;
-  std::vector<ArenaMember*> contending;
-};
-
-// Classifies the arena members into winner and contending.
-// Example:
-// auto [winner, contending] = ClassifyArenaMembers(arena_members);
-ClassifiedArenaMembers ClassifyArenaMembers(
-    const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
-  ClassifiedArenaMembers c;
-  for (const auto& member : arena_members) {
-    switch (member->status()) {
-      case ArenaMember::Status::kWinner:
-        FX_CHECK(!c.winner) << "A gesture arena can have up to one winner only.";
-        c.winner = member.get();
-        break;
-      case ArenaMember::Status::kDefeated:
-        // No work to do.
-        break;
-      case ArenaMember::Status::kContending:
-        c.contending.push_back(member.get());
-        break;
-    };
-  }
-  return c;
-}
-
 }  // namespace
 
-PointerEventRouter::PointerEventRouter(OnStreamHandledCallback on_stream_handled_callback)
+PointerStreamTracker::PointerStreamTracker(OnStreamHandledCallback on_stream_handled_callback)
     : on_stream_handled_callback_(std::move(on_stream_handled_callback)) {
   FX_DCHECK(on_stream_handled_callback_);
 }
 
-void PointerEventRouter::RejectPointerEvents() {
+void PointerStreamTracker::RejectPointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::REJECTED);
-  // it is also necessary to clear the active streams, because as they were rejected, the input
+  // It is also necessary to clear the active streams, because as they were rejected, the input
   // system will not send the rest of the stream to us.
   active_streams_.clear();
 }
 
-void PointerEventRouter::ConsumePointerEvents() {
+void PointerStreamTracker::ConsumePointerEvents() {
   InvokePointerEventCallbacks(fuchsia::ui::input::accessibility::EventHandling::CONSUMED);
 }
 
-void PointerEventRouter::InvokePointerEventCallbacks(
+void PointerStreamTracker::InvokePointerEventCallbacks(
     fuchsia::ui::input::accessibility::EventHandling handled) {
   for (const auto& kv : pointer_event_callbacks_) {
     const auto [device_id, pointer_id] = kv.first;
@@ -72,9 +43,7 @@ void PointerEventRouter::InvokePointerEventCallbacks(
   pointer_event_callbacks_.clear();
 }
 
-void PointerEventRouter::RouteEvent(
-    const AccessibilityPointerEvent& pointer_event,
-    const std::vector<std::unique_ptr<ArenaMember>>& arena_members) {
+void PointerStreamTracker::OnEvent(const AccessibilityPointerEvent& pointer_event) {
   // Note that at some point we must answer whether the pointer event stream was
   // consumed / rejected. For this reason, for each ADD event we store the
   // callback that will be responsible for signaling how the events were
@@ -95,71 +64,94 @@ void PointerEventRouter::RouteEvent(
     default:
       break;
   };
-  for (const auto& member : arena_members) {
-    if (member->is_active()) {
-      member->recognizer()->HandleEvent(pointer_event);
+}
+
+// Keep in mind that non-|ContestMember| methods are not visible outside of |GestureArena|.
+class GestureArena::ArenaContestMember : public ContestMember {
+ public:
+  ArenaContestMember(fxl::WeakPtr<GestureArena> arena, ArenaMember* arena_member)
+      : arena_(arena), arena_member_(arena_member), weak_ptr_factory_(this) {
+    FX_DCHECK(arena_member);
+  }
+
+  ~ArenaContestMember() override {
+    if (arena_) {
+      // This may transition us into an idle state, so do it explicitly ahead of member destruction
+      // and then check resolution again.
+      weak_ptr_factory_.InvalidateWeakPtrs();
+      arena_->TryToResolve();
     }
   }
-}
 
-ArenaMember::ArenaMember(GestureArena* arena, GestureRecognizer* recognizer)
-    : arena_(arena), recognizer_(recognizer) {
-  FX_CHECK(arena_ != nullptr);
-  FX_CHECK(recognizer_ != nullptr);
-}
+  fxl::WeakPtr<ArenaContestMember> GetWeakPtr() { return weak_ptr_factory_.GetWeakPtr(); }
 
-bool ArenaMember::Accept() {
-  if (status_ == Status::kContending) {
-    SetWin();
-    arena_->TryToResolve();
+  ArenaMember* arena_member() const { return arena_member_; }
+
+  bool is_active() const {
+    FX_DCHECK(arena_);
+    return arena_member_->status != Status::kDefeated;
   }
-  return status_ == Status::kWinner;
-}
 
-void ArenaMember::Reject() {
-  if (status_ == Status::kContending || status_ == Status::kWinner) {
-    SetDefeat();
-    arena_->TryToResolve();
+  // |ContestMember|
+  Status status() const override { return arena_ ? arena_member_->status : Status::kObsolete; }
+
+  // |ContestMember|
+  bool Accept() override {
+    // Get a weak pointer to ourselves in case the recognizer releases us on win.
+    auto weak_this = GetWeakPtr();
+
+    if (arena_ && status() == Status::kContending) {
+      arena_member_->SetWin();
+      if (weak_this) {
+        FX_DCHECK(arena_) << "Recognizers should never destroy arenas.";
+        arena_->TryToResolve();
+      }
+    }
+    return weak_this && status() == Status::kWinner;
   }
-  is_active_ = false;
+
+  // |ContestMember|
+  void Reject() override {
+    if (arena_ && (status() == Status::kContending || status() == Status::kWinner)) {
+      // Get a weak pointer to ourselves in case the recognizer releases us on defeat.
+      auto weak_this = GetWeakPtr();
+      arena_member_->SetDefeat();
+      if (weak_this && arena_) {
+        arena_->TryToResolve();
+      }
+    }
+  }
+
+ private:
+  fxl::WeakPtr<GestureArena> arena_;
+  ArenaMember* const arena_member_;
+
+  fxl::WeakPtrFactory<ArenaContestMember> weak_ptr_factory_;
+};
+
+void GestureArena::ArenaMember::SetWin() {
+  FX_DCHECK(status == ContestMember::Status::kContending);
+  FX_LOGS(INFO) << "winning recognizer: " << recognizer->DebugName();
+  status = ContestMember::Status::kWinner;
+  recognizer->OnWin();
 }
 
-void ArenaMember::Hold() { is_holding_ = true; }
-
-void ArenaMember::Release() { is_holding_ = false; }
-
-bool ArenaMember::is_holding() const { return is_holding_; }
-
-void ArenaMember::SetWin() {
-  FX_DCHECK(status_ == Status::kContending);
-  FX_LOGS(INFO) << "winning recognizer: " << recognizer_->DebugName();
-  status_ = Status::kWinner;
-  recognizer_->OnWin();
+void GestureArena::ArenaMember::SetDefeat() {
+  FX_LOGS(INFO) << "defeated recognizer: " << recognizer->DebugName();
+  status = ContestMember::Status::kDefeated;
+  recognizer->OnDefeat();
 }
 
-void ArenaMember::SetDefeat() {
-  FX_LOGS(INFO) << "defeated recognizer: " << recognizer_->DebugName();
-  status_ = Status::kDefeated;
-  recognizer_->OnDefeat();
-  Release();  // Does nothing if not holding.
-}
-
-void ArenaMember::Reset() {
-  status_ = Status::kContending;
-  is_active_ = true;
-  is_holding_ = false;
-}
-
-GestureArena::GestureArena(PointerEventRouter::OnStreamHandledCallback on_stream_handled_callback,
+GestureArena::GestureArena(PointerStreamTracker::OnStreamHandledCallback on_stream_handled_callback,
                            EventHandlingPolicy event_handling_policy)
-    : router_(std::move(on_stream_handled_callback)),
-      event_handling_policy_(event_handling_policy) {}
+    : streams_(std::move(on_stream_handled_callback)),
+      event_handling_policy_(event_handling_policy),
+      weak_ptr_factory_(this) {}
 
-ArenaMember* GestureArena::Add(GestureRecognizer* recognizer) {
-  FX_CHECK(!router_.is_active())
+void GestureArena::Add(GestureRecognizer* recognizer) {
+  FX_CHECK(!streams_.is_active())
       << "Trying to add a new gesture recognizer to an arena which is already active.";
-  arena_members_.push_back(std::make_unique<ArenaMember>(this, recognizer));
-  return arena_members_.back().get();
+  arena_members_.push_back({.recognizer = recognizer});
 }
 
 void GestureArena::OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
@@ -170,42 +162,26 @@ void GestureArena::OnEvent(const fuchsia::ui::input::accessibility::PointerEvent
     StartNewContest();
   }
 
-  router_.RouteEvent(pointer_event, arena_members_);
+  streams_.OnEvent(pointer_event);
+  DispatchEvent(pointer_event);
+
   TryToResolve();
-  switch (state_) {
-    case State::kContendingInProgress:
-      if (IsIdle()) {
-        // The arena has reached the end of an interaction with no winners. Sweep all members and
-        // declares the first one to win.
-        Sweep();
-      }
-      return;
-    case State::kAssigned:
-      if (IsIdle()) {
-        // The arena has reached the end of an interaction with a winner.
-        HandleEvents(/*consumed_by_member=*/true);
-      }
-      return;
-    case State::kEmpty:
-      // The arena has no members left, but still needs to handle incoming events. That depends on
-      // the policy in which it was configured. Although an empty arena is handled when it becomes
-      // empty, it is also necessary to continue handling events until the interaction is over.
-      HandleEvents(/*consumed_by_member=*/false);
-      return;
-    default:
-      return;
-  };
 }
 
 void GestureArena::TryToResolve() {
   if (state_ == State::kEmpty) {
     return;
   }
-  auto [winner, contending] = ClassifyArenaMembers(arena_members_);
+
+  auto [winner, contending] = ClassifyArenaMembers();
 
   if (state_ == State::kAssigned && !winner) {
     // All members have left the arena, including the winner.
     state_ = State::kEmpty;
+
+    // The arena has no members left, but still needs to handle incoming events. That depends on
+    // the policy in which it was configured. Although an empty arena is handled when it becomes
+    // empty, it is also necessary to continue handling events until the interaction is over.
     HandleEvents(/*consumed_by_member=*/false);
     return;
   }
@@ -214,7 +190,7 @@ void GestureArena::TryToResolve() {
     if (winner) {
       state_ = State::kAssigned;
       // Someone claimed a win, inform everyone else about their defeat.
-      for (auto& member : contending) {
+      for (ArenaMember* member : contending) {
         member->SetDefeat();
       }
     } else if (contending.size() == 1) {
@@ -223,42 +199,101 @@ void GestureArena::TryToResolve() {
       contending.front()->SetWin();
     }
   }
-}
 
-void GestureArena::Reset() {
-  FX_CHECK(!router_.is_active()) << "Trying to reset an arena which has cached pointer events";
-  state_ = State::kContendingInProgress;
-  for (auto& member : arena_members_) {
-    member->Reset();
+  if (IsIdle()) {
+    if (state_ == State::kAssigned) {
+      // The arena has reached the end of an interaction with a winner.
+      HandleEvents(/*consumed_by_member=*/true);
+    } else {
+      FX_DCHECK(state_ == State::kContendingInProgress);
+
+      // The arena has reached the end of an interaction with no winners. Sweep all members and
+      // declares the first one to win.
+      Sweep();
+    }
   }
 }
 
+void GestureArena::Reset() {
+  FX_CHECK(!streams_.is_active()) << "Trying to reset an arena which has cached pointer events";
+  state_ = State::kContendingInProgress;
+  contest_members_.clear();
+  weak_ptr_factory_.InvalidateWeakPtrs();
+}
+
 bool GestureArena::IsHeld() const {
-  for (const auto& member : arena_members_) {
-    if (member->status() != ArenaMember::Status::kDefeated && member->is_holding()) {
+  for (const auto& contest_member : contest_members_) {
+    if (contest_member && contest_member->is_active()) {
       return true;
     }
   }
   return false;
 }
 
+GestureArena::ClassifiedArenaMembers GestureArena::ClassifyArenaMembers() {
+  ClassifiedArenaMembers c;
+  for (auto& member : arena_members_) {
+    switch (member.status) {
+      case ContestMember::Status::kContending:
+        c.contending.push_back(&member);
+        break;
+      case ContestMember::Status::kWinner:
+        FX_CHECK(!c.winner) << "A gesture arena can have up to one winner only.";
+        c.winner = &member;
+        break;
+      case ContestMember::Status::kDefeated:
+        // No work to do.
+        break;
+      case ContestMember::Status::kObsolete:
+        FX_NOTREACHED() << "Arena should never set members obsolete.";
+        break;
+    };
+  }
+  return c;
+}
+
+void GestureArena::DispatchEvent(
+    const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
+  auto it = contest_members_.begin(), end = contest_members_.end();
+  while (it != end) {
+    fxl::WeakPtr<ArenaContestMember>& contest_member = *it;
+    if (contest_member && contest_member->is_active()) {
+      contest_member->arena_member()->recognizer->HandleEvent(pointer_event);
+    }
+    // Recheck in case the handler released the member or declared defeat.
+    if (contest_member && contest_member->is_active()) {
+      ++it;
+    } else {
+      // Purge if the member has been released.
+      std::swap(*it, *--end);
+    }
+  }
+  contest_members_.erase(end, contest_members_.end());
+}
+
 void GestureArena::StartNewContest() {
   Reset();
   for (auto& member : arena_members_) {
-    member->recognizer()->OnContestStarted();
+    member.status = ContestMember::Status::kContending;
+    // If we ever allow adding members while active, we'll need to put members in unique_ptrs to
+    // allow for vector reallocation.
+    auto contest_member =
+        std::make_unique<ArenaContestMember>(weak_ptr_factory_.GetWeakPtr(), &member);
+    contest_members_.push_back(contest_member->GetWeakPtr());
+    member.recognizer->OnContestStarted(std::move(contest_member));
   }
 }
 
 void GestureArena::HandleEvents(bool consumed_by_member) {
   if (consumed_by_member || event_handling_policy_ == EventHandlingPolicy::kConsumeEvents) {
-    return router_.ConsumePointerEvents();
+    return streams_.ConsumePointerEvents();
   }
   FX_DCHECK(event_handling_policy_ == EventHandlingPolicy::kRejectEvents);
-  router_.RejectPointerEvents();
+  streams_.RejectPointerEvents();
 }
 
 void GestureArena::Sweep() {
-  auto [winner, contending] = ClassifyArenaMembers(arena_members_);
+  auto [winner, contending] = ClassifyArenaMembers();
   FX_CHECK(!winner) << "Trying to sweep an arena which has a winner.";
   FX_CHECK(!contending.empty()) << "Trying to sweep an arena with no contending members left.";
   auto it = contending.begin();
@@ -269,6 +304,6 @@ void GestureArena::Sweep() {
   }
 }
 
-bool GestureArena::IsIdle() const { return !IsHeld() && !router_.is_active(); }
+bool GestureArena::IsIdle() const { return !IsHeld() && !streams_.is_active(); }
 
 }  // namespace a11y

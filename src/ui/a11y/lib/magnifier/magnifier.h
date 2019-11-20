@@ -14,7 +14,7 @@
 
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/ui/input/gesture_detector.h"
-#include "src/ui/a11y/lib/gesture_manager/arena/gesture_arena.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 #include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
 #include "src/ui/lib/glm_workaround/glm_workaround.h"
 
@@ -39,8 +39,6 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
 
   Magnifier();
   ~Magnifier() override;
-
-  void arena_member(ArenaMember* arena_member);
 
   // |fuchsia::accessibility::Magnifier|
   void RegisterHandler(
@@ -98,6 +96,8 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
   // |GestureRecognizer|
   void OnDefeat() override;
   // |GestureRecognizer|
+  void OnContestStarted(std::unique_ptr<ContestMember> contest_member) override;
+  // |GestureRecognizer|
   void HandleEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) override;
   // |GestureRecognizer|
   std::string DebugName() const override;
@@ -124,7 +124,7 @@ class Magnifier : public fuchsia::accessibility::Magnifier,
 
   bool is_magnified() const;
 
-  ArenaMember* arena_member_ = nullptr;
+  std::unique_ptr<ContestMember> contest_member_;
   fuchsia::accessibility::MagnificationHandlerPtr handler_;
 
   input::GestureDetector gesture_detector_;

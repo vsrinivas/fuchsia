@@ -20,11 +20,6 @@ SwipeRecognizerBase::SwipeRecognizerBase(SwipeGestureCallback callback,
       abandon_task_(this),
       swipe_gesture_timeout_(swipe_gesture_timeout) {}
 
-void SwipeRecognizerBase::AddArenaMember(ArenaMember* new_arena_member) {
-  FXL_CHECK(new_arena_member);
-  arena_member_ = new_arena_member;
-}
-
 void SwipeRecognizerBase::HandleEvent(
     const fuchsia::ui::input::accessibility::PointerEvent& pointer_event) {
   if (!pointer_event.has_phase()) {
@@ -33,112 +28,64 @@ void SwipeRecognizerBase::HandleEvent(
   }
 
   switch (pointer_event.phase()) {
-    case fuchsia::ui::input::PointerEventPhase::ADD:
-      break;
-
     case fuchsia::ui::input::PointerEventPhase::DOWN:
-      if ((gesture_state_ != SwipeGestureState::kNotStarted)) {
-        AbandonGesture();
-        break;
-      }
-
       if (!InitGestureInfo(pointer_event, &gesture_start_info_, &gesture_context_)) {
         FX_LOGS(ERROR) << "Pointer Event is missing required fields. Dropping current event.";
         AbandonGesture();
-        break;
-      }
-
-      if (!ValidatePointerEvent(gesture_start_info_, pointer_event)) {
+      } else if (in_progress_ || !ValidatePointerEvent(gesture_start_info_, pointer_event)) {
         AbandonGesture();
-        break;
+      } else {
+        // Schedule a task to declare defeat with a timeout equal to swipe_gesture_timeout_.
+        abandon_task_.PostDelayed(async_get_default_dispatcher(), swipe_gesture_timeout_);
+        in_progress_ = true;
       }
-
-      // Schedule a task to declare defeat with a timeout equal to swipe_gesture_timeout_.
-      abandon_task_.PostDelayed(async_get_default_dispatcher(), swipe_gesture_timeout_);
-      gesture_state_ = SwipeGestureState::kDownFingerDetected;
-
       break;
-
     case fuchsia::ui::input::PointerEventPhase::MOVE:
-      if ((gesture_state_ != SwipeGestureState::kDownFingerDetected) ||
-          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
-          !ValidateSwipePath(pointer_event)) {
+      if (!in_progress_) {
+        FX_LOGS(ERROR) << "Pointer MOVE event received without preceding DOWN event.";
+      } else if (!(ValidatePointerEvent(gesture_start_info_, pointer_event) &&
+                   ValidateSwipePath(pointer_event))) {
         AbandonGesture();
-        break;
       }
-
       break;
-
     case fuchsia::ui::input::PointerEventPhase::UP:
-      if ((gesture_state_ != SwipeGestureState::kDownFingerDetected) ||
-          !ValidatePointerEvent(gesture_start_info_, pointer_event) ||
-          !ValidateSwipePath(pointer_event) || !ValidateSwipeDistance(pointer_event)) {
+      if (!in_progress_) {
+        FX_LOGS(ERROR) << "Pointer UP event received without preceding DOWN event.";
+      } else if (!(ValidatePointerEvent(gesture_start_info_, pointer_event) &&
+                   ValidateSwipePath(pointer_event) && ValidateSwipeDistance(pointer_event))) {
         AbandonGesture();
-        break;
+      } else {
+        // CallbackTask is set to abandon gesture if timeout is exceeded, so we need to cancel
+        // the callback if a gesture is detected within the timeout period.
+        abandon_task_.Cancel();
+
+        FX_DCHECK(contest_member_);
+        contest_member_->Accept();
+        swipe_gesture_callback_(gesture_context_);
+        contest_member_.reset();
       }
-
-      // CallbackTask is set to abandon gesture if timeout is exceeded, so we need to cancel
-      // the callback if a gesture is detected within the timeout period.
-      abandon_task_.Cancel();
-
-      gesture_state_ = SwipeGestureState::kGestureDetected;
-
-      // Attempt to claim the win (if not already the winner).
-      // If unsuccessful, abandon gesture and reset state.
-      // If successful, arena_member_->Accept() will call OnWin(), so no further work is required.
-      if (is_winner_) {
-        ExecuteOnWin();
-      } else if (!arena_member_->Accept()) {
-        AbandonGesture();
-      }
-
       break;
-
     default:
       break;
   }
 }
 
-void SwipeRecognizerBase::OnWin() {
-  is_winner_ = true;
-  if (gesture_state_ == SwipeGestureState::kGestureDetected) {
-    ExecuteOnWin();
-  }
+void SwipeRecognizerBase::OnDefeat() {
+  abandon_task_.Cancel();
+  contest_member_.reset();
 }
-
-void SwipeRecognizerBase::ExecuteOnWin() {
-  if (is_winner_) {
-    swipe_gesture_callback_(gesture_context_);
-    gesture_state_ = SwipeGestureState::kDone;
-  }
-}
-void SwipeRecognizerBase::OnDefeat() { gesture_state_ = SwipeGestureState::kDone; }
 
 void SwipeRecognizerBase::AbandonGesture() {
-  if (!arena_member_) {
-    FX_LOGS(ERROR) << "Arena member is not initialized.";
-    return;
-  }
+  FX_DCHECK(contest_member_) << "No active contest.";
 
-  arena_member_->Reject();
-  abandon_task_.Cancel();
-  ResetState();
+  contest_member_->Reject();
+  // Remaining cleanup  happens in |OnDefeat|.
 }
 
 void SwipeRecognizerBase::ResetState() {
-  abandon_task_.Cancel();
-
-  // Reset gesture start info.
   ResetGestureInfo(&gesture_start_info_);
-
-  // Reset gesture state.
-  gesture_state_ = SwipeGestureState::kNotStarted;
-
-  // Reset gesture context.
+  in_progress_ = false;
   ResetGestureContext(&gesture_context_);
-
-  // Reset is_winner_ flag.
-  is_winner_ = false;
 }
 
 bool SwipeRecognizerBase::ValidateSwipePath(
@@ -163,6 +110,9 @@ bool SwipeRecognizerBase::ValidateSwipeDistance(
   return (swipe_distance >= kMinSwipeDistance && swipe_distance <= kMaxSwipeDistance);
 }
 
-void SwipeRecognizerBase::OnContestStarted() { ResetState(); }
+void SwipeRecognizerBase::OnContestStarted(std::unique_ptr<ContestMember> contest_member) {
+  ResetState();
+  contest_member_ = std::move(contest_member);
+}
 
 }  // namespace a11y

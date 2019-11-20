@@ -19,6 +19,11 @@ executable("gesture_arena_tests") {
   deps = [
     "//garnet/public/lib/gtest",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
     "//src/ui/a11y/lib/gesture_manager/arena",
+    "//src/ui/a11y/lib/testing:input",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 }

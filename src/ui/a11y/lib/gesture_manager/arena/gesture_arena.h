@@ -7,101 +7,20 @@
 
 #include <fuchsia/ui/input/accessibility/cpp/fidl.h>
 
+#include <map>
 #include <set>
 #include <vector>
 
-#include "src/ui/a11y/lib/gesture_manager/arena/recognizer.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
+#include "src/ui/a11y/lib/gesture_manager/arena/contest_member.h"
 
 namespace a11y {
 
-class GestureArena;
-class PointerEventRouter;
-
-// Represents a recognizer in a Gesture Arena contending for a gesture.
-//
-// Recognizers add themselves to the arena via GestureArena::Add(), and receive a ArenaMember in
-// return. Recognizers are then expected to:
-// 1. Call Accept(), when they want to win the arena.
-// 2. Reject() when they want to leave the arena.
-// 3. Call Hold(), when they want to see a subsequent interaction. They are also
-// expected to call Release(), before the end of the last interaction to
-// indicate they are done.
-//
-// For a group of recognizers in an arena, it is also true:
-// 1. Multiple recognizers are kContending -> One becomes kWinner, remainder
-// kDefeated.
-// 2. Multiple recognizers are kContending -> All but the last declare
-// kDefeated, the last is assigned kWinner.
-// 3. The winner can also declare defeat by calling Reject(), which causes the
-// arena to be empty.
-class ArenaMember {
- public:
-  enum class Status {
-    kContending,  // Competing to handle the gesture
-    kWinner,      // Won the arena for the gesture
-    kDefeated,    // Lost the arena for this gesture.
-  };
-  ArenaMember(GestureArena* arena, GestureRecognizer* recognizer);
-  virtual ~ArenaMember() = default;
-
-  // Returns the status of this member in the Arena. Once the gesture has been handled, the arena is
-  // responsible for resetting this.
-  Status status() const { return status_; }
-
-  // Returns true if this member should receive pointer events.
-  bool is_active() const { return is_active_; }
-
-  // Claims a win in this arena. If this results in this member winning, the recognizer receives a
-  // call to |OnWin()|. Returns true if this member has won, whether due to this claim or if it has
-  // already won, and false if it has already lost.
-  virtual bool Accept();
-
-  // Declares defeat in this arena. If this results in this member being
-  // defeated, the recognizer receives a call to |OnDefeat()|. This also
-  // releases the arena, in case it has been held.
-  virtual void Reject();
-
-  // Holds the arena indicating that this member wants to see another
-  // interaction before the resolution of the contest.
-  void Hold();
-
-  // If the arena was held by this member, releases it.
-  void Release();
-
-  // Returns true if this member is holding the arena.
-  bool is_holding() const;
-
-  GestureRecognizer* recognizer() { return recognizer_; }
-
- private:
-  friend class GestureArena;
-
-  // Sets this member as the winner for the arena.
-  void SetWin();
-
-  // Sets this member as defeated.
-  void SetDefeat();
-
-  // Prepares the arena member to a new contest.
-  void Reset();
-
-  GestureArena* const arena_ = nullptr;
-  GestureRecognizer* const recognizer_ = nullptr;
-  Status status_ = Status::kContending;
-  bool is_active_ = true;
-  bool is_holding_ = false;
-};
-
-// Routes accessibility pointer events to recognizers and input system.
-//
-// The PointerEventRouter manages the life cycle of accessibility pointer
-// events arriving from the OS input system. They are dispatched to
-// recognizers that are still contending for the gesture in the arena or to
-// the recgonizer that has won the arena. It also can dispatch events to the
-// input system, either consuming or rejecting the pointer events. Please see:
-// |fuchsia.ui.input.accessibility.EventHandling| for more info on consuming /
-// rejecting pointer events.
-class PointerEventRouter {
+// The PointerStreamTracker tracks the life cycle of accessibility pointer streams arriving from the
+// OS input system. It can consume or reject tracked pointer streams. Please see
+// fuchsia.ui.input.accessibility.EventHandling| for more info on consuming / rejecting pointer
+// events.
+class PointerStreamTracker {
  public:
   // Callback signature used to indicate when and how an pointer event sent to the arena was
   // processed.
@@ -109,22 +28,20 @@ class PointerEventRouter {
       fit::function<void(uint32_t device_id, uint32_t pointer_id,
                          fuchsia::ui::input::accessibility::EventHandling handled)>;
 
-  explicit PointerEventRouter(OnStreamHandledCallback on_stream_handled_callback);
-  ~PointerEventRouter() = default;
+  explicit PointerStreamTracker(OnStreamHandledCallback on_stream_handled_callback);
+  ~PointerStreamTracker() = default;
 
-  // Rejects all pointer event streams received by the router, causing it to become inactive.
+  // Rejects all pointer event streams received by the tracker, causing it to become inactive.
   void RejectPointerEvents();
 
-  // Consumes all pointer event streams received by the router. This does not
-  // cause the router to become inactive, as it will continue to receive the
+  // Consumes all pointer event streams received by the tracker. This does not
+  // cause the tracker to become inactive, as it will continue to receive the
   // pointer events for each consumed stream until it finishes.
   void ConsumePointerEvents();
 
-  // Dispatches the pointer event to all active arena members. For new contest (ADD pointer
-  // events), also caches the callback from the input system to notify it later whether the pointer
-  // events were consumed / rejected.
-  void RouteEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event,
-                  const std::vector<std::unique_ptr<ArenaMember>>& arena_members);
+  // Adds or removes a pointer stream for the given event. For ADD events, also caches the callback
+  // from the input system to notify it later whether the stream was consumed or rejected.
+  void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Returns true if it has any ongoing pointer event streams which are not
   // finished yet. A stream is considered finished when it sees and event with
@@ -140,21 +57,23 @@ class PointerEventRouter {
   // Callback used to notify how each stream was handled.
   OnStreamHandledCallback on_stream_handled_callback_;
 
-  // Holds how many times the |on_stream_handled_callback_| should be invoked
-  // per pointer event streams in order to notify the input system whether they
-  // were consumed / rejected. A pointer event stream is a sequence of pointer
-  // events that must start with an ADD phase event and end with an REMOVE phase
-  // event. Since only one callback call is needed to notify the input system
+  // Holds how many times the |on_stream_handled_callback_| should be invoked per pointer event
+  // streams in order to notify the input system whether they were consumed / rejected. A pointer
+  // event stream is a sequence of pointer events that must start with an ADD phase event and end
+  // with an REMOVE phase event. Since only one callback call is needed to notify the input system
   // per stream, on an ADD event the count is increased.
+  //
   // Note: this is a map holding just a few keys and follows the map type selection guidance
   // described at:
   // https://chromium.googlesource.com/chromium/src/+/master/base/containers/README.md#map-and-set-selection
   std::map<StreamID, uint32_t> pointer_event_callbacks_;
 
-  // Holds the streams in progress tracked by the router. A stream of pointer events is considered
+  // Holds the streams in progress tracked by the tracker. A stream of pointer events is considered
   // to be active when an event with phase ADD was seen, but not an event with phase REMOVE yet.
   std::set<StreamID> active_streams_;
 };
+
+class GestureRecognizer;
 
 // The Gesture Arena for accessibility services.
 //
@@ -166,10 +85,8 @@ class PointerEventRouter {
 // interaction, sweeps the arena and turn the first recognizer the winner.
 //
 // Any recognizer can declare win or defeat at any time. Once a recognizer has
-// won the arena for that gesture, it receives incoming pointer events until the
-// end of the interaction. The recognizer can continue receiving pointer events
-// of a subsequent interaction by holding the arena and releasing it when it is
-// done.
+// won the arena for that gesture, it receives incoming pointer events until it releases its
+// |ContestMember|.
 //
 // The order in which recognizers are added to the arena is important. When
 // routing pointer events to recognizers, they see the event in order they were
@@ -181,7 +98,7 @@ class PointerEventRouter {
 // In this model, it is important to notice that there are two layers of
 // abstraction:
 // 1. Raw pointer events, which come from the input system, arrive at the arena
-// and are dispatched to arena members via a PointerEventRouter.
+// and are dispatched to arena members via a PointerStreamTracker.
 // 2. Gestures, which are sequences of pointer events with a semantic meaning,
 // are identified by recognizers.
 //
@@ -197,6 +114,8 @@ class PointerEventRouter {
 // Consider an arena with only one recognizer, which, by the rules above, would
 // be a winner by the default. It would process incoming pointer events and
 // detect its gesture only when the gesture actually occurred.
+//
+// Recognizers should not destroy the arena.
 //
 // Implementation notes: this arena is heavily influenced by Fluttter's gesture
 // arena: https://flutter.dev/docs/development/ui/advanced/gestures
@@ -220,29 +139,24 @@ class GestureArena {
   // This arena takes |on_stream_handled_callback|, which is called whenever a
   // stream of pointer events is handled (e.g., is consumed or rejected).
   explicit GestureArena(
-      PointerEventRouter::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {},
+      PointerStreamTracker::OnStreamHandledCallback on_stream_handled_callback = [](auto...) {},
       EventHandlingPolicy event_handling_policy = EventHandlingPolicy::kRejectEvents);
   ~GestureArena() = default;
 
-  // Adds a new recognizer to participate in the arena. The arena returns a
-  // pointer to a ArenaMember object, which is the interface where members talk
-  // to the arena to declare a win, defeat and so on.
-  ArenaMember* Add(GestureRecognizer* recognizer);
-
-  // Returns all arena members.
-  const std::vector<std::unique_ptr<ArenaMember>>& arena_members() const { return arena_members_; }
+  // Adds a new recognizer to participate in the arena.
+  void Add(GestureRecognizer* recognizer);
 
   // Changes the event handling policy for empty arenas.
   void event_handling_policy(EventHandlingPolicy value) { event_handling_policy_ = value; }
 
-  // Dispatches a new pointer event to this arena. This event gets sent to all
-  // arena members which are active at the moment.
+  // Dispatches a new pointer event to this arena. This event gets sent to all arena members which
+  // are active at the moment.
   void OnEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
 
   // Tries to resolve the arena if it is not resolved already.
   // It follows two rules:
-  // 1. If a recgonizer declared a win, it wins.
-  // 2. If a recgonizer is the last one active, it wins.
+  // 1. If a recognizer declared a win, it wins.
+  // 2. If a recognizer is the last one active, it wins.
   // A resolved arena will continue to be so until the interaction is over and
   // the arena is not held, which restarts the arena for a new contest.
   void TryToResolve();
@@ -254,6 +168,33 @@ class GestureArena {
   bool IsHeld() const;
 
  private:
+  class ArenaContestMember;
+
+  // Tracks the state of a recognizer in an arena and backs the state of a |ContestMmeber| during a
+  // contest.
+  struct ArenaMember {
+    GestureRecognizer* recognizer;
+    ContestMember::Status status;
+
+    void SetWin();
+    void SetDefeat();
+  };
+
+  // Holds pointers to arena members in different states.
+  // If winner is not nullptr, contending is empty. If contending is not empty, winner is nullptr.
+  struct ClassifiedArenaMembers {
+    ArenaMember* winner = nullptr;
+    std::vector<ArenaMember*> contending;
+  };
+
+  // Dispatches the pointer event to active arena members and purges inactive contest members.
+  void DispatchEvent(const fuchsia::ui::input::accessibility::PointerEvent& pointer_event);
+
+  // Classifies the arena members into winner and contending.
+  // Example:
+  // auto [winner, contending] = ClassifyArenaMembers();
+  ClassifiedArenaMembers ClassifyArenaMembers();
+
   // Returns true if the arena is not held and the interaction is finished.
   bool IsIdle() const;
 
@@ -263,14 +204,17 @@ class GestureArena {
   // Sweeps the arena granting the win to the first recognizer that is contending.
   void Sweep();
 
-  // handles how accessibility pointer events will be used by this arena. This depends on the policy
+  // Handles how accessibility pointer events will be used by this arena. This depends on the policy
   // in which it was configured during its construction.
   void HandleEvents(bool consumed_by_member);
 
-  PointerEventRouter router_;
-  std::vector<std::unique_ptr<ArenaMember>> arena_members_;
+  PointerStreamTracker streams_;
+  std::vector<ArenaMember> arena_members_;
+  std::vector<fxl::WeakPtr<ArenaContestMember>> contest_members_;
   State state_ = State::kContendingInProgress;
   EventHandlingPolicy event_handling_policy_ = EventHandlingPolicy::kConsumeEvents;
+
+  fxl::WeakPtrFactory<GestureArena> weak_ptr_factory_;
 };
 
 }  // namespace a11y
