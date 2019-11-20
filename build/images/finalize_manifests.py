@@ -67,6 +67,9 @@ input_binary = namedtuple('input_binary', ['target_pattern', 'output_group'])
 def collect_auxiliaries(manifest, examined):
     aux_binaries = {}
     for entry in manifest:
+        # TODO(bwb): Temporary workaround for ZN/GN migration. Remove when all drivers are outside of ZN
+        if "libdriver.so" in entry.source and ".zircon" not in entry.source:
+            continue
         examined.add(entry.source)
         info = binary_info(entry.source)
         if info:

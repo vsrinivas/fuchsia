@@ -272,7 +272,13 @@ if (toolchain_variant.with_shared) {
           output_dir = shared_out_dir
         }
         if (!defined(output_name)) {
-          output_name = target_name
+          # Remove any "lib" prefix.
+          _prefixless = string_replace("###$target_name", "###lib", "")
+          if (_prefixless == "###$target_name") {
+            output_name = target_name
+          } else {
+            output_name = _prefixless
+          }
         }
         if (!defined(output_extension)) {
           if (current_os == "mac") {
@@ -287,7 +293,6 @@ if (toolchain_variant.with_shared) {
           output_file_name += ".$output_extension"
         }
         output_file = "$output_dir/$output_file_name"
-        rebased_output_file = rebase_path(output_file, root_build_dir)
         link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
         metadata = {
@@ -314,10 +319,6 @@ if (toolchain_variant.with_shared) {
               }
             },
           ]
-
-          migrated_manifest_lines = [
-            "lib/$output_file_name=$rebased_output_file",
-          ]
         }
       }
     }
@@ -327,6 +328,10 @@ if (toolchain_variant.with_shared) {
     # the dependency from the main toolchain is still allowed.
     template("shared_library") {
       shared_library(target_name) {
+        # Save the target name here as it could be overridden by the calls
+        # to forward_variables_from below.
+        original_target_name = target_name
+
         # Explicitly forward visibility, implicitly forward everything
         # else.  Forwarding "*" doesn't recurse into nested scopes (to
         # avoid copying all globals into each template invocation), so
@@ -337,8 +342,48 @@ if (toolchain_variant.with_shared) {
         # for rationale on why this GN behavior is not considered a bug.
         forward_variables_from(invoker, [ "visibility" ])
         forward_variables_from(invoker, "*", [ "visibility" ])
+
+        # Restore the original target name.
+        target_name = original_target_name
+
         if (defined(visibility)) {
           visibility += [ ":$target_name" ]
+        }
+
+        if (!defined(output_dir)) {
+          output_dir = root_out_dir
+        }
+        if (!defined(output_name)) {
+          # Remove any "lib" prefix.
+          _prefixless = string_replace("###$target_name", "###lib", "")
+          if (_prefixless == "###$target_name") {
+            output_name = target_name
+          } else {
+            output_name = _prefixless
+          }
+        }
+        if (!defined(output_extension)) {
+          if (current_os == "mac") {
+            output_extension = "dylib"
+          } else {
+            output_extension = "so"
+          }
+        }
+
+        output_file_name = "lib$output_name"
+        if (output_extension != "") {
+          output_file_name += ".$output_extension"
+        }
+        output_file = "$output_dir/$output_file_name"
+        rebased_output_file = rebase_path(output_file, root_build_dir)
+
+        # Note: the manifest-related metadata is added to the builder target as
+        # some targets (e.g. drivers) depend on it directly in the builder
+        # toolchain.
+        metadata = {
+          migrated_manifest_lines = [
+            "lib/$output_file_name=$rebased_output_file",
+          ]
         }
       }
     }
@@ -1101,7 +1146,6 @@ template("loadable_module") {
       output_file_name += ".$output_extension"
     }
     output_file = "$output_dir/$output_file_name"
-    rebased_output_file = rebase_path(output_file, root_build_dir)
     link_output_file = "$output_dir/lib.unstripped/$output_file_name"
 
     metadata = {
@@ -1127,10 +1171,6 @@ template("loadable_module") {
             breakpad = rebase_path("$output_file.sym", root_build_dir)
           }
         },
-      ]
-
-      migrated_manifest_lines = [
-        "driver/$output_file_name=$rebased_output_file",
       ]
     }
   }
