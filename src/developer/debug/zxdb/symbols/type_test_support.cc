@@ -46,14 +46,14 @@ fxl::RefPtr<BaseType> MakeSignedChar8Type() {
 
 fxl::RefPtr<BaseType> MakeRustCharType() {
   auto type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsignedChar, 4, "char");
-  type->set_parent(MakeRustUnit());
+  type->set_parent(UncachedLazySymbol::MakeUnsafe(MakeRustUnit()));
   return type;
 }
 
 fxl::RefPtr<ModifiedType> MakeRustCharPointerType() {
   auto char_type = MakeRustCharType();
   auto mod = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, char_type);
-  mod->set_parent(char_type->parent());
+  mod->set_parent(UncachedLazySymbol::MakeUnsafe(char_type->parent().Get()));
   return mod;
 }
 
@@ -139,12 +139,12 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
   // The single member of the variant has a type name of the variant name.  This type holds all the
   // members passed in.
   auto variant_member_type = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  variant_member_type->set_parent(unit);
+  variant_member_type->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
   variant_member_type->set_byte_size(byte_size);
 
   std::vector<LazySymbol> lazy_members;
   for (const auto& member : members) {
-    member->set_parent(unit);
+    member->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
     lazy_members.emplace_back(member);
   }
   variant_member_type->set_data_members(std::move(lazy_members));
@@ -152,11 +152,11 @@ fxl::RefPtr<Variant> MakeRustVariant(const std::string& name, std::optional<uint
   // This data member in the variant contains the structure above. We assume it starts at offset 0
   // in the containing struct.
   auto variant_data = fxl::MakeRefCounted<DataMember>(name, variant_member_type, 0);
-  variant_data->set_parent(unit);
+  variant_data->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
 
   auto var =
       fxl::MakeRefCounted<Variant>(discriminant, std::vector<LazySymbol>{LazySymbol(variant_data)});
-  var->set_parent(unit);
+  var->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
   return var;
 }
 
@@ -181,12 +181,12 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
   }
 
   auto variant_part = fxl::MakeRefCounted<VariantPart>(discriminant, std::move(lazy_variants));
-  variant_part->set_parent(unit);
+  variant_part->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
 
   auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
   collection->set_variant_part(variant_part);
   collection->set_byte_size(byte_size);
-  collection->set_parent(unit);
+  collection->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
 
   return collection;
 }
@@ -203,7 +203,7 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   // This 4-byte value encodes the discriminant value which indicates which
   // variant is valid. It's at offset 0 in the struct,
   auto uint32_type = MakeInt32Type();
-  uint32_type->set_parent(unit);
+  uint32_type->set_parent(UncachedLazySymbol::MakeUnsafe(unit));
 
   auto discriminant = fxl::MakeRefCounted<DataMember>(std::string(), uint32_type, 0);
 
@@ -225,14 +225,14 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   // Structure that contains the variants. It has a variant_part and no data.
   auto rust_enum =
       MakeRustEnum("RustEnum", discriminant, {none_variant, scalar_variant, point_variant});
-  rust_enum->set_parent(MakeRustUnit());
+  rust_enum->set_parent(UncachedLazySymbol::MakeUnsafe(MakeRustUnit()));
   return rust_enum;
 }
 
 fxl::RefPtr<Collection> MakeTestRustTuple(const std::string& name,
                                           const std::vector<fxl::RefPtr<Type>>& members) {
   auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  coll->set_parent(MakeRustUnit());
+  coll->set_parent(UncachedLazySymbol::MakeUnsafe(MakeRustUnit()));
 
   uint32_t offset = 0;
   std::vector<LazySymbol> data_members;

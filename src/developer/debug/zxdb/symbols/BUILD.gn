@@ -57,6 +57,7 @@ static_library("symbols") {
     "symbol_context.h",
     "symbol_data_provider.h",
     "symbol_factory.h",
+    "symbol_test_parent_setter.h",
     "symbol_utils.h",
     "system_symbols.h",
     "target_symbols.h",

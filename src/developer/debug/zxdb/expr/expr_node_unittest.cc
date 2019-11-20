@@ -24,6 +24,7 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -352,11 +353,11 @@ TEST_F(ExprNodeTest, RustMemberAccess) {
   auto int32_type = MakeInt32Type();
   auto sc =
       MakeCollectionType(DwarfTag::kStructureType, "Foo", {{"a", int32_type}, {"b", int32_type}});
-  sc->set_parent(unit);
+  SymbolTestParentSetter sc_parent(sc, unit);
 
   // Define a reference type.
   auto foo_ptr_type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, sc);
-  foo_ptr_type->set_parent(unit);
+  SymbolTestParentSetter foo_ptr_type_parent(foo_ptr_type, unit);
   foo_ptr_type->set_assigned_name("&Foo");
   // Add memory in two chunks since the mock data provider can only respond with the addresses it's
   // given.

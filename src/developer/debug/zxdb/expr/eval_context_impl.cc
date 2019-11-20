@@ -132,7 +132,7 @@ EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symb
         RefPtrTo(function->GetMostSpecificChild(location.symbol_context(), location.address()));
 
     // Extract the language for the code if possible.
-    if (const CompileUnit* unit = function->GetCompileUnit())
+    if (auto unit = function->GetCompileUnit())
       language_ = DwarfLangToExprLanguage(unit->language());
   }
 }

@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/expr/pretty_type.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/template_parameter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
@@ -46,7 +47,7 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   // comes out with the correct parsing.
   auto std_namespace = fxl::MakeRefCounted<Namespace>("std");
   auto v2_namespace = fxl::MakeRefCounted<Namespace>("__2");
-  v2_namespace->set_parent(std_namespace);
+  SymbolTestParentSetter v2_namespace_parent(v2_namespace, std_namespace);
 
   // The capacity is actually a compressed_pair.
   auto cap_pair = MakeCollectionType(DwarfTag::kStructureType, "compresed_pair",
@@ -55,7 +56,7 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
   auto vector_type = MakeCollectionType(
       DwarfTag::kClassType, "vector<int32_t, std::__2::allocator<int32_t> >",
       {{"__begin_", int32_ptr_type}, {"__end_", int32_ptr_type}, {"__end_cap_", cap_pair}});
-  vector_type->set_parent(v2_namespace);
+  SymbolTestParentSetter vector_type_parent(vector_type, v2_namespace);
 
   auto int32_param = fxl::MakeRefCounted<TemplateParameter>("T", int32_type, false);
   auto allocator_param = fxl::MakeRefCounted<TemplateParameter>("allocator", allocator_type, false);
@@ -132,7 +133,7 @@ TEST_F(PrettyTypeManagerTest, StdVector) {
                           {"__size_", uint64_type},
                           {"__cap_alloc_", int32_type},
                           {"__bits_per_word", int32_type}});
-  vector_bool_type->set_parent(v2_namespace);
+  SymbolTestParentSetter vector_bool_type_parent(vector_bool_type, v2_namespace);
 
   ExprValue vec_bool_value(vector_bool_type, {
                                                  0x00, 0x11, 0x22, 0, 0, 0, 0, 0,  // __begin_
@@ -179,7 +180,7 @@ TEST_F(PrettyTypeManagerTest, RustStrings) {
   auto str_type =
       MakeCollectionType(DwarfTag::kStructureType, "&str",
                          {{"data_ptr", MakeRustCharPointerType()}, {"length", MakeUint64Type()}});
-  str_type->set_parent(MakeRustUnit());
+  SymbolTestParentSetter str_type_parent(str_type, MakeRustUnit());
 
   ExprValue value(str_type, std::vector<uint8_t>(std::begin(kRustObject), std::end(kRustObject)));
   FormatNode node("value", value);

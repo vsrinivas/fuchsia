@@ -15,7 +15,7 @@ Identifier GetSymbolScopePrefix(const Symbol* symbol) {
   if (!symbol->parent().is_valid())
     return Identifier(IdentifierQualification::kGlobal);  // No prefix
 
-  const Symbol* parent = symbol->parent().Get();
+  fxl::RefPtr<Symbol> parent = symbol->parent().Get();
   if (parent->tag() == DwarfTag::kCompileUnit)
     return Identifier(IdentifierQualification::kGlobal);  // Don't go above compilation units.
 
@@ -25,7 +25,7 @@ Identifier GetSymbolScopePrefix(const Symbol* symbol) {
   }
   // Anything else is skipped and we just return the parent's prefix. This
   // will include things like lexical blocks.
-  return GetSymbolScopePrefix(parent);
+  return GetSymbolScopePrefix(parent.get());
 }
 
 }  // namespace zxdb

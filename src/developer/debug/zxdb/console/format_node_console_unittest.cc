@@ -16,6 +16,7 @@
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -538,16 +539,16 @@ TEST_F(FormatValueConsoleTest, Wrapping) {
 // Tests the naming of Rust collections since we have complicated rules depending on verbosity.
 TEST_F(FormatValueConsoleTest, RustCollectionName) {
   auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
-  int32_type->set_parent(LazySymbol(MakeRustUnit()));  // Mark as Rust.
+  SymbolTestParentSetter int32_parent(int32_type, MakeRustUnit());  // Mark as Rust.
 
   // Namespace for the structs. Making the root compilation unit a Rust one will mark all types in
   // this unit as Rust.
   auto ns = fxl::MakeRefCounted<Namespace>("my_ns");
-  ns->set_parent(MakeRustUnit());
+  SymbolTestParentSetter ns_parent(ns, MakeRustUnit());
 
   // Make a simple type in the namespace with no templates.
   auto simple_type = MakeCollectionType(DwarfTag::kStructureType, "MyStruct", {});
-  simple_type->set_parent(ns);
+  SymbolTestParentSetter simple_type_parent(simple_type, ns);
 
   ExprValue simple_value(simple_type, {});
 
@@ -571,7 +572,7 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
       DwarfTag::kStructureType,
       "HashMap<alloc::string::String, &str, std::collections::hash::map::RandomState>",
       {{"a", int32_type}});
-  template_type->set_parent(ns);
+  SymbolTestParentSetter template_type_parent(template_type, ns);
   ExprValue template_value(template_type, {123, 0, 0, 0});
 
   // Minimal verbosity elides the template and omits the namespace.
@@ -602,7 +603,7 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
 // Tests Rust tuples and tuple structs.
 TEST_F(FormatValueConsoleTest, RustTuple) {
   auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
-  int32_type->set_parent(LazySymbol(MakeRustUnit()));  // Mark as Rust.
+  SymbolTestParentSetter int32_type_parent(int32_type, MakeRustUnit());
   auto tuple_type = MakeTestRustTuple("(int32_t, int32_t)", {int32_type, int32_type});
   auto tuple_struct_type = MakeTestRustTuple("MyTupleStruct", {int32_type, int32_type});
 
@@ -700,11 +701,11 @@ TEST_F(FormatValueConsoleTest, RustVector) {
   // Give real values with a type from a Rust unit to trigger Rust-specific formatting. Don't need
   // them to have actual data.
   auto vec_type = MakeCollectionType(DwarfTag::kStructureType, "alloc::vec::Vec<i32>", {});
-  vec_type->set_parent(MakeRustUnit());
+  SymbolTestParentSetter vec_type_parent(vec_type, MakeRustUnit());
   ExprValue vec_value(vec_type, {});
 
   auto int_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeUnsigned, 2, "u32");
-  int_type->set_parent(MakeRustUnit());
+  SymbolTestParentSetter int_type_parent(int_type, MakeRustUnit());
   ExprValue int_value(int_type, {});
 
   // A Vec of int.
@@ -749,7 +750,7 @@ TEST_F(FormatValueConsoleTest, RustVector) {
 
   // Use another type name in minimal mode. It shouldn't get abbreviated with the "vec!"
   auto fast_vec_type = MakeCollectionType(DwarfTag::kStructureType, "FastVector<i32>", {});
-  fast_vec_type->set_parent(MakeRustUnit());
+  SymbolTestParentSetter fast_vec_type_parent(fast_vec_type, MakeRustUnit());
   ExprValue fast_vec_value(fast_vec_type, {});
 
   vec.SetValue(fast_vec_value);

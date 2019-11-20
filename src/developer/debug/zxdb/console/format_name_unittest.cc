@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 
@@ -57,7 +58,7 @@ TEST(FormatName, Regular) {
 
   auto ns = fxl::MakeRefCounted<Namespace>();
   ns->set_assigned_name("ns");
-  function->set_parent(LazySymbol(ns));
+  SymbolTestParentSetter function_parent(function, ns);
 
   elide_param_opts.name.bold_last = true;
   EXPECT_EQ(
@@ -65,8 +66,6 @@ TEST(FormatName, Regular) {
       "kHeading \"Function\", "
       "kComment \"<int>(…)\"",
       FormatFunctionName(function.get(), elide_param_opts).GetDebugString());
-
-  function->set_parent(LazySymbol());
 }
 
 TEST(FormatName, ClangLambda) {
@@ -74,7 +73,7 @@ TEST(FormatName, ClangLambda) {
   auto closure = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("operator()");
-  function->set_parent(closure);
+  SymbolTestParentSetter function_parent(function, closure);
 
   EXPECT_EQ("λ()", FormatFunctionName(function.get(), FormatFunctionNameOptions()).AsString());
 }
@@ -85,7 +84,7 @@ TEST(FormatName, GCCLambda) {
   closure->set_assigned_name("<lambda()>");
   auto function = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   function->set_assigned_name("operator()");
-  function->set_parent(closure);
+  SymbolTestParentSetter function_parent(function, closure);
 
   EXPECT_EQ("λ()", FormatFunctionName(function.get(), FormatFunctionNameOptions()).AsString());
 }
@@ -101,7 +100,7 @@ TEST(FormatName, RustClosure) {
 
   auto closure = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   closure->set_assigned_name("{{closure}}<()>");
-  closure->set_parent(enclosing);
+  SymbolTestParentSetter closure_parent(closure, enclosing);
 
   EXPECT_EQ("λ()", FormatFunctionName(closure.get(), FormatFunctionNameOptions()).AsString());
 }

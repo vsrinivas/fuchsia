@@ -97,7 +97,7 @@ TEST(ModuleSymbols, Basic) {
   // The function symbol should have a compilation unit with a C-style language
   // defined and the name should contain the file.
   ASSERT_TRUE(locations[0].symbol());
-  const CompileUnit* unit = locations[0].symbol().Get()->GetCompileUnit();
+  fxl::RefPtr<CompileUnit> unit = locations[0].symbol().Get()->GetCompileUnit();
   ASSERT_TRUE(unit);
   EXPECT_NE(std::string::npos, unit->name().find("zxdb_symbol_test.cc"));
   EXPECT_TRUE(DwarfLangIsCFamily(unit->language()));

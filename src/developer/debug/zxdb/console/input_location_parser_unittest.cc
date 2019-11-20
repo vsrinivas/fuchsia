@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 
 namespace zxdb {
 
@@ -199,7 +200,7 @@ TEST_F(InputLocationParserTest, ParseLocalInputLocation) {
 
   // Function inside the class.
   auto foo_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  foo_func->set_parent(my_class);
+  SymbolTestParentSetter foo_func_parent(foo_func, my_class);
   foo_func->set_assigned_name(kFunctionName);
   constexpr uint64_t kFunctionBegin = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1000;
   foo_func->set_code_ranges(AddressRanges(AddressRange(kFunctionBegin, kFunctionBegin + 0x10)));
@@ -261,7 +262,7 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   // Class inside the namespace.
   const char kClassName[] = "Class";
   auto global_type = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  global_type->set_parent(ns);
+  SymbolTestParentSetter global_type_parent(global_type, ns);
   global_type->set_assigned_name(kClassName);
   TestIndexedSymbol indexed_type(mock_module_symbols_, indexed_ns.index_node, kClassName,
                                  global_type);
@@ -270,7 +271,7 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   const char kMemberName[] = "MemberFunction";
   auto member_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   member_func->set_assigned_name(kMemberName);
-  member_func->set_parent(global_type);
+  SymbolTestParentSetter member_func_parent(member_func, global_type);
   TestIndexedSymbol indexed_member(mock_module_symbols_, indexed_type.index_node, kMemberName,
                                    member_func);
 
@@ -319,10 +320,6 @@ TEST_F(InputLocationParserTest, CompleteInputLocation) {
   CompleteInputLocation(command, "aNamespace::Class::M", &found);
   ASSERT_EQ(1u, found.size());
   EXPECT_EQ("::aNamespace::Class::MemberFunction", found[0]);
-
-  // Cleanup. Prevent reference cycles.
-  member_func->set_parent(LazySymbol());
-  global_type->set_parent(LazySymbol());
 }
 
 }  // namespace zxdb

@@ -185,7 +185,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeSymbol(const llvm::DWARFDie& die) 
   if (!symbol->parent()) {
     llvm::DWARFDie parent = die.getParent();
     if (parent)
-      symbol->set_parent(MakeLazy(parent));
+      symbol->set_parent(MakeUncachedLazy(parent));
   }
 
   return symbol;
@@ -197,6 +197,14 @@ LazySymbol DwarfSymbolFactory::MakeLazy(const llvm::DWARFDie& die) {
 
 LazySymbol DwarfSymbolFactory::MakeLazy(uint32_t die_offset) {
   return LazySymbol(fxl::RefPtr<SymbolFactory>(this), die_offset);
+}
+
+UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(const llvm::DWARFDie& die) {
+  return UncachedLazySymbol(fxl::RefPtr<SymbolFactory>(this), die.getOffset());
+}
+
+UncachedLazySymbol DwarfSymbolFactory::MakeUncachedLazy(uint32_t die_offset) {
+  return UncachedLazySymbol(fxl::RefPtr<SymbolFactory>(this), die_offset);
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die, DwarfTag tag,
@@ -311,7 +319,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
     //
     // If this is already set, it means we recursively followed the specification which already set
     // it.
-    function->set_parent(MakeLazy(parent));
+    function->set_parent(MakeUncachedLazy(parent));
   }
 
   if (tag == DwarfTag::kInlinedSubroutine) {
@@ -406,7 +414,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeBaseType(const llvm::DWARFDie& die
     base_type->set_byte_size(static_cast<uint32_t>(*byte_size));
 
   if (parent)
-    base_type->set_parent(MakeLazy(parent));
+    base_type->set_parent(MakeUncachedLazy(parent));
 
   return base_type;
 }
@@ -471,7 +479,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCollection(const llvm::DWARFDie& d
     result->set_is_declaration(*is_declaration);
 
   if (parent)
-    result->set_parent(MakeLazy(parent));
+    result->set_parent(MakeUncachedLazy(parent));
 
   return result;
 }
@@ -629,7 +637,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeEnum(const llvm::DWARFDie& die) {
   auto result = fxl::MakeRefCounted<Enumeration>(type_name_str, std::move(lazy_type), *byte_size,
                                                  is_signed, std::move(map));
   if (parent)
-    result->set_parent(MakeLazy(parent));
+    result->set_parent(MakeUncachedLazy(parent));
   if (is_declaration)
     result->set_is_declaration(*is_declaration);
   return result;
@@ -667,7 +675,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunctionType(const llvm::DWARFDie&
 
   auto function = fxl::MakeRefCounted<FunctionType>(lazy_return_type, std::move(parameters));
   if (parent)
-    function->set_parent(MakeLazy(parent));
+    function->set_parent(MakeUncachedLazy(parent));
   return function;
 }
 
@@ -792,7 +800,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeModifiedType(const llvm::DWARFDie&
     result->set_assigned_name(*name);
 
   if (parent)
-    result->set_parent(MakeLazy(parent));
+    result->set_parent(MakeUncachedLazy(parent));
 
   return result;
 }
@@ -816,7 +824,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeNamespace(const llvm::DWARFDie& di
     result->set_assigned_name(*name);
 
   if (parent)
-    result->set_parent(MakeLazy(parent));
+    result->set_parent(MakeUncachedLazy(parent));
   return result;
 }
 
@@ -861,7 +869,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeUnspecifiedType(const llvm::DWARFD
     result->set_assigned_name(*name);
   result->set_byte_size(8);  // Assume pointer.
   if (parent)
-    result->set_parent(MakeLazy(parent));
+    result->set_parent(MakeUncachedLazy(parent));
 
   return result;
 }
@@ -930,7 +938,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeVariable(const llvm::DWARFDie& die
     // specification's parent. See DecodeFunction().
     llvm::DWARFDie parent = die.getParent();
     if (parent)
-      variable->set_parent(MakeLazy(parent));
+      variable->set_parent(MakeUncachedLazy(parent));
   }
   return variable;
 }

@@ -113,7 +113,7 @@ void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
   out->Append(Syntax::kHeading, "Data member: ");
   out->Append(Syntax::kVariable, data_member->GetFullName() + "\n");
 
-  const Symbol* parent = data_member->parent().Get();
+  auto parent = data_member->parent().Get();
   out->Append("  Contained in: ");
   out->Append(FormatIdentifier(parent->GetIdentifier(), FormatIdentifierOptions()));
   out->Append("\n");

@@ -79,8 +79,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // For inline functions, it's important to know both the lexical scope which tells you the
   // class/namespace of the function being inlined (the parent()) as well as the function it's
   // inlined into. Function symbols have a special containing_block() to give the latter.
-  const LazySymbol& parent() const { return parent_; }
-  void set_parent(const LazySymbol& e) { parent_ = e; }
+  const UncachedLazySymbol& parent() const { return parent_; }
+  void set_parent(const UncachedLazySymbol& e) { parent_ = e; }
 
   // Returns the name associated with this symbol. This name comes from the corresponding record in
   // the DWARF format (hence "assigned"). It will NOT include namespace and struct qualifiers.
@@ -119,7 +119,7 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   const Identifier& GetIdentifier() const;
 
   // Returns the CompileUnit that this symbol is associated with. Returns null on failure.
-  const CompileUnit* GetCompileUnit() const;
+  fxl::RefPtr<CompileUnit> GetCompileUnit() const;
 
   // Computes and returns the language associated with this symbol. This will be kNone if the
   // language is not known or unset.
@@ -227,7 +227,12 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
  private:
   DwarfTag tag_ = DwarfTag::kNone;
 
-  LazySymbol parent_;
+  // Using the "uncached" version here prevents reference cycles since normally a parent has
+  // references back to each of its children. By always using the "uncached" one when pointing
+  // up in the symbol tree, there are no owning references to symbol objects going in the opposite
+  // direction that can cause reference cycles. The tradeoff is that going up in the tree requires
+  // decoding the symbol each time at a slight performance penalty.
+  UncachedLazySymbol parent_;
 
   // Lazily computed full symbol name and identifier name.
   mutable std::optional<std::string> full_name_;

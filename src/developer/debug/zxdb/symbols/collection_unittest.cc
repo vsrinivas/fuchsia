@@ -8,6 +8,7 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
 
@@ -25,25 +26,25 @@ TEST(Collection, GetSpecialType) {
 
   // A regular Rust structure with no members.
   auto regular_rust = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "RegularRust");
-  regular_rust->set_parent(MakeRustUnit());
+  SymbolTestParentSetter regular_rust_parent(regular_rust, MakeRustUnit());
   EXPECT_EQ(Collection::kNotSpecial, regular_rust->GetSpecialType());
 
   // A Rust tuple struct which has a normal name and a member named __0.
   auto rust_tuple_struct = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "TupleStruct");
-  rust_tuple_struct->set_parent(MakeRustUnit());
+  SymbolTestParentSetter rust_tuple_struct_parent(rust_tuple_struct, MakeRustUnit());
   rust_tuple_struct->set_data_members({LazySymbol(zero_member)});
   EXPECT_EQ(Collection::kRustTupleStruct, rust_tuple_struct->GetSpecialType());
 
   // A Rust typle which has a name with "(...)" and a member named __0.
   auto rust_tuple = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "(i32, i32)");
-  rust_tuple->set_parent(MakeRustUnit());
+  SymbolTestParentSetter rust_tuple_parent(rust_tuple, MakeRustUnit());
   rust_tuple->set_data_members({LazySymbol(zero_member)});
   EXPECT_EQ(Collection::kRustTuple, rust_tuple->GetSpecialType());
 
   // A Rust Enum has a variant part. This makes a mostly empty one but is
   // // good enough.
   auto rust_enum = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, "Foo");
-  rust_enum->set_parent(MakeRustUnit());
+  SymbolTestParentSetter rust_enum_parent(rust_enum, MakeRustUnit());
   rust_enum->set_variant_part(
       fxl::MakeRefCounted<VariantPart>(LazySymbol(), std::vector<LazySymbol>()));
   EXPECT_EQ(Collection::kRustEnum, rust_enum->GetSpecialType());

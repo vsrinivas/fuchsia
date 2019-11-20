@@ -10,6 +10,7 @@
 #include "src/developer/debug/zxdb/symbols/mock_module_symbols.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/test_symbol_module.h"
 
 namespace zxdb {
@@ -45,7 +46,7 @@ TEST(PermissiveInputLocation, ExpandAndResolve) {
 
   // ::std::Foo().
   auto std_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  std_foo->set_parent(std_ns_symbol);
+  SymbolTestParentSetter std_foo_parent(std_foo, std_ns_symbol);
   std_foo->set_assigned_name(kFooName);
   TestIndexedSymbol std_foo_indexed(module_symbols, std_ns, kFooName, std_foo);
 

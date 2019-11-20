@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
 #include "src/developer/debug/zxdb/symbols/symbol_context.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 #include "src/lib/fxl/logging.h"
@@ -72,7 +73,7 @@ TEST(FindName, FindLocalVariable) {
   uint64_t kFunctionBeginAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1000;
   uint64_t kFunctionEndAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x2000;
   function->set_code_ranges(AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
-  function->set_parent(ns);
+  SymbolTestParentSetter function_parent(function, ns);
 
   // Function parameters.
   auto param_value =
@@ -94,7 +95,7 @@ TEST(FindName, FindLocalVariable) {
   uint64_t kBlockEndAddr = ProcessSymbolsTestSetup::kDefaultLoadAddress + 0x1200;
   auto block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
   block->set_code_ranges(AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
-  block->set_parent(function);
+  SymbolTestParentSetter block_parent(block, function);
   function->set_inner_blocks({LazySymbol(block)});
 
   // Inner block variables.
@@ -172,10 +173,6 @@ TEST(FindName, FindLocalVariable) {
   block_no_modules_context.block = block.get();
   found = FindName(block_no_modules_context, all_kinds, ns_value_ident);
   EXPECT_FALSE(found);
-
-  // Break reference cycle for test teardown.
-  function->set_parent(LazySymbol());
-  block->set_parent(LazySymbol());
 }
 
 // This test only tests for finding object members. It doesn't set up the index which might find
@@ -647,11 +644,11 @@ TEST(FindName, FindRecursiveNamespace) {
 
   const char kBarName[] = "bar";
   auto std_bar_ns_symbol = fxl::MakeRefCounted<Namespace>(kBarName);
-  std_bar_ns_symbol->set_parent(std_ns_symbol);
+  SymbolTestParentSetter std_bar_ns_symbol_parent(std_bar_ns_symbol, std_ns_symbol);
   auto std_bar_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, kBarName);
 
   auto std_anon_ns_symbol = fxl::MakeRefCounted<Namespace>(std::string());
-  std_anon_ns_symbol->set_parent(std_ns_symbol);
+  SymbolTestParentSetter std_anon_ns_symbol_parent(std_anon_ns_symbol, std_ns_symbol);
   auto std_anon_ns = std_ns->AddChild(IndexNode::Kind::kNamespace, "");
 
   // ::Foo().
@@ -662,19 +659,19 @@ TEST(FindName, FindRecursiveNamespace) {
 
   // ::std::Foo().
   auto std_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  std_foo->set_parent(std_ns_symbol);
+  SymbolTestParentSetter std_foo_parent(std_foo, std_ns_symbol);
   std_foo->set_assigned_name(kFooName);
   TestIndexedSymbol std_foo_indexed(module_symbols, std_ns, kFooName, std_foo);
 
   // ::std::bar::Foo().
   auto std_bar_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  std_bar_foo->set_parent(std_bar_ns_symbol);
+  SymbolTestParentSetter std_bar_foo_parent(std_bar_foo, std_bar_ns_symbol);
   std_bar_foo->set_assigned_name(kFooName);
   TestIndexedSymbol std_bar_foo_indexed(module_symbols, std_bar_ns, kFooName, std_bar_foo);
 
   // ::std::$anon::Foo().
   auto std_anon_foo = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  std_anon_foo->set_parent(std_anon_ns_symbol);
+  SymbolTestParentSetter std_anon_foo_parent(std_anon_foo, std_anon_ns_symbol);
   std_anon_foo->set_assigned_name(kFooName);
   TestIndexedSymbol std_anon_foo_indexed(module_symbols, std_anon_ns, kFooName, std_anon_foo);
 

@@ -31,7 +31,7 @@ const Identifier& Symbol::GetIdentifier() const {
   return *identifier_;
 }
 
-const CompileUnit* Symbol::GetCompileUnit() const {
+fxl::RefPtr<CompileUnit> Symbol::GetCompileUnit() const {
   // Currently we don't use compile units very often. This implementation walks up the symbol
   // hierarchy until we find one. This has the disadvantage that it decodes the tree of DIEs up to
   // here which is potentially slow, and if anything fails the path will get lost (even when we can
@@ -44,18 +44,18 @@ const CompileUnit* Symbol::GetCompileUnit() const {
   // Each LazySymbol also has an offset of the compile unit. But symbols don't have a LazySymbol for
   // their *own* symbol. Perhaps they should? In that case we would add a new function to the symbol
   // factory to get the unit for a LazySymbol.
-  const Symbol* cur = this;
+  fxl::RefPtr<Symbol> cur = RefPtrTo(this);
   for (;;) {
     if (const CompileUnit* unit = cur->AsCompileUnit())
-      return unit;
+      return RefPtrTo(unit);
     if (!cur->parent())
-      return nullptr;
+      return fxl::RefPtr<CompileUnit>();
     cur = cur->parent().Get();
   }
 }
 
 DwarfLang Symbol::GetLanguage() const {
-  if (const CompileUnit* unit = GetCompileUnit())
+  if (auto unit = GetCompileUnit())
     return unit->language();
   return DwarfLang::kNone;
 }

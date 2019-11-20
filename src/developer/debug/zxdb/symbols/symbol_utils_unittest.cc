@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/variable.h"
 
 namespace zxdb {
@@ -22,20 +23,20 @@ TEST(SymbolUtils, GetSymbolScopePrefix) {
 
   // Nested anonymous namespace.
   fxl::RefPtr<Namespace> ns2 = fxl::MakeRefCounted<Namespace>();
-  ns2->set_parent(ns1);
+  SymbolTestParentSetter ns2_parent(ns2, ns1);
   EXPECT_EQ("::ns1", GetSymbolScopePrefix(ns2.get()).GetFullName());
   EXPECT_EQ("ns1::$anon", ns2->GetFullName());
 
   // Struct inside anonymous namespace.
   fxl::RefPtr<Collection> st = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
-  st->set_parent(ns2);
+  SymbolTestParentSetter st_parent(st, ns2);
   st->set_assigned_name("Struct");
   EXPECT_EQ("::ns1::$anon", GetSymbolScopePrefix(st.get()).GetFullName());
   EXPECT_EQ("ns1::$anon::Struct", st->GetFullName());
 
   // Data member inside structure.
   fxl::RefPtr<DataMember> dm = fxl::MakeRefCounted<DataMember>();
-  dm->set_parent(st);
+  SymbolTestParentSetter dm_parent(dm, st);
   dm->set_assigned_name("data_");
   EXPECT_EQ("::ns1::$anon::Struct", GetSymbolScopePrefix(dm.get()).GetFullName());
   EXPECT_EQ("ns1::$anon::Struct::data_", dm->GetFullName());
@@ -49,7 +50,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
 
   // Function definition inside namespace.
   fxl::RefPtr<Function> fn = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
-  fn->set_parent(ns);
+  SymbolTestParentSetter fn_parent(fn, ns);
   fn->set_assigned_name("Function");
   EXPECT_EQ("::ns", GetSymbolScopePrefix(fn.get()).GetFullName());
   EXPECT_EQ("ns::Function", fn->GetFullName());
@@ -57,14 +58,14 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   // Lexical scope inside the function. This should not appear in names.
   // TODO(brettw) these nested function scopes should include paramter names.
   fxl::RefPtr<CodeBlock> block = fxl::MakeRefCounted<CodeBlock>(DwarfTag::kLexicalBlock);
-  block->set_parent(fn);
+  SymbolTestParentSetter block_parent(block, fn);
   EXPECT_EQ("::ns::Function", GetSymbolScopePrefix(block.get()).GetFullName());
   EXPECT_EQ("", block->GetFullName());
 
   // Type defined inside the function is qualified by the function name. This format matches GDB and
   // LLDB.
   fxl::RefPtr<Collection> sc = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType);
-  sc->set_parent(block);
+  SymbolTestParentSetter sc_parent(sc, block);
   sc->set_assigned_name("Struct");
   EXPECT_EQ("::ns::Function", GetSymbolScopePrefix(sc.get()).GetFullName());
   EXPECT_EQ("ns::Function::Struct", sc->GetFullName());
@@ -75,7 +76,7 @@ TEST(SymbolUtils, SymbolScopeFunctions) {
   // that way because it falls out of the algorithm. However, the local variable printer may well
   // not need this code path.
   fxl::RefPtr<Variable> var = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
-  var->set_parent(block);
+  SymbolTestParentSetter var_parent(var, block);
   var->set_assigned_name("var");
   EXPECT_EQ("::ns::Function", GetSymbolScopePrefix(var.get()).GetFullName());
   EXPECT_EQ("ns::Function::var", var->GetFullName());

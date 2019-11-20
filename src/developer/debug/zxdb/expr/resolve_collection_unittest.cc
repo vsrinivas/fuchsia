@@ -20,6 +20,7 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -231,7 +232,7 @@ TEST_F(ResolveCollectionTest, ExternStaticMember) {
 
   // Collection with the member.
   auto collection = fxl::MakeRefCounted<Collection>(DwarfTag::kClassType);
-  extern_member->set_parent(collection);
+  SymbolTestParentSetter extern_member_parent(extern_member, collection);
 
   collection->set_assigned_name("Collection");
   collection->set_data_members({LazySymbol(extern_member)});
@@ -252,9 +253,6 @@ TEST_F(ResolveCollectionTest, ExternStaticMember) {
                   EXPECT_EQ(expected, result.value());
                 });
   EXPECT_TRUE(called);
-
-  // Clear parent to eliminate circular refcount.
-  extern_member->set_parent(nullptr);
 }
 
 TEST_F(ResolveCollectionTest, BadMemberArgs) {
