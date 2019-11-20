@@ -63,8 +63,7 @@ class EvalContextImplTest : public TestWithLoop {
   // Returns an evaluation context for a code block. If the code block is null, a default one will
   // be created with MakeCodeBlock().
   fxl::RefPtr<EvalContext> MakeEvalContext(fxl::RefPtr<CodeBlock> code_block = nullptr) {
-    return fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(),
-                                                SymbolContext::ForRelativeAddresses(), provider(),
+    return fxl::MakeRefCounted<EvalContextImpl>(fxl::WeakPtr<const ProcessSymbols>(), provider(),
                                                 code_block ? code_block : MakeCodeBlock());
   }
 
@@ -349,8 +348,8 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   constexpr uint64_t kValValue = 0x0102030405060708;
   provider()->AddMemory(kAbsoluteValAddress, {8, 7, 6, 5, 4, 3, 2, 1});
 
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,
-                                                      provider(), MakeCodeBlock());
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), provider(),
+                                                      MakeCodeBlock());
 
   // Resolving the extern variable should give the value that the non-extern one points to.
   ValueResult result;
@@ -585,8 +584,8 @@ TEST_F(EvalContextImplTest, GetConcreteType) {
   auto const_forward_decl = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kConstType, forward_decl);
 
   // Make a symbol context.
-  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), symbol_context,
-                                                      provider(), fxl::RefPtr<CodeBlock>());
+  auto context = fxl::MakeRefCounted<EvalContextImpl>(setup.process().GetWeakPtr(), provider(),
+                                                      fxl::RefPtr<CodeBlock>());
 
   // Resolving the const forward-defined value gives the non-const version.
   auto result_type = context->GetConcreteType(const_forward_decl.get());

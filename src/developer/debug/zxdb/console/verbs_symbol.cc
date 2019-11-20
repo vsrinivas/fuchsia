@@ -99,14 +99,16 @@ void DumpTypeDescription(const LazySymbol& lazy_type, OutputBuffer* out) {
   out->Append("\n");
 }
 
-void DumpVariableInfo(const SymbolContext& symbol_context, const Variable* variable,
+// ProcessSymbols can be null which will produce relative addresses.
+void DumpVariableInfo(const ProcessSymbols* process_symbols, const Variable* variable,
                       OutputBuffer* out) {
   out->Append(Syntax::kHeading, "Variable: ");
   out->Append(Syntax::kVariable, variable->GetAssignedName());
   out->Append("\n");
   DumpTypeDescription(variable->type(), out);
   out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(variable->tag())));
-  DumpVariableLocation(symbol_context, variable->location(), out);
+
+  DumpVariableLocation(variable->GetSymbolContext(process_symbols), variable->location(), out);
 }
 
 void DumpDataMemberInfo(const DataMember* data_member, OutputBuffer* out) {
@@ -133,8 +135,12 @@ void DumpTypeInfo(const Type* type, OutputBuffer* out) {
   out->Append(fxl::StringPrintf("  DWARF tag: 0x%02x\n", static_cast<unsigned>(type->tag())));
 }
 
-void DumpFunctionInfo(const Function* function, OutputBuffer* out) {
-  out->Append(Syntax::kHeading, "Function: ");
+void DumpFunctionInfo(const ProcessSymbols* process_symbols, const Function* function,
+                      OutputBuffer* out) {
+  if (function->is_inline())
+    out->Append(Syntax::kHeading, "Inline function: ");
+  else
+    out->Append(Syntax::kHeading, "Function: ");
 
   FormatFunctionNameOptions opts;
   opts.name.bold_last = true;
@@ -143,8 +149,16 @@ void DumpFunctionInfo(const Function* function, OutputBuffer* out) {
   out->Append(FormatFunctionName(function, opts));
   out->Append("\n");
 
-  // TODO(bug 41540) When the symbol context can be plumbed through to here, output the absolute
-  // codee rangese.
+  // Code ranges.
+  AddressRanges ranges =
+      function->GetAbsoluteCodeRanges(function->GetSymbolContext(process_symbols));
+  if (ranges.empty()) {
+    out->Append("  No code ranges.\n");
+  } else {
+    out->Append("  Code:\n");
+    for (const auto& range : ranges)
+      out->Append("    " + range.ToString() + "\n");
+  }
 }
 
 // auth --------------------------------------------------------------------------------------------
@@ -473,13 +487,14 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
   if (demangled_buf)
     free(demangled_buf);
 
+  ProcessSymbols* process_symbols = nullptr;
   FindNameContext find_context;
   if (cmd.target()->GetProcess()) {
     // The symbol context parameter is used to prioritize symbols from the current module but since
     // we query everything, it doesn't matter. FindNameContext will handle a null frame pointer and
     // just skip local variables in that case.
-    find_context = FindNameContext(cmd.target()->GetProcess()->GetSymbols(),
-                                   SymbolContext::ForRelativeAddresses(),
+    process_symbols = cmd.target()->GetProcess()->GetSymbols();
+    find_context = FindNameContext(process_symbols, SymbolContext::ForRelativeAddresses(),
                                    cmd.frame()->GetLocation().symbol().Get()->AsCodeBlock());
   } else {
     // Non-running process. Can do some lookup for some things.
@@ -490,12 +505,6 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
 
   std::vector<FoundName> found_items;
   FindName(find_context, find_opts, identifier, &found_items);
-
-  // Symbol context for the current frame.
-  // TODO(bug 41540) this should be deleted as described below.
-  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
-  if (cmd.frame())
-    symbol_context = cmd.frame()->GetLocation().symbol_context();
 
   bool found_item = false;
   for (const FoundName& found : found_items) {
@@ -511,7 +520,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         // TODO(bug 41540) look up the proper symbol context for the variable symbol object. As
         // described above this won't change most things, but we might start needing the symbol
         // context for more stuff, and it's currently very brittle.
-        DumpVariableInfo(symbol_context, found.variable(), &out);
+        DumpVariableInfo(process_symbols, found.variable(), &out);
         found_item = true;
         break;
       case FoundName::kMemberVariable:
@@ -529,7 +538,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         found_item = true;
         break;
       case FoundName::kFunction:
-        DumpFunctionInfo(found.function().get(), &out);
+        DumpFunctionInfo(process_symbols, found.function().get(), &out);
         found_item = true;
         break;
     }

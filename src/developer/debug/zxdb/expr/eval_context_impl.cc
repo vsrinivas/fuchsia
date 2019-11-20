@@ -90,11 +90,9 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 }  // namespace
 
 EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                                 const SymbolContext& symbol_context,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  fxl::RefPtr<CodeBlock> code_block)
     : process_symbols_(std::move(process_symbols)),
-      symbol_context_(symbol_context),
       data_provider_(data_provider),
       block_(std::move(code_block)),
       weak_factory_(this) {}
@@ -103,7 +101,6 @@ EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symb
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  const Location& location)
     : process_symbols_(std::move(process_symbols)),
-      symbol_context_(location.symbol_context()),
       data_provider_(data_provider),
       weak_factory_(this) {
   if (!location.symbol())
@@ -190,6 +187,8 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
     FXL_DCHECK(var);
   }
 
+  SymbolContext symbol_context = var->GetSymbolContext(process_symbols_.get());
+
   // Need to explicitly take a reference to the type.
   fxl::RefPtr<Type> type = RefPtrTo(var->type().Get()->AsType());
   if (!type)
@@ -203,7 +202,7 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
     return cb(Err("No location available."));
   memcpy(&ip, &(*ip_data)[0], ip_data->size());
 
-  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context_, ip);
+  const VariableLocation::Entry* loc_entry = var->location().EntryForIP(symbol_context, ip);
   if (!loc_entry) {
     // No DWARF location applies to the current instruction pointer.
     const char* err_str;
@@ -216,8 +215,6 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
     }
     return cb(Err(ErrType::kOptimizedOut, err_str));
   }
-
-  SymbolContext symbol_context = var->GetSymbolContext(process_symbols_.get());
 
   // Schedule the expression to be evaluated.
   auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
@@ -366,7 +363,12 @@ FoundName EvalContextImpl::DoTargetSymbolsNameLookup(const ParsedIdentifier& ide
 }
 
 FindNameContext EvalContextImpl::GetFindNameContext() const {
-  return FindNameContext(process_symbols_.get(), symbol_context_, block_.get());
+  // The synbol context for the current location is passed to the FindNameContext to prioritize
+  // the current module's values when searching for variables. If relative, this will be ignored.
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+  if (block_ && process_symbols_)
+    symbol_context = block_->GetSymbolContext(process_symbols_.get());
+  return FindNameContext(process_symbols_.get(), symbol_context, block_.get());
 }
 
 }  // namespace zxdb

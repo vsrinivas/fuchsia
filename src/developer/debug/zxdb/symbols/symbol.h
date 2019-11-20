@@ -134,6 +134,8 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
   // it can look up what the module load address is for this symbol's module (the same module can be
   // loaded into multiple processes).
   //
+  // The ProcessSymbols can be null. It will be treated as an invalid module (see below).
+  //
   // The module may not be valid. It could have been unloaded while there were dangling symbols,
   // or it can be null in some test situations. In these cases the resulting symbol context will
   // be a "relative" context -- see SymbolContext::is_relative().

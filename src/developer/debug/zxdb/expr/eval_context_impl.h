@@ -50,7 +50,6 @@ class EvalContextImpl : public EvalContext {
   //
   // The variant that takes a location will extract the code block from the location if possible.
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
-                  const SymbolContext& symbol_context,
                   fxl::RefPtr<SymbolDataProvider> data_provider,
                   fxl::RefPtr<CodeBlock> code_block = fxl::RefPtr<CodeBlock>());
   EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
@@ -89,8 +88,7 @@ class EvalContextImpl : public EvalContext {
   FindNameContext GetFindNameContext() const;
 
   fxl::WeakPtr<const ProcessSymbols> process_symbols_;  // Possibly null.
-  SymbolContext symbol_context_;
-  fxl::RefPtr<SymbolDataProvider> data_provider_;  // Possibly null.
+  fxl::RefPtr<SymbolDataProvider> data_provider_;       // Possibly null.
 
   // Innermost block of the current context. May be null if there is none (this means you won't get
   // any local variable lookups).

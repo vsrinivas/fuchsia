@@ -64,6 +64,9 @@ fxl::WeakPtr<ModuleSymbols> Symbol::GetModuleSymbols() const {
 }
 
 SymbolContext Symbol::GetSymbolContext(const ProcessSymbols* process_symbols) const {
+  if (!process_symbols)
+    return SymbolContext::ForRelativeAddresses();
+
   fxl::WeakPtr<ModuleSymbols> weak_mod = GetModuleSymbols();
   if (!weak_mod)
     return SymbolContext::ForRelativeAddresses();
