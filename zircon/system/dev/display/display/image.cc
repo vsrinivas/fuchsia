@@ -66,11 +66,26 @@ void Image::StartPresent() {
 }
 
 void Image::EarlyRetire() {
+  // A client may re-use an image as soon as signal_fence_ fires. Set in_use_ first.
+  std::atomic_store(&in_use_, false);
   if (wait_fence_) {
     wait_fence_->SetImmediateRelease(std::move(signal_fence_));
     wait_fence_ = nullptr;
+  } else if (signal_fence_) {
+    signal_fence_->Signal();
+    signal_fence_ = nullptr;
   }
+}
+
+void Image::RetireWithFence(fbl::RefPtr<FenceReference>&& fence) {
+  // Retire and acquire are not synchronized, so set in_use_ before signaling so
+  // that the image can be reused as soon as the event is signaled. We don't have
+  // to worry about the armed signal fence being overwritten on reuse since it is
+  // on set in StartRetire, which is called under the same lock as OnRetire.
   std::atomic_store(&in_use_, false);
+  if (fence) {
+    fence->Signal();
+  }
 }
 
 void Image::StartRetire() {
@@ -78,11 +93,7 @@ void Image::StartRetire() {
   ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
 
   if (!presenting_) {
-    if (signal_fence_) {
-      signal_fence_->Signal();
-      signal_fence_ = nullptr;
-    }
-    std::atomic_store(&in_use_, false);
+    RetireWithFence(std::move(signal_fence_));
   } else {
     retiring_ = true;
     armed_signal_fence_ = std::move(signal_fence_);
@@ -95,16 +106,7 @@ void Image::OnRetire() {
   presenting_ = false;
 
   if (retiring_) {
-    // Retire and acquire are not synchronized, so set in_use_ before signaling so
-    // that the image can be reused as soon as the event is signaled. We don't have
-    // to worry about the armed signal fence being overwritten on reuse since it is
-    // on set in StartRetire, which is called under the same lock as OnRetire.
-    std::atomic_store(&in_use_, false);
-
-    if (armed_signal_fence_) {
-      armed_signal_fence_->Signal();
-      armed_signal_fence_ = nullptr;
-    }
+    RetireWithFence(std::move(armed_signal_fence_));
     retiring_ = false;
   }
 }

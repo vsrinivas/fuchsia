@@ -85,6 +85,9 @@ class Image : public fbl::RefCounted<Image>, public IdMappable<fbl::RefPtr<Image
   mtx_t* mtx();
 
  private:
+  // Retires the image and signals |fence|.
+  void RetireWithFence(fbl::RefPtr<FenceReference>&& fence);
+
   image_t info_;
   uint32_t stride_px_;
   Controller* const controller_;
