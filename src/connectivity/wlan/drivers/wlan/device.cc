@@ -584,11 +584,6 @@ zx_status_t Device::SetChannel(wlan_channel_t chan) __TA_NO_THREAD_SAFETY_ANALYS
   snprintf(buf, sizeof(buf), "channel set: from %s to %s",
            common::ChanStr(state_->channel()).c_str(), common::ChanStr(chan).c_str());
 
-  if (chan.primary == state_->channel().primary && chan.cbw == state_->channel().cbw) {
-    warnf("%s suppressed\n", buf);
-    return ZX_OK;
-  }
-
   zx_status_t status = wlanmac_proxy_.SetChannel(0u, &chan);
   if (status != ZX_OK) {
     errorf("%s change failed (status %d)\n", buf, status);
