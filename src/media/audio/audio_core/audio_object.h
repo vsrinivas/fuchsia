@@ -106,7 +106,6 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   virtual void CleanupDestLink(const fbl::RefPtr<AudioLink>& link) {}
 
   // Called immediately after a new link is added to the object.
-  // TODO(39961): Should become OnLinksChanged.
   virtual void OnLinkAdded() {}
 
   std::mutex links_lock_;
