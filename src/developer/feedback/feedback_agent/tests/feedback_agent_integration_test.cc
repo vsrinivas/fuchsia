@@ -325,6 +325,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
   ASSERT_TRUE(data.has_annotations());
   EXPECT_THAT(data.annotations(), testing::UnorderedElementsAreArray({
                                       MatchesKey(kAnnotationBuildBoard),
+                                      MatchesKey(kAnnotationBuildIsDebug),
                                       MatchesKey(kAnnotationBuildLatestCommitDate),
                                       MatchesKey(kAnnotationBuildProduct),
                                       MatchesKey(kAnnotationBuildVersion),

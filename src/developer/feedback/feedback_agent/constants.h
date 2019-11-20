@@ -8,6 +8,7 @@
 namespace feedback {
 
 constexpr char kAnnotationBuildBoard[] = "build.board";
+constexpr char kAnnotationBuildIsDebug[] = "build.is_debug";
 constexpr char kAnnotationBuildLatestCommitDate[] = "build.latest-commit-date";
 constexpr char kAnnotationBuildProduct[] = "build.product";
 constexpr char kAnnotationBuildVersion[] = "build.version";

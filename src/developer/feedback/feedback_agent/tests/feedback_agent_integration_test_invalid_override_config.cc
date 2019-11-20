@@ -56,6 +56,7 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
                                       MatchesKey(kAnnotationBuildBoard),
                                       MatchesKey(kAnnotationBuildLatestCommitDate),
                                       MatchesKey(kAnnotationBuildProduct),
+                                      MatchesKey(kAnnotationBuildIsDebug),
                                       MatchesKey(kAnnotationBuildVersion),
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),

@@ -38,6 +38,14 @@ const std::map<std::string, std::string>& GetAnnotationFilepaths() {
 }
 
 std::optional<std::string> GetAnnotation(const std::string& annotation_key) {
+  if (annotation_key == kAnnotationBuildIsDebug) {
+#ifndef NDEBUG
+    return "true";
+#else
+    return "false";
+#endif
+  }
+
   auto annotation_filepaths = GetAnnotationFilepaths();
   if (annotation_filepaths.find(annotation_key) == annotation_filepaths.end()) {
     return std::nullopt;
@@ -61,6 +69,7 @@ std::set<std::string> BuildInfoProvider::GetSupportedAnnotations() {
   for (const auto& [key, _] : GetAnnotationFilepaths()) {
     annotations.insert(key);
   }
+  annotations.insert(kAnnotationBuildIsDebug);
   return annotations;
 }
 

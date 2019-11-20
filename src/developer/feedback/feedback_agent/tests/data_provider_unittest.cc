@@ -52,10 +52,9 @@ using fuchsia::feedback::ImageEncoding;
 using fuchsia::feedback::Screenshot;
 
 const std::set<std::string> kDefaultAnnotations = {
-    kAnnotationBuildBoard,   kAnnotationBuildLatestCommitDate,
-    kAnnotationBuildProduct, kAnnotationBuildVersion,
-    kAnnotationChannel,      kAnnotationDeviceBoardName,
-    kAnnotationDeviceUptime,
+    kAnnotationBuildBoard,      kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
+    kAnnotationBuildProduct,    kAnnotationBuildVersion, kAnnotationChannel,
+    kAnnotationDeviceBoardName, kAnnotationDeviceUptime,
 };
 const std::set<std::string> kDefaultAttachments = {
     kAttachmentBuildSnapshot,
@@ -402,8 +401,9 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     rapidjson::Document json;
     ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
     rapidjson::Document schema_json;
-    ASSERT_FALSE(schema_json
-                     .Parse(fxl::Substitute(R"({
+    ASSERT_FALSE(
+        schema_json
+            .Parse(fxl::Substitute(R"({
   "type": "object",
   "properties": {
     "$0": {
@@ -426,15 +426,18 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     },
     "$6": {
       "type": "string"
+    },
+    "$7": {
+      "type": "string"
     }
   },
   "additionalProperties": false
 })",
-                                            kAnnotationBuildBoard, kAnnotationBuildLatestCommitDate,
-                                            kAnnotationBuildProduct, kAnnotationBuildVersion,
-                                            kAnnotationChannel, kAnnotationDeviceBoardName,
-                                            kAnnotationDeviceUptime))
-                     .HasParseError());
+                                   kAnnotationBuildBoard, kAnnotationBuildIsDebug,
+                                   kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
+                                   kAnnotationBuildVersion, kAnnotationChannel,
+                                   kAnnotationDeviceBoardName, kAnnotationDeviceUptime))
+            .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
     EXPECT_TRUE(json.Accept(validator));
