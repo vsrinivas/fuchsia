@@ -39,7 +39,6 @@ class AudioOutput : public AudioDevice {
     bool accumulate;
     const TimelineFunction* local_to_output;
 
-    float sw_output_gain_db;
     bool sw_output_muted;
 
     // Per-stream job state, set up for each renderer during SetupMix.

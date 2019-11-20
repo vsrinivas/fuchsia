@@ -115,10 +115,8 @@ bool DriverOutput::StartMixJob(MixJob* job, zx::time process_start) {
   if (settings != nullptr) {
     AudioDeviceSettings::GainState cur_gain_state;
     settings->SnapshotGainState(&cur_gain_state);
-    job->sw_output_gain_db = cur_gain_state.gain_db;
     job->sw_output_muted = cur_gain_state.muted;
   } else {
-    job->sw_output_gain_db = Gain::kUnityGainDb;
     //  TODO(mpuryear): make this false, consistent w/audio_device_settings.h?
     job->sw_output_muted = true;
   }
