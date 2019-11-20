@@ -13,43 +13,43 @@ use {
 /// Notifies when the root instance has been destroyed by ComponentManager.
 /// This is used to terminate ComponentManager when the root component has been destroyed.
 /// TODO(xbhatnag): Consider replacing this with breakpoints.
-pub struct RootRealmPostDestroyNotifier {
+pub struct RootRealmStopNotifier {
     pub rx: oneshot::Receiver<()>,
-    inner: Arc<RootRealmPostDestroyNotifierInner>,
+    inner: Arc<RootRealmStopNotifierInner>,
 }
 
-impl RootRealmPostDestroyNotifier {
+impl RootRealmStopNotifier {
     pub fn new() -> Self {
         let (tx, rx) = oneshot::channel();
-        let inner = Arc::new(RootRealmPostDestroyNotifierInner { tx: Mutex::new(Some(tx)) });
+        let inner = Arc::new(RootRealmStopNotifierInner { tx: Mutex::new(Some(tx)) });
         return Self { rx, inner };
     }
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
         vec![HooksRegistration {
-            events: vec![EventType::PostDestroyInstance],
+            events: vec![EventType::StopInstance],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
     }
 
     pub async fn wait_for_root_realm_destroy(self) {
-        self.rx.await.expect("Failed to wait for root instance to be destroyed");
+        self.rx.await.expect("Failed to wait for root instance to be stopped");
     }
 }
 
-struct RootRealmPostDestroyNotifierInner {
+struct RootRealmStopNotifierInner {
     tx: Mutex<Option<oneshot::Sender<()>>>,
 }
 
-impl Hook for RootRealmPostDestroyNotifierInner {
+impl Hook for RootRealmStopNotifierInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         let inner = self.clone();
         Box::pin(async move {
             if event.target_realm().abs_moniker == AbsoluteMoniker::root() {
                 let tx = inner.tx.lock().await.take();
-                tx.expect("Root instance can only be destroyed once.")
+                tx.expect("Root instance can only be stopped once.")
                     .send(())
-                    .expect("Could not notify on PostDestroyInstance of root realm");
+                    .expect("Could not notify on StopInstance of root realm");
             }
             Ok(())
         })

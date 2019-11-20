@@ -13,7 +13,7 @@ pub mod fuchsia_boot_resolver;
 pub mod fuchsia_pkg_resolver;
 pub mod klog;
 pub mod model;
-pub mod root_realm_post_destroy_notifier;
+pub mod root_realm_stop_notifier;
 pub mod startup;
 pub mod system_controller;
 pub mod work_scheduler;

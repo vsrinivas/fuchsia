@@ -6,7 +6,7 @@ use {
     crate::{
         framework::*,
         model::{runner::Runner, *},
-        root_realm_post_destroy_notifier::*,
+        root_realm_stop_notifier::RootRealmStopNotifier,
         startup::BuiltinRootCapabilities,
     },
     cm_rust::{data, CapabilityPath},
@@ -43,7 +43,7 @@ pub struct ModelParams {
 /// `Runner` and `Resolver`.
 #[derive(Clone)]
 pub struct Model {
-    pub notifier: Arc<Mutex<Option<RootRealmPostDestroyNotifier>>>,
+    pub notifier: Arc<Mutex<Option<RootRealmStopNotifier>>>,
     pub root_realm: Arc<Realm>,
 
     /// The built-in ELF runner, used for starting components with an ELF binary.
@@ -105,7 +105,7 @@ impl Model {
     /// Creates a new component model and initializes its topology.
     pub fn new(params: ModelParams) -> Model {
         Model {
-            notifier: Arc::new(Mutex::new(Some(RootRealmPostDestroyNotifier::new()))),
+            notifier: Arc::new(Mutex::new(Some(RootRealmStopNotifier::new()))),
             root_realm: Arc::new(Realm::new_root_realm(
                 params.root_resolver_registry,
                 params.root_component_url,
