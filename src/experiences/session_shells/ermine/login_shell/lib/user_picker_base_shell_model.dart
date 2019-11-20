@@ -22,9 +22,6 @@ import 'base_model.dart';
 export 'package:lib.widgets/model.dart'
     show ScopedModel, ScopedModelDescendant, ModelFinder;
 
-/// Function signature for GetPresentationMode callback
-typedef GetPresentationModeCallback = void Function(PresentationMode mode);
-
 const Duration _kShowLoadingSpinnerDelay = Duration(milliseconds: 500);
 
 /// Model that provides common state

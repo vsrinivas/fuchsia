@@ -11,7 +11,6 @@ import 'package:fidl_fuchsia_modular/fidl_async.dart';
 import 'package:fidl_fuchsia_modular_auth/fidl_async.dart';
 import 'package:fidl_fuchsia_netstack/fidl_async.dart';
 import 'package:fidl_fuchsia_sys/fidl_async.dart';
-import 'package:fidl_fuchsia_ui_gfx/fidl_async.dart';
 import 'package:fidl_fuchsia_ui_input/fidl_async.dart' as input;
 import 'package:fidl_fuchsia_ui_policy/fidl_async.dart';
 import 'package:fuchsia_logger/logger.dart';
@@ -38,59 +37,18 @@ class CommonBaseShellPresentationImpl extends Presentation {
 
   /// |Presentation|.
   @override
-  // ignore: override_on_non_overriding_method, avoid_positional_boolean_parameters
-  Future<void> enableClipping(bool enabled) async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> useOrthographicView() async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> usePerspectiveView() async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> setRendererParams(List<RendererParam> params) async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> setDisplayUsage(DisplayUsage usage) async {}
-
-  @override
-  // ignore: override_on_non_overriding_method, avoid_positional_boolean_parameters
-  Future<void> setDisplayRotation(double displayRotationDegrees, bool animate) async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> setDisplaySizeInMm(num widthInMm, num heightInMm) async {}
-
-  @override
   Future<void> captureKeyboardEventHack(input.KeyboardEvent eventToCapture,
       InterfaceHandle<KeyboardCaptureListenerHack> listener) async {
     await _model.presentation
         .captureKeyboardEventHack(eventToCapture, listener);
   }
 
+  /// |Presentation|.
   @override
   Future<void> capturePointerEventsHack(
       InterfaceHandle<PointerCaptureListenerHack> listener) async {
     await _model.presentation.capturePointerEventsHack(listener);
   }
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<PresentationMode> getPresentationMode() async { return PresentationMode.closed; }
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> setPresentationModeListener(
-      InterfaceHandle<PresentationModeListener> listener) async {}
-
-  @override
-  // ignore: override_on_non_overriding_method
-  Future<void> registerMediaButtonsListener(
-      InterfaceHandle<MediaButtonsListener> listener) async {}
 }
 
 /// Provides common features needed by all base shells.
