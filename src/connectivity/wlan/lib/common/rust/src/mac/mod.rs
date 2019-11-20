@@ -42,7 +42,7 @@ pub type MacAddr = [u8; 6];
 // or management frame helper functions (e.g. ap::write_open_auth_frame and
 // client::write_open_auth_frame).
 #[repr(transparent)]
-#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug)]
+#[derive(FromBytes, AsBytes, Unaligned, Clone, Copy, Debug, PartialEq)]
 pub struct Bssid(pub MacAddr);
 
 pub const BCAST_ADDR: MacAddr = [0xFF; 6];

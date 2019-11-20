@@ -6,6 +6,7 @@
 
 mod client;
 mod config;
+mod config_manager;
 mod device;
 mod fuse_pending;
 mod known_ess_store;

@@ -31,9 +31,9 @@ pub struct KnownEssStore {
 
 // Warning: changing this struct will break persistence
 #[derive(Deserialize)]
-struct EssJsonRead {
-    ssid: Vec<u8>,
-    password: Vec<u8>,
+pub struct EssJsonRead {
+    pub ssid: Vec<u8>,
+    pub password: Vec<u8>,
 }
 
 // Warning: changing this struct will break persistence

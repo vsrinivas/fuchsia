@@ -20,18 +20,27 @@ const CURRENT_VERSION: u16 = 1;
 /// For now this number is chosen arbitrarily.
 const NUM_DENY_REASONS: usize = 10;
 
+/// The network identifier is the SSID and security policy of the network, and it is used to
+/// distinguish networks. It mirrors the NetworkIdentifier in fidl_fuchsia_wlan_policy.
+pub type NetworkIdentifier = (Vec<u8>, fidl_policy::SecurityType);
 type SaveError = fidl_policy::NetworkConfigChangeError;
 
 /// History of connects, disconnects, and connection strength to estimate whether we can establish
 /// and maintain connection with a network and if it is weakening. Used in choosing best network.
-#[derive(Debug)]
-struct PerformanceStats {
+#[derive(Clone, Debug, PartialEq)]
+pub struct PerformanceStats {
     /// List of recent connection denials, used to determine whether we should try connecting
     /// to a network again. Capacity of list is at least NUM_DENY_REASONS.
     deny_list: NetworkDenialList,
 }
 
-#[derive(Clone, Copy, Debug)]
+impl PerformanceStats {
+    pub fn new() -> Self {
+        Self { deny_list: NetworkDenialList::new() }
+    }
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct NetworkDenial {
     /// Remember which AP of a network was denied
     bssid: Bssid,
@@ -42,7 +51,7 @@ pub struct NetworkDenial {
 }
 
 /// Ring buffer that holds network denials. It starts empty and replaces oldest when full.
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct NetworkDenialList(VecDeque<NetworkDenial>);
 
 impl NetworkDenialList {
@@ -65,41 +74,53 @@ impl NetworkDenialList {
 }
 
 /// Saved data for networks, to remember how to connect to a network and determine if we should.
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub struct NetworkConfig {
     /// (persist) SSID and security type to identify a network.
-    ssid: Vec<u8>,
-    security_type: fidl_policy::SecurityType,
+    pub ssid: Vec<u8>,
+    pub security_type: fidl_policy::SecurityType,
     /// (persist) Credential to connect to a protected network or None if the network is open.
-    credential: fidl_policy::Credential,
+    pub credential: fidl_policy::Credential,
     /// (persist) Remember whether our network indentifier and credential work.
-    has_ever_connected: bool,
+    pub has_ever_connected: bool,
     /// Used to differentiate hidden networks when doing active scans.
-    seen_in_passive_scan_results: bool,
+    pub seen_in_passive_scan_results: bool,
     /// Used to estimate quality to determine whether we want to choose this network.
-    perf_stats: PerformanceStats,
+    pub perf_stats: PerformanceStats,
 }
 
 impl NetworkConfig {
     pub fn new(
-        ssid: Vec<u8>,
-        security_type: fidl_policy::SecurityType,
+        id: NetworkIdentifier,
         credential: fidl_policy::Credential,
         has_ever_connected: bool,
         seen_in_passive_scan_results: bool,
     ) -> Result<Self, SaveError> {
-        if let Some(error) = check_config_errors(&ssid, &security_type, &credential) {
+        if let Some(error) = check_config_errors(&id.0, &id.1, &credential) {
             return Err(error);
         }
 
         Ok(Self {
-            ssid,
-            security_type,
+            ssid: id.0,
+            security_type: id.1,
             credential,
             has_ever_connected,
             seen_in_passive_scan_results,
             perf_stats: PerformanceStats { deny_list: NetworkDenialList::new() },
         })
+    }
+}
+
+impl Clone for NetworkConfig {
+    fn clone(&self) -> Self {
+        NetworkConfig {
+            ssid: self.ssid.clone(),
+            security_type: self.security_type,
+            credential: clone_credential(&self.credential),
+            has_ever_connected: self.has_ever_connected,
+            seen_in_passive_scan_results: self.seen_in_passive_scan_results,
+            perf_stats: self.perf_stats.clone(),
+        }
     }
 }
 
@@ -132,8 +153,8 @@ fn check_config_errors(
                     return Some(SaveError::GeneralError);
                 }
             }
-            fidl_policy::Credential::Psk(pwd) => {
-                if pwd.clone().len() != 64 {
+            fidl_policy::Credential::Psk(psk) => {
+                if psk.clone().len() != 64 {
                     return Some(SaveError::GeneralError);
                 }
             }
@@ -146,6 +167,14 @@ fn check_config_errors(
     None
 }
 
+pub fn clone_credential(credential: &fidl_policy::Credential) -> fidl_policy::Credential {
+    match credential {
+        fidl_policy::Credential::Password(pwd) => fidl_policy::Credential::Password(pwd.clone()),
+        fidl_policy::Credential::Psk(psk) => fidl_policy::Credential::Psk(psk.clone()),
+        _ => fidl_policy::Credential::None(fidl_policy::Empty {}),
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, fidl_fuchsia_wlan_policy as fidl_policy, wlan_common::assert_variant};
@@ -155,7 +184,7 @@ mod tests {
         use fidl_policy::SecurityType::None as SecurityNone;
         let credential = fidl_policy::Credential::None(fidl_policy::Empty);
         let network_config =
-            NetworkConfig::new(b"foo".to_vec(), SecurityNone, credential, false, false)
+            NetworkConfig::new((b"foo".to_vec(), SecurityNone), credential, false, false)
                 .expect("Error creating network config for foo");
 
         assert_eq!(network_config.ssid, b"foo".to_vec());
@@ -170,7 +199,7 @@ mod tests {
         use fidl_policy::SecurityType::Wpa2;
         let credential = fidl_policy::Credential::Password(b"foo-password".to_vec());
 
-        let network_config = NetworkConfig::new(b"foo".to_vec(), Wpa2, credential, false, false)
+        let network_config = NetworkConfig::new((b"foo".to_vec(), Wpa2), credential, false, false)
             .expect("Error creating network config for foo");
 
         assert_eq!(network_config.ssid, b"foo".to_vec());
@@ -188,7 +217,7 @@ mod tests {
         use fidl_policy::SecurityType::Wpa2;
         let credential = fidl_policy::Credential::Psk([1; 64].to_vec());
 
-        let network_config = NetworkConfig::new(b"foo".to_vec(), Wpa2, credential, false, false)
+        let network_config = NetworkConfig::new((b"foo".to_vec(), Wpa2), credential, false, false)
             .expect("Error creating network config for foo");
 
         assert_eq!(network_config.ssid, b"foo".to_vec());
@@ -203,7 +232,7 @@ mod tests {
         use fidl_policy::SecurityType::Wpa2;
         let credential = fidl_policy::Credential::None(fidl_policy::Empty);
 
-        let network_config = NetworkConfig::new([1; 33].to_vec(), Wpa2, credential, false, false);
+        let network_config = NetworkConfig::new(([1; 33].to_vec(), Wpa2), credential, false, false);
 
         assert_variant!(network_config, Result::Err(err) =>
             {assert_eq!(err, SaveError::GeneralError);}
@@ -215,7 +244,7 @@ mod tests {
         use fidl_policy::SecurityType::Wpa;
         let credential = fidl_policy::Credential::Password([1; 64].to_vec());
 
-        let network_config = NetworkConfig::new(b"foo".to_vec(), Wpa, credential, false, false);
+        let network_config = NetworkConfig::new((b"foo".to_vec(), Wpa), credential, false, false);
 
         assert_variant!(network_config, Result::Err(err) =>
             {assert_eq!(err, SaveError::GeneralError);}
@@ -227,7 +256,7 @@ mod tests {
         use fidl_policy::SecurityType::Wpa2;
         let credential = fidl_policy::Credential::Psk(b"bar".to_vec());
 
-        let network_config = NetworkConfig::new(b"foo".to_vec(), Wpa2, credential, false, false);
+        let network_config = NetworkConfig::new((b"foo".to_vec(), Wpa2), credential, false, false);
 
         assert_variant!(network_config, Result::Err(err) =>
             {assert_eq!(err, SaveError::GeneralError);}
