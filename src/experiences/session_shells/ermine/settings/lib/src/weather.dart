@@ -59,10 +59,12 @@ class Weather extends UiSpec {
   }
 
   static Spec _specForWeather(bool tempInFahrenheit) {
-    final locations =
-        _locations.where((location) => location.observation != null).toList();
+    final locations = _locations
+        .where((location) =>
+            location.observation != null && location.tempInDegrees != null)
+        .toList();
     if (locations.isEmpty) {
-      return null;
+      return UiSpec.nullSpec;
     }
     return Spec(title: _title, groups: [
       Group(title: _title, values: [
@@ -99,9 +101,13 @@ class Weather extends UiSpec {
     var result = await _readResponse(response);
     var data = json.decode(result);
     var properties = data['properties'];
-    location
-      ..observation = properties['textDescription']
-      ..tempInDegrees = properties['temperature']['value']?.toDouble();
+    if (properties['textDescription'] != null &&
+        properties['temperature'] != null &&
+        properties['temperature']['value'] != null) {
+      location
+        ..observation = properties['textDescription']
+        ..tempInDegrees = properties['temperature']['value'].toDouble();
+    }
   }
 
   // Read the string response from the [HttpClientResponse].
