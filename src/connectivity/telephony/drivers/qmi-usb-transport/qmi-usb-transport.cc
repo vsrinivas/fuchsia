@@ -66,6 +66,7 @@ zx_status_t Device::SetChannelToDevice(zx_handle_t channel) {
   } else {
     qmi_channel_ = channel;
   }
+  qmi_channel_ = channel;
   return result;
 }
 

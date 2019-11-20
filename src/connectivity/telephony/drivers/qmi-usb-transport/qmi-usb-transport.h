@@ -53,7 +53,7 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   zx_status_t SetNetworkStatusToDevice(bool connected);
   zx_status_t SetSnoopChannelToDevice(zx_handle_t channel);
 
-  // TODO(jiamingw): Group similar declarations together. 
+  // TODO(jiamingw): Group similar declarations together.
   zx_status_t CloseQmiChannel();
   zx_handle_t GetChannel();
   zx_status_t SetAsyncWait();
