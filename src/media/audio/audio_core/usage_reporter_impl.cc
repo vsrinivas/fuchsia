@@ -4,6 +4,8 @@
 
 #include "src/media/audio/audio_core/usage_reporter_impl.h"
 
+#include "src/lib/syslog/cpp/logger.h"
+
 namespace media::audio {
 
 fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> UsageReporterImpl::GetHandler() {
@@ -15,11 +17,15 @@ void UsageReporterImpl::Watch(
     fidl::InterfaceHandle<fuchsia::media::UsageWatcher> usage_state_watcher) {
   auto watcher = usage_state_watcher.Bind();
   auto& set = watcher_set(usage);
-  watcher->OnStateChanged(fidl::Clone(usage), fidl::Clone(set.cached_state), []() {
-    // TODO(37214): Implement per-client queues for flow control
+  int current_id = next_watcher_id_++;
+  watcher.set_error_handler(
+      [&set, current_id](zx_status_t status) { set.watchers.erase(current_id); });
+  watcher->OnStateChanged(fidl::Clone(usage), fidl::Clone(set.cached_state), [current_id, &set]() {
+    --set.watchers[current_id].outstanding_ack_count;
   });
 
-  set.watchers.push_back(std::move(watcher));
+  // Initialize outstanding_ack_count as 1 to count first OnStateChange message
+  set.watchers[current_id] = {std::move(watcher), 1};
 }
 
 void UsageReporterImpl::ReportPolicyAction(fuchsia::media::Usage usage,
@@ -39,10 +45,17 @@ void UsageReporterImpl::ReportPolicyAction(fuchsia::media::Usage usage,
   auto& set = watcher_set(usage);
   set.cached_state = fidl::Clone(state);
 
-  for (auto& watcher : set.watchers) {
-    watcher->OnStateChanged(fidl::Clone(usage), fidl::Clone(state), []() {
-      // TODO(37214): Implement per-client queues for flow control
-    });
+  auto it = set.watchers.begin();
+  while (it != set.watchers.end()) {
+    if (it->second.outstanding_ack_count > MAX_STATES) {
+      FX_LOGS(INFO) << "Disconnecting unresponsive watcher";
+      it = set.watchers.erase(it);
+    } else {
+      ++it->second.outstanding_ack_count;
+      it->second.watcher_ptr->OnStateChanged(fidl::Clone(usage), fidl::Clone(state),
+                                             [it]() { --it->second.outstanding_ack_count; });
+      ++it;
+    }
   }
 }
 

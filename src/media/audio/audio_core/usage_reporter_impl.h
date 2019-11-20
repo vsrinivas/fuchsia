@@ -20,8 +20,13 @@ class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
   fidl::InterfaceRequestHandler<fuchsia::media::UsageReporter> GetHandler();
 
  private:
+  struct Watcher {
+    fuchsia::media::UsageWatcherPtr watcher_ptr;
+    int outstanding_ack_count;
+  };
+
   struct WatcherSet {
-    std::vector<fuchsia::media::UsageWatcherPtr> watchers;
+    std::map<int, Watcher> watchers;
     fuchsia::media::UsageState cached_state = fuchsia::media::UsageState::WithUnadjusted({});
   };
 
@@ -36,6 +41,12 @@ class UsageReporterImpl : public AudioAdmin::PolicyActionReporter,
   fidl::BindingSet<fuchsia::media::UsageReporter, UsageReporterImpl*> bindings_;
   std::array<WatcherSet, fuchsia::media::RENDER_USAGE_COUNT> render_usage_watchers_;
   std::array<WatcherSet, fuchsia::media::CAPTURE_USAGE_COUNT> capture_usage_watchers_;
+  int next_watcher_id_ = 0;
+
+  // Maximum number of states that can go un-acked before a watcher is disconnected
+  static const int MAX_STATES = 20;
+
+  friend class UsageReporterImplTest;
 };
 
 }  // namespace media::audio
