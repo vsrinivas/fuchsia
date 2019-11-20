@@ -100,11 +100,19 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(info->streams_info[1].child_nodes[0].type, kGdc);
     ASSERT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type.size(), 3u);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[0],
-              GdcConfig::MONITORING_360p);
+              GdcConfig::MONITORING_720p);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[1],
               GdcConfig::MONITORING_480p);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].gdc_info.config_type[2],
-              GdcConfig::MONITORING_720p);
+              GdcConfig::MONITORING_360p);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].output_stream_type,
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    // Output node.
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes.size(), 1u);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].type, kOutputStream);
+    EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].output_stream_type,
+              fuchsia::camera2::CameraStreamType::MONITORING);
   }
 
   void TestDebugStreamConfigNode() {
@@ -185,13 +193,13 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
   }
 
-  void TestConfigure_MonitorConfig() {
+  void TestConfigure_MonitorConfig_Stream1() {
     controller_protocol_device_->PopulateConfigurations();
     InternalConfigInfo* internal_info = nullptr;
-    // Get internal configuration for debug config
+    // Get the internal configuration for monitor config
     EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig,
                                                                            &internal_info));
-    // Get stream config for fuchsia::camera2::CameraStreamType::FULL_RESOLUTION; stream
+    // Get the stream config
     auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
         internal_info, fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
@@ -202,6 +210,44 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     stream_config.properties.set_stream_type(
         fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
         fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    PipelineInfo info;
+    info.output_buffers = std::move(buffer_collection);
+    info.image_format_index = 0;
+    info.node = *stream_config_node;
+    info.stream_config = &stream_config;
+
+    auto result = pipeline_manager_->CreateInputNode(&info);
+    EXPECT_EQ(true, result.is_ok());
+
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
+
+    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
+    ASSERT_EQ(true, graph_result.is_ok());
+
+    ASSERT_NE(nullptr, graph_result.value());
+    EXPECT_NE(nullptr, graph_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+
+    // Check if GDC node was created.
+    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
+  }
+
+  void TestConfigure_MonitorConfig_Stream2() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* internal_info = nullptr;
+    // Get the internal configuration for monitor config
+    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kMonitorConfig,
+                                                                           &internal_info));
+    // Get the stream config
+    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
+        internal_info, fuchsia::camera2::CameraStreamType::MONITORING);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING);
 
     PipelineInfo info;
     info.output_buffers = std::move(buffer_collection);
@@ -303,7 +349,12 @@ TEST_F(ControllerProtocolTest, TestShutdownPathAfterStreamingOn) {
   TestShutdownPathAfterStreamingOn();
 }
 
-TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig) { TestConfigure_MonitorConfig(); }
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream1) {
+  TestConfigure_MonitorConfig_Stream1();
+}
+TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream2) {
+  TestConfigure_MonitorConfig_Stream2();
+}
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {
 #ifdef INTERNAL_ACCESS

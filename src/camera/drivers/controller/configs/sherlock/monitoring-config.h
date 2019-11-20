@@ -333,7 +333,7 @@ static InternalConfigNode OutputStreamMonitoring() {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE,
+      .output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING,
   };
 }
 
@@ -372,9 +372,9 @@ static InternalConfigNode Gdc2() {
           },
       .gdc_info.config_type =
           {
-              GdcConfig::MONITORING_360p,
-              GdcConfig::MONITORING_480p,
               GdcConfig::MONITORING_720p,
+              GdcConfig::MONITORING_480p,
+              GdcConfig::MONITORING_360p,
           },
       .constraints = Gdc2Constraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
