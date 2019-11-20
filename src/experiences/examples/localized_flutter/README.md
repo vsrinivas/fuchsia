@@ -11,7 +11,7 @@ a translation pipeline.
 
 ## Building
 
-    fx set workstation.chromebook-x64 --with //src/experiences/examples/localized_flutter_app
+    fx set workstation.chromebook-x64 --with //src/experiences/examples/localized_flutter
     fx build
 
 ## Testing

@@ -1,5 +1,5 @@
 // DO NOT EDIT. This is code generated via package:intl/generate_localized.dart
-// This is a library that provides messages for a en_XA locale. All the
+// This is a library that provides messages for a sr locale. All the
 // messages from the main program should be duplicated here with the same
 // function name.
 
@@ -19,7 +19,7 @@ final messages = new MessageLookup();
 typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 
 class MessageLookup extends MessageLookupByLibrary {
-  String get localeName => 'en_XA';
+  String get localeName => 'sr';
 
   String evaluateMessage(translation, List<dynamic> args) {
     return evaluateJsonTemplate(translation, args);
@@ -28,5 +28,5 @@ class MessageLookup extends MessageLookupByLibrary {
   get messages => _messages ??=
       const JsonDecoder().convert(messageText) as Map<String, dynamic>;
   static final messageText = r'''
-{"appTitle":"[Ļöçåļîžéð Möð one two]","bodyText":["Intl.plural",0,"[Ţĥéŕé åŕé ñö méššåĝéš. one two three four five]","[Ţĥéŕé îš öñé méššåĝé. one two three four five]",null,null,null,["[Ţĥéŕé åŕé ᐅ",0,"ᐊ méššåĝéš. one two three four five]"]],"footer":"[Çömîñĝ šööñ: åçţûåļļý ŕéåðîñĝ ţĥöšé méššåĝéš¡ one two three four five six seven eight nine]"}''';
+{"appTitle":"Локализовани мод","bodyText":["Intl.plural",0,"Нема порука.","Једна порука.",null,[0," поруке."],null,[0," порука."]],"footer":"Долази ускоро: заправо читање ових порука!"}''';
 }

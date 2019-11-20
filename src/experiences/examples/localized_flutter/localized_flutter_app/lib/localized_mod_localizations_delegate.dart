@@ -8,8 +8,8 @@ import 'dart:ui' show Locale;
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:intl/intl.dart';
+import 'package:localized_flutter_localization/messages_all.dart' as messages_all;
 
-import 'localization/messages_all.dart' as messages_all;
 import 'supported_locales.dart';
 
 /// A [LocalizationsDelegate] for Localized Mod that connects Flutter's

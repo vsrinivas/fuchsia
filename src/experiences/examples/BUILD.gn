@@ -5,7 +5,7 @@
 group("examples") {
   deps = [
     "hello_experiences",
-    "localized_flutter_app",
+    "localized_flutter",
     "spinning_cube",
   ]
 }
@@ -25,7 +25,7 @@ group("dart_unittests") {
   _flutter_tester_tests = []
   if (host_os != "mac") {
     _flutter_tester_tests += [
-      "localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
+      "localized_flutter/localized_flutter_app:localized_flutter_app_unittests($host_toolchain)",
       "hello_experiences:hello_experiences_unittests($host_toolchain)",
     ]
   }
