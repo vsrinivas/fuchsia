@@ -1,0 +1,80 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.factory.camera;
+
+using fuchsia.camera2;
+using fuchsia.images;
+using fuchsia.mem;
+using zx;
+
+const uint32 FILE_PATH_MAX_LENGTH = 1024;
+
+enum CameraFactoryError : uint32 {
+    /// The device does not have a camera, or the camera stack can otherwise not be
+    /// reached.
+    NO_CAMERA = 0x01;
+    /// No image could be captured. Most likely because the stream has not been started.
+    STREAMING = 0x02;
+};
+
+/// A protocol for all devices with cameras going through factory calibration
+/// procedures. The devices are exposed as servers; this is meant to receive calls from
+/// and send data back to a SL4F Facade.
+// TODO(41671) - account for multiple cameras on a single device.
+// TODO(41672) - implement video capture.
+[Discoverable]
+protocol CameraFactory {
+    /// Checks whether the device under test has a camera and provides information about
+    /// it. If the device has multiple cameras, the first one listed is chosen.
+    ///
+    /// - response `camera_id` Identifies the camera. This should not change throughout
+    ///                        the lifetime of the camera. Is null if no camera exists.
+    /// - response `camera_info` A table providing identifying information about the
+    ///                          camera. Is null if no camera exists.
+    /// * error A value indicating whether there is a camera.
+    DetectCamera() -> (int32 camera_id, fuchsia.camera2.DeviceInfo camera_info)
+        error CameraFactoryError;
+
+    /// Initializes the camera sensor (and associated MIPI) and connects to a stream.
+    Start();
+
+    /// Stops the camera sensor (and associated MIPI) stream.
+    Stop();
+
+    /// Sets the parameters for the camera's sensor config.
+    ///
+    /// + request `mode` One of the camera's predefined sensor modes (fpms, resolution,
+    ///                  etc).
+    /// + request `exposure` The camera's sensor exposure parameter.
+    /// + request `analog_gain` The camera's sensor analog gain parameter.
+    /// + request `digital_gain` The camera's sensor digital gain parameter.
+    /// * error A value indicating the type of failure, if any. This may occur if there
+    ///         is no camera or it is not streaming.
+    /// * See [`camerasensor.banjo`] for more information on these params:
+    ///     //zircon/system/banjo/ddk.protocol.camerasensor/camerasensor.banjo
+    SetConfig(uint32 mode, uint32 exposure, int32 analog_gain, int32 digital_gain) -> ()
+        error CameraFactoryError;
+
+    /// Instructs the device to save a frame from the stream, and send it back to the
+    /// host.
+    ///
+    /// - response `image_data` A blob of bytes representing the captured image.
+    /// - response `image_info` A struct outlining the image's properties, e.g.
+    ///                         width/height, pixel format, etc.
+    /// * error A value indicating the type of failure, if any. This may occur if there
+    ///         is no camera or it is not streaming.
+    CaptureImage() -> (fuchsia.mem.Buffer image_data,
+                       fuchsia.images.ImageInfo image_info)
+        error CameraFactoryError;
+
+    /// Instructs the device to save tuning data to a persistent factory partition.
+    ///
+    /// + request `calibration_data` A blob of calibration data to be written to disk.
+    /// + request `file_path` Outlines where on device the data is to be written.
+    /// * error A value indicating an IO failure, if any.
+    WriteCalibrationData(fuchsia.mem.Buffer calibration_data,
+                         string:FILE_PATH_MAX_LENGTH file_path)
+        -> () error zx.status;
+};
