@@ -60,9 +60,10 @@ package("use_h264_decoder_test") {
       # Should pass when run VIM2, astro, or QEMU.
       name = "use_h264_decoder_test"
 
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
       environments = [
         vim2_env,
-        astro_env,
+        sherlock_env,
         qemu_env,
       ]
     },
@@ -98,7 +99,10 @@ package("use_h264_decoder_secure_output_test") {
       # Should pass when run on astro.
       name = "use_h264_decoder_secure_output_test"
 
-      environments = [ astro_env ]
+      environments = [
+        astro_env,
+        sherlock_env,
+      ]
     },
   ]
 
@@ -205,9 +209,10 @@ package("use_vp9_decoder_test") {
       # TODO(MTWN-224): Fix the above comment when VP9 HW decode is enabled.
       name = "use_vp9_decoder_test"
 
+      # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
       environments = [
         vim2_env,
-        astro_env,
+        sherlock_env,
       ]
     },
   ]
@@ -280,9 +285,10 @@ template("vp9_file_decoder_conformance_test") {
 
         # This should pass when run on VIM2 or astro, and will fail in any env
         # that lacks VP9 decode.
+        # Disable on astro because not enough contiguous memory. TODO(fxb/41735) Re-enable
         environments = [
           vim2_env,
-          astro_env,
+          sherlock_env,
         ]
       },
     ]
