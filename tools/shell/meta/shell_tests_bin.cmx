@@ -1,0 +1,17 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.boot.RootJob"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/shell_tests_bin"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.boot.RootJob"
+        ]
+    }
+}

@@ -140,5 +140,6 @@ group("rootjob_svc_allowlist") {
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/lib/process_builder:process_builder_tests",
     "//src/sys/component_manager:component_manager_tests",
+    "//tools/shell:shell_tests",
   ]
 }

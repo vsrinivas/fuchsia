@@ -52,6 +52,7 @@ action("js_libs") {
   script = "generate_js_libs.sh"
   sources = [
     "ns.js",
+    "task.js",
     "util.js",
   ]
   generated_output = "$target_gen_dir/libs.manifest"
@@ -68,6 +69,7 @@ source_set("tests") {
     "fidl_test.cc",
     "js_testing_utils.h",
     "ns_test.cc",
+    "task_test.cc",
     "zx_test.cc",
   ]
   deps = [
@@ -79,5 +81,6 @@ source_set("tests") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/memfs",
+    "//zircon/public/lib/task-utils",
   ]
 }

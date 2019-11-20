@@ -269,7 +269,7 @@ class ProtocolClient {
     } else if ('_impl' in channel) {
       this._impl = channel._impl;
     } else {
-      throw "Illegal argument passed as channel to ProtocolClient constructor";
+      throw 'Illegal argument passed as channel to ProtocolClient constructor';
     }
 
     // Populate the ProtocolClient object with methods corresponding to the protocol methods.
@@ -318,7 +318,43 @@ function convertResponseHandles(methodDecl, message) {
     }
     if (methodDecl.maybe_response[i].type.kind == 'request') {
       const handleValue = parseFidlcatHandle(message[methodDecl.maybe_response[i].name]);
-      message[methodDecl.maybe_response[i].name] = zx.Channel.fromValue(handleValue);
+      message[methodDecl.maybe_response[i].name] = zx.Channel.fromValueDeprecated(handleValue);
+    }
+    if (methodDecl.maybe_response[i].type.kind == 'handle') {
+      const handleValue = parseFidlcatHandle(message[methodDecl.maybe_response[i].name]);
+      switch (methodDecl.maybe_response[i].type.subtype) {
+        case 'job':
+          message[methodDecl.maybe_response[i].name] = zx.Job.fromValueDeprecated(handleValue);
+          break;
+        case 'handle':
+        case 'bti':
+        case 'channel':
+        case 'debuglog':
+        case 'event':
+        case 'eventpair':
+        case 'exception':
+        case 'fifo':
+        case 'guest':
+        case 'interrupt':
+        case 'iommu':
+        case 'pager':
+        case 'pcidevice':
+        case 'pmt':
+        case 'port':
+        case 'process':
+        case 'profile':
+        case 'resource':
+        case 'socket':
+        case 'suspendtoken':
+        case 'thread':
+        case 'timer':
+        case 'vcpu':
+        case 'vmar':
+        case 'vmo':
+          throw 'Unsupported handle type ' + methodDecl.maybe_response[i].type.subtype;
+        default:
+          throw 'Unknown handle type ' + methodDecl.maybe_response[i].type.subtype;
+      }
     }
   }
   return message;
@@ -716,4 +752,5 @@ var fidling_handler = {
 const fidling = new Proxy({}, fidling_handler);
 
 global['fidling'] = fidling;
+
 })(globalThis);

@@ -155,4 +155,42 @@ async function ls(pathString) {
   return dirents;
 }
 
+(async function(global) {
+ls('/svc')
+    .then((svcDir) => {
+      // Make services available on an object called `svc`
+      const svc = {};
+      const svcNames = [];
+      for (const service of svcDir) {
+        // serviceName looks like "fuchsia.boot.RootJob"
+        const serviceName = service.name;
+        // Mangle service names to be valid JS identifiers
+        // proxyName looks like "fuchsia_boot_RootJob"
+        const proxyName = serviceName.replace(/\./g, '_');
+        svcNames.push(proxyName);
+        const idx = serviceName.lastIndexOf('.');
+        // name looks like "RootJob"
+        const name = serviceName.substr(idx + 1);
+        // libraryName looks like "fuchsia.boot"
+        const libraryName = serviceName.substr(0, idx);
+        // Define a getter that connects to the service
+        // TODO: should this cache connections until their handles close?
+        Object.defineProperty(svc, proxyName, {
+          enumerable: true,
+          get: () => {
+            return new fidl.ProtocolClient(
+                new zx.Channel(fdio.serviceConnect(`/svc/${serviceName}`)),
+                `${libraryName}/${name}`);
+          },
+        });
+      }
+      svc[Symbol.for('completions')] = svcNames;
+      global['svc'] = svc;
+    })
+    .catch((e) => {
+      console.log(e);
+      console.log(e.stack);
+    });
+})(globalThis);
+
 export {ls};

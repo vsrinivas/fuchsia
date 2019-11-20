@@ -123,6 +123,9 @@ bool Context::InitBuiltins(const std::string& fidl_path, const std::string& boot
     if (!Export("ns", boot_js_path)) {
       return false;
     }
+    if (!Export("task", boot_js_path)) {
+      return false;
+    }
   }
 
   return true;
