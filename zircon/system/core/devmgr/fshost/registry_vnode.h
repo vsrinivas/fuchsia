@@ -2,14 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_
-#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_
+#ifndef ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_VNODE_H_
+#define ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_VNODE_H_
 
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/zx/channel.h>
-
-#include <fuchsia/fshost/llcpp/fidl.h>
 
 #include <fs/pseudo_dir.h>
 #include <fs/service.h>
@@ -19,8 +18,8 @@ namespace devmgr {
 namespace fshost {
 
 // The fshost Vnode represents access to a registry of filesystems.
-class RegistryVnode final : public fs::Service,
-                            public ::llcpp::fuchsia::fshost::Registry::Interface {
+class RegistryVnode final : public ::llcpp::fuchsia::fshost::Registry::Interface,
+                            public fs::Service {
  public:
   // Constructs the vnode, providing a |filesystems| node to which this node will
   // register remote filesystems.
@@ -44,4 +43,4 @@ class RegistryVnode final : public fs::Service,
 }  // namespace fshost
 }  // namespace devmgr
 
-#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_VNODE_H_
+#endif  // ZIRCON_SYSTEM_CORE_DEVMGR_FSHOST_REGISTRY_VNODE_H_

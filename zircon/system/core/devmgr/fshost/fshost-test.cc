@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/fshost/llcpp/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/namespace.h>
 #include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -21,6 +23,7 @@
 #include <zxtest/zxtest.h>
 
 #include "fs-manager.h"
+#include "fs/synchronous_vfs.h"
 #include "fshost-fs-provider.h"
 #include "metrics.h"
 #include "registry.h"
@@ -65,6 +68,34 @@ TEST(VnodeTestCase, AddFilesystem) {
   fbl::RefPtr<fs::Vnode> node;
   ASSERT_OK(dir->Lookup(&node, "0"));
   EXPECT_EQ(node->GetRemote(), client_value);
+}
+
+TEST(VnodeTestCase, AddFilesystemThroughFidl) {
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
+  ASSERT_EQ(loop.StartThread(), ZX_OK);
+
+  // set up registry service
+  zx::channel registry_client, registry_server;
+  ASSERT_OK(zx::channel::create(0, &registry_client, &registry_server));
+  auto dir = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+  auto fshost_vn = new devmgr::fshost::RegistryVnode(loop.dispatcher(), dir);
+  fidl::Bind(loop.dispatcher(), std::move(registry_server), fshost_vn);
+
+  // make a new "vfs" "client" that doesn't really point anywhere.
+  zx::channel vfs_client, vfs_server;
+  ASSERT_OK(zx::channel::create(0, &vfs_client, &vfs_server));
+  zx_handle_t vfs_client_value = vfs_client.get();
+
+  // register the filesystem through the fidl interface
+  auto resp = ::llcpp::fuchsia::fshost::Registry::Call::RegisterFilesystem(
+      zx::unowned(registry_client), std::move(vfs_client));
+  ASSERT_TRUE(resp.ok());
+  ASSERT_OK(resp.value().s);
+
+  // confirm that the filesystem was registered
+  fbl::RefPtr<fs::Vnode> node;
+  ASSERT_OK(dir->Lookup(&node, "0"));
+  EXPECT_EQ(node->GetRemote(), vfs_client_value);
 }
 
 // Test that the manager responds to external signals for unmounting.
