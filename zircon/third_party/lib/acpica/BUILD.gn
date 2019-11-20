@@ -16,6 +16,10 @@ group("headers") {
 config("headers.config") {
   visibility = [ ":headers" ]
   include_dirs = [ "source/include" ]
+
+  # UBSan warns on a few instances of misaligned loads. Define this macro to
+  # perform byte-by-byte accesses.
+  defines = [ "ACPI_MISALIGNMENT_NOT_SUPPORTED" ]
 }
 
 # Disable warnings we won't fix in third-party code.  Putting this in a
@@ -27,7 +31,13 @@ config("disable_warnings") {
   cflags = [ "-Wno-implicit-fallthrough" ]
   if (is_gcc) {
     cflags += [ "-Wno-format-signedness" ]
-    cflags_c = [ "-Wno-discarded-qualifiers" ]
+    cflags_c = [
+      "-Wno-discarded-qualifiers",
+
+      # Disable this to prevent GCC warning on strncpy() copies into char[4]
+      # strings.
+      "-Wno-stringop-truncation",
+    ]
   } else {
     cflags += [
       "-Wno-incompatible-pointer-types-discards-qualifiers",
