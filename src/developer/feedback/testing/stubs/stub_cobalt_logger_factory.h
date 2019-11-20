@@ -6,8 +6,10 @@
 #define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_COBALT_LOGGER_FACTORY_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/zx/time.h>
 
 #include <memory>
 
@@ -19,22 +21,38 @@ class StubCobaltLoggerFactory : public fuchsia::cobalt::LoggerFactory {
  public:
   enum FailureMode { SUCCEED, FAIL_CLOSE_CONNECTIONS, FAIL_CREATE_LOGGER, FAIL_LOG_EVENT };
   explicit StubCobaltLoggerFactory(FailureMode failure_mode = SUCCEED)
-      : failure_mode_(failure_mode), logger_(this) {}
+      : logger_(this), failure_mode_(failure_mode) {}
 
   // Returns a request handler for binding to this stub service.
   fidl::InterfaceRequestHandler<fuchsia::cobalt::LoggerFactory> GetHandler() {
     return factory_bindings_.GetHandler(this);
   }
 
+  bool was_log_event_called() { return logger_.was_log_event_called(); }
   uint32_t last_metric_id() { return logger_.last_metric_id(); }
   uint32_t last_event_code() { return logger_.last_event_code(); }
 
- private:
+  void CloseFactoryConnection() { factory_bindings_.CloseAll(); }
+  void CloseLoggerConnection() { logger_bindings_.CloseAll(); }
+
+  void CloseAllConnections() {
+    CloseFactoryConnection();
+    CloseLoggerConnection();
+  }
+
+ protected:
   class StubLogger : public fuchsia::cobalt::Logger {
    public:
     explicit StubLogger(StubCobaltLoggerFactory* factory) : factory_(factory) {}
-    uint32_t last_metric_id() const { return last_metric_id_; }
-    uint32_t last_event_code() const { return last_event_code_; }
+    bool was_log_event_called() const { return log_event_called_; }
+    uint32_t last_metric_id() const {
+      FXL_CHECK(log_event_called_);
+      return last_metric_id_;
+    }
+    uint32_t last_event_code() const {
+      FXL_CHECK(log_event_called_);
+      return last_event_code_;
+    }
 
    private:
     void LogEvent(uint32_t metric_id, uint32_t event_code,
@@ -101,14 +119,15 @@ class StubCobaltLoggerFactory : public fuchsia::cobalt::LoggerFactory {
       FXL_NOTIMPLEMENTED();
     }
 
-    uint32_t last_metric_id_;
-    uint32_t last_event_code_;
+    bool log_event_called_ = false;
+    uint32_t last_metric_id_ = 0;
+    uint32_t last_event_code_ = 0;
     StubCobaltLoggerFactory* factory_;
   };
 
   void CreateLoggerFromProjectName(
-      ::std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
@@ -117,28 +136,41 @@ class StubCobaltLoggerFactory : public fuchsia::cobalt::LoggerFactory {
   }
   void CreateLoggerSimple(
       fuchsia::cobalt::ProjectProfile profile,
-      ::fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
   void CreateLoggerSimpleFromProjectName(
-      ::std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-      ::fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
+      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectNameCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 
  protected:
-  void CloseAllConnections() {
-    logger_bindings_.CloseAll();
-    factory_bindings_.CloseAll();
-  }
+  StubLogger logger_;
+  fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
 
  private:
   fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
-  fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
   FailureMode failure_mode_;
-  StubLogger logger_;
+};
+
+class StubCobaltLoggerFactoryDelaysReturn : public StubCobaltLoggerFactory {
+ public:
+  StubCobaltLoggerFactoryDelaysReturn(async_dispatcher_t* dispatcher, zx::duration timeout)
+      : StubCobaltLoggerFactory(StubCobaltLoggerFactory::SUCCEED),
+        dispatcher_(dispatcher),
+        timeout_(timeout) {}
+
+ private:
+  void CreateLoggerFromProjectName(
+      std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+      fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectNameCallback callback) override;
+
+  async_dispatcher_t* dispatcher_;
+  zx::duration timeout_;
 };
 
 }  // namespace feedback

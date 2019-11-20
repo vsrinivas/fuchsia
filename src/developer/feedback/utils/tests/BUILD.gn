@@ -18,6 +18,9 @@ test_package("feedback_utils_tests") {
       name = "archive_unittest"
     },
     {
+      name = "cobalt_unittest"
+    },
+    {
       name = "inspect_node_manager_unittest"
     },
     {
@@ -35,6 +38,7 @@ test_package("feedback_utils_tests") {
 
   deps = [
     ":archive_unittest",
+    ":cobalt_unittest",
     ":inspect_node_manager_unittest",
     ":time_unittest",
   ]
@@ -59,6 +63,26 @@ executable("archive_unittest") {
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
+  ]
+}
+
+executable("cobalt_unittest") {
+  testonly = true
+
+  sources = [
+    "cobalt_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
+    "//src/developer/feedback/utils:cobalt",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
   ]
 }
 

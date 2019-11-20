@@ -4,9 +4,11 @@
 
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 
+#include <lib/async/cpp/task.h>
+#include <lib/fidl/cpp/interface_request.h>
+#include <lib/fidl/cpp/internal/stub.h>
 #include <zircon/errors.h>
 
-#include "lib/fidl/cpp/internal/stub.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -30,8 +32,17 @@ void StubCobaltLoggerFactory::CreateLoggerFromProjectName(
   callback(Status::OK);
 }
 
+void StubCobaltLoggerFactoryDelaysReturn::CreateLoggerFromProjectName(
+    std::string project_name, ReleaseStage release_stage, fidl::InterfaceRequest<Logger> logger,
+    LoggerFactory::CreateLoggerFromProjectNameCallback callback) {
+  logger_bindings_.AddBinding(&logger_, std::move(logger));
+  async::PostDelayedTask(
+      dispatcher_, [cb = std::move(callback)]() { cb(Status::OK); }, timeout_);
+}
+
 void StubCobaltLoggerFactory::StubLogger::LogEvent(uint32_t metric_id, uint32_t event_code,
                                                    Logger::LogEventCallback callback) {
+  log_event_called_ = true;
   if (factory_->failure_mode_ == FAIL_LOG_EVENT) {
     callback(Status::INVALID_ARGUMENTS);
     return;

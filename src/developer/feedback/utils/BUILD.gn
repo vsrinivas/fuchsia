@@ -24,6 +24,29 @@ source_set("archive") {
   visibility = [ "//src/developer/feedback/*" ]
 }
 
+source_set("cobalt") {
+  public = [
+    "cobalt.h",
+  ]
+
+  sources = [
+    "cobalt.cc",
+    "cobalt.h",
+  ]
+
+  public_deps = [
+    "//sdk/lib/sys/cpp",
+    "//zircon/system/fidl/fuchsia-cobalt",
+  ]
+
+  deps = [
+    "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
+  ]
+
+  visibility = [ "//src/developer/feedback/*" ]
+}
+
 source_set("inspect_node_manager") {
   sources = [
     "inspect_node_manager.cc",
