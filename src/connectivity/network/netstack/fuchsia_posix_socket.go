@@ -124,7 +124,12 @@ type endpoint struct {
 
 	local, peer zx.Socket
 
-	incomingAssertedMu sync.Mutex
+	incoming struct {
+		mu struct {
+			sync.Mutex
+			asserted bool
+		}
+	}
 
 	// Reference to the netstack global endpoint-map.
 	endpoints *sync.Map
@@ -323,9 +328,13 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 					// Because we are a listening socket, we don't expect anymore
 					// outbound events so there's no harm in letting outEntry remain
 					// registered until the end of the function.
-					ios.incomingAssertedMu.Lock()
-					err := ios.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
-					ios.incomingAssertedMu.Unlock()
+					var err error
+					ios.incoming.mu.Lock()
+					if !ios.incoming.mu.asserted {
+						err = ios.local.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+						ios.incoming.mu.asserted = true
+					}
+					ios.incoming.mu.Unlock()
 					if err != nil {
 						if err, ok := err.(*zx.Error); ok {
 							switch err.Status {
@@ -777,20 +786,23 @@ func (s *socketImpl) SetAttr(flags uint32, attributes io.NodeAttributes) (int32,
 }
 func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error) {
 	ep, wq, err := s.endpoint.ep.Accept()
-	// NB: we need to do this before checking the error, or the incoming signal
-	// will never be cleared.
-	//
-	// We lock here to ensure that no incoming connection changes readiness
-	// while we clear the signal.
-	s.endpoint.incomingAssertedMu.Lock()
-	if s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
-		if err := s.endpoint.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
-			panic(err)
-		}
-	}
-	s.endpoint.incomingAssertedMu.Unlock()
 	if err != nil {
 		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
+	}
+	{
+		var err error
+		// We lock here to ensure that no incoming connection changes readiness
+		// while we clear the signal.
+		s.endpoint.incoming.mu.Lock()
+		if s.endpoint.incoming.mu.asserted && s.endpoint.ep.Readiness(waiter.EventIn) == 0 {
+			err = s.endpoint.local.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0)
+			s.endpoint.incoming.mu.asserted = false
+		}
+		s.endpoint.incoming.mu.Unlock()
+		if err != nil {
+			ep.Close()
+			return 0, socket.ControlInterface{}, err
+		}
 	}
 
 	localAddr, err := ep.GetLocalAddress()
