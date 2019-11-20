@@ -51,6 +51,7 @@ protocol AudioDeviceEnumerator {
     -> OnDeviceAdded(AudioDeviceInfo device);
     -> OnDeviceRemoved(uint64 device_token);
     -> OnDeviceGainChanged(uint64 device_token, AudioGainInfo gain_info);
+    [Deprecated]
     -> OnDefaultDeviceChanged(uint64 old_default_token,
                               uint64 new_default_token);
 
@@ -96,7 +97,9 @@ protocol AudioDeviceEnumerator {
     // plugged input/output". As the human level logic which drives the audio
     // routing policy evolves and becomes more complicated, this will probably
     // change.
+    [Deprecated, Transitional]
     GetDefaultInputDevice() -> (uint64 device_token);
+    [Deprecated, Transitional]
     GetDefaultOutputDevice() -> (uint64 device_token);
 
     AddDeviceByChannel(handle<channel> device_channel, string:256 device_name,

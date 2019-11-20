@@ -12,8 +12,7 @@ group("test") {
     ":audio_admin_tests",
     ":audio_core_hardware_tests",
     ":audio_device_service_tests",
-
-    #TODO(41059): ":audio_device_tests",
+    ":audio_device_tests",
     ":audio_fidl_tests",
     ":audio_pipeline_tests",
   ]
@@ -50,6 +49,19 @@ executable("audio_admin_test_bin") {
     "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test",
     "//zircon/public/lib/fzl",
+  ]
+}
+
+test_package("audio_device_tests") {
+  deps = [
+    "//src/media/audio/audio_core/test/device:audio_device_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "audio_device_tests"
+      environments = basic_envs
+    },
   ]
 }
 
@@ -118,40 +130,6 @@ executable("audio_device_service_tests_bin") {
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/fxl/test:test_settings",
     "//src/media/audio/audio_core/testing",
-    "//src/media/audio/lib/test:hermetic_audio_test",
-  ]
-}
-
-test_package("audio_device_tests") {
-  deps = [
-    ":audio_device_tests_bin",
-  ]
-
-  tests = [
-    {
-      name = "audio_device_tests"
-      environments = basic_envs
-    },
-  ]
-}
-
-executable("audio_device_tests_bin") {
-  testonly = true
-  output_name = "audio_device_tests"
-
-  sources = [
-    "device/audio_device_test.cc",
-    "device/audio_device_test.h",
-    "device/virtual_audio_device_test.cc",
-    "device/virtual_audio_device_test.h",
-    "device/virtual_audio_system_gain_test.cc",
-  ]
-
-  deps = [
-    "//sdk/fidl/fuchsia.media",
-    "//sdk/fidl/fuchsia.virtualaudio",
-    "//src/lib/fxl/test:gtest_main",
-    "//src/lib/syslog/cpp",
     "//src/media/audio/lib/test:hermetic_audio_test",
   ]
 }

@@ -1,0 +1,30 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_test.gni")
+
+rustc_test("audio_device_tests_bin") {
+  name = "audio_device_tests"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
+    "//src/lib/test_util",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:hex",
+    "//third_party/rust_crates:lazy_static",
+    "//third_party/rust_crates:maplit",
+    "//third_party/rust_crates:rand",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
