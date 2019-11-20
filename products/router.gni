@@ -4,6 +4,12 @@
 
 import("//products/core.gni")
 
+base_package_labels -= [
+  "//src/connectivity/network/netcfg",
+  "//src/connectivity/network/netcfg:config",
+  "//src/connectivity/network/netcfg:filter_config",
+]
+
 base_package_labels += [
   "//garnet/packages/config:router",
   "//garnet/packages/prod:chrealm",
@@ -13,7 +19,6 @@ base_package_labels += [
   "//garnet/packages/prod:insntrace",
   "//garnet/packages/prod:iquery",
   "//garnet/packages/prod:memory_monitor",
-  "//garnet/packages/prod:netcfg",
   "//garnet/packages/prod:netstack3",
   "//garnet/packages/prod:network-speed-test",
   "//garnet/packages/prod:overnetstack",
