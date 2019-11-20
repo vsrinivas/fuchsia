@@ -16,7 +16,7 @@ use {
 pub struct SessionManagerArgs {
     #[argh(option, short = 's')]
     /// the URL for the session to start.
-    pub session_url: String,
+    pub session_url: Option<String>,
 }
 
 /// Errors returned by calls startup functions.
@@ -46,8 +46,8 @@ const SESSION_CHILD_COLLECTION: &str = "session";
 /// --session_url option if the argument isn't provided.
 ///
 /// # Returns
-/// `String` if the session url argument exists.
-pub fn get_session_url() -> String {
+/// `String` if the session url argument exists, else `None`.
+pub fn get_session_url() -> Option<String> {
     let SessionManagerArgs { session_url } = argh::from_env();
     session_url
 }

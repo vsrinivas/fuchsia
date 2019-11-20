@@ -14,7 +14,7 @@ use {
 const TEST_NAME: &str = "SessionManagerTest";
 
 /// Exposes the TestSuite service for the test_executor to collect test results.
-/// Passes if the root session is launches succesffully. This tells us:
+/// Passes if the root session launches successfully. This tells us:
 ///     - argument parsing succeeded and the root session url was extracted from it.
 ///     - session_manager is able to use the Realm service to launch a component.
 ///     - the root session was started in the "session" collection.
@@ -37,12 +37,13 @@ fn main() -> Result<(), Error> {
 ///
 /// `outcome`: The outcome of running a session, either Ok(()) or an Err()
 async fn run_session(outcome: &mut ftest::Outcome) -> Result<(), Error> {
-    let session_url = session_manager_lib::startup::get_session_url();
-    match session_manager_lib::startup::launch_session(&session_url).await {
-        Ok(_) => {}
-        Err(e) => {
-            outcome.status = Some(ftest::Status::Failed);
-            println!("Run session failed: {}", e);
+    if let Some(session_url) = session_manager_lib::startup::get_session_url() {
+        match session_manager_lib::startup::launch_session(&session_url).await {
+            Ok(_) => {}
+            Err(e) => {
+                outcome.status = Some(ftest::Status::Failed);
+                println!("Run session failed: {}", e);
+            }
         }
     }
     Ok(())
