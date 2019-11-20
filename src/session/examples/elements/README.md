@@ -50,24 +50,26 @@ Once the simple element is started, it will call `ElementPing::Ping()`. The
 session will receive the ping and log a confirmation.
 
 
-## How to Run
+## Run the Session
 
-To run the example, first edit the session manager cml file to set the element
-session's component url as the argument:
+### Boot into Session
+
+To boot into the example, first edit the session manager cml file to set the
+element session's component url as the argument:
 
 ```
 "args": [ "-s", "fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm" ],
 ```
 
-TODO(37028): Update this when sessions can be configured without modifying the
-session manager's CML file.
+To build the relevant components and boot into the session, follow the
+instructions in [//src/session/README.md](../../README.md).
 
-Then run the following commands:
+### Launch the Session from Command Line
 
-```$sh
-fx set core.x64 --with-base=//src/session:all
-fx build
-fx shell run fuchsia-pkg://fuchsia.com/component_manager_sfw#meta/component_manager_sfw.cmx fuchsia-pkg://fuchsia.com/session_manager#meta/session_manager.cm
+To instruct a running `session_manager` to launch the session, run:
+
+```
+fx shell session_control -s fuchsia-pkg://fuchsia.com/element_session#meta/element_session.cm
 ```
 
 The last command should output a message stating that the element's ping has
