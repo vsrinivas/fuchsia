@@ -41,8 +41,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
     const buffer_collection_info_2_t* output_buffer_collection, const resize_info_t* info,
     const image_format_2_t* input_image_format,
     const image_format_2_t* output_image_format_table_list, size_t output_image_format_table_count,
-    uint32_t output_image_format_index, const hw_accel_callback_t* callback,
-    uint32_t* out_task_index) {
+    uint32_t output_image_format_index, const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -55,7 +55,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskResize(
   zx_status_t status =
       task->InitResize(input_buffer_collection, output_buffer_collection, info, input_image_format,
                        output_image_format_table_list, output_image_format_table_count,
-                       output_image_format_index, callback, bti_, canvas_);
+                       output_image_format_index, frame_callback, res_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -74,7 +74,8 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
     const buffer_collection_info_2_t* output_buffer_collection, const water_mark_info_t* info,
     zx::vmo watermark_vmo, const image_format_2_t* image_format_table_list,
     size_t image_format_table_count, uint32_t image_format_index,
-    const hw_accel_callback_t* callback, uint32_t* out_task_index) {
+    const hw_accel_frame_callback_t* frame_callback,
+    const hw_accel_res_change_callback_t* res_callback, uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -88,7 +89,7 @@ zx_status_t Ge2dDevice::Ge2dInitTaskWaterMark(
   zx_status_t status =
       task->InitWatermark(input_buffer_collection, output_buffer_collection, info, watermark_vmo,
                           image_format_table_list, image_format_table_count, image_format_index,
-                          callback, bti_, canvas_);
+                          frame_callback, res_callback, bti_, canvas_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -208,16 +209,18 @@ void Ge2dDevice::Ge2dSetCropRectangle(uint32_t task_index, const crop_rectangle_
 void Ge2dDevice::ProcessTask(TaskInfo& info) {
   auto task = info.task;
 
-  if (info.op == GE2D_OP_SETOUTPUTRES) {
+  if (info.op == GE2D_OP_SETOUTPUTRES || info.op == GE2D_OP_SETINPUTOUTPUTRES) {
     // This has to free and reallocate the output buffer canvas ids.
     task->Ge2dChangeOutputRes(info.index);
-    // No callback is done after changing output res for GDC.
-    return;
-  } else if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
-    // This has to free and reallocate the input buffer canvas ids.
-    task->Ge2dChangeInputRes(info.index);
-    // This has to free and reallocate the output buffer canvas ids.
-    task->Ge2dChangeOutputRes(info.index);
+    if (info.op == GE2D_OP_SETINPUTOUTPUTRES) {
+      // This has to free and reallocate the input buffer canvas ids.
+      task->Ge2dChangeInputRes(info.index);
+    }
+    frame_available_info f_info;
+    f_info.frame_status = FRAME_STATUS_OK;
+    f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    f_info.metadata.image_format_index = task->output_format_index();
+    task->res_callback()->frame_resolution_changed(task->frame_callback()->ctx, &f_info);
     return;
   }
   auto input_buffer_index = info.index;
@@ -240,7 +243,7 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
     f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     f_info.metadata.image_format_index = task->output_format_index();
     f_info.metadata.input_buffer_index = input_buffer_index;
-    task->callback()->frame_ready(task->callback()->ctx, &f_info);
+    task->frame_callback()->frame_ready(task->res_callback()->ctx, &f_info);
   }
 }
 

@@ -52,7 +52,8 @@ class Ge2dTask : public generictask::GenericTask {
                          const resize_info_t* info, const image_format_2_t* input_image_format,
                          const image_format_2_t* output_image_format_table_list,
                          size_t output_image_format_table_count, uint32_t output_image_format_index,
-                         const hw_accel_callback_t* callback, const zx::bti& bti,
+                         const hw_accel_frame_callback_t* frame_callback,
+                         const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti,
                          amlogic_canvas_protocol_t canvas);
 
   image_format_2_t WatermarkFormat() { return wm_.wm_image_format; }
@@ -64,7 +65,8 @@ class Ge2dTask : public generictask::GenericTask {
                             const water_mark_info_t* info, const zx::vmo& watermark_vmo,
                             const image_format_2_t* image_format_table_list,
                             size_t image_format_table_count, uint32_t image_format_index,
-                            const hw_accel_callback_t* callback, const zx::bti& bti,
+                            const hw_accel_frame_callback_t* frame_callback,
+                            const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti,
                             amlogic_canvas_protocol_t canvas);
 
   image_canvas_id_t GetOutputCanvasIds(zx_handle_t vmo) {
@@ -92,7 +94,8 @@ class Ge2dTask : public generictask::GenericTask {
                    size_t input_image_format_table_count, uint32_t input_image_format_index,
                    const image_format_2_t* output_image_format_table_list,
                    size_t output_image_format_table_count, uint32_t output_image_format_index,
-                   const hw_accel_callback_t* callback, const zx::bti& bti);
+                   const hw_accel_frame_callback_t* frame_callback,
+                   const hw_accel_res_change_callback_t* res_callback, const zx::bti& bti);
   // Allocates canvas ids for every frame in the input and output buffer collections
   // (amlogic). One canvas id is allocated per plane of the image frame. Internally,
   // canvas id allocation pins the vmos (zx_bit_pin()).

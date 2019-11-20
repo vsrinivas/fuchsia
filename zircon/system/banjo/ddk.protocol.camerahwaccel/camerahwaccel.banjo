@@ -23,8 +23,17 @@ struct FrameAvailableInfo {
 };
 
 [Layout = "ddk-callback"]
-protocol HwAccelCallback {
+protocol HwAccelFrameCallback {
     // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
     // frame is ready to be consumed.
     FrameReady(FrameAvailableInfo info);
+};
+
+// This is the same signature as the Frame callback above, but separating this, in
+// case we want to change things around later.
+[Layout = "ddk-callback"]
+protocol HwAccelResChangeCallback {
+    // This is called by the camera HW Accel drivers (gdc, ge2d, ...), every time a
+    // change of resolution completes.
+    FrameResolutionChanged(FrameAvailableInfo info);
 };

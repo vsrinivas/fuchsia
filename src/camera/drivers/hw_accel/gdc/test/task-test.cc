@@ -53,6 +53,12 @@ class TaskTest : public zxtest::Test {
     event_.Signal();
   }
 
+  void ResChangeCallback() {
+    fbl::AutoLock al(&lock_);
+    frame_ready_ = true;
+    event_.Signal();
+  }
+
   void WaitAndReset() {
     fbl::AutoLock al(&lock_);
     while (frame_ready_ == false) {
@@ -114,13 +120,20 @@ class TaskTest : public zxtest::Test {
     zx::port port;
     EXPECT_OK(zx::port::create(ZX_PORT_BIND_TO_INTERRUPT, &port));
 
-    callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
+    frame_callback_.frame_ready = [](void* ctx, const frame_available_info* info) {
       EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
                 info->metadata.image_format_index);
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->metadata.input_buffer_index,
                                                                info->buffer_id);
     };
-    callback_.ctx = this;
+    frame_callback_.ctx = this;
+
+    res_callback_.frame_resolution_changed = [](void* ctx, const frame_available_info* info) {
+      EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
+                info->metadata.image_format_index);
+      return static_cast<TaskTest*>(ctx)->ResChangeCallback();
+    };
+    res_callback_.ctx = this;
 
     EXPECT_OK(zx::interrupt::create(zx::resource(), 0, ZX_INTERRUPT_VIRTUAL, &irq_));
     EXPECT_OK(port.duplicate(ZX_RIGHT_SAME_RIGHTS, &port_));
@@ -146,7 +159,7 @@ class TaskTest : public zxtest::Test {
         &input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
         output_image_format_table_, kImageFormatTableSize, 0,
         reinterpret_cast<gdc_config_info*>(&config_vmo_info_array), kImageFormatTableSize,
-        &callback_, &task_id);
+        &frame_callback_, &res_callback_, &task_id);
     EXPECT_OK(status);
     output_image_format_index_ = 0;
 
@@ -192,7 +205,8 @@ class TaskTest : public zxtest::Test {
   zx::bti bti_handle_;
   zx::port port_;
   zx::interrupt irq_;
-  hw_accel_callback_t callback_;
+  hw_accel_frame_callback_t frame_callback_;
+  hw_accel_res_change_callback_t res_callback_;
   buffer_collection_info_2_t input_buffer_collection_;
   buffer_collection_info_2_t output_buffer_collection_;
   image_format_2_t input_image_format_;
@@ -216,7 +230,8 @@ TEST_F(TaskTest, BasicCreationTest) {
   EXPECT_TRUE(ac.check());
   zx_status_t status;
   status = task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                      output_image_format_table_, 1, 0, &config_info_, 1, &callback_, bti_handle_);
+                      output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
+                      &res_callback_, bti_handle_);
   EXPECT_OK(status);
 }
 
@@ -228,9 +243,10 @@ TEST_F(TaskTest, InvalidFormatTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
-  EXPECT_EQ(ZX_ERR_INVALID_ARGS, task->Init(&input_buffer_collection_, &output_buffer_collection_,
-                                            &format, output_image_format_table_, 1, 0,
-                                            &config_info_, 1, &callback_, bti_handle_));
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            task->Init(&input_buffer_collection_, &output_buffer_collection_, &format,
+                       output_image_format_table_, 1, 0, &config_info_, 1, &frame_callback_,
+                       &res_callback_, bti_handle_));
 }
 
 TEST_F(TaskTest, InputBufferTest) {
@@ -238,9 +254,9 @@ TEST_F(TaskTest, InputBufferTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
-  auto status =
-      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                 output_image_format_table_, 1, 0, &config_info_, 1, &callback_, bti_handle_);
+  auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
+                           &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
+                           &frame_callback_, &res_callback_, bti_handle_);
   EXPECT_OK(status);
 
   // Get the input buffers physical addresses
@@ -261,7 +277,7 @@ TEST_F(TaskTest, InvalidVmoAndOutputFormatCountTest) {
   EXPECT_TRUE(ac.check());
   auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
                            &input_image_format_, output_image_format_table_, kImageFormatTableSize,
-                           0, &config_info_, 1, &callback_, bti_handle_);
+                           0, &config_info_, 1, &frame_callback_, &res_callback_, bti_handle_);
   EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
 }
 
@@ -270,9 +286,9 @@ TEST_F(TaskTest, InvalidVmoTest) {
   fbl::AllocChecker ac;
   auto task = std::unique_ptr<GdcTask>(new (&ac) GdcTask());
   EXPECT_TRUE(ac.check());
-  auto status =
-      task->Init(&input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-                 output_image_format_table_, 1, 0, &config_info_, 1, &callback_, bti_handle_);
+  auto status = task->Init(&input_buffer_collection_, &output_buffer_collection_,
+                           &input_image_format_, output_image_format_table_, 1, 0, &config_info_, 1,
+                           &frame_callback_, &res_callback_, bti_handle_);
   // Expecting Task setup to be returning an error when there are
   // no VMOs in the buffer collection. At the moment VmoPool library
   // doesn't return an error.
@@ -288,9 +304,10 @@ TEST_F(TaskTest, InitTaskTest) {
   std::vector<uint32_t> received_ids;
   for (uint32_t i = 0; i < kMaxTasks; i++) {
     uint32_t task_id;
-    zx_status_t status = gdc_device_->GdcInitTask(
-        &input_buffer_collection_, &output_buffer_collection_, &input_image_format_,
-        output_image_format_table_, 1, 0, &config_info_, 1, &callback_, &task_id);
+    zx_status_t status =
+        gdc_device_->GdcInitTask(&input_buffer_collection_, &output_buffer_collection_,
+                                 &input_image_format_, output_image_format_table_, 1, 0,
+                                 &config_info_, 1, &frame_callback_, &res_callback_, &task_id);
     EXPECT_OK(status);
     // Checking to see if we are getting unique task ids.
     auto entry = find(received_ids.begin(), received_ids.end(), task_id);
@@ -377,6 +394,8 @@ TEST_F(TaskTest, SetOutputResTest) {
   zx_status_t status = gdc_device_->GdcSetOutputResolution(task_id, 2);
   EXPECT_OK(status);
   output_image_format_index_ = 2;
+  WaitAndReset();
+
   // Valid buffer & task id.
   status = gdc_device_->GdcProcessFrame(task_id, kNumberOfBuffers - 1);
   EXPECT_OK(status);
@@ -506,7 +525,8 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
 
 TEST(TaskTest, NonContigVmoTest) {
   zx::bti bti_handle;
-  hw_accel_callback_t callback;
+  hw_accel_frame_callback_t frame_callback;
+  hw_accel_res_change_callback_t res_callback;
   zx::vmo config_vmo;
   buffer_collection_info_2_t input_buffer_collection;
   buffer_collection_info_2_t output_buffer_collection;
@@ -533,8 +553,9 @@ TEST(TaskTest, NonContigVmoTest) {
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
-  status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
-                      image_format_table, 1, 0, &info, 1, &callback, bti_handle);
+  status =
+      task->Init(&input_buffer_collection, &output_buffer_collection, &format, image_format_table,
+                 1, 0, &info, 1, &frame_callback, &res_callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_OK, status);
 
@@ -547,7 +568,8 @@ TEST(TaskTest, NonContigVmoTest) {
 
 TEST(TaskTest, InvalidConfigVmoTest) {
   zx::bti bti_handle;
-  hw_accel_callback_t callback;
+  hw_accel_frame_callback_t frame_callback;
+  hw_accel_res_change_callback_t res_callback;
   zx::vmo config_vmo;
   buffer_collection_info_2_t input_buffer_collection;
   buffer_collection_info_2_t output_buffer_collection;
@@ -572,8 +594,9 @@ TEST(TaskTest, InvalidConfigVmoTest) {
   image_format_2_t image_format_table[kImageFormatTableSize];
   EXPECT_OK(camera::GetImageFormat(image_format_table[0], fuchsia_sysmem_PixelFormatType_NV12,
                                    kWidth, kHeight));
-  status = task->Init(&input_buffer_collection, &output_buffer_collection, &format,
-                      image_format_table, 1, 0, &info, 1, &callback, bti_handle);
+  status =
+      task->Init(&input_buffer_collection, &output_buffer_collection, &format, image_format_table,
+                 1, 0, &info, 1, &frame_callback, &res_callback, bti_handle);
   // Expecting Task setup to convert the non-contig vmo to contig
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
@@ -585,7 +608,8 @@ TEST(TaskTest, InvalidConfigVmoTest) {
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
   zx::bti bti_handle;
-  hw_accel_callback_t callback;
+  hw_accel_frame_callback_t frame_callback;
+  hw_accel_res_change_callback_t res_callback;
   zx::vmo config_vmo;
 
   ASSERT_OK(fake_bti_create(bti_handle.reset_and_get_address()));
@@ -604,7 +628,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
   info.size = kConfigSize;
 
   zx_status_t status = task->Init(nullptr, nullptr, nullptr, image_format_table, 1, 0, &info, 1,
-                                  &callback, bti_handle);
+                                  &frame_callback, &res_callback, bti_handle);
   EXPECT_NE(ZX_OK, status);
   fake_bti_destroy(bti_handle.get());
 }

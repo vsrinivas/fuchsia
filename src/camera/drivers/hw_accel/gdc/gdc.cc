@@ -68,7 +68,9 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
                                    size_t output_image_format_table_count,
                                    uint32_t output_image_format_index,
                                    const gdc_config_info* config_vmo_list, size_t config_vmos_count,
-                                   const hw_accel_callback_t* callback, uint32_t* out_task_index) {
+                                   const hw_accel_frame_callback_t* frame_callback,
+                                   const hw_accel_res_change_callback* res_callback,
+                                   uint32_t* out_task_index) {
   if (out_task_index == nullptr) {
     return ZX_ERR_INVALID_ARGS;
   }
@@ -78,10 +80,10 @@ zx_status_t GdcDevice::GdcInitTask(const buffer_collection_info_2_t* input_buffe
   if (!ac.check()) {
     return ZX_ERR_NO_MEMORY;
   }
-  zx_status_t status =
-      task->Init(input_buffer_collection, output_buffer_collection, input_image_format,
-                 output_image_format_table_list, output_image_format_table_count,
-                 output_image_format_index, config_vmo_list, config_vmos_count, callback, bti_);
+  zx_status_t status = task->Init(
+      input_buffer_collection, output_buffer_collection, input_image_format,
+      output_image_format_table_list, output_image_format_table_count, output_image_format_index,
+      config_vmo_list, config_vmos_count, frame_callback, res_callback, bti_);
   if (status != ZX_OK) {
     FX_LOGF(ERROR, "%s: Task Creation Failed %d\n", __func__, status);
     return status;
@@ -134,7 +136,13 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     // and add a method to get the config vmo corresponding to the
     // new format. For now, all we do is switch to the new imageformat.
     task->set_output_format_index(info.index);
-    // No callback is done after changing output res for GDC.
+    // Invoke the callback function and tell about the output buffer index
+    // which is ready to be used.
+    frame_available_info f_info;
+    f_info.frame_status = FRAME_STATUS_OK;
+    f_info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    f_info.metadata.image_format_index = task->output_format_index();
+    task->res_callback()->frame_resolution_changed(task->res_callback()->ctx, &f_info);
     return;
   }
   auto input_buffer_index = info.index;
@@ -262,7 +270,7 @@ void GdcDevice::ProcessTask(TaskInfo& info) {
     info.metadata.input_buffer_index = input_buffer_index;
     info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
     info.metadata.image_format_index = task->output_format_index();
-    task->callback()->frame_ready(task->callback()->ctx, &info);
+    task->frame_callback()->frame_ready(task->frame_callback()->ctx, &info);
   }
 }
 

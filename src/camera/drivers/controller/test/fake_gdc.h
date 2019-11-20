@@ -36,7 +36,8 @@ class FakeGdc {
                                  uint32_t /*output_image_format_index*/,
                                  const gdc_config_info* /*config_vmo_list*/,
                                  size_t /*config_vmo_count*/,
-                                 const hw_accel_callback_t* /*callback*/,
+                                 const hw_accel_frame_callback_t* /* frame_callback */,
+                                 const hw_accel_res_change_callback_t* /* res_callback */,
                                  uint32_t* /*out_task_index*/) {
     return ZX_OK;
   }
@@ -55,11 +56,13 @@ class FakeGdc {
                                  size_t output_image_format_table_count,
                                  uint32_t output_image_format_index,
                                  const gdc_config_info* config_vmo_list, size_t config_vmo_count,
-                                 const hw_accel_callback_t* callback, uint32_t* out_task_index) {
-    return FakeGdc::GdcInitTask(input_buffer_collection, output_buffer_collection,
-                                input_image_format, output_image_format_table_list,
-                                output_image_format_table_count, output_image_format_index,
-                                config_vmo_list, config_vmo_count, callback, out_task_index);
+                                 const hw_accel_frame_callback_t* frame_callback,
+                                 const hw_accel_res_change_callback_t* res_callback,
+                                 uint32_t* out_task_index) {
+    return FakeGdc::GdcInitTask(
+        input_buffer_collection, output_buffer_collection, input_image_format,
+        output_image_format_table_list, output_image_format_table_count, output_image_format_index,
+        config_vmo_list, config_vmo_count, frame_callback, res_callback, out_task_index);
   }
 
   static zx_status_t GdcProcessFrame(void* /*ctx*/, uint32_t task_index,

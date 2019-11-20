@@ -126,11 +126,11 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
 
   // Initialize the GDC to get a unique task index
   uint32_t gdc_task_index;
-  auto status =
-      gdc_.InitTask(&input_buffers_c.value(), &output_buffers_c.value(), &input_image_formats_c,
-                    output_image_formats_c.data(), output_image_formats_c.size(),
-                    info->image_format_index, config_vmos_info.data(), config_vmos_info.size(),
-                    gdc_node->hw_accelerator_callback(), &gdc_task_index);
+  auto status = gdc_.InitTask(
+      &input_buffers_c.value(), &output_buffers_c.value(), &input_image_formats_c,
+      output_image_formats_c.data(), output_image_formats_c.size(), info->image_format_index,
+      config_vmos_info.data(), config_vmos_info.size(), gdc_node->hw_accelerator_frame_callback(),
+      gdc_node->hw_accelerator_res_callback(), &gdc_task_index);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to initialize GDC";
     return fit::error(status);

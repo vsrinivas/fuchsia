@@ -95,7 +95,8 @@ class GenericTask {
   image_format_2_t output_format() {
     return output_image_format_list_[cur_output_image_format_index_];
   }
-  const hw_accel_callback_t* callback() { return callback_; }
+  const hw_accel_frame_callback_t* frame_callback() { return frame_callback_; }
+  const hw_accel_res_change_callback_t* res_callback() { return res_callback_; }
 
  protected:
   // Initializes a VMO pool from buffer collection for output buffer collection.
@@ -107,7 +108,8 @@ class GenericTask {
                           const image_format_2_t* output_image_format_table_list,
                           size_t output_image_format_table_count,
                           uint32_t output_image_format_index, const zx::bti& bti,
-                          const hw_accel_callback_t* callback);
+                          const hw_accel_frame_callback_t* frame_callback,
+                          const hw_accel_res_change_callback_t* res_callback);
   // Guards Allocations and Frees of buffers in the output pool.
 
  private:
@@ -118,7 +120,8 @@ class GenericTask {
   size_t output_image_format_count_;
   std::unique_ptr<image_format_2_t[]> output_image_format_list_;
   uint32_t cur_output_image_format_index_;
-  const hw_accel_callback_t* callback_;
+  const hw_accel_frame_callback_t* frame_callback_;
+  const hw_accel_res_change_callback_t* res_callback_;
   fzl::VmoPool output_buffers_;
   fbl::Array<fzl::PinnedVmo> input_buffers_;
   std::deque<fzl::VmoPool::Buffer> write_locked_buffers_;

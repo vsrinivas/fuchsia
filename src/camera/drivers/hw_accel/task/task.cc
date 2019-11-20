@@ -49,7 +49,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
                                      const image_format_2_t* output_image_format_table_list,
                                      size_t output_image_format_table_count,
                                      uint32_t output_image_format_index, const zx::bti& bti,
-                                     const hw_accel_callback_t* callback) {
+                                     const hw_accel_frame_callback_t* frame_callback,
+                                     const hw_accel_res_change_callback_t* res_callback) {
   if (!IsBufferCollectionValid(input_buffer_collection,
                                &input_image_format_table_list[input_image_format_index]) ||
       !IsBufferCollectionValid(output_buffer_collection,
@@ -134,7 +135,8 @@ zx_status_t GenericTask::InitBuffers(const buffer_collection_info_2_t* input_buf
     }
   }
 
-  callback_ = callback;
+  frame_callback_ = frame_callback;
+  res_callback_ = res_callback;
 
   return status;
 }

@@ -61,7 +61,8 @@ class ProcessNode {
         parent_node_(parent_node),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
-        hw_accelerator_callback_{OnFrameAvailable, this},
+        hw_accelerator_frame_callback_{OnFrameAvailable, this},
+        hw_accelerator_res_callback_{OnResChange, this},
         gdc_(gdc),
         enabled_(false) {
     ZX_ASSERT(type == NodeType::kGdc);
@@ -117,7 +118,12 @@ class ProcessNode {
 
   // Returns this instance's callback parameter for use with the ISP Stream banjo interface.
   const output_stream_callback_t* isp_callback() { return &isp_callback_; }
-  const hw_accel_callback_t* hw_accelerator_callback() { return &hw_accelerator_callback_; }
+  const hw_accel_frame_callback_t* hw_accelerator_frame_callback() {
+    return &hw_accelerator_frame_callback_;
+  }
+  const hw_accel_res_change_callback_t* hw_accelerator_res_callback() {
+    return &hw_accelerator_res_callback_;
+  }
 
   std::vector<fuchsia::sysmem::ImageFormat_2>& output_image_formats() {
     return output_image_formats_;
@@ -143,6 +149,9 @@ class ProcessNode {
   static void OnFrameAvailable(void* ctx, const frame_available_info_t* info) {
     static_cast<ProcessNode*>(ctx)->OnFrameAvailable(info);
   }
+  // Invoked by GDC or GE2D on a Resolution change completion.
+  // TODO: Implement this (Bug: 41730 @braval).
+  static void OnResChange(void* ctx, const frame_available_info_t* info) {}
 
   bool AllChildNodesDisabled();
   // Type of node.
@@ -164,8 +173,10 @@ class ProcessNode {
   std::unique_ptr<IspStreamProtocol> isp_stream_protocol_;
   // ISP callback
   output_stream_callback_t isp_callback_;
-  // GDC/GE2D callback
-  hw_accel_callback_t hw_accelerator_callback_;
+  // GDC/GE2D Frame callback
+  hw_accel_frame_callback_t hw_accelerator_frame_callback_;
+  // GDC/GE2D Res change callback
+  hw_accel_res_change_callback_t hw_accelerator_res_callback_;
   ddk::GdcProtocolClient gdc_;
   uint32_t hw_accelerator_task_index_;
   bool enabled_;

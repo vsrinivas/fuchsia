@@ -59,7 +59,8 @@ protocol Ge2d {
 		   zircon.device.sysmem.ImageFormat_2 image_format,
                    vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
                    uint32 output_image_format_index,
-                   ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+		   ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+		   ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
 
     // The WaterMark task only supports changing the Input And Output resolution
     // together. Moreover this operation changes both the input and output
@@ -72,7 +73,9 @@ protocol Ge2d {
 		      handle<vmo> watermark_vmo,
                       vector<zircon.device.sysmem.ImageFormat_2> image_format_table,
                       uint32 image_format_index,
-                      ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+		      ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+		      ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
+
 
     // De-registers the task.
     RemoveTask(uint32 task_index);

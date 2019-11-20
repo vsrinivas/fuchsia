@@ -28,7 +28,8 @@ protocol Gdc {
              vector<zircon.device.sysmem.ImageFormat_2> output_image_format_table,
              uint32 output_image_format_index,
              vector<GdcConfigInfo> config_vmos,
-             ddk.protocol.camerahwaccel.HwAccelCallback callback) -> (zx.status s, uint32 task_index);
+             ddk.protocol.camerahwaccel.HwAccelFrameCallback frame_callback,
+	     ddk.protocol.camerahwaccel.HwAccelResChangeCallback res_callback) -> (zx.status s, uint32 task_index);
 
     // De-registers the task.
     RemoveTask(uint32 task_index);
