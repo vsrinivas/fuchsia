@@ -4,7 +4,7 @@
 
 use {
     crate::errors::RepositoryParseError,
-    fidl_fuchsia_pkg as fidl,
+    fidl_fuchsia_pkg as fidl, fuchsia_inspect as inspect,
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     serde_derive::{Deserialize, Serialize},
     std::convert::TryFrom,
@@ -34,6 +34,14 @@ pub struct MirrorConfig {
     blob_mirror_url: String,
 }
 
+pub struct MirrorConfigInspectState {
+    _mirror_url_property: inspect::StringProperty,
+    _subscribe_property: inspect::StringProperty,
+    _blob_key_property: inspect::StringProperty,
+    _blob_mirror_url_property: inspect::StringProperty,
+    _node: inspect::Node,
+}
+
 impl MirrorConfig {
     pub fn mirror_url(&self) -> &str {
         &self.mirror_url
@@ -43,6 +51,20 @@ impl MirrorConfig {
     }
     pub fn blob_mirror_url(&self) -> &str {
         &self.blob_mirror_url
+    }
+    pub fn blob_key(&self) -> Option<&RepositoryBlobKey> {
+        self.blob_key.as_ref()
+    }
+    pub fn create_inspect_state(&self, node: inspect::Node) -> MirrorConfigInspectState {
+        MirrorConfigInspectState {
+            _mirror_url_property: node
+                .create_string("mirror_url", format!("{:?}", self.mirror_url)),
+            _subscribe_property: node.create_string("subscribe", format!("{:?}", &self.subscribe)),
+            _blob_key_property: node.create_string("blob_key", format!("{:?}", &self.blob_key)),
+            _blob_mirror_url_property: node
+                .create_string("blob_mirror_url", format!("{:?}", self.blob_mirror_url)),
+            _node: node,
+        }
     }
 }
 
@@ -222,6 +244,15 @@ impl RepositoryConfig {
     /// Returns a slice of all mirrors.
     pub fn mirrors(&self) -> &[MirrorConfig] {
         &self.mirrors
+    }
+
+    /// Returns a slice of all root keys.
+    pub fn root_keys(&self) -> &[RepositoryKey] {
+        &self.root_keys
+    }
+
+    pub fn update_package_url(&self) -> Option<&PkgUrl> {
+        self.update_package_url.as_ref()
     }
 }
 

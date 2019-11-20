@@ -22,6 +22,7 @@ mod cache;
 mod config;
 mod experiment;
 mod font_package_manager;
+mod inspect_util;
 mod queue;
 mod repository_manager;
 mod repository_service;
@@ -88,22 +89,24 @@ fn main() -> Result<(), Error> {
     let cache = PackageCache::new(pkg_cache, pkgfs_install, pkgfs_needs);
 
     let inspector = fuchsia_inspect::Inspector::new();
-    let rewrite_inspect_node = inspector.root().create_child("rewrite_manager");
-    let experiment_inspect_node = inspector.root().create_child("experiments");
-
     let main_inspect_node = inspector.root().create_child("main");
     let channel_inspect_state = ChannelInspectState::new(main_inspect_node.create_child("channel"));
 
     let amber_connector = AmberConnector::new();
 
-    let experiment_state = Arc::new(RwLock::new(experiment::State::new(experiment_inspect_node)));
+    let experiment_state =
+        Arc::new(RwLock::new(experiment::State::new(inspector.root().create_child("experiments"))));
     let experiments = Arc::clone(&experiment_state).into();
 
     let font_package_manager = Arc::new(load_font_package_manager());
-    let repo_manager =
-        Arc::new(RwLock::new(load_repo_manager(amber_connector, experiments, &config)));
+    let repo_manager = Arc::new(RwLock::new(load_repo_manager(
+        inspector.root().create_child("repository_manager"),
+        amber_connector,
+        experiments,
+        &config,
+    )));
     let rewrite_manager = Arc::new(RwLock::new(load_rewrite_manager(
-        rewrite_inspect_node,
+        inspector.root().create_child("rewrite_manager"),
         &repo_manager.read(),
         &config,
         &channel_inspect_state,
@@ -212,6 +215,7 @@ fn connect_to_pkgfs(subdir: &str) -> Result<DirectoryProxy, Error> {
 }
 
 fn load_repo_manager(
+    node: inspect::Node,
     amber_connector: AmberConnector,
     experiments: Experiments,
     config: &Config,
@@ -225,6 +229,7 @@ fn load_repo_manager(
             fx_log_err!("error loading dynamic repo config: {}", err);
             builder
         })
+        .inspect_node(node)
         .load_static_configs_dir(STATIC_REPO_DIR)
         .unwrap_or_else(|(builder, errs)| {
             for err in errs {

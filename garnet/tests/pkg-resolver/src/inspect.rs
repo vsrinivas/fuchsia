@@ -4,22 +4,13 @@
 
 use {
     super::*,
+    fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
     fuchsia_async as fasync,
     fuchsia_inspect::{assert_inspect_tree, reader::PartialNodeHierarchy},
     std::convert::TryFrom,
 };
 
-#[fasync::run_singlethreaded(test)]
-async fn test_initial_inspect_state() {
-    let env = TestEnv::new();
-    // Wait for inspect VMO to be created
-    env.proxies
-        .rewrite_engine
-        .test_apply("fuchsia-pkg://test")
-        .await
-        .expect("fidl call succeeds")
-        .expect("test apply result is ok");
-
+fn get_partial_node_hierarchy(nested_environment_label: &str) -> PartialNodeHierarchy {
     // When `glob` is matching a path component that is a string literal, it uses
     // `std::fs::metadata()` to test the existence of the path instead of listing the parent dir.
     // `metadata()` calls `stat`, which creates and destroys an fd in fdio.
@@ -47,7 +38,7 @@ async fn test_initial_inspect_state() {
     // TODO(fxb/40888)
     let pattern = format!(
         "/hub/r/{}/*/c/pkg_resolver.cmx/*/out/objects/root.i[n]spect",
-        glob::Pattern::escape(&env.nested_environment_label)
+        glob::Pattern::escape(&nested_environment_label)
     );
     let paths = glob::glob_with(
         &pattern,
@@ -62,13 +53,26 @@ async fn test_initial_inspect_state() {
     assert_eq!(paths.len(), 1, "{:?}", paths);
     let path = paths.pop().unwrap();
 
-    // Obtain VMO and convert into node heirarchy
+    // Obtain VMO and convert into node hierarchy
     let vmo_file = File::open(path).expect("file exists");
     let vmo = fdio::get_vmo_copy_from_file(&vmo_file).expect("vmo exists");
-    let hierarchy = PartialNodeHierarchy::try_from(&vmo).expect("create hierarchy from vmo");
+    PartialNodeHierarchy::try_from(&vmo).expect("create hierarchy from vmo")
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn test_initial_inspect_state() {
+    let env = TestEnv::new();
+    // Wait for inspect VMO to be created
+    env.proxies
+        .rewrite_engine
+        .test_apply("fuchsia-pkg://test")
+        .await
+        .expect("fidl call succeeds")
+        .expect("test apply result is ok");
+    let partial = get_partial_node_hierarchy(&env.nested_environment_label);
 
     assert_inspect_tree!(
-       hierarchy,
+       partial,
         root: {
             rewrite_manager: {
                 dynamic_rules: {},
@@ -83,9 +87,58 @@ async fn test_initial_inspect_state() {
               }
             },
             experiments: {
+            },
+            repository_manager: {
+                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
+                dynamic_configs: {},
+                static_configs: {},
+                conns: {}
             }
         }
     );
+    env.stop().await;
+}
 
+#[fasync::run_singlethreaded(test)]
+async fn test_adding_repo_updates_inspect_state() {
+    let env = TestEnv::new();
+    let config = RepositoryConfigBuilder::new("fuchsia-pkg://example.com".parse().unwrap()).build();
+    Status::ok(
+        env.proxies.repo_manager.add(config.clone().into()).await.expect("fidl call succeeds"),
+    )
+    .expect("repo successfully added");
+    let partial = get_partial_node_hierarchy(&env.nested_environment_label);
+
+    assert_inspect_tree!(
+      partial,
+        root: {
+            rewrite_manager: {
+                dynamic_rules: {},
+                dynamic_rules_path: format!("{:?}", Some(std::path::Path::new("/data/rewrites.json"))),
+                static_rules: {},
+                generation: 0u64,
+            },
+            main: {
+              channel: {
+                tuf_config_name: format!("{:?}", Option::<String>::None),
+                channel_name: format!("{:?}", Option::<String>::None),
+              }
+            },
+            experiments: {
+            },
+            repository_manager: {
+                dynamic_configs_path: format!("{:?}", Some(std::path::Path::new("/data/repositories.json"))),
+                dynamic_configs: {
+                    "example.com": {
+                        root_keys: {},
+                        mirrors: {},
+                        update_package_url: format!("{:?}", config.update_package_url()),
+                    }
+                },
+                static_configs: {},
+                conns: {}
+            }
+        }
+    );
     env.stop().await;
 }

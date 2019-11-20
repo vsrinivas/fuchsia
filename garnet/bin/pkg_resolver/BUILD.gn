@@ -27,6 +27,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/lib/inspect/rust/fuchsia-inspect",
+    "//src/lib/inspect/rust/fuchsia-inspect-contrib",
     "//src/sys/lib/fuchsia_backoff",
     "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//src/sys/lib/fuchsia_url_rewrite",

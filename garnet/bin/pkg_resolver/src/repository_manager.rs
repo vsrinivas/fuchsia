@@ -7,6 +7,7 @@ use {
         amber_connector::AmberConnect,
         cache::{BlobFetcher, PackageCache},
         experiment::{Experiment, Experiments},
+        inspect_util::{InspectableRepoUrl, InspectableRepositoryConfig},
     },
     failure::Fail,
     fidl_fuchsia_amber::{
@@ -14,7 +15,7 @@ use {
         OpenedRepositoryMarker, OpenedRepositoryProxy,
     },
     fidl_fuchsia_pkg_ext::{BlobId, RepositoryConfig, RepositoryConfigs},
-    fuchsia_async as fasync,
+    fuchsia_async as fasync, fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_err, fx_log_info},
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
@@ -23,6 +24,7 @@ use {
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
         fmt, fs, io,
+        ops::Deref,
         path::{Path, PathBuf},
         sync::Arc,
     },
@@ -33,17 +35,30 @@ use {
 pub struct RepositoryManager<A: AmberConnect> {
     experiments: Experiments,
     dynamic_configs_path: Option<PathBuf>,
-    static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
-    dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
+    static_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
+    dynamic_configs: HashMap<RepoUrl, InspectableRepositoryConfig>,
     amber: A,
-    conns: Arc<RwLock<HashMap<RepoUrl, OpenedRepositoryProxy>>>,
+    conns: Arc<RwLock<HashMap<InspectableRepoUrl, OpenedRepositoryProxy>>>,
+    inspect: RepositoryManagerInspectState,
+}
+
+#[derive(Debug)]
+struct RepositoryManagerInspectState {
+    node: inspect::Node,
+    dynamic_configs_node: inspect::Node,
+    static_configs_node: inspect::Node,
+    dynamic_configs_path_property: inspect::StringProperty,
+    conns_node: inspect::Node,
 }
 
 impl<A: AmberConnect> RepositoryManager<A> {
     /// Returns a reference to the [RepositoryConfig] config identified by the config `repo_url`,
     /// or `None` if it does not exist.
     pub fn get(&self, repo_url: &RepoUrl) -> Option<&Arc<RepositoryConfig>> {
-        self.dynamic_configs.get(repo_url).or_else(|| self.static_configs.get(repo_url))
+        self.dynamic_configs
+            .get(repo_url)
+            .or_else(|| self.static_configs.get(repo_url))
+            .map(|a| Deref::deref(a))
     }
 
     /// Returns a reference to the [RepositoryConfig] static config that matches the `channel`.
@@ -88,9 +103,15 @@ impl<A: AmberConnect> RepositoryManager<A> {
             fx_log_info!("closing connection to {} repo because config changed", config.repo_url());
         }
 
-        let result = self.dynamic_configs.insert(config.repo_url().clone(), config);
+        let inspectable_config = InspectableRepositoryConfig::new(
+            Arc::clone(&config),
+            &self.inspect.dynamic_configs_node,
+            config.repo_url().host(),
+        );
+        let result = self.dynamic_configs.insert(config.repo_url().clone(), inspectable_config);
+
         Self::save(dynamic_configs_path, &mut self.dynamic_configs);
-        Ok(result)
+        Ok(result.map(|a| Arc::clone(&*a)))
     }
 
     /// Removes a [RepositoryConfig] identified by the config `repo_url`.
@@ -114,7 +135,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
             }
 
             Self::save(&dynamic_configs_path, &mut self.dynamic_configs);
-            return Ok(Some(config));
+            return Ok(Some(Arc::clone(&*config)));
         }
         if self.static_configs.get(repo_url).is_some() {
             Err(RemoveError::CannotRemoveStaticRepositories)
@@ -139,9 +160,9 @@ impl<A: AmberConnect> RepositoryManager<A> {
     /// ultimately ignore, any errors that occur to make sure forward progress can always be made.
     fn save(
         dynamic_configs_path: &Path,
-        dynamic_configs: &mut HashMap<RepoUrl, Arc<RepositoryConfig>>,
+        dynamic_configs: &mut HashMap<RepoUrl, InspectableRepositoryConfig>,
     ) {
-        let configs = dynamic_configs.iter().map(|(_, c)| (**c).clone()).collect::<Vec<_>>();
+        let configs = dynamic_configs.iter().map(|(_, c)| (***c).clone()).collect::<Vec<_>>();
 
         let result = (|| {
             let mut temp_path = dynamic_configs_path.as_os_str().to_owned();
@@ -227,7 +248,14 @@ impl<A: AmberConnect> RepositoryManager<A> {
                 }
             }
 
-            conns.insert(url.clone(), repo.clone());
+            conns.insert(
+                InspectableRepoUrl::new(
+                    url.clone(),
+                    &self.inspect.conns_node,
+                    "ignored-by-watcher",
+                ),
+                repo.clone(),
+            );
         };
 
         let amber = self.connect_to_amber()?;
@@ -317,18 +345,48 @@ async fn get_package<'a>(
     }
 }
 
+#[derive(Debug)]
+pub struct UnsetInspectNode;
+
 /// [RepositoryManagerBuilder] constructs a [RepositoryManager], optionally initializing it
 /// with [RepositoryConfig]s passed in directly or loaded out of the filesystem.
 #[derive(Clone, Debug)]
-pub struct RepositoryManagerBuilder<A: AmberConnect> {
+pub struct RepositoryManagerBuilder<A: AmberConnect, N> {
     dynamic_configs_path: Option<PathBuf>,
     static_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     dynamic_configs: HashMap<RepoUrl, Arc<RepositoryConfig>>,
     amber: A,
     experiments: Experiments,
+    inspect_node: N,
 }
 
-impl<A: AmberConnect> RepositoryManagerBuilder<A> {
+impl<A: AmberConnect, N> RepositoryManagerBuilder<A, N> {
+    /// Load a directory of [RepositoryConfigs](RepositoryConfig) files into the
+    /// [RepositoryManager], or error out if we encounter errors during the load. The
+    /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
+    pub fn load_static_configs_dir<P>(
+        mut self,
+        static_configs_dir: P,
+    ) -> Result<Self, (Self, Vec<LoadError>)>
+    where
+        P: AsRef<Path>,
+    {
+        let static_configs_dir = static_configs_dir.as_ref();
+
+        let (static_configs, errs) = load_configs_dir(static_configs_dir);
+        self.static_configs = static_configs
+            .into_iter()
+            .map(|(repo_url, config)| (repo_url, Arc::new(config)))
+            .collect();
+        if errs.is_empty() {
+            Ok(self)
+        } else {
+            Err((self, errs))
+        }
+    }
+}
+
+impl<A: AmberConnect> RepositoryManagerBuilder<A, UnsetInspectNode> {
     /// Create a new builder and initialize it with the dynamic
     /// [RepositoryConfigs](RepositoryConfig) from this path if it exists, and add it to the
     /// [RepositoryManager], or error out if we encounter errors during the load. The
@@ -362,6 +420,7 @@ impl<A: AmberConnect> RepositoryManagerBuilder<A> {
                 .collect(),
             amber,
             experiments,
+            inspect_node: UnsetInspectNode,
         };
 
         if let Some(err) = err {
@@ -379,7 +438,6 @@ impl<A: AmberConnect> RepositoryManagerBuilder<A> {
     {
         Self::new(dynamic_configs_path, amber, Experiments::none())
     }
-
     /// Adds these static [RepoConfigs](RepoConfig) to the [RepositoryManager].
     #[cfg(test)]
     pub fn static_configs<I>(mut self, iter: I) -> Self
@@ -393,39 +451,71 @@ impl<A: AmberConnect> RepositoryManagerBuilder<A> {
         self
     }
 
-    /// Load a directory of [RepositoryConfigs](RepositoryConfig) files into the
-    /// [RepositoryManager], or error out if we encounter errors during the load. The
-    /// [RepositoryManagerBuilder] is also returned on error in case the errors should be ignored.
-    pub fn load_static_configs_dir<P>(
-        mut self,
-        static_configs_dir: P,
-    ) -> Result<Self, (Self, Vec<LoadError>)>
-    where
-        P: AsRef<Path>,
-    {
-        let static_configs_dir = static_configs_dir.as_ref();
-
-        let (static_configs, errs) = load_configs_dir(static_configs_dir);
-        self.static_configs = static_configs
-            .into_iter()
-            .map(|(repo_url, config)| (repo_url, Arc::new(config)))
-            .collect();
-        if errs.is_empty() {
-            Ok(self)
-        } else {
-            Err((self, errs))
-        }
-    }
-
-    /// Build the [RepositoryManager].
-    pub fn build(self) -> RepositoryManager<A> {
-        RepositoryManager {
+    /// Use the given inspect_node in the [RepositoryManager].
+    pub fn inspect_node(
+        self,
+        inspect_node: inspect::Node,
+    ) -> RepositoryManagerBuilder<A, inspect::Node> {
+        RepositoryManagerBuilder {
             dynamic_configs_path: self.dynamic_configs_path,
             static_configs: self.static_configs,
             dynamic_configs: self.dynamic_configs,
             amber: self.amber,
             experiments: self.experiments,
+            inspect_node,
+        }
+    }
+}
+
+#[cfg(test)]
+impl<A: AmberConnect + std::fmt::Debug> RepositoryManagerBuilder<A, UnsetInspectNode> {
+    /// In test configurations, allow building the [RepositoryManager] without a configured inspect
+    /// node.
+    pub fn build(self) -> RepositoryManager<A> {
+        let node = inspect::Inspector::new().root().create_child("test");
+        self.inspect_node(node).build()
+    }
+}
+
+fn to_inspectable_map_with_node(
+    from: HashMap<RepoUrl, Arc<RepositoryConfig>>,
+    node: &inspect::Node,
+) -> HashMap<RepoUrl, InspectableRepositoryConfig> {
+    let mut out = HashMap::new();
+    for (repo_url, repo_config) in from.into_iter() {
+        let config = InspectableRepositoryConfig::new(repo_config, node, repo_url.host());
+        out.insert(repo_url, config);
+    }
+    out
+}
+
+impl<A: AmberConnect + std::fmt::Debug> RepositoryManagerBuilder<A, inspect::Node> {
+    /// Build the [RepositoryManager].
+    pub fn build(self) -> RepositoryManager<A> {
+        let inspect = RepositoryManagerInspectState {
+            dynamic_configs_path_property: self
+                .inspect_node
+                .create_string("dynamic_configs_path", &format!("{:?}", self.dynamic_configs_path)),
+            dynamic_configs_node: self.inspect_node.create_child("dynamic_configs"),
+            static_configs_node: self.inspect_node.create_child("static_configs"),
+            conns_node: self.inspect_node.create_child("conns"),
+            node: self.inspect_node,
+        };
+
+        RepositoryManager {
+            dynamic_configs_path: self.dynamic_configs_path,
+            static_configs: to_inspectable_map_with_node(
+                self.static_configs,
+                &inspect.static_configs_node,
+            ),
+            dynamic_configs: to_inspectable_map_with_node(
+                self.dynamic_configs,
+                &inspect.dynamic_configs_node,
+            ),
+            amber: self.amber,
+            experiments: self.experiments,
             conns: Arc::new(RwLock::new(HashMap::new())),
+            inspect,
         }
     }
 }
@@ -601,7 +691,8 @@ mod tests {
     use {
         super::*,
         crate::test_util::{create_dir, ClosedAmberConnector},
-        fidl_fuchsia_pkg_ext::{RepositoryConfigBuilder, RepositoryKey},
+        fidl_fuchsia_pkg_ext::{MirrorConfigBuilder, RepositoryConfigBuilder, RepositoryKey},
+        fuchsia_inspect::assert_inspect_tree,
         fuchsia_url::pkg_url::RepoUrl,
         maplit::hashmap,
         std::{borrow::Borrow, fs::File, io::Write},
@@ -641,6 +732,13 @@ mod tests {
         }
     }
 
+    fn to_inspectable_map(
+        from: HashMap<RepoUrl, Arc<RepositoryConfig>>,
+    ) -> HashMap<RepoUrl, InspectableRepositoryConfig> {
+        let inspector = inspect::Inspector::new();
+        to_inspectable_map_with_node(from, inspector.root())
+    }
+
     #[test]
     fn test_insert_get_remove() {
         let dynamic_dir = tempfile::tempdir().unwrap();
@@ -672,7 +770,7 @@ mod tests {
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
-            hashmap! { fuchsia_url.clone() => Arc::clone(&config1) }
+            to_inspectable_map(hashmap! { fuchsia_url.clone() => Arc::clone(&config1) })
         );
 
         assert_eq!(repomgr.insert(Arc::clone(&config2)), Ok(Some(config1)));
@@ -680,7 +778,7 @@ mod tests {
         assert_eq!(repomgr.static_configs, HashMap::new());
         assert_eq!(
             repomgr.dynamic_configs,
-            hashmap! { fuchsia_url.clone() => Arc::clone(&config2) }
+            to_inspectable_map(hashmap! { fuchsia_url.clone() => Arc::clone(&config2) })
         );
 
         assert_eq!(repomgr.get(&fuchsia_url), Some(&config2));
@@ -824,10 +922,10 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
         assert_eq!(
             repomgr.static_configs,
-            hashmap! {
+            to_inspectable_map(hashmap! {
                 example_url => example_config.into(),
                 fuchsia_url => fuchsia_config.into(),
-            }
+            })
         );
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
@@ -858,10 +956,10 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
         assert_eq!(
             repomgr.static_configs,
-            hashmap! {
+            to_inspectable_map(hashmap! {
                 example_url => example_config.into(),
                 fuchsia_url => fuchsia_config.into(),
-            }
+            })
         );
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
@@ -924,7 +1022,7 @@ mod tests {
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
         assert_eq!(
             repomgr.static_configs,
-            hashmap! { fuchsia_url => fuchsia_com_json_config.into() }
+            to_inspectable_map(hashmap! { fuchsia_url => fuchsia_com_json_config.into() })
         );
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
@@ -966,7 +1064,10 @@ mod tests {
         let repomgr = builder.build();
 
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
-        assert_eq!(repomgr.static_configs, hashmap! { fuchsia_url => fuchsia_config1 });
+        assert_eq!(
+            repomgr.static_configs,
+            to_inspectable_map(hashmap! { fuchsia_url => fuchsia_config1 })
+        );
         assert_eq!(repomgr.dynamic_configs, HashMap::new());
     }
 
@@ -1026,7 +1127,7 @@ mod tests {
 
         assert_eq!(repomgr.dynamic_configs_path, Some(dynamic_configs_path));
         assert_eq!(repomgr.static_configs, HashMap::new());
-        assert_eq!(repomgr.dynamic_configs, hashmap! { fuchsia_url => config });
+        assert_eq!(repomgr.dynamic_configs, to_inspectable_map(hashmap! { fuchsia_url => config }));
     }
 
     #[test]
@@ -1244,15 +1345,178 @@ mod tests {
                 .add_root_key(RepositoryKey::Ed25519(vec![0]))
                 .build(),
         );
-        assert_eq!(repomgr.dynamic_configs.insert(fuchsia_url.clone(), Arc::clone(&config)), None);
+
+        let insp_config = InspectableRepositoryConfig::new(
+            Arc::clone(&config),
+            inspect::Inspector::new().root(),
+            "foo",
+        );
+        assert_eq!(repomgr.dynamic_configs.insert(fuchsia_url.clone(), insp_config), None);
 
         let res = repomgr.remove(&fuchsia_url);
 
         assert_eq!(res, Err(RemoveError::DynamicConfigurationDisabled));
         assert_eq!(
             repomgr.dynamic_configs,
-            hashmap! { fuchsia_url.clone() => Arc::clone(&config) }
+            to_inspectable_map(hashmap! { fuchsia_url.clone() => Arc::clone(&config) })
         );
         assert_eq!(repomgr.list().collect::<Vec<_>>(), vec![config.borrow()]);
+    }
+
+    #[test]
+    fn test_building_repo_manager_with_static_configs_populates_inspect() {
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let mirror_config = MirrorConfigBuilder::new("fake-mirror.com").build();
+        let fuchsia_config = Arc::new(
+            RepositoryConfigBuilder::new(fuchsia_url.clone())
+                .add_root_key(RepositoryKey::Ed25519(vec![1]))
+                .add_mirror(mirror_config.clone())
+                .build(),
+        );
+        let static_dir = create_dir(vec![(
+            "fuchsia.com.json",
+            RepositoryConfigs::Version1(vec![(*fuchsia_config).clone()]),
+        )]);
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let inspector = fuchsia_inspect::Inspector::new();
+
+        let repomgr =
+            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
+                .unwrap()
+                .load_static_configs_dir(static_dir.path())
+                .unwrap()
+                .inspect_node(inspector.root().create_child("repository_manager"))
+                .build();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                repository_manager: {
+                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs: {},
+                  static_configs: {
+                     "fuchsia.com": {
+                        root_keys: {
+                            "0": format!("{:?}", fuchsia_config.root_keys()[0])
+                        },
+                        mirrors: {
+                            "0": {
+                                blob_key: format!("{:?}", mirror_config.blob_key()),
+                                mirror_url: format!("{:?}", mirror_config.mirror_url()),
+                                subscribe: format!("{:?}", mirror_config.subscribe()),
+                                blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
+                            }
+                        },
+                        update_package_url: format!("{:?}", fuchsia_config.update_package_url()),
+                    }
+                  },
+                  conns: {},
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_building_repo_manager_with_no_static_configs_populates_inspect() {
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let inspector = fuchsia_inspect::Inspector::new();
+
+        let repomgr =
+            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
+                .unwrap()
+                .inspect_node(inspector.root().create_child("repository_manager"))
+                .build();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                repository_manager: {
+                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs: {},
+                  static_configs: {},
+                  conns: {},
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_insert_remove_updates_inspect() {
+        let dynamic_dir = tempfile::tempdir().unwrap();
+        let dynamic_configs_path = dynamic_dir.path().join("config");
+        let inspector = fuchsia_inspect::Inspector::new();
+
+        let mut repomgr =
+            RepositoryManagerBuilder::new_test(Some(&dynamic_configs_path), ClosedAmberConnector)
+                .unwrap()
+                .inspect_node(inspector.root().create_child("repository_manager"))
+                .build();
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                repository_manager: {
+                  dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
+                  dynamic_configs: {},
+                  static_configs: {},
+                  conns: {}
+                }
+            }
+        );
+
+        let fuchsia_url = RepoUrl::parse("fuchsia-pkg://fuchsia.com").unwrap();
+        let mirror_config = MirrorConfigBuilder::new("fake-mirror.com").build();
+        let config = Arc::new(
+            RepositoryConfigBuilder::new(fuchsia_url.clone())
+                .add_root_key(RepositoryKey::Ed25519(vec![0]))
+                .add_mirror(mirror_config.clone())
+                .build(),
+        );
+
+        // Insert and make sure inspect state is updated
+        repomgr.insert(Arc::clone(&config)).expect("insert worked");
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                repository_manager: {
+                  dynamic_configs_path: format!("{:?}", repomgr.dynamic_configs_path),
+                  dynamic_configs: {
+                    "fuchsia.com": {
+                        root_keys: {
+                            "0": format!("{:?}", config.root_keys()[0])
+                        },
+                        mirrors: {
+                            "0": {
+                                blob_key: format!("{:?}", mirror_config.blob_key()),
+                                mirror_url: format!("{:?}", mirror_config.mirror_url()),
+                                subscribe: format!("{:?}", mirror_config.subscribe()),
+                                blob_mirror_url: format!("{:?}", mirror_config.blob_mirror_url())
+                            }
+                        },
+                        update_package_url: format!("{:?}", config.update_package_url()),
+                    }
+                  },
+                  static_configs: {},
+                  conns: {}
+                }
+            }
+        );
+
+        // Remove and make sure inspect state is updated
+        repomgr.remove(&fuchsia_url).expect("remove worked");
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                repository_manager: {
+                  dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
+                  dynamic_configs: {},
+                  static_configs: {},
+                  conns: {}
+                }
+            }
+        );
     }
 }
