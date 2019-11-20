@@ -9,6 +9,7 @@ static_library("shared") {
     "address_range.cc",
     "address_range.h",
     "arch_arm64.h",
+    "arch_x86.cc",
     "arch_x86.h",
     "buffered_fd.cc",
     "buffered_fd.h",

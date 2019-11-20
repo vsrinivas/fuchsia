@@ -7,6 +7,8 @@
 
 #include <stdint.h>
 
+#include <string>
+
 namespace debug_ipc {
 
 // Overall functionality for interpreting x86 specific information. This is defined in debug_ipc
@@ -116,6 +118,12 @@ constexpr uint64_t kDR7RW3Shift = 28;  // Bkpt 3 R/W (exception type).
 constexpr uint64_t kDR7RW3Mask = 0x3;
 constexpr uint64_t kDR7LEN3Shift = 30;  // Bkpt 3 LEN (len of address to match).
 constexpr uint64_t kDR7LEN3Mask = 0x3;
+
+// Debug functions ---------------------------------------------------------------------------------
+
+std::string DR6ToString(uint64_t dr6);
+
+std::string DR7ToString(uint64_t dr7);
 
 }  // namespace debug_ipc
 

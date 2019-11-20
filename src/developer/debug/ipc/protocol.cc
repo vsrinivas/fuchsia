@@ -94,7 +94,7 @@ const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<invalid>";
 }
 
 const char* InferiorTypeToString(InferiorType type) {
@@ -108,7 +108,7 @@ const char* InferiorTypeToString(InferiorType type) {
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<invalid>";
 }
 
 const char* TaskTypeToString(TaskType type) {
@@ -126,7 +126,7 @@ const char* TaskTypeToString(TaskType type) {
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<invalid>";
 }
 
 const char* NotifyIO::TypeToString(Type type) {
@@ -140,7 +140,23 @@ const char* NotifyIO::TypeToString(Type type) {
   }
 
   FXL_NOTREACHED();
-  return nullptr;
+  return "<invalid>";
+}
+
+const char* ResumeRequest::HowToString(How how) {
+  switch (how) {
+    case How::kContinue:
+      return "Continue";
+    case How::kStepInstruction:
+      return "Step Instruction";
+    case How::kStepInRange:
+      return "Step In Range";
+    case How::kLast:
+      return "Last";
+  }
+
+  FXL_NOTREACHED();
+  return "<unknown>";
 }
 
 }  // namespace debug_ipc

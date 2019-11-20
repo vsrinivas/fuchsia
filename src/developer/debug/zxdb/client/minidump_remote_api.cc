@@ -50,6 +50,8 @@ class X64ExceptionInfo : public debug_ipc::X64ExceptionInfo {
     return ret;
   }
 
+  void ClearDebugFlags(const DebugRegs&) override {}
+
  private:
   const crashpad::ExceptionSnapshot* snapshot_;
 };

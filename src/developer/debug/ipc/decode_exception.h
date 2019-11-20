@@ -32,6 +32,7 @@ class X64ExceptionInfo {
 
   // Get the necessary debug registers for decoding exceptions. A nullopt indicates failure.
   virtual std::optional<DebugRegs> FetchDebugRegs() = 0;
+  virtual void ClearDebugFlags(const DebugRegs&) = 0;
 };
 
 ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info);

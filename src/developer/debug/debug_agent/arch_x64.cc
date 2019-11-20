@@ -125,6 +125,18 @@ class ExceptionInfo : public debug_ipc::X64ExceptionInfo {
     return ret;
   }
 
+  void ClearDebugFlags(const DebugRegs& regs) override {
+    zx_thread_state_debug_regs_t debug_regs = {};
+    debug_regs.dr[0] = regs.dr0;
+    debug_regs.dr[1] = regs.dr1;
+    debug_regs.dr[2] = regs.dr2;
+    debug_regs.dr[3] = regs.dr3;
+    debug_regs.dr6 = regs.dr6;
+    debug_regs.dr7 = regs.dr7;
+
+    thread_.handle().write_state(ZX_THREAD_STATE_DEBUG_REGS, &debug_regs, sizeof(debug_regs));
+  }
+
  private:
   const DebuggedThread& thread_;
 };

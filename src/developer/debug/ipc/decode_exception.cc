@@ -60,35 +60,41 @@ ExceptionType DecodeHardwareRegister(uint64_t dr7, int slot) {
 }  // namespace
 
 ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
-  // HW exceptions have to be analysed further.
+  // All zircon exceptions don't need further analysis, except hardware which can represent a single
+  // step, a hw breakpoint or a watchpoint.
   ExceptionType type = DecodeZircon(code);
   if (type != ExceptionType::kHardware)
     return type;
 
-  X64ExceptionInfo::DebugRegs regs;
-
+  std::optional<X64ExceptionInfo::DebugRegs> regs;
   if (auto got = info->FetchDebugRegs()) {
-    regs = *got;
-  } else {
-    DEBUG_LOG(Thread) << "Could not get debug regs: asuming single step.";
-    return ExceptionType::kSingleStep;
+    DEBUG_LOG(Archx64) << "DR6: " << debug_ipc::DR6ToString(got->dr6);
+    regs = std::move(got.value());
   }
+
+  // If we could not get the registers, we return the zircon exception. In the case of the ambiguous
+  // hardware type, we assume single step.
+  if (!regs.has_value())
+    return ExceptionType::kSingleStep;
 
   // TODO(DX-1445): This permits only one trigger per exception, when overlaps
   //                could occur. For a first pass this is acceptable.
 
-  // Single step has more priority than other exceptions.
-  if (X86_DBG_STATUS_BS_GET(regs.dr6))
+  if (X86_DBG_STATUS_BS_GET(regs->dr6)) {
+    // This is a single step. We need to clear the BS flag to the further hardware exceptions don't
+    // get flagged as single step.
+    info->ClearDebugFlags(regs.value());
     return ExceptionType::kSingleStep;
+  }
 
-  if (X86_DBG_STATUS_B0_GET(regs.dr6)) {
-    return DecodeHardwareRegister(regs.dr7, 0);
-  } else if (X86_DBG_STATUS_B1_GET(regs.dr6)) {
-    return DecodeHardwareRegister(regs.dr7, 1);
-  } else if (X86_DBG_STATUS_B2_GET(regs.dr6)) {
-    return DecodeHardwareRegister(regs.dr7, 2);
-  } else if (X86_DBG_STATUS_B3_GET(regs.dr6)) {
-    return DecodeHardwareRegister(regs.dr7, 3);
+  if (X86_DBG_STATUS_B0_GET(regs->dr6)) {
+    return DecodeHardwareRegister(regs->dr7, 0);
+  } else if (X86_DBG_STATUS_B1_GET(regs->dr6)) {
+    return DecodeHardwareRegister(regs->dr7, 1);
+  } else if (X86_DBG_STATUS_B2_GET(regs->dr6)) {
+    return DecodeHardwareRegister(regs->dr7, 2);
+  } else if (X86_DBG_STATUS_B3_GET(regs->dr6)) {
+    return DecodeHardwareRegister(regs->dr7, 3);
   } else {
     FXL_NOTREACHED() << "x86: No known hw exception set in DR6";
     return ExceptionType::kUnknown;

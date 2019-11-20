@@ -208,6 +208,7 @@ struct ResumeRequest {
 
     kLast  // Not a real state, used for validation.
   };
+  static const char* HowToString(How);
 
   // If 0, all threads of all debugged processes will be continued.
   uint64_t process_koid = 0;

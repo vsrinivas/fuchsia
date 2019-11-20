@@ -215,6 +215,7 @@ void DebuggedThread::HandleSingleStep(debug_ipc::NotifyException* exception,
     // NOTE: It's important to resume the exception *before* telling the breakpoint we are done
     //       going over it, as it may call ResumeForRunMode, which could then again attempt to step
     //       over it.
+    SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     ResumeException();
     current_breakpoint_->EndStepOver(this);
     current_breakpoint_ = nullptr;
@@ -326,7 +327,9 @@ void DebuggedThread::SendExceptionNotification(debug_ipc::NotifyException* excep
 }
 
 void DebuggedThread::Resume(const debug_ipc::ResumeRequest& request) {
-  DEBUG_LOG(Thread) << ThreadPreamble(this) << "Resuming.";
+  DEBUG_LOG(Thread) << ThreadPreamble(this)
+                    << "Resuming. Run mode: " << debug_ipc::ResumeRequest::HowToString(request.how)
+                    << ", Range: [" << request.range_begin << ", " << request.range_end << ").";
 
   run_mode_ = request.how;
   step_in_range_begin_ = request.range_begin;
