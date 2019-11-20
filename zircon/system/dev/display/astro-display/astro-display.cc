@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 #include "astro-display.h"
 
-#include <fuchsia/sysmem/c/fidl.h>
-#include <lib/image-format/image_format.h>
+#include <fuchsia/sysmem/llcpp/fidl.h>
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
@@ -12,6 +12,8 @@
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
+
+namespace sysmem = llcpp::fuchsia::sysmem;
 
 namespace astro_display {
 
@@ -306,37 +308,33 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
     return status;
   }
 
-  zx_status_t status2;
-  fuchsia_sysmem_BufferCollectionInfo_2 collection_info;
-  status =
-      fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(handle, &status2, &collection_info);
-  if (status != ZX_OK) {
-    return status;
+  auto result =
+      sysmem::BufferCollection::Call::WaitForBuffersAllocated(zx::unowned_channel(handle));
+  if (!result.ok()) {
+    return result.status();
   }
-  if (status2 != ZX_OK) {
-    return status2;
+  if (result->status != ZX_OK) {
+    return result->status;
   }
 
-  fbl::Vector<zx::vmo> vmos;
-  for (uint32_t i = 0; i < collection_info.buffer_count; ++i) {
-    vmos.push_back(zx::vmo(collection_info.buffers[i].vmo));
-  }
+  sysmem::BufferCollectionInfo_2& collection_info = result->buffer_collection_info;
 
-  if (!collection_info.settings.has_image_format_constraints || index >= vmos.size()) {
+  if (!collection_info.settings.has_image_format_constraints ||
+      index >= collection_info.buffer_count) {
     return ZX_ERR_OUT_OF_RANGE;
   }
 
   ZX_DEBUG_ASSERT(collection_info.settings.image_format_constraints.pixel_format.type ==
-                  fuchsia_sysmem_PixelFormatType_BGRA32);
+                  sysmem::PixelFormatType::BGRA32);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.has_format_modifier);
   ZX_DEBUG_ASSERT(
       collection_info.settings.image_format_constraints.pixel_format.format_modifier.value ==
-      fuchsia_sysmem_FORMAT_MODIFIER_LINEAR);
+      sysmem::FORMAT_MODIFIER_LINEAR);
 
   uint32_t minimum_row_bytes;
-  if (!ImageFormatMinimumRowBytes(&collection_info.settings.image_format_constraints, image->width,
-                                  &minimum_row_bytes)) {
+  if (!image_format::GetMinimumRowBytes(collection_info.settings.image_format_constraints,
+                                        image->width, &minimum_row_bytes)) {
     DISP_ERROR("Invalid image width %d for collection\n", image->width);
     return ZX_ERR_INVALID_ARGS;
   }
@@ -350,7 +348,7 @@ zx_status_t AstroDisplay::DisplayControllerImplImportImage(image_t* image,
   canvas_info.flags = CANVAS_FLAGS_READ;
 
   uint8_t local_canvas_idx;
-  status = amlogic_canvas_config(&canvas_, vmos[index].release(),
+  status = amlogic_canvas_config(&canvas_, collection_info.buffers[index].vmo.release(),
                                  collection_info.buffers[index].vmo_usable_start, &canvas_info,
                                  &local_canvas_idx);
   if (status != ZX_OK) {
@@ -557,50 +555,34 @@ zx_status_t AstroDisplay::DisplayControllerImplGetSysmemConnection(zx::channel c
 
 zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
     const image_t* config, zx_unowned_handle_t collection) {
-  fuchsia_sysmem_BufferCollectionConstraints constraints = {};
-  constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
+  sysmem::BufferCollectionConstraints constraints = {};
+  constraints.usage.display = sysmem::displayUsageLayer;
   constraints.has_buffer_memory_constraints = true;
-  fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
-      constraints.buffer_memory_constraints;
-  buffer_constraints.min_size_bytes = 0;
-  buffer_constraints.max_size_bytes = 0xffffffff;
+  sysmem::BufferMemoryConstraints& buffer_constraints = constraints.buffer_memory_constraints;
   buffer_constraints.physically_contiguous_required = true;
   buffer_constraints.secure_required = false;
   buffer_constraints.ram_domain_supported = true;
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.inaccessible_domain_supported = true;
   buffer_constraints.heap_permitted_count = 2;
-  buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
-  buffer_constraints.heap_permitted[1] = fuchsia_sysmem_HeapType_AMLOGIC_SECURE;
+  buffer_constraints.heap_permitted[0] = sysmem::HeapType::SYSTEM_RAM;
+  buffer_constraints.heap_permitted[1] = sysmem::HeapType::AMLOGIC_SECURE;
   constraints.image_format_constraints_count = 1;
-  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-      constraints.image_format_constraints[0];
-  image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+  sysmem::ImageFormatConstraints& image_constraints = constraints.image_format_constraints[0];
+  image_constraints.pixel_format.type = sysmem::PixelFormatType::BGRA32;
   image_constraints.pixel_format.has_format_modifier = true;
-  image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+  image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-  image_constraints.min_coded_width = 0;
-  image_constraints.max_coded_width = 0xffffffff;
-  image_constraints.min_coded_height = 0;
-  image_constraints.max_coded_height = 0xffffffff;
-  image_constraints.min_bytes_per_row = 0;
-  image_constraints.max_bytes_per_row = 0xffffffff;
-  image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-  image_constraints.layers = 1;
-  image_constraints.coded_width_divisor = 1;
-  image_constraints.coded_height_divisor = 1;
+  image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
   image_constraints.bytes_per_row_divisor = 32;
   image_constraints.start_offset_divisor = 32;
-  image_constraints.display_width_divisor = 1;
-  image_constraints.display_height_divisor = 1;
 
-  zx_status_t status =
-      fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);
+  auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
+                                                            constraints);
 
-  if (status != ZX_OK) {
-    DISP_ERROR("Failed to set constraints");
-    return status;
+  if (!res.ok()) {
+    DISP_ERROR("Failed to set constraints: %d", res.status());
+    return res.status();
   }
 
   return ZX_OK;
