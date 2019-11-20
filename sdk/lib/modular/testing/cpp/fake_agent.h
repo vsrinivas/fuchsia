@@ -29,7 +29,7 @@ namespace modular_testing {
 // ..
 // modular_testing::TestHarnessBuilder builder;
 // auto fake_agent = modular_testing::FakeAgent::CreateWithDefaultOptions();
-// builder.InterceptComponent(fake_component.BuildInterceptOptions());
+// builder.InterceptComponent(fake_agent.BuildInterceptOptions());
 // builder.BuildAndRun(test_harness());
 // ..
 class FakeAgent : public FakeComponent {
