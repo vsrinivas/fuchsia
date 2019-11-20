@@ -209,13 +209,13 @@ static const device_component_t components[] = {
 zx_status_t Astro::ThermalInit() {
   // Configure the GPIO to be Output & set it to alternate
   // function 3 which puts in PWM_D mode.
-  zx_status_t status = gpio_impl_.ConfigOut(S905D2_PWM_D_PIN, 0);
+  zx_status_t status = gpio_impl_.ConfigOut(S905D2_PWM_D, 0);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: ConfigOut failed: %d\n", __func__, status);
     return status;
   }
 
-  status = gpio_impl_.SetAltFunction(S905D2_PWM_D_PIN, S905D2_PWM_D_FN);
+  status = gpio_impl_.SetAltFunction(S905D2_PWM_D, S905D2_PWM_D_FN);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: SetAltFunction failed: %d\n", __func__, status);
     return status;

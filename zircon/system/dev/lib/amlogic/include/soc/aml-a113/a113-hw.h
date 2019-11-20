@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_HW_H_
-#define ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_HW_H_
+#pragma once
 
 #define A113_TDM_PHYS_BASE 0xff642000
 
@@ -24,48 +23,3 @@
 #define GAUSS_RAW_NAND_REG 0xffe07800
 #define GAUSS_RAW_NAND_CLKREG 0xffe07000
 #define GAUSS_RAW_NAND_IRQ 66
-
-// PWM register offsets
-#define A113_PWM_AB_BASE 0xffd1b000
-#define A113_PWM_AB_LENGTH 0x1000
-#define A113_PWM_PWM_A 0x0
-#define A113_PWM_PWM_B 0x4
-#define A113_PWM_MISC_REG_AB 0x8
-#define A113_DS_A_B 0xc
-#define A113_PWM_TIME_AB 0x10
-#define A113_PWM_A2 0x14
-#define A113_PWM_B2 0x18
-#define A113_PWM_BLINK_AB 0x1c
-
-#define A113_PWM_CD_BASE 0xffd1a000
-#define A113_PWM_PWM_C 0x0
-#define A113_PWM_PWM_D 0x4
-#define A113_PWM_MISC_REG_CD 0x8
-#define A113_DS_C_D 0xc
-#define A113_PWM_TIME_CD 0x10
-#define A113_PWM_C2 0x14
-#define A113_PWM_D2 0x18
-#define A113_PWM_BLINK_CD 0x1c
-
-#define A113_AO_PWM_AB_BASE 0xFF807000
-#define A113_AO_PWM_PWM_A 0x0
-#define A113_AO_PWM_PWM_B 0x4
-#define A113_AO_PWM_MISC_REG_AB 0x8
-#define A113_AO_DS_A_B 0xc
-#define A113_AO_PWM_TIME_AB 0x10
-#define A113_AO_PWM_A2 0x14
-#define A113_AO_PWM_B2 0x18
-#define A113_AO_PWM_BLINK_AB 0x1c
-
-#define A113_AO_PWM_CD_BASE 0xFF802000
-#define A113_AO_PWM_PWM_C 0x0
-#define A113_AO_PWM_PWM_D 0x4
-#define A113_AO_PWM_MISC_REG_CD 0x8
-#define A113_AO_DS_C_D 0xc
-#define A113_AO_PWM_TIME_CD 0x10
-#define A113_AO_PWM_C2 0x14
-#define A113_AO_PWM_D2 0x18
-#define A113_AO_PWM_BLINK_CD 0x1c
-#define A113_AO_PWM_LENGTH 0x1000
-
-#endif  // ZIRCON_SYSTEM_DEV_LIB_AMLOGIC_INCLUDE_SOC_AML_A113_A113_HW_H_
