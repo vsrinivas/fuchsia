@@ -5,10 +5,12 @@
     "sandbox": {
         "services": [
             "fuchsia.bluetooth.avdtp.PeerManager",
+            "fuchsia.bluetooth.avrcp.PeerManager",
             "fuchsia.bluetooth.bredr.Profile",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
-            "fuchsia.media.SessionAudioConsumerFactory"
+            "fuchsia.media.SessionAudioConsumerFactory",
+            "fuchsia.media.sessions2.Publisher"
         ]
     }
 }

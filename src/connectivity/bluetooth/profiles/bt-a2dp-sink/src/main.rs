@@ -2,13 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "256"]
+#![recursion_limit = "512"]
 
 use {
     bt_a2dp::media_types::*,
     bt_a2dp_sink_metrics as metrics,
     bt_avdtp::{self as avdtp, AvdtpControllerPool},
-    failure::{format_err, Error},
+    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AUDIO_ENCODING_AACLATM, AUDIO_ENCODING_SBC},
     fuchsia_async as fasync,
@@ -29,6 +29,7 @@ use {
 
 use crate::inspect_types::StreamingInspectData;
 
+mod avrcp_relay;
 mod connected_peers;
 mod inspect_types;
 mod peer;
@@ -498,7 +499,8 @@ async fn main() -> Result<(), Error> {
 
     let mut peers = connected_peers::ConnectedPeers::new(streams, cobalt_logger.clone());
 
-    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()?;
+    let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
+        .context("Failed to connect to Bluetooth Profile service")?;
 
     let mut service_def = make_profile_service_definition();
     let (status, service_id) =
@@ -538,6 +540,7 @@ async fn main() -> Result<(), Error> {
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
                 peers.connected(&inspect, peer_id, channel);
                 if let Some(peer) = peers.get(&peer_id) {
+                    // Add the controller to the peers
                     controller_pool.lock().peer_connected(peer_id, peer.read().avdtp_peer());
                 }
             }

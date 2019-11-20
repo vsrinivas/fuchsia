@@ -19,7 +19,7 @@ use {
     },
 };
 
-use crate::{peer, Streams};
+use crate::{avrcp_relay::AvrcpRelay, peer, Streams};
 
 fn codectype_to_availability_metric(
     codec_type: avdtp::MediaCodecType,
@@ -160,11 +160,15 @@ impl ConnectedPeers {
                 let closed_fut = peer.closed();
                 self.connected.insert(id, RwLock::new(peer));
 
+                let avrcp_relay = AvrcpRelay::start(id).ok();
+
                 // Remove the peer when we disconnect.
-                let detached = self.connected.get(&id).expect("just added");
+                let detached_peer = self.connected.get(&id).expect("just added");
                 fasync::spawn(async move {
                     closed_fut.await;
-                    detached.detach();
+                    detached_peer.detach();
+                    // Captures the relay to extend the lifetime until after the peer clooses.
+                    drop(avrcp_relay);
                 });
             }
         }
