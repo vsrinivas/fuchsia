@@ -62,25 +62,6 @@ class AudioDevice : public AudioObject {
   // AudioObject overrides.
   std::optional<VolumeCurve> GetVolumeCurve() const override;
 
-  // NotifyDestFormatPreference
-  //
-  // Called by clients who are destinations of ours, to inform us of their preferred format.
-  //
-  // TODO(johngro): Remove, when driver format selection is controlled by a policy manager layer.
-  virtual void NotifyDestFormatPreference(const fuchsia::media::AudioStreamTypePtr& fmt)
-      FXL_LOCKS_EXCLUDED(mix_domain().token()) {}
-
-  // GetSourceFormatPreference
-  //
-  // Returns the format that this AudioDevice prefers to use when acting as a
-  // source of audio (either an input, or an output being looped back).
-  //
-  // TODO(johngro): Remove this once we have audio policy. Users should talk to
-  // the policy manager to know what inputs and outputs exist, what formats they
-  // support, and to express a desired device routing. "Preference" of an audio
-  // device is not a concept which belongs in the mixer.
-  virtual fuchsia::media::AudioStreamTypePtr GetSourceFormatPreference() { return nullptr; }
-
   // Accessor set gain. Limits the gain command to what the hardware allows, and
   // wakes up the device in the event of a meaningful change in gain settings.
   //
