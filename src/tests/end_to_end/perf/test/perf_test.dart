@@ -46,6 +46,16 @@ void main() {
         uploadToCatapultDashboard: false);
   }
 
+  void addTspecTest(String specFile) {
+    test(specFile, () async {
+      const resultsFile = '/tmp/perf_results.json';
+      final result = await sl4fDriver.ssh.run(
+          'trace record --spec-file=$specFile --benchmark-results-file=$resultsFile');
+      expect(result.exitCode, equals(0));
+      await processResults(resultsFile);
+    }, timeout: Timeout.none);
+  }
+
   test('zircon_benchmarks', () async {
     const resultsFile = '/tmp/perf_results.json';
     // Log the full 32-bit exit status value in order to debug the flaky failure
@@ -60,12 +70,19 @@ void main() {
     await processResults(resultsFile);
   }, timeout: Timeout.none);
 
-  test('benchmark_example.tspec', () async {
-    const spec = '/pkgfs/packages/benchmark/0/data/benchmark_example.tspec';
-    const resultsFile = '/tmp/perf_results.json';
-    final result = await sl4fDriver.ssh.run(
-        'trace record --spec-file=$spec --benchmark-results-file=$resultsFile');
-    expect(result.exitCode, equals(0));
-    await processResults(resultsFile);
-  }, timeout: Timeout.none);
+  addTspecTest('/pkgfs/packages/benchmark/0/data/benchmark_example.tspec');
+
+  // Run "local" Ledger benchmarks.  These don't need external services to
+  // function properly.
+  //
+  // TODO(fxb/23091): For now we are just running one test case here because
+  // running the full set crosses the timeout time limit.  When we figure out
+  // how to address that, we should add the full list from
+  // peridot/tests/benchmarks/benchmarks.cc.
+  const ledgerTests = [
+    'add_new_page_after_clear.tspec',
+  ];
+  for (final specFile in ledgerTests) {
+    addTspecTest('/pkgfs/packages/ledger_benchmarks/0/data/$specFile');
+  }
 }

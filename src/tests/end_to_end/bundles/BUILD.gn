@@ -44,5 +44,7 @@ group("end_to_end_deps") {
     # Used by perf_test.dart for running performance tests.
     "//garnet/bin/zircon_benchmarks:zircon_benchmarks_perftestmode",
     "//garnet/examples/benchmark",
+    "//src/ledger:bin",
+    "//src/ledger/bin/tests/benchmark",
   ]
 }

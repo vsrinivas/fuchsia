@@ -20,6 +20,12 @@ group("ledger") {
   ]
 }
 
+group("bin") {
+  deps = [
+    "bin",
+  ]
+}
+
 group("tests") {
   testonly = true
   deps = [
