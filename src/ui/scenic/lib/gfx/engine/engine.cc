@@ -159,8 +159,8 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
   }
 
   if (uses_protected_memory) {
-    // NOTE: this name is important for benchmarking.  Do not remove or modify it
-    // without also updating the "process_uiperf_trace.go" script.
+    // NOTE: This name is important for benchmarking.  Do not remove or modify
+    // it without also updating tests and benchmarks that depend on it.
     TRACE_INSTANT("gfx", "RenderProtectedFrame", TRACE_SCOPE_THREAD);
   }
 
