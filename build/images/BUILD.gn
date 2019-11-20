@@ -59,6 +59,12 @@ declare_args() {
   # enable throttling of netboot when specific network adapters are combined
   # with specific boards, due to driver and hardware challenges.
   additional_bootserver_arguments = ""
+
+  # Whether to perform check on the build's eligibility for production.
+  # If true, base_packages and cache_packages are checked against dependencies
+  # on :non_production_tag, which is used to tag any non-production GN labels.
+  # Build will fail if such dependency is found.
+  check_production_eligibility = false
 }
 assert(
     meta_package_labels != [],
@@ -93,6 +99,9 @@ group("base_packages") {
   public_deps = [
     "//:additional_base_packages",
   ]
+  if (check_production_eligibility) {
+    assert_no_deps = [ ":non_production_tag" ]
+  }
 }
 
 group("cache_packages") {
@@ -101,6 +110,9 @@ group("cache_packages") {
   public_deps = [
     "//:additional_cache_packages",
   ]
+  if (check_production_eligibility) {
+    assert_no_deps = [ ":non_production_tag" ]
+  }
 }
 
 group("universe_packages") {
@@ -2335,4 +2347,10 @@ generated_file("image_paths") {
   deps = [
     ":images",
   ]
+}
+
+# Add this tag to deps of non_production GN labels (packages/configs).
+# If check_production_eligibility = true, including such GN labels will cause
+# build to fail.
+group("non_production_tag") {
 }
