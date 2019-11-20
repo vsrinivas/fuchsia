@@ -16,6 +16,7 @@ import 'package:quickui/quickui.dart';
 class Bluetooth extends UiSpec {
   // Localized strings.
   static String get _title => Strings.bluetooth;
+  static String get _disconnect => Strings.disconnect;
 
   BluetoothModel model;
 
@@ -33,32 +34,43 @@ class Bluetooth extends UiSpec {
   }
 
   void _onChange() {
-    spec = _specForBluetooth(_deviceNameList(model.remoteDevices));
+    spec = _specForBluetooth(model.remoteDevices);
   }
 
   @override
-  void update(Value value) async {}
+  void update(Value value) async {
+    if (value.$tag == ValueTag.text &&
+        value.text.action > 0 &&
+        value.text.text == _disconnect) {
+      final index = (value.text.action ^ QuickAction.submit.$value) ~/ 2;
+      await model.disconnectDevice(model.remoteDevices[index]);
+    }
+  }
 
   @override
   void dispose() {
     model.dispose();
   }
 
-  static Spec _specForBluetooth(List<TextValue> values) {
-    if (values.isEmpty) {
+  static Spec _specForBluetooth(List<bt.RemoteDevice> devices) {
+    if (devices.isEmpty) {
       // No connected devices found. Send nullSpec to hide bluetooth settings
       return UiSpec.nullSpec;
     }
+    final values = List<TextValue>.generate(devices.length * 2, (index) {
+      return TextValue(
+        text: index.isEven ? devices[index ~/ 2].name : _disconnect,
+        action: index.isEven
+            ? (QuickAction.submit.$value | (index))
+            : (QuickAction.submit.$value | (index - 1)),
+      );
+    });
     return Spec(title: _title, groups: [
       Group(title: _title, values: [
         Value.withIcon(IconValue(codePoint: Icons.bluetooth.codePoint)),
-        Value.withGrid(GridValue(columns: 1, values: values))
+        Value.withGrid(GridValue(columns: 2, values: values))
       ]),
     ]);
-  }
-
-  List<TextValue> _deviceNameList(List<bt.RemoteDevice> devices) {
-    return devices.map((device) => TextValue(text: device.name)).toList();
   }
 }
 
@@ -116,6 +128,9 @@ class BluetoothModel {
       }
     });
   }
+
+  Future<void> disconnectDevice(bt.RemoteDevice device) async =>
+      await _monitor.disconnect(device.identifier);
 
   void dispose() {
     _bluetoothSubscription.cancel();

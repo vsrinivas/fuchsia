@@ -54,8 +54,9 @@ class Status extends StatelessWidget {
             curve: ErmineStyle.kScreenAnimationCurve,
           );
           uiStream.update(value);
-        } else if (action & QuickAction.cancel.$value > 0 ||
-            action & QuickAction.submit.$value > 0) {
+        } else if ((action & QuickAction.cancel.$value > 0 ||
+                action & QuickAction.submit.$value > 0) &&
+            pageController.page > 0) {
           model.detailStream?.update(value);
           pageController.previousPage(
             duration: ErmineStyle.kScreenAnimationDuration,

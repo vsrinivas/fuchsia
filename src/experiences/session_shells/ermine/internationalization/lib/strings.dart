@@ -338,4 +338,9 @@ class Strings {
         name: 'logout',
         desc: 'The label for logout button.',
       );
+  static String get disconnect => Intl.message(
+        'DISCONNECT',
+        name: 'disconnect',
+        desc: 'The label for "disconnect" button.',
+      );
 }
