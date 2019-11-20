@@ -11,6 +11,7 @@
 #include "src/lib/files/path.h"
 #include "src/lib/fsl/syslogger/init.h"
 #include "src/lib/fxl/strings/trim.h"
+#include "third_party/cobalt/src/lib/util/file_util.h"
 
 namespace cobalt {
 
@@ -23,6 +24,10 @@ const config::Environment kDefaultEnvironment = config::Environment::DEVEL;
 const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/config/data";
 constexpr char kReleaseStageFile[] = "release_stage";
 const cobalt::ReleaseStage kDefaultReleaseStage = cobalt::ReleaseStage::GA;
+
+// This will be found under the config directory.
+constexpr char kApiKeyFile[] = "api_key.hex";
+constexpr char kDefaultApiKey[] = "cobalt-default-api-key";
 
 constexpr char kAnalyzerDevelTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_devel_public";
 constexpr char kShufflerDevelTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_devel_public";
@@ -81,12 +86,25 @@ cobalt::ReleaseStage LookupReleaseStage(const std::string& config_dir) {
   }
 }
 
+std::string LookupApiKeyOrDefault(const std::string& config_dir) {
+  auto api_key_path = files::JoinPath(config_dir, kApiKeyFile);
+  std::string api_key = util::ReadHexFileOrDefault(api_key_path, kDefaultApiKey);
+  if (api_key == kDefaultApiKey) {
+    FX_LOGS(INFO) << "LookupApiKeyOrDefault: Using default Cobalt API key.";
+  } else {
+    FX_LOGS(INFO) << "LookupApiKeyOrDefault: Using secret Cobalt API key.";
+  }
+
+  return api_key;
+}
+
 FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir,
                                                    const std::string& environment_dir) {
   for (const auto& environment : LookupCobaltEnvironment(environment_dir)) {
     backend_configurations_.emplace(environment, environment);
   }
   release_stage_ = LookupReleaseStage(config_dir);
+  api_key_ = LookupApiKeyOrDefault(config_dir);
 }
 
 std::vector<config::Environment> FuchsiaConfigurationData::GetBackendEnvironments() const {
@@ -130,5 +148,7 @@ int32_t FuchsiaConfigurationData::GetLogSourceId(
 }
 
 cobalt::ReleaseStage FuchsiaConfigurationData::GetReleaseStage() const { return release_stage_; }
+
+std::string FuchsiaConfigurationData::GetApiKey() const { return api_key_; }
 
 }  // namespace cobalt

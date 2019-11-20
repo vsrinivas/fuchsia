@@ -184,7 +184,6 @@ executable("cobalt_app_unittests") {
     "logger_impl_test.cc",
     "system_data_updater_impl_test.cc",
     "timer_manager_test.cc",
-    "utils_test.cc",
   ]
 
   deps = [

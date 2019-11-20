@@ -124,7 +124,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
         encrypt_to_analyzer_.get(),
         std::make_unique<ClearcutUploader>(
             kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(&network_wrapper_, dispatcher)),
-        nullptr, kClearcutMaxRetries, ReadApiKeyOrDefault());
+        nullptr, kClearcutMaxRetries, configuration_data_.GetApiKey());
     shipping_manager_ = std::unique_ptr<encoder::ShippingManager>(clearcut_shipping_manager);
     // TODO(camrdale): remove this once the log source transition is complete.
     for (const auto& backend_environment : configuration_data_.GetBackendEnvironments()) {

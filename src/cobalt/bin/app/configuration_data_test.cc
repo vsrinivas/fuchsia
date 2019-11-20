@@ -103,4 +103,23 @@ TEST(ConfigTest, ReleaseStagePathDEBUG) {
   EXPECT_EQ(cobalt::ReleaseStage::DEBUG, config_data.GetReleaseStage());
 }
 
+TEST(ConfigTest, GetApiKeyNotEmpty) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+  auto api_key = config_data.GetApiKey();
+  EXPECT_EQ(api_key, "cobalt-default-api-key");
+}
+
+TEST(ConfigTest, GetApiKey) {
+  EXPECT_TRUE(files::DeletePath(kTestDir, true));
+  EXPECT_TRUE(files::CreateDirectory(kTestDir));
+  EXPECT_TRUE(WriteFile("api_key.hex", "deadbeef"));
+
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
+  auto api_key = config_data.GetApiKey();
+  EXPECT_EQ(api_key, "\xDE\xAD\xBE\xEF");
+}
+
 }  // namespace cobalt::test

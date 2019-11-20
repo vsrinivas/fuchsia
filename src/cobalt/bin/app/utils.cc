@@ -9,9 +9,6 @@
 #include "third_party/cobalt/src/lib/util/file_util.h"
 #include "third_party/cobalt/src/lib/util/pem_util.h"
 
-constexpr char kApiKeyFile[] = "/config/data/api_key.hex";
-constexpr char kDefaultApiKey[] = "cobalt-default-api-key";
-
 namespace cobalt {
 
 using fuchsia::cobalt::Status;
@@ -88,20 +85,8 @@ std::string ReadPublicKeyPem(const std::string& pem_file_path) {
   VLOG(2) << "Reading PEM file at " << pem_file_path;
   std::string pem_out;
   FXL_CHECK(util::PemUtil::ReadTextFile(pem_file_path, &pem_out))
-      << "Unable to read file public key PEM file from path " << pem_file_path
-      << ".";
+      << "Unable to read file public key PEM file from path " << pem_file_path << ".";
   return pem_out;
-}
-
-std::string ReadApiKeyOrDefault() {
-  std::string api_key = util::ReadHexFileOrDefault(kApiKeyFile, kDefaultApiKey);
-  if (api_key == kDefaultApiKey) {
-    FX_LOGS(INFO) << "ReadApiKeyOrDefault: Using default Cobalt API key.";
-  } else {
-    FX_LOGS(INFO) << "ReadApiKeyOrDefault: Using secret Cobalt API key.";
-  }
-
-  return api_key;
 }
 
 }  // namespace cobalt

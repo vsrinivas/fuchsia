@@ -35,11 +35,15 @@ class FuchsiaConfigurationData {
 
   cobalt::ReleaseStage GetReleaseStage() const;
 
+  // Returns the cobalt API key. If it cannot be found, return the default API key.
+  std::string GetApiKey() const;
+
  private:
   static const char kDefaultConfigDir[];
   static const char kDefaultEnvironmentDir[];
   std::map<config::Environment, const config::ConfigurationData> backend_configurations_;
   cobalt::ReleaseStage release_stage_;
+  std::string api_key_;
 };
 
 }  // namespace cobalt

@@ -17,8 +17,7 @@
 namespace cobalt {
 
 // Maps an ObservationStore::StoreStatus to a fuchsia::cobalt::Status.
-fuchsia::cobalt::Status ToCobaltStatus(
-    observation_store::ObservationStore::StoreStatus s);
+fuchsia::cobalt::Status ToCobaltStatus(observation_store::ObservationStore::StoreStatus s);
 
 fuchsia::cobalt::Status ToCobaltStatus(logger::Status s);
 
@@ -27,10 +26,6 @@ fuchsia::cobalt::Status ToCobaltStatus(util::Status s);
 // Reads the PEM file at the specified path and returns the contents as
 // a string. CHECK fails if the file cannot be read.
 std::string ReadPublicKeyPem(const std::string& pem_file_path);
-
-// Reads and parses the cobalt API key from the config_data. If it cannot be
-// found, return the default API key.
-std::string ReadApiKeyOrDefault();
 
 }  // namespace cobalt
 
