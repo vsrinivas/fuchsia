@@ -215,8 +215,8 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
-        rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\" {{solibs}} {{libs}}"
+        rspfile_content = "{{inputs}}"
         default_output_extension = ".so"
       }
       description = "SOLINK $outfile"
@@ -261,8 +261,8 @@ template("clang_toolchain") {
         rspfile_content = "{{inputs_newline}}"
         default_output_extension = ".dylib"
       } else {
-        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
-        rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\" {{solibs}} {{libs}}"
+        rspfile_content = "{{inputs}}"
         default_output_extension = ".so"
       }
       if (use_strip) {
