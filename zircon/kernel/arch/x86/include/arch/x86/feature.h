@@ -345,6 +345,11 @@ static inline bool x86_get_disable_spec_mitigations(void) {
   return g_disable_spec_mitigations;
 }
 
+static inline bool x86_cpu_should_ibpb_on_ctxt_switch(void) {
+  extern bool g_should_ibpb_on_ctxt_switch;
+  return g_should_ibpb_on_ctxt_switch;
+}
+
 static inline bool x86_cpu_should_mitigate_ssb(void) {
   extern bool g_ssb_mitigated;
   return g_ssb_mitigated;
@@ -374,6 +379,7 @@ bool x86_intel_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 bool x86_amd_cpu_has_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_intel_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
 void x86_amd_cpu_set_ssbd(const cpu_id::CpuId* cpuid, MsrAccess* msr);
+void x86_cpu_ibpb(MsrAccess* msr);
 #endif
 uint32_t x86_amd_get_patch_level(void);
 uint32_t x86_intel_get_patch_level(void);

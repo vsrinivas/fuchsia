@@ -17,6 +17,7 @@
 #include <arch/x86/descriptor.h>
 #include <arch/x86/feature.h>
 #include <arch/x86/mp.h>
+#include <arch/x86/platform_access.h>
 #include <arch/x86/registers.h>
 #include <arch/x86/x86intrin.h>
 #include <kernel/spinlock.h>
@@ -159,6 +160,12 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
   oldthread->arch.unsafe_sp = x86_read_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET);
   x86_write_gs_offset64(ZX_TLS_UNSAFE_SP_OFFSET, newthread->arch.unsafe_sp);
 #endif
+
+  // Flush Indirect Branch Predictor State if we are switching processes.
+  if (oldthread->aspace != newthread->aspace && x86_cpu_should_ibpb_on_ctxt_switch()) {
+    MsrAccess msr;
+    x86_cpu_ibpb(&msr);
+  }
 
   x86_64_context_switch(&oldthread->arch.sp, newthread->arch.sp);
 }

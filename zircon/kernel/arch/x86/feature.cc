@@ -50,6 +50,7 @@ bool g_ssb_mitigated;
 bool g_has_md_clear;
 bool g_md_clear_on_user_return;
 bool g_has_ibpb;
+bool g_should_ibpb_on_ctxt_switch;
 // True if we should disable all speculative execution mitigations.
 bool g_disable_spec_mitigations;
 
@@ -182,6 +183,12 @@ void x86_feature_init(void) {
     g_has_ssbd = x86_amd_cpu_has_ssbd(&cpuid, &msr);
     g_has_ibpb = cpuid.ReadFeatures().HasFeature(cpu_id::Features::AMD_IBPB);
   }
+  // TODO(fxb/33667, fxb/12150): Consider whether a process can opt-out of an IBPB on switch,
+  // either on switch-in (ex: its compiled with a retpoline) or switch-out (ex: it promises
+  // not to attack the next process).
+  // TODO(fxb/33667, fxb/12150): Should we have an individual knob for IBPB?
+  g_should_ibpb_on_ctxt_switch = (x86_get_disable_spec_mitigations() == false) && g_has_ibpb;
+
   g_ssb_mitigated = (x86_get_disable_spec_mitigations() == false) && g_has_ssb && g_has_ssbd &&
                     gCmdline.GetBool("kernel.x86.spec_store_bypass_disable",
                                      /*default_value=*/false);
@@ -407,6 +414,8 @@ void x86_feature_debug(void) {
     printf("ibpb ");
   if (g_l1d_flush_on_vmentry)
     printf("l1d_flush_on_vmentry ");
+  if (g_should_ibpb_on_ctxt_switch)
+    printf("ibpb_ctxt_switch ");
   printf("\n");
 }
 
