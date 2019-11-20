@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
 
 #include <zircon/syscalls/log.h>
 

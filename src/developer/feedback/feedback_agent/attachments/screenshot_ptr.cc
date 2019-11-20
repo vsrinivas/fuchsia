@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "src/developer/feedback/feedback_agent/screenshot_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 
 #include <lib/async/cpp/task.h>
 #include <zircon/errors.h>

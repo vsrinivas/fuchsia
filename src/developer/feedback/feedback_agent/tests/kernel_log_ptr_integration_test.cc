@@ -16,7 +16,7 @@
 #include <memory>
 #include <vector>
 
-#include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"

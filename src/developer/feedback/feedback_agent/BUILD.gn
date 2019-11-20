@@ -124,48 +124,34 @@ source_set("data_provider_src") {
     "data_provider.h",
     "image_conversion.cc",
     "image_conversion.h",
-    "inspect_ptr.cc",
-    "inspect_ptr.h",
-    "kernel_log_ptr.cc",
-    "kernel_log_ptr.h",
     "ref_counted_delayed_task.cc",
     "ref_counted_delayed_task.h",
-    "screenshot_ptr.cc",
-    "screenshot_ptr.h",
-    "system_log_ptr.cc",
-    "system_log_ptr.h",
   ]
 
   public_deps = [
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.images",
-    "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/lib/sys/cpp",
-    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
-    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-boot",
     "//zircon/system/fidl/fuchsia-mem",
   ]
 
   deps = [
     ":constants",
     "//garnet/public/lib/fostr/fidl/fuchsia.images",
-    "//sdk/lib/fidl/cpp",
+    "//sdk/fidl/fuchsia.ui.scenic",
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
+    "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/utils:archive",
+    "//src/lib/files",
     "//src/lib/fsl",
-    "//src/lib/inspect_deprecated/query",
-    "//src/lib/inspect_deprecated/query:json_formatter",
     "//src/lib/syslog/cpp",
     "//third_party/libpng",
     "//third_party/rapidjson",
-    "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/fdio",
-    "//zircon/public/lib/fit",
-    "//zircon/system/fidl/fuchsia-logger",
   ]
 }
 

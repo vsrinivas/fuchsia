@@ -13,10 +13,10 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/feedback_agent/attachments/inspect_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/kernel_log_ptr.h"
+#include "src/developer/feedback/feedback_agent/attachments/system_log_ptr.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
-#include "src/developer/feedback/feedback_agent/inspect_ptr.h"
-#include "src/developer/feedback/feedback_agent/kernel_log_ptr.h"
-#include "src/developer/feedback/feedback_agent/system_log_ptr.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"

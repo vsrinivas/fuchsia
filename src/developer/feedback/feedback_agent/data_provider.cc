@@ -16,9 +16,9 @@
 
 #include "src/developer/feedback/feedback_agent/annotations.h"
 #include "src/developer/feedback/feedback_agent/attachments.h"
+#include "src/developer/feedback/feedback_agent/attachments/screenshot_ptr.h"
 #include "src/developer/feedback/feedback_agent/config.h"
 #include "src/developer/feedback/feedback_agent/image_conversion.h"
-#include "src/developer/feedback/feedback_agent/screenshot_ptr.h"
 #include "src/lib/files/file.h"
 #include "src/lib/syslog/cpp/logger.h"
 

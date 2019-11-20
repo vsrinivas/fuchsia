@@ -1,0 +1,40 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("attachment_providers") {
+  sources = [
+    "inspect_ptr.cc",
+    "inspect_ptr.h",
+    "kernel_log_ptr.cc",
+    "kernel_log_ptr.h",
+    "screenshot_ptr.cc",
+    "screenshot_ptr.h",
+    "system_log_ptr.cc",
+    "system_log_ptr.h",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.images",
+    "//sdk/fidl/fuchsia.ui.scenic",
+    "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-boot",
+    "//zircon/system/fidl/fuchsia-logger",
+    "//zircon/system/fidl/fuchsia-mem",
+  ]
+
+  deps = [
+    "//src/developer/feedback/feedback_agent:constants",
+    "//src/lib/fsl",
+    "//src/lib/inspect_deprecated/query",
+    "//src/lib/inspect_deprecated/query:json_formatter",
+    "//src/lib/syslog/cpp",
+    "//third_party/rapidjson",
+  ]
+}
