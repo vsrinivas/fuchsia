@@ -24,7 +24,7 @@ TEST(ConfigTest, Empty) {
   EXPECT_TRUE(files::DeletePath(kTestDir, true));
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
   auto envs = config_data.GetBackendEnvironments();
@@ -40,7 +40,7 @@ TEST(ConfigTest, OneValidFile) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("cobalt_environment", "PROD"));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "prod"));
   auto envs = config_data.GetBackendEnvironments();
@@ -56,7 +56,7 @@ TEST(ConfigTest, OneInvalidFile) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("cobalt_environment", "INVALID"));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
   auto envs = config_data.GetBackendEnvironments();
@@ -72,7 +72,7 @@ TEST(ConfigTest, MultipleBackends) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("cobalt_environment", "DEVEL_AND_PROD"));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_TRUE(absl::StrContains(config_data.AnalyzerPublicKeyPath(), "devel"));
   auto envs = config_data.GetBackendEnvironments();
@@ -88,7 +88,7 @@ TEST(ConfigTest, ReleaseStagePathGA) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("release_stage", "GA"));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_EQ(cobalt::ReleaseStage::GA, config_data.GetReleaseStage());
 }
@@ -98,7 +98,7 @@ TEST(ConfigTest, ReleaseStagePathDEBUG) {
   EXPECT_TRUE(files::CreateDirectory(kTestDir));
   EXPECT_TRUE(WriteFile("release_stage", "DEBUG"));
 
-  FuchsiaConfigurationData config_data(kTestDir);
+  FuchsiaConfigurationData config_data(kTestDir, kTestDir);
 
   EXPECT_EQ(cobalt::ReleaseStage::DEBUG, config_data.GetReleaseStage());
 }

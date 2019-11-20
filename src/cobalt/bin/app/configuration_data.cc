@@ -14,11 +14,13 @@
 
 namespace cobalt {
 
-const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/pkg/data";
+const char FuchsiaConfigurationData::kDefaultEnvironmentDir[] = "/pkg/data";
+
 constexpr char kCobaltEnvironmentFile[] = "cobalt_environment";
 // TODO(camrdale): change the default to PROD once its pipeline is working.
 const config::Environment kDefaultEnvironment = config::Environment::DEVEL;
 
+const char FuchsiaConfigurationData::kDefaultConfigDir[] = "/config/data";
 constexpr char kReleaseStageFile[] = "release_stage";
 const cobalt::ReleaseStage kDefaultReleaseStage = cobalt::ReleaseStage::GA;
 
@@ -28,8 +30,8 @@ constexpr char kAnalyzerProdTinkPublicKeyPath[] = "/pkg/data/keys/analyzer_prod_
 constexpr char kShufflerProdTinkPublicKeyPath[] = "/pkg/data/keys/shuffler_prod_public";
 
 // Parse the cobalt environment value from the config data.
-std::vector<config::Environment> LookupCobaltEnvironment(const std::string& config_dir) {
-  auto environment_path = files::JoinPath(config_dir, kCobaltEnvironmentFile);
+std::vector<config::Environment> LookupCobaltEnvironment(const std::string& environment_dir) {
+  auto environment_path = files::JoinPath(environment_dir, kCobaltEnvironmentFile);
   std::string cobalt_environment;
   if (files::ReadFileToString(environment_path, &cobalt_environment)) {
     FX_LOGS(INFO) << "Loaded Cobalt environment from config file " << environment_path << ": "
@@ -79,8 +81,9 @@ cobalt::ReleaseStage LookupReleaseStage(const std::string& config_dir) {
   }
 }
 
-FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir) {
-  for (const auto& environment : LookupCobaltEnvironment(config_dir)) {
+FuchsiaConfigurationData::FuchsiaConfigurationData(const std::string& config_dir,
+                                                   const std::string& environment_dir) {
+  for (const auto& environment : LookupCobaltEnvironment(environment_dir)) {
     backend_configurations_.emplace(environment, environment);
   }
   release_stage_ = LookupReleaseStage(config_dir);

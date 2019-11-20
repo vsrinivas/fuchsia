@@ -18,7 +18,8 @@ namespace cobalt {
 // Encapsulation of the configuration data used by Cobalt in Fuchsia.
 class FuchsiaConfigurationData {
  public:
-  explicit FuchsiaConfigurationData(const std::string& config_dir = kDefaultConfigDir);
+  explicit FuchsiaConfigurationData(const std::string& config_dir = kDefaultConfigDir,
+                                    const std::string& environment_dir = kDefaultEnvironmentDir);
 
   // Get the (possibly multiple) backend environments to write to.
   std::vector<config::Environment> GetBackendEnvironments() const;
@@ -36,6 +37,7 @@ class FuchsiaConfigurationData {
 
  private:
   static const char kDefaultConfigDir[];
+  static const char kDefaultEnvironmentDir[];
   std::map<config::Environment, const config::ConfigurationData> backend_configurations_;
   cobalt::ReleaseStage release_stage_;
 };
