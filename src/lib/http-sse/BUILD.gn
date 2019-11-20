@@ -1,0 +1,42 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+rustc_library("http_sse") {
+  version = "0.1.0"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:matches",
+    "//third_party/rust_crates:proptest",
+  ]
+}
+
+test_package("rust-http-sse-tests") {
+  deps = [
+    ":http_sse_test",
+  ]
+
+  tests = [
+    {
+      name = "http_sse_lib_test"
+      dest = "http-sse-lib-test"
+      environments = basic_envs
+    },
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":rust-http-sse-tests",
+  ]
+}
