@@ -3,27 +3,26 @@
 // found in the LICENSE file.
 
 import 'dart:convert';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_localizations/flutter_localizations.dart';
 
 import 'package:fidl_fuchsia_intl/fidl_async.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fuchsia_internationalization_flutter/internationalization.dart';
 import 'package:fuchsia_logger/logger.dart';
 import 'package:fuchsia_modular/module.dart' as modular;
-import 'package:fuchsia_services/services.dart';
+import 'package:fuchsia_services/services.dart' show StartupContext;
 import 'package:internationalization/localizations_delegate.dart'
     as localizations;
 import 'package:internationalization/supported_locales.dart'
     as supported_locales;
 import 'package:intl/intl.dart';
-import 'package:simple_browser/src/models/tabs_action.dart';
-import 'package:simple_browser/src/models/webpage_action.dart';
-import 'package:webview/webview.dart';
 
 import 'app.dart';
+import 'create_web_context.dart';
 import 'src/blocs/tabs_bloc.dart';
 import 'src/blocs/webpage_bloc.dart';
+import 'src/models/tabs_action.dart';
+import 'src/models/webpage_action.dart';
 
 class RootIntentHandler extends modular.IntentHandler {
   final TabsBloc<WebPageBloc> tabsBloc;
@@ -47,16 +46,17 @@ class RootIntentHandler extends modular.IntentHandler {
 
 void main() {
   setupLogger(name: 'Browser');
-  final _context = ChromiumWebView.createContext();
+  final _context = createWebContext();
 
   // Bind |tabsBloc| here so that it can be referenced in the TabsBloc
   // constructor arguments.
   TabsBloc<WebPageBloc> tabsBloc;
   tabsBloc = TabsBloc(
     tabFactory: () => WebPageBloc(
-        context: _context,
-        popupHandler: (tab) =>
-            tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab))),
+      context: _context,
+      popupHandler: (tab) =>
+          tabsBloc.request.add(AddTabAction<WebPageBloc>(tab: tab)),
+    ),
     disposeTab: (tab) {
       tab.dispose();
     },

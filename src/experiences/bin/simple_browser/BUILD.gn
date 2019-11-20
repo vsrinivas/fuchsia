@@ -39,7 +39,6 @@ flutter_app("simple_browser") {
     "//topaz/public/dart/fuchsia_scenic_flutter",
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
-    "//topaz/public/lib/webview",
   ]
 }
 
