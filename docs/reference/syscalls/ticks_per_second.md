@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Read the number of high-precision timer ticks in a second.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -29,7 +29,7 @@ this value is guaranteed not to change.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -59,6 +59,6 @@ double elapsed_seconds = (ticks_end - ticks_start) / (double)ticks_per_second;
 
  - [`zx_ticks_get()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_ticks_get()`]: ticks_get.md

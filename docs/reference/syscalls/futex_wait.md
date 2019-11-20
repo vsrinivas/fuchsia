@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Wait on a futex.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -52,7 +52,7 @@ details.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 None.
 
@@ -79,7 +79,7 @@ None.
  - [`zx_futex_requeue()`]
  - [`zx_futex_wake()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_futex_requeue()`]: futex_requeue.md
 [`zx_futex_wake()`]: futex_wake.md

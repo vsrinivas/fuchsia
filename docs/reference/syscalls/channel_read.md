@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Read a message from a channel.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -50,7 +50,7 @@ and rights are validated against the expected values.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_CHANNEL** and have **ZX_RIGHT_READ**.
 
@@ -99,7 +99,7 @@ set, then the message is discarded.
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_channel_call()`]: channel_call.md
 [`zx_channel_create()`]: channel_create.md

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Query information about an object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -737,7 +737,7 @@ typedef struct zx_info_bti {
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 If *topic* is **ZX_INFO_PROCESS**, *handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_INSPECT**.
 
@@ -847,7 +847,7 @@ void examine_threads(zx_handle_t proc) {
  - [`zx_handle_replace()`]
  - [`zx_object_get_child()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_channel_call()`]: channel_call.md
 [`zx_futex_wait()`]: futex_wait.md

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Destroys an interrupt object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -35,7 +35,7 @@ that the packet has been read but the interrupt has not been re-armed by calling
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -65,7 +65,7 @@ being waited for.
  - [`zx_interrupt_wait()`]
  - [`zx_port_wait()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_handle_close()`]: handle_close.md
 [`zx_interrupt_ack()`]: interrupt_ack.md

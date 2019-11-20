@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Unmap virtual memory pages.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -29,7 +29,7 @@ unmapped.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -59,7 +59,7 @@ or the requested range partially overlaps a sub-region.
  - [`zx_vmar_map()`]
  - [`zx_vmar_protect()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_vmar_allocate()`]: vmar_allocate.md
 [`zx_vmar_destroy()`]: vmar_destroy.md

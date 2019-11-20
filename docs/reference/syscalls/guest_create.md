@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create a guest.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -48,7 +48,7 @@ See [`zx_vmo_create()`] for the set of rights applied to *vmar_handle*.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *resource* must have resource kind **ZX_RSRC_KIND_HYPERVISOR**.
 
@@ -81,7 +81,7 @@ In a future build this error will no longer occur.
  - [`zx_vmar_map()`]
  - [`zx_vmo_create()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_guest_set_trap()`]: guest_set_trap.md
 [`zx_vcpu_create()`]: vcpu_create.md

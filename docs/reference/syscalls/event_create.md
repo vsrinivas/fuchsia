@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create an event.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -27,7 +27,7 @@ rights](/docs/concepts/kernel/rights.md#zx_rights_basic) plus **ZX_RIGHT_SIGNAL*
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -55,7 +55,7 @@ In a future build this error will no longer occur.
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_eventpair_create()`]: eventpair_create.md
 [`zx_handle_close()`]: handle_close.md

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Kill the provided task (job, process, or thread).
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -38,7 +38,7 @@ Processes and Jobs can also be killed by other agents such as the Job policy wit
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must have **ZX_RIGHT_DESTROY**.
 
@@ -61,7 +61,7 @@ right.
  - [`zx_job_create()`]
  - [`zx_process_create()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_job_create()`]: job_create.md
 [`zx_object_get_info()`]: object_get_info.md

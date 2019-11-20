@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create a resource object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -68,7 +68,7 @@ object with [`zx_object_get_info()`] and **ZX_RIGHT_WRITE** which is checked by
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *parent_rsrc* must be of type **ZX_OBJ_TYPE_RESOURCE** and have **ZX_RIGHT_WRITE**.
 
@@ -97,7 +97,7 @@ longer occur.
  - [`zx_ioports_request()`]
  - [`zx_vmo_create_physical()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_channel_write()`]: channel_write.md
 [`zx_handle_close()`]: handle_close.md

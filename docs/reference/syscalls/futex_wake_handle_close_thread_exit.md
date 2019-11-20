@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Write to futex, wake futex, close handle, exit.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -38,7 +38,7 @@ If any of the operations fail, then the thread takes a trap (as if by `__builtin
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -72,7 +72,7 @@ is used for detached threads.
  - [`zx_thread_exit()`]
  - [`zx_vmar_unmap_handle_close_thread_exit()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_futex_wake()`]: futex_wake.md
 [`zx_handle_close()`]: handle_close.md

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Read the current size of a VMO object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -22,7 +22,7 @@ zx_status_t zx_vmo_get_size(zx_handle_t handle, uint64_t* size);
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 TODO(ZX-2399)
 
@@ -48,7 +48,7 @@ of failure, a negative error value is returned.
  - [`zx_vmo_set_size()`]
  - [`zx_vmo_write()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_vmo_create()`]: vmo_create.md
 [`zx_vmo_create_child()`]: vmo_create_child.md

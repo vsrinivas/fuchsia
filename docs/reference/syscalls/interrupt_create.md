@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create an interrupt object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -50,7 +50,7 @@ Interrupts cannot be waited on with the `zx_object_wait_` family of calls.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *src_obj* must have resource kind **ZX_RSRC_KIND_IRQ**.
 
@@ -83,7 +83,7 @@ In a future build this error will no longer occur.
  - [`zx_interrupt_wait()`]
  - [`zx_port_wait()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_channel_write()`]: channel_write.md
 [`zx_handle_close()`]: handle_close.md

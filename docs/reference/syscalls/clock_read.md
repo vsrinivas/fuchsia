@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Perform a basic read of the clock.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -18,7 +18,7 @@ zx_status_t zx_clock_read(zx_handle_t handle, zx_time_t* now);
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_CLOCK** and have **ZX_RIGHT_READ**.
 
@@ -46,7 +46,7 @@ On success, returns **ZX_OK** along with the clock's current time in the *now* o
  - [`zx_clock_get_details()`]
  - [`zx_clock_update()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_clock_create()`]: clock_create.md
 [`zx_clock_get_details()`]: clock_get_details.md

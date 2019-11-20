@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create a pager owned vmo.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -65,7 +65,7 @@ If *pager* is closed, then no more packets will be delivered to *port* (includin
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *pager* must be of type **ZX_OBJ_TYPE_PAGER**.
 
@@ -96,7 +96,7 @@ If *pager* is closed, then no more packets will be delivered to *port* (includin
  - [`zx_pager_supply_pages()`]
  - [`zx_port_wait()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_pager_detach_vmo()`]: pager_detach_vmo.md
 [`zx_pager_supply_pages()`]: pager_supply_pages.md

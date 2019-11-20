@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
-Perform an operation on all VMOs mapped into part of a VMAR.
+Perform an operation on VMOs mapped into this VMAR.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -25,7 +25,7 @@ zx_status_t zx_vmar_op_range(zx_handle_t handle,
 
 `zx_vmo_op_range()` performs operation *op* on VMOs mapped in the range *address* to *address*+*size*.
 
-*address* and *size* must fall entirely within this VMARR, and must meet the alignment requirements specified for *op* by [`zx_vmo_op_range()`].
+*address* and *size* must fall entirely within this VMAR, and must meet the alignment requirements specified for *op* by [`zx_vmo_op_range()`].
 
 *buffer* and *buffer_size* are currently unused, and must be empty
 
@@ -37,9 +37,9 @@ The operation's semantics are otherwise as described by [`zx_vmo_op_range()`].
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
-If *op* is **ZX_VMO_OP_DECOMMIT**, *handle* must be of type **ZX_OBJ_TYPE_VMAR** and have **ZX_RIGHT_WRITE**.
+If *op* is **ZX_VMO_OP_DECOMMIT**, affected mappings must be writable.
 
 ## RETURN VALUE
 
@@ -67,8 +67,8 @@ If *op* is **ZX_VMO_OP_DECOMMIT**, *handle* must be of type **ZX_OBJ_TYPE_VMAR**
  - [`zx_vmar_unmap()`]
  - [`zx_vmo_op_range()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_vmar_map()`]: vmar_map.md
-[`zx_vmar_unmap`]: vmar_unmap.md
+[`zx_vmar_unmap()`]: vmar_unmap.md
 [`zx_vmo_op_range()`]: vmo_op_range.md

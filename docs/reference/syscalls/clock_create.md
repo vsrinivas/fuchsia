@@ -2,23 +2,25 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Create a new clock object.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
 
-zx_status_t zx_clock_create(uint64_t options, const void* args, zx_handle_t* out);
+zx_status_t zx_clock_create(uint64_t options,
+                            const void* args,
+                            zx_handle_t* out);
 ```
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 None.
 
@@ -95,7 +97,7 @@ and **ZX_RIGHT_WRITE** rights assigned to them.
  - [`zx_clock_read()`]
  - [`zx_clock_update()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_clock_get_details()`]: clock_get_details.md
 [`zx_clock_read()`]: clock_read.md

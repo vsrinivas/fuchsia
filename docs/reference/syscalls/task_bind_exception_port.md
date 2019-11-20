@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -51,7 +51,7 @@ bound *port* when it is unbound. Exception processing will continue as if
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *port* must be of type **ZX_OBJ_TYPE_PORT**.
 
@@ -87,7 +87,7 @@ In a future build this error will no longer occur.
  - [`zx_port_wait()`]
  - [`zx_task_resume_from_exception()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_port_create()`]: port_create.md
 [`zx_port_wait()`]: port_wait.md

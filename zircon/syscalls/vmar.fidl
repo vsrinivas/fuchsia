@@ -46,7 +46,7 @@ protocol vmar {
     [Blocking]
     vmar_op_range(handle<vmar> handle,
                   uint32 op,
-                  uint64 offset,
+                  uint64 address,
                   uint64 size,
                   mutable_vector_void buffer)
         -> (status status);

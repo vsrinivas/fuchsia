@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Signal an object's peer.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -36,7 +36,7 @@ The *clear_mask* is first used to clear any bits indicated, and then the
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must have **ZX_RIGHT_SIGNAL_PEER**.
 
@@ -62,7 +62,7 @@ failure, a negative error value is returned.
  - [`zx_eventpair_create()`]
  - [`zx_object_signal()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_event_create()`]: event_create.md
 [`zx_eventpair_create()`]: eventpair_create.md

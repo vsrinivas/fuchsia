@@ -6,12 +6,14 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 """
-This tool uses the contents of the abigen-generated syscalls/definitions.json
+This tool uses the contents of the kazoo-generated syscalls/definitions.json
 to update docs/syscalls/.
 
 It is not run automatically as part of the build for now (to allow confirmation
-of what it does). So it should be run manually after updating syscalls.abigen
-and building zircon, followed by uploading the changes to docs/ as a CL.
+of what it does). So it should be run manually after updating //zircon/syscalls
+and building zircon, followed by uploading the changes to docs/ as a CL. (It
+will attempt to do a build if it appears that definitions.json is out-of-date
+with respect to the syscall fidl.)
 
 It updates the signature, synopsis, and rights annotations, and corrects some
 formatting.
@@ -26,34 +28,33 @@ import sys
 
 SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
 
-STANDARD_COMMENT = '<!-- Updated by update-docs-from-abigen, do not edit. -->'
+STANDARD_COMMENT = '<!-- Updated by update-docs-from-fidl, do not edit. -->'
 STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
 
 REFERENCES_COMMENT = \
-        '<!-- References updated by update-docs-from-abigen, do not edit. -->'
+        '<!-- References updated by update-docs-from-fidl, do not edit. -->'
 
-SYSCALLS_BANJO = os.path.normpath(
-    os.path.join(SCRIPT_DIR, os.pardir, 'system', 'public', 'zircon',
-                 'syscalls.banjo'))
+SYSCALLS_FIDL_DIR = os.path.normpath(
+    os.path.join(SCRIPT_DIR, os.pardir, 'syscalls'))
 
 
 def parse_args():
     parser = argparse.ArgumentParser(
         description=__doc__,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument(
-        '--json',
-        default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'out',
-                         'default.zircon', 'user-x64-clang', 'gen', 'kernel',
-                         'syscalls', 'zircon', 'definitions.json')),
-        help='path to abigen .json output')
-    parser.add_argument(
-        '--docroot',
-        default=os.path.normpath(
-            os.path.join(SCRIPT_DIR, os.pardir, os.pardir, 'docs', 'reference',
-                         'syscalls')),
-        help='root of syscalls/ to be updated')
+    parser.add_argument('--json',
+                        default=os.path.normpath(
+                            os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
+                                         'out', 'default.zircon',
+                                         'user-x64-clang', 'gen', 'kernel',
+                                         'syscalls', 'zircon',
+                                         'definitions.json')),
+                        help='path to kazoo .json output')
+    parser.add_argument('--docroot',
+                        default=os.path.normpath(
+                            os.path.join(SCRIPT_DIR, os.pardir, os.pardir,
+                                         'docs', 'reference', 'syscalls')),
+                        help='root of syscalls/ to be updated')
     parser.add_argument(
         '--generate-missing',
         default=False,
@@ -141,6 +142,10 @@ def match_sentence_form(sentence, arg_names):
         ],
         ['Every', 'entry', 'of', 'ARG', 'must', 'have', 'RIGHT', '.'],
         [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'affected', 'mappings', 'must',
+            'be', 'writable', '.'
+        ],
+        [
             'Every', 'entry', 'of', 'ARG', 'must', 'have', 'a',
             'WAITITEMMEMBER', 'field', 'with', 'RIGHT', '.'
         ],
@@ -204,6 +209,7 @@ def match_sentence_form(sentence, arg_names):
         'ZX_OBJ_TYPE_SUSPEND_TOKEN',
         'ZX_OBJ_TYPE_PAGER',
         'ZX_OBJ_TYPE_EXCEPTION',
+        'ZX_OBJ_TYPE_CLOCK',
     ])
 
     all_rsrcs = set([
@@ -331,8 +337,8 @@ def update_rights(lines, syscall_data, warn):
 def make_name_block(syscall_data, warn):
     desc = ''
     for x in syscall_data['top_description']:
-        # TODO(scottmg): This is gross, we should change the abigen parser to
-        # give us a string instead of tokens.
+        # TODO(scottmg): This is gross, we should change the output to give us a
+        # string instead of tokens.
         if x in (',', '.', '-', '/', '\'', ')'):
             desc += x
         else:
@@ -481,7 +487,7 @@ TODO(fxbug.dev/32938)
 
 def check_for_orphans(syscalls, root):
     """Checks for any .md files that have been orphaned (no longer have an
-    associated abigen entry.)
+    associated syscalls file entry.)
     """
     orphan_count = 0
     names = set([x['name'] for x in syscalls])
@@ -501,10 +507,12 @@ def check_for_orphans(syscalls, root):
 
 # A few concept docs that are linked in SEE ALSO sections.
 SEE_ALSO_CONCEPTS = {
-    'rights': '/docs/zircon/rights.md',
-    'exceptions': '/docs/zircon/exceptions.md',
-    'futex objects': '/docs/zircon/objects/futex.md',
-    'timer slack': '/docs/zircon/timer_slack.md'
+    'clock transformations': '/docs/concepts/objects/clock_transformations.md',
+    'clocks': '/docs/concepts/objects/clock.md',
+    'exceptions': '/docs/concepts/kernel/exceptions.md',
+    'futex objects': '/docs/concepts/objects/futex.md',
+    'rights': '/docs/concepts/kernel/rights.md',
+    'timer slack': '/docs/concepts/objects/timer_slack.md',
 }
 
 
@@ -583,10 +591,11 @@ def update_syscall_references(lines, syscall, all_syscall_names, warn):
         for sc in all_syscall_names:
             # Look for **zx_stuff()** and [`zx_stuff()`], with both "zx_" and
             # the () being optional.
-            SYSCALL_RE[sc] = re.compile(
-                r'\*{2}(?:zx_)?' + sc + r'(?:\(\))?\*{2}(?:\(\))?'
-                r'|'
-                r'(?:\[)`(?:zx_)?' + sc + r'(?:\(\))?`(?:\])?(\(\))?')
+            SYSCALL_RE[sc] = re.compile(r'\*{2}(?:zx_)?' + sc +
+                                        r'(?:\(\))?\*{2}(?:\(\))?'
+                                        r'|'
+                                        r'(?:\[)`(?:zx_)?' + sc +
+                                        r'(?:\(\))?`(?:\])?(\(\))?')
 
     referred_to = set()
     for sc in all_syscall_names:
@@ -616,9 +625,9 @@ def update_syscall_references(lines, syscall, all_syscall_names, warn):
         lines[:] = lines[:-3]
 
 
-def build_if_out_of_date(abigen, json):
-    """If the json file appears out-of-date relative to syscalls.abigen, then
-    run a zircon build to get the definitions updated.
+def build_if_out_of_date(syscalls_dir, json):
+    """If the json file appears out-of-date relative to any files in the
+    syscalls dir, then run a zircon build to get the definitions updated.
     """
 
     def is_up_to_date(input, output):
@@ -629,21 +638,28 @@ def build_if_out_of_date(abigen, json):
         output_time = os.path.getmtime(output)
         return output_time >= input_time
 
-    if not is_up_to_date(abigen, json):
-        print('%s out of date vs %s, running `fx build`\n'
-              'This will only work if using out/default and configured for x64.'
-              % (json, abigen))
-        subprocess.check_call(['fx', 'build'])
-        if not is_up_to_date(abigen, json):
-            print '%s still out of date relative to %s!' % (json, abigen)
-            raise SystemExit()
+    for f in os.listdir(syscalls_dir):
+        if not f.endswith('.fidl'):
+            continue
+        syscall = os.path.join(syscalls_dir, f)
+        if not os.path.isfile(syscall):
+            continue
+        if not is_up_to_date(syscall, json):
+            print('%s out of date vs %s, running `fx build`\n'
+                  'This will only work if using out/default and configured'
+                  ' for x64.' % (json, syscall))
+            subprocess.check_call(['fx', 'build', '-C', 'out/default.zircon'])
+            if not is_up_to_date(syscall, json):
+                print '%s still out of date relative to %s!' % (json, syscall)
+                raise SystemExit()
+            break
 
 
 def main():
     args = parse_args()
     inf = os.path.relpath(args.json)
     outf = os.path.relpath(args.docroot)
-    build_if_out_of_date(os.path.relpath(SYSCALLS_BANJO), args.json)
+    build_if_out_of_date(os.path.relpath(SYSCALLS_FIDL_DIR), args.json)
     print 'using %s as input and updating %s...' % (inf, outf)
     data = json.loads(open(inf, 'rb').read())
     missing_count = 0

@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Start execution on a thread.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -52,7 +52,7 @@ the function will cause an architecture / toolchain specific exception.
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 *handle* must be of type **ZX_OBJ_TYPE_THREAD** and have **ZX_RIGHT_MANAGE_THREAD**.
 
@@ -84,7 +84,7 @@ is part of is no longer alive.
  - [`zx_thread_exit()`]
  - [`zx_vmar_unmap_handle_close_thread_exit()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_futex_wake_handle_close_thread_exit()`]: futex_wake_handle_close_thread_exit.md
 [`zx_handle_close()`]: handle_close.md

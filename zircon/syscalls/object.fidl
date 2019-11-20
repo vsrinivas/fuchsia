@@ -83,8 +83,8 @@ protocol object {
     object_get_info(handle handle, uint32 topic)
         -> (status status, vector_void buffer, optional_usize actual, optional_usize avail);
 
-    /// Given a kernel object with children objects, obtain a handle to the child specified by the
-    /// provided kernel object id. Rights: handle must have ZX_RIGHT_ENUMERATE.
+    /// Given a kernel object with children objects, obtain a handle to the child specified by the provided kernel object id.
+    /// Rights: handle must have ZX_RIGHT_ENUMERATE.
     object_get_child(handle handle, uint64 koid, rights rights) -> (status status, handle out);
 
     /// Apply a scheduling profile to a thread.

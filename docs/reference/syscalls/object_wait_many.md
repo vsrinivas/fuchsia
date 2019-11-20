@@ -2,13 +2,13 @@
 
 ## NAME
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Wait for signals on multiple objects.
 
 ## SYNOPSIS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 ```c
 #include <zircon/syscalls.h>
@@ -55,7 +55,7 @@ which is 8.  To wait on more things at once use [Ports](/docs/concepts/objects/p
 
 ## RIGHTS
 
-<!-- Updated by update-docs-from-abigen, do not edit. -->
+<!-- Updated by update-docs-from-fidl, do not edit. -->
 
 Every entry of *items* must have a *handle* field with **ZX_RIGHT_WAIT**.
 
@@ -107,7 +107,7 @@ In a future build this error will no longer occur.
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]
 
-<!-- References updated by update-docs-from-abigen, do not edit. -->
+<!-- References updated by update-docs-from-fidl, do not edit. -->
 
 [`zx_object_wait_async()`]: object_wait_async.md
 [`zx_object_wait_one()`]: object_wait_one.md

@@ -45,7 +45,7 @@ protocol clock {
     /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_READ.
     clock_get_details(handle handle, uint64 options) -> (status status, voidptr details);
 
-    /// Make adjustments to the clock.
+    /// Make adjustments to a clock object.
     /// Rights: handle must be of type ZX_OBJ_TYPE_CLOCK and have ZX_RIGHT_WRITE.
     clock_update(handle handle, uint64 options, const_voidptr args) -> (status status);
 };
