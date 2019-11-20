@@ -13,7 +13,7 @@ fx ninja -C out/default.zircon \
   host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
 
-out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug
+out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo-test.debug --gtest_break_on_failure
 
 out/default.zircon/host-x64-linux-clang/obj/tools/fidl/fidlc \
       --json /tmp/syscalls.json \
@@ -24,6 +24,11 @@ mkdir -p /tmp/kazoo-output
 out/default.zircon/host-x64-linux-clang/obj/tools/kazoo/kazoo.debug \
   --arm64-asm=/tmp/kazoo-output/arm64-asm.S \
   --category=/tmp/kazoo-output/syscall-category.inc \
+  --go-syscall-stubs=/tmp/kazoo-output/syscalls_fuchsia.go \
+  --go-syscall-x86-asm=/tmp/kazoo-output/syscalls_fuchsia_amd64.go \
+  --go-vdso-arm64-calls=/tmp/kazoo-output/vdso_fuchsia_arm64.s \
+  --go-vdso-keys=/tmp/kazoo-output/vdso_keys_fuchsia.go \
+  --go-vdso-x86-calls=/tmp/kazoo-output/vdso_fuchsia_amd64.s \
   --json=/tmp/kazoo-output/definitions.json \
   --kernel-branches=/tmp/kazoo-output/kernel-branches.S \
   --kernel-header=/tmp/kazoo-output/kernel-header.h \
@@ -55,16 +60,21 @@ function show_if_changed() {
 # master vs. the current work.
 if [ -d "/tmp/kazoo-previous/" ]; then
   show_if_changed "arm64-asm.S"
-  show_if_changed "syscall-category.inc"
+  show_if_changed "definitions.h"
   show_if_changed "definitions.json"
+  show_if_changed "definitions.rs"
   show_if_changed "kernel-branches.S"
   show_if_changed "kernel-header.h"
   show_if_changed "kernel-wrappers.inc"
   show_if_changed "ktrace.inc"
-  show_if_changed "definitions.rs"
+  show_if_changed "syscall-category.inc"
   show_if_changed "syscall-numbers.h"
-  show_if_changed "definitions.h"
+  show_if_changed "syscalls_fuchsia.go"
+  show_if_changed "syscalls_fuchsia_amd64.go"
   show_if_changed "vdso-definitions.h"
   show_if_changed "vdso-wrappers.inc"
+  show_if_changed "vdso_fuchsia_amd64.s"
+  show_if_changed "vdso_fuchsia_arm64.s"
+  show_if_changed "vdso_keys_fuchsia.go"
   show_if_changed "x86-asm.S"
 fi

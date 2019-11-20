@@ -36,18 +36,34 @@ extern testing::Test* g_current_test;
 
 class TestResult {
  public:
-  TestResult(bool condition, const char* error)
-      : condition_(condition), error_(error) {
+  TestResult(bool condition, const char* error) : condition_(condition), error_(error) {
     if (!condition)
       g_current_test->failed_ = true;
   }
 
+  // For _EQ so we can print both sides.
+  template <class T, class U>
+  TestResult(bool condition, const char* error, const T& left, const U& right)
+      : TestResult(condition, error) {
+    std::stringstream lss;
+    lss << left;
+    left_ = lss.str();
+
+    std::stringstream rss;
+    rss << right;
+    right_ = rss.str();
+  }
+
   operator bool() const { return condition_; }
   const char* error() const { return error_; }
+  const std::string& left() const { return left_; }
+  const std::string& right() const { return right_; }
 
  private:
   bool condition_;
   const char* error_;
+  std::string left_;
+  std::string right_;
 };
 
 class Message {
@@ -68,16 +84,25 @@ class Message {
 class AssertHelper {
  public:
   AssertHelper(const char* file, int line, const TestResult& test_result)
-      : file_(file), line_(line), error_(test_result.error()) {}
+      : file_(file),
+        line_(line),
+        error_(test_result.error()),
+        left_(test_result.left()),
+        right_(test_result.right()) {}
 
   void operator=(const Message& message) const {
     printf("\n*** FAILURE %s:%d: %s\n", file_, line_, error_);
+    if (!left_.empty() || !right_.empty()) {
+      printf("LHS:\n-----\n%s\n-----\nRHS:\n-----\n%s\n-----\n", left_.c_str(), right_.c_str());
+    }
   }
 
  private:
   const char* file_;
   int line_;
   const char* error_;
+  std::string left_;
+  std::string right_;
 };
 
 }  // namespace testing
@@ -121,45 +146,39 @@ void RegisterTest(testing::Test* (*)(), const char*);
 #define TEST_NONFATAL_FAILURE_(message) \
   ::testing::AssertHelper(__FILE__, __LINE__, message) = ::testing::Message()
 
-#define TEST_FATAL_FAILURE_(message)                            \
-  return ::testing::AssertHelper(__FILE__, __LINE__, message) = \
-             ::testing::Message()
+#define TEST_FATAL_FAILURE_(message) \
+  return ::testing::AssertHelper(__FILE__, __LINE__, message) = ::testing::Message()
 
-#define EXPECT_EQ(a, b)                                     \
-  TEST_ASSERT_(::testing::TestResult(a == b, #a " == " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_EQ(a, b)                                                                          \
+  do {                                                                                           \
+    const auto& _a = (a);                                                                        \
+    const auto& _b = (b);                                                                        \
+    TEST_ASSERT_(::testing::TestResult(_a == _b, #a " == " #b, _a, _b), TEST_NONFATAL_FAILURE_); \
+  } while (false)
 
-#define EXPECT_NE(a, b)                                     \
-  TEST_ASSERT_(::testing::TestResult(a != b, #a " != " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_NE(a, b) \
+  TEST_ASSERT_(::testing::TestResult(a != b, #a " != " #b), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_LT(a, b)                                   \
-  TEST_ASSERT_(::testing::TestResult(a < b, #a " < " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_LT(a, b) \
+  TEST_ASSERT_(::testing::TestResult(a < b, #a " < " #b), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_GT(a, b)                                   \
-  TEST_ASSERT_(::testing::TestResult(a > b, #a " > " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_GT(a, b) \
+  TEST_ASSERT_(::testing::TestResult(a > b, #a " > " #b), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_LE(a, b)                                     \
-  TEST_ASSERT_(::testing::TestResult(a <= b, #a " <= " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_LE(a, b) \
+  TEST_ASSERT_(::testing::TestResult(a <= b, #a " <= " #b), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_GE(a, b)                                     \
-  TEST_ASSERT_(::testing::TestResult(a >= b, #a " >= " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_GE(a, b) \
+  TEST_ASSERT_(::testing::TestResult(a >= b, #a " >= " #b), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_TRUE(a)                                          \
-  TEST_ASSERT_(::testing::TestResult(static_cast<bool>(a), #a), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_TRUE(a) \
+  TEST_ASSERT_(::testing::TestResult(static_cast<bool>(a), #a), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_FALSE(a)                                          \
-  TEST_ASSERT_(::testing::TestResult(!static_cast<bool>(a), #a), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_FALSE(a) \
+  TEST_ASSERT_(::testing::TestResult(!static_cast<bool>(a), #a), TEST_NONFATAL_FAILURE_)
 
-#define EXPECT_STREQ(a, b)                                                \
-  TEST_ASSERT_(::testing::TestResult(strcmp(a, b) == 0, #a " str== " #b), \
-               TEST_NONFATAL_FAILURE_)
+#define EXPECT_STREQ(a, b) \
+  TEST_ASSERT_(::testing::TestResult(strcmp(a, b) == 0, #a " str== " #b), TEST_NONFATAL_FAILURE_)
 
 #define ASSERT_EQ(a, b) \
   TEST_ASSERT_(::testing::TestResult(a == b, #a " == " #b), TEST_FATAL_FAILURE_)
@@ -167,11 +186,9 @@ void RegisterTest(testing::Test* (*)(), const char*);
 #define ASSERT_NE(a, b) \
   TEST_ASSERT_(::testing::TestResult(a != b, #a " != " #b), TEST_FATAL_FAILURE_)
 
-#define ASSERT_LT(a, b) \
-  TEST_ASSERT_(::testing::TestResult(a < b, #a " < " #b), TEST_FATAL_FAILURE_)
+#define ASSERT_LT(a, b) TEST_ASSERT_(::testing::TestResult(a < b, #a " < " #b), TEST_FATAL_FAILURE_)
 
-#define ASSERT_GT(a, b) \
-  TEST_ASSERT_(::testing::TestResult(a > b, #a " > " #b), TEST_FATAL_FAILURE_)
+#define ASSERT_GT(a, b) TEST_ASSERT_(::testing::TestResult(a > b, #a " > " #b), TEST_FATAL_FAILURE_)
 
 #define ASSERT_LE(a, b) \
   TEST_ASSERT_(::testing::TestResult(a <= b, #a " <= " #b), TEST_FATAL_FAILURE_)
@@ -179,16 +196,13 @@ void RegisterTest(testing::Test* (*)(), const char*);
 #define ASSERT_GE(a, b) \
   TEST_ASSERT_(::testing::TestResult(a >= b, #a " >= " #b), TEST_FATAL_FAILURE_)
 
-#define ASSERT_TRUE(a)                                          \
-  TEST_ASSERT_(::testing::TestResult(static_cast<bool>(a), #a), \
-               TEST_FATAL_FAILURE_)
+#define ASSERT_TRUE(a) \
+  TEST_ASSERT_(::testing::TestResult(static_cast<bool>(a), #a), TEST_FATAL_FAILURE_)
 
-#define ASSERT_FALSE(a)                                          \
-  TEST_ASSERT_(::testing::TestResult(!static_cast<bool>(a), #a), \
-               TEST_FATAL_FAILURE_)
+#define ASSERT_FALSE(a) \
+  TEST_ASSERT_(::testing::TestResult(!static_cast<bool>(a), #a), TEST_FATAL_FAILURE_)
 
-#define ASSERT_STREQ(a, b)                                                \
-  TEST_ASSERT_(::testing::TestResult(strcmp(a, b) == 0, #a " str== " #b), \
-               TEST_FATAL_FAILURE_)
+#define ASSERT_STREQ(a, b) \
+  TEST_ASSERT_(::testing::TestResult(strcmp(a, b) == 0, #a " str== " #b), TEST_FATAL_FAILURE_)
 
 #endif  // TOOLS_KAZOO_TEST_H_

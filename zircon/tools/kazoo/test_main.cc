@@ -64,12 +64,18 @@ int main(int argc, char** argv) {
   setvbuf(stdout, NULL, _IOLBF, BUFSIZ);
 
   int tests_started = 0;
+  bool break_on_failure = false;
 
   const char* test_filter = "*";
   for (int i = 1; i < argc; ++i) {
     const char kTestFilterPrefix[] = "--gtest_filter=";
     if (strncmp(argv[i], kTestFilterPrefix, strlen(kTestFilterPrefix)) == 0) {
       test_filter = &argv[i][strlen(kTestFilterPrefix)];
+    }
+
+    const char kTestBreakOnFailure[] = "--gtest_break_on_failure";
+    if (strcmp(argv[i], kTestBreakOnFailure) == 0) {
+      break_on_failure = true;
     }
   }
 
@@ -99,8 +105,12 @@ int main(int argc, char** argv) {
     test->SetUp();
     test->Run();
     test->TearDown();
-    if (test->Failed())
+    if (test->Failed()) {
       passed = false;
+      if (break_on_failure) {
+        __builtin_trap();
+      }
+    }
     delete test;
   }
 
