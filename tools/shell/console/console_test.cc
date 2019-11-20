@@ -5,6 +5,7 @@
 #include "tools/shell/console/console.h"
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <stdlib.h>
 
@@ -16,7 +17,7 @@
 
 // Sanity check test to make sure Hello World works.
 TEST(Console, Sanity) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/test_tmp"));
 

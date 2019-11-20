@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/async-loop/default.h>
 #include <lib/memfs/memfs.h>
 #include <stdlib.h>
 
@@ -53,7 +54,7 @@ TEST_F(NsTest, Utf8Decode) {
 // Sanity check test to make sure Hello World works.
 TEST_F(NsTest, ListFiles) {
   InitBuiltins("/pkg/data/fidling", "/pkg/data/lib");
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  async::Loop loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   ASSERT_EQ(loop.StartThread(), ZX_OK);
   ASSERT_EQ(ZX_OK, memfs_install_at(loop.dispatcher(), "/ns_test_tmp"));
 
