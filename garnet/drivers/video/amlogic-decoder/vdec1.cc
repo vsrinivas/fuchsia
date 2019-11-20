@@ -244,12 +244,9 @@ void Vdec1::InitializeStreamInput(bool use_parser, uint32_t buffer_address, uint
       VldMemVififoControl::Get().FromValue(0).set_upper(0x11).set_fill_on_level(true);
   if (use_parser) {
     fifo_control.set_fill_en(true).set_empty_en(true);
-    // Parser will do 64-bit endianness conversion.
-    fifo_control.set_endianness(0);
-  } else {
-    // Expect input to be in normal byte order.
-    fifo_control.set_endianness(7);
   }
+  // Expect input to be in normal byte order.
+  fifo_control.set_endianness(7);
   fifo_control.WriteTo(mmio()->dosbus);
 }
 

@@ -84,6 +84,7 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
     ParserEsControl::Get()
         .ReadFrom(owner_->mmio()->parser)
         .set_video_manual_read_ptr_update(false)
+        .set_video_write_endianness(0x7)
         .WriteTo(owner_->mmio()->parser);
 
     instance->core()->InitializeParserInput();

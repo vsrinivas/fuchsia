@@ -51,6 +51,11 @@ uint8_t GetNalUnitType(const std::vector<uint8_t>& nal_unit) {
   return *next_start & 0xf;
 }
 
+static void ValidateInputRegisters(AmlogicVideo* video) {
+  // Check that input is the correct endianness.
+  EXPECT_EQ(7u, VldMemVififoControl::Get().ReadFrom(video->mmio()->dosbus).endianness());
+}
+
 class TestH264 {
  public:
   static void Decode(bool use_parser) {
@@ -72,6 +77,7 @@ class TestH264 {
     }
     status = video->InitializeStreamBuffer(use_parser, use_parser ? PAGE_SIZE : PAGE_SIZE * 1024,
                                            /*is_secure=*/false);
+    ValidateInputRegisters(video.get());
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
     std::promise<void> second_wait_valid;

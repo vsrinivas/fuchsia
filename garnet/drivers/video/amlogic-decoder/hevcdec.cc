@@ -232,7 +232,7 @@ void HevcDec::InitializeParserInput() {
   DosGenCtrl0::Get().FromValue(0).set_vbuf_rp_select(DosGenCtrl0::kHevc).WriteTo(mmio()->dosbus);
   HevcStreamControl::Get()
       .ReadFrom(mmio()->dosbus)
-      .set_endianness(0)
+      .set_endianness(7)
       .set_use_parser_vbuf_wp(true)
       .set_stream_fetch_enable(true)
       .WriteTo(mmio()->dosbus);
@@ -275,9 +275,9 @@ uint32_t HevcDec::GetReadOffset() {
 
 zx_status_t HevcDec::InitializeInputContext(InputContext* context, bool is_secure) {
   constexpr uint32_t kInputContextSize = 4096;
-  auto create_result = InternalBuffer::Create(
-      "HevcDecInputCtx", &owner_->SysmemAllocatorSyncPtr(), owner_->bti(), kInputContextSize,
-      is_secure, /*is_writable=*/true, /*is_mapping_needed_=*/false);
+  auto create_result = InternalBuffer::Create("HevcDecInputCtx", &owner_->SysmemAllocatorSyncPtr(),
+                                              owner_->bti(), kInputContextSize, is_secure,
+                                              /*is_writable=*/true, /*is_mapping_needed_=*/false);
   if (!create_result.is_ok()) {
     LOG(ERROR, "Failed to allocate input context - status: %d", create_result.error());
     return create_result.error();
