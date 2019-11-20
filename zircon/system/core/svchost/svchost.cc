@@ -175,10 +175,11 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.tracing.provider.Registry",
     // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.controller.Controller",
-    // For amberctl over serial shell.
+    // For amberctl and pkgctl over serial shell.
     "fuchsia.pkg.PackageResolver",
     "fuchsia.pkg.RepositoryManager",
     "fuchsia.pkg.rewrite.Engine",
+    "fuchsia.update.Manager",
     nullptr,
     // clang-format on
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
