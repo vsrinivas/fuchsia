@@ -156,10 +156,10 @@ class AudioDevice : public AudioObject {
 
   // ShutdownSelf
   //
-  // Kick off the process of shooting ourselves in the head. Note: after this
-  // method is called, no new callbacks may be scheduled. When the main message
-  // loop gets our shutdown request, it completes the process by unlinking us
-  // from our AudioRenderers/AudioCapturers and calling our Cleanup.
+  // Kick off the process of shutting ourselves down. Note: after this method is
+  // called, no new callbacks may be scheduled. When the main message loop gets
+  // our shutdown request, it completes the process by unlinking us from our
+  // AudioRenderers/AudioCapturers and calling our Cleanup.
   void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain().token());
 
   // Check the shutting down flag.  We are in the process of shutting down when
