@@ -2,12 +2,12 @@
 # before making changes to this file, and add a member of the fuchsia.dev
 # team as reviewer.
 toc:
-- title: "Contributing"
+- title: "Contributing to Fuchsia"
   path: /CONTRIBUTING.md
 - title: "Code of conduct"
   path: /CODE_OF_CONDUCT.md
-- title: "Contributing patches to Zircon"
-  path: /docs/contribute/contributing.md
+- title: "Guidelines for contributing to Zircon"
+  path: /docs/contribute/guidelines_for_contributing_to_zircon.md
 - title: "Best practices"
   section:
   - include: /docs/contribute/best-practices/_toc.yaml

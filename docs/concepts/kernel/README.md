@@ -25,7 +25,8 @@ port_wait and thread sleep being the notable exceptions.
 This page is a non-comprehensive index of the zircon documentation.
 
 + [Getting Started](/docs/development/kernel/getting_started.md)
-+ [Contributing Patches](/docs/contribute/contributing.md)
++ [Contributing
+  Patches to Zircon](/docs/development/source_code/contribute_changes.md#contributing-patches-to-zircon)
 + [GN in Zircon](/docs/development/build/zircon_gn.md)
 
 + [Concepts Overview](/docs/concepts/kernel/concepts.md)

@@ -236,4 +236,4 @@ For random tips on debugging in the zircon environment see
 [debugging](/docs/development/debugging/tips.md).
 
 ## Contribute changes
-* See [contributing.md](/docs/contribute/contributing.md).
+* See [CONTRIBUTING.md](/CONTRIBUTING.md#contributing-patches-to-zircon)
