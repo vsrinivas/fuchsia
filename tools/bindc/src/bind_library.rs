@@ -77,20 +77,20 @@ fn keyword_extend(input: &str) -> IResult<&str, &str, BindParserError> {
     ws(tag("extend"))(input)
 }
 
-fn keyword_uint(input: &str) -> IResult<&str, ValueType> {
-    value(ValueType::Number, ws(tag("uint")))(input)
+fn keyword_uint(input: &str) -> IResult<&str, ValueType, BindParserError> {
+    value(ValueType::Number, ws(map_err(tag("uint"), BindParserError::Type)))(input)
 }
 
-fn keyword_string(input: &str) -> IResult<&str, ValueType> {
-    value(ValueType::Str, ws(tag("string")))(input)
+fn keyword_string(input: &str) -> IResult<&str, ValueType, BindParserError> {
+    value(ValueType::Str, ws(map_err(tag("string"), BindParserError::Type)))(input)
 }
 
-fn keyword_bool(input: &str) -> IResult<&str, ValueType> {
-    value(ValueType::Bool, ws(tag("bool")))(input)
+fn keyword_bool(input: &str) -> IResult<&str, ValueType, BindParserError> {
+    value(ValueType::Bool, ws(map_err(tag("bool"), BindParserError::Type)))(input)
 }
 
-fn keyword_enum(input: &str) -> IResult<&str, ValueType> {
-    value(ValueType::Enum, ws(tag("enum")))(input)
+fn keyword_enum(input: &str) -> IResult<&str, ValueType, BindParserError> {
+    value(ValueType::Enum, ws(map_err(tag("enum"), BindParserError::Type)))(input)
 }
 
 fn value_list<'a, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, Vec<O>, BindParserError>
@@ -98,7 +98,7 @@ where
     F: Fn(&'a str) -> IResult<&'a str, O, BindParserError>,
 {
     move |input: &'a str| {
-        let separator = || map_err(ws(tag(",")), BindParserError::ListSeparator);
+        let separator = || ws(map_err(tag(","), BindParserError::ListSeparator));
         let values = separated_nonempty_list(separator(), |s| f(s));
 
         // Lists may optionally be terminated by an additional trailing separator.
@@ -146,10 +146,8 @@ fn enum_value_list(input: &str) -> IResult<&str, Vec<Value>, BindParserError> {
 fn declaration(input: &str) -> IResult<&str, Declaration, BindParserError> {
     let (input, extends) = opt(keyword_extend)(input)?;
 
-    let (input, value_type) = map_err(
-        alt((keyword_uint, keyword_string, keyword_bool, keyword_enum)),
-        BindParserError::Type,
-    )(input)?;
+    let (input, value_type) =
+        alt((keyword_uint, keyword_string, keyword_bool, keyword_enum))(input)?;
 
     let (input, identifier) = ws(compound_identifier)(input)?;
 
@@ -166,8 +164,8 @@ fn declaration(input: &str) -> IResult<&str, Declaration, BindParserError> {
 }
 
 fn library_name(input: &str) -> IResult<&str, CompoundIdentifier, BindParserError> {
-    let keyword = map_err(ws(tag("library")), BindParserError::LibraryKeyword);
-    let terminator = map_err(ws(tag(";")), BindParserError::Semicolon);
+    let keyword = ws(map_err(tag("library"), BindParserError::LibraryKeyword));
+    let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
     delimited(keyword, ws(compound_identifier), terminator)(input)
 }
 

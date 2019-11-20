@@ -7,13 +7,14 @@ use lazy_static::lazy_static;
 use nom::{
     branch::alt,
     bytes::complete::{escaped, is_not, tag},
-    character::complete::multispace0,
-    character::complete::{char, digit1, hex_digit1, one_of},
+    character::complete::{
+        char, digit1, hex_digit1, line_ending, multispace1, not_line_ending, one_of,
+    },
     combinator::{map, map_res, opt, value},
     error::{ErrorKind, ParseError},
     multi::{many0, separated_nonempty_list},
     named, re_find_static,
-    sequence::{delimited, preceded},
+    sequence::{delimited, preceded, tuple},
     IResult,
 };
 use std::fmt;
@@ -77,6 +78,7 @@ pub enum BindParserError {
     ConditionValue(String),
     AcceptKeyword(String),
     NoStatements(String),
+    UnterminatedComment,
     Unknown(String, ErrorKind),
 }
 
@@ -122,15 +124,15 @@ pub fn compound_identifier(input: &str) -> IResult<&str, CompoundIdentifier, Bin
 }
 
 pub fn using(input: &str) -> IResult<&str, Include, BindParserError> {
-    let as_keyword = map_err(ws(tag("as")), BindParserError::AsKeyword);
+    let as_keyword = ws(map_err(tag("as"), BindParserError::AsKeyword));
     let (input, name) = compound_identifier(input)?;
     let (input, alias) = opt(preceded(as_keyword, identifier))(input)?;
     Ok((input, Include { name, alias }))
 }
 
 pub fn using_list(input: &str) -> IResult<&str, Vec<Include>, BindParserError> {
-    let using_keyword = map_err(ws(tag("using")), BindParserError::UsingKeyword);
-    let terminator = map_err(ws(tag(";")), BindParserError::Semicolon);
+    let using_keyword = ws(map_err(tag("using"), BindParserError::UsingKeyword));
+    let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
     let using = delimited(using_keyword, ws(using), terminator);
     many0(ws(using))(input)
 }
@@ -160,13 +162,50 @@ where
     }
 }
 
-// Wraps a parser |f| and discards zero or more whitespace characters before and after it.
-pub fn ws<I, O, E: ParseError<I>, F>(f: F) -> impl Fn(I) -> IResult<I, O, E>
+/// Wraps a parser |f| and discards zero or more whitespace characters or comments before and after
+/// it.
+pub fn ws<'a, O, F>(f: F) -> impl Fn(&'a str) -> IResult<&'a str, O, BindParserError>
 where
-    I: nom::InputTakeAtPosition<Item = char>,
-    F: Fn(I) -> IResult<I, O, E>,
+    F: Fn(&'a str) -> IResult<&'a str, O, BindParserError>,
 {
-    delimited(multispace0, f, multispace0)
+    let multispace = || value((), multispace1);
+    let comment_or_whitespace =
+        || many0(alt((multispace(), multiline_comment, singleline_comment)));
+    delimited(comment_or_whitespace(), f, comment_or_whitespace())
+}
+
+/// Parser that matches a multiline comment, e.g. "/* comment */". Comments may be nested.
+fn multiline_comment(input: &str) -> IResult<&str, (), BindParserError> {
+    let (input, _) = tag("/*")(input)?;
+    let mut iter = input.char_indices().peekable();
+    let mut stack = 1;
+    while let (Some((_, first)), Some((_, second))) = (iter.next(), iter.peek()) {
+        if first == '/' && *second == '*' {
+            stack += 1;
+            iter.next();
+        } else if first == '*' && *second == '/' {
+            stack -= 1;
+            iter.next();
+            if stack == 0 {
+                break;
+            }
+        }
+    }
+    if stack != 0 {
+        return Err(nom::Err::Failure(BindParserError::UnterminatedComment));
+    }
+    let remainder = if let Some((consumed, _)) = iter.peek() {
+        let (_, r) = input.split_at(*consumed);
+        r
+    } else {
+        ""
+    };
+    Ok((remainder, ()))
+}
+
+/// Parser that matches a single line comment, e.g. "// comment\n".
+fn singleline_comment(input: &str) -> IResult<&str, (), BindParserError> {
+    value((), tuple((tag("//"), not_line_ending, line_ending)))(input)
 }
 
 // Wraps a parser and replaces its error.
@@ -508,6 +547,41 @@ mod test {
         #[test]
         fn empty() {
             assert_eq!(using_list(""), Ok(("", vec![])));
+        }
+    }
+
+    mod whitespace {
+        use super::*;
+
+        #[test]
+        fn multiline_comments() {
+            assert_eq!(multiline_comment("/*one*/"), Ok(("", ())));
+            assert_eq!(multiline_comment("/*one*/two"), Ok(("two", ())));
+            assert_eq!(multiline_comment("/*one/*two*/three/*four*/five*/six"), Ok(("six", ())));
+            assert_eq!(multiline_comment("/*/*one*/*/two"), Ok(("two", ())));
+            assert_eq!(
+                multiline_comment("/*one"),
+                Err(nom::Err::Failure(BindParserError::UnterminatedComment))
+            );
+        }
+
+        #[test]
+        fn singleline_comments() {
+            assert_eq!(singleline_comment("//one\ntwo"), Ok(("two", ())));
+            assert_eq!(singleline_comment("//one\r\ntwo"), Ok(("two", ())));
+        }
+
+        #[test]
+        fn whitespace() {
+            let test = || tag("test");
+            assert_eq!(ws(test())("test"), Ok(("", "test")));
+
+            assert_eq!(ws(test())(" \n\t\r\ntest"), Ok(("", "test")));
+            assert_eq!(ws(test())("test \n\t\r\n"), Ok(("", "test")));
+
+            assert_eq!(ws(test())(" // test \n test // test \n abc"), Ok(("abc", "test")));
+
+            assert_eq!(ws(test())(" /* test */ test /* test */ abc"), Ok(("abc", "test")));
         }
     }
 }

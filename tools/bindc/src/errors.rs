@@ -103,6 +103,9 @@ impl From<BindParserError> for UserError {
                 "Bind programs must contain at least one statement.",
                 Some(span),
             ),
+            BindParserError::UnterminatedComment => {
+                UserError::new("E023", "Found an unterminated multiline comment.", None)
+            }
             BindParserError::Unknown(span, kind) => UserError::new(
                 "E022",
                 &format!(

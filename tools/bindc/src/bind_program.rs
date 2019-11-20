@@ -90,16 +90,16 @@ fn condition(input: &str) -> IResult<&str, Condition, BindParserError> {
 }
 
 fn condition_statement(input: &str) -> IResult<&str, Statement, BindParserError> {
-    let terminator = map_err(ws(tag(";")), BindParserError::Semicolon);
+    let terminator = ws(map_err(tag(";"), BindParserError::Semicolon));
     map(terminated(condition, terminator), Statement::ConditionStatement)(input)
 }
 
 fn keyword_if(input: &str) -> IResult<&str, &str, BindParserError> {
-    map_err(ws(tag("if")), BindParserError::IfKeyword)(input)
+    ws(map_err(tag("if"), BindParserError::IfKeyword))(input)
 }
 
 fn keyword_else(input: &str) -> IResult<&str, &str, BindParserError> {
-    map_err(ws(tag("else")), BindParserError::ElseKeyword)(input)
+    ws(map_err(tag("else"), BindParserError::ElseKeyword))(input)
 }
 
 fn if_statement(input: &str) -> IResult<&str, Statement, BindParserError> {
@@ -120,13 +120,13 @@ fn statement_block(input: &str) -> IResult<&str, Vec<Statement>, BindParserError
 }
 
 fn keyword_accept(input: &str) -> IResult<&str, &str, BindParserError> {
-    map_err(ws(tag("accept")), BindParserError::AcceptKeyword)(input)
+    ws(map_err(tag("accept"), BindParserError::AcceptKeyword))(input)
 }
 
 fn accept(input: &str) -> IResult<&str, Statement, BindParserError> {
     let list_start = map_err(tag("{"), BindParserError::ListStart);
     let list_end = map_err(tag("}"), BindParserError::ListEnd);
-    let separator = || map_err(ws(tag(",")), BindParserError::ListSeparator);
+    let separator = || ws(map_err(tag(","), BindParserError::ListSeparator));
 
     let values = separated_nonempty_list(separator(), ws(condition_value));
     // Lists may optionally be terminated by an additional trailing separator.
