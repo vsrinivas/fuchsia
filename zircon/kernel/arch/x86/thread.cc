@@ -162,7 +162,10 @@ __NO_SAFESTACK __attribute__((target("fsgsbase"))) void arch_context_switch(thre
 #endif
 
   // Flush Indirect Branch Predictor State if we are switching processes.
-  if (oldthread->aspace != newthread->aspace && x86_cpu_should_ibpb_on_ctxt_switch()) {
+  // Do not bother if we're switching to the kernel address space - the kernel protects
+  // itself from indirect branch predictor poisoning attacks via alternative mechanisms.
+  if (oldthread->aspace != newthread->aspace && newthread->aspace != nullptr &&
+      x86_cpu_should_ibpb_on_ctxt_switch()) {
     MsrAccess msr;
     x86_cpu_ibpb(&msr);
   }
