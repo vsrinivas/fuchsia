@@ -9,6 +9,7 @@
 #include <lib/zx/socket.h>
 #include <string.h>
 #include <unistd.h>
+#include <zircon/errors.h>
 
 #include <gtest/gtest.h>
 
@@ -100,7 +101,7 @@ TEST_F(ShebangTest, SpawnShebangRespectsNamesapce) {
   zx::process process;
   zx_status_t status = fdio_spawn(ZX_HANDLE_INVALID, FDIO_SPAWN_CLONE_ALL, path, argv,
                                   process.reset_and_get_address());
-  EXPECT_EQ(status, ZX_ERR_NOT_FOUND);
+  EXPECT_EQ(status, ZX_ERR_INTERNAL);
   EXPECT_FALSE(process.is_valid());
 }
 

@@ -118,6 +118,10 @@ test_package("fdio_spawn_tests") {
       source = rebase_path("test_bins/resolve_infinite_loop", root_build_dir)
     },
     {
+      name = "resolve_to_not_found"
+      source = rebase_path("test_bins/resolve_to_not_found", root_build_dir)
+    },
+    {
       name = "echo_arguments.sh"
       source = rebase_path("test_bins/echo_arguments.sh", root_build_dir)
     },

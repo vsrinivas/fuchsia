@@ -167,6 +167,7 @@ static zx_status_t resolve_name(const char* name, size_t name_len, zx::vmo* out_
   if (status != ZX_OK) {
     report_error(err_msg, "failed to resolve %.*s", name_len, name);
   }
+
   return status;
 }
 
@@ -644,7 +645,6 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   std::list<std::string> extra_args;
   zx::vmo executable(executable_vmo);
   executable_vmo = ZX_HANDLE_INVALID;
-  bool handle_interpreters_returned_not_found = false;
 
   memset(msg_handles, 0, sizeof(msg_handles));
 
@@ -756,7 +756,6 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job, uint32_t flags, zx_handle_t executab
   // resolve any '#!' directives that are present, updating executable and ldsvc as needed
   status = handle_interpreters(&executable, &ldsvc, &extra_args, err_msg);
   if (status != ZX_OK) {
-    handle_interpreters_returned_not_found = (status == ZX_ERR_NOT_FOUND);
     goto cleanup;
   }
   if (ldsvc.is_valid()) {
@@ -961,7 +960,7 @@ cleanup:
   // dependency of launching could not be fulfilled, but clients of spawn_etc
   // and friends could misinterpret this to mean the binary was not found.
   // Instead we remap that specific case to ZX_ERR_INTERNAL.
-  if (status == ZX_ERR_NOT_FOUND && !handle_interpreters_returned_not_found) {
+  if (status == ZX_ERR_NOT_FOUND) {
     return ZX_ERR_INTERNAL;
   }
 
