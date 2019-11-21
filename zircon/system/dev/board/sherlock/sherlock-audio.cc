@@ -8,7 +8,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/metadata/audio.h>
-#include <soc/aml-s905d2/s905d2-hiu.h>
+#include <soc/aml-meson/g12b-clk.h>
 #include <soc/aml-t931/t931-gpio.h>
 #include <soc/aml-t931/t931-hw.h>
 
@@ -151,22 +151,27 @@ zx_status_t Sherlock::AudioInit() {
   pdm_dev.bti_list = pdm_btis;
   pdm_dev.bti_count = countof(pdm_btis);
 
-  aml_hiu_dev_t hiu;
-  status = s905d2_hiu_init(&hiu);
+  status = clk_impl_.Disable(g12b_clk::CLK_HIFI_PLL);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "hiu_init: failed: %d\n", status);
+    zxlogf(ERROR, "%s: Disable(CLK_HIFI_PLL) failed, st = %d\n",
+           __func__, status);
     return status;
   }
 
-  aml_pll_dev_t hifi_pll;
-  s905d2_pll_init(&hiu, &hifi_pll, HIFI_PLL);
-  status = s905d2_pll_set_rate(&hifi_pll, T931_HIFI_PLL_RATE);
+  status = clk_impl_.SetRate(g12b_clk::CLK_HIFI_PLL, T931_HIFI_PLL_RATE);
   if (status != ZX_OK) {
-    zxlogf(ERROR, "Invalid rate selected for hifipll\n");
+    zxlogf(ERROR, "%s: SetRate(CLK_HIFI_PLL) failed, st = %d\n",
+           __func__, status);
     return status;
   }
 
-  s905d2_pll_ena(&hifi_pll);
+  status = clk_impl_.Enable(g12b_clk::CLK_HIFI_PLL);
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s: Enable(CLK_HIFI_PLL) failed, st = %d\n",
+           __func__, status);
+    return status;
+  }
+
 
   // TDM pin assignments.
   gpio_impl_.SetAltFunction(T931_GPIOZ(7), T931_GPIOZ_7_TDMC_SCLK_FN);

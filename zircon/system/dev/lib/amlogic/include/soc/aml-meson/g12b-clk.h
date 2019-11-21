@@ -4,6 +4,7 @@
 #pragma once
 
 #include <soc/aml-meson/aml-clk-common.h>
+#include <soc/aml-s905d2/s905d2-hiu.h>
 
 namespace g12b_clk {
 
@@ -20,5 +21,12 @@ constexpr uint32_t G12B_CLK_SYS_CPUB_CLK_DIV16 = AmlClkId(4, aml_clk_common::aml
 
 // NB: This must be the last entry
 constexpr uint32_t CLK_G12B_COUNT = 5;
+
+// kMesonPllClocks
+constexpr uint32_t CLK_GP0_PLL  = AmlClkId(GP0_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_PCIE_PLL = AmlClkId(PCIE_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS_PLL  = AmlClkId(SYS_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, aml_clk_common::aml_clk_type::kMesonPll);
 
 }  // namespace g12b_clk
