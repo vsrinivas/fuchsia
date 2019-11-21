@@ -72,6 +72,11 @@ class MmioBuffer {
   }
 
   // Create() is not implemented.
+  static zx_status_t Create(zx_off_t offset, size_t size, zx::vmo vmo, uint32_t cache_policy,
+                            std::optional<MmioBuffer>* mmio_buffer) {
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
   // Pin() returns an invalid paddr.
 
   void reset() {}

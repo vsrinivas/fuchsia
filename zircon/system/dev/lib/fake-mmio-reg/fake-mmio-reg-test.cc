@@ -9,6 +9,12 @@
 
 namespace ddk_fake_test {
 
+TEST(MockMmioReg, Create) {
+  std::optional<ddk::MmioBuffer> buffer;
+  ASSERT_EQ(ddk::MmioBuffer::Create(0, 0, zx::vmo(ZX_HANDLE_INVALID), 0, &buffer),
+            ZX_ERR_NOT_SUPPORTED);
+}
+
 TEST(MockMmioReg, CopyFrom) {
   constexpr size_t kRegArrayLength = 0x100;
   ddk_fake::FakeMmioReg reg_array_1[kRegArrayLength];
