@@ -153,4 +153,8 @@ void TestPageCloud::GetDiff(std::vector<uint8_t> commit_id,
   callback(cloud_provider::Status::OK, std::move(diff_pack));
 }
 
+void TestPageCloud::UpdateClock(cloud_provider::ClockPack /*clock*/, UpdateClockCallback callback) {
+  callback(cloud_provider::Status::NOT_SUPPORTED, nullptr);
+}
+
 }  // namespace cloud_sync

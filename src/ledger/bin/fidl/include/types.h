@@ -13,6 +13,7 @@
 // More convenient aliases for FIDL types.
 
 namespace cloud_provider {
+using ClockPack = fuchsia::ledger::cloud::ClockPack;
 using CloudProvider = fuchsia::ledger::cloud::CloudProvider;
 using CloudProviderPtr = fuchsia::ledger::cloud::CloudProviderPtr;
 using CloudController = fuchsia::ledger::cloud::test::CloudController;

@@ -103,6 +103,7 @@ impl Flaky {
             PageCloudRequest::GetObject { id, .. } => id.hash(&mut hasher),
             PageCloudRequest::GetDiff { commit_id, .. } => commit_id.hash(&mut hasher),
             PageCloudRequest::SetWatcher { .. } => return None,
+            PageCloudRequest::UpdateClock { .. } => return None,
         }
         return Some(hasher.finish());
     }

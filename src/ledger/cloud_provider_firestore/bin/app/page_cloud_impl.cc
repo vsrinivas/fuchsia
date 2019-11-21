@@ -307,6 +307,10 @@ void PageCloudImpl::GetDiff(std::vector<uint8_t> commit_id,
   callback(cloud_provider::Status::NOT_SUPPORTED, {});
 }
 
+void PageCloudImpl::UpdateClock(cloud_provider::ClockPack /*clock*/, UpdateClockCallback callback) {
+  callback(cloud_provider::Status::NOT_SUPPORTED, nullptr);
+}
+
 void PageCloudImpl::OnConnected() {
   auto request = google::firestore::v1beta1::ListenRequest();
   request.set_database(firestore_service_->GetDatabasePath());

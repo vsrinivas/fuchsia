@@ -208,6 +208,75 @@ struct ReferencePack {
     fuchsia.mem.Buffer? buffer;
 };
 
+// Clocks
+//
+// Clocks are a way for every actor (device or cloud) to represent its knowledge of the state of
+// other actors interested in a particular page.
+// A clock lists every device known to have interacted with the page. A device is identified with
+// a `PageDeviceIdentifier`, composed of a fingerprint, identical to the one used by the device in
+// `DeviceSet`, and a counter which is used to distinguish two instances of the same page on the
+// same device when an eviction occurred and the page was recreated.
+// The state of a device is represented in a `ClockEntry`, which represents a single commit (
+// https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/architecture.md#Storage). As
+// the commit identifier may be unknown to the recipient, the commit generation is also included
+// to allow the comparison between two entries of the same device.
+// The state of the cloud storage for the page cannot be described by a single commit. Thus, it is
+// described by the last state of each device as known by the cloud, as a `ClockEntry`. It is
+// stored alongside the local entry in a `DeviceEntry`.
+// A device may decide to evict a page, or a device may be evicted from the fleet of devices. It
+// then becomes "inactive" on the page, and we need to communicate this information to the other
+// devices. This is done in two steps: first, the device entry is replaced by a tombstone marker,
+// indicating that the device no longer has the page. Once the tombstone has propagated to every
+// devices, the entry can be entirely deleted to free space.
+
+/// ClockEntry uniquely identifies a commit, as a way to indicate the state of the page on a device.
+table ClockEntry {
+    1: CommitIdentifier commit_id;
+    /// Generation of the commit referred by `commit_id`.
+    2: uint64 generation;
+};
+
+/// Tombstone entry for a device clock.
+table TombstoneEntry {
+};
+
+/// Deletion request for a device clock.
+table DeletionEntry {
+};
+
+/// DeviceEntry contains clock entries for an active device.
+xunion DeviceEntry {
+    // An actual clock.
+    1: ClockEntry local_entry;
+    // The entry is a tombstone.
+    2: TombstoneEntry tombstone_entry;
+    // The clock entry should be deleted by the receiver.
+    3: DeletionEntry deletion_entry;
+};
+
+/// Clock for a single device, active or inactive.
+table DeviceClock {
+    /// Fingerprint of the device. It should match the fingerprint of the device in `DeviceSet`.
+    1: Fingerprint fingerprint;
+    /// Counter for the device. This counter increases between two local instances attached to the 
+    /// same page on the same device. It is defined by the device only and only used for clocks.
+    2: uint64 counter;
+    /// Local state of the device pointed by `device_id` as known by the clock owner.
+    3: DeviceEntry device_entry;
+};
+
+/// Full clock, representing the state of the device fleet for a given page.
+table Clock {
+    /// State of each device. The order is not significant.
+    1: vector<DeviceClock>:MAX devices;
+};
+
+/// Contains a Buffer containing the FIDL serialization of Clocks.
+/// We use a buffer to as the number of devices interested in a page is not bounded.
+struct ClockPack {
+    fuchsia.mem.Buffer buffer;
+};
+
 /// Handler for cloud sync of a single page.
 ///
 /// Implementation of this class manages a *commit log*, which is an append-only
@@ -277,6 +346,24 @@ protocol PageCloud {
     // TODO(LE-823): update once the transition to diffs is complete.
     GetDiff(CommitIdentifier commit_id, vector<CommitIdentifier>:32 possible_bases)
         -> (Status status, DiffPack? diff);
+
+    /// Sends our clock to the cloud. The cloud will update its clock from it.
+    /// For each DeviceEntry inside a clock, the update rules are the following:
+    /// When a DeviceEntry is received and the state is:
+    ///  - empty, then the Entry is unconditionnaly stored
+    ///  - clock, then each clock entry are updated if the generation is strictly
+    /// superior to the one stored and the commit pointed by the entry is known.
+    ///  - tombstone, then nothing happens
+    /// when a regular tombstone is received and the state is:
+    ///  - empty, then the tombstone is stored
+    ///  - clock, then the clock is dropped and tombstone is stored
+    ///  - tombstone, then nothing happens
+    /// The cloud should never receive a deletion tombstone. However, clients should apply these
+    /// rules when a deletion tombstone is received. If the state is:
+    ///  - empty, then nothing happens
+    ///  - clock, the record is cleared, including the PageDeviceIdentifier.
+    ///  - tombstone, the record is cleared, including the PageDeviceIdentifier.
+    UpdateClock(ClockPack clock) -> (Status status, ClockPack? new_clock);
 };
 
 /// Watcher for push notifications from cloud sync of a single page.

@@ -329,6 +329,9 @@ impl PageSession {
                     }
                 }
             }
+            PageCloudRequest::UpdateClock { clock: _, responder } => {
+                responder.send(Status::NotSupported, None)
+            }
         }
     }
 
@@ -351,6 +354,9 @@ impl PageSession {
                 watcher.into_proxy()?.on_error(Status::NetworkError)
             }
             PageCloudRequest::GetDiff { responder, .. } => {
+                responder.send(Status::NetworkError, None)
+            }
+            PageCloudRequest::UpdateClock { responder, .. } => {
                 responder.send(Status::NetworkError, None)
             }
         }

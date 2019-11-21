@@ -25,6 +25,7 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
+#include "src/lib/fxl/logging.h"
 
 namespace cloud_provider_firestore {
 namespace {

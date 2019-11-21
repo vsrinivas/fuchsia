@@ -287,4 +287,8 @@ void FakePageCloud::GetDiff(std::vector<uint8_t> commit_id,
   callback(cloud_provider::Status::NOT_SUPPORTED, {});
 }
 
+void FakePageCloud::UpdateClock(cloud_provider::ClockPack /*clock*/, UpdateClockCallback callback) {
+  callback(cloud_provider::Status::NOT_SUPPORTED, nullptr);
+}
+
 }  // namespace ledger

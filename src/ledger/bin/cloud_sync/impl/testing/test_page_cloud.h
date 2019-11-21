@@ -77,6 +77,7 @@ class TestPageCloud : public cloud_provider::PageCloud {
                   SetWatcherCallback callback) override;
   void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
                GetDiffCallback callback) override;
+  void UpdateClock(cloud_provider::ClockPack commits, UpdateClockCallback callback) override;
 
   fidl::Binding<cloud_provider::PageCloud> binding_;
 

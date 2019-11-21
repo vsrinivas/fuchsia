@@ -51,6 +51,7 @@ class PageCloudImpl : public cloud_provider::PageCloud, public ListenCallClient 
                   SetWatcherCallback callback) override;
   void GetDiff(std::vector<uint8_t> commit_id, std::vector<std::vector<uint8_t>> possible_bases,
                GetDiffCallback callback) override;
+  void UpdateClock(cloud_provider::ClockPack, UpdateClockCallback callback) override;
 
   // ListenCallClient:
   void OnConnected() override;
