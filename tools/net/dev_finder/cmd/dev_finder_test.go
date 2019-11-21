@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"fmt"
 	"net"
 	"strings"
 	"testing"
@@ -480,5 +481,40 @@ func TestOutputJSON(t *testing.T) {
 		if d := cmp.Diff(want, got); d != "" {
 			t.Errorf("outputNormal(includeDomain) mismatch: (-want +got):\n%s", d)
 		}
+	}
+}
+
+func TestAddrToIP(t *testing.T) {
+	want := "::1"
+	ipNet := &net.IPNet{IP: net.ParseIP(want)}
+	ip, zone, err := addrToIP(ipNet)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := ip.String()
+	if d := cmp.Diff(want, got); d != "" {
+		t.Errorf("addrToIP(ipNet) mismatch: (-want +got):\n%s", d)
+	}
+
+	ipAddr := &net.IPAddr{IP: net.ParseIP("::2"), Zone: "eno1"}
+	want = ipAddr.String()
+	ip, zone, err = addrToIP(ipAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = fmt.Sprintf("%s%%%s", ip.String(), zone)
+	if d := cmp.Diff(want, got); d != "" {
+		t.Errorf("addrToIP(ipAddr) mismatch: (-want +got):\n%s", d)
+	}
+
+	udpAddr := &net.IPAddr{IP: net.ParseIP("::3"), Zone: "eno1"}
+	want = fmt.Sprintf("%s%%%s", udpAddr.IP.String(), udpAddr.Zone)
+	ip, zone, err = addrToIP(udpAddr)
+	if err != nil {
+		t.Fatal(err)
+	}
+	got = fmt.Sprintf("%s%%%s", ip.String(), zone)
+	if d := cmp.Diff(want, got); d != "" {
+		t.Errorf("addrToIP(ipAddr) mismatch: (-want +got):\n%s", d)
 	}
 }

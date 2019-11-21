@@ -28,25 +28,30 @@ type mDNSResponse struct {
 	rxPacket mdns.Packet
 }
 
-func (m *mDNSResponse) getReceiveIP() (net.IP, error) {
+func (m *mDNSResponse) getReceiveIP() (net.IP, string, error) {
 	if unicastAddrs, err := m.rxIface.Addrs(); err != nil {
-		return nil, err
+		return nil, "", err
 	} else {
 		for _, addr := range unicastAddrs {
 			var ip net.IP
+			var zone string
 			switch v := addr.(type) {
 			case *net.IPNet:
 				ip = v.IP
 			case *net.IPAddr:
 				ip = v.IP
+				zone = v.Zone
+			case *net.UDPAddr:
+				ip = v.IP
+				zone = v.Zone
 			}
-			if ip == nil || ip.To4() == nil {
+			if ip == nil {
 				continue
 			}
-			return ip, nil
+			return ip, zone, nil
 		}
 	}
-	return nil, fmt.Errorf("no IPv4 unicast addresses found on iface %v", m.rxIface)
+	return nil, "", fmt.Errorf("no unicast addresses found on iface %v", m.rxIface)
 }
 
 type mDNSHandler func(mDNSResponse, bool, chan<- *fuchsiaDevice)
@@ -147,16 +152,16 @@ func (cmd *devFinderCmd) Output() io.Writer {
 }
 
 // Extracts the IP from its argument, returning an error if the type is unsupported.
-func addrToIP(addr net.Addr) (net.IP, error) {
+func addrToIP(addr net.Addr) (net.IP, string, error) {
 	switch v := addr.(type) {
 	case *net.IPNet:
-		return v.IP, nil
+		return v.IP, "", nil
 	case *net.IPAddr:
-		return v.IP, nil
+		return v.IP, v.Zone, nil
 	case *net.UDPAddr:
-		return v.IP, nil
+		return v.IP, v.Zone, nil
 	}
-	return nil, errors.New("unsupported address type")
+	return nil, "", errors.New("unsupported address type")
 }
 
 func (cmd *devFinderCmd) newMDNS(address string) mdnsInterface {

@@ -44,15 +44,15 @@ func listMDNSHandler(resp mDNSResponse, localResolve bool, f chan<- *fuchsiaDevi
 			// domain of the device.
 			fuchsiaDomain := string(a.Data[1 : nameLength+1])
 			if localResolve {
-				recvIP, err := resp.getReceiveIP()
+				recvIP, zone, err := resp.getReceiveIP()
 				if err != nil {
 					f <- &fuchsiaDevice{err: err}
 					return
 				}
-				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain}
+				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain, zone: zone}
 				continue
 			}
-			if ip, err := addrToIP(resp.devAddr); err != nil {
+			if ip, zone, err := addrToIP(resp.devAddr); err != nil {
 				f <- &fuchsiaDevice{
 					err: fmt.Errorf("could not find addr for %v: %v", resp.devAddr, err),
 				}
@@ -60,6 +60,7 @@ func listMDNSHandler(resp mDNSResponse, localResolve bool, f chan<- *fuchsiaDevi
 				f <- &fuchsiaDevice{
 					addr:   ip,
 					domain: fuchsiaDomain,
+					zone:   zone,
 				}
 			}
 		}
@@ -98,12 +99,12 @@ func resolveMDNSHandler(resp mDNSResponse, localResolve bool, f chan<- *fuchsiaD
 				return
 			}
 			if localResolve {
-				recvIP, err := resp.getReceiveIP()
+				recvIP, zone, err := resp.getReceiveIP()
 				if err != nil {
 					f <- &fuchsiaDevice{err: err}
 					return
 				}
-				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain}
+				f <- &fuchsiaDevice{addr: recvIP, domain: fuchsiaDomain, zone: zone}
 				continue
 			}
 			f <- &fuchsiaDevice{addr: net.IP(a.Data), domain: fuchsiaDomain}
