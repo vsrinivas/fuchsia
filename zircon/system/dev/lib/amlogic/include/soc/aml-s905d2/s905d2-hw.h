@@ -149,7 +149,24 @@
 #define S905D2_PWM_BLINK_EF 0x6407
 
 #define S905D2_AO_PWM_AB_BASE 0xFF807000
+#define S905D2_AO_PWM_PWM_A 0x0
+#define S905D2_AO_PWM_PWM_B 0x4
+#define S905D2_AO_PWM_MISC_REG_AB 0x8
+#define S905D2_AO_DS_A_B 0xc
+#define S905D2_AO_PWM_TIME_AB 0x10
+#define S905D2_AO_PWM_A2 0x14
+#define S905D2_AO_PWM_B2 0x18
+#define S905D2_AO_PWM_BLINK_AB 0x1c
+
 #define S905D2_AO_PWM_CD_BASE 0xFF802000
+#define S905D2_AO_PWM_PWM_C 0x0
+#define S905D2_AO_PWM_PWM_D 0x4
+#define S905D2_AO_PWM_MISC_REG_CD 0x8
+#define S905D2_AO_DS_C_D 0xc
+#define S905D2_AO_PWM_TIME_CD 0x10
+#define S905D2_AO_PWM_C2 0x14
+#define S905D2_AO_PWM_D2 0x18
+#define S905D2_AO_PWM_BLINK_CD 0x1c
 #define S905D2_AO_PWM_LENGTH 0x1000
 
 // Datasheet has incorrect number, but linux device tree seems correct.
@@ -210,7 +227,7 @@
 #define S905D2_UART_RTS_A_FN 1
 
 // Alternate function for PWM
-#define S905D2_PWM_D S905D2_GPIOE(1)
+#define S905D2_PWM_D_PIN S905D2_GPIOE(1)
 #define S905D2_PWM_D_FN 3
 
 #define S905D2_EE_PDM_BASE (0xff640000)
