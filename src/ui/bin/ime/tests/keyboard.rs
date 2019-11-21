@@ -29,7 +29,7 @@ fn event_to_semantic_key(event: ui_input2::KeyEvent) -> ui_input2::SemanticKey {
             ui_input2::SemanticKey::Symbol(symbol.to_string())
         }
         Some(ui_input2::SemanticKey::Action(action)) => ui_input2::SemanticKey::Action(*action),
-        None => panic!("Semantic key empty"),
+        None => panic!("Semantic key empty {:?}", event),
         _ => panic!("UnknownVariant"),
     }
 }

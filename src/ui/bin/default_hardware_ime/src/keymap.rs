@@ -227,7 +227,7 @@ mod tests {
         assert_eq!(keymap.layouts.len(), 3);
 
         let layout = keymap.layouts.get(0).expect("layout page populated");
-        assert_eq!(layout.entries.len(), 27);
+        assert_eq!(layout.entries.len(), 28);
 
         let entry = layout.entries.get(&TEST_KEY_CODE).expect("test key defined");
         assert_eq!(*entry, Entry::Symbol(TEST_SYMBOL.to_string()));
