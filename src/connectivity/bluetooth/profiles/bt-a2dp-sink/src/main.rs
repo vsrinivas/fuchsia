@@ -519,7 +519,7 @@ async fn main() -> Result<(), Error> {
                 let peer_id = device_id.parse().expect("peer ids from profile should parse");
                 peers.connected(&inspect, peer_id, channel);
                 if let Some(peer) = peers.get(&peer_id) {
-                    controller_pool.lock().peer_connected(peer_id, peer.avdtp_peer());
+                    controller_pool.lock().peer_connected(peer_id, peer.read().avdtp_peer());
                 }
             }
         }

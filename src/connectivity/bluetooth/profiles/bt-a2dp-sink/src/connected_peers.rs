@@ -6,13 +6,15 @@ use {
     bt_a2dp_sink_metrics as metrics, bt_avdtp as avdtp,
     fidl_fuchsia_bluetooth_bredr::ProfileDescriptor,
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{detachable_map::DetachableMap, types::PeerId},
     fuchsia_inspect as inspect,
     fuchsia_syslog::{fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
+    parking_lot::RwLock,
     std::{
         collections::hash_map::Entry,
         collections::{HashMap, HashSet},
+        sync::Arc,
     },
 };
 
@@ -81,7 +83,7 @@ fn spawn_stream_discovery(peer: &peer::Peer) {
 /// discovery, connections and disconnections.
 pub struct ConnectedPeers {
     /// The set of connected peers.
-    connected: HashMap<PeerId, peer::Peer>,
+    connected: DetachableMap<PeerId, RwLock<peer::Peer>>,
     /// ProfileDescriptors from discovering the peer.
     descriptors: HashMap<PeerId, Option<ProfileDescriptor>>,
     /// The set of streams that are made available to peers.
@@ -90,33 +92,32 @@ pub struct ConnectedPeers {
 
 impl ConnectedPeers {
     pub(crate) fn new(streams: Streams) -> Self {
-        Self { connected: HashMap::new(), descriptors: HashMap::new(), streams }
+        Self { connected: DetachableMap::new(), descriptors: HashMap::new(), streams }
     }
 
-    pub(crate) fn get(&self, id: &PeerId) -> Option<&peer::Peer> {
-        self.connected.get(id)
+    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<RwLock<peer::Peer>>> {
+        self.connected.get(id).and_then(|p| p.upgrade())
     }
 
     pub fn found(&mut self, id: PeerId, desc: ProfileDescriptor) {
         if self.descriptors.insert(id, Some(desc)).is_some() {
             // We have maybe connected to this peer before, and we just need to
             // discover the streams.
-            if let Entry::Occupied(mut peer) = self.connected.entry(id) {
-                let peer = peer.get_mut();
-                peer.set_descriptor(desc.clone());
-                spawn_stream_discovery(peer);
+            if let Some(peer) = self.get(&id) {
+                peer.write().set_descriptor(desc.clone());
+                spawn_stream_discovery(&peer.read());
             }
         }
     }
 
     pub fn connected(&mut self, inspect: &inspect::Inspector, id: PeerId, channel: zx::Socket) {
-        match self.connected.entry(id) {
-            Entry::Occupied(mut entry) => {
-                if let Err(e) = entry.get_mut().receive_channel(channel) {
+        match self.get(&id) {
+            Some(peer) => {
+                if let Err(e) = peer.write().receive_channel(channel) {
                     fx_log_warn!("{} failed to connect channel: {}", id, e);
                 }
             }
-            Entry::Vacant(entry) => {
+            None => {
                 fx_log_info!("Adding new peer for {}", id);
                 let avdtp_peer = match avdtp::Peer::new(channel) {
                     Ok(peer) => peer,
@@ -142,7 +143,15 @@ impl ConnectedPeers {
                         entry.insert(None);
                     }
                 }
-                entry.insert(peer);
+                let closed_fut = peer.closed();
+                self.connected.insert(id, RwLock::new(peer));
+
+                // Remove the peer when we disconnect.
+                let detached = self.connected.get(&id).expect("just added");
+                fasync::spawn(async move {
+                    closed_fut.await;
+                    detached.detach();
+                });
             }
         }
     }
@@ -213,7 +222,7 @@ mod tests {
             Some(peer) => peer,
         };
 
-        exercise_avdtp(&mut exec, remote, peer);
+        exercise_avdtp(&mut exec, remote, &peer.read());
     }
 
     fn expect_started_discovery(exec: &mut fasync::Executor, remote: zx::Socket) {
@@ -276,7 +285,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO(41346): this test fails now
     fn connected_peers_peer_disconnect_removes_peer() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
@@ -299,7 +307,6 @@ mod tests {
     }
 
     #[test]
-    #[ignore] // TODO(41346): this test fails now
     fn connected_peers_reconnect_works() {
         let mut exec = fasync::Executor::new().expect("executor should build");
         let id = PeerId(1);
