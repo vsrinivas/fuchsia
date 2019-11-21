@@ -187,11 +187,11 @@ constexpr zx_bind_inst_t root_match[] = {
 };
 static const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, CLK_SYS_PLL_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_PLL_DIV16),
 };
 static const zx_bind_inst_t clk2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, CLK_SYS_CPU_CLK_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12a_clk::CLK_SYS_CPU_CLK_DIV16),
 };
 static const device_component_part_t clk1_component[] = {
     {countof(root_match), root_match},

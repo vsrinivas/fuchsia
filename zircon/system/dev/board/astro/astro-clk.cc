@@ -30,8 +30,8 @@ constexpr pbus_mmio_t clk_mmios[] = {
 
 constexpr clock_id_t clock_ids[] = {
     // For thermal driver.
-    {CLK_SYS_PLL_DIV16},
-    {CLK_SYS_CPU_CLK_DIV16},
+    {g12a_clk::CLK_SYS_PLL_DIV16},
+    {g12a_clk::CLK_SYS_CPU_CLK_DIV16},
 };
 
 constexpr pbus_metadata_t clock_metadata[] = {

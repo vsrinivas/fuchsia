@@ -240,7 +240,7 @@ static const zx_bind_inst_t gpio_vdig_match[] = {
 };
 static const zx_bind_inst_t clk_sensor_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_CAM_INCK_24M),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_CAM_INCK_24M),
 };
 static const zx_bind_inst_t mipicsi_match[] = {
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MIPI_CSI),

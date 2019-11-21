@@ -16,6 +16,8 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
+#include <soc/aml-meson/aml-clk-common.h>
+
 #include "aml-axg-blocks.h"
 #include "aml-g12a-blocks.h"
 #include "aml-g12b-blocks.h"
@@ -53,6 +55,12 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
 
       gates_ = g12a_clk_gates;
       gate_count_ = countof(g12a_clk_gates);
+
+      s905d2_hiu_init_etc(&hiudev_, static_cast<uint8_t*>(hiu_mmio_.get()));
+      for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
+        const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
+        s905d2_pll_init_etc(&hiudev_, &plldev_[pllnum], pll);
+      }
       break;
     }
     case PDEV_DID_AMLOGIC_G12B_CLK: {
@@ -122,6 +130,21 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx_status_t AmlClock::ClkTogglePll(uint32_t clk, const bool enable) {
+  if (clk >= HIU_PLL_COUNT) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  aml_pll_dev_t* target = &plldev_[clk];
+
+  if (enable) {
+    return s905d2_pll_ena(target);
+  } else {
+    s905d2_pll_disable(target);
+    return ZX_OK;
+  }
+}
+
 zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
   if (clk >= gate_count_) {
     return ZX_ERR_INVALID_ARGS;
@@ -140,19 +163,102 @@ zx_status_t AmlClock::ClkToggle(uint32_t clk, const bool enable) {
   return ZX_OK;
 }
 
-zx_status_t AmlClock::ClockImplEnable(uint32_t clk) { return ClkToggle(clk, true); }
+zx_status_t AmlClock::ClockImplEnable(uint32_t clk) {
+  // Determine which clock type we're trying to control.
+  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
+  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
 
-zx_status_t AmlClock::ClockImplDisable(uint32_t clk) { return ClkToggle(clk, false); }
+  switch (type) {
+    case aml_clk_common::aml_clk_type::kMesonGate:
+      return ClkToggle(clkid, true);
+    case aml_clk_common::aml_clk_type::kMesonPll:
+      return ClkTogglePll(clkid, true);
+  }
+
+  // Not a supported clock type?
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
+zx_status_t AmlClock::ClockImplDisable(uint32_t clk) {
+    // Determine which clock type we're trying to control.
+  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
+  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
+
+  switch (type) {
+    case aml_clk_common::aml_clk_type::kMesonGate:
+      return ClkToggle(clkid, false);
+    case aml_clk_common::aml_clk_type::kMesonPll:
+      return ClkTogglePll(clkid, false);
+  }
+
+  // Not a supported clock type?
+  return ZX_ERR_NOT_SUPPORTED;
+}
 
 zx_status_t AmlClock::ClockImplIsEnabled(uint32_t id, bool* out_enabled) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t AmlClock::ClockImplSetRate(uint32_t id, uint64_t hz) { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t AmlClock::ClockImplSetRate(uint32_t clk, uint64_t hz) {
+  // Determine which clock type we're trying to control.
+  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
+  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
 
-zx_status_t AmlClock::ClockImplQuerySupportedRate(uint32_t id, uint64_t max_rate,
+  if (clkid >= HIU_PLL_COUNT) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (type != aml_clk_common::aml_clk_type::kMesonPll) {
+    // For now, only Meson PLLs support rate operation.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+
+  aml_pll_dev_t* target = &plldev_[clkid];
+
+  return s905d2_pll_set_rate(target, hz);
+}
+
+zx_status_t AmlClock::ClockImplQuerySupportedRate(uint32_t clk, uint64_t max_rate,
                                                   uint64_t* out_best_rate) {
-  return ZX_ERR_NOT_SUPPORTED;
+  // Determine which clock type we're trying to control.
+  aml_clk_common::aml_clk_type type = aml_clk_common::AmlClkType(clk);
+  const uint16_t clkid = aml_clk_common::AmlClkIndex(clk);
+
+  if (clkid >= HIU_PLL_COUNT) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (type != aml_clk_common::aml_clk_type::kMesonPll) {
+    // For now, only Meson PLLs support rate operation.
+    return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  if (out_best_rate == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  const hhi_plls_t pllid = static_cast<hhi_plls_t>(clkid);
+  const hhi_pll_rate_t* rate_table = s905d2_pll_get_rate_table(pllid);
+  const size_t rate_table_size = s905d2_get_rate_table_count(pllid);
+  const hhi_pll_rate_t* best_rate = nullptr;
+
+  for (size_t i = 0; i < rate_table_size; i++) {
+    if (rate_table[i].rate <= max_rate) {
+      best_rate = &rate_table[i];
+    } else {
+      break;
+    }
+  }
+
+  // Couldn't find a rate lower than or equal to max_rate.
+  if (!best_rate) {
+    return ZX_ERR_NOT_FOUND;
+  }
+
+  *out_best_rate = best_rate->rate;
+
+  return ZX_OK;
 }
 
 zx_status_t AmlClock::ClockImplGetRate(uint32_t id, uint64_t* out_current_rate) {

@@ -12,6 +12,10 @@
 
 #include <threads.h>
 
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 enum {
   AML_I2C_A,
   AML_I2C_B,
@@ -59,8 +63,12 @@ zx_status_t gauss_usb_init(gauss_bus_t* bus);
 // gauss-clk.c
 zx_status_t gauss_clk_init(gauss_bus_t* bus);
 
-// gauss-pcie.c
+// gauss-pcie.cc
 zx_status_t gauss_pcie_init(gauss_bus_t* bus);
 
 // gauss-raw_nand.c
 zx_status_t gauss_raw_nand_init(gauss_bus_t* bus);
+
+#ifdef __cplusplus
+}  // extern "C"
+#endif

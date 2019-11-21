@@ -18,6 +18,8 @@
 #include <fuchsia/hardware/clock/c/fidl.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
+#include <soc/aml-s905d2/s905d2-hiu.h>
+
 #include <optional>
 
 namespace amlogic_clock {
@@ -64,6 +66,9 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   // Clock measure helper API.
   zx_status_t ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq);
 
+  // Toggle enable bit for PLL clocks.
+  zx_status_t ClkTogglePll(uint32_t clk, const bool enable);
+
   // IO MMIO
   ddk::MmioBuffer hiu_mmio_;
   std::optional<ddk::MmioBuffer> msr_mmio_;
@@ -72,6 +77,10 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   fbl::Mutex lock_;
   const meson_clk_gate_t* gates_ = nullptr;
   size_t gate_count_ = 0;
+
+  aml_hiu_dev_t hiudev_;
+  aml_pll_dev_t plldev_[HIU_PLL_COUNT];
+
   // Clock Table
   const char* const* clk_table_ = nullptr;
   size_t clk_table_count_ = 0;

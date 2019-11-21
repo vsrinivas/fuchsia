@@ -222,19 +222,19 @@ const zx_bind_inst_t root_match[] = {
 };
 const zx_bind_inst_t clk1_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLL_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLL_DIV16),
 };
 const zx_bind_inst_t clk2_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPU_CLK_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPU_CLK_DIV16),
 };
 const zx_bind_inst_t clk3_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_PLLB_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_PLLB_DIV16),
 };
 const zx_bind_inst_t clk4_match[] = {
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_CLOCK),
-    BI_MATCH_IF(EQ, BIND_CLOCK_ID, G12B_CLK_SYS_CPUB_CLK_DIV16),
+    BI_MATCH_IF(EQ, BIND_CLOCK_ID, g12b_clk::G12B_CLK_SYS_CPUB_CLK_DIV16),
 };
 const device_component_part_t clk1_component[] = {
     {countof(root_match), root_match},

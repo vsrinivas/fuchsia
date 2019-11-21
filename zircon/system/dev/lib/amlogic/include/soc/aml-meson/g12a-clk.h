@@ -4,76 +4,86 @@
 
 #pragma once
 
-typedef enum g12a_clk_gate_idx {
-  // SYS CPU CLK
-  CLK_SYS_PLL_DIV16 = 0,
-  CLK_SYS_CPU_CLK_DIV16,
+#include <soc/aml-s905d2/s905d2-hiu.h>
+#include <soc/aml-meson/aml-clk-common.h>
 
-  CLK_DDR,
-  CLK_DOS,
-  CLK_ALOCKER,
-  CLK_MIPI_DSI_HOST,
-  CLK_ETH_PHY,
-  CLK_ISA,
-  CLK_PL301,
-  CLK_PERIPHS,
-  CLK_SPICC_0,
-  CLK_I2C,
-  CLK_SANA,
-  CLK_SD,
-  CLK_RNG0,
-  CLK_UART0,
-  CLK_SPICC_1,
-  CLK_HIU_REG,
-  CLK_MIPI_DSI_PHY,
-  CLK_ASSIST_MISC,
-  CLK_EMMC_A,
-  CLK_EMMC_B,
-  CLK_EMMC_C,
-  CLK_ACODEC,
-  CLK_AUDIO,
-  CLK_ETH_CORE,
-  CLK_DEMUX,
-  CLK_AIFIFO,
-  CLK_ADC,
-  CLK_UART1,
-  CLK_G2D,
-  CLK_RESET,
-  CLK_PCIE_COMB,
-  CLK_PARSER,
-  CLK_USB_GENERAL,
-  CLK_PCIE_PHY,
-  CLK_AHB_ARB0,
-  CLK_AHB_DATA_BUS,
-  CLK_AHB_CTRL_BUS,
-  CLK_HTX_HDCP22,
-  CLK_HTX_PCLK,
-  CLK_BT656,
-  CLK_USB1_TO_DDR,
-  CLK_MMC_PCLK,
-  CLK_UART2,
-  CLK_VPU_INTR,
-  CLK_GIC,
-  CLK_VCLK2_VENCI0,
-  CLK_VCLK2_VENCI1,
-  CLK_VCLK2_VENCP0,
-  CLK_VCLK2_VENCP1,
-  CLK_VCLK2_VENCT0,
-  CLK_VCLK2_VENCT1,
-  CLK_VCLK2_OTHER,
-  CLK_VCLK2_ENCI,
-  CLK_VCLK2_ENCP,
-  CLK_DAC_CLK,
-  CLK_AOCLK_GATE,
-  CLK_IEC958_GATE,
-  CLK_ENC480P,
-  CLK_RNG1,
-  CLK_VCLK2_ENCT,
-  CLK_VCLK2_ENCL,
-  CLK_VCLK2_VENCLMMC,
-  CLK_VCLK2_VENCL,
-  CLK_VCLK2_OTHER1,
+namespace g12a_clk {
 
-  // NB: This must be the last entry
-  CLK_G12A_COUNT,
-} g12a_clk_gate_idx_t;
+// kMesonGate Clocks
+constexpr uint32_t CLK_SYS_PLL_DIV16 = AmlClkId(0, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SYS_CPU_CLK_DIV16 = AmlClkId(1, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_DDR = AmlClkId(2, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_DOS = AmlClkId(3, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ALOCKER = AmlClkId(4, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_MIPI_DSI_HOST = AmlClkId(5, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ETH_PHY = AmlClkId(6, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ISA = AmlClkId(7, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_PL301 = AmlClkId(8, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_PERIPHS = AmlClkId(9, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SPICC_0 = AmlClkId(10, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_I2C = AmlClkId(11, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SANA = AmlClkId(12, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SD = AmlClkId(13, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_RNG0 = AmlClkId(14, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_UART0 = AmlClkId(15, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_SPICC_1 = AmlClkId(16, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_HIU_REG = AmlClkId(17, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_MIPI_DSI_PHY = AmlClkId(18, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ASSIST_MISC = AmlClkId(19, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_EMMC_A = AmlClkId(20, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_EMMC_B = AmlClkId(21, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_EMMC_C = AmlClkId(22, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ACODEC = AmlClkId(23, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AUDIO = AmlClkId(24, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ETH_CORE = AmlClkId(25, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_DEMUX = AmlClkId(26, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AIFIFO = AmlClkId(27, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ADC = AmlClkId(28, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_UART1 = AmlClkId(29, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_G2D = AmlClkId(30, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_RESET = AmlClkId(31, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_PCIE_COMB = AmlClkId(32, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_PARSER = AmlClkId(33, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_USB_GENERAL = AmlClkId(34, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_PCIE_PHY = AmlClkId(35, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AHB_ARB0 = AmlClkId(36, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AHB_DATA_BUS = AmlClkId(37, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AHB_CTRL_BUS = AmlClkId(38, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_HTX_HDCP22 = AmlClkId(39, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_HTX_PCLK = AmlClkId(40, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_BT656 = AmlClkId(41, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_USB1_TO_DDR = AmlClkId(42, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_MMC_PCLK = AmlClkId(43, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_UART2 = AmlClkId(44, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VPU_INTR = AmlClkId(45, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_GIC = AmlClkId(46, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCI0 = AmlClkId(47, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCI1 = AmlClkId(48, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCP0 = AmlClkId(49, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCP1 = AmlClkId(50, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCT0 = AmlClkId(51, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCT1 = AmlClkId(52, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_OTHER = AmlClkId(53, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_ENCI = AmlClkId(54, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_ENCP = AmlClkId(55, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_DAC_CLK = AmlClkId(56, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_AOCLK_GATE = AmlClkId(57, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_IEC958_GATE = AmlClkId(58, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_ENC480P = AmlClkId(59, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_RNG1 = AmlClkId(60, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_ENCT = AmlClkId(61, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_ENCL = AmlClkId(62, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCLMMC = AmlClkId(63, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_VENCL = AmlClkId(64, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_VCLK2_OTHER1 = AmlClkId(65, aml_clk_common::aml_clk_type::kMesonGate);
+constexpr uint32_t CLK_G12A_COUNT = 66;
+
+
+// kMesonPllClocks
+constexpr uint32_t CLK_GP0_PLL  = AmlClkId(GP0_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_PCIE_PLL = AmlClkId(PCIE_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_HIFI_PLL = AmlClkId(HIFI_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS_PLL  = AmlClkId(SYS_PLL,  aml_clk_common::aml_clk_type::kMesonPll);
+constexpr uint32_t CLK_SYS1_PLL = AmlClkId(SYS1_PLL, aml_clk_common::aml_clk_type::kMesonPll);
+
+}  // namespace g12a_clk

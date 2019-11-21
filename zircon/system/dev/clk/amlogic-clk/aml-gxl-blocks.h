@@ -111,5 +111,5 @@ static meson_clk_gate_t gxl_clk_gates[] = {
     {.reg = GXL_HHI_GCLK_OTHER, .bit = 31},  // CLK_GXL_EDP
 };
 
-static_assert(CLK_GXL_COUNT == countof(gxl_clk_gates),
+static_assert(gxl_clk::CLK_GXL_COUNT == countof(gxl_clk_gates),
               "gxl_clk_gates[] and gxl_clk_gate_idx count mismatch");

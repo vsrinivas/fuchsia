@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <string.h>
+
 #include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
@@ -9,8 +11,36 @@
 #include <ddk/debug.h>
 #include <ddk/mmio-buffer.h>
 #include <hw/reg.h>
+#include <soc/aml-s905d2/s905d2-hiu-regs.h>
 #include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
+
+static inline uint32_t hiu_clk_get_reg(aml_hiu_dev_t* dev, uint32_t offset) {
+  return readl(dev->regs_vaddr + offset);
+}
+
+static inline uint32_t hiu_clk_set_reg(aml_hiu_dev_t* dev, uint32_t offset, uint32_t value) {
+  writel(value, dev->regs_vaddr + offset);
+  return hiu_clk_get_reg(dev, offset);
+}
+
+static inline uint32_t hiu_get_pll_offs(aml_pll_dev_t* pll_dev) {
+  switch (pll_dev->pll_num) {
+    case GP0_PLL:
+      return HHI_GP0_PLL_CNTL0;
+    case PCIE_PLL:
+      return HHI_PCIE_PLL_CNTL0;
+    case HIFI_PLL:
+      return HHI_HIFI_PLL_CNTL0;
+    case SYS_PLL:
+      return HHI_SYS_PLL_CNTL0;
+    case SYS1_PLL:
+      return HHI_SYS1_PLL_CNTL0;
+    default:
+      ZX_DEBUG_ASSERT(0);
+  }
+  return 0;
+}
 
 zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
   // Please do not use get_root_resource() in new code. See ZX-1467.
@@ -27,6 +57,17 @@ zx_status_t s905d2_hiu_init(aml_hiu_dev_t* device) {
 
   return ZX_OK;
 }
+
+zx_status_t s905d2_hiu_init_etc(aml_hiu_dev_t* device, uint8_t* hiubase) {
+  memset(device, 0, sizeof(*device));
+
+  device->mmio.vmo = ZX_HANDLE_INVALID;
+
+  device->regs_vaddr = hiubase;
+
+  return ZX_OK;
+}
+
 
 static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
   aml_hiu_dev_t* device = pll_dev->hiu;
@@ -75,7 +116,7 @@ static zx_status_t s905d2_pll_init_regs(aml_pll_dev_t* pll_dev) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
+void s905d2_pll_init_etc(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
   ZX_DEBUG_ASSERT(device);
   ZX_DEBUG_ASSERT(pll_dev);
 
@@ -89,6 +130,13 @@ zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_p
 
   ZX_DEBUG_ASSERT(pll_dev->rate_table);
   ZX_DEBUG_ASSERT(pll_dev->rate_count);
+}
+
+zx_status_t s905d2_pll_init(aml_hiu_dev_t* device, aml_pll_dev_t* pll_dev, hhi_plls_t pll_num) {
+  ZX_DEBUG_ASSERT(device);
+  ZX_DEBUG_ASSERT(pll_dev);
+
+  s905d2_pll_init_etc(device, pll_dev, pll_num);
 
   // Disable and reset the pll
   s905d2_pll_disable(pll_dev);

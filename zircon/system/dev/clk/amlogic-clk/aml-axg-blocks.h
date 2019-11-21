@@ -72,5 +72,5 @@ static constexpr meson_clk_gate_t axg_clk_gates[] = {
     {.reg = AXG_HHI_PCIE_PLL_CNTL6, .bit = 4},  // CLK_CML0_EN
 };
 
-static_assert(CLK_AXG_COUNT == countof(axg_clk_gates),
+static_assert(axg_clk::CLK_AXG_COUNT == countof(axg_clk_gates),
               "axg_clk_gates[] and axg_clk_gate_idx count mismatch");

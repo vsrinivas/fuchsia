@@ -57,8 +57,9 @@ const hhi_pll_rate_t* s905d2_pll_get_rate_table(hhi_plls_t pll_num) {
     case SYS_PLL:
     case SYS1_PLL:
       return s905d2_hiu_pll_rates;
+    default:
+      return NULL;
   }
-  return NULL;
 }
 
 size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
@@ -69,6 +70,7 @@ size_t s905d2_get_rate_table_count(hhi_plls_t pll_num) {
     case SYS_PLL:
     case SYS1_PLL:
       return countof(s905d2_hiu_pll_rates);
+    default:
+      return 0;
   }
-  return 0;
 }

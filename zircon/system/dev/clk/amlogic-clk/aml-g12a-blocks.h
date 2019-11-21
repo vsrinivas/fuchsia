@@ -222,8 +222,8 @@ static constexpr meson_clk_gate_t g12a_clk_gates[] = {
     {.reg = kHhiGclk2Other, .bit = 26},  // CLK_VCLK2_OTHER1
 };
 
-static_assert(CLK_G12A_COUNT == countof(g12a_clk_gates),
-              "g12a_clk_gates[] and g12a_clk_gate_idx_t count mismatch");
+static_assert(g12a_clk::CLK_G12A_COUNT == countof(g12a_clk_gates),
+              "g12a_clk_gates[] and CLK_G12A_COUNT count mismatch");
 
 static constexpr meson_clk_msr_t g12a_clk_msr = {
     .reg0_offset = (0x1 << 2),
