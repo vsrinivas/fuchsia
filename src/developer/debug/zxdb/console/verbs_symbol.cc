@@ -624,8 +624,8 @@ void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
   if (index_status.empty()) {
     out->Append(Syntax::kError, "  No symbol locations are indexed.");
     out->Append(
-        "\n\n  Use the command-line switch \"zxdb -s <path>\" to "
-        "specify the location of\n  your symbols.\n\n");
+        "\n\n  Use the command-line switch \"zxdb -s <path>\" or the option \"symbol-paths\"\n"
+        "  (see \"get/set symbol-paths\") to specify the location of your symbols.\n\n");
   } else {
     out->Append(Syntax::kComment,
                 "  Use \"sym-stat --dump-index\" to see the individual mappings.\n\n");
