@@ -29,7 +29,11 @@ func (e *endpoint) MTU() uint32 { return e.client.Info.Mtu }
 func (e *endpoint) Capabilities() stack.LinkEndpointCapabilities {
 	return stack.CapabilityResolutionRequired
 }
-func (e *endpoint) MaxHeaderLength() uint16 { return header.EthernetMinimumSize }
+func (e *endpoint) MaxHeaderLength() uint16 {
+	// Ethernet headers are never prepended into a buffer.Prependable, so no
+	// space need be reserved for them.
+	return 0
+}
 func (e *endpoint) LinkAddress() tcpip.LinkAddress {
 	return tcpip.LinkAddress(e.client.Info.Mac.Octets[:])
 }

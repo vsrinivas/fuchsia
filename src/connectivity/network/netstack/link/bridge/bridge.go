@@ -246,10 +246,6 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 		ep.dispatcher.DeliverNetworkPacket(ep, srcLinkAddr, dstLinkAddr, p, vv, linkHeader)
 	}
 
-	payload := vv
-	hdr := buffer.NewPrependableFromView(payload.First())
-	payload.RemoveFirst() // doesn't mutate vv
-
 	// NB: This isn't really a valid Route; Route is a public type but cannot
 	// be instantiated fully outside of the stack package, because its
 	// underlying referencedNetworkEndpoint cannot be accessed.
@@ -258,6 +254,8 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 	// extremely strange for the LinkEndpoint we're calling WritePacket on to
 	// access itself so indirectly.
 	r := stack.Route{LocalLinkAddress: srcLinkAddr, RemoteLinkAddress: dstLinkAddr, NetProto: p}
+
+	hdr := buffer.NewPrependable(int(ep.MaxHeaderLength()))
 
 	// TODO(NET-690): Learn which destinations are on which links and restrict transmission, like a bridge.
 	rxaddr := rxEP.LinkAddress()
@@ -268,7 +266,7 @@ func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, d
 		// Don't write back out interface from which the frame arrived
 		// because that causes interoperability issues with a router.
 		if linkaddr != rxaddr {
-			l.WritePacket(&r, nil, hdr, payload, p)
+			l.WritePacket(&r, nil, hdr, vv, p)
 		}
 	}
 }

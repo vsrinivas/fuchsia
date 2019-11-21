@@ -366,15 +366,18 @@ func (e *endpoint) WritePacket(r *stack.Route, _ *stack.GSO, hdr buffer.Prependa
 		panic(fmt.Sprintf("ep: %+v linked endpoint: %+v has not been `Attach`ed; call stack.CreateNIC to attach it", e, e.linked))
 	}
 
-	vv := buffer.NewVectorisedView(hdr.UsedLength()+payload.Size(), append([]buffer.View{hdr.View()}, payload.Views()...))
+	// DeliverNetworkPacket doesn't handle empty leading slices.
+	if hdr := hdr.View(); len(hdr) > 0 {
+		payload = buffer.NewVectorisedView(len(hdr)+payload.Size(), append([]buffer.View{hdr}, payload.Views()...))
+	}
 	// the "remote" address for `other` is our local address and vice versa
 	//
 	// We use nil as the link header parameter for DeliverNetworkPacket and
 	// onWritePacket as we pass a packet straight from e to the linked
 	// endpoint, e.linked, without creating an l2 header.
-	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, vv, nil)
-	if e.onWritePacket != nil {
-		e.onWritePacket(vv, nil)
+	e.linked.dispatcher.DeliverNetworkPacket(e.linked, r.LocalLinkAddress, r.RemoteLinkAddress, protocol, payload, nil)
+	if fn := e.onWritePacket; fn != nil {
+		fn(payload, nil)
 	}
 	return nil
 }
