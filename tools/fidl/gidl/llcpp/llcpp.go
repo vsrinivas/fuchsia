@@ -309,7 +309,7 @@ func (b *llcppValueBuilder) OnUnion(value gidlir.Object, decl *gidlmixer.UnionDe
 		gidlmixer.Visit(b, field.Value, fieldDecl)
 		fieldVar := b.lastVar
 		b.Builder.WriteString(fmt.Sprintf(
-			"%s.set_%s(std::move(%s));\n", containerVar, field.Key.Name, fieldVar))
+			"%s.set_%s(&%s);\n", containerVar, field.Key.Name, fieldVar))
 	}
 	if decl.IsNullable() {
 		b.lastVar = "&" + containerVar

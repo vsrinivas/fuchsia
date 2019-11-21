@@ -527,7 +527,7 @@ TEST(Conformance, AddEthernetDeviceRequest_Old_Encode) {
   v3.name = std::move(v4);
   llcpp::conformance::IpAddressConfig v5;
   bool v6 = true;
-  v5.set_dhcp(std::move(v6));
+  v5.set_dhcp(&v6);
   v3.ip_address_config = std::move(v5);
   v1.config = std::move(v3);
   uint32_t v7 = 4294967295ull;
@@ -600,11 +600,11 @@ TEST(Conformance, Optionals_Old_Encode) {
   v1.xu2 = std::move(v9);
   llcpp::conformance::UnionWithEmptyStruct v11;
   llcpp::conformance::EmptyStruct v12{};
-  v11.set_s(std::move(v12));
+  v11.set_s(&v12);
   v1.u = std::move(v11);
   llcpp::conformance::UnionWithEmptyStruct v13;
   llcpp::conformance::EmptyStruct v14{};
-  v13.set_s(std::move(v14));
+  v13.set_s(&v14);
   v1.u2 = std::move(&v13);
 
   const auto expected = std::vector<uint8_t>{
@@ -1144,7 +1144,7 @@ TEST(Conformance, Sandwich1Case1_Old_Encode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionSize8Align4 v3;
   uint32_t v4 = 202050057ull;
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -1163,7 +1163,7 @@ TEST(Conformance, Sandwich1WithOptUnionPresent_Old_Encode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionSize8Align4 v3;
   uint32_t v4 = 202050057ull;
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.opt_union = std::move(&v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -1205,7 +1205,7 @@ TEST(Conformance, Sandwich2Case1_Old_Encode) {
   uint8_t v9 = 165ull;
   auto v10 = fidl::Array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
                                      std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
+  v3.set_variant(&v10);
   v1.the_union = std::move(v3);
   uint32_t v11 = 134678021ull;
   v1.after = std::move(v11);
@@ -1228,7 +1228,7 @@ TEST(Conformance, Sandwich3Case1_Old_Encode) {
   v4.f1 = std::move(v5);
   uint64_t v6 = 12659246559711111592ull;
   v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.the_union = std::move(v3);
   uint32_t v7 = 134678021ull;
   v1.after = std::move(v7);
@@ -1287,7 +1287,7 @@ TEST(Conformance, Sandwich4Case1_Old_Encode) {
       std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
       std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
       std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
+  v3.set_variant(&v36);
   v1.the_union = std::move(v3);
   uint32_t v37 = 134678021ull;
   v1.after = std::move(v37);
@@ -1309,8 +1309,8 @@ TEST(Conformance, Sandwich5Case1_Old_Encode) {
   llcpp::conformance::UnionOfUnion v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
-  v3.set_size8align4(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size8align4(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v6 = 134678021ull;
   v1.after = std::move(v6);
@@ -1336,8 +1336,8 @@ TEST(Conformance, Sandwich5Case2_Old_Encode) {
   v5.f1 = std::move(v6);
   uint64_t v7 = 12659246559711111592ull;
   v5.f2 = std::move(v7);
-  v4.set_variant(std::move(v5));
-  v3.set_size24align8(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size24align8(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v8 = 134678021ull;
   v1.after = std::move(v8);
@@ -1366,7 +1366,7 @@ TEST(Conformance, Sandwich6Case1_Old_Encode) {
   auto v10 = fidl::Array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
                                      std::move(v7), std::move(v8), std::move(v9)};
   auto v11 = fidl::VectorView<uint8_t>(v10.data(), 6);
-  v3.set_vector_of_uint8(std::move(v11));
+  v3.set_vector_of_uint8(&v11);
   v1.the_union = std::move(v3);
   uint32_t v12 = 134678021ull;
   v1.after = std::move(v12);
@@ -1387,7 +1387,7 @@ TEST(Conformance, Sandwich6Case1AbsentVector_Old_Encode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionWithVector v3;
   auto v4 = fidl::VectorView<uint8_t>();
-  v3.set_vector_of_uint8(std::move(v4));
+  v3.set_vector_of_uint8(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -1407,7 +1407,7 @@ TEST(Conformance, Sandwich6Case2_Old_Encode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionWithVector v3;
   fidl::StringView v4("soft migrations rock!", 21);
-  v3.set_s(std::move(v4));
+  v3.set_s(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -1449,7 +1449,7 @@ TEST(Conformance, Sandwich6Case3_Old_Encode) {
   auto v19 = fidl::Array<llcpp::conformance::StructSize3Align1, 3>{std::move(v4), std::move(v9),
                                                                    std::move(v14)};
   auto v20 = fidl::VectorView<llcpp::conformance::StructSize3Align1>(v19.data(), 3);
-  v3.set_vector_s3_a1(std::move(v20));
+  v3.set_vector_s3_a1(&v20);
   v1.the_union = std::move(v3);
   uint32_t v21 = 134678021ull;
   v1.after = std::move(v21);
@@ -1487,7 +1487,7 @@ TEST(Conformance, Sandwich6Case4_Old_Encode) {
   auto v13 = fidl::Array<llcpp::conformance::StructSize3Align2, 3>{std::move(v4), std::move(v7),
                                                                    std::move(v10)};
   auto v14 = fidl::VectorView<llcpp::conformance::StructSize3Align2>(v13.data(), 3);
-  v3.set_vector_s3_a2(std::move(v14));
+  v3.set_vector_s3_a2(&v14);
   v1.the_union = std::move(v3);
   uint32_t v15 = 134678021ull;
   v1.after = std::move(v15);
@@ -1512,7 +1512,7 @@ TEST(Conformance, Sandwich6Case5_Old_Encode) {
   uint32_t v6 = 4294967295ull;
   auto v7 = fidl::Array<uint32_t, 3>{std::move(v4), std::move(v5), std::move(v6)};
   auto v8 = fidl::VectorView<uint32_t>(v7.data(), 3);
-  v3.set_handles(std::move(v8));
+  v3.set_handles(&v8);
   v1.the_union = std::move(v3);
   uint32_t v9 = 134678021ull;
   v1.after = std::move(v9);
@@ -1545,7 +1545,7 @@ TEST(Conformance, Sandwich6Case6_Old_Encode) {
   auto v13 = fidl::Array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
   v9.three_bytes = std::move(v13);
   auto v14 = fidl::Array<llcpp::conformance::StructSize3Align1, 2>{std::move(v4), std::move(v9)};
-  v3.set_array_s3_a1(std::move(v14));
+  v3.set_array_s3_a1(&v14);
   v1.the_union = std::move(v3);
   uint32_t v15 = 134678021ull;
   v1.after = std::move(v15);
@@ -1575,7 +1575,7 @@ TEST(Conformance, Sandwich6Case7_Old_Encode) {
   uint8_t v9 = 166ull;
   v7.f2 = std::move(v9);
   auto v10 = fidl::Array<llcpp::conformance::StructSize3Align2, 2>{std::move(v4), std::move(v7)};
-  v3.set_array_s3_a2(std::move(v10));
+  v3.set_array_s3_a2(&v10);
   v1.the_union = std::move(v3);
   uint32_t v11 = 134678021ull;
   v1.after = std::move(v11);
@@ -1596,10 +1596,10 @@ TEST(Conformance, Sandwich6Case8_Old_Encode) {
   llcpp::conformance::UnionWithVector v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
+  v4.set_variant(&v5);
   auto v6 = fidl::Array<llcpp::conformance::UnionSize8Align4, 1>{std::move(v4)};
   auto v7 = fidl::VectorView<llcpp::conformance::UnionSize8Align4>(v6.data(), 1);
-  v3.set_vector_union(std::move(v7));
+  v3.set_vector_union(&v7);
   v1.the_union = std::move(v3);
   uint32_t v8 = 134678021ull;
   v1.after = std::move(v8);
@@ -1623,7 +1623,7 @@ TEST(Conformance, Sandwich7Case1_Old_Encode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.the_union = std::move(v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -1951,7 +1951,7 @@ TEST(Conformance, Table_UnionWithVector_ReservedSandwich_Old_Encode) {
   auto v2 = llcpp::conformance::Table_UnionWithVector_ReservedSandwich::Build();
   llcpp::conformance::UnionWithVector v3;
   fidl::StringView v4("hello", 5);
-  v3.set_s(std::move(v4));
+  v3.set_s(&v4);
   v2.set_uv(&v3);
   auto v5 = v2.view();
   v1.table = std::move(v5);
@@ -1980,7 +1980,7 @@ TEST(Conformance, Table_UnionWithVector_StructSandwich_Old_Encode) {
   v2.set_s1(&v3);
   llcpp::conformance::UnionWithVector v8;
   fidl::StringView v9("hello", 5);
-  v8.set_s(std::move(v9));
+  v8.set_s(&v9);
   v2.set_uv(&v8);
   llcpp::conformance::StructSize3Align1 v10{};
   uint8_t v11 = 4ull;
@@ -2031,25 +2031,25 @@ TEST(Conformance, ArrayStruct_Old_Encode) {
   llcpp::conformance::ArrayStruct v1{};
   llcpp::conformance::StringUnion v2;
   fidl::StringView v3("one", 3);
-  v2.set_s(std::move(v3));
+  v2.set_s(&v3);
   llcpp::conformance::StringUnion v4;
   fidl::StringView v5("two", 3);
-  v4.set_s(std::move(v5));
+  v4.set_s(&v5);
   llcpp::conformance::StringUnion v6;
   fidl::StringView v7("three", 5);
-  v6.set_s(std::move(v7));
+  v6.set_s(&v7);
   auto v8 =
       fidl::Array<llcpp::conformance::StringUnion, 3>{std::move(v2), std::move(v4), std::move(v6)};
   v1.unions = std::move(v8);
   llcpp::conformance::StringUnion v9;
   fidl::StringView v10("four", 4);
-  v9.set_s(std::move(v10));
+  v9.set_s(&v10);
   llcpp::conformance::StringUnion v11;
   fidl::StringView v12("five", 4);
-  v11.set_s(std::move(v12));
+  v11.set_s(&v12);
   llcpp::conformance::StringUnion v13;
   fidl::StringView v14("six", 3);
-  v13.set_s(std::move(v14));
+  v13.set_s(&v14);
   auto v15 = fidl::Array<llcpp::conformance::StringUnion*, 3>{std::move(&v9), std::move(&v11),
                                                               std::move(&v13)};
   v1.optional_unions = std::move(v15);
@@ -2089,7 +2089,7 @@ TEST(Conformance, EmptyStructUnion_Old_Encode) {
   llcpp::conformance::EmptyStructUnionStruct v1{};
   llcpp::conformance::EmptyStructUnion v2;
   llcpp::conformance::TransformerEmptyStruct v3{};
-  v2.set_es(std::move(v3));
+  v2.set_es(&v3);
   v1.u = std::move(v2);
 
   const auto expected = std::vector<uint8_t>{
@@ -2146,7 +2146,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Encode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v1.u1 = std::move(v4);
   uint64_t v38 = 4919131752989213764ull;
   v1.f3 = std::move(v38);
@@ -2193,7 +2193,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Encode) {
       std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
       std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
       std::move(v71), std::move(v72)};
-  v40.set_variant(std::move(v73));
+  v40.set_variant(&v73);
   v1.u2 = std::move(v40);
   uint64_t v74 = 8608480567731124087ull;
   v1.f5 = std::move(v74);
@@ -2240,7 +2240,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Encode) {
       std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
       std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
       std::move(v107), std::move(v108)};
-  v76.set_variant(std::move(v109));
+  v76.set_variant(&v109);
   v1.u3 = std::move(v76);
   uint64_t v110 = 12297829382473034410ull;
   v1.f7 = std::move(v110);
@@ -2287,7 +2287,7 @@ TEST(Conformance, OutOfLineSandwich1Case1_Old_Encode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.the_union = std::move(v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -2320,7 +2320,7 @@ TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_Old_Encode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.opt_union = std::move(&v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -2451,7 +2451,7 @@ TEST(Conformance, Sandwich4Align8_Old_Encode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v2.the_union = std::move(v4);
   uint32_t v38 = 134678021ull;
   v2.after = std::move(v38);
@@ -2515,7 +2515,7 @@ TEST(Conformance, Sandwich4Align8WithPointer_Old_Encode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v2.the_union = std::move(v4);
   uint32_t v38 = 134678021ull;
   v2.after = std::move(v38);
@@ -2543,8 +2543,8 @@ TEST(Conformance, Sandwich8Case1_Old_Encode) {
   llcpp::conformance::UnionOfUnion v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
-  v3.set_size8align4(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size8align4(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v6 = 134678021ull;
   v1.after = std::move(v6);
@@ -2582,7 +2582,7 @@ TEST(Conformance, Sandwich9Case1_Old_Encode) {
       fidl::Array<fidl::VectorView<llcpp::conformance::StructSize3Align1*>, 1>{std::move(v15)};
   auto v17 =
       fidl::VectorView<fidl::VectorView<llcpp::conformance::StructSize3Align1*>>(v16.data(), 1);
-  v3.set_v(std::move(v17));
+  v3.set_v(&v17);
   v1.the_union = std::move(v3);
   uint16_t v18 = 4625ull;
   v1.after = std::move(v18);
@@ -2629,13 +2629,13 @@ TEST(Conformance, StringUnionVector_Old_Encode) {
   llcpp::conformance::StringUnionVector v1{};
   llcpp::conformance::StringUnion v2;
   fidl::StringView v3("hello", 5);
-  v2.set_s(std::move(v3));
+  v2.set_s(&v3);
   llcpp::conformance::StringUnion v4;
   uint8_t v5 = 170ull;
-  v4.set_u8(std::move(v5));
+  v4.set_u8(&v5);
   llcpp::conformance::StringUnion v6;
   uint8_t v7 = 187ull;
-  v6.set_u8(std::move(v7));
+  v6.set_u8(&v7);
   auto v8 = fidl::Array<llcpp::conformance::StringUnion*, 3>{std::move(&v2), std::move(&v4),
                                                              std::move(&v6)};
   auto v9 = fidl::VectorView<llcpp::conformance::StringUnion*>(v8.data(), 3);
@@ -2694,7 +2694,7 @@ TEST(Conformance, UnionWithBoundString_Old_Encode) {
   llcpp::conformance::UnionWithBoundStringStruct v1{};
   llcpp::conformance::UnionWithBoundString v2;
   fidl::StringView v3("abcd", 4);
-  v2.set_boundFiveStr(std::move(v3));
+  v2.set_boundFiveStr(&v3);
   v1.v = std::move(v2);
 
   const auto expected = std::vector<uint8_t>{
@@ -2710,7 +2710,7 @@ TEST(Conformance, UnionMigration_SingleVariant_Old_Encode) {
   llcpp::conformance::SingleVariantUnionStruct v1{};
   llcpp::conformance::SingleVariantUnion v2;
   uint32_t v3 = 42ull;
-  v2.set_x(std::move(v3));
+  v2.set_x(&v3);
   v1.u = std::move(v2);
 
   const auto expected = std::vector<uint8_t>{
@@ -3233,7 +3233,7 @@ TEST(Conformance, AddEthernetDeviceRequest_Old_Decode) {
   v3.name = std::move(v4);
   llcpp::conformance::IpAddressConfig v5;
   bool v6 = true;
-  v5.set_dhcp(std::move(v6));
+  v5.set_dhcp(&v6);
   v3.ip_address_config = std::move(v5);
   v1.config = std::move(v3);
   uint32_t v7 = 4294967295ull;
@@ -3306,11 +3306,11 @@ TEST(Conformance, Optionals_Old_Decode) {
   v1.xu2 = std::move(v9);
   llcpp::conformance::UnionWithEmptyStruct v11;
   llcpp::conformance::EmptyStruct v12{};
-  v11.set_s(std::move(v12));
+  v11.set_s(&v12);
   v1.u = std::move(v11);
   llcpp::conformance::UnionWithEmptyStruct v13;
   llcpp::conformance::EmptyStruct v14{};
-  v13.set_s(std::move(v14));
+  v13.set_s(&v14);
   v1.u2 = std::move(&v13);
 
   auto bytes = std::vector<uint8_t>{
@@ -3850,7 +3850,7 @@ TEST(Conformance, Sandwich1Case1_Old_Decode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionSize8Align4 v3;
   uint32_t v4 = 202050057ull;
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -3869,7 +3869,7 @@ TEST(Conformance, Sandwich1WithOptUnionPresent_Old_Decode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionSize8Align4 v3;
   uint32_t v4 = 202050057ull;
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.opt_union = std::move(&v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -3911,7 +3911,7 @@ TEST(Conformance, Sandwich2Case1_Old_Decode) {
   uint8_t v9 = 165ull;
   auto v10 = fidl::Array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
                                      std::move(v7), std::move(v8), std::move(v9)};
-  v3.set_variant(std::move(v10));
+  v3.set_variant(&v10);
   v1.the_union = std::move(v3);
   uint32_t v11 = 134678021ull;
   v1.after = std::move(v11);
@@ -3934,7 +3934,7 @@ TEST(Conformance, Sandwich3Case1_Old_Decode) {
   v4.f1 = std::move(v5);
   uint64_t v6 = 12659246559711111592ull;
   v4.f2 = std::move(v6);
-  v3.set_variant(std::move(v4));
+  v3.set_variant(&v4);
   v1.the_union = std::move(v3);
   uint32_t v7 = 134678021ull;
   v1.after = std::move(v7);
@@ -3993,7 +3993,7 @@ TEST(Conformance, Sandwich4Case1_Old_Decode) {
       std::move(v24), std::move(v25), std::move(v26), std::move(v27), std::move(v28),
       std::move(v29), std::move(v30), std::move(v31), std::move(v32), std::move(v33),
       std::move(v34), std::move(v35)};
-  v3.set_variant(std::move(v36));
+  v3.set_variant(&v36);
   v1.the_union = std::move(v3);
   uint32_t v37 = 134678021ull;
   v1.after = std::move(v37);
@@ -4015,8 +4015,8 @@ TEST(Conformance, Sandwich5Case1_Old_Decode) {
   llcpp::conformance::UnionOfUnion v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
-  v3.set_size8align4(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size8align4(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v6 = 134678021ull;
   v1.after = std::move(v6);
@@ -4042,8 +4042,8 @@ TEST(Conformance, Sandwich5Case2_Old_Decode) {
   v5.f1 = std::move(v6);
   uint64_t v7 = 12659246559711111592ull;
   v5.f2 = std::move(v7);
-  v4.set_variant(std::move(v5));
-  v3.set_size24align8(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size24align8(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v8 = 134678021ull;
   v1.after = std::move(v8);
@@ -4072,7 +4072,7 @@ TEST(Conformance, Sandwich6Case1_Old_Decode) {
   auto v10 = fidl::Array<uint8_t, 6>{std::move(v4), std::move(v5), std::move(v6),
                                      std::move(v7), std::move(v8), std::move(v9)};
   auto v11 = fidl::VectorView<uint8_t>(v10.data(), 6);
-  v3.set_vector_of_uint8(std::move(v11));
+  v3.set_vector_of_uint8(&v11);
   v1.the_union = std::move(v3);
   uint32_t v12 = 134678021ull;
   v1.after = std::move(v12);
@@ -4093,7 +4093,7 @@ TEST(Conformance, Sandwich6Case1AbsentVector_Old_Decode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionWithVector v3;
   auto v4 = fidl::VectorView<uint8_t>();
-  v3.set_vector_of_uint8(std::move(v4));
+  v3.set_vector_of_uint8(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -4113,7 +4113,7 @@ TEST(Conformance, Sandwich6Case2_Old_Decode) {
   v1.before = std::move(v2);
   llcpp::conformance::UnionWithVector v3;
   fidl::StringView v4("soft migrations rock!", 21);
-  v3.set_s(std::move(v4));
+  v3.set_s(&v4);
   v1.the_union = std::move(v3);
   uint32_t v5 = 134678021ull;
   v1.after = std::move(v5);
@@ -4155,7 +4155,7 @@ TEST(Conformance, Sandwich6Case3_Old_Decode) {
   auto v19 = fidl::Array<llcpp::conformance::StructSize3Align1, 3>{std::move(v4), std::move(v9),
                                                                    std::move(v14)};
   auto v20 = fidl::VectorView<llcpp::conformance::StructSize3Align1>(v19.data(), 3);
-  v3.set_vector_s3_a1(std::move(v20));
+  v3.set_vector_s3_a1(&v20);
   v1.the_union = std::move(v3);
   uint32_t v21 = 134678021ull;
   v1.after = std::move(v21);
@@ -4193,7 +4193,7 @@ TEST(Conformance, Sandwich6Case4_Old_Decode) {
   auto v13 = fidl::Array<llcpp::conformance::StructSize3Align2, 3>{std::move(v4), std::move(v7),
                                                                    std::move(v10)};
   auto v14 = fidl::VectorView<llcpp::conformance::StructSize3Align2>(v13.data(), 3);
-  v3.set_vector_s3_a2(std::move(v14));
+  v3.set_vector_s3_a2(&v14);
   v1.the_union = std::move(v3);
   uint32_t v15 = 134678021ull;
   v1.after = std::move(v15);
@@ -4218,7 +4218,7 @@ TEST(Conformance, Sandwich6Case5_Old_Decode) {
   uint32_t v6 = 4294967295ull;
   auto v7 = fidl::Array<uint32_t, 3>{std::move(v4), std::move(v5), std::move(v6)};
   auto v8 = fidl::VectorView<uint32_t>(v7.data(), 3);
-  v3.set_handles(std::move(v8));
+  v3.set_handles(&v8);
   v1.the_union = std::move(v3);
   uint32_t v9 = 134678021ull;
   v1.after = std::move(v9);
@@ -4251,7 +4251,7 @@ TEST(Conformance, Sandwich6Case6_Old_Decode) {
   auto v13 = fidl::Array<uint8_t, 3>{std::move(v10), std::move(v11), std::move(v12)};
   v9.three_bytes = std::move(v13);
   auto v14 = fidl::Array<llcpp::conformance::StructSize3Align1, 2>{std::move(v4), std::move(v9)};
-  v3.set_array_s3_a1(std::move(v14));
+  v3.set_array_s3_a1(&v14);
   v1.the_union = std::move(v3);
   uint32_t v15 = 134678021ull;
   v1.after = std::move(v15);
@@ -4281,7 +4281,7 @@ TEST(Conformance, Sandwich6Case7_Old_Decode) {
   uint8_t v9 = 166ull;
   v7.f2 = std::move(v9);
   auto v10 = fidl::Array<llcpp::conformance::StructSize3Align2, 2>{std::move(v4), std::move(v7)};
-  v3.set_array_s3_a2(std::move(v10));
+  v3.set_array_s3_a2(&v10);
   v1.the_union = std::move(v3);
   uint32_t v11 = 134678021ull;
   v1.after = std::move(v11);
@@ -4302,10 +4302,10 @@ TEST(Conformance, Sandwich6Case8_Old_Decode) {
   llcpp::conformance::UnionWithVector v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
+  v4.set_variant(&v5);
   auto v6 = fidl::Array<llcpp::conformance::UnionSize8Align4, 1>{std::move(v4)};
   auto v7 = fidl::VectorView<llcpp::conformance::UnionSize8Align4>(v6.data(), 1);
-  v3.set_vector_union(std::move(v7));
+  v3.set_vector_union(&v7);
   v1.the_union = std::move(v3);
   uint32_t v8 = 134678021ull;
   v1.after = std::move(v8);
@@ -4329,7 +4329,7 @@ TEST(Conformance, Sandwich7Case1_Old_Decode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.the_union = std::move(v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -4657,7 +4657,7 @@ TEST(Conformance, Table_UnionWithVector_ReservedSandwich_Old_Decode) {
   auto v2 = llcpp::conformance::Table_UnionWithVector_ReservedSandwich::Build();
   llcpp::conformance::UnionWithVector v3;
   fidl::StringView v4("hello", 5);
-  v3.set_s(std::move(v4));
+  v3.set_s(&v4);
   v2.set_uv(&v3);
   auto v5 = v2.view();
   v1.table = std::move(v5);
@@ -4686,7 +4686,7 @@ TEST(Conformance, Table_UnionWithVector_StructSandwich_Old_Decode) {
   v2.set_s1(&v3);
   llcpp::conformance::UnionWithVector v8;
   fidl::StringView v9("hello", 5);
-  v8.set_s(std::move(v9));
+  v8.set_s(&v9);
   v2.set_uv(&v8);
   llcpp::conformance::StructSize3Align1 v10{};
   uint8_t v11 = 4ull;
@@ -4737,25 +4737,25 @@ TEST(Conformance, ArrayStruct_Old_Decode) {
   llcpp::conformance::ArrayStruct v1{};
   llcpp::conformance::StringUnion v2;
   fidl::StringView v3("one", 3);
-  v2.set_s(std::move(v3));
+  v2.set_s(&v3);
   llcpp::conformance::StringUnion v4;
   fidl::StringView v5("two", 3);
-  v4.set_s(std::move(v5));
+  v4.set_s(&v5);
   llcpp::conformance::StringUnion v6;
   fidl::StringView v7("three", 5);
-  v6.set_s(std::move(v7));
+  v6.set_s(&v7);
   auto v8 =
       fidl::Array<llcpp::conformance::StringUnion, 3>{std::move(v2), std::move(v4), std::move(v6)};
   v1.unions = std::move(v8);
   llcpp::conformance::StringUnion v9;
   fidl::StringView v10("four", 4);
-  v9.set_s(std::move(v10));
+  v9.set_s(&v10);
   llcpp::conformance::StringUnion v11;
   fidl::StringView v12("five", 4);
-  v11.set_s(std::move(v12));
+  v11.set_s(&v12);
   llcpp::conformance::StringUnion v13;
   fidl::StringView v14("six", 3);
-  v13.set_s(std::move(v14));
+  v13.set_s(&v14);
   auto v15 = fidl::Array<llcpp::conformance::StringUnion*, 3>{std::move(&v9), std::move(&v11),
                                                               std::move(&v13)};
   v1.optional_unions = std::move(v15);
@@ -4795,7 +4795,7 @@ TEST(Conformance, EmptyStructUnion_Old_Decode) {
   llcpp::conformance::EmptyStructUnionStruct v1{};
   llcpp::conformance::EmptyStructUnion v2;
   llcpp::conformance::TransformerEmptyStruct v3{};
-  v2.set_es(std::move(v3));
+  v2.set_es(&v3);
   v1.u = std::move(v2);
 
   auto bytes = std::vector<uint8_t>{
@@ -4852,7 +4852,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Decode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v1.u1 = std::move(v4);
   uint64_t v38 = 4919131752989213764ull;
   v1.f3 = std::move(v38);
@@ -4899,7 +4899,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Decode) {
       std::move(v61), std::move(v62), std::move(v63), std::move(v64), std::move(v65),
       std::move(v66), std::move(v67), std::move(v68), std::move(v69), std::move(v70),
       std::move(v71), std::move(v72)};
-  v40.set_variant(std::move(v73));
+  v40.set_variant(&v73);
   v1.u2 = std::move(v40);
   uint64_t v74 = 8608480567731124087ull;
   v1.f5 = std::move(v74);
@@ -4946,7 +4946,7 @@ TEST(Conformance, NoCodingTablesStressor_Old_Decode) {
       std::move(v97),  std::move(v98),  std::move(v99),  std::move(v100), std::move(v101),
       std::move(v102), std::move(v103), std::move(v104), std::move(v105), std::move(v106),
       std::move(v107), std::move(v108)};
-  v76.set_variant(std::move(v109));
+  v76.set_variant(&v109);
   v1.u3 = std::move(v76);
   uint64_t v110 = 12297829382473034410ull;
   v1.f7 = std::move(v110);
@@ -4993,7 +4993,7 @@ TEST(Conformance, OutOfLineSandwich1Case1_Old_Decode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.the_union = std::move(v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -5026,7 +5026,7 @@ TEST(Conformance, OutOfLineSandwich1WithOptUnionPresent_Old_Decode) {
   v3.before = std::move(v4);
   llcpp::conformance::UnionSize8Align4 v5;
   uint32_t v6 = 202050057ull;
-  v5.set_variant(std::move(v6));
+  v5.set_variant(&v6);
   v3.opt_union = std::move(&v5);
   uint32_t v7 = 134678021ull;
   v3.after = std::move(v7);
@@ -5157,7 +5157,7 @@ TEST(Conformance, Sandwich4Align8_Old_Decode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v2.the_union = std::move(v4);
   uint32_t v38 = 134678021ull;
   v2.after = std::move(v38);
@@ -5221,7 +5221,7 @@ TEST(Conformance, Sandwich4Align8WithPointer_Old_Decode) {
       std::move(v25), std::move(v26), std::move(v27), std::move(v28), std::move(v29),
       std::move(v30), std::move(v31), std::move(v32), std::move(v33), std::move(v34),
       std::move(v35), std::move(v36)};
-  v4.set_variant(std::move(v37));
+  v4.set_variant(&v37);
   v2.the_union = std::move(v4);
   uint32_t v38 = 134678021ull;
   v2.after = std::move(v38);
@@ -5249,8 +5249,8 @@ TEST(Conformance, Sandwich8Case1_Old_Decode) {
   llcpp::conformance::UnionOfUnion v3;
   llcpp::conformance::UnionSize8Align4 v4;
   uint32_t v5 = 202050057ull;
-  v4.set_variant(std::move(v5));
-  v3.set_size8align4(std::move(v4));
+  v4.set_variant(&v5);
+  v3.set_size8align4(&v4);
   v1.union_of_union = std::move(v3);
   uint32_t v6 = 134678021ull;
   v1.after = std::move(v6);
@@ -5288,7 +5288,7 @@ TEST(Conformance, Sandwich9Case1_Old_Decode) {
       fidl::Array<fidl::VectorView<llcpp::conformance::StructSize3Align1*>, 1>{std::move(v15)};
   auto v17 =
       fidl::VectorView<fidl::VectorView<llcpp::conformance::StructSize3Align1*>>(v16.data(), 1);
-  v3.set_v(std::move(v17));
+  v3.set_v(&v17);
   v1.the_union = std::move(v3);
   uint16_t v18 = 4625ull;
   v1.after = std::move(v18);
@@ -5335,13 +5335,13 @@ TEST(Conformance, StringUnionVector_Old_Decode) {
   llcpp::conformance::StringUnionVector v1{};
   llcpp::conformance::StringUnion v2;
   fidl::StringView v3("hello", 5);
-  v2.set_s(std::move(v3));
+  v2.set_s(&v3);
   llcpp::conformance::StringUnion v4;
   uint8_t v5 = 170ull;
-  v4.set_u8(std::move(v5));
+  v4.set_u8(&v5);
   llcpp::conformance::StringUnion v6;
   uint8_t v7 = 187ull;
-  v6.set_u8(std::move(v7));
+  v6.set_u8(&v7);
   auto v8 = fidl::Array<llcpp::conformance::StringUnion*, 3>{std::move(&v2), std::move(&v4),
                                                              std::move(&v6)};
   auto v9 = fidl::VectorView<llcpp::conformance::StringUnion*>(v8.data(), 3);
@@ -5400,7 +5400,7 @@ TEST(Conformance, UnionWithBoundString_Old_Decode) {
   llcpp::conformance::UnionWithBoundStringStruct v1{};
   llcpp::conformance::UnionWithBoundString v2;
   fidl::StringView v3("abcd", 4);
-  v2.set_boundFiveStr(std::move(v3));
+  v2.set_boundFiveStr(&v3);
   v1.v = std::move(v2);
 
   auto bytes = std::vector<uint8_t>{
@@ -5416,7 +5416,7 @@ TEST(Conformance, UnionMigration_SingleVariant_Old_Decode) {
   llcpp::conformance::SingleVariantUnionStruct v1{};
   llcpp::conformance::SingleVariantUnion v2;
   uint32_t v3 = 42ull;
-  v2.set_x(std::move(v3));
+  v2.set_x(&v3);
   v1.u = std::move(v2);
 
   auto bytes = std::vector<uint8_t>{
