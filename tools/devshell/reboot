@@ -57,4 +57,39 @@ fi
 
 "${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${device}" "dm ${reboot_type}"
 
-fx-command-exec shell dm "${reboot_type}"
+# Check that the device is reachable over SSH, otherwise let the user know.
+# This establishes a ControlMaster.
+monotime=$(fx-command-run shell clock --monotonic)
+if [[ $? -ne 0 ]]; then
+  fx-error "Could not reach ${device} over SSH"
+  exit 1
+fi
+
+# Note: the background and exit trick here loosely gives us a "successful"
+# command completion, provided the shell parses our input. As dm reboot is
+# synchronous, we can't wait for it to complete, as the shell/ssh get no
+# shutdown message, and will simply observe a peer connection dropping.
+# Sometimes the reboot races the exit, in which case this command also exits
+# with error, but the following SSH check will fail (provided the device
+# doesn't reboot to SSH in less than a few seconds), so the loop will exit with
+# success.
+fx-command-run shell "dm \"${reboot_type}\" & exit 0"
+
+# Wait for the SSH connection to go down. As we use ControlMaster, we can
+# observe this using the control master check.
+i=0
+while fx-command-run shell -O check > /dev/null 2>&1; do
+  if [[ "$monotime" -gt $(fx-command-run shell clock --monotonic) ]]; then
+    # If we get here, then we raced between reboot and check, the device
+    # rebooted so fast that someone reconnected our SSH ControlMaster before we
+    # observed it going down (this generally only happens if the 'exit 0' above
+    # also races, and `fx serve` is busy trying to re-connect).
+    exit 0
+  fi
+
+  sleep 0.5
+  if [[ "$((i++))" -gt "10" ]]; then
+    fx-error "SSH still connected after $((i/2))s, reboot may have failed"
+    exit 1
+  fi
+done
