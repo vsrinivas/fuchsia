@@ -129,8 +129,7 @@ TEST(ClkTestAml, G12aEnableDisableAll) {
   EXPECT_EQ(memcmp(actual.get(), expected.get(), S905D2_HIU_LENGTH), 0);
 }
 
-
-TEST(ClkTestAml, G12aSetRate) {
+static void TestPlls(const uint32_t did) {
   auto ignored = std::make_unique<uint8_t[]>(S905D2_HIU_LENGTH);
   mmio_buffer_t buffer;
   buffer.vaddr = ignored.get();
@@ -138,7 +137,7 @@ TEST(ClkTestAml, G12aSetRate) {
   buffer.size = S905D2_HIU_LENGTH;
   buffer.vmo = ZX_HANDLE_INVALID;
 
-  AmlClockTest clk(buffer, PDEV_DID_AMLOGIC_G12A_CLK);
+  AmlClockTest clk(buffer, did);
 
   constexpr uint16_t kPllStart = 0;
   constexpr uint16_t kPllEnd = HIU_PLL_COUNT;
@@ -157,6 +156,14 @@ TEST(ClkTestAml, G12aSetRate) {
     st = clk.ClockImplSetRate(clkid, best_supported_rate);
     EXPECT_OK(st);
   }
+}
+
+TEST(ClkTestAml, G12aSetRate) {
+  TestPlls(PDEV_DID_AMLOGIC_G12A_CLK);
+}
+
+TEST(ClkTestAml, G12bSetRate) {
+  TestPlls(PDEV_DID_AMLOGIC_G12B_CLK);
 }
 
 }  // namespace amlogic_clock

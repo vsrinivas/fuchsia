@@ -69,6 +69,8 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   // Toggle enable bit for PLL clocks.
   zx_status_t ClkTogglePll(uint32_t clk, const bool enable);
 
+  void InitHiu();
+
   // IO MMIO
   ddk::MmioBuffer hiu_mmio_;
   std::optional<ddk::MmioBuffer> msr_mmio_;

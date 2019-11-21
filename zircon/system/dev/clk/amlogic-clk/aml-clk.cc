@@ -56,11 +56,8 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
       gates_ = g12a_clk_gates;
       gate_count_ = countof(g12a_clk_gates);
 
-      s905d2_hiu_init_etc(&hiudev_, static_cast<uint8_t*>(hiu_mmio_.get()));
-      for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
-        const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
-        s905d2_pll_init_etc(&hiudev_, &plldev_[pllnum], pll);
-      }
+      InitHiu();
+
       break;
     }
     case PDEV_DID_AMLOGIC_G12B_CLK: {
@@ -71,6 +68,9 @@ AmlClock::AmlClock(zx_device_t* device, ddk::MmioBuffer hiu_mmio,
 
       gates_ = g12b_clk_gates;
       gate_count_ = countof(g12b_clk_gates);
+
+      InitHiu();
+
       break;
     }
     default:
@@ -367,6 +367,14 @@ static const fuchsia_hardware_clock_Device_ops_t fidl_ops_ = {
 
 zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
   return fuchsia_hardware_clock_Device_dispatch(this, txn, msg, &fidl_ops_);
+}
+
+void AmlClock::InitHiu() {
+  s905d2_hiu_init_etc(&hiudev_, static_cast<uint8_t*>(hiu_mmio_.get()));
+  for (unsigned int pllnum = 0; pllnum < HIU_PLL_COUNT; pllnum++) {
+    const hhi_plls_t pll = static_cast<hhi_plls_t>(pllnum);
+    s905d2_pll_init_etc(&hiudev_, &plldev_[pllnum], pll);
+  }
 }
 
 void AmlClock::DdkUnbindNew(ddk::UnbindTxn txn) {
