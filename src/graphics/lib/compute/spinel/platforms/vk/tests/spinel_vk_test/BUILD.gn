@@ -1,0 +1,47 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//src/graphics/lib/compute/gn/build_rules.gni")
+
+source_set("spinel_vk_test") {
+  testonly = true
+  sources = [
+    "env.cc",
+    "env.h",
+    "env_spn_vk_target.cc",
+    "env_spn_vk_target.h",
+    "env_vk_device.cc",
+    "env_vk_device.h",
+    "env_vk_instance.cc",
+    "env_vk_instance.h",
+    "fxt_spinel_vk.cc",
+    "fxt_spinel_vk.h",
+  ]
+  deps = [
+    "${graphics_compute_dir}/common",
+    "${graphics_compute_dir}/common/vk",
+    graphics_compute_gtest_target,
+  ]
+  public_deps = [
+    "${graphics_compute_dir}/hotsort/platforms/vk",
+    "${graphics_compute_dir}/spinel:spinel_vk_for_tests",
+    graphics_compute_vulkan_loader_target,
+  ]
+}
+
+graphics_compute_unittests("spinel_vk_api_unittests") {
+  sources = [
+    "spinel_vk_api_unittests.cc",
+  ]
+  deps = [
+    ":spinel_vk_test",
+  ]
+}
+
+group("vk_unittests") {
+  testonly = true
+  public_deps = [
+    ":spinel_vk_api_unittests",  # basic API tests
+  ]
+}

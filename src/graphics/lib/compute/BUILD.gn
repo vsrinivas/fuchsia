@@ -99,6 +99,7 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
 # on a working Vulkan environment.
 graphics_compute_unittests_package("graphics_compute_vk_unittests") {
   deps = [
+    "spinel:vk_unittests",
     "tests:common_vk_unittests",
   ]
   needs_vulkan = true

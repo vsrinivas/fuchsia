@@ -10,3 +10,10 @@ group("tests") {
     "spinel_vk_svg",
   ]
 }
+
+group("vk_unittests") {
+  testonly = true
+  public_deps = [
+    "spinel_vk_test:vk_unittests",
+  ]
+}

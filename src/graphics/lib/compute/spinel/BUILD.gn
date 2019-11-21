@@ -83,3 +83,10 @@ group("tests") {
     "platforms/vk/tests",
   ]
 }
+
+group("vk_unittests") {
+  testonly = true
+  public_deps = [
+    "platforms/vk/tests:vk_unittests",
+  ]
+}
