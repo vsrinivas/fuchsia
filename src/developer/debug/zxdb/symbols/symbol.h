@@ -14,7 +14,9 @@
 #include "src/developer/debug/zxdb/symbols/dwarf_tag.h"
 #include "src/developer/debug/zxdb/symbols/identifier.h"
 #include "src/developer/debug/zxdb/symbols/lazy_symbol.h"
+#include "src/developer/debug/zxdb/symbols/symbol_context.h"
 #include "src/lib/fxl/memory/ref_counted.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -30,7 +32,9 @@ class FunctionType;
 class InheritedFrom;
 class MemberPtr;
 class ModifiedType;
+class ModuleSymbols;
 class Namespace;
+class ProcessSymbols;
 class TemplateParameter;
 class Type;
 class Value;
@@ -120,6 +124,20 @@ class Symbol : public fxl::RefCountedThreadSafe<Symbol> {
 
   // Returns the CompileUnit that this symbol is associated with. Returns null on failure.
   fxl::RefPtr<CompileUnit> GetCompileUnit() const;
+
+  // Returns the module symbols associated with this symbol object. It can be null if the module
+  // has been unloaded and there are still dangling references to symbols, and it can also be null
+  // in some test situations.
+  fxl::WeakPtr<ModuleSymbols> GetModuleSymbols() const;
+
+  // Returns the symbol context for this symbol in the given process. This requires the process so
+  // it can look up what the module load address is for this symbol's module (the same module can be
+  // loaded into multiple processes).
+  //
+  // The module may not be valid. It could have been unloaded while there were dangling symbols,
+  // or it can be null in some test situations. In these cases the resulting symbol context will
+  // be a "relative" context -- see SymbolContext::is_relative().
+  SymbolContext GetSymbolContext(const ProcessSymbols* process_symbols) const;
 
   // Computes and returns the language associated with this symbol. This will be kNone if the
   // language is not known or unset.

@@ -7,20 +7,25 @@
 
 #include "src/developer/debug/zxdb/symbols/dwarf_lang.h"
 #include "src/developer/debug/zxdb/symbols/symbol.h"
+#include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
+
+class ModuleSymbols;
 
 class CompileUnit final : public Symbol {
  public:
   // Symbol overrides.
   const CompileUnit* AsCompileUnit() const override { return this; }
 
+  // Module. This can be null if the module was unloaded while somebody held onto this symbol. It
+  // is also null in many unit testing situations where mock symbols are created.
+  const fxl::WeakPtr<ModuleSymbols>& module() const { return module_; }
+
   DwarfLang language() const { return language_; }
-  void set_language(DwarfLang lang) { language_ = lang; }
 
   // The file name that generated this unit.
   const std::string& name() const { return name_; }
-  void set_name(std::string name) { name_ = name; }
 
   // Compilation units have a lot of other stuff which we currently have no need for. These can be
   // added here as needed.
@@ -29,8 +34,10 @@ class CompileUnit final : public Symbol {
   FRIEND_REF_COUNTED_THREAD_SAFE(CompileUnit);
   FRIEND_MAKE_REF_COUNTED(CompileUnit);
 
-  CompileUnit();
+  explicit CompileUnit(fxl::WeakPtr<ModuleSymbols> module, DwarfLang lang, std::string name);
   ~CompileUnit() override;
+
+  fxl::WeakPtr<ModuleSymbols> module_;
 
   DwarfLang language_ = DwarfLang::kNone;
   std::string name_;
