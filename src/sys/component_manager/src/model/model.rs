@@ -390,7 +390,7 @@ impl Model {
                 })
                 .collect();
             let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
-            let event = Event::BindInstance {
+            let event = Event::StartInstance {
                 realm: realm.clone(),
                 component_decl: state.decl().clone(),
                 live_child_realms,

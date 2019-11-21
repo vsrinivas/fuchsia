@@ -87,17 +87,17 @@ impl ComponentSideTesting {
         Ok(())
     }
 
-    /// Blocks until a CapabilityUse invocation matching the specified component
+    /// Blocks until a UseCapability invocation matching the specified component
     /// and capability basename. All other invocations are ignored.
-    pub async fn wait_until_capability_use(
+    pub async fn wait_until_use_capability(
         &self,
         components: Vec<&str>,
         capability_basename: &str,
     ) -> Result<(), Error> {
         self.breakpoints
-            .wait_until_capability_use(&mut components.into_iter(), capability_basename)
+            .wait_until_use_capability(&mut components.into_iter(), capability_basename)
             .await
-            .context("wait until capability use failed")?;
+            .context("wait until use capability failed")?;
         Ok(())
     }
 

@@ -34,8 +34,7 @@ const uint64 MAX_CAPABILITY_PATH_LENGTH = 50;
 enum EventType {
     /// An instance was bound to successfully.
     /// This instance is now running.
-    /// TODO(xbhatnag): Rename this event to START_INSTANCE
-    BIND_INSTANCE = 0;
+    START_INSTANCE = 0;
 
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
@@ -55,8 +54,7 @@ enum EventType {
     /// A component uses a capability by creating a channel and providing
     /// the server end of the channel to the component manager for routing
     /// to a particular capability.
-    /// TODO(xbhatnag): Rename this event to USE_CAPABILITY
-    CAPABILITY_USE = 4;
+    USE_CAPABILITY = 4;
 };
 
 /// A protocol used in testing by a component instance to block the
@@ -74,12 +72,12 @@ protocol Breakpoints {
     /// allowed to proceed until resumed explicitly by calling Resume().
     Expect(EventType event_type, vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component) -> ();
 
-    /// Blocks until a CapabilityUse invocation matching the specified component
+    /// Blocks until a UseCapability invocation matching the specified component
     /// and capability path. All other invocations are ignored.
     ///
     /// Note: The component manager is blocked after this call and will not be
     /// allowed to proceed until resumed explicitly by calling Resume().
-    WaitUntilCapabilityUse(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path) -> ();
+    WaitUntilUseCapability(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path) -> ();
 
     /// Resume the component manager from the last expected invocation.
     Resume() -> ();

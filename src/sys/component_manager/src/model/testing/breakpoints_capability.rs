@@ -136,7 +136,7 @@ impl BreakpointCapabilityProvider {
 
                     Some(invocation)
                 }
-                fbreak::BreakpointsRequest::WaitUntilCapabilityUse {
+                fbreak::BreakpointsRequest::WaitUntilUseCapability {
                     component,
                     requested_capability_path,
                     responder,
@@ -145,21 +145,21 @@ impl BreakpointCapabilityProvider {
                     let component: Vec<&str> = component.iter().map(|x| x.as_ref()).collect();
                     let component: AbsoluteMoniker = component.into();
                     loop {
-                        // Keep looping until we get an CapabilityUse event with the correct
+                        // Keep looping until we get an UseCapability event with the correct
                         // capability path and component.
 
                         // Wait for the next invocation
                         let invocation = receiver.receive().await;
 
                         // Correct EventType?
-                        if let Event::CapabilityUse { realm, use_ } = &invocation.event {
+                        if let Event::UseCapability { realm, use_ } = &invocation.event {
                             // Correct component?
                             if realm.abs_moniker == component {
                                 // TODO(xbhatnag): Currently only service uses are sent as events
                                 // Hence, the UseDecl must always have a CapabilityPath.
                                 let actual_capability_path = use_
                                     .path()
-                                    .expect("WaitUntilCapabilityUse: UseDecl must have path")
+                                    .expect("WaitUntilUseCapability: UseDecl must have path")
                                     .to_string();
                                 // Correct capability path?
                                 if requested_capability_path == actual_capability_path {
@@ -261,11 +261,11 @@ impl ComponentManagerCapabilityProvider for BreakpointCapabilityProvider {
 
 fn convert_event_type(event_type: fbreak::EventType) -> EventType {
     match event_type {
-        fbreak::EventType::BindInstance => EventType::BindInstance,
+        fbreak::EventType::StartInstance => EventType::StartInstance,
         fbreak::EventType::StopInstance => EventType::StopInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,
-        fbreak::EventType::CapabilityUse => EventType::CapabilityUse,
+        fbreak::EventType::UseCapability => EventType::UseCapability,
     }
 }
 

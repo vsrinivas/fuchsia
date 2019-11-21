@@ -23,17 +23,17 @@ async fn base_resolver_test() -> Result<(), Error> {
     )
     .await;
 
-    test.register_breakpoints(vec![fbreak::EventType::BindInstance]).await;
+    test.register_breakpoints(vec![fbreak::EventType::StartInstance]).await;
 
     // Begin component manager's execution
     test.resume_breakpoint().await;
 
     // Expect the root component to be bound to
-    test.expect_breakpoint(fbreak::EventType::BindInstance, vec![]).await;
+    test.expect_breakpoint(fbreak::EventType::StartInstance, vec![]).await;
     test.resume_breakpoint().await;
 
     // Expect the echo_server component to be bound to
-    test.expect_breakpoint(fbreak::EventType::BindInstance, vec!["echo_server:0"]).await;
+    test.expect_breakpoint(fbreak::EventType::StartInstance, vec!["echo_server:0"]).await;
     test.resume_breakpoint().await;
 
     // Connect to the echo service

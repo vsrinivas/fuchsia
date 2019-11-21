@@ -208,12 +208,12 @@ impl TestRunner {
 async fn advanced_routing_test() -> Result<(), Error> {
     let root_component_url = "fuchsia-pkg://fuchsia.com/hub_integration_test#meta/echo_realm.cm";
     let test_runner =
-        TestRunner::new_with_breakpoints(root_component_url, vec![EventType::CapabilityUse])
+        TestRunner::new_with_breakpoints(root_component_url, vec![EventType::UseCapability])
             .await?;
 
     // Wait for Breakpoints and HubReport capabilities to be used by reporter.
-    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
-    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+    test_runner.expect_invocation(EventType::UseCapability, vec!["reporter:0"]).await.resume();
+    test_runner.expect_invocation(EventType::UseCapability, vec!["reporter:0"]).await.resume();
 
     // Verify that echo_realm has two children.
     test_runner.verify_global_directory_listing("children", vec!["echo_server", "reporter"]).await;
@@ -302,7 +302,7 @@ async fn advanced_routing_test() -> Result<(), Error> {
     responder.send().expect("Could not respond");
 
     // Wait for the reporter to connect to the Echo capability
-    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+    test_runner.expect_invocation(EventType::UseCapability, vec!["reporter:0"]).await.resume();
 
     // Verify that the hub now shows the Echo capability as in use
     let responder = test_runner
@@ -314,7 +314,7 @@ async fn advanced_routing_test() -> Result<(), Error> {
     responder.send().expect("Could not respond");
 
     // Wait for the reporter to connect to the Echo capability again
-    test_runner.expect_invocation(EventType::CapabilityUse, vec!["reporter:0"]).await.resume();
+    test_runner.expect_invocation(EventType::UseCapability, vec!["reporter:0"]).await.resume();
 
     // Verify that the hub does not change
     let responder = test_runner

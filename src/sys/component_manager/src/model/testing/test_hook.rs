@@ -129,7 +129,7 @@ impl TestHook {
             events: vec![
                 EventType::AddDynamicChild,
                 EventType::PreDestroyInstance,
-                EventType::BindInstance,
+                EventType::StartInstance,
                 EventType::StopInstance,
                 EventType::PostDestroyInstance,
             ],
@@ -175,7 +175,7 @@ impl TestHookInner {
         block_on(self.lifecycle_events.lock()).clone()
     }
 
-    pub async fn on_bind_instance_async<'a>(
+    pub async fn on_start_instance_async<'a>(
         &'a self,
         realm: Arc<Realm>,
         live_child_realms: &'a Vec<Arc<Realm>>,
@@ -256,13 +256,13 @@ impl Hook for TestHookInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::BindInstance {
+                Event::StartInstance {
                     realm,
                     component_decl: _,
                     live_child_realms,
                     routing_facade: _,
                 } => {
-                    self.on_bind_instance_async(realm.clone(), live_child_realms).await?;
+                    self.on_start_instance_async(realm.clone(), live_child_realms).await?;
                 }
                 Event::AddDynamicChild { realm } => {
                     self.create_instance_if_necessary(realm.abs_moniker.clone()).await?;

@@ -14,7 +14,7 @@ use {
 async fn main() -> Result<(), Error> {
     let testing = ComponentSideTesting::new()?;
 
-    testing.register_breakpoints(vec![fbreak::EventType::CapabilityUse]).await?;
+    testing.register_breakpoints(vec![fbreak::EventType::UseCapability]).await?;
 
     // Read the listing of entires of the hub rooted at this component and
     // pass the results to the integration test.
@@ -37,7 +37,7 @@ async fn main() -> Result<(), Error> {
     // Since connecting to the Echo capability is an asynchronous operation, we should
     // wait until the capability is actually in use.
     testing
-        .wait_until_capability_use(vec!["reporter:0"], "/svc/fidl.examples.routing.echo.Echo")
+        .wait_until_use_capability(vec!["reporter:0"], "/svc/fidl.examples.routing.echo.Echo")
         .await?;
     testing.resume_invocation().await?;
 
@@ -50,7 +50,7 @@ async fn main() -> Result<(), Error> {
     // Since connecting to the Echo capability is an asynchronous operation, we should
     // wait until the capability is actually in use.
     testing
-        .wait_until_capability_use(vec!["reporter:0"], "/svc/fidl.examples.routing.echo.Echo")
+        .wait_until_use_capability(vec!["reporter:0"], "/svc/fidl.examples.routing.echo.Echo")
         .await?;
     testing.resume_invocation().await?;
 

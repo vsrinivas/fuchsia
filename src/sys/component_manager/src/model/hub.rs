@@ -123,12 +123,12 @@ impl Hub {
         vec![HooksRegistration {
             events: vec![
                 EventType::AddDynamicChild,
-                EventType::BindInstance,
-                EventType::CapabilityUse,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
                 EventType::RouteFrameworkCapability,
+                EventType::StartInstance,
                 EventType::StopInstance,
+                EventType::UseCapability,
             ],
             callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
         }]
@@ -358,7 +358,7 @@ impl HubInner {
         Ok(())
     }
 
-    async fn on_bind_instance_async<'a>(
+    async fn on_start_instance_async<'a>(
         &'a self,
         realm: Arc<model::Realm>,
         component_decl: &'a ComponentDecl,
@@ -558,13 +558,13 @@ impl model::Hook for HubInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
-                Event::BindInstance {
+                Event::StartInstance {
                     realm,
                     component_decl,
                     live_child_realms,
                     routing_facade,
                 } => {
-                    self.on_bind_instance_async(
+                    self.on_start_instance_async(
                         realm.clone(),
                         component_decl,
                         live_child_realms,
@@ -594,7 +594,7 @@ impl model::Hook for HubInner {
                         )
                         .await?;
                 }
-                Event::CapabilityUse { realm, use_ } => {
+                Event::UseCapability { realm, use_ } => {
                     self.on_capability_use_async(realm.clone(), use_.clone()).await?;
                 }
                 _ => {}

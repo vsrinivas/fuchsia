@@ -274,7 +274,7 @@ impl IncomingNamespace {
                         .look_up_realm(&abs_moniker)
                         .await
                         .expect("A service that is using a capability must exist in the model.");
-                    let event = Event::CapabilityUse { realm: realm.clone(), use_ };
+                    let event = Event::UseCapability { realm: realm.clone(), use_ };
                     realm
                         .hooks
                         .dispatch(&event)

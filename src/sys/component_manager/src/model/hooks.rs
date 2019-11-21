@@ -21,15 +21,6 @@ pub enum EventType {
     /// Depending on its eagerness, this child may/may not be started yet.
     AddDynamicChild,
 
-    /// An instance was bound to. If the instance is executable, it is also started.
-    /// TODO(xbhatnag): Rename this event to StartInstance
-    BindInstance,
-
-    /// A capability was used by an instance. An instance uses a capability when
-    /// it creates a channel and provides the server end to ComponentManager for routing.
-    /// TODO(xbhatnag): Rename this event to UseCapability
-    CapabilityUse,
-
     /// An instance was destroyed successfully. The instance is stopped and no longer
     /// exists in the parent's realm.
     PostDestroyInstance,
@@ -44,7 +35,6 @@ pub enum EventType {
     /// If this component has an execution, an instance will be started shortly after this event.
     /// This event occurs exactly once in the lifetime of component manager and is used
     /// for debugging purposes.
-    /// TODO(xbhatnag): Consider making this event more generic (PreBindInstance)
     RootRealmCreated,
 
     /// A builtin capability is being requested by a component and requires routing.
@@ -55,8 +45,15 @@ pub enum EventType {
     /// The event propagation system is used to supply the capability being requested.
     RouteFrameworkCapability,
 
+    /// An instance was bound to. If the instance is executable, it is also started.
+    StartInstance,
+
     /// An instance was stopped successfully.
     StopInstance,
+
+    /// A capability was used by an instance. An instance uses a capability when
+    /// it creates a channel and provides the server end to ComponentManager for routing.
+    UseCapability,
 }
 
 /// The component manager calls out to objects that implement the `Hook` trait on registered
@@ -81,16 +78,6 @@ pub enum Event {
     // Keep the events listed below in alphabetical order!
     AddDynamicChild {
         realm: Arc<Realm>,
-    },
-    BindInstance {
-        realm: Arc<Realm>,
-        component_decl: ComponentDecl,
-        live_child_realms: Vec<Arc<Realm>>,
-        routing_facade: RoutingFacade,
-    },
-    CapabilityUse {
-        realm: Arc<Realm>,
-        use_: UseDecl,
     },
     PostDestroyInstance {
         realm: Arc<Realm>,
@@ -118,8 +105,18 @@ pub enum Event {
         // a Mutex.
         capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
     },
+    StartInstance {
+        realm: Arc<Realm>,
+        component_decl: ComponentDecl,
+        live_child_realms: Vec<Arc<Realm>>,
+        routing_facade: RoutingFacade,
+    },
     StopInstance {
         realm: Arc<Realm>,
+    },
+    UseCapability {
+        realm: Arc<Realm>,
+        use_: UseDecl,
     },
 }
 
@@ -127,28 +124,28 @@ impl Event {
     pub fn target_realm(&self) -> Arc<Realm> {
         match self {
             Event::AddDynamicChild { realm } => realm.clone(),
-            Event::BindInstance { realm, .. } => realm.clone(),
-            Event::CapabilityUse { realm, .. } => realm.clone(),
             Event::PostDestroyInstance { realm } => realm.clone(),
             Event::PreDestroyInstance { realm } => realm.clone(),
             Event::RootRealmCreated { realm, .. } => realm.clone(),
             Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
             Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
+            Event::StartInstance { realm, .. } => realm.clone(),
             Event::StopInstance { realm } => realm.clone(),
+            Event::UseCapability { realm, .. } => realm.clone(),
         }
     }
 
     pub fn type_(&self) -> EventType {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
-            Event::BindInstance { .. } => EventType::BindInstance,
-            Event::CapabilityUse { .. } => EventType::CapabilityUse,
             Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
             Event::RootRealmCreated { .. } => EventType::RootRealmCreated,
             Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
+            Event::StartInstance { .. } => EventType::StartInstance,
             Event::StopInstance { .. } => EventType::StopInstance,
+            Event::UseCapability { .. } => EventType::UseCapability,
         }
     }
 }
