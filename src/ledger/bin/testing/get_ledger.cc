@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/services.h>
 
 #include <utility>
 
@@ -58,17 +57,18 @@ Status GetLedger(sys::ComponentContext* context,
 
   ledger_internal::LedgerRepositoryFactoryPtr repository_factory;
 
-  component::Services child_services;
+  fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
-  launch_info.directory_request = child_services.NewRequest();
+  launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   AppendGarbageCollectionPolicyFlags(gc_policy, &launch_info);
   launch_info.arguments->push_back("--disable_reporting");
   launch_info.arguments->push_back("--verbose=" + std::to_string(fxl::GetVlogVerbosity()));
   fuchsia::sys::LauncherPtr launcher;
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), std::move(controller_request));
-  child_services.ConnectToService(repository_factory.NewRequest());
+  sys::ServiceDirectory child_services(std::move(child_directory));
+  child_services.Connect(repository_factory.NewRequest());
 
   fuchsia::ledger::internal::LedgerRepositorySyncPtr repository;
 

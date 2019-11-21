@@ -8,7 +8,6 @@
 #include <lib/fidl/cpp/synchronous_interface_ptr.h>
 #include <lib/fit/function.h>
 #include <lib/gtest/real_loop_fixture.h>
-#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 #include <string.h>
 
@@ -86,10 +85,10 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
 
  protected:
   void Init(std::vector<std::string> additional_args) {
-    component::Services child_services;
+    fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
-    launch_info.directory_request = child_services.NewRequest();
+    launch_info.directory_request = child_directory.NewRequest().TakeChannel();
     launch_info.arguments = std::vector<std::string>{"--disable_reporting"};
     ledger::AppendGarbageCollectionPolicyFlags(ledger::kTestingGarbageCollectionPolicy,
                                                &launch_info);
@@ -109,8 +108,9 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
         ADD_FAILURE() << "Ledger repository error: " << status;
       }
     });
-    child_services.ConnectToService(ledger_repository_factory_.NewRequest());
-    child_services.ConnectToService(controller_.NewRequest());
+    sys::ServiceDirectory child_services(std::move(child_directory));
+    child_services.Connect(ledger_repository_factory_.NewRequest());
+    child_services.Connect(controller_.NewRequest());
   }
 
   void RegisterShutdownCallback(fit::function<void()> callback) {

@@ -7,7 +7,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/svc/cpp/services.h>
 #include <lib/sys/cpp/component_context.h>
 
 #include <cstdlib>
@@ -31,10 +30,10 @@ int main(int argc, char const *argv[]) {
   std::unique_ptr<sys::ComponentContext> context(sys::ComponentContext::Create());
 
   // Get a repository factory.
-  component::Services services;
+  fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kLedgerBinaryPath;
-  launch_info.directory_request = services.NewRequest();
+  launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   launch_info.arguments->push_back("--disable_reporting");
   // This instance exists to allow tests built outside of peridot (ie. clients of ledger) to get
   // access to a Ledger instance backed by memfs. We want this instance to use the default garbage
@@ -45,7 +44,9 @@ int main(int argc, char const *argv[]) {
   context->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller.NewRequest());
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr repository_factory;
-  services.ConnectToService(repository_factory.NewRequest());
+  sys::ServiceDirectory child_services(std::move(child_directory));
+  child_services.Connect(repository_factory.NewRequest());
+
 
   // Create memfs.
   auto memfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();

@@ -6,7 +6,6 @@
 
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/optional.h>
-#include <lib/svc/cpp/services.h>
 
 #include <utility>
 
@@ -67,16 +66,17 @@ void LedgerAppInstanceImpl::Init(
 
   // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12278): Connect |inspect_request| to
   // the Ledger component under test.
-  component::Services child_services;
+  fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
-  launch_info.directory_request = child_services.NewRequest();
+  launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   *launch_info.arguments = {"--disable_reporting", "--disable_p2p_sync"};
   ledger::AppendGarbageCollectionPolicyFlags(kTestingGarbageCollectionPolicy, &launch_info);
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  child_services.ConnectToService(std::move(repository_factory_request));
+  sys::ServiceDirectory child_services(std::move(child_directory));
+  child_services.Connect(std::move(repository_factory_request));
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {

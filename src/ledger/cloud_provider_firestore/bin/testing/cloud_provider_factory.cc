@@ -7,7 +7,6 @@
 #include <fuchsia/net/oldhttp/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/services.h>
 #include <zircon/status.h>
 
 #include <utility>
@@ -116,15 +115,16 @@ CloudProviderFactory::~CloudProviderFactory() {
 
 void CloudProviderFactory::Init() {
   services_loop_.StartThread();
-  component::Services child_services;
+  fidl::InterfaceHandle<fuchsia::io::Directory> child_directory;
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kAppUrl;
   launch_info.arguments.emplace({kNoCobaltReporting.ToString()});
-  launch_info.directory_request = child_services.NewRequest();
+  launch_info.directory_request = child_directory.NewRequest().TakeChannel();
   fuchsia::sys::LauncherPtr launcher;
   component_context_->svc()->Connect(launcher.NewRequest());
   launcher->CreateComponent(std::move(launch_info), cloud_provider_controller_.NewRequest());
-  child_services.ConnectToService(cloud_provider_factory_.NewRequest());
+  sys::ServiceDirectory child_services(std::move(child_directory));
+  child_services.Connect(cloud_provider_factory_.NewRequest());
 }
 
 void CloudProviderFactory::MakeCloudProvider(

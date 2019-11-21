@@ -29,7 +29,6 @@ source_set("message_relay") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
     "//src/lib/callback",
     "//src/lib/fxl",

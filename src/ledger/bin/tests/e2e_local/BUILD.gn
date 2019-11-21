@@ -16,7 +16,6 @@ executable("e2e_local") {
 
   deps = [
     "//garnet/public/lib/gtest",
-    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/base64url:base64url",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",

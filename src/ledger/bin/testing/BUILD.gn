@@ -158,7 +158,6 @@ source_set("get_ledger") {
   ]
 
   deps = [
-    "//garnet/public/lib/svc/cpp",
     "//src/ledger/bin/fidl",
     "//src/lib/callback",
   ]
@@ -221,7 +220,6 @@ executable("memory_usage_test_benchmark") {
   deps = [
     ":get_ledger",
     ":lib",
-    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/scoped_tmpfs",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

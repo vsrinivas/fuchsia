@@ -18,7 +18,6 @@ executable("e2e_sync") {
 
   deps = [
     ":ledger_e2e_sync_credentials",
-    "//garnet/public/lib/svc/cpp",
     "//peridot/lib/convert",
     "//peridot/lib/rng:system",
     "//sdk/lib/fidl/cpp",
