@@ -50,7 +50,7 @@ class InterceptingThreadObserver : public zxdb::ThreadObserver {
   void Register(int64_t koid, SyscallDecoder* decoder);
   void AddExitBreakpoint(zxdb::Thread* thread, const std::string& syscall_name, uint64_t address);
 
-  void CreateNewBreakpoint(zxdb::BreakpointSettings& settings);
+  void CreateNewBreakpoint(zxdb::Thread* thread, zxdb::BreakpointSettings& settings);
 
  private:
   InterceptionWorkflow* workflow_;

@@ -84,8 +84,9 @@ void InterceptingThreadObserver::OnThreadStopped(
           return;
         }
       }
-      FXL_LOG(INFO) << "Internal error: breakpoint "
-                    << settings.locations[0].name.components()[0].name() << " not managed";
+      FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+                     << ':' << thread->GetKoid() << ": Internal error: breakpoint "
+                     << settings.locations[0].name.components()[0].name() << " not managed";
       thread->Continue();
       return;
     }
@@ -129,15 +130,17 @@ void InterceptingThreadObserver::AddExitBreakpoint(zxdb::Thread* thread,
 
   FXL_VLOG(2) << "Thread " << thread->GetKoid() << ": creating return value breakpoint for "
               << syscall_name << " at address " << std::hex << address << std::dec;
-  CreateNewBreakpoint(settings);
+  CreateNewBreakpoint(thread, settings);
 }
 
-void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::BreakpointSettings& settings) {
+void InterceptingThreadObserver::CreateNewBreakpoint(zxdb::Thread* thread,
+                                                     zxdb::BreakpointSettings& settings) {
   zxdb::Breakpoint* breakpoint = workflow_->session_->system().CreateNewBreakpoint();
 
-  breakpoint->SetSettings(settings, [](const zxdb::Err& err) {
+  breakpoint->SetSettings(settings, [thread](const zxdb::Err& err) {
     if (!err.ok()) {
-      FXL_LOG(INFO) << "Error in setting breakpoint: " << err.msg();
+      FXL_LOG(ERROR) << thread->GetProcess()->GetName() << ' ' << thread->GetProcess()->GetKoid()
+                     << ':' << thread->GetKoid() << ": Error in setting breakpoint: " << err.msg();
     }
   });
 }
