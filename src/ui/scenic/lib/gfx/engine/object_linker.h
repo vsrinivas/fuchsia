@@ -273,6 +273,7 @@ void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool on_destructi
     linker_->DestroyEndpoint(endpoint_id_, is_import);
   }
   linker_.reset();
+  object_.reset();
   link_resolved_ = nullptr;
   endpoint_id_ = ZX_KOID_INVALID;
   LinkInvalidated(on_destruction);

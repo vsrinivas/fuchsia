@@ -389,11 +389,95 @@ TEST_F(FlatlandTest, GraphLinkReplaceWithoutConnection) {
   fidl::InterfacePtr<GraphLink> graph_link2;
   flatland.LinkToParent(std::move(child_token2), graph_link2.NewRequest());
 
+  // Until Present() is called, the previous GraphLink is not unbound.
+  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(graph_link2.is_bound());
+
   RunLoopUntilIdle();
   PRESENT(flatland, true);
   RunLoopUntilIdle();
 
-  // TODO(37597): Test for cleanup of previous link here.
+  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_TRUE(graph_link2.is_bound());
+}
+
+TEST_F(FlatlandTest, GraphLinkReplaceWithConnection) {
+  Flatland parent = CreateFlatland();
+  Flatland child = CreateFlatland();
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  fidl::InterfacePtr<GraphLink> graph_link;
+  CreateLink(linker_, &parent, &child, kLinkId1, &content_link, &graph_link);
+  RunLoopUntilIdle();
+
+  fidl::InterfacePtr<GraphLink> graph_link2;
+
+  // Don't use the helper function for the second link to test when the previous links are closed.
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  // Creating the new GraphLink doesn't invalidate either of the old links until Present() is
+  // called on the child.
+  child.LinkToParent(std::move(child_token), graph_link2.NewRequest());
+
+  EXPECT_TRUE(content_link.is_bound());
+  EXPECT_TRUE(graph_link.is_bound());
+  EXPECT_TRUE(graph_link2.is_bound());
+
+  // Present() replaces the original GraphLink, which also results in the invalidation of both ends
+  // of the original link.
+  RunLoopUntilIdle();
+  PRESENT(child, true);
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link.is_bound());
+  EXPECT_FALSE(graph_link.is_bound());
+  EXPECT_TRUE(graph_link2.is_bound());
+}
+
+TEST_F(FlatlandTest, GraphLinkUnbindsOnParentDeath) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  fidl::InterfacePtr<GraphLink> graph_link;
+  flatland.LinkToParent(std::move(child_token), graph_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  parent_token.value.reset();
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(graph_link.is_bound());
+}
+
+TEST_F(FlatlandTest, ContentLinkUnbindsOnChildDeath) {
+  Flatland flatland = CreateFlatland();
+
+  ContentLinkToken parent_token;
+  GraphLinkToken child_token;
+  ASSERT_EQ(ZX_OK, zx::eventpair::create(0, &parent_token.value, &child_token.value));
+
+  const uint64_t kLinkId1 = 1;
+
+  fidl::InterfacePtr<ContentLink> content_link;
+  flatland.CreateLink(kLinkId1, std::move(parent_token), {}, content_link.NewRequest());
+
+  RunLoopUntilIdle();
+  PRESENT(flatland, true);
+  RunLoopUntilIdle();
+
+  child_token.value.reset();
+  RunLoopUntilIdle();
+
+  EXPECT_FALSE(content_link.is_bound());
 }
 
 TEST_F(FlatlandTest, ContentLinkIdIsZero) {

@@ -80,12 +80,14 @@ void Flatland::LinkToParent(GraphLinkToken token, fidl::InterfaceRequest<GraphLi
       [this, impl = link.impl](fidl::InterfaceRequest<ContentLink> request) {
         // Set up the link here, so that the channel is initialized, but don't actually change the
         // link in our member variable until present is called.
-        //
-        // TODO(37597): Calling LinkToParent()) a second time should clean up the previous link in
-        // the binding set.
         content_link_bindings_.AddBinding(impl, std::move(request));
       },
-      /* link_failed = */ nullptr);
+      /* link_invalidated = */
+      [this, impl = link.impl](bool on_link_destruction) {
+        if (!on_link_destruction) {
+          content_link_bindings_.RemoveBinding(impl);
+        }
+      });
 
   // This portion of the method is feed-forward. Our Link should not actually be changed until
   // Present() is called, so that the update to the Link is atomic with all other operations in the
@@ -230,7 +232,12 @@ void Flatland::CreateLink(LinkId link_id, ContentLinkToken token, LinkProperties
       [this, impl = link.impl](fidl::InterfaceRequest<GraphLink> request) {
         graph_link_bindings_.AddBinding(impl, std::move(request));
       },
-      /* link_failed = */ nullptr);
+      /* link_invalidated = */
+      [this, impl = link.impl](bool on_link_destruction) {
+        if (!on_link_destruction) {
+          graph_link_bindings_.RemoveBinding(impl);
+        }
+      });
 
   // This is the feed-forward portion of the method. Here, we add the link to the map, and
   // initialize its layout with the desired properties.

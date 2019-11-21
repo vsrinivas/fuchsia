@@ -755,6 +755,66 @@ TEST_F(ObjectLinkerTest, MoveInitializedLink) {
   EXPECT_EQ(1u, export_disconnected2);
 }
 
+TEST_F(ObjectLinkerTest, ImportLinkDeathDestroysImport) {
+  // Use a custom ObjectLinker template.
+  using SharedTestObjectLinker = ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
+  SharedTestObjectLinker object_linker;
+
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  auto import_obj = std::make_shared<TestImportObj>(kImportValue);
+
+  // Fetch a weak pointer to the original object so that invalidating the link will destroy the
+  // object.
+  std::weak_ptr<TestImportObj> weak_import_obj = import_obj;
+  EXPECT_FALSE(weak_import_obj.expired());
+
+  SharedTestObjectLinker::ImportLink import_link =
+      object_linker.CreateImport(std::move(import_obj), std::move(import_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+
+  import_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
+                         [](bool on_link_destruction) {});
+
+  // This should cause the import to get a link_disconnected event when the eventloop ticks, which
+  // will delete the only shared pointer to the object, invalidating the weak pointer.
+  export_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+
+  EXPECT_TRUE(weak_import_obj.expired());
+}
+
+TEST_F(ObjectLinkerTest, ExportLinkDeathDestroysExport) {
+  // Use a custom ObjectLinker template.
+  using SharedTestObjectLinker = ObjectLinker<std::shared_ptr<TestExportObj>, std::shared_ptr<TestImportObj>>;
+  SharedTestObjectLinker object_linker;
+
+  zx::eventpair export_token, import_token;
+  EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
+
+  auto export_obj = std::make_shared<TestExportObj>(kExportValue);
+
+  // Fetch a weak pointer to the original object so that invalidating the link will destroy the
+  // object.
+  std::weak_ptr<TestExportObj> weak_export_obj = export_obj;
+  EXPECT_FALSE(weak_export_obj.expired());
+
+  SharedTestObjectLinker::ExportLink export_link =
+      object_linker.CreateExport(std::move(export_obj), std::move(export_token), error_reporter());
+  EXPECT_ERROR_COUNT(0);
+
+  export_link.Initialize(ERROR_IF_CALLED("import.link_resolved"),
+                         [](bool on_link_destruction) {});
+
+  // This should cause the export to get a link_disconnected event when the eventloop ticks, which
+  // will delete the only shared pointer to the object, invalidating the weak pointer.
+  import_token.reset();
+  EXPECT_TRUE(RunLoopUntilIdle());
+
+  EXPECT_TRUE(weak_export_obj.expired());
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl
