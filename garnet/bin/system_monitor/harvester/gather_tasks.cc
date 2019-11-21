@@ -23,12 +23,12 @@ class TaskHarvester final : public TaskEnumerator {
 
   // After gathering the data, upload it to |dockyard|.
   void UploadTaskInfo(DockyardProxy* dockyard_proxy) {
-    if (FXL_VLOG_IS_ON(1)) {
+    if (FXL_VLOG_IS_ON(2)) {
       for (const auto& int_sample : int_sample_list_) {
-        FXL_VLOG(1) << int_sample.first << ": " << int_sample.second;
+        FXL_VLOG(2) << int_sample.first << ": " << int_sample.second;
       }
       for (const auto& string_sample : string_sample_list_) {
-        FXL_VLOG(1) << string_sample.first << ": " << string_sample.second;
+        FXL_VLOG(2) << string_sample.first << ": " << string_sample.second;
       }
     }
 
@@ -86,7 +86,7 @@ class TaskHarvester final : public TaskEnumerator {
       return;
     }
     AddKoidString(koid, "name", name);
-    FXL_VLOG(1) << "name " << name;
+    FXL_VLOG(2) << "name " << name;
   }
 
   // Gather stats for a specific process.

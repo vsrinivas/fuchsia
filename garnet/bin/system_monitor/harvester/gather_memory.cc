@@ -39,7 +39,7 @@ void GatherMemory::Gather() {
     return;
   }
 
-  FXL_VLOG(1) << "free memory total " << stats.free_bytes << ", heap "
+  FXL_VLOG(2) << "free memory total " << stats.free_bytes << ", heap "
               << stats.free_heap_bytes << ", vmo " << stats.vmo_bytes
               << ", mmu " << stats.mmu_overhead_bytes << ", ipc "
               << stats.ipc_bytes;

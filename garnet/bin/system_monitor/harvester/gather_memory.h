@@ -9,6 +9,7 @@
 
 namespace harvester {
 
+// Gather high level memory information from the kernel.
 class GatherMemory : public GatherCategory {
  public:
   GatherMemory(zx_handle_t root_resource,

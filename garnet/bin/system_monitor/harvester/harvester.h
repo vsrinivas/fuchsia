@@ -11,6 +11,7 @@
 #include "gather_inspectable.h"
 #include "gather_introspection.h"
 #include "gather_memory.h"
+#include "gather_memory_digest.h"
 #include "gather_tasks.h"
 #include "gather_tasks_cpu.h"
 
@@ -44,6 +45,8 @@ class Harvester {
   GatherIntrospection gather_introspection_{root_resource_,
                                             dockyard_proxy_.get()};
   GatherMemory gather_memory_{root_resource_, dockyard_proxy_.get()};
+  GatherMemoryDigest gather_memory_digest_{root_resource_,
+                                           dockyard_proxy_.get()};
   GatherTasks gather_tasks_{root_resource_, dockyard_proxy_.get()};
   GatherTasksCpu gather_tasks_cpu_{root_resource_, dockyard_proxy_.get()};
 
