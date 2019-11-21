@@ -107,6 +107,7 @@ if (current_toolchain == default_toolchain) {
       "ENABLE_PANIC_SHELL",
       "WITH_DEBUG_LINEBUFFER",
       "ZIRCON_TOOLCHAIN",
+      "LK_DEBUGLEVEL=$kernel_debug_level",
     ]
 
     if (!enable_user_pci) {

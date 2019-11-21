@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/config/levels.gni")
+
 declare_args() {
   # Maximum number of CPUs the kernel will run on (others will be ignored).
   smp_max_cpus = 32
@@ -44,6 +46,14 @@ declare_args() {
   # Extra macro definitions for kernel code, e.g. "DISABLE_KASLR",
   # "ENABLE_KERNEL_LL_DEBUG".
   kernel_extra_defines = []
+
+  # Enables various kernel debugging and diagnostic features.  Valid
+  # values are between 0-3.  The higher the value, the more that are
+  # enabled.  A value of 0 disables all of them.
+  #
+  # TODO(41790): This value is derived from assert_level.  Decouple
+  # the two and set kernel_debug_level independently.
+  kernel_debug_level = assert_level
 }
 
 declare_args() {

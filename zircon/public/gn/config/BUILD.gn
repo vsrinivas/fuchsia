@@ -304,9 +304,6 @@ config("linker_gc") {
 config("assert_level") {
   assert(assert_level >= 0)
   defines = [ "ZX_ASSERT_LEVEL=$assert_level" ]
-  if (is_kernel) {
-    defines += [ "LK_DEBUGLEVEL=$assert_level" ]
-  }
   if (assert_level == 0) {
     defines += [ "NDEBUG" ]
   }
