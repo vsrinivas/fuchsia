@@ -205,7 +205,11 @@ class AskModel extends ChangeNotifier {
       surfaceRelation: modular.SurfaceRelation(),
     );
     storyMaster
-      ..enqueue([modular.StoryCommand.withAddMod(addMod)])
+      ..enqueue([
+        modular.StoryCommand.withAddMod(addMod),
+        modular.StoryCommand.withSetFocusState(
+            modular.SetFocusState(focused: true)),
+      ])
       ..execute();
   }
 
