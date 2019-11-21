@@ -114,12 +114,13 @@ func parsePackages(r io.Reader) ([]Descriptor, error) {
 		}
 		return 0, nil, nil
 	})
+	space := regexp.MustCompile(`\s+`)
 	exp := regexp.MustCompile(`(?m)^(?P<key>\S+): (?P<value>(.*)(?:$\s^ .*)*)$`)
 	var descriptors []Descriptor
 	for scanner.Scan() {
 		descriptor := make(Descriptor)
 		for _, m := range exp.FindAllStringSubmatch(scanner.Text(), -1) {
-			descriptor[m[1]] = m[2]
+			descriptor[m[1]] = space.ReplaceAllString(m[2], " ")
 		}
 		descriptors = append(descriptors, descriptor)
 	}
@@ -234,11 +235,13 @@ func downloadPackageList(config *Config, depends bool) ([]Lock, error) {
 					}
 					// Use tags as a more fine-grained filter.
 					var tag bool
-					for _, n := range strings.Split(p["Tag"], ", ") {
-						t := strings.Split(strings.TrimSpace(n), " ")[0]
-						switch t {
-						case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
-							tag = true
+					if section {
+						for _, n := range strings.Split(p["Tag"], ", ") {
+							t := strings.Split(strings.TrimSpace(n), " ")[0]
+							switch t {
+							case "devel::library", "x11::library", "role::devel-lib", "role::shared-lib":
+								tag = true
+							}
 						}
 					}
 					// Skip everything that doesn't match.

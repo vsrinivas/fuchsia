@@ -17,27 +17,35 @@ packages:
   - package: libglapi-mesa
   - package: libx11-6
   - package: libx11-dev
-  - package: libxcursor1
+  - package: libx11-xcb-dev
+  - package: libx11-xcb1
+  - package: libxau-dev
+  - package: libxau6
+  - package: libxcb1
+  - package: libxcb1-dev
   - package: libxcursor-dev
-  - package: libxext6
+  - package: libxcursor1
+  - package: libxdmcp-dev
+  - package: libxdmcp6
   - package: libxext-dev
-  - package: libxfixes3
+  - package: libxext6
   - package: libxfixes-dev
-  - package: libxi6
+  - package: libxfixes3
   - package: libxi-dev
-  - package: libxrandr2
-  - package: libxrandr-dev
-  - package: libxrender1
-  - package: libxrender-dev
-  - package: libxinerama1
+  - package: libxi6
   - package: libxinerama-dev
+  - package: libxinerama1
+  - package: libxrandr-dev
+  - package: libxrandr2
+  - package: libxrender-dev
+  - package: libxrender1
   - package: linux-libc-dev
   - package: mesa-common-dev
   - package: x11proto-core-dev
+  - package: x11proto-fixes-dev
   - package: x11proto-gl-dev
   - package: x11proto-input-dev
   - package: x11proto-kb-dev
   - package: x11proto-randr-dev
   - package: x11proto-render-dev
   - package: x11proto-xext-dev
-  - package: x11proto-fixes-dev

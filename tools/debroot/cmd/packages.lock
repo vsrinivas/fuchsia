@@ -1,5 +1,5 @@
-hash: 8727abfc278cd94cc0b6d4285f92eca18f7495bf7650a26e416ad585c9b3f65a
-updated: 2019-08-14T21:38:48.608392147-07:00
+hash: 786b2acdac5e021b1cbef437853e4178d0198febf95c7cd8ca4131da0d215e5e
+updated: 2019-11-18T16:42:36.650279517-08:00
 packages:
 - package: libc6
   version: 2.19-18+deb8u10
@@ -113,6 +113,102 @@ packages:
   version: 2:1.6.2-3+deb8u1
   filename: pool/main/libx/libx11/libx11-dev_1.6.2-3+deb8u1_i386.deb
   hash: 82fd52f4db77855cbf76f274550ff07d2a4bfe62a9c9d10e0345e7c8dece4188
+- package: libx11-xcb-dev
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb-dev_1.6.2-3+deb8u1_amd64.deb
+  hash: 2468e294865fcd530dda96083a5c70facb73e9fb9732f5eb1a72ade19301e28c
+- package: libx11-xcb-dev
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb-dev_1.6.2-3+deb8u1_arm64.deb
+  hash: d0f801f7c05e8dd387166cd5b96c750b119928f0709e60e8c4d725d0a85372c7
+- package: libx11-xcb-dev
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb-dev_1.6.2-3+deb8u1_armhf.deb
+  hash: d8d898756e73d1eb0b536ac1ccc58be69c4c59783a20bbbec24904aa297d464a
+- package: libx11-xcb-dev
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb-dev_1.6.2-3+deb8u1_i386.deb
+  hash: 929f258d74580139b32c8afde526c643a4b34610c0ffac7eba2a97e673070cb4
+- package: libx11-xcb1
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb1_1.6.2-3+deb8u1_amd64.deb
+  hash: 1ef8ed1432b77d0be013c58b373ba5c776ac7392970b68bfe5443ee9b5c0b2a3
+- package: libx11-xcb1
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb1_1.6.2-3+deb8u1_arm64.deb
+  hash: e4409ed284bd823fa4f585984e71b8b0a317482d13509ded3880efdebbfbb656
+- package: libx11-xcb1
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb1_1.6.2-3+deb8u1_armhf.deb
+  hash: e79b8083a4e4b37306855421062e71ac78bf56d3bc46543ba37351c4a8e38250
+- package: libx11-xcb1
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-xcb1_1.6.2-3+deb8u1_i386.deb
+  hash: 096bc4b6e35b06fc37ca5ca14594566c53fbb525c13e0caf4e85b2593dbc1d20
+- package: libxau-dev
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau-dev_1.0.8-1_amd64.deb
+  hash: 256706493b32161b061c9fa452df1774d5004879cb73262ae2b52aa93b5dd91a
+- package: libxau-dev
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau-dev_1.0.8-1_arm64.deb
+  hash: f3e12518599bd5ace01d475abfa7165846a6c4c955e9e369693610f9e7110888
+- package: libxau-dev
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau-dev_1.0.8-1_armhf.deb
+  hash: 9369d7f69b7b026ba3de65d3ff3ded4821dbb9df4790921f3f44147efd798627
+- package: libxau-dev
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau-dev_1.0.8-1_i386.deb
+  hash: ecc3312f6bd8e5c5234ffbf98d74ee7d93f9df88806e5febeaba45f6f47a11c6
+- package: libxau6
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau6_1.0.8-1_amd64.deb
+  hash: b03b2d0d400c2002a2d38300bd6630306abb0ff325c3d4a4447ecceb58335228
+- package: libxau6
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau6_1.0.8-1_arm64.deb
+  hash: 669a4c83b05c8123827f88dba4c8766e106fcfa7660c3c4fa3d1adba00b26f3f
+- package: libxau6
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau6_1.0.8-1_armhf.deb
+  hash: 5c0395d79cf16acb86708ed37fa5bf31734cde01771a5d226c7a89f611108bf7
+- package: libxau6
+  version: 1:1.0.8-1
+  filename: pool/main/libx/libxau/libxau6_1.0.8-1_i386.deb
+  hash: d2f5aa54c06b63a0c372854ba9fcf83cb799c12836026d71c9e3a86f2db012cd
+- package: libxcb1
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1_1.10-3+b1_amd64.deb
+  hash: 07bf131f4f0f8a9f1a023ab88cce3a1d12cc7222d3c7f08f00b60a3699af5188
+- package: libxcb1
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1_1.10-3+b1_arm64.deb
+  hash: cd5db9d91927f063b98664d76d5648614d95f8130d4b8e6d091452ecc5b03eba
+- package: libxcb1
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1_1.10-3+b1_armhf.deb
+  hash: 6f5c3a6e93329e4786b12be4d055f20ebaa5a2c0a90aabee070a1fbe3825fe67
+- package: libxcb1
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1_1.10-3+b1_i386.deb
+  hash: b8c8caf9bca561cbf1eb0df22082173c081ffc775158caca13b877af9ac64d02
+- package: libxcb1-dev
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1-dev_1.10-3+b1_amd64.deb
+  hash: b7897143190b96156330fbf4b0922911e79605a637169bdd795a3935ac89a8b2
+- package: libxcb1-dev
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1-dev_1.10-3+b1_arm64.deb
+  hash: bd3b0b2bf3015c2c565fcf5d491661322c4056dbf568e7c5d5b86452b472ba1f
+- package: libxcb1-dev
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1-dev_1.10-3+b1_armhf.deb
+  hash: 6cef447558a3921f46f2a85ece415d2d3aa4fdb17f0377922649fec0914c8068
+- package: libxcb1-dev
+  version: 1.10-3+b1
+  filename: pool/main/libx/libxcb/libxcb1-dev_1.10-3+b1_i386.deb
+  hash: 3caa816257832091fd5cfd5a9199fa3dddb0e220b39cea70332551126305fdeb
 - package: libxcursor-dev
   version: 1:1.1.14-1+deb8u1
   filename: pool/main/libx/libxcursor/libxcursor-dev_1.1.14-1+deb8u1_amd64.deb
@@ -145,6 +241,38 @@ packages:
   version: 1:1.1.14-1+deb8u1
   filename: pool/main/libx/libxcursor/libxcursor1_1.1.14-1+deb8u1_i386.deb
   hash: 771530e98891da87de8c15156d2a2d06ab293086a35f5167f9116548f41900c4
+- package: libxdmcp-dev
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp-dev_1.1.1-1+b1_amd64.deb
+  hash: 953ad14c0ce8e57cd0aecf7b600494a15fec75ef348d316f31346c87058b6b5c
+- package: libxdmcp-dev
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp-dev_1.1.1-1+b1_arm64.deb
+  hash: 4565350b7f13c341f500fcdf7ec7099b84f7ef52da91c7ffc753f3f8197459bc
+- package: libxdmcp-dev
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp-dev_1.1.1-1+b1_armhf.deb
+  hash: da97fb1ec76280552796e00d4fe9f46b80c197bbe8a836211c40bb81924b876c
+- package: libxdmcp-dev
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp-dev_1.1.1-1+b1_i386.deb
+  hash: 565e5bc331a5dc5ca09a3e09e6015aac7fd33d303fa5130509e4be2818c60548
+- package: libxdmcp6
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp6_1.1.1-1+b1_amd64.deb
+  hash: 6758bc820616254634fdd2354a2691e40d2973d6bf3a9c12417f02770f75081c
+- package: libxdmcp6
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp6_1.1.1-1+b1_arm64.deb
+  hash: c237732263f4530421bcd7c698e0c55595a2510953df18431ccb8f918904bbe3
+- package: libxdmcp6
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp6_1.1.1-1+b1_armhf.deb
+  hash: c6b3a0af35740048006f4f61f3b0ee3463164f0a6a792e9273d6f2b9a3905fef
+- package: libxdmcp6
+  version: 1:1.1.1-1+b1
+  filename: pool/main/libx/libxdmcp/libxdmcp6_1.1.1-1+b1_i386.deb
+  hash: 43227639c8e94d55c7da25ed2e1f4335115db2b79b7748ac459283a1e3df44a3
 - package: libxext-dev
   version: 2:1.3.3-1
   filename: pool/main/libx/libxext/libxext-dev_1.3.3-1_amd64.deb
