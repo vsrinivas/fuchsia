@@ -1,0 +1,34 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tel.devmgr.IsolatedDevmgr": [
+                    "fuchsia-pkg://fuchsia.com/tel_devmgr#meta/tel_devmgr.cmx"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/tel-driver-unit-test"
+    },
+    "sandbox": {
+        "boot": [
+            "bin",
+            "driver",
+            "lib"
+        ],
+        "dev": [
+            "class/qmi-transport",
+            "test/test"
+        ],
+        "services": [
+            "fuchsia.tel.devmgr.IsolatedDevmgr",
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher"
+        ],
+        "system": [
+            "driver",
+            "driver/qmi-transport.so"
+        ]
+    }
+}

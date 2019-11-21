@@ -15,6 +15,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <array>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -38,6 +40,83 @@
 
 namespace qmi_usb {
 
+constexpr uint8_t kEthFrameHdrSize = 14;
+constexpr uint8_t kEthertypeLen = 2;
+constexpr std::array<uint8_t, kEthertypeLen> kEthertypeArpArr = {0x08, 0x06};
+constexpr std::array<uint8_t, kEthertypeLen> kEthertypeIpv4Arr = {0x08, 0x0};
+constexpr uint16_t kEthertypeArp = 0x0806;
+constexpr uint16_t kEthertypeIpv4 = 0x0800;
+constexpr uint16_t kArpSize = 28;
+constexpr uint8_t kArpHdrSize = 8;
+constexpr std::array<uint8_t, kArpHdrSize> kArpRespHdr = {0x00, 0x01, 0x08, 0x00,
+                                                          0x06, 0x04, 0x00, 0x02};
+constexpr std::array<uint8_t, kArpHdrSize> kArpReqHdr = {0x00, 0x01, 0x08, 0x00,
+                                                         0x06, 0x04, 0x00, 0x01};
+constexpr uint8_t kIpLenLoc = 2;
+constexpr uint8_t kMacAddrLen = 6;
+constexpr uint8_t kIpv4AddrLen = 4;
+constexpr uint16_t kEthMtu = 1024;  // TODO (jiamingw): check if it can be 1500
+
+constexpr uint8_t kByteShift1 = 8;
+
+constexpr uint32_t kUsbCtrlEpMsgSizeMax = 2048;
+constexpr uint32_t kUsbBulkInEpMsgSizeMax = 2048;
+constexpr uint32_t kUsbBulkOutEpMsgSizeMax = 2048;
+
+struct EthTxStats {
+  uint32_t arp_req_cnt;
+  uint32_t arp_resp_cnt;
+  uint32_t arp_dropped_cnt;
+  uint32_t eth_type_unsupported_cnt;
+  uint32_t eth_dropped_cnt;
+  uint32_t ipv4_tx_succeed_cnt;
+  uint32_t ipv4_tx_dropped_cnt;
+};
+
+struct ArpFrameHdr {
+  uint16_t hw_type;
+  uint16_t proto_type;
+  uint8_t hw_addr_len;
+  uint8_t proto_addr_len;
+  uint16_t opcode;
+} __PACKED;
+
+struct ArpFrame {
+  ArpFrameHdr arp_hdr;
+  uint8_t src_mac_addr[kMacAddrLen];
+  uint8_t src_ip_addr[kIpv4AddrLen];
+  uint8_t dst_mac_addr[kMacAddrLen];
+  uint8_t dst_ip_addr[kIpv4AddrLen];
+} __PACKED;
+
+struct EthFrameHdr {
+  uint8_t dst_mac_addr[kMacAddrLen];
+  uint8_t src_mac_addr[kMacAddrLen];
+  uint16_t ethertype;
+} __PACKED;
+
+struct EthArpFrame {
+  EthFrameHdr eth_hdr;
+  ArpFrame arp;
+} __PACKED;
+
+struct EthFrame {
+  EthFrameHdr eth_hdr;
+  uint8_t eth_payload[];
+} __PACKED;
+
+struct IpPktHdr {
+  uint32_t version : 4;
+  uint32_t ihl : 4;
+  uint32_t dscp : 6;
+  uint32_t ecn : 2;
+  uint32_t total_length : 16;
+} __PACKED;
+
+// Fake mac address of the ethernet device that meets the mac address
+// format requirement: unicast and locally administered
+constexpr std::array<uint8_t, kMacAddrLen> kFakeMacAddr = {0x02, 0x47, 0x4f, 0x4f, 0x47, 0x4c};
+
 class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
                llcpp::fuchsia::hardware::telephony::transport::Qmi::Interface {
  public:
@@ -57,8 +136,13 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   zx_status_t CloseQmiChannel();
   zx_handle_t GetChannel();
   zx_status_t SetAsyncWait();
-  zx_status_t QueueRequest(const uint8_t* data, size_t length, usb_request_t* req);
-  zx_status_t SendLocked(ethernet_netbuf_t* netbuf);
+  zx_status_t HandleArpReq(const ArpFrame& arp_frame);
+  void GenEthArpResp(const ArpFrame& req, EthArpFrame* resp);
+  void SetEthDestMacAddr(const uint8_t* mac_addr_ptr);
+  void GenInboundEthFrameHdr(EthFrameHdr* eth_frame_hdr);
+  zx_status_t QueueUsbRequestHandler(const uint8_t* ip, size_t length, usb_request_t* req);
+  zx_status_t HandleQueueUsbReq(const uint8_t* data, size_t length, usb_request_t* req);
+  zx_status_t SendLocked(const uint8_t* byte_data, size_t length);
   void QmiUpdateOnlineStatus(bool is_online);
   uint32_t GetMacAddr(uint8_t* buffer, uint32_t buffer_length);
   void QmiInterruptHandler(usb_request_t* request);
@@ -77,6 +161,10 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   void QmiEthernetQueueTxHandler(uint32_t options, ethernet_netbuf_t* netbuf,
                                  ethernet_impl_queue_tx_callback completion_cb, void* cookie);
 
+  void EthClientInit(const ethernet_ifc_protocol_t* ifc);
+  void EthTxListNodeInit();
+  void EthMtxInit();
+  
   // DDK Mixin methods
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -103,10 +191,11 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   // Ethernet
   zx_device_t* eth_zxdev_;
   mtx_t ethernet_mutex_;
-  ethernet_ifc_protocol_t ethernet_ifc_;
+  std::unique_ptr<ddk::EthernetIfcProtocolClient> eth_ifc_ptr_;
+  std::unique_ptr<std::array<uint8_t, kMacAddrLen>> eth_dst_mac_addr_;
+  EthTxStats eth_tx_stats_;
 
   // Device attributes
-  uint8_t mac_addr_[ETH_MAC_SIZE];
   uint16_t ethernet_mtu_;  // TODO (jiamingw) confirm that this is used to replace magic number 1024
 
   // Connection attributes

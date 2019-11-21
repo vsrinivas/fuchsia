@@ -18,6 +18,7 @@ test_package("telephony-tests") {
     "component-integration:fake-qmi-query",
     "component-integration:snooper",
     "driver-integration:telephony-qmi-usb-integration-test",
+    "driver-unit:tel-driver-unit-test",
   ]
 
   extra = [ "$target_gen_dir/devmgr.manifest" ]
@@ -25,6 +26,10 @@ test_package("telephony-tests") {
   tests = [
     {
       name = "telephony-qmi-usb-integration-test"
+      environments = basic_envs
+    },
+    {
+      name = "tel-driver-unit-test"
       environments = basic_envs
     },
     {

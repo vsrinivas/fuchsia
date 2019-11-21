@@ -17,6 +17,7 @@
 
 #include <ddk/debug.h>
 #include <ddktl/fidl.h>
+#include <endian.h>
 
 #ifndef _ALL_SOURCE
 #define _ALL_SOURCE
@@ -29,8 +30,6 @@
 #define ETHERNET_RECV_DELAY 10
 #define ETHERNET_INITIAL_TRANSMIT_DELAY 0
 #define ETHERNET_INITIAL_RECV_DELAY 0
-
-#define ETHERNET_FRAME_OFFSET 14
 
 namespace telephony_transport = ::llcpp::fuchsia::hardware::telephony::transport;
 namespace telephony_snoop = ::llcpp::fuchsia::telephony::snoop;
@@ -66,67 +65,81 @@ zx_status_t Device::SetChannelToDevice(zx_handle_t channel) {
   } else {
     qmi_channel_ = channel;
   }
-  qmi_channel_ = channel;
   return result;
 }
 
-zx_status_t Device::QueueRequest(const uint8_t* data, size_t length, usb_request_t* req) {
-  req->header.length = length;
-  if (length < 41) {
-    zxlogf(ERROR, "qmi-usb-transport: length is too short (length: %zx) \n", length);
-    return ZX_ERR_IO;
+void Device::SetEthDestMacAddr(const uint8_t* mac_addr_ptr) {
+  if (eth_dst_mac_addr_ == nullptr) {
+    eth_dst_mac_addr_ = std::make_unique<std::array<uint8_t, kMacAddrLen>>();
+  } else {
+    zxlogf(INFO, "qmi-usb-transport: overwriting eth dest mac addr\n");
   }
 
-  if (length > 1024) {
+  std::copy(mac_addr_ptr, &mac_addr_ptr[kMacAddrLen], eth_dst_mac_addr_.get()->begin());
+}
+
+zx_status_t Device::HandleArpReq(const ArpFrame& arp_frame) {
+  if (memcmp(kArpReqHdr.data(), &arp_frame.arp_hdr, sizeof(kArpReqHdr)) != 0) {
+    zxlogf(ERROR, "qmi-usb-transport: invalid arp request\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
+  }
+
+  SetEthDestMacAddr(arp_frame.src_mac_addr);
+
+  EthArpFrame eth_arp_resp;
+  GenEthArpResp(arp_frame, &eth_arp_resp);
+
+  // TODO (jiamingw): understand the reason to sleep here.
+  zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
+  mtx_lock(&ethernet_mutex_);
+  if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
+    // TODO (jiamingw): Log arp response.
+    zxlogf(INFO, "qmi-usb-transport: Replying Arp Msg\n");
+    eth_ifc_ptr_->Recv(reinterpret_cast<const uint8_t*>(&eth_arp_resp), kArpSize + kEthFrameHdrSize, 0);
+  }
+  mtx_unlock(&ethernet_mutex_);
+
+  return ZX_OK;
+}
+
+void Device::GenEthArpResp(const ArpFrame& req, EthArpFrame* resp) {
+  // TODO (fxb/40051): Generate fake mac address to support multiple
+  // cellular devices.
+  // Eth header
+  // eth_dst_mac_addr_ is ensured to be not null when calling this method.
+  std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(), resp->eth_hdr.dst_mac_addr);
+  std::copy(kFakeMacAddr.begin(), kFakeMacAddr.end(), resp->eth_hdr.src_mac_addr);
+  resp->eth_hdr.ethertype = betoh16(kEthertypeArp);
+  // Eth payload.
+  std::copy(kArpRespHdr.begin(), kArpRespHdr.end(), reinterpret_cast<uint8_t*>(&resp->arp.arp_hdr));
+  std::copy(kFakeMacAddr.begin(), kFakeMacAddr.end(), resp->arp.src_mac_addr);
+  std::copy(req.dst_ip_addr, &req.dst_ip_addr[kIpv4AddrLen], resp->arp.src_ip_addr);
+  std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(), resp->arp.dst_mac_addr);
+  std::copy(req.src_ip_addr, &req.src_ip_addr[kIpv4AddrLen], resp->arp.dst_ip_addr);
+}
+
+zx_status_t Device::QueueUsbRequestHandler(const uint8_t* ip, size_t length, usb_request_t* req) {
+  auto ip_hdr = reinterpret_cast<const IpPktHdr*>(ip);
+  size_t ip_length = betoh16(ip_hdr->total_length);
+  zxlogf(INFO, "qmi-usb-transport: ip: x%x x%x\n", ip[0], ip[1]);
+
+  if (ip_length != length) {
     zxlogf(ERROR,
-           "qmi-usb-transport: length is greater than buffer size. (length: "
-           "%zx) \n",
-           length);
-    return ZX_ERR_IO;
-  }
-
-  // Check if this in an arp frame, short-circuit return a synthetic one if so
-  const uint8_t* eth = &data[ETHERNET_FRAME_OFFSET];
-  if ((eth[0] == 0x00) &&                      // hardware type
-      (eth[1] == 0x01) && (eth[2] == 0x08) &&  // protocol
-      (eth[3] == 0x00) && (eth[4] == 0x06) &&  // hardware len
-      (eth[5] == 0x04) &&                      // protocol len
-      (eth[6] == 0x00) &&                      // arp request op
-      (eth[7] == 0x01)) {
-    uint8_t read_data[] = {
-        // ethernet frame
-        0x62, 0x77, 0x62, 0x62, 0x77, 0x62,  // destination mac addr (bwb)
-        0x79, 0x61, 0x6B, 0x79, 0x61, 0x6B,  // source mac addr (yak)
-        0x08, 0x06,                          // arp ethertype
-        // data payload
-        0x00, 0x01, 0x08, 0x00, 0x06, 0x04, 0x00, 0x02,  // ARP header
-        0x79, 0x61, 0x6B, 0x79, 0x61, 0x6B,              // yak mac addr
-        eth[24], eth[25], eth[26], eth[27],              // swapped IP addr
-        0x62, 0x77, 0x62, 0x62, 0x77, 0x62,              // bwb mac addr
-        eth[14], eth[15], eth[16], eth[17],              // swapped IP addr
-    };
-
-    zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
-    mtx_lock(&ethernet_mutex_);
-    if (ethernet_ifc_.ops) {
-      ethernet_ifc_recv(&ethernet_ifc_, read_data, sizeof(read_data), 0);
-    }
-    mtx_unlock(&ethernet_mutex_);
-    return ZX_OK;
-  }
-
-  ssize_t ip_length = ((eth[2] << 8) + eth[3]);
-  if (ip_length > (ssize_t)length) {
-    zxlogf(ERROR,
-           "qmi-usb-transport: length of IP packet is more than the ethernet "
-           "frame! %zx/%zd \n",
+           "qmi-usb-transport: length of IP packet does not match length in eth "
+           "frame! %zd/%zd \n",
            ip_length, length);
     return ZX_ERR_IO;
   }
 
-  ssize_t bytes_copied = usb_request_copy_to(req, eth, ip_length, 0);
+  ssize_t bytes_copied = usb_request_copy_to(req, ip, ip_length, 0);
   if (bytes_copied < 0) {
     zxlogf(ERROR, "qmi-usb-transport: failed to copy data into send txn (error %zd)\n",
+           bytes_copied);
+    return ZX_ERR_IO;
+  }
+
+  if (static_cast<size_t>(bytes_copied) != ip_length) {
+    zxlogf(ERROR, "qmi-usb-transport: expect to copy %zu bytes but only copied %zd\n", ip_length,
            bytes_copied);
     return ZX_ERR_IO;
   }
@@ -135,14 +148,25 @@ zx_status_t Device::QueueRequest(const uint8_t* data, size_t length, usb_request
       .callback = usb_write_complete,
       .ctx = this,
   };
+  req->header.length = bytes_copied;
+  // TODO (jiamingw): logging IP packet ((uintptr_t)req->virt) + req->offset) with length ip_length.
+  zxlogf(INFO, "qmi-usb-transport: tx IP pkt\n");
   usb_request_queue(&usb_, req, &complete);
   return ZX_OK;
 }
 
-zx_status_t inline Device::SendLocked(ethernet_netbuf_t* netbuf) {
-  const uint8_t* byte_data = (const uint8_t*)netbuf->data_buffer;
-  size_t length = netbuf->data_size;
+zx_status_t Device::HandleQueueUsbReq(const uint8_t* data, size_t length, usb_request_t* req) {
+  zxlogf(INFO, "qmi-usb-transport: sending data to modem\n");
+  zx_status_t res = QueueUsbRequestHandler(data, length, req);
+  if (res != ZX_OK) {
+    eth_tx_stats_.ipv4_tx_dropped_cnt += 1;
+    return res;
+  }
+  eth_tx_stats_.ipv4_tx_succeed_cnt += 1;
+  return ZX_OK;
+}
 
+zx_status_t inline Device::SendLocked(const uint8_t* byte_data, size_t length) {
   // Make sure that we can get all of the tx buffers we need to use
   usb_request_t* tx_req = usb_req_list_remove_head(&tx_txn_bufs_, parent_req_size_);
   if (tx_req == nullptr) {
@@ -151,8 +175,9 @@ zx_status_t inline Device::SendLocked(ethernet_netbuf_t* netbuf) {
 
   zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
   zx_status_t status;
-  if ((status = QueueRequest(byte_data, length, tx_req)) != ZX_OK) {
-    zx_status_t add_status = usb_req_list_add_tail(&tx_txn_bufs_, tx_req, parent_req_size_);
+  if ((status = HandleQueueUsbReq(byte_data, length, tx_req)) != ZX_OK) {
+    // Add packet back to original place if it is not being sent.
+    zx_status_t add_status = usb_req_list_add_head(&tx_txn_bufs_, tx_req, parent_req_size_);
     ZX_DEBUG_ASSERT(add_status == ZX_OK);
     return status;
   }
@@ -170,16 +195,16 @@ void Device::QmiUpdateOnlineStatus(bool is_online) {
   if (is_online) {
     zxlogf(INFO, "qmi-usb-transport: connected to network\n");
     online_ = true;
-    if (ethernet_ifc_.ops) {
-      ethernet_ifc_status(&ethernet_ifc_, online_ ? ETHERNET_STATUS_ONLINE : 0);
+    if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
+      eth_ifc_ptr_->Status(online_ ? ETHERNET_STATUS_ONLINE : 0);
     } else {
       zxlogf(ERROR, "qmi-usb-transport: not connected to ethermac interface\n");
     }
   } else {
     zxlogf(INFO, "qmi-usb-transport: no connection to network\n");
     online_ = false;
-    if (ethernet_ifc_.ops) {
-      ethernet_ifc_status(&ethernet_ifc_, 0);
+    if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
+      eth_ifc_ptr_->Status(0);
     }
   }
   mtx_unlock(&ethernet_mutex_);
@@ -297,108 +322,142 @@ uint32_t Device::GetMacAddr(uint8_t* buffer, uint32_t buffer_length) {
   if (buffer == nullptr) {
     return 0;
   }
-  uint32_t copy_length = std::min((uint32_t)sizeof(mac_addr_), buffer_length);
-  memcpy(buffer, mac_addr_, copy_length);
+  uint32_t copy_length = std::min((uint32_t)sizeof(kFakeMacAddr), buffer_length);
+  std::copy(kFakeMacAddr.begin(), kFakeMacAddr.end(), buffer);
   return copy_length;
 }
 
-static zx_status_t qmi_ethernet_impl_query(void* ctx, uint32_t options, ethernet_info_t* info) {
-  Device* device = static_cast<Device*>(ctx);
+zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
   // No options are supported
   if (options) {
     zxlogf(ERROR, "qmi-usb-transport: unexpected options to ethernet_query\n");
-
     return ZX_ERR_INVALID_ARGS;
   }
   memset(info, 0, sizeof(*info));
-  info->mtu = 1024;
-
-  device->GetMacAddr(info->mac, sizeof(info->mac));
+  info->mtu = kEthMtu;
+  GetMacAddr(info->mac, sizeof(info->mac));
   info->netbuf_size = sizeof(txn_info_t);
   return ZX_OK;
 }
-zx_status_t Device::QmiEthernetStartHandler(const ethernet_ifc_protocol_t* ifc) {
-  zx_status_t status = ZX_OK;
+
+zx_status_t Device::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
+  zxlogf(INFO, "qmi-usb-transport: EthernetImplStart called\n");
   mtx_lock(&ethernet_mutex_);
-  if (ethernet_ifc_.ops) {
-    status = ZX_ERR_ALREADY_BOUND;
-  } else {
-    ethernet_ifc_ = *ifc;
-    ethernet_ifc_status(&ethernet_ifc_, online_ ? ETHERNET_STATUS_ONLINE : 0);
+  if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
+    mtx_unlock(&ethernet_mutex_);
+    return ZX_ERR_ALREADY_BOUND;
   }
+  eth_ifc_ptr_.reset(new ddk::EthernetIfcProtocolClient(ifc));
   mtx_unlock(&ethernet_mutex_);
-  return status;
+  return ZX_OK;
 }
-static zx_status_t qmi_ethernet_impl_start(void* ctx, const ethernet_ifc_protocol_t* ifc) {
-  zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
-  Device* device_ptr = static_cast<Device*>(ctx);
-  return device_ptr->QmiEthernetStartHandler(ifc);
-}
-static zx_status_t qmi_ethernet_impl_set_param(void* cookie, uint32_t param, int32_t value,
-                                               const void* data, size_t data_size) {
+
+zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const void* data,
+                                         size_t data_size) {
   return ZX_ERR_NOT_SUPPORTED;
 }
-void Device::QmiEthernetStopHandler() {
+
+void Device::EthernetImplStop() {
+  zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
   mtx_lock(&ethernet_mutex_);
-  ethernet_ifc_.ops = nullptr;
+  eth_ifc_ptr_.reset();
   mtx_unlock(&ethernet_mutex_);
 }
 
-static void qmi_ethernet_impl_stop(void* ctx) {
-  zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
-  Device* device_ptr = static_cast<Device*>(ctx);
-  device_ptr->QmiEthernetStopHandler();
-}
+void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
+                                 ethernet_impl_queue_tx_callback completion_cb, void* cookie) {
+  // TODO (jiamingw): Log netbuf->data_buffer with length netbuf->data_size.
+  zxlogf(INFO, "qmi-usb-transport: transmitting outbound data plane msg:\n");
 
-void Device::QmiEthernetQueueTxHandler(uint32_t options, ethernet_netbuf_t* netbuf,
-                                       ethernet_impl_queue_tx_callback completion_cb,
-                                       void* cookie) {
   size_t length = netbuf->data_size;
-  zx_status_t status = ZX_OK;
-  txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
-  txn->completion_cb = completion_cb;
-  txn->cookie = cookie;
-  // TODO mtu better
-  if (length > 1024 || length == 0) {
-    complete_txn(txn, ZX_ERR_INVALID_ARGS);
-    return;
+
+  if (length < kEthFrameHdrSize) {
+    zxlogf(ERROR, "qmi-usb-transport: tx eth frame too short (length: %zx) \n", length);
+    eth_tx_stats_.eth_dropped_cnt += 1;
   }
-  mtx_lock(&tx_mutex_);
-  if (device_unbound_) {
-    status = ZX_ERR_IO_NOT_PRESENT;
-  } else {
-    status = SendLocked(netbuf);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-      // No buffers available, queue it up
-      list_add_tail(&tx_pending_infos_, &txn->node);
+  size_t eth_payload_len = length - kEthFrameHdrSize;
+
+  // Check data type. Only Arp or IPv4 packet will be handled.
+  const EthFrameHdr* eth_hdr = static_cast<const EthFrameHdr*>(netbuf->data_buffer);
+  switch (betoh16(eth_hdr->ethertype)) {
+    // Arp request. Send back Arp response.
+    case kEthertypeArp: {
+      eth_tx_stats_.arp_req_cnt += 1;
+      if (eth_payload_len < kArpSize) {
+        zxlogf(ERROR, "qmi-usb-transport: arp req too short\n");
+        return;
+      }
+
+      auto eth_arp = static_cast<const EthArpFrame*>(netbuf->data_buffer);
+      zx_status_t res = HandleArpReq(eth_arp->arp);
+      if (res != ZX_OK) {
+        eth_tx_stats_.arp_dropped_cnt += 1;
+      }
+      break;
     }
-  }
-  mtx_unlock(&tx_mutex_);
-  if (status != ZX_ERR_SHOULD_WAIT) {
-    complete_txn(txn, status);
+    // IPv4 packet. Send to modem.
+    case kEthertypeIpv4: {
+      zx_status_t status = ZX_OK;
+      txn_info_t* txn = containerof(netbuf, txn_info_t, netbuf);
+      txn->completion_cb = completion_cb;
+      txn->cookie = cookie;
+
+      if (length > kEthMtu || length == 0) {
+        complete_txn(txn, ZX_ERR_INVALID_ARGS);
+        return;
+      }
+
+      mtx_lock(&tx_mutex_);
+      if (device_unbound_) {
+        status = ZX_ERR_IO_NOT_PRESENT;
+      } else {
+        auto eth_ip = static_cast<const EthFrame*>(netbuf->data_buffer);
+        status = SendLocked(eth_ip->eth_payload, eth_payload_len);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+          // No buffers available, queue it up
+          list_add_tail(&tx_pending_infos_, &txn->node);
+        }
+      }
+      mtx_unlock(&tx_mutex_);
+
+      if (status != ZX_ERR_SHOULD_WAIT) {
+        complete_txn(txn, status);
+      }
+      break;
+    }
+    default:
+      zxlogf(ERROR, "qmi-usb-transport: ethertype 0x%x not supported\n", eth_hdr->ethertype);
+      eth_tx_stats_.eth_dropped_cnt += 1;
+      break;
   }
   return;
 }
-static void qmi_ethernet_impl_queue_tx(void* context, uint32_t options, ethernet_netbuf_t* netbuf,
-                                       ethernet_impl_queue_tx_callback completion_cb,
-                                       void* cookie) {
-  Device* device_ptr = static_cast<Device*>(context);
-  device_ptr->QmiEthernetQueueTxHandler(options, netbuf, completion_cb, cookie);
-}
+
+#define DEV(c) static_cast<Device*>(c)
 static ethernet_impl_protocol_ops_t ethernet_impl_ops = {
-    .query = qmi_ethernet_impl_query,
-    .stop = qmi_ethernet_impl_stop,
-    .start = qmi_ethernet_impl_start,
-    .queue_tx = qmi_ethernet_impl_queue_tx,
-    .set_param = qmi_ethernet_impl_set_param,
+    .query = [](void* ctx, uint32_t options, ethernet_info_t* info) -> zx_status_t {
+      return DEV(ctx)->EthernetImplQuery(options, info);
+    },
+    .stop = [](void* ctx) { DEV(ctx)->EthernetImplStop(); },
+    .start = [](void* ctx, const ethernet_ifc_protocol_t* ifc) -> zx_status_t {
+      return DEV(ctx)->EthernetImplStart(ifc);
+    },
+    .queue_tx =
+        [](void* ctx, uint32_t options, ethernet_netbuf_t* netbuf,
+           ethernet_impl_queue_tx_callback completion_cb,
+           void* cookie) { DEV(ctx)->EthernetImplQueueTx(options, netbuf, completion_cb, cookie); },
+    .set_param = [](void* ctx, uint32_t param, int32_t value, const void* data, size_t data_size)
+        -> zx_status_t { return DEV(ctx)->EthernetImplSetParam(param, value, data, data_size); },
 };
+#undef DEV
 
 static zx_protocol_device_t eth_qmi_ops = {
     .version = DEVICE_OPS_VERSION,
 };
 
 void Device::QmiInterruptHandler(usb_request_t* request) {
+  zxlogf(INFO, "request->response.actual: %lu\n", request->response.actual);
   if (request->response.actual < sizeof(usb_cdc_notification_t)) {
     zxlogf(ERROR, "qmi-usb-transport: ignored interrupt (size = %ld)\n",
            (long)request->response.actual);
@@ -408,8 +467,9 @@ void Device::QmiInterruptHandler(usb_request_t* request) {
   usb_cdc_notification_t usb_req;
   usb_request_copy_from(request, &usb_req, sizeof(usb_cdc_notification_t), 0);
 
+  // TODO (jiamingw): confirm this check is unnecessary
   uint16_t packet_size = max_packet_size_;
-  if (packet_size > 2048) {
+  if (packet_size > kUsbCtrlEpMsgSizeMax) {
     zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n", packet_size);
     return;
   }
@@ -478,7 +538,7 @@ int Device::EventLoop(void) {
   };
   usb_request_queue(&usb_, txn, &complete);
   zxlogf(INFO, "successfully queued int req\n");
-  if (max_packet_size_ > 2048) {
+  if (max_packet_size_ > kUsbCtrlEpMsgSizeMax) {
     zxlogf(ERROR, "qmi-usb-transport: packet too big: %d\n", max_packet_size_);
     return ZX_ERR_IO_REFUSED;
   }
@@ -547,45 +607,53 @@ static int qmi_transport_thread(void* ctx) {
   return device_ptr->EventLoop();
 }
 
+void Device::GenInboundEthFrameHdr(EthFrameHdr* eth_frame_hdr) {
+  // Dest mac addr.
+  std::copy(eth_dst_mac_addr_->begin(), eth_dst_mac_addr_->end(),
+            eth_frame_hdr->dst_mac_addr);
+  // Src mac addr.
+  std::copy(&kFakeMacAddr[0], &kFakeMacAddr[kMacAddrLen], eth_frame_hdr->src_mac_addr);
+  // Ethertype.
+  eth_frame_hdr->ethertype = betoh16(kEthertypeIpv4);
+  return;
+}
+
 // Note: the assumption made here is that no rx transmissions will be processed
 // in parallel, so we do not maintain an rx mutex.
 void Device::UsbRecv(usb_request_t* request) {
-  size_t len = request->response.actual;
+  size_t eth_frame_payload_len = request->response.actual;
 
-  uint8_t* read_data;
-  zx_status_t status = usb_request_mmap(request, reinterpret_cast<void**>(&read_data));
+  uint8_t* eth_frame_payload;
+  zx_status_t status = usb_request_mmap(request, reinterpret_cast<void**>(&eth_frame_payload));
   if (status != ZX_OK) {
     zxlogf(ERROR, "qmi-usb-transport: usb_request_mmap failed with status %d\n", status);
     return;
   }
 
-  if (len > 2048) {
-    zxlogf(ERROR, "qmi-usb-transport: recieved usb packet is too large: %zd\n", len);
+  if (eth_frame_payload_len > kUsbBulkInEpMsgSizeMax) {
+    zxlogf(ERROR, "qmi-usb-transport: recieved usb packet is too large: %zd\n",
+           eth_frame_payload_len);
     return;
   }
 
-  uint8_t send_data[len + ETHERNET_FRAME_OFFSET];  // woo! VLA!
-  send_data[0] = 0x62;                             // destination mac addr
-  send_data[1] = 0x77;
-  send_data[2] = 0x62;
-  send_data[3] = 0x62;
-  send_data[4] = 0x77;
-  send_data[5] = 0x62;
+  // TODO (jiamingw): Log message eth_frame_payload.
+  zxlogf(INFO, "qmi-usb-transport: getting inbound data plane msg\n");
 
-  send_data[6] = 0x79;  // source mac addr
-  send_data[7] = 0x61;
-  send_data[8] = 0x6B;
-  send_data[9] = 0x79;
-  send_data[10] = 0x61;
-  send_data[11] = 0x6B;
+  if (eth_dst_mac_addr_ == nullptr) {
+    zxlogf(ERROR, "qmi-usb-transport: no eth mac addr, cannot send eth frame\n");
+    return;
+  }
 
-  send_data[12] = 0x08;
-  send_data[13] = 0x00;
+  uint8_t eth_frame_arr[eth_frame_payload_len + kEthFrameHdrSize];
+  auto eth_ip = reinterpret_cast<EthFrame*>(eth_frame_arr);
+  GenInboundEthFrameHdr(&eth_ip->eth_hdr);
 
-  memcpy(&send_data[ETHERNET_FRAME_OFFSET], read_data, len);
+  // Copy ethernet frame payload.
+  std::copy(eth_frame_payload, &eth_frame_payload[eth_frame_payload_len], eth_ip->eth_payload);
+
   mtx_lock(&ethernet_mutex_);
-  if (ethernet_ifc_.ops) {
-    ethernet_ifc_recv(&ethernet_ifc_, send_data, len + ETHERNET_FRAME_OFFSET, 0);
+  if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
+    eth_ifc_ptr_->Recv(eth_frame_arr, eth_frame_payload_len + kEthFrameHdrSize, 0);
   }
   mtx_unlock(&ethernet_mutex_);
 }
@@ -663,7 +731,9 @@ void Device::UsbWriteCompleteHandler(usb_request_t* request) {
   zx_status_t send_status = ZX_OK;
   if (!list_is_empty(&tx_pending_infos_)) {
     txn = list_peek_head_type(&tx_pending_infos_, txn_info_t, node);
-    if ((send_status = SendLocked(&txn->netbuf)) != ZX_ERR_SHOULD_WAIT) {
+    if ((send_status =
+             SendLocked(&static_cast<const uint8_t*>(txn->netbuf.data_buffer)[kEthFrameHdrSize],
+                        (txn->netbuf.data_size - kEthFrameHdrSize)) != ZX_ERR_SHOULD_WAIT)) {
       list_remove_head(&tx_pending_infos_);
       additional_tx_queued = true;
     }
@@ -702,6 +772,20 @@ void Device::QmiBindFailedErr(zx_status_t status, usb_request_t* int_buf) {
   QmiBindFailedNoErr(int_buf);
 }
 
+void Device::EthClientInit(const ethernet_ifc_protocol_t* ifc) {
+  eth_ifc_ptr_.reset(new ddk::EthernetIfcProtocolClient(ifc));
+}
+
+void Device::EthTxListNodeInit() {
+  list_initialize(&tx_txn_bufs_);
+  list_initialize(&tx_pending_infos_);
+}
+
+void Device::EthMtxInit() {
+  mtx_init(&ethernet_mutex_, mtx_plain);
+  mtx_init(&tx_mutex_, mtx_plain);
+}
+
 zx_status_t Device::Bind() {
   zx_status_t status;
   usb_request_t* int_buf = nullptr;
@@ -717,10 +801,8 @@ zx_status_t Device::Bind() {
 
   // Initialize context
   memcpy(&usb_, &usb, sizeof(usb_));
-  list_initialize(&tx_txn_bufs_);
-  list_initialize(&tx_pending_infos_);
-  mtx_init(&ethernet_mutex_, mtx_plain);
-  mtx_init(&tx_mutex_, mtx_plain);
+  EthTxListNodeInit();
+  EthMtxInit();
 
   parent_req_size_ = usb_get_request_size(&usb_);
   uint64_t req_size = parent_req_size_ + sizeof(usb_req_internal_t);
@@ -832,7 +914,7 @@ zx_status_t Device::Bind() {
 
   // Allocate tx transaction buffers
   // TODO uint16_t tx_buf_sz = qmi_ctx->mtu;
-  uint16_t tx_buf_sz = 1024;
+  uint16_t tx_buf_sz = kEthMtu;
   size_t tx_buf_remain = kMaxTxBufSz;
   while (tx_buf_remain >= tx_buf_sz) {
     usb_request_t* tx_buf;
@@ -855,7 +937,7 @@ zx_status_t Device::Bind() {
 
   // Allocate rx transaction buffers
   // TODO(bwb) get correct buffer sizes from usb
-  uint16_t rx_buf_sz = 1024;
+  uint16_t rx_buf_sz = kEthMtu;
   size_t rx_buf_remain = kMaxRxBufSz;
   while (rx_buf_remain >= rx_buf_sz) {
     usb_request_t* rx_buf;
@@ -873,14 +955,6 @@ zx_status_t Device::Bind() {
     usb_request_queue(&usb_, rx_buf, &complete);
     rx_buf_remain -= rx_buf_sz;
   }
-
-  // Set MAC addr
-  mac_addr_[0] = 0x62;
-  mac_addr_[1] = 0x77;
-  mac_addr_[2] = 0x62;
-  mac_addr_[3] = 0x62;
-  mac_addr_[4] = 0x77;
-  mac_addr_[5] = 0x62;
 
   // Kick off the handler thread
   int thread_result =
