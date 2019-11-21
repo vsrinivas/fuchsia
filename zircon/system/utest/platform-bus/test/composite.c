@@ -282,16 +282,22 @@ static void test_codec_get_dai_formats_callback(void* ctx, zx_status_t status,
   if (status != ZX_OK) {
     return;
   }
+  // Use memcpy() to avoid direct loads to misaligned pointers.
+  uint32_t number_of_channels_list[3];
+  memcpy(number_of_channels_list, formats_list[1].number_of_channels_list,
+         sizeof(number_of_channels_list));
+  uint32_t frame_rate;
+  memcpy(&frame_rate, formats_list[2].frame_rates_list, sizeof(frame_rate));
   if (formats_count != 3 || formats_list[0].bits_per_sample_count != 3 ||
       formats_list[0].bits_per_sample_list[0] != 1 ||
       formats_list[0].bits_per_sample_list[1] != 99 ||
       formats_list[0].bits_per_sample_list[2] != 253 ||
       formats_list[0].number_of_channels_count != 0 || formats_list[0].frame_rates_count != 0 ||
       formats_list[1].number_of_channels_count != 3 ||
-      formats_list[1].number_of_channels_list[0] != 0 ||
-      formats_list[1].number_of_channels_list[1] != 1 ||
-      formats_list[1].number_of_channels_list[2] != 200 || formats_list[2].frame_rates_count != 1 ||
-      formats_list[2].frame_rates_list[0] != 48000) {
+      number_of_channels_list[0] != 0 ||
+      number_of_channels_list[1] != 1 ||
+      number_of_channels_list[2] != 200 || formats_list[2].frame_rates_count != 1 ||
+      frame_rate != 48000) {
     *out = ZX_ERR_INTERNAL;
   }
 }
