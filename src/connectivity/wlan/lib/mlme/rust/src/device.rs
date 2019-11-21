@@ -11,6 +11,14 @@ use {
     wlan_common::TimeUnit,
 };
 
+#[derive(Debug, PartialEq)]
+pub struct LinkStatus(u8);
+impl LinkStatus {
+    pub const DOWN: Self = Self(0);
+    pub const UP: Self = Self(1);
+}
+
+#[derive(Debug)]
 pub struct TxFlags(u32);
 impl TxFlags {
     pub const NONE: Self = Self(0);
@@ -52,6 +60,8 @@ pub struct Device {
     ) -> i32,
     /// Disable beaconing on the device.
     disable_beaconing: extern "C" fn(device: *mut c_void) -> i32,
+    /// Sets the link status to be UP or DOWN.
+    set_link_status: extern "C" fn(device: *mut c_void, status: u8) -> i32,
 }
 
 impl Device {
@@ -124,6 +134,11 @@ impl Device {
         let status = (self.disable_beaconing)(self.device);
         zx::ok(status)
     }
+
+    pub fn set_link_status(&self, status: LinkStatus) -> Result<(), zx::Status> {
+        let status = (self.set_link_status)(self.device, status.0);
+        zx::ok(status)
+    }
 }
 
 #[cfg(test)]
@@ -135,6 +150,7 @@ pub struct FakeDevice {
     pub keys: Vec<key::KeyConfig>,
     pub bss_cfg: Option<WlanBssConfig>,
     pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
+    pub link_status: LinkStatus,
 }
 
 #[cfg(test)]
@@ -153,6 +169,7 @@ impl FakeDevice {
             keys: vec![],
             bss_cfg: None,
             bcn_cfg: None,
+            link_status: LinkStatus::DOWN,
         }
     }
 
@@ -174,6 +191,15 @@ impl FakeDevice {
         // safe here because device_ptr always points to Self
         unsafe {
             (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), flags));
+        }
+        zx::sys::ZX_OK
+    }
+
+    pub extern "C" fn set_link_status(device: *mut c_void, status: u8) -> i32 {
+        assert!(!device.is_null());
+        // safe here because device_ptr always points to Self
+        unsafe {
+            (*(device as *mut Self)).link_status = LinkStatus(status);
         }
         zx::sys::ZX_OK
     }
@@ -270,6 +296,7 @@ impl FakeDevice {
             configure_bss: Self::configure_bss,
             enable_beaconing: Self::enable_beaconing,
             disable_beaconing: Self::disable_beaconing,
+            set_link_status: Self::set_link_status,
         }
     }
 
@@ -285,6 +312,7 @@ impl FakeDevice {
             configure_bss: Self::configure_bss,
             enable_beaconing: Self::enable_beaconing,
             disable_beaconing: Self::disable_beaconing,
+            set_link_status: Self::set_link_status,
         }
     }
 }
@@ -334,6 +362,7 @@ mod tests {
             configure_bss: FakeDevice::configure_bss,
             enable_beaconing: FakeDevice::enable_beaconing,
             disable_beaconing: FakeDevice::disable_beaconing,
+            set_link_status: FakeDevice::set_link_status,
         };
 
         let result = dev.access_sme_sender(|sender| {
@@ -432,5 +461,17 @@ mod tests {
         assert!(fake_device.bcn_cfg.is_some());
         dev.disable_beaconing().expect("error disabling beaconing");
         assert!(fake_device.bcn_cfg.is_none());
+    }
+
+    #[test]
+    fn set_link_status() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+
+        dev.set_link_status(LinkStatus::UP).expect("failed setting status");
+        assert_eq!(fake_device.link_status, LinkStatus::UP);
+
+        dev.set_link_status(LinkStatus::DOWN).expect("failed setting status");
+        assert_eq!(fake_device.link_status, LinkStatus::DOWN);
     }
 }
