@@ -4,7 +4,7 @@
 
 #include <errno.h>
 #include <fcntl.h>
-#include <fuchsia/boot/c/fidl.h>
+#include <fuchsia/boot/llcpp/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
@@ -27,6 +27,8 @@
 #include <fs-management/mount.h>
 
 namespace {
+
+namespace fboot = ::llcpp::fuchsia::boot;
 
 void InitArgvAndActions(zx_handle_t* handles, uint32_t* types, size_t len,
                         fdio_spawn_action_t* actions_out) {
@@ -54,23 +56,22 @@ zx_handle_t RetriveWriteOnlyDebuglogHandle() {
     return ZX_HANDLE_INVALID;
   }
 
-  constexpr char kWriteOnlyLogPath[] = "/svc/" fuchsia_boot_WriteOnlyLog_Name;
-  status = fdio_service_connect(kWriteOnlyLogPath, remote.release());
+  std::string path = std::string("/svc/") + fboot::WriteOnlyLog::Name;
+  status = fdio_service_connect(path.c_str(), remote.release());
   if (status != ZX_OK) {
     fprintf(stderr, "fs-management: Failed to connect to WriteOnlyLog: %d (%s)\n", status,
             zx_status_get_string(status));
     return ZX_HANDLE_INVALID;
   }
 
-  zx::debuglog log;
-  status = fuchsia_boot_WriteOnlyLogGet(local.get(), log.reset_and_get_address());
-  if (status != ZX_OK) {
-    fprintf(stderr, "fs-management: WriteOnlyLogGet failed: %d (%s)\n", status,
-            zx_status_get_string(status));
+  auto resp = fboot::WriteOnlyLog::Call::Get(zx::unowned(local));
+  if (!resp.ok()) {
+    fprintf(stderr, "fs-management: WriteOnlyLogGet failed: %d (%s)\n", resp.status(),
+            zx_status_get_string(resp.status()));
     return ZX_HANDLE_INVALID;
   }
 
-  return log.release();
+  return resp.value().log.release();
 }
 
 // Initializes Stdio.

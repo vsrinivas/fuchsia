@@ -23,7 +23,7 @@ zx_library("fs-management") {
     "$zx/system/fidl/fuchsia-hardware-block-volume:c.headers",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-boot:c",
+    "$zx/system/fidl/fuchsia-boot:llcpp",
     "$zx/system/fidl/fuchsia-hardware-block:c",
     "$zx/system/fidl/fuchsia-hardware-block-partition:c",
     "$zx/system/fidl/fuchsia-hardware-block-volume:c",
