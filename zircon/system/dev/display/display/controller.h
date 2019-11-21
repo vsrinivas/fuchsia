@@ -156,7 +156,7 @@ class Controller : public ControllerParent,
   bool unbinding_ __TA_GUARDED(mtx()) = false;
 
   DisplayInfo::Map displays_ __TA_GUARDED(mtx());
-  bool vc_applied_;
+  bool vc_applied_ = false;
   uint32_t applied_stamp_ = UINT32_MAX;
   uint32_t applied_client_id_ = UINT32_MAX;
 
