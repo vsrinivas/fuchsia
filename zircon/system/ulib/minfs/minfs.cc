@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <minfs/minfs.h>
+
 #include <fcntl.h>
 #include <inttypes.h>
 #include <lib/cksum.h>
@@ -21,7 +23,6 @@
 #include <fbl/auto_call.h>
 #include <fs/trace.h>
 #include <fs/transaction/block_transaction.h>
-#include <minfs/minfs.h>
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
@@ -33,6 +34,7 @@
 #include <fbl/auto_lock.h>
 #include <fs/journal/journal.h>
 #include <fs/journal/replay.h>
+#include <fs/pseudo_dir.h>
 #endif
 
 #include <utility>
@@ -1382,32 +1384,36 @@ zx_status_t Mount(std::unique_ptr<minfs::Bcache> bc, const MountOptions& options
 
 #ifdef __Fuchsia__
 zx_status_t MountAndServe(const MountOptions& mount_options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<block_client::BlockDevice> device,
-                          zx::channel mount_channel, fbl::Closure on_unmount) {
+                          std::unique_ptr<minfs::Bcache> bcache,
+                          zx::channel mount_channel, fbl::Closure on_unmount,
+                          ServeLayout serve_layout) {
   TRACE_DURATION("minfs", "MountAndServe");
   minfs::MountOptions options = mount_options;
 
-  std::unique_ptr<minfs::Bcache> bc;
-  bool readonly_device = false;
-  zx_status_t status = CreateBcache(std::move(device), &readonly_device, &bc);
-  if (status != ZX_OK) {
-    FS_TRACE_ERROR("minfs: Could not create block cache\n");
-    return status;
-  }
-  options.readonly_after_initialization |= readonly_device;
-  options.repair_filesystem &= !readonly_device;
-
-  fbl::RefPtr<VnodeMinfs> root;
-  status = Mount(std::move(bc), options, &root);
+  fbl::RefPtr<VnodeMinfs> data_root;
+  zx_status_t status = Mount(std::move(bcache), options, &data_root);
   if (status != ZX_OK) {
     return status;
   }
 
-  Minfs* vfs = root->Vfs();
+  Minfs* vfs = data_root->Vfs();
   vfs->SetMetrics(options.metrics);
   vfs->SetUnmountCallback(std::move(on_unmount));
   vfs->SetDispatcher(dispatcher);
-  return vfs->ServeDirectory(std::move(root), std::move(mount_channel));
+
+  fbl::RefPtr<fs::Vnode> export_root;
+  switch (serve_layout) {
+    case ServeLayout::kDataRootOnly:
+      export_root = std::move(data_root);
+      break;
+    case ServeLayout::kExportDirectory:
+      auto outgoing = fbl::MakeRefCounted<fs::PseudoDir>();
+      outgoing->AddEntry("root", std::move(data_root));
+      export_root = std::move(outgoing);
+      break;
+  }
+
+  return vfs->ServeDirectory(std::move(export_root), std::move(mount_channel));
 }
 
 void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
@@ -1416,7 +1422,7 @@ void Minfs::Shutdown(fs::Vfs::ShutdownCallback cb) {
   ManagedVfs::Shutdown([this, cb = std::move(cb)](zx_status_t status) mutable {
     Sync([this, cb = std::move(cb)](zx_status_t) mutable {
       async::PostTask(dispatcher(), [this, cb = std::move(cb)]() mutable {
-        // Ensure writeback buffer completes before auxilliary structures are deleted.
+        // Ensure writeback buffer completes before auxiliary structures are deleted.
         StopWriteback();
 
         auto on_unmount = std::move(on_unmount_);

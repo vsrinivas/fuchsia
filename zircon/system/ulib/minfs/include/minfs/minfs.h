@@ -47,6 +47,18 @@ enum class UpdateBackupSuperblock {
   kUpdate,
 };
 
+// Determines the kind of directory layout the filesystem server should expose to the outside world.
+// TODO(fxb/34531): When all users migrate to the export directory, delete this enum, since only
+// |kExportDirectory| would be used.
+enum class ServeLayout {
+  // The root of the filesystem is exposed directly.
+  kDataRootOnly,
+
+  // Expose a pseudo-directory with the filesystem root located at "svc/root".
+  // TODO(fxb/34531): Also expose an administration service under "svc/fuchsia.fs.Admin".
+  kExportDirectory
+};
+
 struct MountOptions {
   // Determines whether the filesystem will be accessible as read-only.
   // This does not mean that access to the block device is exclusively read-only;
@@ -81,15 +93,16 @@ inline zx_status_t Mkfs(Bcache* bc) { return Mkfs({}, bc); }
 zx_status_t CreateBcache(std::unique_ptr<block_client::BlockDevice> device, bool* out_readonly,
                          std::unique_ptr<minfs::Bcache>* out);
 
-// Mount the filesystem backed by |device_fd| using the VFS layer |vfs|,
-// and serve the root directory under the provided |mount_channel|.
+// Mount the filesystem backed by |bcache| and serve under the provided |mount_channel|.
+// The layout of the served directory is controlled by |serve_layout|.
 //
 // This function does not start the async_dispatcher_t object owned by |vfs|;
 // requests will not be dispatched if that async_dispatcher_t object is not
 // active.
 zx_status_t MountAndServe(const MountOptions& options, async_dispatcher_t* dispatcher,
-                          std::unique_ptr<block_client::BlockDevice> device,
-                          zx::channel mount_channel, fbl::Closure on_unmount);
+                          std::unique_ptr<minfs::Bcache> bcache,
+                          zx::channel mount_channel, fbl::Closure on_unmount,
+                          ServeLayout serve_layout);
 #endif
 
 }  // namespace minfs

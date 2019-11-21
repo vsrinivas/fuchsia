@@ -46,10 +46,18 @@ zx_test("minfs-integration") {
     "integration/backup-superblock.cc",
     "integration/integration_main.cc",
     "integration/minfs_fixtures.cc",
+    "integration/mount_test.cc",
     "integration/utils.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-io:llcpp",
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/async:async-cpp",
+    "$zx/system/ulib/async:async-default",
     "$zx/system/ulib/async-loop",
+    "$zx/system/ulib/async-loop:async-loop-cpp",
+    "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/fdio",
     "$zx/system/ulib/fs-management",
     "$zx/system/ulib/fs-test-utils",
     "$zx/system/ulib/fs/test_support",
