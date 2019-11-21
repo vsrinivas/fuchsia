@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_magma.h"
 
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -21,13 +21,11 @@ zx_status_t VirtioMagma::Start(
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::VirtioWaylandImporter>
         wayland_importer,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioMagmaUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioMagmaUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(magma_.NewRequest());
+  services->Connect(magma_.NewRequest());
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {

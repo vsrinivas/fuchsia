@@ -14,6 +14,7 @@
             "fuchsia.boot.RootResource",
             "fuchsia.virtualization.vmm.LaunchInfoProvider",
             "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
             "fuchsia.tracing.provider.Registry"
         ]
     }

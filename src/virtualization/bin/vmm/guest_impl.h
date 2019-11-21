@@ -7,8 +7,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
-
-#include "src/lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 // Provides an implementation of the |fuchsia::virtualization::Guest|
 // interface. This exposes some guest services over FIDL.
@@ -16,7 +15,7 @@ class GuestImpl : public fuchsia::virtualization::Guest {
  public:
   GuestImpl();
 
-  zx_status_t AddPublicService(component::StartupContext* context);
+  zx_status_t AddPublicService(sys::ComponentContext* context);
 
   // Extracts the socket handle to be used for the host end of serial
   // communication. The other end of this socket will be provided to clients

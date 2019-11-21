@@ -5,7 +5,7 @@
 #include "src/virtualization/bin/vmm/controller/virtio_wl.h"
 
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -20,13 +20,11 @@ zx_status_t VirtioWl::Start(
     const zx::guest& guest, zx::vmar vmar,
     fidl::InterfaceHandle<fuchsia::virtualization::WaylandDispatcher> dispatch_handle,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioWlUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioWlUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(wayland_.NewRequest());
+  services->Connect(wayland_.NewRequest());
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);
   if (status != ZX_OK) {

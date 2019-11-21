@@ -52,7 +52,6 @@ source_set("cpp") {
     "//src/modular/lib/testing:component_base",
     "//src/virtualization/bin/guest_manager:lib",
     "//src/virtualization/bin/guest_runner:lib",
-    "//src/virtualization/bin/vmm:lib",
   ]
 }
 

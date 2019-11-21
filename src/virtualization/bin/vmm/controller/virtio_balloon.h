@@ -8,11 +8,11 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <virtio/balloon.h>
 #include <virtio/virtio_ids.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
 static constexpr uint16_t kVirtioBalloonNumQueues = 3;
@@ -23,7 +23,7 @@ class VirtioBalloon : public VirtioComponentDevice<VIRTIO_ID_BALLOON, kVirtioBal
  public:
   explicit VirtioBalloon(const PhysMem& phys_mem);
 
-  zx_status_t AddPublicService(component::StartupContext* context);
+  zx_status_t AddPublicService(sys::ComponentContext* context);
 
   zx_status_t Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                     async_dispatcher_t* dispatcher);

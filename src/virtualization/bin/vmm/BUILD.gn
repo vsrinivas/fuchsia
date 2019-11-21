@@ -112,9 +112,10 @@ source_set("lib") {
 
   public_deps = [
     "//sdk/fidl/fuchsia.virtualization.vmm",
-    "//src/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/virtualization/bin/vmm/device",
     "//zircon/public/lib/ddk",
+    "//zircon/public/lib/trace",
     "//zircon/public/lib/virtio",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-boot",

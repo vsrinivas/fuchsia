@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_input.h"
 
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/device/input.h"
@@ -48,14 +48,12 @@ zx_status_t VirtioInput::Start(
     const zx::guest& guest,
     fidl::InterfaceRequest<fuchsia::virtualization::hardware::ViewListener> view_listener_request,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioInputUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioInputUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(input_.NewRequest());
-  services.ConnectToService(std::move(view_listener_request));
+  services->Connect(input_.NewRequest());
+  services->Connect(std::move(view_listener_request));
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

@@ -4,6 +4,7 @@
 
 #include "src/virtualization/bin/vmm/virtio_vsock.h"
 
+#include <lib/async/cpp/task.h>
 #include <lib/async/task.h>
 #include <lib/fit/defer.h>
 #include <zircon/syscalls/object.h>
@@ -467,7 +468,7 @@ zx_status_t VirtioVsock::ChannelConnection::Write(VirtioQueue* queue, virtio_vso
   return status;
 }
 
-VirtioVsock::VirtioVsock(component::StartupContext* context, const PhysMem& phys_mem,
+VirtioVsock::VirtioVsock(sys::ComponentContext* context, const PhysMem& phys_mem,
                          async_dispatcher_t* dispatcher)
     : VirtioInprocessDevice(phys_mem, 0 /* device_features */),
       dispatcher_(dispatcher),
@@ -487,7 +488,7 @@ VirtioVsock::VirtioVsock(component::StartupContext* context, const PhysMem& phys
           });
         };
 
-    context->outgoing().AddPublicService(std::move(handler));
+    context->outgoing()->AddPublicService(std::move(handler));
   }
 }
 

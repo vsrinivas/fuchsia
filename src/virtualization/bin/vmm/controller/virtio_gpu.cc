@@ -17,13 +17,12 @@ zx_status_t VirtioGpu::Start(
     const zx::guest& guest,
     fidl::InterfaceHandle<fuchsia::virtualization::hardware::ViewListener> view_listener,
     fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioGpuUrl,
-      .directory_request = services_.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioGpuUrl;
+  services_ = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services_.ConnectToService(gpu_.NewRequest());
-  services_.ConnectToService(events_.NewRequest());
+  services_->Connect(gpu_.NewRequest());
+  services_->Connect(events_.NewRequest());
   events_.events().OnConfigChanged = fit::bind_member(this, &VirtioGpu::OnConfigChanged);
 
   fuchsia::virtualization::hardware::StartInfo start_info;

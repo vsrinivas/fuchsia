@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
 
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/lib/fxl/logging.h"
 
@@ -16,20 +16,18 @@ VirtioBalloon::VirtioBalloon(const PhysMem& phys_mem)
                             fit::bind_member(this, &VirtioBalloon::ConfigureQueue),
                             fit::bind_member(this, &VirtioBalloon::Ready)) {}
 
-zx_status_t VirtioBalloon::AddPublicService(component::StartupContext* context) {
-  return context->outgoing().AddPublicService(bindings_.GetHandler(this));
+zx_status_t VirtioBalloon::AddPublicService(sys::ComponentContext* context) {
+  return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 zx_status_t VirtioBalloon::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                                  async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioBalloonUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioBalloonUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(balloon_.NewRequest());
-  services.ConnectToService(stats_.NewRequest());
+  services->Connect(balloon_.NewRequest());
+  services->Connect(stats_.NewRequest());
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

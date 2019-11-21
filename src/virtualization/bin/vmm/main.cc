@@ -14,6 +14,7 @@
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/namespace.h>
+#include <lib/sys/cpp/component_context.h>
 #include <limits.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -31,7 +32,6 @@
 
 #include <trace-provider/provider.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/strings/string_printf.h"
 #include "src/virtualization/bin/vmm/controller/virtio_balloon.h"
@@ -99,12 +99,11 @@ int main(int argc, char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   async::Loop device_loop(&kAsyncLoopConfigNoAttachToCurrentThread);
   trace::TraceProviderWithFdio trace_provider(loop.dispatcher());
-  std::unique_ptr<component::StartupContext> context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::unique_ptr<sys::ComponentContext> context = sys::ComponentContext::Create();
 
   fuchsia::virtualization::LaunchInfo launch_info;
   fuchsia::virtualization::vmm::LaunchInfoProviderSyncPtr launch_info_provider;
-  context->ConnectToEnvironmentService(launch_info_provider.NewRequest());
+  context->svc()->Connect(launch_info_provider.NewRequest());
   zx_status_t status = launch_info_provider->GetLaunchInfo(&launch_info);
   // NOTE: This isn't an error yet since only the guest_manager exposes the
   // LaunchInfoProvider service. This will become an error once we invert the
@@ -115,7 +114,7 @@ int main(int argc, char** argv) {
 
   GuestImpl guest_controller;
   fuchsia::sys::LauncherPtr launcher;
-  context->environment()->GetLauncher(launcher.NewRequest());
+  context->svc()->Connect(launcher.NewRequest());
 
   GuestConfig cfg;
   status = read_guest_cfg("/guest/data/guest.cfg", argc, argv, &cfg);
@@ -219,9 +218,9 @@ int main(int argc, char** argv) {
       FXL_LOG(ERROR) << "Block spec missing path attribute " << status;
       return ZX_ERR_INVALID_ARGS;
     }
-    uint32_t flags = ZX_FS_RIGHT_READABLE;
+    uint32_t flags = fuchsia::io::OPEN_RIGHT_READABLE;
     if (block_spec.mode == fuchsia::virtualization::BlockMode::READ_WRITE) {
-      flags |= ZX_FS_RIGHT_WRITABLE;
+      flags |= fuchsia::io::OPEN_RIGHT_WRITABLE;
     }
     fidl::InterfaceHandle<fuchsia::io::File> file;
     status = fdio_open(block_spec.path.c_str(), flags, file.NewRequest().TakeChannel().release());

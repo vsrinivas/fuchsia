@@ -8,12 +8,12 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/hardware/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/component_context.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include <virtio/gpu.h>
 #include <virtio/virtio_ids.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 
 static constexpr uint16_t kVirtioGpuNumQueues = 2;
@@ -34,7 +34,7 @@ class VirtioGpu
     CONFIG_READY,
     READY,
   } state_ = State::NOT_READY;
-  component::Services services_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   fuchsia::sys::ComponentControllerPtr controller_;
   // Use a sync pointer for consistency of virtual machine execution.
   fuchsia::virtualization::hardware::VirtioGpuSyncPtr gpu_;

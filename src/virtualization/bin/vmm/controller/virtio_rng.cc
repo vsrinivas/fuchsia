@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_rng.h"
 
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 static constexpr char kVirtioRngUrl[] = "fuchsia-pkg://fuchsia.com/virtio_rng#meta/virtio_rng.cmx";
 
@@ -15,13 +15,11 @@ VirtioRng::VirtioRng(const PhysMem& phys_mem)
 
 zx_status_t VirtioRng::Start(const zx::guest& guest, fuchsia::sys::Launcher* launcher,
                              async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioRngUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioRngUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(rng_.NewRequest());
+  services->Connect(rng_.NewRequest());
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

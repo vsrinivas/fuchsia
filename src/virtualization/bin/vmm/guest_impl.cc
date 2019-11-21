@@ -18,8 +18,8 @@ GuestImpl::GuestImpl() {
   FXL_CHECK(status == ZX_OK) << "Failed to create socket";
 }
 
-zx_status_t GuestImpl::AddPublicService(component::StartupContext* context) {
-  return context->outgoing().AddPublicService(bindings_.GetHandler(this));
+zx_status_t GuestImpl::AddPublicService(sys::ComponentContext* context) {
+  return context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 zx::socket GuestImpl::SerialSocket() { return duplicate(socket_); }

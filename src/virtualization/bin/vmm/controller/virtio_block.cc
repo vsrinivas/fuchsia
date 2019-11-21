@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_block.h"
 
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/virtualization/bin/vmm/device/block.h"
 
@@ -31,13 +31,11 @@ zx_status_t VirtioBlock::Start(const zx::guest& guest, const std::string& id,
                                fuchsia::virtualization::BlockFormat format,
                                fuchsia::io::FilePtr file, fuchsia::sys::Launcher* launcher,
                                async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioBlockUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioBlockUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(block_.NewRequest());
+  services->Connect(block_.NewRequest());
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

@@ -4,7 +4,7 @@
 
 #include "src/virtualization/bin/vmm/controller/virtio_net.h"
 
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 static constexpr char kVirtioNetUrl[] = "fuchsia-pkg://fuchsia.com/virtio_net#meta/virtio_net.cmx";
 
@@ -16,13 +16,11 @@ VirtioNet::VirtioNet(const PhysMem& phys_mem)
 zx_status_t VirtioNet::Start(const zx::guest& guest,
                              const fuchsia::hardware::ethernet::MacAddress& mac_address,
                              fuchsia::sys::Launcher* launcher, async_dispatcher_t* dispatcher) {
-  component::Services services;
-  fuchsia::sys::LaunchInfo launch_info{
-      .url = kVirtioNetUrl,
-      .directory_request = services.NewRequest(),
-  };
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = kVirtioNetUrl;
+  auto services = sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
   launcher->CreateComponent(std::move(launch_info), controller_.NewRequest());
-  services.ConnectToService(net_.NewRequest());
+  services->Connect(net_.NewRequest());
 
   fuchsia::virtualization::hardware::StartInfo start_info;
   zx_status_t status = PrepStart(guest, dispatcher, &start_info);

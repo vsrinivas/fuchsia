@@ -7,6 +7,7 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/socket.h>
 
@@ -16,7 +17,6 @@
 #include <virtio/virtio_ids.h>
 #include <virtio/vsock.h>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/vmm/virtio_device.h"
 #include "src/virtualization/bin/vmm/virtio_queue_waiter.h"
 
@@ -27,7 +27,7 @@ class VirtioVsock
       public fuchsia::virtualization::GuestVsockEndpoint,
       public fuchsia::virtualization::GuestVsockAcceptor {
  public:
-  VirtioVsock(component::StartupContext* context, const PhysMem&, async_dispatcher_t* dispatcher);
+  VirtioVsock(sys::ComponentContext* context, const PhysMem&, async_dispatcher_t* dispatcher);
 
   uint32_t guest_cid() const;
 
