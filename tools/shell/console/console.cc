@@ -11,12 +11,16 @@
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
 #include "tools/shell/console/command_line_options.h"
+#include "tools/shell/lib/li.h"
 #include "tools/shell/lib/runtime.h"
 
 namespace shell {
 
 extern "C" const uint8_t qjsc_repl[];
 extern "C" const uint32_t qjsc_repl_size;
+
+extern "C" const uint8_t qjsc_repl_cc[];
+extern "C" const uint32_t qjsc_repl_cc_size;
 
 int ConsoleMain(int argc, const char **argv) {
   CommandLineOptions options;
@@ -55,8 +59,16 @@ int ConsoleMain(int argc, const char **argv) {
   js_std_add_helpers(ctx_ptr, 0, nullptr);
 
   if (!options.command_string) {
-    // Use the qjs repl for the time being.
-    js_std_eval_binary(ctx_ptr, qjsc_repl, qjsc_repl_size, 0);
+    if (!options.line_editor) {
+      // Use the qjs repl for the time being.
+      js_std_eval_binary(ctx_ptr, qjsc_repl, qjsc_repl_size, 0);
+    } else {
+      if (li::LiModuleInit(ctx_ptr, "li_internal") == nullptr) {
+        ctx.DumpError();
+        return 1;
+      }
+      js_std_eval_binary(ctx_ptr, qjsc_repl_cc, qjsc_repl_cc_size, 0);
+    }
   } else {
     const char *command = options.command_string->c_str();
     JSValue result = JS_Eval(ctx_ptr, command, options.command_string->length(), "batch", 0);

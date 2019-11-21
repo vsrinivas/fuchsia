@@ -19,6 +19,9 @@ const char kFidlIrPathHelp[] = R"(  --fidl-ir-path=<path>
       /pkgfs/packages/josh/0/data/fidling, and only takes a single path
       element.  This should be fixed, which requires turning the shell
       into a component.)";
+const char kLineEditorHelp[] = R"(  --fuchsia-line-editor
+  -l
+      Use Fuchsia line_input line editor.)";
 
 const char kBootJsLibPathHelp[] = R"(  --boot-js-lib-path=<path>
   -j <path>
@@ -35,6 +38,7 @@ cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions
   parser.AddSwitch("fidl-ir-path", 'f', kFidlIrPathHelp, &CommandLineOptions::fidl_ir_path);
   parser.AddSwitch("boot-js-lib-path", 'j', kBootJsLibPathHelp,
                    &CommandLineOptions::boot_js_lib_path);
+  parser.AddSwitch("fuchsia-line-editor", 'l', kLineEditorHelp, &CommandLineOptions::line_editor);
 
   cmdline::Status status = parser.Parse(argc, argv, options, params);
   if (status.has_error()) {

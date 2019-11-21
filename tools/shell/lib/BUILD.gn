@@ -10,7 +10,11 @@ static_library("lib") {
     "fdio.h",
     "fidl.cc",
     "fidl.h",
+    "li.cc",
+    "li.h",
     "qjs_util.h",
+    "repl.cc",
+    "repl.h",
     "runtime.cc",
     "runtime.h",
     "zx.cc",
@@ -22,6 +26,7 @@ static_library("lib") {
     ":zx",
     "//src/lib/fidl_codec",
     "//src/lib/fxl",
+    "//src/lib/line_input",
     "//third_party/quickjs:qjs-lib",
     "//third_party/rapidjson",
     "//zircon/public/lib/fdio",
@@ -63,12 +68,22 @@ action("js_libs") {
          rebase_path(sources, root_build_dir)
 }
 
+compiled_js("repl_cc") {
+  source = "repl_cc.js"
+  module = true
+  extra_args = [
+    "-M",
+    "li_internal",
+  ]
+}
+
 source_set("tests") {
   testonly = true
   sources = [
     "fidl_test.cc",
     "js_testing_utils.h",
     "ns_test.cc",
+    "repl_test.cc",
     "task_test.cc",
     "zx_test.cc",
   ]
