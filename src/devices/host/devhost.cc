@@ -626,7 +626,7 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
 static void log_rpc(const fbl::RefPtr<zx_device_t>& dev, const char* opname) {
   char buffer[512];
   const char* path = mkdevpath(dev, buffer, sizeof(buffer));
-  log(ERROR, "devhost[%s] %s'\n", path, opname);
+  log(RPC_OUT, "devhost[%s] %s'\n", path, opname);
 }
 
 static void log_rpc_result(const char* opname, zx_status_t status,
