@@ -66,6 +66,29 @@ def MeanAndStddev(values):
     return mean_val, stddev_val
 
 
+def FormatDecimal(val, decimal_places):
+    return ('%%.%df' % decimal_places) % val
+
+
+# Format the given "value +/- offset" confidence interval as a string.
+#
+# This prints a number of decimal fraction digits that is appropriate to
+# the width of the confidence interval.  The offset part is formatted to 2
+# significant figures.  The value part is formatted with the same number of
+# decimal places as the offset.
+def FormatConfidenceInterval(value, offset):
+    if math.isinf(offset) or math.isnan(offset) or offset <= 0:
+        return '%g +/- %g' % (value, offset)
+    significant_figures = 2
+    # Applying math.floor() ensures that powers of 10 and non powers of 10
+    # (e.g. 0.10 and 0.11) are both formatted with the same number of
+    # decimal places.
+    log_value = int(math.floor(math.log10(offset)))
+    decimal_places = max(significant_figures - log_value - 1, 0)
+    return '%s +/- %s' % (FormatDecimal(value, decimal_places),
+                          FormatDecimal(offset, decimal_places))
+
+
 class Stats(object):
 
     def __init__(self, values, unit):
@@ -80,7 +103,8 @@ class Stats(object):
         self.interval = (mean - offset, mean + offset)
 
     def FormatConfidenceInterval(self):
-        return '%d +/- %d %s' % (self._mean, self._offset, self._unit)
+        return '%s %s' % (FormatConfidenceInterval(self._mean, self._offset),
+                          self._unit)
 
     # Returns the relative CI width, which is the width of the confidence
     # interval divided by the mean.

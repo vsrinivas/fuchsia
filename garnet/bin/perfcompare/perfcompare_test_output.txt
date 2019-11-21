@@ -21,7 +21,7 @@ Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before    Mean after
 ------------------------------------  ----------------  -------------  -------------  --------------
-fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26 ns  991 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    992 +/- 26 ns  992 +/- 26 ns
 fuchsia.example: SecondExample        added             -              -              1975 +/- 78 ns
 
 
@@ -39,14 +39,14 @@ Results from test cases with differences:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26 ns  1391 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1492 +/- 26 ns  1392 +/- 26 ns
 
 
 Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1491 +/- 26 ns  1391 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  faster            0.900-0.967    1492 +/- 26 ns  1392 +/- 26 ns
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
@@ -64,7 +64,7 @@ Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  no_sig_diff       0.933-1.002    1491 +/- 26 ns  1441 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.933-1.002    1492 +/- 26 ns  1442 +/- 26 ns
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
@@ -82,7 +82,7 @@ Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26 ns   991 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    992 +/- 26 ns   992 +/- 26 ns
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
@@ -117,14 +117,14 @@ Results from test cases with differences:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26 ns  1591 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1492 +/- 26 ns  1592 +/- 26 ns
 
 
 Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  --------------
-fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1491 +/- 26 ns  1591 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  slower            1.031-1.104    1492 +/- 26 ns  1592 +/- 26 ns
 fuchsia.example: SecondExample        no_sig_diff       0.924-1.083    1975 +/- 78 ns  1975 +/- 78 ns
 
 
@@ -149,7 +149,7 @@ Results from all test cases:
 
 Test case                             Improve/regress?  Factor change  Mean before     Mean after
 ------------------------------------  ----------------  -------------  --------------  -------------
-fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    991 +/- 26 ns   991 +/- 26 ns
+fuchsia.example: ClockGetTimeExample  no_sig_diff       0.949-1.054    992 +/- 26 ns   992 +/- 26 ns
 fuchsia.example: SecondExample        removed           -              1975 +/- 78 ns  -
 
 

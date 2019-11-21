@@ -126,6 +126,41 @@ def GenerateTestData(mean, stddev):
 SLOW_INITIAL_RUN = [1e6]
 
 
+class FormatConfidenceIntervalTest(unittest.TestCase):
+
+    def test_confidence_interval_formatting(self):
+        Format = perfcompare.FormatConfidenceInterval
+
+        self.assertEquals(Format(12345.6789, 2222), '12346 +/- 2222')
+        self.assertEquals(Format(12345.6789, 0.02222), '12345.679 +/- 0.022')
+        self.assertEquals(Format(12345.6789, 0.07777), '12345.679 +/- 0.078')
+        self.assertEquals(Format(12345.6789, 0.09911), '12345.679 +/- 0.099')
+        # Corner case: rounding 0.09950 to 2 significant figures produces
+        # 0.100, which looks like 3 significant figures rather than 2.
+        self.assertEquals(Format(12345.6789, 0.09950), '12345.679 +/- 0.100')
+        self.assertEquals(Format(12345.6789, 2e-5), '12345.678900 +/- 0.000020')
+
+        # Corner case: the offset is a power of 10.
+        self.assertEquals(Format(12345.6789, 0.1), '12345.68 +/- 0.10')
+        self.assertEquals(Format(12345.6789, 0.01), '12345.679 +/- 0.010')
+
+        # Corner case: zero offset.
+        self.assertEquals(Format(12345.6789, 0), '12345.7 +/- 0')
+
+        # Corner case: negative offset.  This does not make sense for a
+        # confidence interval and should not happen, but let's ensure it
+        # gets formatted anyway in case that it useful for debugging.
+        self.assertEquals(Format(12345.6789, -1), '12345.7 +/- -1')
+
+        # Corner cases: infinity and NaN.
+        self.assertEquals(Format(12345.6789, numpy.inf), '12345.7 +/- inf')
+        self.assertEquals(Format(12345.6789, -numpy.inf), '12345.7 +/- -inf')
+        self.assertEquals(Format(12345.6789, numpy.nan), '12345.7 +/- nan')
+        self.assertEquals(Format(numpy.inf, 0.1234), 'inf +/- 0.12')
+        self.assertEquals(Format(-numpy.inf, 0.1234), '-inf +/- 0.12')
+        self.assertEquals(Format(numpy.nan, 0.1234), 'nan +/- 0.12')
+
+
 class StatisticsTest(TempDirTestCase):
 
     # Generate some example perf test data, allowing variation at each
@@ -220,18 +255,18 @@ class StatisticsTest(TempDirTestCase):
         self.CheckConfidenceInterval(self.GenerateData(), '1000 +/- 0 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_boots=100),
-            '1021 +/- 451 ns')
+            '1021 +/- 452 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_processes=100),
             '1012 +/- 151 ns')
         self.CheckConfidenceInterval(
             self.GenerateData(stddev_across_iters=100),
-            '980 +/- 73 ns')
+            '981 +/- 74 ns')
 
     # Test the case where just a single value is produced per process run.
     def test_confidence_interval_with_single_value_per_process(self):
         self.CheckConfidenceInterval(
-            [[[100]], [[101]]], '100 +/- 31 ns')
+            [[[100]], [[101]]], '100 +/- 32 ns')
 
     # If the "before" and "after" results have identical confidence
     # intervals, that should be treated as "no difference", including when
@@ -285,7 +320,7 @@ class PerfCompareTest(TempDirTestCase):
         test_name = 'fuchsia.example: ClockGetTimeExample'
         self.assertEquals(
             results[test_name].FormatConfidenceInterval(),
-            '991 +/- 26 ns')
+            '992 +/- 26 ns')
 
     # Returns the output of compare_perf when run on the given directories.
     def ComparePerf(self, before_dir, after_dir):
