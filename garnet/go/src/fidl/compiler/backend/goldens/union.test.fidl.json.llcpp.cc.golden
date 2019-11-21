@@ -77,6 +77,62 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
 }
 
 
+::llcpp::test::name::ReverseOrdinalUnion::ReverseOrdinalUnion() {
+  tag_ = Tag::Invalid;
+}
+
+::llcpp::test::name::ReverseOrdinalUnion::~ReverseOrdinalUnion() {
+  Destroy();
+}
+
+void ::llcpp::test::name::ReverseOrdinalUnion::Destroy() {
+  switch (which()) {
+  default:
+    break;
+  }
+  tag_ = Tag::Invalid;
+}
+
+void ::llcpp::test::name::ReverseOrdinalUnion::MoveImpl_(ReverseOrdinalUnion&& other) {
+  switch (other.which()) {
+  case Tag::kFirst:
+    mutable_first() = std::move(other.mutable_first());
+    break;
+  case Tag::kSecond:
+    mutable_second() = std::move(other.mutable_second());
+    break;
+  default:
+    break;
+  }
+  other.Destroy();
+}
+
+void ::llcpp::test::name::ReverseOrdinalUnion::SizeAndOffsetAssertionHelper() {
+  static_assert(offsetof(::llcpp::test::name::ReverseOrdinalUnion, first_) == 4);
+  static_assert(offsetof(::llcpp::test::name::ReverseOrdinalUnion, second_) == 4);
+  static_assert(sizeof(::llcpp::test::name::ReverseOrdinalUnion) == ::llcpp::test::name::ReverseOrdinalUnion::PrimarySize);
+}
+
+
+uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_first() {
+  if (which() != Tag::kFirst) {
+    Destroy();
+    new (&first_) uint32_t;
+  }
+  tag_ = Tag::kFirst;
+  return first_;
+}
+
+uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_second() {
+  if (which() != Tag::kSecond) {
+    Destroy();
+    new (&second_) uint32_t;
+  }
+  tag_ = Tag::kSecond;
+  return second_;
+}
+
+
 ::llcpp::test::name::FieldCollision::FieldCollision() {
   tag_ = Tag::Invalid;
 }

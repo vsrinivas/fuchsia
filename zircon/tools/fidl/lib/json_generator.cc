@@ -4,8 +4,6 @@
 
 #include "fidl/json_generator.h"
 
-#include <functional>
-
 #include "fidl/names.h"
 
 namespace fidl {
@@ -495,13 +493,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
     // fields. However, since union tag indices come from the JSON members array
     // -- which usually follows source order -- it would break ABI. We prevent
     // this by sorting members by xunion_ordinal before emitting them.
-    std::vector<std::reference_wrapper<const flat::Union::Member>> sorted_members(
-        value.members.cbegin(), value.members.cend());
-    std::sort(sorted_members.begin(), sorted_members.end(),
-              [](const auto& member1, const auto& member2) {
-                return member1.get().xunion_ordinal->value < member2.get().xunion_ordinal->value;
-              });
-    GenerateObjectMember("members", sorted_members);
+    GenerateObjectMember("members", value.MembersSortedByXUnionOrdinal());
 
     auto deprecated_type_shape = value.typeshape(WireFormat::kOld);
     GenerateObjectMember("size", deprecated_type_shape.InlineSize());

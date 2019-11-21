@@ -12,7 +12,7 @@
       "name": "test.name/NullableUnionStruct",
       "location": {
         "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-        "line": 19,
+        "line": 24,
         "column": 8
       },
       "anonymous": false,
@@ -26,7 +26,7 @@
           "name": "the_union",
           "location": {
             "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
-            "line": 20,
+            "line": 25,
             "column": 12
           },
           "size": 8,
@@ -339,12 +339,93 @@
         "has_flexible_envelope": false,
         "contains_union": true
       }
+    },
+    {
+      "name": "test.name/ReverseOrdinalUnion",
+      "location": {
+        "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+        "line": 19,
+        "column": 7
+      },
+      "members": [
+        {
+          "xunion_ordinal": 1,
+          "reserved": false,
+          "name": "first",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 21,
+            "column": 15
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        },
+        {
+          "xunion_ordinal": 2,
+          "reserved": false,
+          "name": "second",
+          "type": {
+            "kind": "primitive",
+            "subtype": "uint32"
+          },
+          "location": {
+            "filename": "garnet/go/src/fidl/compiler/backend/typestest/union.test.fidl",
+            "line": 20,
+            "column": 15
+          },
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0,
+      "type_shape_old": {
+        "inline_size": 8,
+        "alignment": 4,
+        "depth": 0,
+        "max_handles": 0,
+        "max_out_of_line": 0,
+        "has_padding": false,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      },
+      "type_shape_v1": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      },
+      "type_shape_v1_no_ee": {
+        "inline_size": 24,
+        "alignment": 8,
+        "depth": 1,
+        "max_handles": 0,
+        "max_out_of_line": 8,
+        "has_padding": true,
+        "has_flexible_envelope": false,
+        "contains_union": true
+      }
     }
   ],
   "xunion_declarations": [],
   "type_alias_declarations": [],
   "declaration_order": [
     "test.name/Union",
+    "test.name/ReverseOrdinalUnion",
     "test.name/NullableUnionStruct",
     "test.name/FieldCollision",
     "test.name/ExplicitUnion"
@@ -353,6 +434,7 @@
     "test.name/NullableUnionStruct": "struct",
     "test.name/Union": "union",
     "test.name/FieldCollision": "union",
-    "test.name/ExplicitUnion": "union"
+    "test.name/ExplicitUnion": "union",
+    "test.name/ReverseOrdinalUnion": "union"
   }
 }

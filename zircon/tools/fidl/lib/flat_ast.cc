@@ -229,6 +229,17 @@ uint32_t Union::DataOffset(WireFormat wire_format) const {
   return TypeShape(*this, wire_format).Alignment();
 }
 
+std::vector<std::reference_wrapper<const Union::Member>> Union::MembersSortedByXUnionOrdinal()
+    const {
+  std::vector<std::reference_wrapper<const Member>> sorted_members(members.cbegin(),
+                                                                   members.cend());
+  std::sort(sorted_members.begin(), sorted_members.end(),
+            [](const auto& member1, const auto& member2) {
+              return member1.get().xunion_ordinal->value < member2.get().xunion_ordinal->value;
+            });
+  return sorted_members;
+}
+
 bool Typespace::Create(const flat::Name& name, const Type* arg_type,
                        const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
                        types::Nullability nullability, const Type** out_type,

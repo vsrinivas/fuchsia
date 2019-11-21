@@ -13,6 +13,7 @@
 #include <any>
 #include <cassert>
 #include <cstdint>
+#include <functional>
 #include <iostream>
 #include <limits>
 #include <map>
@@ -488,9 +489,7 @@ struct Decl {
 struct Object {
   virtual ~Object() = default;
 
-  TypeShape typeshape(fidl::WireFormat wire_format) const {
-    return TypeShape(*this, wire_format);
-  }
+  TypeShape typeshape(fidl::WireFormat wire_format) const { return TypeShape(*this, wire_format); }
 
   // |Visitor|, and the corresponding |Accept()| method below, enable the visitor pattern to be used
   // for derived classes of Object. See <https://en.wikipedia.org/wiki/Visitor_pattern> for
@@ -1015,6 +1014,9 @@ struct Union final : public TypeDecl {
   }
 
   std::vector<Member> members;
+
+  // Returns references to union members sorted by their xunion_ordinal.
+  std::vector<std::reference_wrapper<const Member>> MembersSortedByXUnionOrdinal() const;
 
   std::any AcceptAny(VisitorAny* visitor) const override;
 

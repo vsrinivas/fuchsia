@@ -1651,6 +1651,18 @@ uint8_t bytes_union_migration_single_variant_v1[] = {
     0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
 };
 
+uint8_t bytes_reverse_ordinal_union_old[] = {
+    0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
+uint8_t bytes_reverse_ordinal_union_v1[] = {
+    0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  //
+    0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
+};
+
 uint8_t bytes_non_empty_string_with_null_ptr_body_old_and_v1[] = {
     0x03, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
     0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  //
@@ -3066,6 +3078,24 @@ bool test_union_migration_single_variant_v1_to_old() {
   END_TEST;
 }
 
+bool test_reverse_ordinal_union_old_to_v1() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_ReverseOrdinalUnionStructTable,
+      bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old,
+      bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1));
+  END_TEST;
+}
+
+bool test_reverse_ordinal_union_v1_to_old() {
+  BEGIN_TEST;
+  ASSERT_TRUE(check_fidl_transform(
+      FIDL_TRANSFORMATION_V1_TO_OLD, &v1_conformance_ReverseOrdinalUnionStructTable,
+      bytes_reverse_ordinal_union_v1, sizeof bytes_reverse_ordinal_union_v1,
+      bytes_reverse_ordinal_union_old, sizeof bytes_reverse_ordinal_union_old));
+  END_TEST;
+}
+
 bool test_non_empty_string_with_null_ptr_body_old_to_v1_failure() {
   BEGIN_TEST;
   run_fidl_transform(FIDL_TRANSFORMATION_OLD_TO_V1, &conformance_StringWrapperTable,
@@ -3393,6 +3423,10 @@ RUN_TEST(test_union_with_bound_string_v1_to_old)
 RUN_TEST(test_union_migration_single_variant_old_to_v1)
 
 RUN_TEST(test_union_migration_single_variant_v1_to_old)
+
+RUN_TEST(test_reverse_ordinal_union_old_to_v1)
+
+RUN_TEST(test_reverse_ordinal_union_v1_to_old)
 
 RUN_TEST(test_non_empty_string_with_null_ptr_body_old_to_v1_failure)
 

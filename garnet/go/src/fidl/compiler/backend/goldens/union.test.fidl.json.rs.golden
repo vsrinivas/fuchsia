@@ -85,6 +85,26 @@ fidl_union! {
   out_of_line_ty: OutOfLineUnion,
 }
 
+fidl_union! {
+  #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
+  name: ReverseOrdinalUnion,
+  members: [
+    First {
+      ty: u32,
+      offset: 4,
+      xunion_ordinal: 1,
+    },
+    Second {
+      ty: u32,
+      offset: 4,
+      xunion_ordinal: 2,
+    },
+  ],
+  size: 8,
+  align: 4,
+  out_of_line_ty: OutOfLineUnion,
+}
+
 #[derive(Debug, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 pub struct NullableUnionStruct {
   pub the_union: Option<Box<Union>>,

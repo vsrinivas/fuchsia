@@ -19,3 +19,15 @@ union SingleVariantUnion {
 struct SingleVariantUnionStruct {
     SingleVariantUnion u;
 };
+
+// Union tags follow the explicit ordinal order, not source order.
+union ReverseOrdinalUnion {
+    4: int64 x; // tag 2
+    3: reserved;
+    2: bool y; // tag 1
+    1: uint32 z; // tag 0
+};
+
+struct ReverseOrdinalUnionStruct {
+    ReverseOrdinalUnion u;
+};

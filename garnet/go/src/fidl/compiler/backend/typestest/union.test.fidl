@@ -16,6 +16,11 @@ union ExplicitUnion {
     3: string StringNeedsConstructor;
 };
 
+union ReverseOrdinalUnion {
+    2: uint32 second;
+    1: uint32 first;
+};
+
 struct NullableUnionStruct {
     Union? the_union;
 };

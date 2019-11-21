@@ -9,6 +9,7 @@ namespace test {
 namespace name {
 
 class Union;
+class ReverseOrdinalUnion;
 class NullableUnionStruct;
 class FieldCollision;
 class ExplicitUnion;
@@ -108,6 +109,87 @@ inline zx_status_t Clone(const ::test::name::Union& value,
 }
 
 using UnionPtr = ::std::unique_ptr<Union>;
+
+class ReverseOrdinalUnion final {
+ public:
+  ReverseOrdinalUnion();
+  ~ReverseOrdinalUnion();
+
+  ReverseOrdinalUnion(ReverseOrdinalUnion&&);
+  ReverseOrdinalUnion& operator=(ReverseOrdinalUnion&&);
+
+  enum class Tag : fidl_union_tag_t {
+    kFirst = 0,
+    kSecond = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
+  enum __attribute__((enum_extensibility(closed))) XUnionTag : fidl_xunion_tag_t {
+    kFirst = 1,  // 0x1
+    kSecond = 2,  // 0x2
+  };
+
+  static inline ::std::unique_ptr<ReverseOrdinalUnion> New() { return ::std::make_unique<ReverseOrdinalUnion>(); }
+
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  void EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, ReverseOrdinalUnion* _value, size_t _offset);
+  zx_status_t Clone(ReverseOrdinalUnion* result) const;
+
+  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
+
+  bool is_first() const { return Which() == Tag(0); }
+  
+  uint32_t& first() {
+    if (!is_first()) {
+      value_.emplace<0 + 1>();
+    }
+    return value_.template get<0 + 1>();
+  }
+  
+  const uint32_t& first() const { return value_.template get<0 + 1>(); }
+  void set_first(uint32_t value);
+
+  bool is_second() const { return Which() == Tag(1); }
+  
+  uint32_t& second() {
+    if (!is_second()) {
+      value_.emplace<1 + 1>();
+    }
+    return value_.template get<1 + 1>();
+  }
+  
+  const uint32_t& second() const { return value_.template get<1 + 1>(); }
+  void set_second(uint32_t value);
+
+  Tag Which() const {
+    size_t index = value_.index();
+    if (index == 0) {
+      return Tag::Invalid;
+    } else {
+      return Tag(index - 1);
+    }
+  }
+
+ private:
+  XUnionTag WhichXUnionTag() const {
+    switch (Which()) {
+    case Tag::kFirst: return XUnionTag::kFirst;
+    case Tag::kSecond: return XUnionTag::kSecond;
+    case Tag::Invalid: return XUnionTag(0);
+    }
+  }
+
+  using Variant = fit::internal::variant<fit::internal::monostate, uint32_t, uint32_t>;
+  Variant value_;
+};
+
+inline zx_status_t Clone(const ::test::name::ReverseOrdinalUnion& value,
+                         ::test::name::ReverseOrdinalUnion* result) {
+  return value.Clone(result);
+}
+
+using ReverseOrdinalUnionPtr = ::std::unique_ptr<ReverseOrdinalUnion>;
 
 class NullableUnionStruct final {
  public:
@@ -306,6 +388,36 @@ struct Equality<::test::name::Union> {
       case ::test::name::Union::Tag::kVectorStringAlsoNeedsConstructor:
 	return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor(), _rhs.VectorStringAlsoNeedsConstructor());
       case ::test::name::Union::Tag::Invalid:
+	return true;
+      default:
+	return false;
+    }
+  }
+};
+template <>
+struct IsFidlUnion<::test::name::ReverseOrdinalUnion> : public std::true_type {};
+
+template <>
+struct CodingTraits<::test::name::ReverseOrdinalUnion>
+    : public EncodableCodingTraits<::test::name::ReverseOrdinalUnion, 8, 24> {};
+
+inline zx_status_t Clone(const ::test::name::ReverseOrdinalUnion& value,
+                         ::test::name::ReverseOrdinalUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+
+template<>
+struct Equality<::test::name::ReverseOrdinalUnion> {
+  static inline bool Equals(const ::test::name::ReverseOrdinalUnion& _lhs, const ::test::name::ReverseOrdinalUnion& _rhs) {
+    if (_lhs.Which() != _rhs.Which()) {
+      return false;
+    }
+    switch (_lhs.Which()) {
+      case ::test::name::ReverseOrdinalUnion::Tag::kFirst:
+	return ::fidl::Equals(_lhs.first(), _rhs.first());
+      case ::test::name::ReverseOrdinalUnion::Tag::kSecond:
+	return ::fidl::Equals(_lhs.second(), _rhs.second());
+      case ::test::name::ReverseOrdinalUnion::Tag::Invalid:
 	return true;
       default:
 	return false;

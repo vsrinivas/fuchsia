@@ -3214,6 +3214,39 @@ fn test_union_migration_single_variant_v1_encode() {
 }
 
 #[test]
+fn test_reverse_ordinal_union_old_encode() {
+    let value = &mut conformance::ReverseOrdinalUnionStruct {
+        u: conformance::ReverseOrdinalUnion::X(42i64),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(OLD_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
+fn test_reverse_ordinal_union_v1_encode() {
+    let value = &mut conformance::ReverseOrdinalUnionStruct {
+        u: conformance::ReverseOrdinalUnion::X(42i64),
+    };
+    let bytes = &mut Vec::new();
+    Encoder::encode_with_context(V1_CONTEXT, bytes, &mut Vec::new(), value).unwrap();
+    assert_eq!(
+        *bytes,
+        &[
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x2a, 0x00, 0x00, 0x00,
+            0x00, 0x00, 0x00, 0x00,
+        ][..]
+    );
+}
+
+#[test]
 fn test_3_byte_object_alignment_in_struct_old_decode() {
     let value = &mut conformance::ThreeByteInStruct::new_empty();
     let bytes = &mut [
@@ -6380,6 +6413,35 @@ fn test_union_migration_single_variant_v1_decode() {
     assert_eq!(
         *value,
         conformance::SingleVariantUnionStruct { u: conformance::SingleVariantUnion::X(42u32) }
+    );
+}
+
+#[test]
+fn test_reverse_ordinal_union_old_decode() {
+    let value = &mut conformance::ReverseOrdinalUnionStruct::new_empty();
+    let bytes = &mut [
+        0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00,
+    ];
+    Decoder::decode_with_context(OLD_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::ReverseOrdinalUnionStruct { u: conformance::ReverseOrdinalUnion::X(42i64) }
+    );
+}
+
+#[test]
+fn test_reverse_ordinal_union_v1_decode() {
+    let value = &mut conformance::ReverseOrdinalUnionStruct::new_empty();
+    let bytes = &mut [
+        0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x2a, 0x00, 0x00, 0x00, 0x00, 0x00,
+        0x00, 0x00,
+    ];
+    Decoder::decode_with_context(V1_CONTEXT, bytes, &mut [], value).unwrap();
+    assert_eq!(
+        *value,
+        conformance::ReverseOrdinalUnionStruct { u: conformance::ReverseOrdinalUnion::X(42i64) }
     );
 }
 

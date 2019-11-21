@@ -138,3 +138,42 @@ func ExplicitUnionWithStringNeedsConstructor(stringNeedsConstructor string) Expl
 	_u.SetStringNeedsConstructor(stringNeedsConstructor)
 	return _u
 }
+type I_reverseOrdinalUnionTag uint32
+const (
+	_ I_reverseOrdinalUnionTag = iota
+	ReverseOrdinalUnionFirst
+	ReverseOrdinalUnionSecond
+)
+
+
+type ReverseOrdinalUnion struct {
+	I_reverseOrdinalUnionTag `fidl:"u,8,4" fidl_size_v1:"24" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"24" fidl_alignment_v1_no_ee:"8"`
+	First uint32  `fidl:"1"`
+	Second uint32  `fidl:"2"`
+}
+
+func (u *ReverseOrdinalUnion) Which() I_reverseOrdinalUnionTag {
+	return u.I_reverseOrdinalUnionTag
+}
+
+func (u *ReverseOrdinalUnion) SetFirst(first uint32) {
+	u.I_reverseOrdinalUnionTag = ReverseOrdinalUnionFirst
+	u.First = first
+}
+
+func ReverseOrdinalUnionWithFirst(first uint32) ReverseOrdinalUnion {
+	var _u ReverseOrdinalUnion
+	_u.SetFirst(first)
+	return _u
+}
+
+func (u *ReverseOrdinalUnion) SetSecond(second uint32) {
+	u.I_reverseOrdinalUnionTag = ReverseOrdinalUnionSecond
+	u.Second = second
+}
+
+func ReverseOrdinalUnionWithSecond(second uint32) ReverseOrdinalUnion {
+	var _u ReverseOrdinalUnion
+	_u.SetSecond(second)
+	return _u
+}

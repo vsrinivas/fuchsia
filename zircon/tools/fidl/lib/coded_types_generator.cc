@@ -231,19 +231,15 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
             auto coded_parameter_type = CompileType(
                 parameter.type_ctor->type, coded::CodingContext::kOutsideEnvelope, wire_format);
             if (coded_parameter_type->coding_needed == coded::CodingNeeded::kAlways) {
-              request_fields.emplace_back(coded_parameter_type,
-                                          parameter.typeshape(wire_format).InlineSize(),
+              request_fields.emplace_back(
+                  coded_parameter_type, parameter.typeshape(wire_format).InlineSize(),
+                  parameter.fieldshape(wire_format).Offset(),
+                  parameter.fieldshape(wire_format).Padding(), coded_message.get(), field_num);
+            } else {
+              request_fields.emplace_back(nullptr, parameter.typeshape(wire_format).InlineSize(),
                                           parameter.fieldshape(wire_format).Offset(),
                                           parameter.fieldshape(wire_format).Padding(),
-                                          coded_message.get(),
-                                          field_num);
-            } else {
-              request_fields.emplace_back(nullptr,
-                                        parameter.typeshape(wire_format).InlineSize(),
-                                        parameter.fieldshape(wire_format).Offset(),
-                                        parameter.fieldshape(wire_format).Padding(),
-                                        coded_message.get(),
-                                        field_num);
+                                          coded_message.get(), field_num);
             }
             field_num++;
           }
@@ -285,8 +281,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
         } else {
-          struct_fields.emplace_back(nullptr,
-                                     member.typeshape(wire_format).InlineSize(),
+          struct_fields.emplace_back(nullptr, member.typeshape(wire_format).InlineSize(),
                                      member.fieldshape(wire_format).Offset(),
                                      member.fieldshape(wire_format).Padding(), coded_struct,
                                      field_num);
@@ -301,7 +296,22 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl, const WireFormat
           static_cast<coded::UnionType*>(named_coded_types_[&decl->name].get());
       std::vector<coded::UnionField>& union_members = union_struct->members;
       std::map<uint32_t, const flat::Union::Member*> members;
-      for (const auto& member : union_decl->members) {
+
+      // As part of the union-to-xunion migration, static unions now use an
+      // explicit syntax to specify their xunion_ordinal:
+      //
+      //     union Foo {
+      //         1: int bar;  // union tag 0, xunion ordinal 1
+      //         2: bool baz; // union tag 1, xunion ordinal 2
+      //     };
+      //
+      // This makes it look like the variants can be safely reordered, like
+      // table fields. However, since union tags correspond to indices in the
+      // coding table "members" array -- which usually follows source order --
+      // it would break ABI. We prevent this by sorting members by
+      // xunion_ordinal before emitting the array.
+      for (const auto& member_ref : union_decl->MembersSortedByXUnionOrdinal()) {
+        const auto& member = member_ref.get();
         if (!members.emplace(member.xunion_ordinal->value, &member).second) {
           assert(false && "Duplicate ordinal found in table generation");
         }

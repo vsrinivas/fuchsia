@@ -2720,6 +2720,21 @@ TEST(Conformance, UnionMigration_SingleVariant_Old_Encode) {
   EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
 }
 
+TEST(Conformance, ReverseOrdinalUnion_Old_Encode) {
+  llcpp::conformance::ReverseOrdinalUnionStruct v1{};
+  llcpp::conformance::ReverseOrdinalUnion v2;
+  int64_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  const auto expected = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+
+  };
+  EXPECT_TRUE(llcpp_conformance_utils::EncodeSuccess(&v1, expected));
+}
+
 TEST(Conformance, 3ByteObjectAlignmentInStruct_Old_Decode) {
   llcpp::conformance::ThreeByteInStruct v1{};
   llcpp::conformance::ThreeByte v2{};
@@ -5421,6 +5436,21 @@ TEST(Conformance, UnionMigration_SingleVariant_Old_Decode) {
 
   auto bytes = std::vector<uint8_t>{
       0x00, 0x00, 0x00, 0x00, 0x2a, 0x00, 0x00, 0x00,
+
+  };
+  EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));
+}
+
+TEST(Conformance, ReverseOrdinalUnion_Old_Decode) {
+  llcpp::conformance::ReverseOrdinalUnionStruct v1{};
+  llcpp::conformance::ReverseOrdinalUnion v2;
+  int64_t v3 = 42ull;
+  v2.set_x(std::move(v3));
+  v1.u = std::move(v2);
+
+  auto bytes = std::vector<uint8_t>{
+      0x02, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+      0x2a, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
 
   };
   EXPECT_TRUE(llcpp_conformance_utils::DecodeSuccess(&v1, std::move(bytes)));

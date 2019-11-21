@@ -5,6 +5,7 @@
 #include <fidl/tables_generator.h>
 #include <unittest/unittest.h>
 
+#include "fidl/coded_ast.h"
 #include "test_library.h"
 
 namespace {
@@ -585,6 +586,50 @@ enum MyEnum : uint16 {
   END_TEST;
 }
 
+bool CodedTypesOfUnionsWithReverseOrdinals() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct First {};
+struct Second {};
+
+union MyUnion {
+  3: Second second;
+  2: reserved;
+  1: First first;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kOld);
+
+  auto name = fidl::flat::Name(library.library(), "MyUnion");
+  auto type = gen.CodedTypeFor(&name);
+  ASSERT_NONNULL(type);
+  ASSERT_STR_EQ("example_MyUnion", type->coded_name.c_str());
+  ASSERT_EQ(fidl::coded::CodingNeeded::kAlways, type->coding_needed);
+  ASSERT_EQ(fidl::coded::Type::Kind::kUnion, type->kind);
+
+  auto coded_union = static_cast<const fidl::coded::UnionType*>(type);
+  ASSERT_EQ(2, coded_union->members.size());
+
+  auto union_field0 = coded_union->members.at(0);
+  ASSERT_EQ(1, union_field0.xunion_ordinal);
+  ASSERT_NONNULL(union_field0.type);
+  auto union_field0_struct = static_cast<const fidl::coded::StructType*>(union_field0.type);
+  ASSERT_STR_EQ("example/First", union_field0_struct->qname.c_str());
+
+  auto union_field1 = coded_union->members.at(1);
+  ASSERT_EQ(3, union_field1.xunion_ordinal);
+  ASSERT_NONNULL(union_field1.type);
+  auto union_field1_struct = static_cast<const fidl::coded::StructType*>(union_field1.type);
+  ASSERT_STR_EQ("example/Second", union_field1_struct->qname.c_str());
+
+  END_TEST;
+}
+
 bool field_num_in_struct() {
   BEGIN_TEST;
 
@@ -633,7 +678,6 @@ struct MyStruct {
   }
 
   END_TEST;
-
 }
 
 bool field_num_in_message() {
@@ -712,7 +756,6 @@ protocol MyProtocol {
   }
 
   END_TEST;
-
 }
 
 }  // namespace
@@ -730,6 +773,7 @@ RUN_TEST(CodedTypesOfNullableXUnions);
 RUN_TEST(CodedTypesOfTables);
 RUN_TEST(CodedTypesOfBits);
 RUN_TEST(CodedTypesOfEnum);
+RUN_TEST(CodedTypesOfUnionsWithReverseOrdinals);
 RUN_TEST(field_num_in_struct);
 RUN_TEST(field_num_in_message);
 

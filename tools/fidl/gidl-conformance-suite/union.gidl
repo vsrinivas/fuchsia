@@ -58,3 +58,22 @@ success("UnionMigration_SingleVariant") {
         ],
     },
 }
+
+success("ReverseOrdinalUnion") {
+    value = ReverseOrdinalUnionStruct {
+        u: ReverseOrdinalUnion {
+            x: 42,
+        },
+    },
+    bytes = {
+        old = [
+            tag 4:num(2), 4:padding, x 8:num(42),
+        ],
+        v1 = [
+            ordinal 8:num(4),
+            num_bytes 4:num(8), num_handles 4:num(0),
+            present 8:raw(0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF),
+            x 8:num(42),
+        ],
+    },
+}

@@ -45,4 +45,14 @@ test_name_ExplicitUnionOutOfLine [
 test_name_ExplicitUnionHandles [
        void void
 ][varlen]
+test_name_ReverseOrdinalUnionInLine [
+       first fidl_union_member[test_name_ReverseOrdinalUnionTag_first, int32]
+       second fidl_union_member[test_name_ReverseOrdinalUnionTag_second, int32]
+]
+test_name_ReverseOrdinalUnionOutOfLine [
+       void void
+][varlen]
+test_name_ReverseOrdinalUnionHandles [
+       void void
+][varlen]
 

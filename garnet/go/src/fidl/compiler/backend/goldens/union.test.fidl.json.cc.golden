@@ -159,6 +159,131 @@ void Union::set_StringNeedsConstructor(::std::string value) {
 void Union::set_VectorStringAlsoNeedsConstructor(::std::vector<::std::string> value) {
   value_.emplace<static_cast<size_t>(Tag::kVectorStringAlsoNeedsConstructor) + 1>(std::move(value));
 }
+ReverseOrdinalUnion::ReverseOrdinalUnion() : value_() {}
+
+ReverseOrdinalUnion::~ReverseOrdinalUnion() {
+}
+
+ReverseOrdinalUnion::ReverseOrdinalUnion(ReverseOrdinalUnion&& other) : value_(std::move(other.value_)) {
+}
+
+ReverseOrdinalUnion& ReverseOrdinalUnion::operator=(ReverseOrdinalUnion&& other) {
+  if (this != &other) {
+    value_ = std::move(other.value_);
+  }
+  return *this;
+}
+
+void ReverseOrdinalUnion::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  if (_encoder->ShouldEncodeUnionAsXUnion()) {
+    EncodeAsXUnionBytes(_encoder, _offset);
+    return;
+  }
+
+  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(_encoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    ::fidl::Encode(_encoder, &first(), _offset + 4);
+    break;
+   case 1:
+    ::fidl::Encode(_encoder, &second(), _offset + 4);
+    break;
+   default:
+    break;
+  }
+}
+
+void ReverseOrdinalUnion::EncodeAsXUnionBytes(::fidl::Encoder* _encoder, size_t _offset) {
+  const size_t length_before = _encoder->CurrentLength();
+  const size_t handles_before = _encoder->CurrentHandleCount();
+
+  size_t envelope_offset = 0;
+
+  switch (Which()) {
+    case Tag::kFirst: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &first(), envelope_offset);
+      break;
+    }
+    case Tag::kSecond: {
+      envelope_offset = _encoder->Alloc(::fidl::EncodingInlineSize<uint32_t, ::fidl::Encoder>(_encoder));
+      ::fidl::Encode(_encoder, &second(), envelope_offset);
+      break;
+    }
+    default:
+       break;
+  }
+
+  fidl_xunion_t* xunion = _encoder->GetPtr<fidl_xunion_t>(_offset);
+  assert(xunion->envelope.presence == FIDL_ALLOC_ABSENT);
+
+  if (envelope_offset) {
+    xunion->tag = WhichXUnionTag();
+    xunion->envelope.num_bytes = _encoder->CurrentLength() - length_before;
+    xunion->envelope.num_handles = _encoder->CurrentHandleCount() - handles_before;
+    xunion->envelope.presence = FIDL_ALLOC_PRESENT;
+  }
+}
+
+void ReverseOrdinalUnion::Decode(::fidl::Decoder* _decoder, ReverseOrdinalUnion* _value, size_t _offset) {
+  fidl_union_tag_t _tag;
+  ::fidl::Decode(_decoder, &_tag, _offset);
+  switch (_tag) {
+   case 0:
+    {
+      uint32_t _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 4);
+      _value->set_first(std::move(_member));
+      break;
+    }
+   case 1:
+    {
+      uint32_t _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 4);
+      _value->set_second(std::move(_member));
+      break;
+    }
+   default:
+    _value->value_.emplace<0>();
+  }
+}
+
+zx_status_t ReverseOrdinalUnion::Clone(ReverseOrdinalUnion* _result) const {
+  zx_status_t _status = ZX_OK;
+  switch (Which()) {
+    case Tag::kFirst:
+      {
+        uint32_t _member{};
+        _status = ::fidl::Clone(first(), &_member);
+        if (_status == ZX_OK) {
+          _result->set_first(std::move(_member));
+        }
+      }
+      break;
+    case Tag::kSecond:
+      {
+        uint32_t _member{};
+        _status = ::fidl::Clone(second(), &_member);
+        if (_status == ZX_OK) {
+          _result->set_second(std::move(_member));
+        }
+      }
+      break;
+    case Tag::Invalid:
+      _result->value_.emplace<0>();
+      break;
+  }
+  return _status;
+}
+
+void ReverseOrdinalUnion::set_first(uint32_t value) {
+  value_.emplace<static_cast<size_t>(Tag::kFirst) + 1>(std::move(value));
+}
+
+void ReverseOrdinalUnion::set_second(uint32_t value) {
+  value_.emplace<static_cast<size_t>(Tag::kSecond) + 1>(std::move(value));
+}
 extern "C" const fidl_type_t test_name_NullableUnionStructTable;
 const fidl_type_t* NullableUnionStruct::FidlType = &test_name_NullableUnionStructTable;
 extern "C" const fidl_type_t v1_test_name_NullableUnionStructTable;
