@@ -16,6 +16,10 @@ test("shell_tests_bin") {
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
+
+  # Extra stack needed to avoid crashes when calling QuickJS functions
+  # with asan enabled.
+  ldflags = [ "-Wl,-z,stack-size=0x200000" ]
 }
 
 # Generate a manifest providing all of the .fidl.json files exported by the
@@ -89,6 +93,10 @@ executable("bin") {
   ]
 
   libs = [ "zircon" ]
+
+  # Extra stack needed to avoid crashes when calling QuickJS functions
+  # with asan enabled.
+  ldflags = [ "-Wl,-z,stack-size=0x200000" ]
 }
 
 # "josh" is Javascript Object SHell.  We can change the name later.

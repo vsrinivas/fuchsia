@@ -32,6 +32,11 @@ Runtime::~Runtime() {
 
 Context::Context(const Runtime* rt) : ctx_(JS_NewContext(rt->Get())) {
   is_valid_ = (ctx_ == nullptr);
+
+#if __has_feature(address_sanitizer)
+  // ASan tends to exceed the max stack size of 256K.
+  JS_SetMaxStackSize(ctx_, 1024 * 1024);
+#endif  // __has_feature(address_sanitizer)
 }
 
 Context::~Context() {
