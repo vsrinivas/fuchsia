@@ -338,6 +338,61 @@ TEST_F(ParseJournalTest, MultipleEntriesWithSameSequenceNumberOnlyKeepsFirst) {
   ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
 }
 
+// When two operations are on contiguous dev offsets in order, they are merged into one write
+// operation.
+TEST_F(ParseJournalTest, ContiguousWritesAreMerged) {
+  info_block()->Update(0, kGoldenSequenceNumber);
+  fbl::Vector<storage::BufferedOperation> ops;
+  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
+  AddOperation(/* dev_offset= */ 11, /* length= */ 1, &ops);
+  const uint64_t kEntryLengthA = 2 + kEntryMetadataBlocks;
+  JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
+                                kGoldenSequenceNumber);
+
+  fbl::Vector<storage::BufferedOperation> operations;
+  uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start));
+  ASSERT_EQ(1, operations.size());
+  EXPECT_EQ(kGoldenSequenceNumber + 1, sequence_number);
+  EXPECT_EQ(kEntryLengthA, next_entry_start);
+  uint64_t vmo_offset = kJournalEntryHeaderBlocks;
+  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 2));
+}
+
+// When two operations are merged, but then later a subset of that merged operation is updated
+// again, the operation is split up into the proper chunks.
+TEST_F(ParseJournalTest, UpdatingSubsetOfPreviousContiguousWriteSplitsOperation) {
+  info_block()->Update(0, kGoldenSequenceNumber);
+  fbl::Vector<storage::BufferedOperation> ops;
+  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
+  AddOperation(/* dev_offset= */ 11, /* length= */ 1, &ops);
+  const uint64_t kEntryLengthA = 2 + kEntryMetadataBlocks;
+  JournalEntryView entry_view_a(storage::BlockBufferView(journal_buffer(), 0, kEntryLengthA), ops,
+                                kGoldenSequenceNumber);
+
+  ops.reset();
+  AddOperation(/* dev_offset= */ 10, /* length= */ 1, &ops);
+  const uint64_t kEntryLengthB = 1 + kEntryMetadataBlocks;
+  JournalEntryView entry_view_b(
+      storage::BlockBufferView(journal_buffer(), kEntryLengthA, kEntryLengthB), ops,
+      kGoldenSequenceNumber + 1);
+
+  fbl::Vector<storage::BufferedOperation> operations;
+  uint64_t sequence_number = 0;
+  uint64_t next_entry_start = 0;
+  ASSERT_OK(ParseJournalEntries(info_block(), journal_buffer(), &operations, &sequence_number,
+                                &next_entry_start));
+  ASSERT_EQ(2, operations.size());
+  EXPECT_EQ(kGoldenSequenceNumber + 2, sequence_number);
+  EXPECT_EQ(kEntryLengthA + kEntryLengthB, next_entry_start);
+  uint64_t vmo_offset = kJournalEntryHeaderBlocks;
+  ASSERT_NO_FAILURES(CheckWriteOperation(operations[1], vmo_offset + 1, 11, 1));
+  vmo_offset += kEntryLengthA;
+  ASSERT_NO_FAILURES(CheckWriteOperation(operations[0], vmo_offset, 10, 1));
+}
+
 TEST_F(ParseJournalTest, EscapedEntry) {
   info_block()->Update(0, kGoldenSequenceNumber);
   fbl::Vector<storage::BufferedOperation> ops;
