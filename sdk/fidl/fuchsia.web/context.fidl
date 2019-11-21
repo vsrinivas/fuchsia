@@ -82,6 +82,10 @@ bits ContextFeatureFlags : uint64 {
     /// Enables Widevine CDM modules for EME API. `VULKAN` feature must be enabled as well.
     /// Requires [`fuchsia.media.drm.Widevine`] service.
     WIDEVINE_CDM = 0x20;
+
+    /// Allows embedders to render web content without graphical output or Scenic.
+    /// Not compatible with the [`VULKAN`] flag.
+    HEADLESS = 0x40;
 };
 
 table CreateContextParams {

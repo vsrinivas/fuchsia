@@ -48,6 +48,17 @@ protocol Frame {
     /// - `view_token`: Token for the new view.
     CreateView(fuchsia.ui.views.ViewToken view_token);
 
+    /// Enables headless rendering of the Frame.
+    /// This is used when content depends on layout and/or animation events firing normally.
+    /// May only be used on a Context created with the `HEADLESS` feature flag.
+    [Transitional]
+    EnableHeadlessRendering();
+
+    /// Stops headless rendering of the Frame.
+    /// May only be used on a Context created with the `HEADLESS` feature flag.
+    [Transitional]
+    DisableHeadlessRendering();
+
     /// Returns a [`fuchsia.media.sessions2.Player`] interface through which media (i.e.
     /// video/audio) playback in the frame may be observed, and/or controlled. Only one
     /// [`fuchsia.media.sessions2.Player`] may be active at a time, for each [`fuchsia.web.Frame`].
