@@ -1,18 +1,18 @@
 {
-    "default_lease_time": 86400,
-    "managed_addrs": [
-        "192.168.0.2",
-        "192.168.0.3",
-        "192.168.0.4"
-    ],
-    "max_lease_time_s": 86400,
-    "name_servers": [
-        "8.8.8.8",
-        "8.8.4.4"
-    ],
-    "routers": [
-        "127.0.0.1"
-    ],
-    "server_ip": "192.168.0.1",
-    "subnet_mask": 25
+    "managed_addrs": {
+        "network_id": "192.168.0.0",
+        "broadcast": "192.168.0.128",
+        "mask": {
+            "ones": 25
+        },
+        "pool_range_start": "192.168.0.2",
+        "pool_range_stop": "192.168.0.5"
+    },
+    "server_ips": ["192.168.0.1"],
+    "lease_length": {
+        "default_seconds": 86400,
+        "max_seconds": 86400
+    },
+    "permitted_macs": [],
+    "static_assignments": {}
 }

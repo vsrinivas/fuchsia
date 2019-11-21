@@ -15,7 +15,7 @@ use {
     fuchsia_async::{self as fasync, net::UdpSocket, Interval},
     fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self as fx_syslog, fx_log_err, fx_log_info},
-    fuchsia_zircon::{self as zx, DurationNum, Status},
+    fuchsia_zircon::{DurationNum, Status},
     futures::{Future, StreamExt, TryFutureExt, TryStreamExt},
     std::{
         cell::RefCell,
@@ -56,14 +56,9 @@ async fn main() -> Result<(), Error> {
 
     let args: Args = argh::from_env();
     let config = configuration::load_server_config_from_file(args.config)?;
-    let server = Server::from_config(
-        config,
-        || zx::Time::get(zx::ClockId::UTC).into_nanos() / 1_000_000_000,
-        DEFAULT_STASH_ID,
-        DEFAULT_STASH_PREFIX,
-    )
-    .await
-    .context("failed to create server")?;
+    let server = Server::from_config(config, DEFAULT_STASH_ID, DEFAULT_STASH_PREFIX)
+        .await
+        .context("failed to create server")?;
     let server = RefCell::new(server);
 
     let mut fs = ServiceFs::new_local();
@@ -102,9 +97,9 @@ async fn main() -> Result<(), Error> {
     Ok(())
 }
 
-async fn define_msg_handling_loop_future<F: Fn() -> i64>(
+async fn define_msg_handling_loop_future(
     sock: UdpSocket,
-    server: &RefCell<Server<F>>,
+    server: &RefCell<Server>,
 ) -> Result<Void, Error> {
     let mut buf = vec![0u8; BUF_SZ];
     loop {
@@ -137,8 +132,8 @@ async fn define_msg_handling_loop_future<F: Fn() -> i64>(
     }
 }
 
-fn define_lease_expiration_handler_future<'a, F: Fn() -> i64>(
-    server: &'a RefCell<Server<F>>,
+fn define_lease_expiration_handler_future<'a>(
+    server: &'a RefCell<Server>,
 ) -> impl Future<Output = Result<(), Error>> + 'a {
     let expiration_interval = Interval::new(EXPIRATION_INTERVAL_SECS.seconds());
     expiration_interval

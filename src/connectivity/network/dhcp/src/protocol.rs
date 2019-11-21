@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::configuration::RequestedConfig;
 use failure::Fail;
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use num_derive::FromPrimitive;
@@ -227,19 +226,6 @@ impl Message {
             })
             .next()
             .ok_or(ProtocolError::MissingOption(OptionCode::DhcpMessageType))
-    }
-
-    pub fn parse_to_config(&self) -> RequestedConfig {
-        RequestedConfig {
-            lease_time_s: self
-                .options
-                .iter()
-                .filter_map(|opt| match opt {
-                    DhcpOption::IpAddressLeaseTime(v) => Some(*v),
-                    _ => None,
-                })
-                .next(),
-        }
     }
 }
 

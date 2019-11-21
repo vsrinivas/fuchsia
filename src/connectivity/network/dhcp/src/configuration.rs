@@ -3,55 +3,72 @@
 // found in the LICENSE file.
 
 use failure::Fail;
-use serde::de::{self, Visitor};
 use serde_derive::{Deserialize, Serialize};
 use serde_json;
+use std::collections::HashMap;
 use std::convert::TryFrom;
+use std::fs;
 use std::io;
 use std::net::Ipv4Addr;
-use std::{fmt, fs};
 
-/// Attempts to load a `ServerConfig` from the json file at the provided path.
-pub fn load_server_config_from_file(path: String) -> Result<ServerConfig, ConfigError> {
+/// Attempts to load a `ServerParameters` from the json file at the provided path.
+pub fn load_server_config_from_file(path: String) -> Result<ServerParameters, ConfigError> {
     let json = fs::read_to_string(path)?;
     let config = serde_json::from_str(&json)?;
     Ok(config)
 }
 
 /// A collection of the basic configuration parameters needed by the server.
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
-pub struct ServerConfig {
-    /// The IPv4 address of the host running the server.
-    pub server_ip: Ipv4Addr,
-    /// The default time (in seconds) assigned to IP address leases assigned by the server.
-    // TODO(atait): change field type to zx::Duration
-    pub default_lease_time: u32,
-    /// The number of bits to mask the subnet address from the host address in an IPv4Addr.
-    pub subnet_mask: SubnetMask,
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ServerParameters {
+    /// The IPv4 addresses of the host running the server.
+    pub server_ips: Vec<Ipv4Addr>,
+    /// The duration for which leases should be assigned to clients
+    pub lease_length: LeaseLength,
     /// The IPv4 addresses which the server is responsible for managing and leasing to
     /// clients.
-    pub managed_addrs: Vec<Ipv4Addr>,
-    /// The IPv4 addresses, in order of priority, for the default gateway/router of the local
-    /// network.
-    pub routers: Vec<Ipv4Addr>,
-    /// The IPv4 addresses, in order of priority, for the default DNS servers of the local network.
-    pub name_servers: Vec<Ipv4Addr>,
-    /// Maximum allowed lease time, in case client requests a specific lease duration.
-    pub max_lease_time_s: u32,
+    pub managed_addrs: ManagedAddresses,
+    /// A list of MAC addresses which are permitted to request a lease. If empty, any MAC address
+    /// may request a lease.
+    pub permitted_macs: Vec<fidl_fuchsia_hardware_ethernet_ext::MacAddress>,
+    /// A collection of static address assignments. Any client whose MAC address has a static
+    /// assignment will be offered the assigned IP address.
+    pub static_assignments: HashMap<fidl_fuchsia_hardware_ethernet_ext::MacAddress, Ipv4Addr>,
 }
 
-impl ServerConfig {
-    pub fn new() -> Self {
-        ServerConfig {
-            server_ip: Ipv4Addr::UNSPECIFIED,
-            default_lease_time: 60 * 60 * 24, // One day in seconds
-            subnet_mask: SubnetMask { ones: 24 },
-            managed_addrs: vec![],
-            routers: vec![],
-            name_servers: vec![],
-            max_lease_time_s: 60 * 60 * 24 * 7, // One week in seconds
-        }
+/// The IP addresses which the server will manage and lease to clients.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct ManagedAddresses {
+    /// The network id of the subnet for which the server will manage addresses.
+    pub network_id: Ipv4Addr,
+    /// The broadcast id of the subnet for which the server will manage addresses.
+    pub broadcast: Ipv4Addr,
+    /// The subnet mask of the subnet for which the server will manage addresses.
+    pub mask: SubnetMask,
+    /// The inclusive starting address of the range of managed addresses.
+    pub pool_range_start: Ipv4Addr,
+    /// The exclusive stopping address of the range of managed addresses.
+    pub pool_range_stop: Ipv4Addr,
+}
+
+impl ManagedAddresses {
+    /// Returns an iterator of the `Ipv4Addr`s from `pool_range_start`, inclusive, to
+    /// `pool_range_stop`, exclusive.
+    pub fn pool_range(&self) -> impl Iterator<Item = Ipv4Addr> {
+        let start: u32 = self.pool_range_start.into();
+        let stop: u32 = self.pool_range_stop.into();
+        (start..stop).map(|addr| addr.into())
     }
+}
+
+/// Parameters controlling lease duration allocation. Per,
+/// https://tools.ietf.org/html/rfc2131#section-3.3, times are represented as relative times.
+#[derive(Debug, Deserialize, Serialize)]
+pub struct LeaseLength {
+    /// The default lease duration assigned by the server.
+    pub default_seconds: u32,
+    /// The maximum allowable lease duration which a client can request.
+    pub max_seconds: u32,
 }
 
 /// A wrapper around the error types which can be returned when loading a
@@ -76,40 +93,12 @@ impl From<serde_json::Error> for ConfigError {
     }
 }
 
-/// Specific config values requested by the client in an option.
-#[derive(Debug, PartialEq)]
-pub struct RequestedConfig {
-    /// Lease time requested by client in seconds.
-    pub lease_time_s: Option<u32>,
-}
-
-impl RequestedConfig {
-    pub fn new() -> Self {
-        RequestedConfig { lease_time_s: None }
-    }
-}
-
-/// Values to be provided to the client.
-#[derive(Debug, PartialEq)]
-pub struct ClientConfig {
-    /// Lease time to be provided to the client in seconds.
-    pub lease_time_s: u32,
-}
-
-impl ClientConfig {
-    pub fn new(lease_time_s: u32) -> Self {
-        ClientConfig { lease_time_s: lease_time_s }
-    }
-}
-
 const U32_BITS: u8 = (std::mem::size_of::<u32>() * 8) as u8;
 
 /// A bitmask which represents the boundary between the Network part and Host part of an IPv4
 /// address.
-#[serde(transparent)]
-#[derive(Debug, Deserialize, PartialEq, Serialize)]
+#[derive(Clone, Copy, Debug, Deserialize, PartialEq, Serialize)]
 pub struct SubnetMask {
-    #[serde(deserialize_with = "deserialize_ones")]
     /// The set high-order bits of the mask.
     ones: u8,
 }
@@ -121,9 +110,16 @@ impl SubnetMask {
     }
 
     fn to_u32(&self) -> u32 {
-        let mut n: u32 = u32::max_value();
-        n <<= (U32_BITS - self.ones) as u32;
-        n
+        let n = u32::max_value();
+        // overflowing_shl() will not shift arguments >= the bit length of the calling value, so we
+        // must special case a mask with 0 ones.
+        if self.ones == 0 {
+            0
+        } else {
+            // overflowing_shl() must be used here for panic safety.
+            let (n, _overflow) = n.overflowing_shl((U32_BITS - self.ones) as u32);
+            n
+        }
     }
 
     /// Returns the count of the set high-order bits of the `SubnetMask`.
@@ -140,59 +136,38 @@ impl SubnetMask {
 }
 
 impl TryFrom<u8> for SubnetMask {
-    type Error = &'static str;
+    type Error = failure::Error;
 
     /// Returns a `Ok(SubnetMask)` with the `ones` high-order bits set if `ones` < 32, else `Err`.
     fn try_from(ones: u8) -> Result<Self, Self::Error> {
         if ones >= U32_BITS {
-            Err("failed precondition: argument must be < 32 (bit length of an IPv4 address)")
+            Err(failure::err_msg(
+                "failed precondition: argument must be < 32 (bit length of an IPv4 address)",
+            ))
         } else {
             Ok(SubnetMask { ones })
         }
     }
 }
 
-fn deserialize_ones<'de, D>(deserializer: D) -> Result<u8, D::Error>
-where
-    D: de::Deserializer<'de>,
-{
-    struct SubnetMaskVisitor;
-
-    impl<'de> Visitor<'de> for SubnetMaskVisitor {
-        type Value = u8;
-
-        fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
-            formatter.write_str("an integer between 0 and 32")
-        }
-
-        fn visit_u64<E: de::Error>(self, v: u64) -> Result<Self::Value, E> {
-            let v = std::convert::TryInto::<Self::Value>::try_into(v).map_err(
-                |std::num::TryFromIntError { .. }| {
-                    de::Error::invalid_value(de::Unexpected::Unsigned(v), &self)
-                },
-            )?;
-            let v = SubnetMask::try_from(v)
-                .map_err(|e| de::Error::invalid_value(de::Unexpected::Unsigned(v.into()), &e))?;
-            Ok(v.ones())
-        }
+impl Into<Ipv4Addr> for SubnetMask {
+    fn into(self) -> Ipv4Addr {
+        Ipv4Addr::from(self.to_u32())
     }
-
-    deserializer.deserialize_u8(SubnetMaskVisitor {})
 }
 
 #[cfg(test)]
 mod tests {
-    use super::{SubnetMask, TryFrom};
-    use serde_json;
+    use super::*;
 
     #[test]
-    fn subnet_mask_serializes_deserializes() -> Result<(), failure::Error> {
-        let mask = SubnetMask::try_from(24).unwrap();
-        let ser = serde_json::to_string(&mask)?;
-        let expected = r#"24"#;
-        assert_eq!(expected, ser);
-        let de: SubnetMask = serde_json::from_str(&ser)?;
-        assert_eq!(mask, de);
+    fn test_into_ipv4addr_returns_ipv4addr() -> Result<(), failure::Error> {
+        let v1: Ipv4Addr = SubnetMask { ones: 24 }.into();
+        let v2: Ipv4Addr = SubnetMask { ones: 0 }.into();
+        let v3: Ipv4Addr = SubnetMask { ones: 32 }.into();
+        assert_eq!(v1, Ipv4Addr::new(255, 255, 255, 0));
+        assert_eq!(v2, Ipv4Addr::new(0, 0, 0, 0));
+        assert_eq!(v3, Ipv4Addr::new(255, 255, 255, 255));
         Ok(())
     }
 }
