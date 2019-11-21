@@ -454,15 +454,11 @@ impl ElfController {
                     // for now, treat a stop the same as a kill because this
                     // is not yet implementing proper behavior to first ask the
                     // remote process to exit
-                    // let _ = self.job.kill();
-                    // c.shutdown();
                     self.kill(c);
                     break;
                 }
                 fsys::ComponentControllerRequest::Kill { control_handle: c } => {
                     self.kill(c);
-                    // let _ = self.job.kill();
-                    // c.shutdown();
                     break;
                 }
             }
