@@ -477,9 +477,9 @@ TEST_F(TaskTest, SetOutputResTest) {
   uint32_t watermark_task_id;
   ASSERT_OK(SetupForFrameProcessing(fake_regs, resize_task_id, watermark_task_id));
 
+  output_image_format_index_ = 2;
   zx_status_t status = ge2d_device_->Ge2dSetOutputResolution(resize_task_id, 2);
   EXPECT_OK(status);
-  output_image_format_index_ = 2;
   WaitAndReset();
 
   // Valid buffer & task id.
@@ -512,9 +512,9 @@ TEST_F(TaskTest, SetInputAndOutputResTest) {
   zx_status_t status = ge2d_device_->Ge2dSetInputAndOutputResolution(resize_task_id, 2);
   EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
 
+  output_image_format_index_ = 2;
   status = ge2d_device_->Ge2dSetInputAndOutputResolution(watermark_task_id, 2);
   EXPECT_OK(status);
-  output_image_format_index_ = 2;
   WaitAndReset();
 
   // Valid buffer & task id.

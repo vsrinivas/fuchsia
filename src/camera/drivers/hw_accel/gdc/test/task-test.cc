@@ -391,9 +391,9 @@ TEST_F(TaskTest, SetOutputResTest) {
 
   SetExpectations(fake_regs);
 
+  output_image_format_index_ = 2;
   zx_status_t status = gdc_device_->GdcSetOutputResolution(task_id, 2);
   EXPECT_OK(status);
-  output_image_format_index_ = 2;
   WaitAndReset();
 
   // Valid buffer & task id.
