@@ -725,6 +725,11 @@ template("package") {
     }
 
     foreach(test, pkg.tests) {
+      assert(!defined(test.tags),
+             "tags are only valid within an environment scope")
+
+      # It's a common mistake to specify "tags" in the scope of the test
+      # instead of in an environment scope.
       is_disabled = defined(test.disabled) && test.disabled
 
       if (defined(test.dest)) {

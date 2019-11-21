@@ -129,6 +129,11 @@ template("test_spec") {
   foreach(env, environments) {
     dims = []  # Clear from previous iteration.
     if (defined(env.dimensions)) {
+      dim = {
+      }
+      dim = env.dimensions
+      assert(!defined(dim.tags),
+             "tags are only valid in an environments scope, not in dimensions")
       foreach(key, all_dimension_keys) {
         dims += [
           {
