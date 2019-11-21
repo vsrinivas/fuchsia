@@ -70,7 +70,7 @@ class Session {
     return GfxCommandApplier::ApplyCommand(this, command_context, std::move(command));
   }
 
-  SessionId id() const { return id_; }
+  scheduling::SessionId id() const { return id_; }
 
   const fxl::WeakPtr<Session> GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
   const SessionContext& session_context() const { return session_context_; }
@@ -199,7 +199,7 @@ class Session {
 
   zx::time last_applied_update_presentation_time_ = zx::time(0);
 
-  const SessionId id_;
+  const scheduling::SessionId id_;
   std::string debug_name_;
 
   const std::shared_ptr<ErrorReporter> error_reporter_;

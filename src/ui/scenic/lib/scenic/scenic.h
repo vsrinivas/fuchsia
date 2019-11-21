@@ -72,7 +72,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   SystemT* RegisterSystem(Args&&... args);
 
   // Called by Session when it needs to close itself.
-  void CloseSession(Session* session);
+  void CloseSession(scheduling::SessionId session_id);
 
   // |fuchsia::ui::scenic::Scenic|
   void CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session,
@@ -113,7 +113,7 @@ class Scenic : public fuchsia::ui::scenic::Scenic {
   std::vector<fit::closure> run_after_initialized_;
 
   // Session bindings rely on setup of systems_; order matters.
-  std::map<Session*, std::unique_ptr<Session>> sessions_;
+  std::unordered_map<scheduling::SessionId, std::unique_ptr<scenic_impl::Session>> sessions_;
   fidl::BindingSet<fuchsia::ui::scenic::Scenic> scenic_bindings_;
   fidl::BindingSet<fuchsia::ui::scenic::internal::Snapshot> snapshot_bindings_;
 

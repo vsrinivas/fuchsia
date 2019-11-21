@@ -29,7 +29,7 @@ CommandDispatcherContext::CommandDispatcherContext(CommandDispatcherContext&& co
   other_session_id = 0;
 }
 
-void CommandDispatcherContext::KillSession() { scenic_->CloseSession(session()); }
+void CommandDispatcherContext::KillSession() { scenic_->CloseSession(session_id()); }
 
 CommandDispatcher::CommandDispatcher(CommandDispatcherContext context)
     : context_(std::move(context)) {}

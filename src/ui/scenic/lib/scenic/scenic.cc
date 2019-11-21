@@ -35,7 +35,7 @@ void Scenic::SetInitialized() {
   run_after_initialized_.clear();
 }
 
-void Scenic::CloseSession(Session* session) { sessions_.erase(session); }
+void Scenic::CloseSession(scheduling::SessionId session_id) { sessions_.erase(session_id); }
 
 void Scenic::RunAfterInitialized(fit::closure closure) {
   if (initialized_) {
@@ -56,11 +56,11 @@ void Scenic::CreateSession(fidl::InterfaceRequest<fuchsia::ui::scenic::Session> 
 void Scenic::CreateSessionImmediately(
     fidl::InterfaceRequest<fuchsia::ui::scenic::Session> session_request,
     fidl::InterfaceHandle<fuchsia::ui::scenic::SessionListener> listener) {
-  auto session = std::make_unique<Session>(next_session_id_++, std::move(session_request),
-                                           std::move(listener));
+  auto session = std::make_unique<scenic_impl::Session>(
+      next_session_id_++, std::move(session_request), std::move(listener));
 
   session->set_binding_error_handler(
-      [this, session = session.get()](zx_status_t status) { CloseSession(session); });
+      [this, session_id = session->id()](zx_status_t status) { CloseSession(session_id); });
 
   // Give each installed System an opportunity to install a CommandDispatcher in
   // the newly-created Session.
@@ -75,7 +75,8 @@ void Scenic::CreateSessionImmediately(
 
   session->InitializeOnFramePresentedCallback();
 
-  sessions_[session.get()] = std::move(session);
+  FXL_CHECK(sessions_.find(session->id()) == sessions_.end());
+  sessions_[session->id()] = std::move(session);
 }
 
 void Scenic::GetDisplayInfo(fuchsia::ui::scenic::Scenic::GetDisplayInfoCallback callback) {
