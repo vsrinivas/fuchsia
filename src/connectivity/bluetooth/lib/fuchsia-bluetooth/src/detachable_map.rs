@@ -10,6 +10,8 @@ use std::{
     sync::{Arc, Weak},
 };
 
+/// A weak reference to an entry in a DetachableMap. This is a weak reference, if the entry is
+/// detached before it is upgraded, the entry can be gone.
 pub struct DetachableWeak<K, V> {
     inner: Weak<V>,
     parent: Arc<RwLock<HashMap<K, Arc<V>>>>,
@@ -17,39 +19,51 @@ pub struct DetachableWeak<K, V> {
 }
 
 impl<K: Hash + Eq, V> DetachableWeak<K, V> {
-    pub fn new(item: &Arc<V>, parent: Arc<RwLock<HashMap<K, Arc<V>>>>, key: K) -> Self {
+    fn new(item: &Arc<V>, parent: Arc<RwLock<HashMap<K, Arc<V>>>>, key: K) -> Self {
         Self { inner: Arc::downgrade(item), parent, key }
     }
 
+    /// Attempt to upgrade the weak pointer to an Arc, extending the lifetime of the value if
+    /// successful.  Returns None if the item has been dropped (by another client detaching this)
     pub fn upgrade(&self) -> Option<Arc<V>> {
         self.inner.upgrade()
     }
 
     /// Destroys the original reference to this vended item.
-    /// If other references to the item exist (from `upgrade`),
-    /// it will not be dropped until those references are dropped.
+    /// If other references to the item exist (from `upgrade`), it will not be dropped until those
+    /// references are dropped.
     pub fn detach(self) {
         self.parent.write().remove(&self.key);
     }
 }
 
+/// A Map with detachable entries.  After retrieval, entries can be "detached", removing them from
+/// the map, allowing any client to expire the key in the map.  They are weak, and can be upgraded
+/// to a strong reference to the stored object.
 pub struct DetachableMap<K, V> {
     map: Arc<RwLock<HashMap<K, Arc<V>>>>,
 }
 
-impl<K: Hash + Eq + Clone, V> DetachableMap<K, V> {
-    pub fn new() -> Self {
+impl<K: Hash + Eq + Clone, V> Default for DetachableMap<K, V> {
+    fn default() -> Self {
         Self { map: Arc::new(RwLock::new(HashMap::new())) }
+    }
+}
+
+impl<K: Hash + Eq + Clone, V> DetachableMap<K, V> {
+    /// Creates an empty `DetachableMap`.   The map is initially empty.
+    pub fn new() -> DetachableMap<K, V> {
+        Default::default()
     }
 
     /// Inserts a new item into the map at `key`
-    /// Returns a reference to the old item at `key` if one existed,
-    /// or None otherwise.
+    /// Returns a reference to the old item at `key` if one existed or None otherwise.
     pub fn insert(&mut self, key: K, value: V) -> Option<Arc<V>> {
         self.map.write().insert(key, Arc::new(value))
     }
 
-    /// True if the map contains a key at `key`
+    /// True if the map contains a value for the specified key  The key may be any borrowed form of
+    /// the key's type, with `Hash` and `Eq` matching the type.
     pub fn contains_key<Q: ?Sized>(&self, key: &Q) -> bool
     where
         K: Borrow<Q>,
@@ -79,7 +93,7 @@ mod test {
 
     #[test]
     fn contains_keys() {
-        let mut map = DetachableMap::new();
+        let mut map = DetachableMap::default();
 
         map.insert(0, TestStruct { data: 45 });
 
@@ -95,7 +109,7 @@ mod test {
 
     #[test]
     fn upgrade_detached() {
-        let mut map = DetachableMap::new();
+        let mut map = DetachableMap::default();
 
         map.insert(0, TestStruct { data: 45 });
 

@@ -8,6 +8,8 @@ pub mod constants;
 
 /// Lists of Bluetooth SIG assigned numbers and conversion functions
 pub mod assigned_numbers;
+/// The DetachableMap type
+pub mod detachable_map;
 /// Bluetooth Error type
 pub mod error;
 /// Tools for writing asynchronous expectations in tests

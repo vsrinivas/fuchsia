@@ -12,20 +12,21 @@ use {
     fidl_fuchsia_bluetooth_bredr::*,
     fidl_fuchsia_media::{AudioChannelId, AudioPcmMode, PcmFormat},
     fuchsia_async as fasync,
-    fuchsia_bluetooth::types::PeerId,
+    fuchsia_bluetooth::{
+        detachable_map::{DetachableMap, DetachableWeak},
+        types::PeerId,
+    },
     fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{self, AsyncWriteExt, StreamExt, TryStreamExt},
     std::{convert::TryInto, string::String},
 };
 
-mod detachable_map;
 mod encoding;
 mod pcm_audio;
 mod peer;
 mod sources;
 
-use crate::detachable_map::*;
 use crate::encoding::{EncodedStreamSbc, RtpPacketBuilderSbc};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
