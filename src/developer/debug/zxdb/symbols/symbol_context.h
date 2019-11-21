@@ -25,6 +25,11 @@ class SymbolContext {
 
   explicit SymbolContext(uint64_t load_address) : load_address_(load_address) {}
 
+  // Returns true if this is a relative symbol context. Relative contexts do not have a real
+  // loaded module associated with them and addresses will be unchanged between relative and
+  // absolute.
+  bool is_relative() const { return load_address_ == 0; }
+
   bool operator==(const SymbolContext& other) const { return load_address_ == other.load_address_; }
   bool operator!=(const SymbolContext& other) const { return load_address_ != other.load_address_; }
 

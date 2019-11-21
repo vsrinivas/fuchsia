@@ -134,6 +134,15 @@ std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols()
   return result;
 }
 
+const LoadedModuleSymbols* ProcessSymbols::GetLoadedForModuleSymbols(
+    const ModuleSymbols* mod_sym) const {
+  for (const auto& [addr, info] : modules_) {
+    if (info.symbols->module_symbols() == mod_sym)
+      return info.symbols.get();
+  }
+  return nullptr;
+}
+
 const LoadedModuleSymbols* ProcessSymbols::GetModuleForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
   if (!info)

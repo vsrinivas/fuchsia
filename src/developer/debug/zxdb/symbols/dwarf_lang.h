@@ -46,6 +46,8 @@ enum class DwarfLang : int {
   kFortran08 = 0x23,
   kRenderScript = 0x24,
   kBLISS = 0x25,
+
+  kLast
 };
 
 // Returns true for any version of C, C++, and Objective C.

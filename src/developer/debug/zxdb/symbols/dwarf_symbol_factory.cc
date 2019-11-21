@@ -496,13 +496,17 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeCompileUnit(const llvm::DWARFDie& 
   if (!decoder.Decode(die))
     return fxl::MakeRefCounted<Symbol>();
 
-  auto result = fxl::MakeRefCounted<CompileUnit>();
+  std::string name_str;
   if (name)
-    result->set_name(*name);
-  if (language)
-    result->set_language(static_cast<DwarfLang>(*language));
+    name_str = *name;
 
-  return result;
+  DwarfLang lang_enum = DwarfLang::kNone;
+  if (language && *language >= 0 && *language < static_cast<int>(DwarfLang::kLast))
+    lang_enum = static_cast<DwarfLang>(*language);
+
+  // We know the symbols_ is valid, that was checked on entry to CreateSymbol().
+  return fxl::MakeRefCounted<CompileUnit>(static_cast<ModuleSymbols*>(symbols_.get())->GetWeakPtr(),
+                                          lang_enum, std::move(name_str));
 }
 
 fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeDataMember(const llvm::DWARFDie& die) {
