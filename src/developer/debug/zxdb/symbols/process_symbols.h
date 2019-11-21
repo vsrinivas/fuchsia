@@ -78,10 +78,6 @@ class ProcessSymbols {
   // Returns the information for all the modules that were loaded with symbol information.
   std::vector<const LoadedModuleSymbols*> GetLoadedModuleSymbols() const;
 
-  // Returns the instance of the LoadedModuleSymbols for the given ModuleSymbols if it's currently
-  // loaded in the process. Returns null otherwise.
-  const LoadedModuleSymbols* GetLoadedForModuleSymbols(const ModuleSymbols* mod_sym) const;
-
   // Finds the module for the given address. Returns null if the address does not correspond to
   // loaded code in any module.
   const LoadedModuleSymbols* GetModuleForAddress(uint64_t address) const;

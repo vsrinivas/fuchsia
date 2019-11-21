@@ -5,8 +5,6 @@
 #include "src/developer/debug/zxdb/symbols/symbol.h"
 
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
-#include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
-#include "src/developer/debug/zxdb/symbols/process_symbols.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 
@@ -54,25 +52,6 @@ fxl::RefPtr<CompileUnit> Symbol::GetCompileUnit() const {
       return fxl::RefPtr<CompileUnit>();
     cur = cur->parent().Get();
   }
-}
-
-fxl::WeakPtr<ModuleSymbols> Symbol::GetModuleSymbols() const {
-  fxl::RefPtr<CompileUnit> unit = GetCompileUnit();
-  if (!unit)
-    return fxl::WeakPtr<ModuleSymbols>();
-  return unit->module();
-}
-
-SymbolContext Symbol::GetSymbolContext(const ProcessSymbols* process_symbols) const {
-  fxl::WeakPtr<ModuleSymbols> weak_mod = GetModuleSymbols();
-  if (!weak_mod)
-    return SymbolContext::ForRelativeAddresses();
-
-  const LoadedModuleSymbols* loaded = process_symbols->GetLoadedForModuleSymbols(weak_mod.get());
-  if (!loaded)
-    return SymbolContext::ForRelativeAddresses();
-
-  return loaded->symbol_context();
 }
 
 DwarfLang Symbol::GetLanguage() const {
