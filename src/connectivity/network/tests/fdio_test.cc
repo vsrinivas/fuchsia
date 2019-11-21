@@ -186,6 +186,58 @@ TEST(SocketTest, CloseZXSocketOnClose) {
       << zx_status_get_string(status);
 }
 
+TEST(SocketTest, AcceptedSocketIsConnected) {
+  // Create the listening endpoint (server).
+  fbl::unique_fd serverfd;
+  ASSERT_TRUE(serverfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  struct sockaddr_in addr = {};
+  addr.sin_family = AF_INET;
+  addr.sin_addr.s_addr = htonl(INADDR_ANY);
+  ASSERT_EQ(bind(serverfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)), 0)
+      << strerror(errno);
+  ASSERT_EQ(listen(serverfd.get(), 1), 0) << strerror(errno);
+
+  // Get the address the server is listening on.
+  socklen_t addrlen = sizeof(addr);
+  ASSERT_EQ(getsockname(serverfd.get(), reinterpret_cast<struct sockaddr*>(&addr), &addrlen), 0)
+      << strerror(errno);
+  ASSERT_EQ(addrlen, sizeof(addr));
+
+  // Connect to the listening endpoint (client).
+  fbl::unique_fd clientfd;
+  ASSERT_TRUE(clientfd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+  ASSERT_EQ(connect(clientfd.get(), reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr)),
+            0)
+      << strerror(errno);
+
+  // Accept the new connection (client) on the listening endpoint (server).
+  fbl::unique_fd connfd;
+  ASSERT_TRUE(connfd = fbl::unique_fd(accept(serverfd.get(), nullptr, nullptr))) << strerror(errno);
+  ASSERT_EQ(close(serverfd.release()), 0) << strerror(errno);
+
+  zx::channel channel;
+  zx_status_t status;
+  ASSERT_EQ(status = fdio_fd_transfer(connfd.get(), channel.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
+
+  fuchsia::posix::socket::Control_SyncProxy control(std::move(channel));
+
+  fuchsia::io::NodeInfo node_info;
+  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+
+  zx::socket& socket = node_info.socket().socket;
+
+  zx_signals_t pending;
+  ASSERT_EQ(status = socket.wait_one(ZX_USER_SIGNAL_1 | ZX_USER_SIGNAL_3, zx::time::infinite_past(),
+                                     &pending),
+            ZX_OK)
+      << zx_status_get_string(status);
+  EXPECT_TRUE(pending & ZX_USER_SIGNAL_1);
+  EXPECT_TRUE(pending & ZX_USER_SIGNAL_3);
+}
+
 TEST(SocketTest, CloseClonedSocketAfterTcpRst) {
   // Create the listening endpoint (server).
   fbl::unique_fd serverfd;

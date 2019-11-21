@@ -79,29 +79,13 @@ int socket(int domain, int type, int protocol) {
   if (int16_t out_code = socket_response->code) {
     return ERRNO(out_code);
   }
-  fsocket::Control::SyncClient control(std::move(socket_response->s));
-
-  auto describe_result = control.Describe();
-  status = describe_result.status();
+  fdio_t* io;
+  status = fdio_from_channel(std::move(socket_response->s), &io);
   if (status != ZX_OK) {
     return ERROR(status);
   }
-  fio::NodeInfo& node_info = describe_result.Unwrap()->info;
 
-  fdio_t* io;
-  switch (node_info.which()) {
-    case fio::NodeInfo::Tag::kSocket: {
-      status =
-          fdio_socket_create(std::move(control), std::move(node_info.mutable_socket().socket), &io);
-      if (status != ZX_OK) {
-        return ERROR(status);
-      }
-      break;
-    }
-    default:
-      return ERROR(ZX_ERR_INTERNAL);
-  }
-
+  // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (type & SOCK_NONBLOCK) {
     *fdio_get_ioflag(io) |= IOFLAG_NONBLOCK;
   }
@@ -288,10 +272,9 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
       return ERRNO(out_code);
     }
   }
-  fsocket::Control::SyncClient control(std::move(accepted));
 
   if (len) {
-    auto result = control.GetPeerName();
+    auto result = fsocket::Control::Call::GetPeerName(zx::unowned(accepted));
     zx_status_t status = result.status();
     if (status != ZX_OK) {
       fdio_release_reserved(nfd);
@@ -307,31 +290,14 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
     *len = static_cast<socklen_t>(out.count());
   }
 
-  auto result = control.Describe();
-  zx_status_t status = result.status();
+  fdio_t* accepted_io;
+  zx_status_t status = fdio_from_channel(std::move(accepted), &accepted_io);
   if (status != ZX_OK) {
     fdio_release_reserved(nfd);
     return ERROR(status);
   }
-  fio::NodeInfo& node_info = result.Unwrap()->info;
 
-  fdio_t* accepted_io;
-  switch (node_info.which()) {
-    case fio::NodeInfo::Tag::kSocket: {
-      status = fdio_socket_create(std::move(control), std::move(node_info.mutable_socket().socket),
-                                  &accepted_io);
-      if (status != ZX_OK) {
-        fdio_release_reserved(nfd);
-        return ERROR(status);
-      }
-      break;
-    }
-    default:
-      fdio_release_reserved(nfd);
-      return ERROR(ZX_ERR_INTERNAL);
-  }
-  *fdio_get_ioflag(accepted_io) |= IOFLAG_SOCKET_CONNECTED;
-
+  // TODO(tamird): we're not handling this flag in fdio_from_channel, which seems bad.
   if (flags & SOCK_NONBLOCK) {
     *fdio_get_ioflag(accepted_io) |= IOFLAG_NONBLOCK;
   }

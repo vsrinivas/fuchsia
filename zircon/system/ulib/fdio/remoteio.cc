@@ -318,14 +318,7 @@ zx_status_t fdio_from_node_info(zx::channel handle, fio::NodeInfo info, fdio_t**
   return ZX_OK;
 }
 
-// Creates an |fdio_t| from a Zircon channel object.
-//
-// The |channel| must implement the |fuchsia.io.Node| protocol. Uses the
-// |Describe| method from the |fuchsia.io.Node| protocol to determine the type
-// of |fdio_t| object to create.
-//
-// Always consumes |channel|.
-static zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
+zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io) {
   auto response = fio::Node::Call::Describe(zx::unowned_channel(channel));
   zx_status_t status = response.status();
   if (status != ZX_OK) {
@@ -401,7 +394,8 @@ zx_status_t fdio_remote_clone(zx_handle_t node, fdio_t** out_io) {
 
   status = fio::Node::Call::Clone(zx::unowned_channel(node),
                                   fio::CLONE_FLAG_SAME_RIGHTS | fio::OPEN_FLAG_DESCRIBE,
-                                  std::move(request)).status();
+                                  std::move(request))
+               .status();
   if (status != ZX_OK) {
     return status;
   }

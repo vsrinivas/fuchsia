@@ -288,7 +288,10 @@ func (ios *endpoint) loopWrite() {
 }
 
 // loopRead connects libc read to the network stack.
-func (ios *endpoint) loopRead(inCh <-chan struct{}) {
+func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
+	var initOnce sync.Once
+	initDone := func() { initOnce.Do(func() { close(initCh) }) }
+
 	closeFn := func() { ios.close(ios.loopWriteDone) }
 
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
@@ -319,6 +322,8 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 				if connected {
 					panic(fmt.Sprintf("connected endpoint returned %s", err))
 				}
+				// We're not connected; unblock the caller before waiting for incoming packets.
+				initDone()
 				select {
 				case <-ios.closing:
 					// We're shutting down.
@@ -375,6 +380,8 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}) {
 					panic(err)
 				}
 			}
+			// Either we're connected or not; unblock the caller.
+			initDone()
 			// TODO(fxb.dev/35006): Handle all transport read errors.
 			switch err {
 			case nil:
@@ -553,11 +560,12 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 	inEntry, inCh := waiter.NewChannelEntry(nil)
 	ios.wq.EventRegister(&inEntry, waiter.EventIn)
 
+	initCh := make(chan struct{})
 	go func() {
 		defer close(ios.loopReadDone)
 		defer ios.wq.EventUnregister(&inEntry)
 
-		ios.loopRead(inCh)
+		ios.loopRead(inCh, initCh)
 	}()
 	go func() {
 		defer close(ios.loopWriteDone)
@@ -575,6 +583,8 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 		s.close()
 		return socket.ControlInterface{}, err
 	}
+	// Wait for initial state checking to complete.
+	<-initCh
 	return socket.ControlInterface{Channel: peerC}, nil
 }
 

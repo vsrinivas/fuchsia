@@ -215,6 +215,15 @@ zx_status_t fdio_validate_path(const char* path, size_t* out_length);
 zx_status_t fdio_from_node_info(zx::channel handle, llcpp::fuchsia::io::NodeInfo info,
                                 fdio_t** out_io);
 
+// Creates an |fdio_t| from a Zircon channel object.
+//
+// The |channel| must implement the |fuchsia.io.Node| protocol. Uses the
+// |Describe| method from the |fuchsia.io.Node| protocol to determine the type
+// of |fdio_t| object to create.
+//
+// Always consumes |channel|.
+zx_status_t fdio_from_channel(zx::channel channel, fdio_t** out_io);
+
 // Creates an |fdio_t| by waiting for a |fuchsia.io/Node.OnOpen| event on |channel|.
 //
 // Uses the contents of the event to determine what kind of |fdio_t| to create.
