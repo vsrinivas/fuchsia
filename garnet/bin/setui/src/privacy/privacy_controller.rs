@@ -1,15 +1,15 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use parking_lot::RwLock;
-use std::sync::Arc;
 
-use futures::lock::Mutex;
-use futures::stream::StreamExt;
-use futures::TryFutureExt;
+use std::sync::Arc;
 
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_err;
+use futures::lock::Mutex;
+use futures::stream::StreamExt;
+use futures::TryFutureExt;
+use parking_lot::RwLock;
 
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
@@ -39,7 +39,7 @@ impl PrivacyController {
 
         fasync::spawn(
             async move {
-                // Local copy of persisted audio description value.
+                // Local copy of persisted privacy value.
                 let stored_value: PrivacyInfo;
                 {
                     let mut storage_lock = storage.lock().await;
@@ -57,9 +57,9 @@ impl PrivacyController {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: failure::Error| {
-                    fx_log_err!("Error processing privacy command: {:?}", e);
-                }),
+            .unwrap_or_else(|e: failure::Error| {
+                fx_log_err!("Error processing privacy command: {:?}", e);
+            }),
         );
 
         return Ok(ctrl_tx);
@@ -131,7 +131,7 @@ impl PrivacyController {
             let _ = match write_request {
                 Ok(_) => responder.send(Ok(None)),
                 Err(err) => responder
-                    .send(Err(failure::format_err!("failed to persist privacy_info:{}", err))),
+                    .send(Err(failure::format_err!("failed to persist privacy_info: {}", err))),
             };
         });
     }

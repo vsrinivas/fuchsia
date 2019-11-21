@@ -75,7 +75,7 @@ async fn test_intl() {
     }
 
     let mut intl_settings = fidl_fuchsia_settings::IntlSettings::empty();
-    let updated_timezone = "PDT";
+    let updated_timezone = "GMT";
 
     intl_settings.time_zone_id =
         Some(fidl_fuchsia_intl::TimeZoneId { id: updated_timezone.to_string() });

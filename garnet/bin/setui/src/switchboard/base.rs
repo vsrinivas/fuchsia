@@ -77,7 +77,7 @@ pub enum SettingRequest {
     SetNightModeInitiatedDoNotDisturb(bool),
 
     // Intl requests.
-    SetTimeZone(String),
+    SetIntlInfo(IntlInfo),
 
     // Power requests.
     Reboot,
@@ -174,9 +174,9 @@ impl DoNotDisturbInfo {
     }
 }
 
-#[derive(PartialEq, Debug, Clone)]
+#[derive(PartialEq, Debug, Clone, Serialize, Deserialize)]
 pub struct IntlInfo {
-    pub time_zone_id: String,
+    pub time_zone_id: Option<String>,
 }
 
 #[derive(PartialEq, Debug, Clone, Copy, Serialize, Deserialize)]

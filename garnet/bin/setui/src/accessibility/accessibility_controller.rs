@@ -93,9 +93,9 @@ pub fn spawn_accessibility_controller(
             }
             Ok(())
         }
-            .unwrap_or_else(|e: failure::Error| {
-                fx_log_err!("Error processing accessibility command: {:?}", e)
-            }),
+        .unwrap_or_else(|e: failure::Error| {
+            fx_log_err!("Error processing accessibility command: {:?}", e)
+        }),
     );
     accessibility_handler_tx
 }
