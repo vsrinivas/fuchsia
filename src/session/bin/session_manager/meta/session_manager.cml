@@ -1,8 +1,6 @@
 {
     "program": {
         "binary": "bin/session_manager",
-        // The root session.
-        "args": [ "-s", "fuchsia-pkg://fuchsia.com/graphical_session#meta/graphical_session.cm" ],
     },
     "expose": [
         {
