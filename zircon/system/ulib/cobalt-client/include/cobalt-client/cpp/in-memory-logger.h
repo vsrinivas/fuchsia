@@ -19,10 +19,9 @@ namespace cobalt_client {
 // The class intentionally virtual and not final, to allow customization by unit tests.
 class InMemoryLogger : public internal::Logger {
  public:
-  using MetricInfo = internal::MetricInfo;
   using HistogramBucket = internal::HistogramBucket;
   template <typename MetricType>
-  using MetricMap = std::map<MetricInfo, MetricType, MetricInfo::LessThan>;
+  using MetricMap = std::map<MetricOptions, MetricType, MetricOptions::LessThan>;
   using HistogramStorage = std::map<uint32_t, Histogram<1>::Count>;
 
   InMemoryLogger() = default;
@@ -33,11 +32,11 @@ class InMemoryLogger : public internal::Logger {
   ~InMemoryLogger() override;
 
   // Adds the contents of buckets and the required info to a buffer.
-  bool Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
+  bool Log(const MetricOptions& metric_info, const HistogramBucket* buckets,
            size_t num_buckets) override;
 
   // Adds the count and the required info to a buffer.
-  bool Log(const MetricInfo& metric_info, int64_t count) override;
+  bool Log(const MetricOptions& metric_info, int64_t count) override;
 
   const MetricMap<Counter::Count>& counters() const { return persisted_counters_; }
 

@@ -9,7 +9,7 @@ namespace cobalt_client {
 InMemoryLogger::~InMemoryLogger() {}
 
 // Adds the contents of buckets and the required info to a buffer.
-bool InMemoryLogger::Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
+bool InMemoryLogger::Log(const MetricOptions& metric_info, const HistogramBucket* buckets,
                          size_t num_buckets) {
   if (fail_logging_) {
     return false;
@@ -23,7 +23,7 @@ bool InMemoryLogger::Log(const MetricInfo& metric_info, const HistogramBucket* b
 }
 
 // Adds the count and the required info to a buffer.
-bool InMemoryLogger::Log(const MetricInfo& metric_info, int64_t count) {
+bool InMemoryLogger::Log(const MetricOptions& metric_info, int64_t count) {
   if (fail_logging_) {
     return false;
   }

@@ -11,45 +11,49 @@
 
 namespace cobalt_client {
 
-// Defines basic set of options for instantiating a metric.
 struct MetricOptions {
-  enum class Mode : uint8_t {
-    // This mode means that metric initialization occurs at object construction.
-    kEager,
-    // This mode marks a set of options as a placeholder, allowing metric instantiations to
-    // defer initialization to a later stage.
-    kLazy,
+  static constexpr uint64_t kMaxEventCodes = 5;
+
+  // Allows using a |MetricOptions| as key in ordered containers.
+  struct LessThan {
+    bool operator()(const MetricOptions& lhs, const MetricOptions& rhs) const {
+      if (lhs.component < rhs.component) {
+        return true;
+      } else if (lhs.component > rhs.component) {
+        return false;
+      }
+      if (lhs.metric_id < rhs.metric_id) {
+        return true;
+      } else if (lhs.metric_id > rhs.metric_id) {
+        return false;
+      }
+      return lhs.event_codes < rhs.event_codes;
+    }
   };
 
-  void SetMode(Mode mode) { this->mode = mode; }
+  // Allows comparing two |MetricOptions|, which is a shortcut for checking if
+  // all fields are equal.
+  bool operator==(const MetricOptions& rhs) const {
+    return rhs.metric_id == metric_id && rhs.event_codes == event_codes &&
+           rhs.component == component;
+  }
+  bool operator!=(const MetricOptions& rhs) const { return !(*this == rhs); }
 
-  // Returns true if this does not represent a valid configuration, and is in |kLazy| mode.
-  bool IsEager() const { return mode == Mode::kEager; }
-
-  // Returns true if this does not represent a valid configuration, and is in |kLazy| mode.
-  bool IsLazy() const { return mode == Mode::kLazy; }
-
-  // Provides refined metric collection for remote and local metrics.
-  std::string component;
+  // Provides refined metric collection for remote metrics.
+  // Warning: |component| is not yet supported in the backend, so it will be ignored.
+  std::string component = {};
 
   // Used by remote metrics to match with the respective unique id for the projects defined
   // metrics in the backend.
-  uint32_t metric_id;
+  uint32_t metric_id = {};
 
-  // Provides refined metric collection for metrics, by including the repective event_codes
-  // when logging into cobalt.
-  //
-  // This is the equivalent of the event enums defined in the cobalt configuration, because of this
-  // order matters.
+  // This is the equivalent of the event enums defined in the cobalt configuration, because of
+  // this order matters.
   //
   // E.g. Metric{id:1, event_codes:{0,0,0,0,1}}
   //      Metric{id:1, event_codes:{0,0,0,0,2}}
   // Can be seen independently in the cobalt backend, or aggregated together.
-  std::array<uint32_t, 5> event_codes;
-
-  // Defines whether the metric is local or remote.
-  // Internal use, should not be set manually.
-  Mode mode = Mode::kLazy;
+  std::array<uint32_t, kMaxEventCodes> event_codes = {};
 };
 
 // Describes an histogram, and provides data for mapping a value to a given bucket.

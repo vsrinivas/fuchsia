@@ -25,6 +25,7 @@
 
 #include <cobalt-client/cpp/collector-internal.h>
 #include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
@@ -143,11 +144,11 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
 
   void LogCobaltEvent(::llcpp::fuchsia::cobalt::CobaltEvent event,
                       LogCobaltEventCompleter::Sync completer) final {
-    // Use MetricInfo as a key.
-    MetricInfo info;
+    // Use MetricOptions as a key.
+    MetricOptions info;
     info.metric_id = event.metric_id;
     info.component = event.component.data();
-    for (uint64_t i = 0; i < MetricInfo::kMaxEventCodes; ++i) {
+    for (uint64_t i = 0; i < MetricOptions::kMaxEventCodes; ++i) {
       info.event_codes[i] = event.event_codes[i];
     }
     switch (event.payload.which()) {
@@ -294,7 +295,7 @@ constexpr uint64_t kBucketCount = 10;
 TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
   std::vector<HistogramBucket> buckets;
 
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -319,7 +320,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
 TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError) {
   std::vector<HistogramBucket> buckets;
 
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -340,7 +341,7 @@ TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenFactoryServiceReturnsError)
 TEST_F(CobaltLoggerTest, LogHistogramReturnsFalseWhenLoggerServiceReturnsError) {
   std::vector<HistogramBucket> buckets;
 
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -360,7 +361,7 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
   std::vector<HistogramBucket> buckets;
   std::atomic<bool> log_result(false);
 
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -394,7 +395,7 @@ TEST_F(CobaltLoggerTest, LogHistogramWaitsUntilServiceBecomesAvailable) {
 constexpr int64_t kCounter = 1;
 
 TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -410,7 +411,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsTrueWhenServiceReturnsOk) {
 }
 
 TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -425,7 +426,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenFactoryServiceReturnsError) {
 }
 
 TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};
@@ -439,7 +440,7 @@ TEST_F(CobaltLoggerTest, LogCounterReturnsFalseWhenLoggerServiceReturnsError) {
 
 TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
   std::atomic<bool> log_result(false);
-  MetricInfo info;
+  MetricOptions info;
   info.metric_id = 1;
   info.component = "SomeComponent";
   info.event_codes = {1, 2, 3, 4, 5};

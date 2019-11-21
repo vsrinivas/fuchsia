@@ -39,7 +39,7 @@ struct CollectorOptions {
   std::string project_name;
 
   // This is set internally by factory functions.
-  uint32_t release_stage = 0;
+  internal::ReleaseStageType release_stage = 0;
 };
 
 // This class acts as a peer for instantiating Histograms and Counters. All

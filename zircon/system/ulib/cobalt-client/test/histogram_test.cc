@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cobalt-client/cpp/histogram.h>
-
 #include <float.h>
 #include <fuchsia/cobalt/c/fidl.h>
 #include <lib/sync/completion.h>
@@ -16,6 +14,7 @@
 #include <unistd.h>
 
 #include <cobalt-client/cpp/histogram-internal.h>
+#include <cobalt-client/cpp/histogram.h>
 #include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 #include <fbl/auto_call.h>
@@ -43,10 +42,10 @@ constexpr uint64_t kMetricId = 1;
 // Component name.
 constexpr char kComponent[] = "SomeRandomHistogramComponent";
 
-constexpr std::array<uint32_t, MetricInfo::kMaxEventCodes> kEventCodes = {2, 3, 4, 5, 6};
+constexpr std::array<uint32_t, MetricOptions::kMaxEventCodes> kEventCodes = {2, 3, 4, 5, 6};
 
-MetricInfo MakeMetricInfo() {
-  MetricInfo metric_info;
+MetricOptions MakeMetricOptions() {
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
   metric_info.component = kComponent;
   metric_info.event_codes = kEventCodes;
@@ -55,7 +54,6 @@ MetricInfo MakeMetricInfo() {
 
 HistogramOptions MakeHistogramOptions() {
   HistogramOptions options = HistogramOptions::CustomizedExponential(kBuckets, 2, 1, 0);
-  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.component = kComponent;
   options.event_codes = kEventCodes;
@@ -63,7 +61,7 @@ HistogramOptions MakeHistogramOptions() {
 }
 
 RemoteHistogram<kBuckets> MakeRemoteHistogram() {
-  return RemoteHistogram<kBuckets>(MakeMetricInfo());
+  return RemoteHistogram<kBuckets>(MakeHistogramOptions());
 }
 
 bool HistEventValuesEq(const fbl::Vector<HistogramBucket>& actual,
@@ -197,47 +195,6 @@ bool TestIncrementMultiThread() {
   END_TEST;
 }
 
-bool TestLazyInitialization() {
-  BEGIN_TEST;
-  FakeLogger logger;
-  RemoteHistogram<kBuckets> histogram;
-  // Lazily initialize the options.
-  histogram.Initialize(MakeHistogramOptions());
-
-  fbl::Vector<HistogramBucket> expected_buckets;
-  expected_buckets.reserve(histogram.size());
-
-  // Increase the count of each bucket bucket_index times.
-  for (uint32_t bucket_index = 0; bucket_index < histogram.size(); ++bucket_index) {
-    ASSERT_EQ(histogram.GetCount(bucket_index), 0);
-    histogram.IncrementCount(bucket_index, bucket_index);
-    ASSERT_EQ(histogram.GetCount(bucket_index), bucket_index);
-    expected_buckets.push_back(
-        {.index = static_cast<uint32_t>(bucket_index), .count = bucket_index});
-    ASSERT_EQ(expected_buckets[bucket_index].index, bucket_index);
-    ASSERT_EQ(expected_buckets[bucket_index].count, bucket_index);
-  }
-
-  ASSERT_TRUE(histogram.Flush(&logger));
-
-  ASSERT_EQ(logger.logged_histograms().size(), 1);
-
-  // Check that flushed data is actually what we expect:
-  // The metadata is the same, and each bucket contains bucket_index count.
-  auto& hist_entry = logger.logged_histograms()[0];
-
-  EXPECT_TRUE(hist_entry.metric_info == MakeMetricInfo());
-
-  // Verify there is a bucket event_data.
-  EXPECT_TRUE(HistEventValuesEq(hist_entry.buckets, expected_buckets));
-
-  // Verify all buckets are 0.
-  for (uint32_t bucket_index = 0; bucket_index < histogram.size(); ++bucket_index) {
-    EXPECT_EQ(histogram.GetCount(bucket_index), 0);
-  }
-  END_TEST;
-}
-
 // Verifies that when flushing an histogram, all the flushed data matches that of
 // the count in the histogram.
 bool TestFlush() {
@@ -264,7 +221,7 @@ bool TestFlush() {
   // The metadata is the same, and each bucket contains bucket_index count.
   auto& hist_entry = logger.logged_histograms()[0];
 
-  EXPECT_TRUE(hist_entry.metric_info == MakeMetricInfo());
+  EXPECT_TRUE(hist_entry.metric_info == MakeMetricOptions());
 
   // Verify there is a bucket event_data.
   EXPECT_TRUE(HistEventValuesEq(hist_entry.buckets, expected_buckets));
@@ -381,12 +338,12 @@ bool TestHistogramLazyInitialization() {
   histogram.Initialize(MakeHistogramOptions(), nullptr);
 
   histogram.Add(25);
-  ASSERT_EQ(histogram.GetRemoteCount(25), 1);
+  ASSERT_EQ(histogram.GetCount(25), 1);
   histogram.Add(25, 4);
   histogram.Add(1500, 2);
 
-  ASSERT_EQ(histogram.GetRemoteCount(25), 5);
-  ASSERT_EQ(histogram.GetRemoteCount(1500), 2);
+  ASSERT_EQ(histogram.GetCount(25), 5);
+  ASSERT_EQ(histogram.GetCount(1500), 2);
 
   END_TEST;
 }
@@ -397,12 +354,12 @@ bool TestAdd() {
   Histogram<kBuckets> histogram(MakeHistogramOptions());
 
   histogram.Add(25);
-  ASSERT_EQ(histogram.GetRemoteCount(25), 1);
+  ASSERT_EQ(histogram.GetCount(25), 1);
   histogram.Add(25, 4);
   histogram.Add(1500, 2);
 
-  ASSERT_EQ(histogram.GetRemoteCount(25), 5);
-  ASSERT_EQ(histogram.GetRemoteCount(1500), 2);
+  ASSERT_EQ(histogram.GetCount(25), 5);
+  ASSERT_EQ(histogram.GetCount(1500), 2);
 
   END_TEST;
 }
@@ -447,8 +404,7 @@ bool TestAddMultiple() {
 
   // Verify that the data stored through public API, matches the expected values.
   for (auto& val_bucket : data) {
-    EXPECT_EQ(histogram.GetRemoteCount(val_bucket.value),
-              expected_hist.GetCount(val_bucket.bucket));
+    EXPECT_EQ(histogram.GetCount(val_bucket.value), expected_hist.GetCount(val_bucket.bucket));
   }
 
   END_TEST;
@@ -461,20 +417,19 @@ bool TestAddAfterFlush() {
   HistogramOptions options = HistogramOptions::CustomizedExponential(/*bucket_count=*/kBuckets,
                                                                      /*base=*/2,
                                                                      /*scalar=*/1, /*offset=*/-10);
-  options.SetMode(MetricOptions::Mode::kEager);
   internal::FlushInterface* remote_histogram;
   FakeLogger logger;
   Histogram<kBuckets> histogram(options, &remote_histogram);
   BaseHistogram<kBuckets + 2> expected_hist;
 
   histogram.Add(25, 4);
-  ASSERT_EQ(histogram.GetRemoteCount(25), 4);
+  ASSERT_EQ(histogram.GetCount(25), 4);
   remote_histogram->Flush(&logger);
   histogram.Add(25, 4);
   histogram.Add(1500, 2);
 
-  ASSERT_EQ(histogram.GetRemoteCount(25), 4);
-  ASSERT_EQ(histogram.GetRemoteCount(1500), 2);
+  ASSERT_EQ(histogram.GetCount(25), 4);
+  ASSERT_EQ(histogram.GetCount(1500), 2);
 
   END_TEST;
 }
@@ -587,7 +542,7 @@ bool TestAddMultiThread() {
   for (uint32_t bucket = 0; bucket < kBuckets + 2; ++bucket) {
     double value;
     value = options.reverse_map_fn(bucket, histogram.size(), options);
-    EXPECT_EQ(histogram.GetRemoteCount(value), expected_hist.GetCount(bucket));
+    EXPECT_EQ(histogram.GetCount(value), expected_hist.GetCount(bucket));
   }
   END_TEST;
 }
@@ -662,7 +617,7 @@ bool TestAddAndFlushMultiThread() {
   for (uint32_t bucket = 0; bucket < histogram.size(); ++bucket) {
     double value;
     value = options.reverse_map_fn(bucket, histogram.size(), options);
-    EXPECT_EQ(histogram.GetRemoteCount(value) + flushed_hist.GetCount(bucket),
+    EXPECT_EQ(histogram.GetCount(value) + flushed_hist.GetCount(bucket),
               expected_hist.GetCount(bucket));
   }
   END_TEST;
@@ -677,7 +632,6 @@ END_TEST_CASE(BaseHistogramTest)
 BEGIN_TEST_CASE(RemoteHistogramTest)
 RUN_TEST(TestFlush)
 RUN_TEST(TestFlushMultithread)
-RUN_TEST(TestLazyInitialization)
 END_TEST_CASE(RemoteHistogramTest)
 
 BEGIN_TEST_CASE(HistogramTest)

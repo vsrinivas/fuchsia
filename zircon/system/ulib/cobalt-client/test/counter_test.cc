@@ -43,16 +43,13 @@ namespace {
 
 MetricOptions MakeMetricOptions() {
   MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.component = kComponent;
   options.event_codes = {kEventCode, 0, 0, 0, 0};
   return options;
 }
 
-MetricInfo MakeMetricInfo() { return MetricInfo::From(MakeMetricOptions()); }
-
-RemoteCounter MakeRemoteCounter() { return RemoteCounter(MakeMetricInfo()); }
+RemoteCounter MakeRemoteCounter() { return RemoteCounter(MakeMetricOptions()); }
 
 // Verify that increments increases the underlying count by 1.
 // This is veryfying the default behaviour.
@@ -232,8 +229,8 @@ bool TestFlush() {
   BEGIN_TEST;
   RemoteCounter counter = MakeRemoteCounter();
   counter.Increment(20);
-  MetricInfo actual_metric_info;
-  MetricInfo expected_metric_info = MakeMetricInfo();
+  MetricOptions actual_metric_info;
+  MetricOptions expected_metric_info = MakeMetricOptions();
   FakeLogger logger;
   logger.set_should_fail(false);
   int64_t actual_count;
@@ -385,11 +382,11 @@ bool TestIncrement() {
   BEGIN_TEST;
   Counter counter(internal::MakeMetricOptions());
 
-  ASSERT_EQ(counter.GetRemoteCount(), 0);
+  ASSERT_EQ(counter.GetCount(), 0);
   counter.Increment();
-  ASSERT_EQ(counter.GetRemoteCount(), 1);
+  ASSERT_EQ(counter.GetCount(), 1);
   counter.Increment(24);
-  ASSERT_EQ(counter.GetRemoteCount(), 25);
+  ASSERT_EQ(counter.GetCount(), 25);
   END_TEST;
 }
 
@@ -444,7 +441,7 @@ bool TestIncrementMultiThread() {
 
   // Each thread should increase the counter by a total of value^2, which yields a total of:
   // kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6 = Sum(i=1, kThreads) i^2
-  ASSERT_EQ(counter.GetRemoteCount(), kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6);
+  ASSERT_EQ(counter.GetCount(), kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6);
   END_TEST;
 }
 

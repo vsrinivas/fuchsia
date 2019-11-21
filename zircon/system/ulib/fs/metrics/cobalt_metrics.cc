@@ -46,9 +46,7 @@ VnodeMetrics::VnodeMetrics(cobalt_client::Collector* collector, const fbl::Strin
                            bool local_metrics) {
   // Initialize all the metrics for the collector.
   cobalt_client::HistogramOptions nano_base = kVnodeOptionsNanoOp;
-  nano_base.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   cobalt_client::HistogramOptions micro_base = kVnodeOptionsMicroOp;
-  micro_base.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   nano_base.component = fs_name.c_str();
   micro_base.component = fs_name.c_str();
 

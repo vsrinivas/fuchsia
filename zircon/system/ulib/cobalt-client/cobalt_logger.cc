@@ -23,7 +23,7 @@ namespace cobalt_client {
 namespace internal {
 namespace {
 
-::llcpp::fuchsia::cobalt::CobaltEvent MetricIntoToCobaltEvent(const MetricInfo& metric_info) {
+::llcpp::fuchsia::cobalt::CobaltEvent MetricIntoToCobaltEvent(const MetricOptions& metric_info) {
   llcpp::fuchsia::cobalt::CobaltEvent event;
   event.metric_id = metric_info.metric_id;
   event.component = fidl::StringView(metric_info.component);
@@ -71,7 +71,7 @@ bool CobaltLogger::TryObtainLogger() {
          create_logger_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
 }
 
-bool CobaltLogger::Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
+bool CobaltLogger::Log(const MetricOptions& metric_info, const HistogramBucket* buckets,
                        size_t bucket_count) {
   if (!TryObtainLogger()) {
     return false;
@@ -89,7 +89,7 @@ bool CobaltLogger::Log(const MetricInfo& metric_info, const HistogramBucket* buc
   return log_result.status() == ZX_OK && log_result->status == ::llcpp::fuchsia::cobalt::Status::OK;
 }
 
-bool CobaltLogger::Log(const MetricInfo& metric_info, RemoteCounter::Type count) {
+bool CobaltLogger::Log(const MetricOptions& metric_info, RemoteCounter::Type count) {
   if (!TryObtainLogger()) {
     return false;
   }

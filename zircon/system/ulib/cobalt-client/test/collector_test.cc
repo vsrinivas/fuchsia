@@ -42,15 +42,15 @@ constexpr uint32_t kMetricId = 1;
 constexpr uint32_t kBuckets = 5;
 
 // Event code to be used by default MetricOptions.
-constexpr std::array<uint32_t, MetricInfo::kMaxEventCodes> kEventCodes = {1, 2, 3, 4, 5};
+constexpr std::array<uint32_t, MetricOptions::kMaxEventCodes> kEventCodes = {1, 2, 3, 4, 5};
 
 // Component name used for the tests.
 constexpr char kComponent[] = "SomeRandomCollectorComponent";
 
-MetricInfo MakeMetricInfo(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
-                          uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
-                          uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
-  MetricInfo metric_info;
+MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
+                                uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
+                                uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
+  MetricOptions metric_info;
   metric_info.component = kComponent;
   metric_info.metric_id = metric_id;
   metric_info.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
@@ -65,20 +65,8 @@ CollectorOptions MakeCollectorOptions() {
 
 MetricOptions MakeMetricOptionsWithDefault() {
   MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.event_codes = kEventCodes;
-  options.component = kComponent;
-  return options;
-}
-
-MetricOptions MakeMetricOptions(uint32_t metric_id = kMetricId, uint32_t event_code_0 = 0,
-                                uint32_t event_code_1 = 0, uint32_t event_code_2 = 0,
-                                uint32_t event_code_3 = 0, uint32_t event_code_4 = 0) {
-  MetricOptions options;
-  options.SetMode(MetricOptions::Mode::kEager);
-  options.metric_id = metric_id;
-  options.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
   options.component = kComponent;
   return options;
 }
@@ -88,7 +76,6 @@ HistogramOptions MakeHistogramOptionsWithDefault() {
   // -inf  -2     0    2    +inf
   HistogramOptions options =
       HistogramOptions::CustomizedLinear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
-  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = kMetricId;
   options.event_codes = kEventCodes;
   options.component = kComponent;
@@ -102,7 +89,6 @@ HistogramOptions MakeHistogramOptions(uint32_t metric_id = kMetricId, uint32_t e
   // -inf  -2     0    2    +inf
   HistogramOptions options =
       HistogramOptions::CustomizedLinear(kBuckets, /*scalar*/ 2, /*offset*/ -2);
-  options.SetMode(MetricOptions::Mode::kEager);
   options.metric_id = metric_id;
   options.event_codes = {event_code_0, event_code_1, event_code_2, event_code_3, event_code_4};
   options.component = kComponent;
@@ -161,7 +147,7 @@ bool AddCounterTest() {
   Collector collector(std::move(logger));
   auto counter = Counter(MakeMetricOptionsWithDefault(), &collector);
   counter.Increment(5);
-  ASSERT_EQ(counter.GetRemoteCount(), 5);
+  ASSERT_EQ(counter.GetCount(), 5);
   END_TEST;
 }
 
@@ -177,9 +163,9 @@ bool AddCounterMultipleTest() {
   counter.Increment(5);
   counter_2.Increment(3);
   counter_3.Increment(2);
-  ASSERT_EQ(counter.GetRemoteCount(), 5);
-  ASSERT_EQ(counter_2.GetRemoteCount(), 3);
-  ASSERT_EQ(counter_3.GetRemoteCount(), 2);
+  ASSERT_EQ(counter.GetCount(), 5);
+  ASSERT_EQ(counter_2.GetCount(), 3);
+  ASSERT_EQ(counter_3.GetCount(), 2);
   END_TEST;
 }
 
@@ -191,7 +177,7 @@ bool AddHistogramTest() {
   auto histogram = Histogram<kBuckets>(MakeHistogramOptionsWithDefault(), &collector);
 
   histogram.Add(-4, 2);
-  ASSERT_EQ(histogram.GetRemoteCount(-4), 2);
+  ASSERT_EQ(histogram.GetCount(-4), 2);
   END_TEST;
 }
 
@@ -211,9 +197,9 @@ bool AddHistogramMultipleTest() {
   histogram.Add(-4, 2);
   histogram_2.Add(-1, 3);
   histogram_3.Add(1, 4);
-  EXPECT_EQ(histogram.GetRemoteCount(-4), 2);
-  EXPECT_EQ(histogram_2.GetRemoteCount(-1), 3);
-  EXPECT_EQ(histogram_3.GetRemoteCount(1), 4);
+  EXPECT_EQ(histogram.GetCount(-4), 2);
+  EXPECT_EQ(histogram_2.GetCount(-1), 3);
+  EXPECT_EQ(histogram_3.GetCount(1), 4);
   END_TEST;
 }
 
@@ -241,24 +227,24 @@ bool FlushTest() {
   collector.Flush();
 
   // Verify reset of local data.
-  EXPECT_EQ(histogram.GetRemoteCount(-4), 0);
-  EXPECT_EQ(histogram_2.GetRemoteCount(-1), 0);
-  EXPECT_EQ(counter.GetRemoteCount(), 0);
-  EXPECT_EQ(counter_2.GetRemoteCount(), 0);
+  EXPECT_EQ(histogram.GetCount(-4), 0);
+  EXPECT_EQ(histogram_2.GetCount(-1), 0);
+  EXPECT_EQ(counter.GetCount(), 0);
+  EXPECT_EQ(counter_2.GetCount(), 0);
 
   // Verify 'persisted' data matches what the local data used to be.
   // Note: for now event_type is 0 for all metrics.
 
   // -4 goes to underflow bucket(0)
   size_t bucket = options.map_fn(-4, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 1))[bucket].count, 2);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricOptions(1, 1))[bucket].count, 2);
 
   // -1 goes to first non underflow bucket(1)
   bucket = options.map_fn(-1, histogram_2.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 2))[bucket].count, 3);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricOptions(1, 2))[bucket].count, 3);
 
-  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 1)), 5);
-  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 2)), 3);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricOptions(2, 1)), 5);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricOptions(2, 2)), 3);
   END_TEST;
 }
 
@@ -288,26 +274,26 @@ bool FlushFailTest() {
   collector.Flush();
 
   // Verify reset of local data.
-  EXPECT_EQ(histogram.GetRemoteCount(-4), 0);
-  EXPECT_EQ(histogram_2.GetRemoteCount(-1), 3);
-  EXPECT_EQ(counter.GetRemoteCount(), 0);
-  EXPECT_EQ(counter_2.GetRemoteCount(), 3);
+  EXPECT_EQ(histogram.GetCount(-4), 0);
+  EXPECT_EQ(histogram_2.GetCount(-1), 3);
+  EXPECT_EQ(counter.GetCount(), 0);
+  EXPECT_EQ(counter_2.GetCount(), 3);
 
   // Verify 'persisted' data matches what the local data used to be.
   // Note: for now event_type is 0 for all metrics.
 
   // -4 goes to underflow bucket(0)
   size_t bucket = options.map_fn(-4, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 1))[bucket].count, 2);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricOptions(1, 1))[bucket].count, 2);
 
   // -1 goes to first non underflow bucket(1), and its expected to be 0 because the logger failed.
   bucket = options.map_fn(-1, histogram.size(), options);
-  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricInfo(1, 2))[bucket].count, 0);
+  EXPECT_EQ(logger_ptr->GetHistogram(MakeMetricOptions(1, 2))[bucket].count, 0);
 
-  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 1)), 5);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricOptions(2, 1)), 5);
 
   // Expected to be 0, because the logger failed.
-  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricInfo(2, 2)), 0);
+  EXPECT_EQ(logger_ptr->GetCounter(MakeMetricOptions(2, 2)), 0);
   END_TEST;
 }
 
@@ -447,14 +433,14 @@ bool FlushMultithreadTest() {
         for (size_t bucket = 0; bucket < hist->size(); ++bucket) {
           double value =
               options.reverse_map_fn(static_cast<uint32_t>(bucket), hist->size(), options);
-          auto& logged_hist = logger_ptr->GetHistogram(MakeMetricInfo(metric_id, event_code));
-          EXPECT_EQ((should_fail ? hist->GetRemoteCount(value) : logged_hist[bucket].count),
+          auto& logged_hist = logger_ptr->GetHistogram(MakeMetricOptions(metric_id, event_code));
+          EXPECT_EQ((should_fail ? hist->GetCount(value) : logged_hist[bucket].count),
                     expected_bucket_count);
         }
       }
       for (auto& counter : counters) {
-        int64_t logged_count = logger_ptr->GetCounter(MakeMetricInfo(metric_id, event_code));
-        ASSERT_EQ(logged_count + counter->GetRemoteCount(), expected_bucket_count);
+        int64_t logged_count = logger_ptr->GetCounter(MakeMetricOptions(metric_id, event_code));
+        ASSERT_EQ(logged_count + counter->GetCount(), expected_bucket_count);
       }
     }
   }

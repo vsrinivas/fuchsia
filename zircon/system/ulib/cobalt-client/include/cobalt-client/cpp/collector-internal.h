@@ -51,11 +51,11 @@ class CobaltLogger final : public Logger {
   ~CobaltLogger() final = default;
 
   // Returns true if the histogram was persisted.
-  bool Log(const MetricInfo& metric_info, const HistogramBucket* buckets,
+  bool Log(const MetricOptions& metric_info, const HistogramBucket* buckets,
            size_t bucket_count) final;
 
   // Returns true if the counter was persisted.
-  bool Log(const MetricInfo& metric_info, int64_t count) final;
+  bool Log(const MetricOptions& metric_info, int64_t count) final;
 
  protected:
   // Returns true if |logger_| is able to  provide a logging service instance for |options_|.

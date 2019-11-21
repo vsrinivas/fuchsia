@@ -37,8 +37,8 @@ class MetricsTest : public zxtest::Test {
   std::unique_ptr<cobalt_client::Collector> collector_;
 };
 
-cobalt_client::InMemoryLogger::MetricInfo MakeMetricInfoFromId(uint32_t metric_id) {
-  cobalt_client::internal::MetricInfo info = {};
+cobalt_client::MetricOptions MakeMetricOptionsFromId(uint32_t metric_id) {
+  cobalt_client::MetricOptions info = {};
   info.metric_id = metric_id;
   return info;
 }
@@ -47,19 +47,19 @@ constexpr auto kCorruptionMetricId = static_cast<EventIntType>(fs_metrics::Event
 
 TEST_F(MetricsTest, LogMinfsDataCorruption) {
   FsHostMetrics metrics(std::move(collector_));
-  ASSERT_EQ(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
   metrics.LogMinfsCorruption();
   // Nothing is logged until flushed.
-  ASSERT_EQ(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
 
   // Once we flush, we should see the logged event in the metrics.
   metrics.mutable_collector()->Flush();
-  ASSERT_NE(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_NE(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
 
-  EXPECT_EQ(logger_->counters().at(MakeMetricInfoFromId(kCorruptionMetricId)), 1);
+  EXPECT_EQ(logger_->counters().at(MakeMetricOptionsFromId(kCorruptionMetricId)), 1);
 }
 
 TEST_F(MetricsTest, FlushUntilSuccessWorks) {
@@ -73,12 +73,12 @@ TEST_F(MetricsTest, FlushUntilSuccessWorks) {
   loop.RunFor(zx::sec(10));
 
   // After 10 seconds, nothing should be logged.
-  ASSERT_EQ(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
   loop.RunFor(zx::sec(10));
 
   // After 20 seconds, nothing should be logged.
-  ASSERT_EQ(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_EQ(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
 
   // Logger begins working.
@@ -87,9 +87,9 @@ TEST_F(MetricsTest, FlushUntilSuccessWorks) {
   // Work should complete now.
   loop.RunFor(zx::sec(10));
 
-  ASSERT_NE(logger_->counters().find(MakeMetricInfoFromId(kCorruptionMetricId)),
+  ASSERT_NE(logger_->counters().find(MakeMetricOptionsFromId(kCorruptionMetricId)),
             logger_->counters().end());
-  EXPECT_EQ(logger_->counters().at(MakeMetricInfoFromId(kCorruptionMetricId)), 1);
+  EXPECT_EQ(logger_->counters().at(MakeMetricOptionsFromId(kCorruptionMetricId)), 1);
 }
 
 }  // namespace

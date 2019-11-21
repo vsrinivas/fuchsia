@@ -65,7 +65,7 @@ class BaseCounter {
 class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
  public:
   RemoteCounter() = default;
-  RemoteCounter(const MetricInfo& metric_info);
+  RemoteCounter(const MetricOptions& metric_options);
   RemoteCounter(const RemoteCounter&) = delete;
   RemoteCounter(RemoteCounter&&);
   RemoteCounter& operator=(const RemoteCounter&) = delete;
@@ -76,16 +76,12 @@ class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
 
   void UndoFlush() override;
 
-  // Should only be called when default constructed.
-  void Initialize(const MetricOptions& metric_options);
-
   // Returns the metric_id associated with this remote metric.
-  const MetricInfo& metric_info() const { return metric_info_; }
+  const MetricOptions& metric_options() const { return metric_options_; }
 
  private:
   int64_t buffer_;
-  // Unique-Id representing this metric in the backend.
-  MetricInfo metric_info_;
+  MetricOptions metric_options_;
 };
 
 }  // namespace internal

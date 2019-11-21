@@ -28,43 +28,38 @@ class Histogram {
   using Count = uint64_t;
 
   Histogram() = default;
-  Histogram(const HistogramOptions& options)
-      : remote_histogram_(internal::MetricInfo::From(options)), options_(options) {}
+  Histogram(const HistogramOptions& options) : remote_histogram_(options) {}
   // Collector's lifetime must exceed the histogram's lifetime.
   Histogram(const HistogramOptions& options, Collector* collector)
-      : remote_histogram_(internal::MetricInfo::From(options)),
-        options_(options),
-        collector_(collector) {
-    ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Cannot initialize histogram with |kLazy| options.");
+      : remote_histogram_(options), collector_(collector) {
     if (collector_ != nullptr) {
-      collector_->Subscribe(&remote_histogram_);
+      collector_->Subscribe(&remote_histogram_.value());
     }
   }
   // Constructor for internal use only.
   Histogram(const HistogramOptions& options, internal::FlushInterface** flush_interface)
-      : remote_histogram_(internal::MetricInfo::From(options)), options_(options) {
-    ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Cannot initialize histogram with |kLazy| options.");
-    *flush_interface = &remote_histogram_;
+      : remote_histogram_(options) {
+    *flush_interface = &remote_histogram_.value();
   }
   Histogram(const Histogram&) = delete;
   Histogram(Histogram&& other) = delete;
   Histogram& operator=(const Histogram&) = delete;
   Histogram& operator=(Histogram&&) = delete;
   ~Histogram() {
-    if (collector_ != nullptr) {
-      collector_->UnSubscribe(&remote_histogram_);
+    if (collector_ != nullptr && remote_histogram_.has_value()) {
+      collector_->UnSubscribe(&remote_histogram_.value());
     }
   }
 
   // Optionally initialize lazily the histogram, if is more readable to do so
   // in the constructor or function body.
   void Initialize(const HistogramOptions& options, Collector* collector) {
-    ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize histogram with |kLazy| options.");
-    options_ = options;
+    ZX_DEBUG_ASSERT_MSG(!remote_histogram_.has_value(),
+                        "Cannot call |Initialize| on intialized Histogram.");
     collector_ = collector;
-    remote_histogram_.Initialize(options_);
+    remote_histogram_.emplace(options);
     if (collector_ != nullptr) {
-      collector_->Subscribe(&remote_histogram_);
+      collector_->Subscribe(&remote_histogram_.value());
     }
   }
 
@@ -76,29 +71,30 @@ class Histogram {
   // |ValueType| must either be an (u)int or a double.
   template <typename ValueType>
   void Add(ValueType value, Count times = 1) {
-    ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Histogram must be initialized before operation.");
+    ZX_DEBUG_ASSERT_MSG(remote_histogram_.has_value(),
+                        "Must initialize histogram before calling |Add|.");
     double dbl_value = static_cast<double>(value);
-    uint32_t bucket = options_.map_fn(dbl_value, size(), options_);
-    remote_histogram_.IncrementCount(bucket, times);
+    uint32_t bucket = remote_histogram_->metric_options().map_fn(
+        dbl_value, size(), remote_histogram_->metric_options());
+    remote_histogram_->IncrementCount(bucket, times);
   }
 
   // Returns the count of the bucket containing |value|, since it was last sent
   // to cobalt.
   // |ValueType| must either be an (u)int or a double.
   template <typename ValueType>
-  Count GetRemoteCount(ValueType value) const {
-    ZX_DEBUG_ASSERT_MSG(!options_.IsLazy(), "Histogram must be initialized before operation.");
+  Count GetCount(ValueType value) const {
+    ZX_DEBUG_ASSERT_MSG(remote_histogram_.has_value(),
+                        "Must initialize histogram before calling |GetCount|.");
     double dbl_value = static_cast<double>(value);
-    uint32_t bucket = options_.map_fn(dbl_value, size(), options_);
-    return remote_histogram_.GetCount(bucket);
+    uint32_t bucket = remote_histogram_->metric_options().map_fn(
+        dbl_value, size(), remote_histogram_->metric_options());
+    return remote_histogram_->GetCount(bucket);
   }
 
  private:
   // Two extra buckets for overflow and underflow buckets.
-  internal::RemoteHistogram<num_buckets + 2> remote_histogram_;
-
-  HistogramOptions options_;
-
+  std::optional<internal::RemoteHistogram<num_buckets + 2>> remote_histogram_;
   Collector* collector_ = nullptr;
 };
 }  // namespace cobalt_client

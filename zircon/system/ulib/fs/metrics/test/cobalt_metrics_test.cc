@@ -25,14 +25,13 @@ constexpr uint32_t kBuckets = 20;
 
 cobalt_client::CollectorOptions MakeOptions() {
   cobalt_client::CollectorOptions options = cobalt_client::CollectorOptions::Debug();
-  options.project_name = "FsHostProjectName";
+  options.project_name = "Test Project";
   return options;
 }
 
 cobalt_client::HistogramOptions MakeHistogramOptions() {
   cobalt_client::HistogramOptions options =
       cobalt_client::HistogramOptions::CustomizedExponential(10, 2, 1, 0);
-  options.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   options.metric_id = 1;
   options.event_codes = {0, 0, 0, 0, 0};
   return options;
@@ -40,7 +39,6 @@ cobalt_client::HistogramOptions MakeHistogramOptions() {
 
 cobalt_client::MetricOptions MakeCounterOptions() {
   cobalt_client::MetricOptions options;
-  options.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   options.metric_id = 1;
   options.event_codes = {0, 0, 0, 0, 0};
   return options;
@@ -56,7 +54,7 @@ TEST(CobaltMetricsTest, LogWhileEnabled) {
     vnodes->close.Add(kLatencyNs);
   }
   // We should have observed 15 hundred usecs.
-  EXPECT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 1);
+  EXPECT_EQ(vnodes->close.GetCount(kLatencyNs), 1);
 }
 
 TEST(CobaltMetricsTest, LogWhileNotEnabled) {
@@ -68,7 +66,7 @@ TEST(CobaltMetricsTest, LogWhileNotEnabled) {
   if (metrics.IsEnabled()) {
     vnodes->close.Add(kLatencyNs);
   }
-  EXPECT_EQ(vnodes->close.GetRemoteCount(kLatencyNs), 0);
+  EXPECT_EQ(vnodes->close.GetCount(kLatencyNs), 0);
 }
 
 TEST(CobaltMetricsTest, EnableMetricsEnabled) {
@@ -107,8 +105,8 @@ TEST(CobaltMetrics, AddCustomMetric) {
   hist.Add(25);
   counter.Increment(20);
 
-  ASSERT_EQ(hist.GetRemoteCount(25), 1);
-  ASSERT_EQ(counter.GetRemoteCount(), 20);
+  ASSERT_EQ(hist.GetCount(25), 1);
+  ASSERT_EQ(counter.GetCount(), 20);
 
   // Sanity check.
   metrics.mutable_collector()->Flush();

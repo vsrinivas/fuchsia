@@ -74,10 +74,10 @@ TEST_F(CompositeLatencyEventTest, SelectAppropiateHistogram) {
 
   // Verify that cobalt persisted one observation for each metric.
   for (auto event : kVnodeEvents) {
-    cobalt_client::InMemoryLogger::MetricInfo info = {};
-    info.metric_id = static_cast<uint32_t>(event);
-    info.component = kComponentName;
-    auto entry = logger_->histograms().find(info);
+    cobalt_client::MetricOptions options = {};
+    options.metric_id = static_cast<uint32_t>(event);
+    options.component = kComponentName;
+    auto entry = logger_->histograms().find(options);
     EXPECT_NE(logger_->histograms().end(), entry);
     // There should be one event per bucket, since we made a one to one mapping for each event.
     EXPECT_EQ(fs_metrics::VnodeMetrics::kHistogramBuckets + kCobaltOverflowHistogramBuckets,

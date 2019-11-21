@@ -6,6 +6,7 @@
 #define COBALT_CLIENT_CPP_COUNTER_H_
 
 #include <cstdint>
+#include <optional>
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/counter-internal.h>
@@ -25,7 +26,7 @@ class Counter {
   using Count = uint64_t;
 
   Counter() = default;
-  Counter(const MetricOptions& options);
+  explicit Counter(const MetricOptions& options);
   Counter(const MetricOptions& options, Collector* collector);
   // Constructor for internal use only.
   Counter(const MetricOptions& options, internal::FlushInterface** flush_interface);
@@ -43,12 +44,11 @@ class Counter {
 
   // Returns the current value of the counter that would be
   // sent to the remote service(cobalt).
-  Count GetRemoteCount() const;
+  Count GetCount() const;
 
  private:
-  internal::RemoteCounter remote_counter_;
+  std::optional<internal::RemoteCounter> remote_counter_ = std::nullopt;
   Collector* collector_ = nullptr;
-  MetricOptions::Mode mode_ = MetricOptions::Mode::kLazy;
 };
 
 }  // namespace cobalt_client

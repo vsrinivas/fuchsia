@@ -12,6 +12,7 @@
 
 #include <cobalt-client/cpp/collector.h>
 #include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <minfs/format.h>
 #include <ramdevice-client/ramdisk.h>
 #include <zxtest/zxtest.h>
@@ -275,13 +276,13 @@ TEST_F(BlockDeviceHarness, TestCorruptionEventLogged) {
   EXPECT_NOT_OK(device.CheckFilesystem());
 
   // Verify a corruption event was logged.
-  cobalt_client::InMemoryLogger::MetricInfo info;
-  info.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
+  cobalt_client::MetricOptions metric_options;
+  metric_options.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(
       fs_metrics::Event::kDataCorruption);
-  info.event_codes = {};
-  info.component = {};
-  ASSERT_NE(logger_->counters().find(info), logger_->counters().end());
-  ASSERT_EQ(logger_->counters().at(info), 1);
+  metric_options.event_codes = {};
+  metric_options.component = {};
+  ASSERT_NE(logger_->counters().find(metric_options), logger_->counters().end());
+  ASSERT_EQ(logger_->counters().at(metric_options), 1);
 }
 
 // TODO: Add tests for Zxcrypt binding.

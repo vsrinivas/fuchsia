@@ -11,6 +11,7 @@
 #include <cstdint>
 
 #include <cobalt-client/cpp/counter-internal.h>
+#include <cobalt-client/cpp/metric-options.h>
 #include <cobalt-client/cpp/types-internal.h>
 
 namespace cobalt_client {
@@ -62,14 +63,11 @@ class BaseHistogram {
 // Initializes buckets such that bucket[i].index = i and bucket[i].count = 0.
 void InitBucketBuffer(HistogramBucket* buckets, uint32_t bucket_count);
 
-// Sets |metric_info| to respective values from |options|, and initializes the buckets.
-void InitLazily(const MetricOptions& options, HistogramBucket* buckets, uint32_t num_buckets,
-                MetricInfo* metric_info);
-
 // Sets the count of each bucket in |bucket_buffer| to the respective value in
 // |buckets|, and sets the count in |buckets| to 0.
-bool HistogramFlush(const MetricInfo& metric_info, Logger* logger, BaseCounter<uint64_t>* buckets,
-                    HistogramBucket* bucket_buffer, uint32_t num_buckets);
+bool HistogramFlush(const HistogramOptions& metric_options, Logger* logger,
+                    BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
+                    uint32_t num_buckets);
 
 // Undo's an ungoing Flush effects.
 void HistogramUndoFlush(BaseCounter<uint64_t>* buckets, HistogramBucket* bucket_buffer,
@@ -84,8 +82,8 @@ template <uint32_t num_buckets>
 class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface {
  public:
   RemoteHistogram() = default;
-  RemoteHistogram(const MetricInfo& metric_info)
-      : BaseHistogram<num_buckets>(), metric_info_(metric_info) {
+  RemoteHistogram(const HistogramOptions& metric_options)
+      : BaseHistogram<num_buckets>(), metric_options_(metric_options) {
     InitBucketBuffer(bucket_buffer_, num_buckets);
   }
   RemoteHistogram(const RemoteHistogram&) = delete;
@@ -94,18 +92,14 @@ class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface
   RemoteHistogram& operator=(RemoteHistogram&&) = delete;
   ~RemoteHistogram() override = default;
 
-  void Initialize(const MetricOptions& options) {
-    InitLazily(options, bucket_buffer_, num_buckets, &metric_info_);
-  }
-
   bool Flush(Logger* logger) override {
-    return HistogramFlush(metric_info_, logger, this->buckets_, bucket_buffer_, num_buckets);
+    return HistogramFlush(metric_options_, logger, this->buckets_, bucket_buffer_, num_buckets);
   }
 
   void UndoFlush() override { HistogramUndoFlush(this->buckets_, bucket_buffer_, num_buckets); }
 
   // Returns the metric_id associated with this remote metric.
-  const MetricInfo& metric_info() const { return metric_info_; }
+  const HistogramOptions& metric_options() const { return metric_options_; }
 
  private:
   // Buffer for out of line allocation for the data being sent
@@ -114,7 +108,7 @@ class RemoteHistogram : public BaseHistogram<num_buckets>, public FlushInterface
   HistogramBucket bucket_buffer_[num_buckets];
 
   // Metric information such as metric_id, event_code and component.
-  MetricInfo metric_info_;
+  HistogramOptions metric_options_;
 };
 
 }  // namespace internal

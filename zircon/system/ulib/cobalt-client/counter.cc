@@ -14,80 +14,64 @@
 namespace cobalt_client {
 namespace internal {
 
-RemoteCounter::RemoteCounter(const MetricInfo& metric_info)
-    : BaseCounter(), metric_info_(metric_info) {
+RemoteCounter::RemoteCounter(const MetricOptions& metric_options)
+    : BaseCounter(), metric_options_(metric_options) {
   buffer_ = 0;
 }
 
 RemoteCounter::RemoteCounter(RemoteCounter&& other)
     : BaseCounter(std::move(other)),
       buffer_(std::move(other.buffer_)),
-      metric_info_(other.metric_info_) {}
+      metric_options_(other.metric_options_) {}
 
 bool RemoteCounter::Flush(Logger* logger) {
   // Write the current value of the counter to the buffer, and reset it to 0.
   buffer_ = this->Exchange();
-  return logger->Log(metric_info_, buffer_);
+  return logger->Log(metric_options_, buffer_);
 }
 
 void RemoteCounter::UndoFlush() { this->Increment(buffer_); }
 
-void RemoteCounter::Initialize(const MetricOptions& options) {
-  ZX_DEBUG_ASSERT(!options.IsLazy());
-  metric_info_ = MetricInfo::From(options);
-}
-
 }  // namespace internal
 
-Counter::Counter(const MetricOptions& options)
-    : remote_counter_(internal::MetricInfo::From(options)), mode_(options.mode) {
-  ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
-}
+Counter::Counter(const MetricOptions& options) : remote_counter_(options) {}
 
 Counter::Counter(const MetricOptions& options, Collector* collector)
-    : remote_counter_(internal::MetricInfo::From(options)),
-      collector_(collector),
-      mode_(options.mode) {
-  ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
+    : remote_counter_(options), collector_(collector) {
   if (collector_ != nullptr) {
-    collector_->Subscribe(&remote_counter_);
+    collector_->Subscribe(&remote_counter_.value());
   }
 }
 
 Counter::Counter(const MetricOptions& options, internal::FlushInterface** flush_interface)
-    : remote_counter_(internal::MetricInfo::From(options)),
-      collector_(nullptr),
-      mode_(options.mode) {
-  ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
-  *flush_interface = &remote_counter_;
+    : remote_counter_(options), collector_(nullptr) {
+  *flush_interface = &remote_counter_.value();
 }
 
 Counter::~Counter() {
-  if (collector_ != nullptr) {
-    collector_->UnSubscribe(&remote_counter_);
+  if (collector_ != nullptr && remote_counter_.has_value()) {
+    collector_->UnSubscribe(&remote_counter_.value());
   }
 }
 
 void Counter::Initialize(const MetricOptions& options, Collector* collector) {
-  ZX_DEBUG_ASSERT_MSG(!options.IsLazy(), "Cannot initialize counter with |kLazy| options.");
+  ZX_DEBUG_ASSERT_MSG(!remote_counter_.has_value(), "Cannot renitialize a Counter.");
   collector_ = collector;
-  remote_counter_.Initialize(options);
-  mode_ = options.mode;
+  remote_counter_.emplace(options);
   if (collector_ != nullptr) {
-    collector_->Subscribe(&remote_counter_);
+    collector_->Subscribe(&remote_counter_.value());
   }
 }
 
 void Counter::Increment(Counter::Count value) {
-  ZX_DEBUG_ASSERT_MSG(mode_ != MetricOptions::Mode::kLazy,
-                      "Cannot operate on metric with mode set to |kLazy|.");
-  remote_counter_.Increment(value);
+  ZX_DEBUG_ASSERT_MSG(remote_counter_.has_value(), "Cannot call |Add| to unintialized Counter.");
+  remote_counter_->Increment(value);
 }
 
-Counter::Count Counter::GetRemoteCount() const {
-  ZX_DEBUG_ASSERT_MSG(mode_ != MetricOptions::Mode::kLazy,
-                      "Cannot operate on metric with mode set to |kLazy|.");
-  return remote_counter_.Load();
+Counter::Count Counter::GetCount() const {
+  ZX_DEBUG_ASSERT_MSG(remote_counter_.has_value(),
+                      "Cannot call |GetCount| to unintialized Counter.");
+  return remote_counter_->Load();
 }
 
 }  // namespace cobalt_client

@@ -18,18 +18,18 @@ namespace internal {
 class FakeLogger : public Logger {
  public:
   struct HistEntry {
-    MetricInfo metric_info;
+    MetricOptions metric_info;
     fbl::Vector<HistogramBucket> buckets;
   };
 
   struct CountEntry {
-    MetricInfo metric_info;
+    MetricOptions metric_info;
     int64_t count;
   };
 
   FakeLogger() = default;
 
-  bool Log(const MetricInfo& metric_info, const HistogramBucket* bucket, size_t num_buckets) {
+  bool Log(const MetricOptions& metric_info, const HistogramBucket* bucket, size_t num_buckets) {
     if (!should_fail_) {
       size_t index = logged_histograms_.size();
       logged_histograms_.push_back({metric_info, {}});
@@ -40,7 +40,7 @@ class FakeLogger : public Logger {
     return !should_fail_;
   }
 
-  bool Log(const MetricInfo& metric_info, int64_t count) {
+  bool Log(const MetricOptions& metric_info, int64_t count) {
     if (!should_fail_) {
       logged_counts_.push_back({metric_info, count});
     }
@@ -53,7 +53,7 @@ class FakeLogger : public Logger {
 
   void set_should_fail(bool should_fail) { should_fail_ = should_fail; }
 
-  const fbl::Vector<HistogramBucket> GetHistogram(const MetricInfo& info) const {
+  const fbl::Vector<HistogramBucket> GetHistogram(const MetricOptions& info) const {
     fbl::Vector<HistogramBucket> histogram;
     for (auto& hist_entry : logged_histograms_) {
       if (info == hist_entry.metric_info) {
@@ -71,7 +71,7 @@ class FakeLogger : public Logger {
     return histogram;
   }
 
-  RemoteCounter::Type GetCounter(const MetricInfo& info) const {
+  RemoteCounter::Type GetCounter(const MetricOptions& info) const {
     RemoteCounter::Type count = 0;
     for (auto& count_entry : logged_counts_) {
       if (info == count_entry.metric_info) {

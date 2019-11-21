@@ -8,14 +8,13 @@
 namespace cobalt_client {
 namespace {
 using HistogramBucket = InMemoryLogger::HistogramBucket;
-using MetricInfo = InMemoryLogger::MetricInfo;
 
 constexpr uint64_t kMetricId = 44;
 constexpr uint64_t kMetric2Id = 45;
 constexpr int64_t kCount = 32;
 
 TEST(InMemoryLoggerTest, LogCounterOnce) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
 
@@ -27,9 +26,9 @@ TEST(InMemoryLoggerTest, LogCounterOnce) {
 }
 
 TEST(InMemoryLoggerTest, LogMultipleCounters) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
-  MetricInfo metric_info_2;
+  MetricOptions metric_info_2;
   metric_info_2.metric_id = kMetric2Id;
   InMemoryLogger logger;
 
@@ -45,7 +44,7 @@ TEST(InMemoryLoggerTest, LogMultipleCounters) {
 }
 
 TEST(InMemoryLoggerTest, LogCounterMultipleTimesAccumulates) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
   constexpr int64_t kCount = 25;
@@ -70,7 +69,7 @@ constexpr HistogramBucket kHistBuckets2[] = {
 };
 
 TEST(InMemoryLoggerTest, LogHistogramOnce) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
 
@@ -86,10 +85,10 @@ TEST(InMemoryLoggerTest, LogHistogramOnce) {
 }
 
 TEST(InMemoryLoggerTest, LogMultipleHistograms) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
 
-  MetricInfo metric_info_2;
+  MetricOptions metric_info_2;
   metric_info_2.metric_id = kMetric2Id;
   InMemoryLogger logger;
 
@@ -119,7 +118,7 @@ TEST(InMemoryLoggerTest, LogMultipleHistograms) {
 }
 
 TEST(InMemoryLoggerTest, LogHistogramMultipleTimesAccumulates) {
-  MetricInfo metric_info;
+  MetricOptions metric_info;
   metric_info.metric_id = kMetricId;
   InMemoryLogger logger;
 

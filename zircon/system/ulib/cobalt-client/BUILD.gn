@@ -36,7 +36,6 @@ source_set("metrics") {
   sources = [
     "counter.cc",
     "histogram.cc",
-    "metric_info.cc",
   ]
   include_dirs = [ "./include/" ]
   public_deps = [

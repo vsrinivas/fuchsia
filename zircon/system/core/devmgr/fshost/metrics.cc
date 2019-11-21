@@ -14,7 +14,6 @@ namespace devmgr {
 namespace {
 cobalt_client::MetricOptions MakeMetricOptions(fs_metrics::Event event) {
   cobalt_client::MetricOptions options;
-  options.SetMode(cobalt_client::MetricOptions::Mode::kEager);
   options.metric_id = static_cast<std::underlying_type<fs_metrics::Event>::type>(event);
   options.event_codes = {0, 0, 0, 0, 0};
   return options;
