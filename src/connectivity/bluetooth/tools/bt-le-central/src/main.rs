@@ -15,7 +15,7 @@ use {
     getopts::Options,
 };
 
-use crate::central::{listen_central_events, CentralState};
+use crate::central::{connect_peripheral, listen_central_events, CentralState, CentralStatePtr};
 
 mod central;
 mod gatt;
@@ -136,23 +136,13 @@ fn do_scan(
     (remaining_scan_results, connect, fut)
 }
 
-async fn do_connect<'a>(args: &'a [String], central: &'a CentralProxy) -> Result<(), Error> {
+async fn do_connect<'a>(state: CentralStatePtr, args: &'a [String]) -> Result<(), Error> {
     if args.len() != 1 {
         println!("connect: peer-id is required");
         return Err(BTError::new("invalid input").into());
     }
 
-    let (_, server_end) = fidl::endpoints::create_endpoints()?;
-
-    let status = central
-        .connect_peripheral(&args[0], server_end)
-        .await
-        .context("failed to connect to peripheral")?;
-
-    match status.error {
-        None => Ok(()),
-        Some(e) => Err(BTError::from(*e).into()),
-    }
+    connect_peripheral(&state, args[0].clone()).await
 }
 
 fn usage(appname: &str) -> () {
@@ -195,10 +185,7 @@ fn main() -> Result<(), Error> {
                 };
                 fut.await?
             }
-            "connect" => {
-                let svc = state.read().get_svc().clone();
-                do_connect(&args[2..], &svc).await?
-            }
+            "connect" => do_connect(state.clone(), &args[2..]).await?,
             _ => {
                 println!("Invalid command: {}", command);
                 usage(appname);

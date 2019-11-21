@@ -17,7 +17,7 @@ use {
 
 use crate::gatt::repl::start_gatt_loop;
 
-type CentralStatePtr = Arc<RwLock<CentralState>>;
+pub type CentralStatePtr = Arc<RwLock<CentralState>>;
 
 pub struct CentralState {
     // If `Some(n)`, stop scanning and close the delegate handle after n more scan results.
@@ -100,11 +100,7 @@ pub async fn listen_central_events(state: CentralStatePtr) {
                         drop(central);
                         match connect_peripheral(state, id).await {
                             Ok(()) => Ok(()),
-                            Err(_) =>
-                            // TODO(armansito): kill the channel here instead
-                            {
-                                exit(0)
-                            }
+                            Err(_) => Ok(()),
                         }
                     } else {
                         exit(0)
@@ -126,7 +122,7 @@ pub async fn listen_central_events(state: CentralStatePtr) {
 
 // Attempts to connect to the peripheral with the given |id| and begins the
 // GATT REPL if this succeeds.
-async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(), Error> {
+pub async fn connect_peripheral(state: &CentralStatePtr, mut id: String) -> Result<(), Error> {
     let (proxy, server) =
         endpoints::create_proxy().map_err(|_| BTError::new("Failed to create Client pair"))?;
 
