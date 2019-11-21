@@ -21,9 +21,15 @@ group("core") {
     "core/bt-gap",
     "core/bt-host",
     "core/bt-init",
-    "tools/bt-snoop",
     "profiles/bt-a2dp-sink",
     "profiles/bt-avrcp",
     "profiles/bt-hog",
+    "tools/bt-snoop",
   ]
+}
+
+# Includes hci and transport drivers for broadcom controllers which communicate over a uart
+# transport.
+group("broadcom_uart") {
+  public_deps = []
 }
