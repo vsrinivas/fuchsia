@@ -10,6 +10,7 @@ group("tools") {
     "//src/connectivity/network/netdump",
     "//src/connectivity/overnet/tools",
     "//src/developer/debug/zxdb:zxdb_host",
+    "//src/developer/exception_broker/limbo_client",
     "//src/developer/feedback/bugreport",
     "//src/developer/kcounter_inspect",
     "//src/sys/component_manager_for_test",
