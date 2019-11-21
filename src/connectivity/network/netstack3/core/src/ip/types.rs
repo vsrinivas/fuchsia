@@ -165,7 +165,7 @@ create_protocol_enum!(
 /// An extension trait to the `Ip` trait adding an associated `PacketBuilder`
 /// type.
 pub(crate) trait IpExt: Ip {
-    type PacketBuilder: IpPacketBuilder<Self>;
+    type PacketBuilder: IpPacketBuilder<Self> + Eq;
 }
 
 // NOTE(joshlf): We know that this is safe because the Ip trait is sealed to
@@ -305,7 +305,7 @@ impl<B: ByteSlice> IpPacket<B, Ipv6> for Ipv6Packet<B> {
 ///
 /// `IpPacketBuilder` is implemented by `Ipv4PacketBuilder` and
 /// `Ipv6PacketBuilder`.
-pub(crate) trait IpPacketBuilder<I: Ip>: PacketBuilder {
+pub(crate) trait IpPacketBuilder<I: Ip>: PacketBuilder + Clone {
     fn new(src_ip: I::Addr, dst_ip: I::Addr, ttl: u8, proto: IpProto) -> Self;
 }
 

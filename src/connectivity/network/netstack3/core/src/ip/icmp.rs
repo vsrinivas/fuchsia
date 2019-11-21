@@ -1766,7 +1766,7 @@ mod tests {
         }
 
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+        let (src_mac, dst_mac, src_ip, dst_ip, _, message, code) =
             crate::testutil::parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, M, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 f,

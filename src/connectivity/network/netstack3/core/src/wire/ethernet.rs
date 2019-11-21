@@ -402,7 +402,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="bytes is below minimum frame size of")]
+    #[should_panic(expected = "bytes is below minimum frame size of")]
     fn test_serialize_panic() {
         // create with a body which is below the minimum length
         let mut buf = [0u8; ETHERNET_MIN_FRAME_LEN - 1];

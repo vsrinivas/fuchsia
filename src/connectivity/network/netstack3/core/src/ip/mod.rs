@@ -14,6 +14,7 @@ mod igmp;
 mod ipv6;
 mod mld;
 pub(crate) mod reassembly;
+mod socket;
 mod types;
 
 // It's ok to `pub use` rather `pub(crate) use` here because the items in
@@ -2636,7 +2637,7 @@ mod tests {
         // to validate the rest of the icmp message body.
         let ipv6_packet_buf_mut: &mut [u8] = ipv6_packet_buf.as_mut();
         ipv6_packet_buf_mut[7] -= 1;
-        let (_, _, _, _, message, code) =
+        let (_, _, _, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, Icmpv6PacketTooBig, _>(
                 buf,
                 move |packet| {
@@ -3026,7 +3027,7 @@ mod tests {
         assert_eq!(get_counter_val(&mut ctx, "send_icmpv4_dest_unreachable"), 1);
         assert_eq!(ctx.dispatcher.frames_sent().len(), 1);
         let buf = &ctx.dispatcher.frames_sent()[0].1[..];
-        let (_, _, _, _, _, code) =
+        let (_, _, _, _, _, _, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
                 buf,
                 |_| {},
@@ -3090,7 +3091,9 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic(expected="loopback addresses should be handled before consulting the forwarding table")]
+    #[should_panic(
+        expected = "loopback addresses should be handled before consulting the forwarding table"
+    )]
     fn test_lookup_table_address<I: Ip>() {
         let cfg = get_dummy_config::<I::Addr>();
         let ip_address = I::LOOPBACK_ADDRESS;

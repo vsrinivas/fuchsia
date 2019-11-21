@@ -448,7 +448,9 @@ impl<B: ByteSlice> Ipv6Packet<B> {
                 // extension headers while looking for the fragment header, meaning there
                 // is no fragment header. This function should never be called if there
                 // is no fragment extension header in the packet.
-                let next_ext_hdr = iter.next().expect("exhausted all extension headers without finding fragment header");
+                let next_ext_hdr = iter
+                    .next()
+                    .expect("exhausted all extension headers without finding fragment header");
 
                 if let Ipv6ExtensionHeaderData::Fragment { .. } = next_ext_hdr.data() {
                     // The next extension header is the fragment header
@@ -649,7 +651,7 @@ impl<B: ByteSlice> Ipv6PacketRaw<B> {
 }
 
 /// A builder for IPv6 packets.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Ipv6PacketBuilder {
     ds: u8,
     ecn: u8,
@@ -1311,7 +1313,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="Mtu, Nested { inner: Buf { buf:")]
+    #[should_panic(expected = "Mtu, Nested { inner: Buf { buf:")]
     fn test_serialize_panic_packet_length() {
         // Test that a packet whose payload is longer than 2^16 - 1 bytes is
         // rejected.
@@ -1322,7 +1324,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="packet must have at least one extension header")]
+    #[should_panic(expected = "packet must have at least one extension header")]
     fn test_copy_header_bytes_for_fragment_without_ext_hdrs() {
         let mut buf = &fixed_hdr_to_bytes(new_fixed_hdr())[..];
         let packet = buf.parse::<Ipv6Packet<_>>().unwrap();
@@ -1330,7 +1332,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="exhausted all extension headers without finding fragment header")]
+    #[should_panic(expected = "exhausted all extension headers without finding fragment header")]
     fn test_copy_header_bytes_for_fragment_with_1_ext_hdr_no_fragment() {
         #[rustfmt::skip]
         let mut buf = [
@@ -1359,7 +1361,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="exhausted all extension headers without finding fragment header")]
+    #[should_panic(expected = "exhausted all extension headers without finding fragment header")]
     fn test_copy_header_bytes_for_fragment_with_2_ext_hdr_no_fragment() {
         #[rustfmt::skip]
         let mut buf = [

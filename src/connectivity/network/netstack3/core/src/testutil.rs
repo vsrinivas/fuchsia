@@ -435,20 +435,21 @@ pub(crate) fn parse_ethernet_frame(
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet<I: Ip>(
     mut buf: &[u8],
-) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto)> {
+) -> IpParseResult<I, (&[u8], I::Addr, I::Addr, IpProto, u8)> {
     use crate::ip::IpPacket;
 
     let packet = (&mut buf).parse::<<I as IpExtByteSlice<_>>::Packet>()?;
     let src_ip = packet.src_ip();
     let dst_ip = packet.dst_ip();
     let proto = packet.proto();
+    let ttl = packet.ttl();
     // Because the packet type here is generic, Rust doesn't know that it
     // doesn't implement Drop, and so it doesn't know that it's safe to drop as
     // soon as it's no longer used and allow buf to no longer be borrowed on the
     // next line. It works fine in parse_ethernet_frame because EthernetFrame is
     // a concrete type which Rust knows doesn't implement Drop.
     std::mem::drop(packet);
-    Ok((buf, src_ip, dst_ip, proto))
+    Ok((buf, src_ip, dst_ip, proto, ttl))
 }
 
 /// Parse an ICMP packet.
@@ -487,7 +488,7 @@ where
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
     buf: &[u8],
-) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, IpProto)> {
+) -> IpParseResult<I, (&[u8], Mac, Mac, I::Addr, I::Addr, IpProto, u8)> {
     use crate::device::ethernet::EthernetIpExt;
     let (body, src_mac, dst_mac, ethertype) = parse_ethernet_frame(buf)?;
     if ethertype != Some(I::ETHER_TYPE) {
@@ -495,8 +496,8 @@ pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
         return Err(ParseError::NotExpected.into());
     }
 
-    let (body, src_ip, dst_ip, proto) = parse_ip_packet::<I>(body)?;
-    Ok((body, src_mac, dst_mac, src_ip, dst_ip, proto))
+    let (body, src_ip, dst_ip, proto, ttl) = parse_ip_packet::<I>(body)?;
+    Ok((body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl))
 }
 
 /// Parse an ICMP packet in an IP packet in an Ethernet frame.
@@ -514,19 +515,19 @@ pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
 >(
     buf: &[u8],
     f: F,
-) -> IpParseResult<I, (Mac, Mac, I::Addr, I::Addr, M, C)>
+) -> IpParseResult<I, (Mac, Mac, I::Addr, I::Addr, u8, M, C)>
 where
     for<'a> IcmpPacket<I, &'a [u8], M>:
         ParsablePacket<&'a [u8], IcmpParseArgs<I::Addr>, Error = ParseError>,
 {
-    let (body, src_mac, dst_mac, src_ip, dst_ip, proto) =
+    let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
         parse_ip_packet_in_ethernet_frame::<I>(buf)?;
     if proto != I::IP_PROTO {
         debug!("unexpected IP protocol: {} (wanted {})", proto, I::IP_PROTO);
         return Err(ParseError::NotExpected.into());
     }
     let (message, code) = parse_icmp_packet(body, src_ip, dst_ip, f)?;
-    Ok((src_mac, dst_mac, src_ip, dst_ip, message, code))
+    Ok((src_mac, dst_mac, src_ip, dst_ip, ttl, message, code))
 }
 
 /// Get a DummyEventDispatcherConfig depending on the `IpAddress`
@@ -1443,25 +1444,27 @@ mod tests {
     #[test]
     fn test_parse_ip_packet() {
         use crate::wire::testdata::icmp_redirect::IP_PACKET_BYTES;
-        let (body, src_ip, dst_ip, proto) = parse_ip_packet::<Ipv4>(IP_PACKET_BYTES).unwrap();
+        let (body, src_ip, dst_ip, proto, ttl) = parse_ip_packet::<Ipv4>(IP_PACKET_BYTES).unwrap();
         assert_eq!(body, &IP_PACKET_BYTES[20..]);
         assert_eq!(src_ip, Ipv4Addr::new([10, 123, 0, 2]));
         assert_eq!(dst_ip, Ipv4Addr::new([10, 123, 0, 1]));
         assert_eq!(proto, IpProto::Icmp);
+        assert_eq!(ttl, 255);
 
         use crate::wire::testdata::icmp_echo_v6::REQUEST_IP_PACKET_BYTES;
-        let (body, src_ip, dst_ip, proto) =
+        let (body, src_ip, dst_ip, proto, ttl) =
             parse_ip_packet::<Ipv6>(REQUEST_IP_PACKET_BYTES).unwrap();
         assert_eq!(body, &REQUEST_IP_PACKET_BYTES[40..]);
         assert_eq!(src_ip, Ipv6Addr::new([0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1]));
         assert_eq!(dst_ip, Ipv6Addr::new([0xFE, 0xC0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]));
         assert_eq!(proto, IpProto::Icmpv6);
+        assert_eq!(ttl, 64);
     }
 
     #[test]
     fn test_parse_ip_packet_in_ethernet_frame() {
         use crate::wire::testdata::tls_client_hello_v4::*;
-        let (body, src_mac, dst_mac, src_ip, dst_ip, proto) =
+        let (body, src_mac, dst_mac, src_ip, dst_ip, proto, ttl) =
             parse_ip_packet_in_ethernet_frame::<Ipv4>(ETHERNET_FRAME.bytes).unwrap();
         assert_eq!(body, &IPV4_PACKET.bytes[IPV4_PACKET.body_range]);
         assert_eq!(src_mac, ETHERNET_FRAME.metadata.src_mac);
@@ -1469,6 +1472,7 @@ mod tests {
         assert_eq!(src_ip, IPV4_PACKET.metadata.src_ip);
         assert_eq!(dst_ip, IPV4_PACKET.metadata.dst_ip);
         assert_eq!(proto, IPV4_PACKET.metadata.proto);
+        assert_eq!(ttl, IPV4_PACKET.metadata.ttl);
     }
 
     #[test]
@@ -1490,7 +1494,7 @@ mod tests {
     fn test_parse_icmp_packet_in_ip_packet_in_ethernet_frame() {
         set_logger_for_test();
         use crate::wire::testdata::icmp_echo_ethernet::*;
-        let (src_mac, dst_mac, src_ip, dst_ip, _, _) =
+        let (src_mac, dst_mac, src_ip, dst_ip, _, _, _) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpEchoReply, _>(
                 &REPLY_ETHERNET_FRAME_BYTES,
                 |_| {},

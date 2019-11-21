@@ -537,7 +537,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="not enough bytes for an ARP packet")]
+    #[should_panic(expected = "not enough bytes for an ARP packet")]
     fn test_serialize_panic_insufficient_packet_space() {
         // Test that a buffer which doesn't leave enough room for the packet is
         // rejected.

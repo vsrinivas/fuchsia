@@ -2316,7 +2316,8 @@ fn send_router_advertisement<D: LinkDevice, C: NdpContext<D>>(
     // link-local address, as per RFC 4861 section 4.2. The call to either `unwrap` may
     // panic if `device_id` does not have an assigned (non-tentative) link-local address,
     // but this is documented for this function.
-    let src_ip = ctx.get_link_local_addr(device_id)
+    let src_ip = ctx
+        .get_link_local_addr(device_id)
         .expect("cannot send router advertisement without a link-local address")
         .try_into_permanent()
         .expect("cannot send router advertisement with temporary link-local address");
@@ -3609,7 +3610,7 @@ mod tests {
 
     /// Validate a simple Router Advertisement message (using default NDP configurations).
     fn validate_simple_ra(buf: &[u8], lifetime: u16) {
-        let (_, _, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 buf,
                 |p| {
@@ -5431,7 +5432,7 @@ mod tests {
         // `MAX_RTR_SOLICITATION_DELAY`.
         assert!(ctx.now().duration_since(time) < MAX_RTR_SOLICITATION_DELAY);
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (src_mac, _, src_ip, _, message, code) =
+        let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |_| {},
@@ -5443,7 +5444,7 @@ mod tests {
         let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        let (src_mac, _, src_ip, _, message, code) =
+        let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[1].1,
                 |_| {},
@@ -5463,7 +5464,7 @@ mod tests {
         let time = ctx.now();
         assert!(trigger_next_timer(&mut ctx));
         assert_eq!(ctx.now().duration_since(time), RTR_SOLICITATION_INTERVAL);
-        let (src_mac, _, src_ip, _, message, code) =
+        let (src_mac, _, src_ip, _, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[2].1,
                 |p| {
@@ -5519,7 +5520,7 @@ mod tests {
 
         // Each packet would be the same.
         for f in ctx.dispatcher().frames_sent() {
-            let (src_mac, _, src_ip, _, message, code) =
+            let (src_mac, _, src_ip, _, _, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                     &f.1,
                     |_| {},
@@ -5571,7 +5572,7 @@ mod tests {
 
         // Should have sent a router solicitation and still have the timer setup.
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (_, _dst_mac, _, _, _, _) =
+        let (_, _dst_mac, _, _, _, _, _) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterSolicitation, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |_| {},
@@ -5778,7 +5779,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)")]
+    #[should_panic(
+        expected = "assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)"
+    )]
     fn test_send_router_advertisement_as_non_router_panic() {
         //
         // Attempting to send a router advertisement when a device is not a router should result in
@@ -5812,7 +5815,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="cannot send router advertisement with temporary link-local address")]
+    #[should_panic(expected = "cannot send router advertisement with temporary link-local address")]
     fn test_send_router_advertisement_without_linklocal() {
         //
         // Attempting to send a router advertisement when a device does not yet have a link-local
@@ -5848,7 +5851,9 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)")]
+    #[should_panic(
+        expected = "assertion failed: is_final_ra_batch || ctx.is_advertising_interface(device_id)"
+    )]
     fn test_send_router_advertisement_with_should_send_advertisement_unset_panic() {
         //
         // Attempting to send a router advertisements when it is configured to not do so should
@@ -5966,7 +5971,7 @@ mod tests {
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 1);
-        let (_, _, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 &ctx.dispatcher().frames_sent()[0].1,
                 |p| {
@@ -6020,7 +6025,7 @@ mod tests {
             Ipv6::ALL_NODES_LINK_LOCAL_ADDRESS,
         );
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
-        let (_, _, src_ip, dst_ip, message, code) =
+        let (_, _, src_ip, dst_ip, _, message, code) =
             parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, RouterAdvertisement, _>(
                 &ctx.dispatcher().frames_sent()[1].1,
                 |p| {

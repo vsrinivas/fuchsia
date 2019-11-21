@@ -482,7 +482,7 @@ impl<'a, I: Clone + Iterator<Item = &'a Ipv4Option<'a>>> PacketBuilder
 }
 
 /// A builder for IPv4 packets.
-#[derive(Debug)]
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) struct Ipv4PacketBuilder {
     dscp: u8,
     ecn: u8,
@@ -964,7 +964,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="(Mtu, Nested { inner: Buf { buf:")]
+    #[should_panic(expected = "(Mtu, Nested { inner: Buf { buf:")]
     fn test_serialize_panic_packet_length() {
         // Test that a packet which is longer than 2^16 - 1 bytes is rejected.
         Buf::new(&mut [0; (1 << 16) - IPV4_MIN_HDR_LEN][..], ..)

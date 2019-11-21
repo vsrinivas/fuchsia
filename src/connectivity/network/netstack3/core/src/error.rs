@@ -43,6 +43,14 @@ pub enum NetstackError {
     /// Errors related to connections.
     #[fail(display = "{}", _0)]
     Connect(#[cause] ConnectError),
+
+    /// Error when there is no route to an address.
+    #[fail(display = "No route to address")]
+    NoRoute,
+
+    /// Error when a maximum transmission unit (MTU) is exceeded.
+    #[fail(display = "MTU exceeded")]
+    Mtu,
     // Add error types here as we add more to the stack
 }
 
@@ -203,4 +211,14 @@ pub enum ConnectError {
     /// Connection in use.
     #[fail(display = "Connection in use")]
     ConnectionInUse,
+}
+
+/// Error when no route exists to a remote address.
+#[derive(Debug, PartialEq, Eq)]
+pub struct NoRouteError;
+
+impl From<NoRouteError> for NetstackError {
+    fn from(_: NoRouteError) -> NetstackError {
+        NetstackError::NoRoute
+    }
 }

@@ -1089,8 +1089,8 @@ pub(super) fn leave_ip_multicast<C: EthernetIpDeviceContext, A: IpAddress>(
     let groups = &mut device_state.ipv6_multicast_groups;
 
     // Will panic if `device_id` has not yet joined the multicast address.
-    let counter = groups.get_mut(&multicast_addr)
-        .expect("cannot leave not-yet-joined multicast group");
+    let counter =
+        groups.get_mut(&multicast_addr).expect("cannot leave not-yet-joined multicast group");
 
     if *counter == 1 {
         let mac = MulticastAddr::from(&multicast_addr);
@@ -1725,7 +1725,7 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic(expected="assertion failed: is_device_initialized(ctx.state(), device)")]
+    #[should_panic(expected = "assertion failed: is_device_initialized(ctx.state(), device)")]
     fn receive_frame_uninitialized<I: Ip>() {
         test_receive_ip_frame::<I>(false);
     }
@@ -1764,7 +1764,7 @@ mod tests {
     }
 
     #[ip_test]
-    #[should_panic(expected="assertion failed: is_device_usable(ctx.state(), device)")]
+    #[should_panic(expected = "assertion failed: is_device_usable(ctx.state(), device)")]
     fn test_send_frame_uninitialized<I: Ip>() {
         test_send_ip_frame::<I>(false);
     }
@@ -1783,7 +1783,7 @@ mod tests {
     }
 
     #[test]
-    #[should_panic(expected="assertion failed: state.is_uninitialized()")]
+    #[should_panic(expected = "assertion failed: state.is_uninitialized()")]
     fn initialize_multiple() {
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
         let device =
@@ -1812,7 +1812,7 @@ mod tests {
         #[specialize_ip]
         fn check_icmp<I: Ip>(buf: &[u8]) {
             #[ipv4]
-            let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            let (src_mac, dst_mac, src_ip, dst_ip, ttl, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv4, _, IcmpDestUnreachable, _>(
                     buf,
                     |_| {},
@@ -1820,7 +1820,7 @@ mod tests {
                 .unwrap();
 
             #[ipv6]
-            let (src_mac, dst_mac, src_ip, dst_ip, message, code) =
+            let (src_mac, dst_mac, src_ip, dst_ip, ttl, message, code) =
                 parse_icmp_packet_in_ip_packet_in_ethernet_frame::<Ipv6, _, IcmpDestUnreachable, _>(
                     buf,
                     |_| {},
@@ -1910,13 +1910,14 @@ mod tests {
         assert_eq!(ctx.dispatcher().frames_sent().len(), 2);
         println!("{:?}", buf.as_ref());
         println!("{:?}", ctx.dispatcher().frames_sent()[1].1);
-        let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto) =
+        let (packet_buf, _, _, packet_src_ip, packet_dst_ip, proto, ttl) =
             parse_ip_packet_in_ethernet_frame::<I>(&ctx.dispatcher().frames_sent()[1].1[..])
                 .unwrap();
         assert_eq!(src_ip.get(), packet_src_ip);
         assert_eq!(config.remote_ip.get(), packet_dst_ip);
         assert_eq!(proto, IpProto::Tcp);
         assert_eq!(body, packet_buf);
+        assert_eq!(ttl, 63);
 
         // Attempt to unset router
         set_routing_enabled::<_, I>(&mut ctx, device, false);
@@ -2202,7 +2203,7 @@ mod tests {
     /// This method should always panic as leaving an unjoined multicast group is a panic
     /// condition.
     #[ip_test]
-    #[should_panic(expected="cannot leave not-yet-joined multicast group")]
+    #[should_panic(expected = "cannot leave not-yet-joined multicast group")]
     fn test_ip_leave_unjoined_multicast<I: Ip>() {
         let config = get_dummy_config::<I::Addr>();
         let mut ctx = DummyEventDispatcherBuilder::default().build::<DummyEventDispatcher>();
