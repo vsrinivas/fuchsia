@@ -18,7 +18,7 @@ class FakeOwner : public MemoryAllocator::Owner {
  public:
   FakeOwner() { EXPECT_OK(fake_bti_create(bti_.reset_and_get_address())); }
 
-  ~FakeOwner() { fake_bti_destroy(bti_.release()); }
+  ~FakeOwner() { }
 
   const zx::bti& bti() override { return bti_; }
   zx_status_t CreatePhysicalVmo(uint64_t base, uint64_t size, zx::vmo* vmo_out) override {

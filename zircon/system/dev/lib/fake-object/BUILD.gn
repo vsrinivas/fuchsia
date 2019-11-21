@@ -2,16 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-zx_library("fake-bti") {
+zx_library("fake-object") {
   sdk = "shared"
-  sdk_headers = [ "lib/fake-bti/bti.h" ]
+  sdk_headers = [ "lib/fake-object/object.h" ]
   testonly = true
   shared = true
   sources = [
-    "fake-bti.cc",
+    "fake-handle.cc",
+    "fake-object.cc",
+  ]
+  public_deps = [
+    "$zx/system/ulib/zircon-internal",
   ]
   deps = [
-    "$zx/system/dev/lib/fake-object",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/zircon",

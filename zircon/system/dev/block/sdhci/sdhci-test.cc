@@ -4,13 +4,14 @@
 
 #include "sdhci.h"
 
+#include <lib/fake-bti/bti.h>
+#include <lib/fake_ddk/fake_ddk.h>
+#include <lib/sync/completion.h>
+
 #include <atomic>
 #include <memory>
 #include <optional>
 
-#include <lib/fake-bti/bti.h>
-#include <lib/fake_ddk/fake_ddk.h>
-#include <lib/sync/completion.h>
 #include <mock/ddktl/protocol/sdhci.h>
 #include <zxtest/zxtest.h>
 
@@ -110,16 +111,14 @@ class SdhciTest : public zxtest::Test {
 
   void SetUp() override {
     ASSERT_TRUE(registers_);
-    ASSERT_OK(fake_bti_create(&fake_bti_));
+    ASSERT_OK(fake_bti_create(fake_bti_.reset_and_get_address()));
   }
-
-  void TearDown() override { fake_bti_destroy(fake_bti_); }
 
  protected:
   void CreateDut() {
     memset(registers_.get(), 0, kRegisterSetSize);
 
-    dut_.emplace(fake_ddk::kFakeParent, ddk::MmioView(mmio_), zx::bti(fake_bti_),
+    dut_.emplace(fake_ddk::kFakeParent, ddk::MmioView(mmio_), std::move(fake_bti_),
                  ddk::SdhciProtocolClient(mock_sdhci_.GetProto()));
 
     HostControllerVersion::Get()
@@ -134,7 +133,7 @@ class SdhciTest : public zxtest::Test {
   zx::interrupt irq_;
   std::optional<TestSdhci> dut_;
   ddk::MmioView mmio_;
-  zx_handle_t fake_bti_;
+  zx::bti fake_bti_;
 };
 
 TEST_F(SdhciTest, DdkLifecycle) {
