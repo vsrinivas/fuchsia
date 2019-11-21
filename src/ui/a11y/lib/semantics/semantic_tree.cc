@@ -117,14 +117,16 @@ bool SemanticTree::ApplyCommit() {
   pending_transactions_.clear();
 
   // Get root node of the tree after all the updates/commits are applied.
-  // If no tree is found, then commit is unsuccessful and this should result in closing of the fidl
-  // channel with semantic provider.
+  // Only empty semantic trees are allowed to not have a root node.
   fuchsia::accessibility::semantics::NodePtr root_node = GetAccessibilityNode(kRootNode);
   if (!root_node) {
-    FX_LOGS(ERROR) << "No root node found after applying commit for view(koid):"
-                   << GetKoid(view_ref_);
-    nodes_.clear();
-    return false;
+    FX_LOGS(INFO) << "No root node found after applying commit for view(koid):"
+                  << GetKoid(view_ref_);
+    if (!nodes_.empty()) {
+      nodes_.clear();
+      return false;
+    }
+    return true;
   }
 
   // Semantic tree must be acyclic. Delete if cycle found.

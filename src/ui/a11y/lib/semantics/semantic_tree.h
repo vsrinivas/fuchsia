@@ -68,14 +68,13 @@ class SemanticTree : public fuchsia::accessibility::semantics::SemanticTree {
   // and delete calls that conform to these limits. The commit function must
   // always be called at the end of a full update push to signal the end of
   // an update.
-  // Updates/Deletes are processed in the order in which they are recieved. If the committed updates
-  // result in an ill formed tree(for example a missing root node or a cycle) then semantic manager
-  // will close the connection.
-  // |fuchsia::accessibility::semantics::SemanticsTree|
+  // Updates/Deletes are processed in the order in which they are received. If the committed
+  // updates result in an ill formed tree(for example a tree containing a cycle) then semantic
+  // manager will close the connection. |fuchsia::accessibility::semantics::SemanticsTree|
   void CommitUpdates(CommitUpdatesCallback callback) override;
 
-  // Semantic Tree supports partial updates of existing nodes. Clients should ensure that every node
-  // in the list of nodes contains a node-id.
+  // Semantic Tree supports partial updates of existing nodes. Clients should ensure that every
+  // node in the list of nodes contains a node-id.
   // If node-id is missing, then semantic manager will ignore that node.
   // |fuchsia::accessibility::semantics::SemanticsTree|
   void UpdateSemanticNodes(std::vector<fuchsia::accessibility::semantics::Node> nodes) override;

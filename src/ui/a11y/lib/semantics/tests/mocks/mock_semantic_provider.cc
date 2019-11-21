@@ -61,4 +61,6 @@ void MockSemanticProvider::SendEventPairSignal() {
   eventpair_peer_.reset();
 }
 
+bool MockSemanticProvider::IsChannelClosed() { return !tree_ptr_.channel().is_valid(); }
+
 }  // namespace accessibility_test

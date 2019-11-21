@@ -49,6 +49,9 @@ class MockSemanticProvider {
 
   fuchsia::ui::views::ViewRef CreateOrphanViewRef();
 
+  // Returns true if channel is closed.
+  bool IsChannelClosed();
+
  private:
   // Pointer to semantic tree which is used for sending Update/Delete/Commit
   // messages.

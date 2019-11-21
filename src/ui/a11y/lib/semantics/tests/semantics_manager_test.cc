@@ -536,7 +536,7 @@ TEST_F(SemanticsManagerTest, LogSemanticTree_SingleNode) {
   EXPECT_EQ(kSemanticTreeSingle, buffer);
 }
 
-// Test that calling LogSemanticTreeForView() with an unregistered ViewRef returns empty string. 
+// Test that calls LogSemanticTreeForView() with an unregistered ViewRef returns empty string.
 TEST_F(SemanticsManagerTest, LogSemanticTreeForView_NoViewRegistered) {
   fuchsia::ui::views::ViewRef unregistered_view_ref;
   zx::eventpair unused;
@@ -548,7 +548,7 @@ TEST_F(SemanticsManagerTest, LogSemanticTreeForView_NoViewRegistered) {
 }
 
 // Test for LogSemanticTreeForView() to make sure correct logs are generated,
-// when there are muultiple views registered with the semantics manager.
+// when there are multiple views registered with the semantics manager.
 TEST_F(SemanticsManagerTest, LogSemanticTreeForView_MultipleViews) {
   // Create fake semantic provider and register view with semantics_manager_.
   accessibility_test::MockSemanticProvider semantic_provider_single_node(&semantics_manager_);
@@ -567,12 +567,14 @@ TEST_F(SemanticsManagerTest, LogSemanticTreeForView_MultipleViews) {
 
   InitializeActionListener(kSemanticTreeOddNodesPath, &semantic_provider_odd_nodes);
 
-  // Verify that LogSemantoicTreeForView() returns the correct logs when supplied each of the 
+  // Verify that LogSemanticTreeForView() returns the correct logs when supplied each of the
   // two registered view refs.
-  std::string single_node_tree_log = semantics_manager_.LogSemanticTreeForView(semantic_provider_single_node.view_ref());
+  std::string single_node_tree_log =
+      semantics_manager_.LogSemanticTreeForView(semantic_provider_single_node.view_ref());
   EXPECT_EQ(single_node_tree_log, kSemanticTreeSingle);
 
-  std::string odd_nodes_tree_log = semantics_manager_.LogSemanticTreeForView(semantic_provider_odd_nodes.view_ref());
+  std::string odd_nodes_tree_log =
+      semantics_manager_.LogSemanticTreeForView(semantic_provider_odd_nodes.view_ref());
   EXPECT_EQ(odd_nodes_tree_log, kSemanticTreeOdd);
 }
 
@@ -869,6 +871,96 @@ TEST_F(SemanticsManagerTest, EventPairSignalled) {
     NodePtr returned_node =
         semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
     EXPECT_EQ(returned_node, nullptr);
+  }
+}
+
+// This test ensures that empty trees are supported in semantics manager by:
+//   1. Adding a single node to the tree and expect commit to be successful.
+//   2. Delete the only node present in the semantic tree.
+//   3. Add another node to the tree, to make sure previous delete did not close the channel(since
+//   empty tree is a valid tree and commit should not fail in this situation.)
+TEST_F(SemanticsManagerTest, EmptyTreeIsSupported) {
+  // Create Semantic Provider.
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Create test node to update.
+  Node root_node = CreateTestNode(0, kLabelA);
+  // Commit newly created node.
+  {
+    std::vector<Node> update_nodes;
+    Node clone_node;
+    root_node.Clone(&clone_node);
+    update_nodes.push_back(std::move(clone_node));
+
+    // Update the node created above.
+    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+    RunLoopUntilIdle();
+
+    // Commit Node.
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+
+    // Check that the root node is present in the tree.
+    NodePtr returned_node =
+        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+    EXPECT_NE(returned_node, nullptr);
+    EXPECT_EQ(root_node.node_id(), returned_node->node_id());
+    EXPECT_STREQ(root_node.attributes().label().data(), returned_node->attributes().label().data());
+  }
+
+  // Call delete node for the "root_node" added above.
+  {
+    std::vector<uint32_t> delete_nodes;
+    delete_nodes.push_back(root_node.node_id());
+    semantic_provider.DeleteSemanticNodes(std::move(delete_nodes));
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+    // Check that the root node is not present in the tree.
+    NodePtr returned_node =
+        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+    EXPECT_EQ(returned_node, nullptr);
+  }
+
+  // Make sure channel is open.
+  EXPECT_FALSE(semantic_provider.IsChannelClosed());
+}
+
+// Tests that adding nodes without a root node will result in failed commit.
+TEST_F(SemanticsManagerTest, AddingNodeWithoutRoot) {
+  // Create Semantic Provider.
+  accessibility_test::MockSemanticProvider semantic_provider(&semantics_manager_);
+  // We make sure the Semantic Action Listener has finished connecting to the
+  // root.
+  RunLoopUntilIdle();
+
+  // Create non-root node to update.
+  Node node = CreateTestNode(1, kLabelA);
+  // Commit newly created node.
+  {
+    std::vector<Node> update_nodes;
+    Node clone_node;
+    node.Clone(&clone_node);
+    update_nodes.push_back(std::move(clone_node));
+
+    // Update the node created above.
+    semantic_provider.UpdateSemanticNodes(std::move(update_nodes));
+    RunLoopUntilIdle();
+
+    // Commit Node.
+    semantic_provider.CommitUpdates();
+    RunLoopUntilIdle();
+
+    // Check that the node is not present in the tree since trying to add a node without a root node
+    // should result in Commit() failure.
+    NodePtr returned_node =
+        semantics_manager_.GetAccessibilityNode(semantic_provider.view_ref(), 0);
+    EXPECT_EQ(returned_node, nullptr);
+
+    // Make sure channel is closed.
+    EXPECT_TRUE(semantic_provider.IsChannelClosed());
   }
 }
 
