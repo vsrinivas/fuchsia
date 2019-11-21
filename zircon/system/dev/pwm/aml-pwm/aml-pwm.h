@@ -6,63 +6,87 @@
 #define ZIRCON_SYSTEM_DEV_PWM_AML_PWM_AML_PWM_H_
 
 #include <lib/mmio/mmio.h>
+#include <zircon/types.h>
 
 #include <array>
+#include <vector>
 
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/pwm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+
+#include "aml-pwm-regs.h"
 
 namespace pwm {
 
-namespace {
-
-// MMIO indices (based on aml-gpio.c gpio_mmios)
-enum MmioIdx {
-  MMIO_AB = 0,
-  MMIO_CD = 1,
-  MMIO_EF = 2,
-  MMIO_AO_AB = 3,
-  MMIO_AO_CD = 4,
-  MMIO_COUNT,
-};
-
-}  // namespace
-
+class AmlPwm;
 class AmlPwmDevice;
 using AmlPwmDeviceType = ddk::Device<AmlPwmDevice, ddk::UnbindableNew>;
+
+class AmlPwm {
+ public:
+  explicit AmlPwm(ddk::MmioBuffer mmio) : mmio_(std::move(mmio)) {}
+
+  zx_status_t PwmImplSetConfig(uint32_t idx, const pwm_config_t* config);
+  zx_status_t PwmImplEnable(uint32_t idx);
+  zx_status_t PwmImplDisable(uint32_t idx);
+
+ private:
+  friend class AmlPwmDevice;
+
+  // Register fine control.
+  zx_status_t SetMode(uint32_t idx, Mode mode);
+  zx_status_t SetDutyCycle(uint32_t idx, uint32_t period, float duty_cycle);
+  zx_status_t SetDutyCycle2(uint32_t idx, uint32_t period, float duty_cycle);
+  zx_status_t Invert(uint32_t idx, bool on);
+  zx_status_t EnableHiZ(uint32_t idx, bool on);
+  zx_status_t EnableClock(uint32_t idx, bool on);
+  zx_status_t EnableConst(uint32_t idx, bool on);
+  zx_status_t SetClock(uint32_t idx, uint8_t sel);
+  zx_status_t SetClockDivider(uint32_t idx, uint8_t div);
+  zx_status_t EnableBlink(uint32_t idx, bool on);
+  zx_status_t SetBlinkTimes(uint32_t idx, uint8_t times);
+  zx_status_t SetDSSetting(uint32_t idx, uint16_t val);
+  zx_status_t SetTimers(uint32_t idx, uint8_t timer1, uint8_t timer2);
+
+  std::array<fbl::Mutex, REG_COUNT> locks_;
+  ddk::MmioBuffer mmio_;
+};
 
 class AmlPwmDevice : public AmlPwmDeviceType,
                      public ddk::PwmImplProtocol<AmlPwmDevice, ddk::base_protocol> {
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
-    ShutDown();
-    txn.Reply();
-  }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
-  // Ddk Mixins.
   zx_status_t PwmImplSetConfig(uint32_t idx, const pwm_config_t* config);
   zx_status_t PwmImplEnable(uint32_t idx);
   zx_status_t PwmImplDisable(uint32_t idx);
 
  protected:
   // For unit testing
-  explicit AmlPwmDevice(ddk::MmioBuffer mmio_ab, ddk::MmioBuffer mmio_cd, ddk::MmioBuffer mmio_ef,
-                        ddk::MmioBuffer mmio_ao_ab, ddk::MmioBuffer mmio_ao_cd)
-      : AmlPwmDeviceType(nullptr),
-        mmios_{std::move(mmio_ab), std::move(mmio_cd), std::move(mmio_ef), std::move(mmio_ao_ab),
-               std::move(mmio_ao_cd)} {}
+  explicit AmlPwmDevice() : AmlPwmDeviceType(nullptr) {}
+  zx_status_t Init(ddk::MmioBuffer mmio0, ddk::MmioBuffer mmio1, ddk::MmioBuffer mmio2,
+                   ddk::MmioBuffer mmio3, ddk::MmioBuffer mmio4) {
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio0)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio1)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio2)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio3)));
+    pwms_.push_back(std::make_unique<AmlPwm>(std::move(mmio4)));
+
+    return ZX_OK;
+  }
 
  private:
   explicit AmlPwmDevice(zx_device_t* parent) : AmlPwmDeviceType(parent) {}
 
   zx_status_t Init(zx_device_t* parent);
-  void ShutDown();
 
-  std::array<std::optional<ddk::MmioBuffer>, MMIO_COUNT> mmios_;
+  std::vector<std::unique_ptr<AmlPwm>> pwms_;
 };
 
 }  // namespace pwm

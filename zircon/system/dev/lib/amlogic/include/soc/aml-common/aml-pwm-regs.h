@@ -7,6 +7,19 @@
 
 namespace aml_pwm {
 
+enum RegIdx : uint8_t {
+  REG_A = 0,
+  REG_B = 1,
+  REG_MISC = 2,
+  REG_DS = 3,
+  REG_TIME = 4,
+  REG_A2 = 5,
+  REG_B2 = 6,
+  REG_BLINK = 7,
+
+  REG_COUNT,
+};
+
 constexpr uint32_t kAOffset = 0x0;
 constexpr uint32_t kBOffset = 0x4;
 constexpr uint32_t kMiscOffset = 0x8;
