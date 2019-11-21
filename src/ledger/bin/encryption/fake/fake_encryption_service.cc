@@ -10,16 +10,18 @@
 #include <string>
 
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
 namespace {
-std::string Encode(fxl::StringView content) { return "_" + content.ToString() + "_"; }
+std::string Encode(absl::string_view content) { return "_" + convert::ToString(content) + "_"; }
 
-std::string Decode(fxl::StringView encrypted_content) {
-  return encrypted_content.substr(1, encrypted_content.size() - 2).ToString();
+std::string Decode(absl::string_view encrypted_content) {
+  return convert::ToString(encrypted_content.substr(1, encrypted_content.size() - 2));
 }
 
 // Entry id size in bytes.
@@ -107,9 +109,9 @@ void FakeEncryptionService::GetPageId(std::string page_name,
 }
 
 void FakeEncryptionService::EncryptObject(storage::ObjectIdentifier /*object_identifier*/,
-                                          fxl::StringView content,
+                                          absl::string_view content,
                                           fit::function<void(Status, std::string)> callback) {
-  std::string result = EncryptObjectSynchronous(content.ToString());
+  std::string result = EncryptObjectSynchronous(convert::ToString(content));
   async::PostTask(dispatcher_,
                   [callback = std::move(callback), result = std::move(result)]() mutable {
                     callback(Status::OK, std::move(result));
@@ -135,15 +137,14 @@ void FakeEncryptionService::GetChunkingPermutation(
 std::string FakeEncryptionService::GetEntryId() {
   std::string counter_str = std::to_string(entry_id_counter_++);
   std::string padding(kEntryIdSize - counter_str.size(), 0);
-  return fxl::Concatenate({std::move(padding), std::move(counter_str)});
+  return absl::StrCat(std::move(padding), std::move(counter_str));
 }
 
-std::string FakeEncryptionService::GetEntryIdForMerge(fxl::StringView entry_name,
+std::string FakeEncryptionService::GetEntryIdForMerge(absl::string_view entry_name,
                                                       storage::CommitId left_parent_id,
                                                       storage::CommitId right_parent_id,
-                                                      fxl::StringView operation_list) {
-  std::string inputs =
-      fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
+                                                      absl::string_view operation_list) {
+  std::string inputs = absl::StrCat(entry_name, left_parent_id, right_parent_id, operation_list);
   if (merge_entry_ids_.find(inputs) == merge_entry_ids_.end()) {
     merge_entry_ids_[inputs] = GetEntryId();
   }

@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -20,7 +21,7 @@ class StringObject : public Object {
     return ObjectIdentifier(1u, ObjectDigest("digest"), nullptr);
   }
 
-  Status GetData(fxl::StringView* data) const override {
+  Status GetData(absl::string_view* data) const override {
     *data = value_;
     return Status::OK;
   }

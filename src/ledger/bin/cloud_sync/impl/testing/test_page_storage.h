@@ -20,6 +20,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 // Fake implementation of storage::PageStorage. Injects the data that PageSync
@@ -52,9 +53,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
                         fit::function<void(ledger::Status)> callback) override;
   void MarkPieceSynced(storage::ObjectIdentifier object_identifier,
                        fit::function<void(ledger::Status)> callback) override;
-  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+  void SetSyncMetadata(absl::string_view key, absl::string_view value,
                        fit::function<void(ledger::Status)> callback) override;
-  void GetSyncMetadata(fxl::StringView key,
+  void GetSyncMetadata(absl::string_view key,
                        fit::function<void(ledger::Status, std::string)> callback) override;
   void GetObject(storage::ObjectIdentifier object_identifier, Location /*location*/,
                  fit::function<void(ledger::Status, std::unique_ptr<const storage::Object>)>
@@ -67,7 +68,7 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
       fit::function<void(ledger::Status, storage::CommitIdView, std::vector<storage::EntryChange>)>
           callback) override;
   void GetCommitIdFromRemoteId(
-      fxl::StringView remote_commit_id,
+      absl::string_view remote_commit_id,
       fit::function<void(ledger::Status, storage::CommitId)> callback) override;
 
   storage::PageId page_id_to_return;

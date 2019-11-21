@@ -5,6 +5,7 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -39,7 +40,7 @@ ObjectIdentifier CommitEmptyImpl::GetRootIdentifier() const {
   return ObjectIdentifier();
 }
 
-fxl::StringView CommitEmptyImpl::GetStorageBytes() const {
+absl::string_view CommitEmptyImpl::GetStorageBytes() const {
   FXL_NOTIMPLEMENTED();
   return "NOT_IMPLEMENTED";
 }

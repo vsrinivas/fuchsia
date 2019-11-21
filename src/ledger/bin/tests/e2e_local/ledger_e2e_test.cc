@@ -13,7 +13,6 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/base64url/base64url.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/app/serialization_version.h"
@@ -31,6 +30,8 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/io/fd.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace test {
 namespace e2e_local {
@@ -41,10 +42,10 @@ using ::testing::ElementsAre;
 // Recursively searches for a directory with name |target_dir| and returns
 // whether it was found. If found, |path_to_dir| is updated with the path from
 // the source path.
-bool FindPathToDir(const ledger::DetachedPath& root_path, fxl::StringView target_dir,
+bool FindPathToDir(const ledger::DetachedPath& root_path, absl::string_view target_dir,
                    ledger::DetachedPath* path_to_dir) {
   bool dir_found = false;
-  auto on_next_directory_entry = [&](fxl::StringView entry) {
+  auto on_next_directory_entry = [&](absl::string_view entry) {
     ledger::DetachedPath current_path = root_path.SubPath(entry);
     if (files::IsDirectoryAt(current_path.root_fd(), current_path.path())) {
       if (entry == target_dir) {
@@ -199,7 +200,7 @@ TEST_F(LedgerEndToEndTest, ClearPage) {
 
     // The following is assuming that the page's folder is using the name
     // <base64(page_id)>.
-    std::string page_dir_name = base64url::Base64UrlEncode(convert::ExtendedStringView(page_id.id));
+    std::string page_dir_name = absl::WebSafeBase64Escape(convert::ExtendedStringView(page_id.id));
     ledger::DetachedPath page_path;
     ASSERT_TRUE(FindPathToDir(ledger::DetachedPath(tmpfs.root_fd()), page_dir_name, &page_path))
         << "Failed to find page's directory. Expected to find directory named "
@@ -238,7 +239,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   RegisterShutdownCallback([&ledger_shut_down] { ledger_shut_down = true; });
 
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = ledger::kSerializationVersion.ToString();
+  const std::string content_path = convert::ToString(ledger::kSerializationVersion);
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
   ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));
@@ -295,8 +296,8 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryOnInitialCheck) {
   // Make sure all the contents are deleted. Only the staging directory should
   // be present.
   std::vector<std::string> directory_entries;
-  auto on_next_directory_entry = [&](fxl::StringView entry) {
-    directory_entries.push_back(entry.ToString());
+  auto on_next_directory_entry = [&](absl::string_view entry) {
+    directory_entries.push_back(convert::ToString(entry));
     return true;
   };
   EXPECT_TRUE(
@@ -319,7 +320,7 @@ TEST_F(LedgerEndToEndTest, CloudEraseRecoveryFromTheWatcher) {
 
   ledger_internal::LedgerRepositoryPtr ledger_repository;
   scoped_tmpfs::ScopedTmpFS tmpfs;
-  const std::string content_path = ledger::kSerializationVersion.ToString();
+  const std::string content_path = convert::ToString(ledger::kSerializationVersion);
   const std::string deletion_sentinel_path = content_path + "/sentinel";
   ASSERT_TRUE(files::CreateDirectoryAt(tmpfs.root_fd(), content_path));
   ASSERT_TRUE(files::WriteFileAt(tmpfs.root_fd(), deletion_sentinel_path, "", 0));

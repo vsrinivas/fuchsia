@@ -40,11 +40,11 @@
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -76,7 +76,7 @@ using ::testing::IsEmpty;
     ledger_expectations.push_back(NodeMatches(NameMatches(ledger_name)));
   }
   return ChildrenMatch(ElementsAre(ChildrenMatch(
-      ElementsAre(AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent.ToString())),
+      ElementsAre(AllOf(NodeMatches(NameMatches(convert::ToString(kLedgersInspectPathComponent))),
                         ChildrenMatch(ElementsAreArray(ledger_expectations)))))));
 }
 
@@ -171,7 +171,7 @@ class FakeUserSync : public sync_coordinator::UserSync {
 
   // Creates a FakeLedgerSync to allow tracking of the page synchronization.
   std::unique_ptr<sync_coordinator::LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override {
+      absl::string_view app_id, encryption::EncryptionService* encryption_service) override {
     auto ledger_sync = std::make_unique<sync_coordinator::FakeLedgerSync>();
     ledger_sync_ptr_ = ledger_sync.get();
     return std::move(ledger_sync);
@@ -244,8 +244,8 @@ class LedgerRepositoryImplTest : public TestWithEnvironment {
     auto fake_page_eviction_manager = std::make_unique<FakeDiskCleanupManager>();
     disk_cleanup_manager_ = fake_page_eviction_manager.get();
     top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
-    attachment_node_ =
-        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
+    attachment_node_ = top_level_node_.CreateChild(
+        convert::ToString(kSystemUnderTestAttachmentPointPathComponent));
 
     Status status;
     std::unique_ptr<DbViewFactory> dbview_factory;
@@ -343,7 +343,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   inspect_deprecated::ObjectHierarchy zeroth_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &zeroth_hierarchy));
   EXPECT_THAT(zeroth_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
-                                    kRequestsInspectPathComponent.ToString(), 0UL)))))));
+                                    convert::ToString(kRequestsInspectPathComponent), 0UL)))))));
 
   // When one binding has been made to the repository, check that the "requests"
   // metric is present and is one.
@@ -352,7 +352,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   inspect_deprecated::ObjectHierarchy first_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &first_hierarchy));
   EXPECT_THAT(first_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
-                                   kRequestsInspectPathComponent.ToString(), 1UL)))))));
+                                   convert::ToString(kRequestsInspectPathComponent), 1UL)))))));
 
   // When two bindings have been made to the repository, check that the
   // "requests" metric is present and is two.
@@ -361,7 +361,7 @@ TEST_F(LedgerRepositoryImplTest, InspectAPIRequestsMetricOnMultipleBindings) {
   inspect_deprecated::ObjectHierarchy second_hierarchy;
   ASSERT_TRUE(Inspect(&top_level_node_, &test_loop(), &second_hierarchy));
   EXPECT_THAT(second_hierarchy, ChildrenMatch(Contains(NodeMatches(MetricList(Contains(UIntMetricIs(
-                                    kRequestsInspectPathComponent.ToString(), 2UL)))))));
+                                    convert::ToString(kRequestsInspectPathComponent), 2UL)))))));
 }
 
 TEST_F(LedgerRepositoryImplTest, InspectAPILedgerPresence) {
@@ -602,7 +602,7 @@ PageId RandomId(const Environment& environment) {
 TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageSyncStarted) {
   PagePtr page;
   PageId id = RandomId(environment_);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   repository_->BindRepository(ledger_repository_ptr.NewRequest());
@@ -631,7 +631,7 @@ TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageSyncStarted) {
 TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageWithOpenedPage) {
   PagePtr page;
   PageId id = RandomId(environment_);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   repository_->BindRepository(ledger_repository_ptr.NewRequest());
@@ -656,7 +656,7 @@ TEST_F(LedgerRepositoryImplTest, TrySyncClosedPageWithOpenedPage) {
 TEST_F(LedgerRepositoryImplTest, PageDeletionNewDeviceId) {
   PagePtr page;
   PageId id = RandomId(environment_);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   repository_->BindRepository(ledger_repository_ptr.NewRequest());
@@ -711,7 +711,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionNotDoneIfDeviceIdManagerFails) {
   });
   PagePtr page;
   PageId id = RandomId(environment_);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   repository_->BindRepository(ledger_repository_ptr.NewRequest());
@@ -758,7 +758,7 @@ TEST_F(LedgerRepositoryImplTest, PageDeletionReopensPageManagerIfClosed) {
   });
   PagePtr page;
   PageId id = RandomId(environment_);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;
 
   repository_->BindRepository(ledger_repository_ptr.NewRequest());

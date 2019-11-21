@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -43,7 +44,7 @@ class Commit {
 
   // Returns the byte representation of this |Commit| as they will be synced to
   // the cloud.
-  virtual fxl::StringView GetStorageBytes() const = 0;
+  virtual absl::string_view GetStorageBytes() const = 0;
 
   static bool TimestampOrdered(const std::unique_ptr<const Commit>& commit1,
                                const std::unique_ptr<const Commit>& commit2);
@@ -53,7 +54,7 @@ class Commit {
 };
 
 // Generate an id for a commit based on its content.
-std::string ComputeCommitId(fxl::StringView content);
+std::string ComputeCommitId(absl::string_view content);
 
 // Comparator for commits that order commits based on their generation, then on
 // their id, with highest generation/highest id first.

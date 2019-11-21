@@ -8,10 +8,11 @@
 #include <openssl/hkdf.h>
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
-std::string HMAC256KDF(fxl::StringView data, size_t length) {
+std::string HMAC256KDF(absl::string_view data, size_t length) {
   std::string output;
   output.resize(length);
   int result =

@@ -18,18 +18,19 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
 // Logs an error message if the given |status| is not |OK| or |INTERRUPTED|.
-void LogOnPageUpdateError(fxl::StringView operation_description, Status status,
-                          fxl::StringView ledger_name, storage::PageIdView page_id) {
+void LogOnPageUpdateError(absl::string_view operation_description, Status status,
+                          absl::string_view ledger_name, storage::PageIdView page_id) {
   // Don't print an error on |INTERRUPED|: it means that the operation was
   // interrupted, because PageEvictionManagerImpl was destroyed before being
   // empty.
@@ -74,29 +75,30 @@ void PageEvictionManagerImpl::TryEvictPages(PageEvictionPolicy* policy,
       });
 }
 
-void PageEvictionManagerImpl::MarkPageOpened(fxl::StringView ledger_name,
+void PageEvictionManagerImpl::MarkPageOpened(absl::string_view ledger_name,
                                              storage::PageIdView page_id) {
   coroutine_manager_.StartCoroutine(
-      [this, ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
+      [this, ledger_name = convert::ToString(ledger_name),
+       page_id = convert::ToString(page_id)](coroutine::CoroutineHandler* handler) {
         ExpiringToken token = token_manager_.CreateToken();
         Status status = db_->MarkPageOpened(handler, ledger_name, page_id);
         LogOnPageUpdateError("mark page as opened", status, ledger_name, page_id);
       });
 }
 
-void PageEvictionManagerImpl::MarkPageClosed(fxl::StringView ledger_name,
+void PageEvictionManagerImpl::MarkPageClosed(absl::string_view ledger_name,
                                              storage::PageIdView page_id) {
   coroutine_manager_.StartCoroutine(
-      [this, ledger_name = ledger_name.ToString(),
-       page_id = page_id.ToString()](coroutine::CoroutineHandler* handler) {
+      [this, ledger_name = convert::ToString(ledger_name),
+       page_id = convert::ToString(page_id)](coroutine::CoroutineHandler* handler) {
         ExpiringToken token = token_manager_.CreateToken();
         Status status = db_->MarkPageClosed(handler, ledger_name, page_id);
         LogOnPageUpdateError("mark page as closed", status, ledger_name, page_id);
       });
 }
 
-void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+void PageEvictionManagerImpl::TryEvictPage(absl::string_view ledger_name,
+                                           storage::PageIdView page_id,
                                            PageEvictionCondition condition,
                                            fit::function<void(Status, PageWasEvicted)> callback) {
   coroutine_manager_.StartCoroutine(
@@ -107,7 +109,7 @@ void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage:
           callback(status, was_evicted);
         }
       },
-      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
+      [this, ledger_name = convert::ToString(ledger_name), page_id = convert::ToString(page_id),
        condition](coroutine::CoroutineHandler* handler) mutable {
         ExpiringToken token = token_manager_.CreateToken();
         PageWasEvicted was_evicted;
@@ -117,14 +119,14 @@ void PageEvictionManagerImpl::TryEvictPage(fxl::StringView ledger_name, storage:
       });
 }
 
-void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+void PageEvictionManagerImpl::EvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                                         fit::function<void(Status)> callback) {
   FXL_DCHECK(delegate_);
   // We cannot delete the page storage and mark the deletion atomically. We thus
   // delete the page first, and then mark it as evicted in Page Usage DB.
   delegate_->DeletePageStorage(
       ledger_name, page_id,
-      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString(),
+      [this, ledger_name = convert::ToString(ledger_name), page_id = convert::ToString(page_id),
        callback = std::move(callback)](Status status) mutable {
         // |PAGE_NOT_FOUND| is not an error, but it must have been handled
         // before we try to evict the page.
@@ -137,7 +139,7 @@ void PageEvictionManagerImpl::EvictPage(fxl::StringView ledger_name, storage::Pa
 }
 
 Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handler,
-                                             fxl::StringView ledger_name,
+                                             absl::string_view ledger_name,
                                              storage::PageIdView page_id, bool* can_evict) {
   FXL_DCHECK(delegate_);
 
@@ -168,7 +170,7 @@ Status PageEvictionManagerImpl::CanEvictPage(coroutine::CoroutineHandler* handle
 }
 
 Status PageEvictionManagerImpl::CanEvictEmptyPage(coroutine::CoroutineHandler* handler,
-                                                  fxl::StringView ledger_name,
+                                                  absl::string_view ledger_name,
                                                   storage::PageIdView page_id, bool* can_evict) {
   FXL_DCHECK(delegate_);
 
@@ -176,7 +178,8 @@ Status PageEvictionManagerImpl::CanEvictEmptyPage(coroutine::CoroutineHandler* h
   PagePredicateResult empty_state;
   auto sync_call_status = coroutine::SyncCall(
       handler,
-      [this, ledger_name = ledger_name.ToString(), page_id = page_id.ToString()](auto callback) {
+      [this, ledger_name = convert::ToString(ledger_name),
+       page_id = convert::ToString(page_id)](auto callback) {
         delegate_->PageIsClosedOfflineAndEmpty(ledger_name, page_id, std::move(callback));
       },
       &status, &empty_state);

@@ -6,6 +6,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/ledger/bin/storage/fake/fake_page_storage.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace storage {
 namespace fake {
@@ -98,24 +99,25 @@ void FakeLedgerStorage::ClearCalls() {
 
 void FakeLedgerStorage::DelayIsSyncedCallback(storage::PageIdView page_id, bool delay_callback) {
   if (delay_callback) {
-    pages_with_delayed_callback.insert(page_id.ToString());
+    pages_with_delayed_callback.insert(convert::ToString(page_id));
   } else {
-    pages_with_delayed_callback.erase(page_id.ToString());
+    pages_with_delayed_callback.erase(convert::ToString(page_id));
   }
 }
 
 bool FakeLedgerStorage::ShouldDelayIsSyncedCallback(storage::PageIdView page_id) {
-  return pages_with_delayed_callback.find(page_id.ToString()) != pages_with_delayed_callback.end();
+  return pages_with_delayed_callback.find(convert::ToString(page_id)) !=
+         pages_with_delayed_callback.end();
 }
 
 void FakeLedgerStorage::CallIsSyncedCallback(storage::PageIdView page_id) {
-  auto it = page_storages_.find(page_id.ToString());
+  auto it = page_storages_.find(convert::ToString(page_id));
   FXL_CHECK(it != page_storages_.end());
   it->second->CallIsSyncedCallback();
 }
 
 void FakeLedgerStorage::set_page_storage_synced(storage::PageIdView page_id, bool is_synced) {
-  storage::PageId page_id_string = page_id.ToString();
+  storage::PageId page_id_string = convert::ToString(page_id);
   if (is_synced) {
     synced_pages_.insert(page_id_string);
   } else {
@@ -131,7 +133,7 @@ void FakeLedgerStorage::set_page_storage_synced(storage::PageIdView page_id, boo
 
 void FakeLedgerStorage::set_page_storage_offline_empty(storage::PageIdView page_id,
                                                        bool is_offline_empty) {
-  storage::PageId page_id_string = page_id.ToString();
+  storage::PageId page_id_string = convert::ToString(page_id);
   if (is_offline_empty) {
     offline_empty_pages_.insert(page_id_string);
   } else {

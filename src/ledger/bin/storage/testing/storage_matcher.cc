@@ -9,6 +9,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 
 using testing::_;
 using testing::AllOf;
@@ -52,7 +53,7 @@ testing::Matcher<const Commit&> MatchesCommit(const CommitId& id,
                    [](const Commit& commit) {
                      std::set<CommitId> parent_ids;
                      for (const CommitIdView& parent_id : commit.GetParentIds()) {
-                       parent_ids.insert(parent_id.ToString());
+                       parent_ids.insert(convert::ToString(parent_id));
                      }
                      return parent_ids;
                    },

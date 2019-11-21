@@ -30,6 +30,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
 ABSL_FLAG(ssize_t, key_size, -1, "size of the keys of entries");
@@ -40,7 +41,7 @@ ABSL_FLAG(bool, use_inline, false,
 
 namespace ledger {
 namespace {
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_entry";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/get_entry";
 }  // namespace
 
 // Benchmark that measures the time taken to read an entry from a page.
@@ -92,7 +93,7 @@ GetEntryBenchmark::GetEntryBenchmark(async::Loop* loop,
                                      bool use_inline)
     : loop_(loop),
       random_(0),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),

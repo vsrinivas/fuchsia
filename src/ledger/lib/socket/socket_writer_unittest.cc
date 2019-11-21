@@ -11,6 +11,7 @@
 
 #include "src/ledger/lib/socket/socket_drainer_client.h"
 #include "src/ledger/lib/socket/socket_pair.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace socket {
 namespace {
@@ -22,8 +23,8 @@ class StringClient : public SocketWriter::Client {
   explicit StringClient(std::string value) : value_(std::move(value)) {}
 
   void GetNext(size_t offset, size_t max_size,
-               fit::function<void(fxl::StringView)> callback) override {
-    fxl::StringView data = value_;
+               fit::function<void(absl::string_view)> callback) override {
+    absl::string_view data = value_;
     callback(data.substr(offset, max_size));
   }
 

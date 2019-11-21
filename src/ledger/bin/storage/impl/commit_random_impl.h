@@ -12,6 +12,7 @@
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -36,7 +37,7 @@ class CommitRandomImpl : public CommitEmptyImpl {
 
   ObjectIdentifier GetRootIdentifier() const override;
 
-  fxl::StringView GetStorageBytes() const override;
+  absl::string_view GetStorageBytes() const override;
 
  private:
   CommitId id_;

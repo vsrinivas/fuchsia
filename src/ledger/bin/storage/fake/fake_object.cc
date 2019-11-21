@@ -6,13 +6,16 @@
 
 #include <utility>
 
+#include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
+
 namespace storage {
 namespace fake {
 
-FakePiece::FakePiece(ObjectIdentifier identifier, fxl::StringView content)
-    : identifier_(std::move(identifier)), content_(content.ToString()) {}
+FakePiece::FakePiece(ObjectIdentifier identifier, absl::string_view content)
+    : identifier_(std::move(identifier)), content_(convert::ToString(content)) {}
 
-fxl::StringView FakePiece::GetData() const { return content_; }
+absl::string_view FakePiece::GetData() const { return content_; }
 
 Status FakePiece::AppendReferences(ObjectReferencesAndPriority* references) const {
   return Status::OK;
@@ -24,14 +27,14 @@ std::unique_ptr<const FakePiece> FakePiece::Clone() const {
   return std::make_unique<const FakePiece>(identifier_, content_);
 }
 
-FakeObject::FakeObject(ObjectIdentifier identifier, fxl::StringView content)
+FakeObject::FakeObject(ObjectIdentifier identifier, absl::string_view content)
     : piece_(std::make_unique<FakePiece>(std::move(identifier), std::move(content))) {}
 
 FakeObject::FakeObject(std::unique_ptr<const Piece> piece) : piece_(std::move(piece)) {}
 
 ObjectIdentifier FakeObject::GetIdentifier() const { return piece_->GetIdentifier(); }
 
-Status FakeObject::GetData(fxl::StringView* data) const {
+Status FakeObject::GetData(absl::string_view* data) const {
   *data = piece_->GetData();
   return Status::OK;
 }

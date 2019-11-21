@@ -35,6 +35,7 @@
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, story_count, -1, "the number of stories to be created");
 ABSL_FLAG(ssize_t, active_story_count, -1, "The number of active stories");
@@ -44,9 +45,8 @@ ABSL_FLAG(bool, wait_for_cached_page, false,
 
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kMessageQueuePageId = "MessageQueuePage";
-constexpr fxl::StringView kAgentRunnerPageId = "AgentRunnerPage_";
+constexpr absl::string_view kMessageQueuePageId = "MessageQueuePage";
+constexpr absl::string_view kAgentRunnerPageId = "AgentRunnerPage_";
 
 // The delay to be used when waiting for ledger background I/O operations to finish. Adding this
 // delay before creating a new story will simulate the optimal conditions for creating a new Story:
@@ -78,7 +78,7 @@ std::vector<uint8_t> GetModuleKey(int i) {
   return convert::ToArray(absl::StrFormat("Module/OpalMod564ffe1c-3136-4103-a5a3-a2%010d", i));
 }
 
-std::unique_ptr<PageId> MakePageId(fxl::StringView id) {
+std::unique_ptr<PageId> MakePageId(absl::string_view id) {
   PageId page_id;
   FXL_DCHECK(id.size() == page_id.id.size()) << id.size() << " != " << page_id.id.size();
   memcpy(page_id.id.data(), id.data(), id.length());
@@ -116,7 +116,7 @@ class EmptyWatcher : public PageWatcher {
 };
 
 // Helper function for adding a watcher on a page.
-void AddWatcher(const PagePtr* page, fxl::StringView prefix, EmptyWatcher* watcher) {
+void AddWatcher(const PagePtr* page, absl::string_view prefix, EmptyWatcher* watcher) {
   PageSnapshotPtr page_snapshot;
   (*page)->GetSnapshot(page_snapshot.NewRequest(), convert::ToArray(prefix),
                        (*watcher).NewBinding());

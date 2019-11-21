@@ -16,6 +16,7 @@
 
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 // gtest matchers are in gmock and we cannot include the specific header file
 // directly as it is private to the library.
@@ -67,7 +68,7 @@ class FakeCommit : public storage::CommitEmptyImpl {
     return parent_ids;
   }
 
-  fxl::StringView GetStorageBytes() const override { return data_; }
+  absl::string_view GetStorageBytes() const override { return data_; }
 
   std::unique_ptr<const storage::Commit> Clone() const override {
     return std::make_unique<FakeCommit>(id_, data_);
@@ -202,7 +203,7 @@ class FakeDeviceMesh : public DeviceMesh {
 
   void Send(const p2p_provider::P2PClientId& device_name,
             convert::ExtendedStringView data) override {
-    messages_.emplace_back(std::forward_as_tuple(device_name, data.ToString()));
+    messages_.emplace_back(std::forward_as_tuple(device_name, convert::ToString(data)));
     auto it = callbacks_.find(device_name);
     if (it != callbacks_.end()) {
       it->second();
@@ -215,8 +216,8 @@ class FakeDeviceMesh : public DeviceMesh {
   std::map<p2p_provider::P2PClientId, fit::closure> callbacks_;
 };
 
-void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
-                           fxl::StringView page_id) {
+void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer, absl::string_view namespace_id,
+                           absl::string_view page_id) {
   flatbuffers::Offset<WatchStartRequest> watch_start = CreateWatchStartRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
@@ -228,8 +229,8 @@ void BuildWatchStartBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringVi
   buffer->Finish(message);
 }
 
-void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
-                          fxl::StringView page_id) {
+void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer, absl::string_view namespace_id,
+                          absl::string_view page_id) {
   flatbuffers::Offset<WatchStopRequest> watch_stop = CreateWatchStopRequest(*buffer);
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
@@ -241,8 +242,8 @@ void BuildWatchStopBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringVie
   buffer->Finish(message);
 }
 
-void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
-                              fxl::StringView page_id,
+void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                              absl::string_view namespace_id, absl::string_view page_id,
                               std::vector<storage::ObjectIdentifier> object_ids) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
@@ -264,7 +265,8 @@ void BuildObjectRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::Strin
 }
 
 void BuildObjectResponseBuffer(
-    flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id, fxl::StringView page_id,
+    flatbuffers::FlatBufferBuilder* buffer, absl::string_view namespace_id,
+    absl::string_view page_id,
     std::vector<std::tuple<storage::ObjectIdentifier, std::string, bool>> data) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
@@ -298,8 +300,9 @@ void BuildObjectResponseBuffer(
   buffer->Finish(message);
 }
 
-void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
-                              fxl::StringView page_id, std::vector<storage::CommitId> commit_ids) {
+void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer,
+                              absl::string_view namespace_id, absl::string_view page_id,
+                              std::vector<storage::CommitId> commit_ids) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
                             convert::ToFlatBufferVector(buffer, page_id));
@@ -318,8 +321,8 @@ void BuildCommitRequestBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::Strin
   buffer->Finish(fb_message);
 }
 
-void BuildCommitBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView namespace_id,
-                       fxl::StringView page_id,
+void BuildCommitBuffer(flatbuffers::FlatBufferBuilder* buffer, absl::string_view namespace_id,
+                       absl::string_view page_id,
                        const std::vector<std::unique_ptr<const storage::Commit>>& commits) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),
@@ -344,7 +347,7 @@ void BuildCommitBuffer(flatbuffers::FlatBufferBuilder* buffer, fxl::StringView n
 }
 
 void ConnectToDevice(PageCommunicatorImpl* page_communicator, p2p_provider::P2PClientId device,
-                     fxl::StringView ledger, fxl::StringView page) {
+                     absl::string_view ledger, absl::string_view page) {
   flatbuffers::FlatBufferBuilder buffer;
   BuildWatchStartBuffer(&buffer, ledger, page);
   MessageHolder<Message> message =

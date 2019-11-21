@@ -31,6 +31,7 @@
 #include "src/ledger/bin/tests/integration/sharding.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/socket_writer.h"
 #include "src/ledger/lib/socket/strings.h"
@@ -38,7 +39,8 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/handles/object_info.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -56,10 +58,10 @@ enum class TestDiffs {
   TEST_ANY
 };
 
-constexpr fxl::StringView kLedgerName = "AppTests";
+constexpr absl::string_view kLedgerName = "AppTests";
 constexpr zx::duration kBackoffDuration = zx::msec(5);
 const char kUserId[] = "user";
-constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
+constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
 
 // Implementation of rng::Random that delegates to another instance. This is
 // needed because EnvironmentBuilder requires taking ownership of the random
@@ -169,21 +171,21 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
       services_dispatcher_(services_dispatcher),
       cloud_controller_(cloud_controller),
       weak_ptr_factory_(this) {
-  auto top_level_objects = component::Object::Make(kTestTopLevelNodeName.ToString());
+  auto top_level_objects = component::Object::Make(convert::ToString(kTestTopLevelNodeName));
   auto top_level_object_dir = component::ObjectDir(top_level_objects);
   std::shared_ptr<component::Object> top_level_component_object = top_level_object_dir.object();
   top_level_inspect_node_ = inspect_deprecated::Node(std::move(top_level_object_dir));
 
-  async::PostTask(
-      loop_->dispatcher(),
-      [this, request = std::move(repository_factory_request),
-       user_communicator_factory = std::move(user_communicator_factory),
-       inspect_request = std::move(inspect_request), top_level_component_object]() mutable {
-        factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
-            environment_.get(), std::move(request), std::move(user_communicator_factory),
-            top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()),
-            std::move(inspect_request), top_level_component_object.get());
-      });
+  async::PostTask(loop_->dispatcher(), [this, request = std::move(repository_factory_request),
+                                        user_communicator_factory =
+                                            std::move(user_communicator_factory),
+                                        inspect_request = std::move(inspect_request),
+                                        top_level_component_object]() mutable {
+    factory_container_ = std::make_unique<LedgerRepositoryFactoryContainer>(
+        environment_.get(), std::move(request), std::move(user_communicator_factory),
+        top_level_inspect_node_.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)),
+        std::move(inspect_request), top_level_component_object.get());
+  });
 }
 
 cloud_provider::CloudProviderPtr LedgerAppInstanceImpl::MakeCloudProvider() {
@@ -368,14 +370,13 @@ class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
   }
 
   std::string TestSuffix() const override {
-    return fxl::Concatenate(
-        {std::string(enable_sync_ == EnableSync::YES ? "Sync" : "NoSync"),
-         std::string(inject_error_ == InjectNetworkError::YES ? "WithNetworkError" : ""),
-         std::string(enable_p2p_ == EnableP2PMesh::YES ? "P2P" : "NoP2P"),
-         std::string(test_diffs_ == TestDiffs::TEST_ANY
-                         ? ""
-                         : test_diffs_ == TestDiffs::TEST_COMPATIBILITY ? "DiffCompatibility"
-                                                                        : "DiffOnly")});
+    return absl::StrCat(
+        enable_sync_ == EnableSync::YES ? "Sync" : "NoSync",
+        inject_error_ == InjectNetworkError::YES ? "WithNetworkError" : "",
+        enable_p2p_ == EnableP2PMesh::YES ? "P2P" : "NoP2P",
+        test_diffs_ == TestDiffs::TEST_ANY
+            ? ""
+            : test_diffs_ == TestDiffs::TEST_COMPATIBILITY ? "DiffCompatibility" : "DiffOnly");
   }
 
   TestDiffs test_diffs() const { return test_diffs_; }

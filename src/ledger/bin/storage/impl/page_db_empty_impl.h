@@ -7,6 +7,7 @@
 
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -51,7 +52,7 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status EnsureObjectDeletable(coroutine::CoroutineHandler* handler,
                                const ObjectDigest& object_digest,
                                std::vector<std::string>* object_status_keys) override;
-  Status GetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
+  Status GetSyncMetadata(coroutine::CoroutineHandler* handler, absl::string_view key,
                          std::string* value) override;
 
   Status IsPageOnline(coroutine::CoroutineHandler* handler, bool* page_is_online) override;
@@ -64,10 +65,12 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status DeleteMerge(coroutine::CoroutineHandler* handler, CommitIdView parent1_id,
                      CommitIdView parent2_id, CommitIdView commit_id) override;
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
-                               fxl::StringView remote_commit_id, const ObjectIdentifier& root_node,
-                               fxl::StringView storage_bytes) override;
+                               absl::string_view remote_commit_id,
+                               const ObjectIdentifier& root_node,
+                               absl::string_view storage_bytes) override;
   Status DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
-                      fxl::StringView remote_commit_id, const ObjectIdentifier& root_node) override;
+                      absl::string_view remote_commit_id,
+                      const ObjectIdentifier& root_node) override;
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
                      PageDbObjectStatus object_status,
                      const ObjectReferencesAndPriority& references) override;
@@ -80,8 +83,8 @@ class PageDbEmptyImpl : public PageDb, public PageDb::Batch {
   Status SetObjectStatus(coroutine::CoroutineHandler* handler,
                          const ObjectIdentifier& object_identifier,
                          PageDbObjectStatus object_status) override;
-  Status SetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
-                         fxl::StringView value) override;
+  Status SetSyncMetadata(coroutine::CoroutineHandler* handler, absl::string_view key,
+                         absl::string_view value) override;
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;
   Status GetDeviceId(coroutine::CoroutineHandler* handler, clocks::DeviceId* device_id) override;
   Status GetClock(coroutine::CoroutineHandler* handler, Clock* clock) override;

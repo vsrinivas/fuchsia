@@ -15,7 +15,7 @@
 #include "src/ledger/bin/app/types.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -46,7 +46,7 @@ class PageEvictionManager {
     // this method and before the callback is called. Otherwise it will be |YES|
     // or |NO| depending on whether the page is synced.
     virtual void PageIsClosedAndSynced(
-        fxl::StringView ledger_name, storage::PageIdView page_id,
+        absl::string_view ledger_name, storage::PageIdView page_id,
         fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Checks whether the given page is closed, offline and empty. The result
@@ -54,11 +54,11 @@ class PageEvictionManager {
     // after calling this method and before the callback is called. Otherwise it
     // will be |YES| or |NO| depending on whether the page is offline and empty.
     virtual void PageIsClosedOfflineAndEmpty(
-        fxl::StringView ledger_name, storage::PageIdView page_id,
+        absl::string_view ledger_name, storage::PageIdView page_id,
         fit::function<void(Status, PagePredicateResult)> callback) = 0;
 
     // Deletes the local copy of the given page from storage.
-    virtual void DeletePageStorage(fxl::StringView ledger_name, storage::PageIdView page_id,
+    virtual void DeletePageStorage(absl::string_view ledger_name, storage::PageIdView page_id,
                                    fit::function<void(Status)> callback) = 0;
   };
 
@@ -82,10 +82,10 @@ class PageEvictionManager {
   virtual void TryEvictPages(PageEvictionPolicy* policy, fit::function<void(Status)> callback) = 0;
 
   // Marks the page as open.
-  virtual void MarkPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void MarkPageOpened(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 
   // Marks the page as closed.
-  virtual void MarkPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void MarkPageClosed(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 };
 
 }  // namespace ledger

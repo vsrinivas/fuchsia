@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -78,7 +79,7 @@ TEST_P(DbTest, IteratorOperatesOnSnapshot) {
     ASSERT_EQ(db_->GetIteratorAtPrefix(handler, "key", &iterator), Status::OK);
     EXPECT_EQ(iterator->GetStatus(), Status::OK);
     ASSERT_TRUE(iterator->Valid());
-    EXPECT_THAT(**iterator, Pair(fxl::StringView("key1"), fxl::StringView("value1")));
+    EXPECT_THAT(**iterator, Pair(absl::string_view("key1"), absl::string_view("value1")));
     ASSERT_TRUE(iterator->Next().Valid());
 
     // Delete key1, key2 and key3.
@@ -93,7 +94,7 @@ TEST_P(DbTest, IteratorOperatesOnSnapshot) {
     // Continue the iteration. The iterator operates on a snapshot and is not invalidated by the
     // deletion.
     ASSERT_TRUE(iterator->Valid());
-    EXPECT_THAT(**iterator, Pair(fxl::StringView("key2"), fxl::StringView("value2")));
+    EXPECT_THAT(**iterator, Pair(absl::string_view("key2"), absl::string_view("value2")));
 
     // Add key4.
     EXPECT_EQ(db_->StartBatch(handler, &batch), Status::OK);
@@ -103,7 +104,7 @@ TEST_P(DbTest, IteratorOperatesOnSnapshot) {
 
     // Complete the iteration. The iterator operates on a snapshot and does not see the insertion.
     ASSERT_TRUE(iterator->Next().Valid());
-    EXPECT_THAT(**iterator, Pair(fxl::StringView("key3"), fxl::StringView("value3")));
+    EXPECT_THAT(**iterator, Pair(absl::string_view("key3"), absl::string_view("value3")));
     EXPECT_FALSE(iterator->Next().Valid());
   });
 }
@@ -339,9 +340,9 @@ TEST_P(DbTest, GetIteratorAtPrefixDeleteOrdering) {
         ASSERT_EQ(db_->GetIteratorAtPrefix(handler, "key", &iterator), Status::OK);
         EXPECT_EQ(iterator->GetStatus(), Status::OK);
         ASSERT_TRUE(iterator->Valid());
-        EXPECT_THAT(**iterator, Pair(fxl::StringView("key1"), fxl::StringView("value1")));
+        EXPECT_THAT(**iterator, Pair(absl::string_view("key1"), absl::string_view("value1")));
         ASSERT_TRUE(iterator->Next().Valid());
-        EXPECT_THAT(**iterator, Pair(fxl::StringView("key2"), fxl::StringView("value2")));
+        EXPECT_THAT(**iterator, Pair(absl::string_view("key2"), absl::string_view("value2")));
         EXPECT_FALSE(iterator->Next().Valid());
       },
       [](CoroutineHandler* handler, Db::Batch* batch) {
@@ -483,7 +484,7 @@ TEST_P(DbTest, PutGetIteratorAtPrefixOrdering) {
         ASSERT_EQ(db_->GetIteratorAtPrefix(handler, "key", &iterator), Status::OK);
         EXPECT_EQ(iterator->GetStatus(), Status::OK);
         ASSERT_TRUE(iterator->Valid());
-        EXPECT_THAT(**iterator, Pair(fxl::StringView("key1"), fxl::StringView("value")));
+        EXPECT_THAT(**iterator, Pair(absl::string_view("key1"), absl::string_view("value")));
         EXPECT_FALSE(iterator->Next().Valid());
       });
 }

@@ -16,6 +16,8 @@
 #include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -25,20 +27,20 @@ using ::testing::IsEmpty;
 
 class FakeDelegate : public PageEvictionManager::Delegate {
  public:
-  void PageIsClosedAndSynced(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/,
+  void PageIsClosedAndSynced(absl::string_view /*ledger_name*/, storage::PageIdView /*page_id*/,
                              fit::function<void(Status, PagePredicateResult)> callback) override {
     callback(Status::OK, PagePredicateResult::YES);
   }
 
   void PageIsClosedOfflineAndEmpty(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
+      absl::string_view ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PagePredicateResult)> callback) override {
     callback(Status::OK, closed_offline_empty);
   }
 
-  void DeletePageStorage(fxl::StringView /*ledger_name*/, storage::PageIdView page_id,
+  void DeletePageStorage(absl::string_view /*ledger_name*/, storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override {
-    deleted_pages.push_back(page_id.ToString());
+    deleted_pages.push_back(convert::ToString(page_id));
     callback(Status::OK);
   }
 

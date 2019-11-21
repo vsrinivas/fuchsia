@@ -11,7 +11,7 @@
 #include <functional>
 #include <memory>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -24,7 +24,7 @@ void SafeCloseDir(DIR* dir) {
 }  // namespace
 
 bool GetDirectoryEntries(const DetachedPath& directory,
-                         fit::function<bool(fxl::StringView)> callback) {
+                         fit::function<bool(absl::string_view)> callback) {
   int dir_fd = openat(directory.root_fd(), directory.path().c_str(), O_RDONLY);
   if (dir_fd == -1) {
     return false;
@@ -41,7 +41,7 @@ bool GetDirectoryEntries(const DetachedPath& directory,
           continue;
         }
       }
-      if (!callback(fxl::StringView(name))) {
+      if (!callback(absl::string_view(name))) {
         break;
       }
     }

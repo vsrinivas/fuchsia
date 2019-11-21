@@ -5,6 +5,8 @@
 #include "src/ledger/bin/sync_coordinator/impl/user_sync_impl.h"
 
 #include "src/ledger/bin/sync_coordinator/impl/ledger_sync_impl.h"
+#include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace sync_coordinator {
 
@@ -34,7 +36,7 @@ void UserSyncImpl::SetWatcher(SyncStateWatcher* watcher) {
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    fxl::StringView app_id, encryption::EncryptionService* encryption_service) {
+    absl::string_view app_id, encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
   std::unique_ptr<cloud_sync::LedgerSync> cloud_ledger_sync;
   if (cloud_sync_) {
@@ -43,7 +45,7 @@ std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
   std::unique_ptr<p2p_sync::LedgerCommunicator> p2p_ledger_sync;
   if (p2p_sync_) {
     // FIXME(etiennej): fix the API
-    p2p_ledger_sync = p2p_sync_->GetLedgerCommunicator(app_id.ToString());
+    p2p_ledger_sync = p2p_sync_->GetLedgerCommunicator(convert::ToString(app_id));
   }
   auto combined_sync =
       std::make_unique<LedgerSyncImpl>(std::move(cloud_ledger_sync), std::move(p2p_ledger_sync));

@@ -36,6 +36,7 @@
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -67,16 +68,16 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
   void BindRepository(fidl::InterfaceRequest<ledger_internal::LedgerRepository> repository_request);
 
   // PageEvictionManager::Delegate:
-  void PageIsClosedAndSynced(fxl::StringView ledger_name, storage::PageIdView page_id,
+  void PageIsClosedAndSynced(absl::string_view ledger_name, storage::PageIdView page_id,
                              fit::function<void(Status, PagePredicateResult)> callback) override;
   void PageIsClosedOfflineAndEmpty(
-      fxl::StringView ledger_name, storage::PageIdView page_id,
+      absl::string_view ledger_name, storage::PageIdView page_id,
       fit::function<void(Status, PagePredicateResult)> callback) override;
-  void DeletePageStorage(fxl::StringView ledger_name, storage::PageIdView page_id,
+  void DeletePageStorage(absl::string_view ledger_name, storage::PageIdView page_id,
                          fit::function<void(Status)> callback) override;
 
   // BackgroundSyncManager::Delegate:
-  void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void TrySyncClosedPage(absl::string_view ledger_name, storage::PageIdView page_id) override;
 
   // LedgerRepository:
   void GetLedger(std::vector<uint8_t> ledger_name, fidl::InterfaceRequest<Ledger> ledger_request,
@@ -110,7 +111,7 @@ class LedgerRepositoryImpl : public fuchsia::ledger::internal::LedgerRepositoryS
 
   void CheckDiscardable();
 
-  DetachedPath GetPathFor(fxl::StringView ledger_name);
+  DetachedPath GetPathFor(absl::string_view ledger_name);
 
   const DetachedPath content_path_;
   Environment* const environment_;

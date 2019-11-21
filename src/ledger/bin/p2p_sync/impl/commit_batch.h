@@ -16,7 +16,6 @@
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 

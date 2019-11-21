@@ -14,24 +14,25 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
 void PageUtils::ResolveObjectIdentifierAsStringView(
     storage::PageStorage* storage, storage::ObjectIdentifier object_identifier,
     storage::PageStorage::Location location,
-    fit::function<void(Status, fxl::StringView)> callback) {
+    fit::function<void(Status, absl::string_view)> callback) {
   storage->GetObject(std::move(object_identifier), location,
                      [callback = std::move(callback)](
                          Status status, std::unique_ptr<const storage::Object> object) {
                        if (status != Status::OK) {
-                         callback(status, fxl::StringView());
+                         callback(status, absl::string_view());
                          return;
                        }
-                       fxl::StringView data;
+                       absl::string_view data;
                        status = object->GetData(&data);
                        if (status != Status::OK) {
-                         callback(status, fxl::StringView());
+                         callback(status, absl::string_view());
                          return;
                        }
 

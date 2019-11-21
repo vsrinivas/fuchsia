@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -92,10 +93,10 @@ class PageStorageEmptyImpl : public PageStorage {
   void GetPiece(ObjectIdentifier object_identifier,
                 fit::function<void(Status, std::unique_ptr<const Piece>)> callback) override;
 
-  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+  void SetSyncMetadata(absl::string_view key, absl::string_view value,
                        fit::function<void(Status)> callback) override;
 
-  void GetSyncMetadata(fxl::StringView key,
+  void GetSyncMetadata(absl::string_view key,
                        fit::function<void(Status, std::string)> callback) override;
 
   void GetCommitContents(const Commit& commit, std::string min_key,
@@ -120,7 +121,7 @@ class PageStorageEmptyImpl : public PageStorage {
 
   void GetClock(fit::function<void(Status, Clock)> callback) override;
 
-  void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+  void GetCommitIdFromRemoteId(absl::string_view remote_commit_id,
                                fit::function<void(Status, CommitId)> callback) override;
 };
 

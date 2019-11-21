@@ -41,6 +41,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
@@ -53,6 +54,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -134,7 +136,7 @@ using ::testing::VariantWith;
 
 std::vector<PageStorage::CommitIdAndBytes> CommitAndBytesFromCommit(const Commit& commit) {
   std::vector<PageStorage::CommitIdAndBytes> result;
-  result.emplace_back(commit.GetId(), commit.GetStorageBytes().ToString());
+  result.emplace_back(commit.GetId(), convert::ToString(commit.GetStorageBytes()));
   return result;
 }
 
@@ -348,7 +350,7 @@ class ControlledLevelDb : public Db {
 
     // Batch:
     Status Put(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
-               fxl::StringView value) override {
+               absl::string_view value) override {
       return batch_->Put(handler, key, value);
     }
 
@@ -915,7 +917,7 @@ TEST_F(PageStorageTest, AddGetLocalCommits) {
   EXPECT_EQ(status, Status::OK);
 
   CommitId id = commit->GetId();
-  std::string storage_bytes = commit->GetStorageBytes().ToString();
+  std::string storage_bytes = convert::ToString(commit->GetStorageBytes());
 
   // Search for a commit that exists and check the content.
   std::unique_ptr<const Commit> found = GetCommit(id);
@@ -1063,7 +1065,7 @@ TEST_F(PageStorageTest, AddCommitBeforeParentsError) {
   bool called;
   Status status;
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit->GetId(), commit->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit->GetId(), convert::ToString(commit->GetStorageBytes()));
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
                                callback::Capture(callback::SetWhenCalled(&called), &status));
 
@@ -1087,8 +1089,8 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
       environment_.clock(), environment_.random(), root_identifier, std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
-  commits_and_bytes.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit2->GetId(), convert::ToString(commit2->GetStorageBytes()));
+  commits_and_bytes.emplace_back(commit1->GetId(), convert::ToString(commit1->GetStorageBytes()));
 
   bool called;
   Status status;
@@ -1127,9 +1129,9 @@ TEST_P(PageStorageSyncTest, AddGetSyncedCommits) {
       std::unique_ptr<const Object> root_object =
           TryGetObject(root_identifier, PageStorage::Location::Local());
 
-      fxl::StringView root_data;
+      absl::string_view root_data;
       ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-      sync.AddObject(root_identifier, root_data.ToString(), TreeNodeObjectAvailability());
+      sync.AddObject(root_identifier, convert::ToString(root_data), TreeNodeObjectAvailability());
     }
 
     // Reset and clear the storage.
@@ -1210,7 +1212,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSynced) {
   EXPECT_EQ(GetUnsyncedCommits().size(), 1u);
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit->GetId(), commit->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit->GetId(), convert::ToString(commit->GetStorageBytes()));
   storage_->AddCommitsFromSync(std::move(commits_and_bytes), ChangeSource::CLOUD,
                                callback::Capture(callback::SetWhenCalled(&called), &status));
   RunLoopUntilIdle();
@@ -1308,7 +1310,7 @@ TEST_F(PageStorageTest, OrderHeadCommitsByTimestampThenId) {
     std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
         &test_clock, environment_.random(), object_identifiers[i], std::move(parent));
 
-    commits.emplace_back(commit->GetId(), commit->GetStorageBytes().ToString());
+    commits.emplace_back(commit->GetId(), convert::ToString(commit->GetStorageBytes()));
     sorted_commits.emplace_back(timestamps[i], commit->GetId());
   }
 
@@ -1376,7 +1378,7 @@ TEST_F(PageStorageTest, CreateJournalHugeNode) {
       CollectPieces(
           identifier,
           [this](ObjectIdentifier identifier,
-                 fit::function<void(Status, fxl::StringView)> callback) {
+                 fit::function<void(Status, absl::string_view)> callback) {
             storage_->GetPiece(std::move(identifier),
                                [callback = std::move(callback)](
                                    Status status, std::unique_ptr<const Piece> piece) {
@@ -1486,7 +1488,7 @@ TEST_F(PageStorageTestNoGc, AddHugeObjectFromLocal) {
         TryGetObject(object_identifier, PageStorage::Location::Local());
     ASSERT_NE(object, nullptr);
     EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
-    fxl::StringView object_data;
+    absl::string_view object_data;
     ASSERT_EQ(object->GetData(&object_data), Status::OK);
     EXPECT_EQ(convert::ToString(object_data), data.value);
     EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
@@ -1952,7 +1954,7 @@ TEST_F(PageStorageTest, GetObject) {
     std::unique_ptr<const Object> object =
         TryGetObject(data.object_identifier, PageStorage::Location::Local());
     EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
-    fxl::StringView object_data;
+    absl::string_view object_data;
     ASSERT_EQ(object->GetData(&object_data), Status::OK);
     EXPECT_EQ(convert::ToString(object_data), data.value);
   });
@@ -2086,7 +2088,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2132,7 +2134,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2167,7 +2169,7 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2203,17 +2205,17 @@ TEST_F(PageStorageTestNoGc, GetHugeObjectPartFromSync) {
 
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   FakeSyncDelegate sync;
-  ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, &fake_factory_,
-                   [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
-                     ObjectIdentifier object_identifier = piece->GetIdentifier();
-                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-                       return;
-                     }
-                     digest_to_identifier[object_identifier.object_digest()] = object_identifier;
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
-                                    ObjectAvailability::P2P_AND_CLOUD);
-                   });
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, &fake_factory_,
+      [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+          return;
+        }
+        digest_to_identifier[object_identifier.object_digest()] = object_identifier;
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
+                       ObjectAvailability::P2P_AND_CLOUD);
+      });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved
   // from cloud. This is an attempt at finding bugs in the code that wouldn't hold pieces alive
@@ -2286,7 +2288,7 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
         if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2315,17 +2317,17 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
 
   // Initialize the sync delegate with the pieces of |data|.
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
-  ObjectIdentifier object_identifier =
-      ForEachPiece(data_str, ObjectType::BLOB, &fake_factory_,
-                   [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
-                     ObjectIdentifier object_identifier = piece->GetIdentifier();
-                     if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
-                       return;
-                     }
-                     digest_to_identifier[object_identifier.object_digest()] = object_identifier;
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
-                                    ObjectAvailability::P2P_AND_CLOUD);
-                   });
+  ObjectIdentifier object_identifier = ForEachPiece(
+      data_str, ObjectType::BLOB, &fake_factory_,
+      [&sync, &digest_to_identifier](std::unique_ptr<const Piece> piece) {
+        ObjectIdentifier object_identifier = piece->GetIdentifier();
+        if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
+          return;
+        }
+        digest_to_identifier[object_identifier.object_digest()] = object_identifier;
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
+                       ObjectAvailability::P2P_AND_CLOUD);
+      });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   // Check that we created a part big enough to require at least two batches of pending calls.
   ASSERT_GT(sync.GetNumberOfObjectsStored(), 2 * kMaxConcurrentDownloads);
@@ -2370,7 +2372,7 @@ TEST_F(PageStorageTest, GetObjectFromSync) {
   std::unique_ptr<const Object> object =
       TryGetObject(data.object_identifier, PageStorage::Location::ValueFromNetwork());
   EXPECT_EQ(object->GetIdentifier(), data.object_identifier);
-  fxl::StringView object_data;
+  absl::string_view object_data;
   ASSERT_EQ(object->GetData(&object_data), Status::OK);
   EXPECT_EQ(convert::ToString(object_data), data.value);
   // Check that the piece has been added to storage (it is small enough that
@@ -2397,7 +2399,7 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
         if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(object_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2425,7 +2427,7 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
 
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::ValueFromNetwork());
-  fxl::StringView object_data;
+  absl::string_view object_data;
   ASSERT_EQ(object->GetData(&object_data), Status::OK);
   EXPECT_EQ(convert::ToString(object_data), data_str);
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
@@ -2477,7 +2479,7 @@ TEST_F(PageStorageTest, AddAndGetHugeTreenodeFromLocal) {
 
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::Local());
-  fxl::StringView content;
+  absl::string_view content;
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data.value);
   EXPECT_TRUE(ObjectIsUntracked(object_identifier, true));
@@ -2552,7 +2554,7 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
           inbound_references[reference_identifier->second].emplace(piece_identifier.object_digest(),
                                                                    priority);
         }
-        sync.AddObject(std::move(piece_identifier), piece->GetData().ToString(),
+        sync.AddObject(std::move(piece_identifier), convert::ToString(piece->GetData()),
                        ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
@@ -2590,7 +2592,7 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   CommitId commit_id = GetFirstHead()->GetId();
   std::unique_ptr<const Object> object =
       TryGetObject(object_identifier, PageStorage::Location::TreeNodeFromNetwork(commit_id));
-  fxl::StringView content;
+  absl::string_view content;
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data_str);
 
@@ -2983,8 +2985,8 @@ TEST_F(PageStorageTest, CommitFailNoWatchNotification) {
 }
 
 TEST_F(PageStorageTest, SyncMetadata) {
-  std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {{"foo1", "foo2"},
-                                                                              {"bar1", " bar2 "}};
+  std::vector<std::pair<absl::string_view, absl::string_view>> keys_and_values = {
+      {"foo1", "foo2"}, {"bar1", " bar2 "}};
   for (const auto& key_and_value : keys_and_values) {
     auto key = key_and_value.first;
     auto value = key_and_value.second;
@@ -3054,9 +3056,9 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
                         ObjectAvailability::P2P_AND_CLOUD);
         std::unique_ptr<const Object> root_object =
             TryGetObject(tree_object_identifiers_[i], PageStorage::Location::Local());
-        fxl::StringView root_data;
+        absl::string_view root_data;
         ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-        sync_.AddObject(tree_object_identifiers_[i], root_data.ToString(),
+        sync_.AddObject(tree_object_identifiers_[i], convert::ToString(root_data),
                         ObjectAvailability::P2P_AND_CLOUD);
         all_entries.push_back(entries);
       }
@@ -3145,13 +3147,13 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
                      {all_entries[4][1], false}});
 
       std::vector<PageStorage::CommitIdAndBytes> initial_batch;
-      initial_batch.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
-      initial_batch.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
-      initial_batch.emplace_back(commit5->GetId(), commit5->GetStorageBytes().ToString());
+      initial_batch.emplace_back(commit0->GetId(), convert::ToString(commit0->GetStorageBytes()));
+      initial_batch.emplace_back(commit1->GetId(), convert::ToString(commit1->GetStorageBytes()));
+      initial_batch.emplace_back(commit5->GetId(), convert::ToString(commit5->GetStorageBytes()));
 
-      test_batch_.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
-      test_batch_.emplace_back(commit3->GetId(), commit3->GetStorageBytes().ToString());
-      test_batch_.emplace_back(commit4->GetId(), commit4->GetStorageBytes().ToString());
+      test_batch_.emplace_back(commit2->GetId(), convert::ToString(commit2->GetStorageBytes()));
+      test_batch_.emplace_back(commit3->GetId(), convert::ToString(commit3->GetStorageBytes()));
+      test_batch_.emplace_back(commit4->GetId(), convert::ToString(commit4->GetStorageBytes()));
 
       commit0.reset();
       commit1.reset();
@@ -3612,18 +3614,21 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   CommitId id3 = commit3->GetId();
   std::map<ObjectIdentifier, std::string> object_data_base;
   object_data_base[commit1->GetRootIdentifier()] =
-      TryGetPiece(commit1->GetRootIdentifier())->GetData().ToString();
+      convert::ToString(TryGetPiece(commit1->GetRootIdentifier())->GetData());
   object_data_base[commit2->GetRootIdentifier()] =
-      TryGetPiece(commit2->GetRootIdentifier())->GetData().ToString();
+      convert::ToString(TryGetPiece(commit2->GetRootIdentifier())->GetData());
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes_base;
-  commits_and_bytes_base.emplace_back(commit1->GetId(), commit1->GetStorageBytes().ToString());
-  commits_and_bytes_base.emplace_back(commit2->GetId(), commit2->GetStorageBytes().ToString());
+  commits_and_bytes_base.emplace_back(commit1->GetId(),
+                                      convert::ToString(commit1->GetStorageBytes()));
+  commits_and_bytes_base.emplace_back(commit2->GetId(),
+                                      convert::ToString(commit2->GetStorageBytes()));
 
   std::map<ObjectIdentifier, std::string> object_data_merge;
   object_data_merge[commit3->GetRootIdentifier()] =
-      TryGetPiece(commit3->GetRootIdentifier())->GetData().ToString();
+      convert::ToString(TryGetPiece(commit3->GetRootIdentifier())->GetData());
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes_merge;
-  commits_and_bytes_merge.emplace_back(commit3->GetId(), commit3->GetStorageBytes().ToString());
+  commits_and_bytes_merge.emplace_back(commit3->GetId(),
+                                       convert::ToString(commit3->GetStorageBytes()));
 
   // We have extracted the commit and object data. We now reset the state of
   // PageStorage so we can add them again (in a controlled manner).
@@ -3794,7 +3799,8 @@ TEST_F(PageStorageTest, AddCommitsMissingParent) {
       environment_.clock(), environment_.random(), root_identifier, std::move(parent));
 
   std::vector<PageStorage::CommitIdAndBytes> commits_and_bytes;
-  commits_and_bytes.emplace_back(commit_child->GetId(), commit_child->GetStorageBytes().ToString());
+  commits_and_bytes.emplace_back(commit_child->GetId(),
+                                 convert::ToString(commit_child->GetStorageBytes()));
 
   bool called;
   Status status;
@@ -3870,9 +3876,9 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   EXPECT_TRUE(commit);
 
   ObjectIdentifier root_id = commit->GetRootIdentifier();
-  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  std::string root_data = convert::ToString(TryGetPiece(root_id)->GetData());
   CommitId commit_id = commit->GetId();
-  std::string commit_data = commit->GetStorageBytes().ToString();
+  std::string commit_data = convert::ToString(commit->GetStorageBytes());
   auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
 
   commit.reset();
@@ -3940,9 +3946,9 @@ TEST_P(PageStorageSyncTest, GetCommitRootIdentifierFailedToAdd) {
   EXPECT_TRUE(commit);
 
   ObjectIdentifier root_id = commit->GetRootIdentifier();
-  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  std::string root_data = convert::ToString(TryGetPiece(root_id)->GetData());
   CommitId commit_id = commit->GetId();
-  std::string commit_data = commit->GetStorageBytes().ToString();
+  std::string commit_data = convert::ToString(commit->GetStorageBytes());
   auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
 
   commit.reset();
@@ -3989,9 +3995,9 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   EXPECT_TRUE(commit);
 
   ObjectIdentifier root_id = commit->GetRootIdentifier();
-  std::string root_data = TryGetPiece(root_id)->GetData().ToString();
+  std::string root_data = convert::ToString(TryGetPiece(root_id)->GetData());
   CommitId commit_id = commit->GetId();
-  std::string commit_data = commit->GetStorageBytes().ToString();
+  std::string commit_data = convert::ToString(commit->GetStorageBytes());
   auto commit_id_and_bytes = CommitAndBytesFromCommit(*commit);
   std::string remote_commit_id = encryption_service_.EncodeCommitId(commit_id);
 
@@ -4159,8 +4165,8 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
                        return;
                      }
                      digest_to_identifier[piece_identifier.object_digest()] = piece_identifier;
-                     sync.AddObject(std::move(piece_identifier), piece->GetData().ToString(),
-                                    ObjectAvailability::P2P);
+                     sync.AddObject(std::move(piece_identifier),
+                                    convert::ToString(piece->GetData()), ObjectAvailability::P2P);
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -4305,7 +4311,7 @@ TEST_F(PageStorageTest, GetGenerationAndMissingParents) {
       environment_.clock(), environment_.random(), root_identifier, std::move(parents));
 
   PageStorage::CommitIdAndBytes id_and_bytes(commit_to_add->GetId(),
-                                             commit_to_add->GetStorageBytes().ToString());
+                                             convert::ToString(commit_to_add->GetStorageBytes()));
   bool called;
   Status status;
   uint64_t generation;

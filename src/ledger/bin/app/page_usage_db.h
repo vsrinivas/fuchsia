@@ -23,7 +23,7 @@
 #include "src/ledger/bin/synchronization/completer.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/operation_serializer.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -45,17 +45,17 @@ class PageUsageDb {
 
   // Marks the page with the given id as opened. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
-  Status MarkPageOpened(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+  Status MarkPageOpened(coroutine::CoroutineHandler* handler, absl::string_view ledger_name,
                         storage::PageIdView page_id);
 
   // Marks the page with the given id as closed. |INTERNAL_ERROR| is returned if
   // the operation is interrupted.
-  Status MarkPageClosed(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+  Status MarkPageClosed(coroutine::CoroutineHandler* handler, absl::string_view ledger_name,
                         storage::PageIdView page_id);
 
   // Marks the page with the given id as evicted. |INTERNAL_ERROR| is returned
   // if the operation is interrupted.
-  Status MarkPageEvicted(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+  Status MarkPageEvicted(coroutine::CoroutineHandler* handler, absl::string_view ledger_name,
                          storage::PageIdView page_id);
 
   // Marks all open pages as closed. |INTERNAL_ERROR| is returned if the
@@ -75,10 +75,10 @@ class PageUsageDb {
   Status Init(coroutine::CoroutineHandler* handler);
 
   // Inserts the given |key|-|value| pair in the underlying database.
-  Status Put(coroutine::CoroutineHandler* handler, fxl::StringView key, fxl::StringView value);
+  Status Put(coroutine::CoroutineHandler* handler, absl::string_view key, absl::string_view value);
 
   // Deletes the row with the given |key| in the underlying database.
-  Status Delete(coroutine::CoroutineHandler* handler, fxl::StringView key);
+  Status Delete(coroutine::CoroutineHandler* handler, absl::string_view key);
 
   timekeeper::Clock* const clock_;
   std::unique_ptr<storage::Db> const db_;

@@ -10,6 +10,9 @@
 
 #include <sstream>
 
+#include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
+
 namespace ledger {
 
 namespace internal {
@@ -61,7 +64,7 @@ StatusTranslater::StatusTranslater(const fuchsia::ledger::PageSnapshot_FetchPart
 }  // namespace internal
 
 bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
-                 fxl::StringView description) {
+                 absl::string_view description) {
   if (status.ok()) {
     return false;
   }

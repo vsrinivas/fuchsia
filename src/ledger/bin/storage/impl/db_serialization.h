@@ -8,7 +8,7 @@
 #include "peridot/lib/rng/random.h"
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -38,7 +38,7 @@ class HeadRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::HEADS);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView head);
 };
@@ -48,7 +48,7 @@ class MergeRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::MERGES);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView parent1_id, CommitIdView parent2_id,
                                CommitIdView merge_commit_id);
@@ -60,7 +60,7 @@ class CommitRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::COMMITS);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView commit_id);
 };
@@ -70,7 +70,7 @@ class ObjectRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::OBJECTS);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
   static std::string GetKeyFor(const ObjectDigest& object_digest);
 };
@@ -94,11 +94,11 @@ class ReferenceRow {
   static constexpr char kLazyPrefixChar = static_cast<char>(Priority::LAZY);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
-  static constexpr fxl::StringView kCommitPrefix = fxl::StringView(&kCommitPrefixChar, 1);
-  static constexpr fxl::StringView kObjectPrefix = fxl::StringView(&kObjectPrefixChar, 1);
-  static constexpr fxl::StringView kEagerPrefix = fxl::StringView(&kEagerPrefixChar, 1);
-  static constexpr fxl::StringView kLazyPrefix = fxl::StringView(&kLazyPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
+  static constexpr absl::string_view kCommitPrefix = absl::string_view(&kCommitPrefixChar, 1);
+  static constexpr absl::string_view kObjectPrefix = absl::string_view(&kObjectPrefixChar, 1);
+  static constexpr absl::string_view kEagerPrefix = absl::string_view(&kEagerPrefixChar, 1);
+  static constexpr absl::string_view kLazyPrefix = absl::string_view(&kLazyPrefixChar, 1);
 
   // Returns key for object-object links.
   static std::string GetKeyForObject(const ObjectDigest& source, const ObjectDigest& destination,
@@ -124,7 +124,7 @@ class UnsyncedCommitRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::UNSYNCED_COMMIT);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
   static std::string GetKeyFor(CommitIdView commit_id);
 };
@@ -138,9 +138,9 @@ class ObjectStatusRow {
   static constexpr char kSyncedPrefixChar = static_cast<char>(RowType::SYNCED_OBJECT_DIGEST);
 
  public:
-  static constexpr fxl::StringView kTransientPrefix = fxl::StringView(&kTransientPrefixChar, 1);
-  static constexpr fxl::StringView kLocalPrefix = fxl::StringView(&kLocalPrefixChar, 1);
-  static constexpr fxl::StringView kSyncedPrefix = fxl::StringView(&kSyncedPrefixChar, 1);
+  static constexpr absl::string_view kTransientPrefix = absl::string_view(&kTransientPrefixChar, 1);
+  static constexpr absl::string_view kLocalPrefix = absl::string_view(&kLocalPrefixChar, 1);
+  static constexpr absl::string_view kSyncedPrefix = absl::string_view(&kSyncedPrefixChar, 1);
 
   static std::string GetKeyFor(PageDbObjectStatus object_status,
                                const ObjectIdentifier& object_identifier);
@@ -149,7 +149,7 @@ class ObjectStatusRow {
                                   const ObjectDigest& object_digest);
 
  private:
-  static fxl::StringView GetPrefixFor(PageDbObjectStatus object_status);
+  static absl::string_view GetPrefixFor(PageDbObjectStatus object_status);
 };
 
 class SyncMetadataRow {
@@ -157,9 +157,9 @@ class SyncMetadataRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::SYNC_METADATA);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
-  static std::string GetKeyFor(fxl::StringView key);
+  static std::string GetKeyFor(absl::string_view key);
 };
 
 class PageIsOnlineRow {
@@ -167,7 +167,7 @@ class PageIsOnlineRow {
   static constexpr char kKeyChar = static_cast<char>(RowType::PAGE_IS_ONLINE);
 
  public:
-  static constexpr fxl::StringView kKey = fxl::StringView(&kKeyChar, 1);
+  static constexpr absl::string_view kKey = absl::string_view(&kKeyChar, 1);
 };
 
 class ClockRow {
@@ -176,8 +176,8 @@ class ClockRow {
   static constexpr char kClockEntriesPrefixChar = static_cast<char>(RowType::CLOCK_ENTRIES);
 
  public:
-  static constexpr fxl::StringView kDeviceIdKey = fxl::StringView(&kClockDeviceIdChar, 1);
-  static constexpr fxl::StringView kEntriesKey = fxl::StringView(&kClockEntriesPrefixChar, 1);
+  static constexpr absl::string_view kDeviceIdKey = absl::string_view(&kClockDeviceIdChar, 1);
+  static constexpr absl::string_view kEntriesKey = absl::string_view(&kClockEntriesPrefixChar, 1);
 };
 
 class RemoteCommitIdToLocalRow {
@@ -185,9 +185,9 @@ class RemoteCommitIdToLocalRow {
   static constexpr char kPrefixChar = static_cast<char>(RowType::REMOTE_COMMIT_ID_TO_LOCAL);
 
  public:
-  static constexpr fxl::StringView kPrefix = fxl::StringView(&kPrefixChar, 1);
+  static constexpr absl::string_view kPrefix = absl::string_view(&kPrefixChar, 1);
 
-  static std::string GetKeyFor(fxl::StringView remote_commit_id);
+  static std::string GetKeyFor(absl::string_view remote_commit_id);
 };
 
 }  // namespace storage

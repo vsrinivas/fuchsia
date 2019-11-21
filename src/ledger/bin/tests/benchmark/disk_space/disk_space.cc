@@ -23,6 +23,7 @@
 #include "src/ledger/bin/testing/page_data_generator.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -31,6 +32,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, page_count, -1, "number of pages to create");
 ABSL_FLAG(ssize_t, unique_key_count, -1, "number of keys to create");
@@ -41,7 +43,7 @@ ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/disk_space";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/disk_space";
 
 // Disk space "general usage" benchmark.
 // This benchmark is used to capture Ledger disk usage over the set of common
@@ -106,7 +108,7 @@ DiskSpaceBenchmark::DiskSpaceBenchmark(async::Loop* loop,
                                        size_t commit_count, size_t key_size, size_t value_size)
     : loop_(loop),
       random_(0),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),

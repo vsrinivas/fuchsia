@@ -24,9 +24,10 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/capture.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 namespace {
@@ -374,7 +375,7 @@ TEST_F(BatchUploadTest, DiffFromEmpty) {
   auto obj_id0 = MakeObjectIdentifier("obj_digest0");
   auto obj_id1 = MakeObjectIdentifier("obj_digest1");
   storage_.diffs_to_return["id"] =
-      std::make_pair(storage::kFirstPageCommitId.ToString(),
+      std::make_pair(convert::ToString(storage::kFirstPageCommitId),
                      std::vector<storage::EntryChange>{
                          {{"key0", obj_id0, storage::KeyPriority::EAGER, "entry0"}, false},
                          {{"key1", obj_id1, storage::KeyPriority::LAZY, "entry1"}, true}});
@@ -498,7 +499,7 @@ TEST_F(BatchUploadTest, DiffSortedByEntryId) {
   auto obj_id0 = MakeObjectIdentifier("obj_digest0");
   auto obj_id1 = MakeObjectIdentifier("obj_digest1");
   storage_.diffs_to_return["id"] =
-      std::make_pair(storage::kFirstPageCommitId.ToString(),
+      std::make_pair(convert::ToString(storage::kFirstPageCommitId),
                      std::vector<storage::EntryChange>{
                          {{"key0", obj_id0, storage::KeyPriority::EAGER, "entryC"}, false},
                          {{"key1", obj_id1, storage::KeyPriority::LAZY, "entryA"}, true},
@@ -916,7 +917,7 @@ class FailingEncryptObjectEncryptionService : public encryption::FakeEncryptionS
   explicit FailingEncryptObjectEncryptionService(async_dispatcher_t* dispatcher)
       : encryption::FakeEncryptionService(dispatcher) {}
 
-  void EncryptObject(storage::ObjectIdentifier /*object_identifier*/, fxl::StringView /*content*/,
+  void EncryptObject(storage::ObjectIdentifier /*object_identifier*/, absl::string_view /*content*/,
                      fit::function<void(encryption::Status, std::string)> callback) override {
     callback(encryption::Status::INVALID_ARGUMENT, "");
   }
@@ -939,7 +940,7 @@ TYPED_TEST(FailingBatchUploadTest, Fail) {
   auto id2 = this->MakeObjectIdentifier("obj_digest2");
 
   this->storage_.diffs_to_return["id"] =
-      std::make_pair(storage::kFirstPageCommitId.ToString(),
+      std::make_pair(convert::ToString(storage::kFirstPageCommitId),
                      std::vector<storage::EntryChange>{
                          {{"key0", id1, storage::KeyPriority::EAGER, "entry0"}, false},
                          {{"key1", id2, storage::KeyPriority::LAZY, "entry1"}, true}});

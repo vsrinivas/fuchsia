@@ -14,7 +14,7 @@
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace socket {
 
@@ -25,7 +25,7 @@ class SocketWriter {
   class Client {
    public:
     virtual void GetNext(size_t offset, size_t max_size,
-                         fit::function<void(fxl::StringView)> callback) = 0;
+                         fit::function<void(absl::string_view)> callback) = 0;
     virtual void OnDataComplete() = 0;
 
    protected:
@@ -42,7 +42,7 @@ class SocketWriter {
 
  private:
   void GetData();
-  void WriteData(fxl::StringView data);
+  void WriteData(absl::string_view data);
   void Done();
 
   Client* const client_;
@@ -52,7 +52,7 @@ class SocketWriter {
   // Data left to send from last call to |GetNext|.
   std::string data_;
   // Data left to send.
-  fxl::StringView data_view_;
+  absl::string_view data_view_;
   zx::socket destination_;
   async::Wait wait_;
 };
@@ -66,7 +66,7 @@ class StringSocketWriter : public SocketWriter::Client {
 
  private:
   void GetNext(size_t offset, size_t max_size,
-               fit::function<void(fxl::StringView)> callback) override;
+               fit::function<void(absl::string_view)> callback) override;
   void OnDataComplete() override;
 
   SocketWriter socket_writer_;

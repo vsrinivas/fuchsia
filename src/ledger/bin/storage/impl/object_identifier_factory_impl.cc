@@ -10,6 +10,7 @@
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 
 namespace storage {

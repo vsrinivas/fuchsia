@@ -10,7 +10,7 @@
 #include <string>
 
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -39,10 +39,10 @@ class DetachedPath {
   const std::string& path() const { return path_; };
 
   // A |DetachedPath| representing the |path| appended to the current path.
-  DetachedPath SubPath(fxl::StringView path) const;
+  DetachedPath SubPath(absl::string_view path) const;
   // A |DetachedPath| representing all the |path| in |components| appended to
   // the current path.
-  DetachedPath SubPath(std::initializer_list<fxl::StringView> components) const;
+  DetachedPath SubPath(std::initializer_list<absl::string_view> components) const;
 
   // Opens a UniqueFD at the current path. If the operation fails, the returned
   // UniqueFd will be invalid.

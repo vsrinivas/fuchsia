@@ -33,6 +33,7 @@ executable("cloud_provider") {
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/testing/loop_fixture",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
   ]
 }

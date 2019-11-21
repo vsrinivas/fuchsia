@@ -13,6 +13,7 @@
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/iterator.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -38,7 +39,7 @@ ObjectIdentifier FakeCommit::GetRootIdentifier() const {
   return encryption::MakeDefaultObjectIdentifier(factory_, ObjectDigest(journal_->GetId()));
 }
 
-fxl::StringView FakeCommit::GetStorageBytes() const { return fxl::StringView(); }
+absl::string_view FakeCommit::GetStorageBytes() const { return absl::string_view(); }
 
 }  // namespace fake
 }  // namespace storage

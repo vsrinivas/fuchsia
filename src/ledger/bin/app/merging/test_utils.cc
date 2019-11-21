@@ -14,8 +14,10 @@
 #include "src/ledger/bin/storage/impl/leveldb.h"
 #include "src/ledger/bin/storage/impl/page_storage_impl.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -60,13 +62,13 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
     return ::testing::AssertionFailure() << "PageStorage::GetObject returned status: " << status;
   }
 
-  fxl::StringView data;
+  absl::string_view data;
   status = object->GetData(&data);
   if (status != Status::OK) {
     return ::testing::AssertionFailure() << "Object::GetData returned status: " << status;
   }
 
-  *value = data.ToString();
+  *value = convert::ToString(data);
   return ::testing::AssertionSuccess();
 }
 
@@ -79,7 +81,7 @@ fit::function<void(storage::Journal*)> TestWithPageStorage::DeleteKeyFromJournal
     return ::testing::AssertionFailure() << "LevelDb::Init failed with status " << status;
   }
   auto local_page_storage = std::make_unique<storage::PageStorageImpl>(
-      &environment_, &encryption_service_, std::move(db), kRootPageId.ToString(),
+      &environment_, &encryption_service_, std::move(db), convert::ToString(kRootPageId),
       storage::CommitPruningPolicy::NEVER);
 
   bool called;

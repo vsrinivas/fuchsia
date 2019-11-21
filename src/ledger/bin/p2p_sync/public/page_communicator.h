@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // PageCommunicator handles page-level data transfer between peers.

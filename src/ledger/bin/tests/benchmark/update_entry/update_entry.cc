@@ -31,6 +31,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
 ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
@@ -38,8 +39,7 @@ ABSL_FLAG(ssize_t, transaction_size, -1, "number of element in the transaction")
 
 namespace ledger {
 namespace {
-
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/update_entry";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/update_entry";
 
 const int kKeySize = 100;
 
@@ -90,7 +90,7 @@ UpdateEntryBenchmark::UpdateEntryBenchmark(async::Loop* loop,
     : loop_(loop),
       random_(0),
       generator_(&random_),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       component_context_(std::move(component_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),

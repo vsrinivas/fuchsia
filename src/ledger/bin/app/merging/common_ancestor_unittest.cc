@@ -16,6 +16,7 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
@@ -123,7 +124,7 @@ TEST_F(CommonAncestorTest, TwoChildrenOfRoot) {
                                  &comparison, &result);
     EXPECT_EQ(status, Status::OK);
     EXPECT_EQ(comparison, CommitComparison::UNORDERED);
-    EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
+    EXPECT_THAT(GetCommitIds(result), ElementsAre(convert::ToString(storage::kFirstPageCommitId)));
   });
 }
 
@@ -201,7 +202,7 @@ TEST_F(CommonAncestorTest, MergeCommitAndSomeOthers) {
                                  &comparison, &result);
     EXPECT_EQ(status, Status::OK);
     EXPECT_EQ(comparison, CommitComparison::UNORDERED);
-    EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
+    EXPECT_THAT(GetCommitIds(result), ElementsAre(convert::ToString(storage::kFirstPageCommitId)));
   });
 }
 
@@ -230,7 +231,7 @@ TEST_F(CommonAncestorTest, LongChain) {
     // This test lasts ~2.5s on x86+qemu+kvm.
     EXPECT_EQ(status, Status::OK);
     EXPECT_EQ(comparison, CommitComparison::UNORDERED);
-    EXPECT_THAT(GetCommitIds(result), ElementsAre(storage::kFirstPageCommitId.ToString()));
+    EXPECT_THAT(GetCommitIds(result), ElementsAre(convert::ToString(storage::kFirstPageCommitId)));
   });
 }
 

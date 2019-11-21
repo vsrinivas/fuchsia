@@ -31,7 +31,6 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
 namespace ledger {

@@ -9,17 +9,19 @@
 
 #include "src/ledger/bin/cloud_sync/impl/page_sync_impl.h"
 #include "src/ledger/bin/encryption/impl/encryption_service_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/backoff/exponential_backoff.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
 LedgerSyncImpl::LedgerSyncImpl(ledger::Environment* environment, const UserConfig* user_config,
                                encryption::EncryptionService* encryption_service,
-                               fxl::StringView app_id, std::unique_ptr<SyncStateWatcher> watcher)
+                               absl::string_view app_id, std::unique_ptr<SyncStateWatcher> watcher)
     : environment_(environment),
       user_config_(user_config),
       encryption_service_(encryption_service),
-      app_id_(app_id.ToString()),
+      app_id_(convert::ToString(app_id)),
       user_watcher_(std::move(watcher)) {
   if (!user_config_->cloud_provider) {
     FXL_LOG(ERROR) << "Instantiated a LedgerSyncImpl with an invalid cloud provider.";

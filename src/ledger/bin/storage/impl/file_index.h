@@ -8,7 +8,7 @@
 #include "src/ledger/bin/storage/impl/file_index_generated.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -22,10 +22,10 @@ class FileIndexSerialization {
   };
 
   // Checks that |data| is a correct encoding for a |FileIndex|.
-  static bool CheckValidFileIndexSerialization(fxl::StringView data);
+  static bool CheckValidFileIndexSerialization(absl::string_view data);
 
   // Parses a |FileIndex| from |content|.
-  static Status ParseFileIndex(fxl::StringView content, const FileIndex** file_index);
+  static Status ParseFileIndex(absl::string_view content, const FileIndex** file_index);
 
   // Builds the |FileIndex| representing the given children.
   static void BuildFileIndex(const std::vector<ObjectIdentifierAndSize>& children,

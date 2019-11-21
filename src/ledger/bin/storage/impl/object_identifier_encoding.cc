@@ -10,7 +10,9 @@
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 ObjectIdentifier ToObjectIdentifier(const ObjectIdentifierStorage* object_identifier_storage,
@@ -40,7 +42,7 @@ std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier) {
   return convert::ToString(builder);
 }
 
-bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+bool DecodeObjectIdentifier(absl::string_view data, ObjectIdentifierFactory* factory,
                             ObjectIdentifier* object_identifier) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!VerifyObjectIdentifierStorageBuffer(verifier)) {
@@ -57,11 +59,11 @@ bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* facto
 
 std::string EncodeDigestPrefixedObjectIdentifier(const ObjectIdentifier& object_identifier) {
   FXL_DCHECK(object_identifier.object_digest().Serialize().size() == kStorageHashSize + 1);
-  return fxl::Concatenate({object_identifier.object_digest().Serialize(),
-                           SerializeData(static_cast<uint32_t>(object_identifier.key_index()))});
+  return absl::StrCat(object_identifier.object_digest().Serialize(),
+                      SerializeData(static_cast<uint32_t>(object_identifier.key_index())));
 }
 
-bool DecodeDigestPrefixedObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+bool DecodeDigestPrefixedObjectIdentifier(absl::string_view data, ObjectIdentifierFactory* factory,
                                           ObjectIdentifier* object_identifier) {
   constexpr size_t kObjectDigestSize = kStorageHashSize + 1;
   constexpr size_t kKeyIndexSize = sizeof(uint32_t);
@@ -73,7 +75,7 @@ bool DecodeDigestPrefixedObjectIdentifier(fxl::StringView data, ObjectIdentifier
   }
   uint32_t key_index = DeserializeData<uint32_t>(data.substr(kObjectDigestSize, kKeyIndexSize));
   *object_identifier = factory->MakeObjectIdentifier(
-      key_index, ObjectDigest(data.substr(0, kObjectDigestSize).ToString()));
+      key_index, ObjectDigest(convert::ToString(data.substr(0, kObjectDigestSize))));
   return true;
 }
 

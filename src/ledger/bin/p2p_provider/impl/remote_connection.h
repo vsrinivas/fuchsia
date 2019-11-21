@@ -11,7 +11,7 @@
 #include <string>
 
 #include "src/ledger/bin/fidl_helpers/message_relay.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_provider {
 // RemoteConnection holds a connection with a single remote device.
@@ -25,7 +25,7 @@ class RemoteConnection {
   void Start(zx::channel channel);
 
   // Sends |data| to another device through the channel set in |Start|.
-  void SendMessage(fxl::StringView data);
+  void SendMessage(absl::string_view data);
 
   // Disconnects.
   void Disconnect();

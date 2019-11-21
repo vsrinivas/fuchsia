@@ -19,14 +19,15 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/loop_controller.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/hierarchy.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
-inline constexpr fxl::StringView kSystemUnderTestAttachmentPointPathComponent = "attachment_point";
+inline constexpr absl::string_view kSystemUnderTestAttachmentPointPathComponent =
+    "attachment_point";
 
 // Given an |inspect_deprecated::Node| under which another |inspect_deprecated::Node| is available
 // at |child_name|, binds |child| to the child node.

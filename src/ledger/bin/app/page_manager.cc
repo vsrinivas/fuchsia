@@ -27,6 +27,7 @@
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -49,10 +50,10 @@ PageManager::PageManager(Environment* environment, std::string ledger_name, stor
       ledger_sync_(ledger_sync),
       ledger_merge_manager_(ledger_merge_manager),
       inspect_node_(std::move(inspect_node)),
-      heads_node_(inspect_node_.CreateChild(kHeadsInspectPathComponent.ToString())),
+      heads_node_(inspect_node_.CreateChild(convert::ToString(kHeadsInspectPathComponent))),
       heads_children_manager_(environment_->dispatcher(), &heads_node_, this),
       heads_children_manager_retainer_(heads_node_.SetChildrenManager(&heads_children_manager_)),
-      commits_node_(inspect_node_.CreateChild(kCommitsInspectPathComponent.ToString())),
+      commits_node_(inspect_node_.CreateChild(convert::ToString(kCommitsInspectPathComponent))),
       commits_children_manager_(environment_->dispatcher(), &commits_node_, this),
       commits_children_manager_retainer_(
           commits_node_.SetChildrenManager(&commits_children_manager_)),

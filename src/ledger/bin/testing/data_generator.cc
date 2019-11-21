@@ -12,12 +12,13 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kKeyIdSeparator = "-";
+constexpr absl::string_view kKeyIdSeparator = "-";
 
 }  // namespace
 
@@ -32,7 +33,7 @@ std::vector<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   auto rand_bytes = MakeValue(size - i_str.size() - kKeyIdSeparator.size());
 
   return convert::ToArray(
-      fxl::Concatenate({convert::ExtendedStringView(rand_bytes), kKeyIdSeparator, i_str}));
+      absl::StrCat(convert::ExtendedStringView(rand_bytes), kKeyIdSeparator, i_str));
 }
 
 PageId DataGenerator::MakePageId() {
@@ -62,7 +63,7 @@ std::vector<std::vector<uint8_t>> DataGenerator::MakeKeys(size_t key_count, size
 
 size_t DataGenerator::GetKeyId(const std::vector<uint8_t>& key) {
   std::string key_str = convert::ToString(key);
-  size_t split_index = key_str.find_last_of(kKeyIdSeparator.ToString());
+  size_t split_index = key_str.find_last_of(convert::ToString(kKeyIdSeparator));
   FXL_CHECK(split_index != std::string::npos &&
             split_index + kKeyIdSeparator.size() < key_str.size());
   return std::stoul(key_str.substr(split_index + kKeyIdSeparator.size()));

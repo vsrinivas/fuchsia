@@ -38,7 +38,7 @@ bool DecodeEntryPayload(convert::ExtendedStringView entry_id, convert::ExtendedS
     return false;
   }
 
-  entry->entry_id = entry_id.ToString();
+  entry->entry_id = convert::ToString(entry_id);
   entry->key = convert::ToString(entry_payload->entry_name());
   entry->priority = entry_payload->priority() == KeyPriority_EAGER ? storage::KeyPriority::EAGER
                                                                    : storage::KeyPriority::LAZY;

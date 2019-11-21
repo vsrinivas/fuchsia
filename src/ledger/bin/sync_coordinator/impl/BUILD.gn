@@ -19,6 +19,7 @@ source_set("impl") {
   deps = [
     "//src/ledger/bin/sync_coordinator/public",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -41,6 +42,7 @@ source_set("unittests") {
     "//src/ledger/bin/testing:lib",
     "//src/lib/backoff/testing",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]
 

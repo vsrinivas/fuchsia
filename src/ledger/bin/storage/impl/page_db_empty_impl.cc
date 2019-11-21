@@ -4,6 +4,8 @@
 
 #include "src/ledger/bin/storage/impl/page_db_empty_impl.h"
 
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
+
 namespace storage {
 
 using coroutine::CoroutineHandler;
@@ -74,7 +76,7 @@ Status PageDbEmptyImpl::GetUnsyncedPieces(CoroutineHandler* /*handler*/,
                                           std::vector<ObjectIdentifier>* /*object_identifiers*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/, fxl::StringView /*key*/,
+Status PageDbEmptyImpl::GetSyncMetadata(CoroutineHandler* /*handler*/, absl::string_view /*key*/,
                                         std::string* /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -101,14 +103,14 @@ Status PageDbEmptyImpl::DeleteMerge(coroutine::CoroutineHandler* /*handler*/,
 }
 Status PageDbEmptyImpl::AddCommitStorageBytes(CoroutineHandler* /*handler*/,
                                               const CommitId& /*commit_id*/,
-                                              fxl::StringView /*remote_commit_id*/,
+                                              absl::string_view /*remote_commit_id*/,
                                               const ObjectIdentifier& /*root_node*/,
-                                              fxl::StringView /*storage_bytes*/) {
+                                              absl::string_view /*storage_bytes*/) {
   return Status::NOT_IMPLEMENTED;
 }
 Status PageDbEmptyImpl::DeleteCommit(coroutine::CoroutineHandler* /*handler*/,
                                      CommitIdView /*commit_id*/,
-                                     fxl::StringView /*remote_commit_id*/,
+                                     absl::string_view /*remote_commit_id*/,
                                      const ObjectIdentifier& /*root_node*/) {
   return Status::NOT_IMPLEMENTED;
 }
@@ -136,8 +138,8 @@ Status PageDbEmptyImpl::MarkCommitIdUnsynced(CoroutineHandler* /*handler*/,
                                              uint64_t /*generation*/) {
   return Status::NOT_IMPLEMENTED;
 }
-Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/, fxl::StringView /*key*/,
-                                        fxl::StringView /*value*/) {
+Status PageDbEmptyImpl::SetSyncMetadata(CoroutineHandler* /*handler*/, absl::string_view /*key*/,
+                                        absl::string_view /*value*/) {
   return Status::NOT_IMPLEMENTED;
 }
 

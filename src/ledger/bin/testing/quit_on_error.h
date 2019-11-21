@@ -13,7 +13,7 @@
 #include "fuchsia/ledger/cpp/fidl.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/public/status.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -44,7 +44,7 @@ class StatusTranslater {
 // the given ledger status is not Status::OK. Returns true if the loop
 // was quit .
 bool QuitOnError(fit::closure quit_callback, internal::StatusTranslater status,
-                 fxl::StringView description);
+                 absl::string_view description);
 
 inline auto QuitOnErrorCallback(fit::closure quit_callback, std::string description) {
   return [quit_callback = std::move(quit_callback),

@@ -7,10 +7,11 @@
 #include <openssl/sha.h>
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
-std::string SHA256WithLengthHash(fxl::StringView data) {
+std::string SHA256WithLengthHash(absl::string_view data) {
   std::string result;
   result.resize(SHA256_DIGEST_LENGTH);
   SHA256_CTX sha256;

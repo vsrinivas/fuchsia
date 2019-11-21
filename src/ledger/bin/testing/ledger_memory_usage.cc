@@ -15,13 +15,14 @@
 
 #include <task-utils/walker.h>
 
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kLedgerBinaryName = "ledger.cmx";
+constexpr absl::string_view kLedgerBinaryName = "ledger.cmx";
 
 // Retrieves the name of the task with the given handle. Returns true on
 // success, or false otherwise.
@@ -32,7 +33,7 @@ bool GetTaskName(zx::unowned<zx::process>& task, std::string* name) {
     // Failed to get the name of task.
     return false;
   }
-  *name = std::string(task_name);
+  *name = convert::ToString(task_name);
   return true;
 }
 

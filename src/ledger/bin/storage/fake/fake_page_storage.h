@@ -21,7 +21,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -92,7 +92,7 @@ class FakePageStorage : public PageStorageEmptyImpl {
   // By default, fake object digests are invalid to ensure external clients do
   // not rely implicitly on the internal encoding. Specific tests can override
   // this method if they need valid object digests instead.
-  virtual ObjectDigest FakeDigest(fxl::StringView value) const;
+  virtual ObjectDigest FakeDigest(absl::string_view value) const;
 
   PageId page_id_;
 

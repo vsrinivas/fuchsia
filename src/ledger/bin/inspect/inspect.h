@@ -8,25 +8,25 @@
 #include <string>
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
 // The filesystem directory in which the Inspect hierarchy appears.
-inline fxl::StringView kInspectNodesDirectory = "inspect";
+inline absl::string_view kInspectNodesDirectory = "inspect";
 // The name given to the top-level object at the root of the Inspect hierarchy.
-inline fxl::StringView kTopLevelNodeName = "ledger_component";
-inline fxl::StringView kRepositoriesInspectPathComponent = "repositories";
-inline fxl::StringView kLedgersInspectPathComponent = "ledgers";
-inline fxl::StringView kPagesInspectPathComponent = "pages";
-inline fxl::StringView kHeadsInspectPathComponent = "heads";
-inline fxl::StringView kCommitsInspectPathComponent = "commits";
-inline fxl::StringView kParentsInspectPathComponent = "parents";
-inline fxl::StringView kEntriesInspectPathComponent = "entries";
-inline fxl::StringView kValueInspectPathComponent = "value";
+inline absl::string_view kTopLevelNodeName = "ledger_component";
+inline absl::string_view kRepositoriesInspectPathComponent = "repositories";
+inline absl::string_view kLedgersInspectPathComponent = "ledgers";
+inline absl::string_view kPagesInspectPathComponent = "pages";
+inline absl::string_view kHeadsInspectPathComponent = "heads";
+inline absl::string_view kCommitsInspectPathComponent = "commits";
+inline absl::string_view kParentsInspectPathComponent = "parents";
+inline absl::string_view kEntriesInspectPathComponent = "entries";
+inline absl::string_view kValueInspectPathComponent = "value";
 // TODO(nathaniel): "requests" was introduced as a demonstration; it should be
 // either given real meaning or cleaned up.
-inline fxl::StringView kRequestsInspectPathComponent = "requests";
+inline absl::string_view kRequestsInspectPathComponent = "requests";
 
 // Converts a |PageId| to a string suitable to be passed to Inspect for Inspect
 // to show in its user interface and its outputs.

@@ -10,7 +10,9 @@
 #include <algorithm>
 #include <utility>
 
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace socket {
 
@@ -37,7 +39,7 @@ void SocketWriter::Start(zx::socket destination) {
 void SocketWriter::GetData() {
   FXL_DCHECK(data_.empty());
   wait_.Cancel();
-  client_->GetNext(offset_, kDefaultSocketBufferSize, [this](fxl::StringView data) {
+  client_->GetNext(offset_, kDefaultSocketBufferSize, [this](absl::string_view data) {
     if (data.empty()) {
       Done();
       return;
@@ -47,7 +49,7 @@ void SocketWriter::GetData() {
   });
 }
 
-void SocketWriter::WriteData(fxl::StringView data) {
+void SocketWriter::WriteData(absl::string_view data) {
   zx_status_t status = ZX_OK;
   while (status == ZX_OK && !data.empty()) {
     size_t written;
@@ -74,7 +76,7 @@ void SocketWriter::WriteData(fxl::StringView data) {
 
   if (status == ZX_ERR_SHOULD_WAIT) {
     if (data_.empty()) {
-      data_ = data.ToString();
+      data_ = convert::ToString(data);
       data_view_ = data_;
     } else {
       data_view_ = data;
@@ -101,8 +103,8 @@ void StringSocketWriter::Start(std::string data, zx::socket destination) {
 }
 
 void StringSocketWriter::GetNext(size_t offset, size_t max_size,
-                                 fit::function<void(fxl::StringView)> callback) {
-  fxl::StringView data = data_;
+                                 fit::function<void(absl::string_view)> callback) {
+  absl::string_view data = data_;
   callback(data.substr(offset, max_size));
 }
 

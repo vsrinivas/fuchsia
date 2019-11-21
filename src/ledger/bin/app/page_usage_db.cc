@@ -13,23 +13,25 @@
 #include "src/ledger/bin/synchronization/lock.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kOpenedPagePrefix = "opened/";
+constexpr absl::string_view kOpenedPagePrefix = "opened/";
 
-std::string GetKeyForOpenedPage(fxl::StringView ledger_name, storage::PageIdView page_id) {
+std::string GetKeyForOpenedPage(absl::string_view ledger_name, storage::PageIdView page_id) {
   FXL_DCHECK(page_id.size() == ::fuchsia::ledger::PAGE_ID_SIZE);
-  return fxl::Concatenate({kOpenedPagePrefix, ledger_name, page_id});
+  return absl::StrCat(kOpenedPagePrefix, ledger_name, page_id);
 }
 
-void GetPageFromOpenedRow(fxl::StringView row, std::string* ledger_name, storage::PageId* page_id) {
+void GetPageFromOpenedRow(absl::string_view row, std::string* ledger_name,
+                          storage::PageId* page_id) {
   FXL_DCHECK(row.size() > ::fuchsia::ledger::PAGE_ID_SIZE + kOpenedPagePrefix.size());
   size_t ledger_name_size = row.size() - ::fuchsia::ledger::PAGE_ID_SIZE - kOpenedPagePrefix.size();
-  *ledger_name = row.substr(kOpenedPagePrefix.size(), ledger_name_size).ToString();
-  *page_id = row.substr(kOpenedPagePrefix.size() + ledger_name_size).ToString();
+  *ledger_name = convert::ToString(row.substr(kOpenedPagePrefix.size(), ledger_name_size));
+  *page_id = convert::ToString(row.substr(kOpenedPagePrefix.size() + ledger_name_size));
 }
 
 // An iterator over PageInfo.
@@ -86,7 +88,7 @@ class PageInfoIterator final : public storage::Iterator<const PageInfo> {
 
 // If the given |status| is not |OK| or |INTERRUPTED|, logs an error message on
 // failure to initialize. Returns true in case of error; false otherwise.
-bool LogOnInitializationError(fxl::StringView operation_description, Status status) {
+bool LogOnInitializationError(absl::string_view operation_description, Status status) {
   if (status != Status::OK) {
     if (status != Status::INTERRUPTED) {
       FXL_LOG(ERROR) << operation_description
@@ -119,7 +121,7 @@ Status PageUsageDb::Init(coroutine::CoroutineHandler* handler) {
 }
 
 Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
-                                   fxl::StringView ledger_name, storage::PageIdView page_id) {
+                                   absl::string_view ledger_name, storage::PageIdView page_id) {
   Status status = Init(handler);
   if (LogOnInitializationError("MarkPageOpened", status)) {
     return status;
@@ -129,7 +131,7 @@ Status PageUsageDb::MarkPageOpened(coroutine::CoroutineHandler* handler,
 }
 
 Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
-                                   fxl::StringView ledger_name, storage::PageIdView page_id) {
+                                   absl::string_view ledger_name, storage::PageIdView page_id) {
   Status status = Init(handler);
   if (LogOnInitializationError("MarkPageClosed", status)) {
     return status;
@@ -143,7 +145,7 @@ Status PageUsageDb::MarkPageClosed(coroutine::CoroutineHandler* handler,
 }
 
 Status PageUsageDb::MarkPageEvicted(coroutine::CoroutineHandler* handler,
-                                    fxl::StringView ledger_name, storage::PageIdView page_id) {
+                                    absl::string_view ledger_name, storage::PageIdView page_id) {
   Status status = Init(handler);
   if (LogOnInitializationError("TryEvictPage", status)) {
     return status;
@@ -190,8 +192,8 @@ Status PageUsageDb::GetPages(coroutine::CoroutineHandler* handler,
 
 bool PageUsageDb::IsInitialized() { return initialization_completer_.IsCompleted(); }
 
-Status PageUsageDb::Put(coroutine::CoroutineHandler* handler, fxl::StringView key,
-                        fxl::StringView value) {
+Status PageUsageDb::Put(coroutine::CoroutineHandler* handler, absl::string_view key,
+                        absl::string_view value) {
   std::unique_ptr<storage::Db::Batch> batch;
   std::unique_ptr<lock::Lock> lock;
   // Used for serializing Put and Delete operations.
@@ -204,7 +206,7 @@ Status PageUsageDb::Put(coroutine::CoroutineHandler* handler, fxl::StringView ke
   return batch->Execute(handler);
 }
 
-Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler, fxl::StringView key) {
+Status PageUsageDb::Delete(coroutine::CoroutineHandler* handler, absl::string_view key) {
   std::unique_ptr<storage::Db::Batch> batch;
   // Used for serializing Put and Delete operations.
   std::unique_ptr<lock::Lock> lock;

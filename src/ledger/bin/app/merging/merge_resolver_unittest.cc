@@ -21,6 +21,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/cancellable_helper.h"
 #include "src/lib/callback/capture.h"
@@ -51,7 +52,7 @@ class FakePageStorageImpl : public storage::PageStorageEmptyImpl {
   FakePageStorageImpl& operator=(const FakePageStorageImpl&) = delete;
 
   void MarkCommitContentsUnavailable(storage::CommitIdView commit_id) {
-    removed_commit_ids_.insert(commit_id.ToString());
+    removed_commit_ids_.insert(convert::ToString(commit_id));
   }
 
   Status GetHeadCommits(

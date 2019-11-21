@@ -7,10 +7,11 @@
 #include <memory>
 
 #include "src/ledger/lib/vmo/strings.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 Status Object::GetVmo(ledger::SizedVmo* vmo) const {
-  fxl::StringView data;
+  absl::string_view data;
   RETURN_ON_ERROR(GetData(&data));
 
   if (!ledger::VmoFromString(data, vmo)) {

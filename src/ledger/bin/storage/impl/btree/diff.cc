@@ -12,6 +12,7 @@
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/btree/synchronous_storage.h"
 #include "src/ledger/bin/storage/impl/object_digest.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -26,7 +27,7 @@ class IteratorPair {
 
   // Initialize the pair with the ids of both roots.
   Status Init(LocatedObjectIdentifier left_node_identifier,
-              LocatedObjectIdentifier right_node_identifier, fxl::StringView min_key) {
+              LocatedObjectIdentifier right_node_identifier, absl::string_view min_key) {
     RETURN_ON_ERROR(left_.Init(std::move(left_node_identifier)));
     RETURN_ON_ERROR(right_.Init(std::move(right_node_identifier)));
     if (!min_key.empty()) {
@@ -109,7 +110,7 @@ class IteratorPair {
   // is greater than or equal to min_key and 2) might be different between the
   // two iterators. We consider that the two entries might be different, if they
   // are in btree nodes with different ids.
-  Status SkipIteratorsTo(fxl::StringView min_key) {
+  Status SkipIteratorsTo(absl::string_view min_key) {
     for (;;) {
       if (left_.SkipToIndex(min_key)) {
         return right_.SkipTo(min_key);
@@ -331,7 +332,7 @@ class ThreeWayIterator {
 
   Status Init(LocatedObjectIdentifier base_node_identifier,
               LocatedObjectIdentifier left_node_identifier,
-              LocatedObjectIdentifier right_node_identifier, fxl::StringView min_key) {
+              LocatedObjectIdentifier right_node_identifier, absl::string_view min_key) {
     RETURN_ON_ERROR(
         base_left_iterators_->Init(base_node_identifier, std::move(left_node_identifier), min_key));
     RETURN_ON_ERROR(base_right_iterators_->Init(std::move(base_node_identifier),

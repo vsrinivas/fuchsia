@@ -15,12 +15,12 @@
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace {
 
 constexpr char kLedgerBinaryPath[] = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
-constexpr fxl::StringView kLedgerName = "test ledger instance";
+constexpr absl::string_view kLedgerName = "test ledger instance";
 
 }  // namespace
 

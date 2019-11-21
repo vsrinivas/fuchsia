@@ -4,8 +4,8 @@
 
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 
-#include "peridot/lib/base64url/base64url.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
 
 namespace cloud_provider {
 
@@ -15,7 +15,7 @@ ValidationTest::ValidationTest()
 ValidationTest::~ValidationTest() = default;
 
 std::vector<uint8_t> ValidationTest::GetUniqueRandomId() {
-  return convert::ToArray(base64url::Base64UrlEncode(random_.RandomUniqueBytes()));
+  return convert::ToArray(absl::WebSafeBase64Escape(random_.RandomUniqueBytes()));
 }
 
 void ValidationTest::SetUp() { component_context_->svc()->Connect(cloud_provider_.NewRequest()); }

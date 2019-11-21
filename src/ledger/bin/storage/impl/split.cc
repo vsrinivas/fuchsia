@@ -21,6 +21,7 @@
 #include "src/ledger/third_party/bup/bupsplit.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -290,7 +291,7 @@ class SplitContext {
       data.append(views_[i].data(), views_[i].size());
     }
 
-    fxl::StringView last = views_.back();
+    absl::string_view last = views_.back();
     data.append(last.data(), index);
 
     if (index < last.size()) {
@@ -319,7 +320,7 @@ class SplitContext {
   std::vector<std::unique_ptr<DataSource::DataChunk>> current_chunks_;
   // The list of data that has not yet been consumed. For all indexes, the view
   // at the given index is a view to the chunk at the same index.
-  std::vector<fxl::StringView> views_;
+  std::vector<absl::string_view> views_;
   // List of unsent indices per level.
   std::vector<std::vector<ObjectIdentifierAndSize>> current_identifiers_per_level_;
   // The most recent piece that is entirely consumed but not yet sent to
@@ -329,7 +330,8 @@ class SplitContext {
 
 class CollectPiecesState : public fxl::RefCountedThreadSafe<CollectPiecesState> {
  public:
-  fit::function<void(ObjectIdentifier, fit::function<void(Status, fxl::StringView)>)> data_accessor;
+  fit::function<void(ObjectIdentifier, fit::function<void(Status, absl::string_view)>)>
+      data_accessor;
   fit::function<bool(IterationStatus, ObjectIdentifier)> callback;
   bool running = true;
 };
@@ -347,7 +349,7 @@ void CollectPiecesInternal(ObjectIdentifier root, fxl::RefPtr<CollectPiecesState
   }
 
   state->data_accessor(root, [state, factory = root.factory(), on_done = std::move(on_done)](
-                                 Status status, fxl::StringView data) mutable {
+                                 Status status, absl::string_view data) mutable {
     if (!state->running) {
       on_done();
       return;
@@ -389,7 +391,7 @@ void SplitDataSource(DataSource* source, ObjectType object_type,
   });
 }
 
-Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory* factory,
+Status ForEachIndexChild(absl::string_view index_content, ObjectIdentifierFactory* factory,
                          fit::function<Status(ObjectIdentifier)> callback) {
   const FileIndex* file_index;
   RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(index_content, &file_index));
@@ -403,7 +405,7 @@ Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory*
 
 void CollectPieces(
     ObjectIdentifier root,
-    fit::function<void(ObjectIdentifier, fit::function<void(Status, fxl::StringView)>)>
+    fit::function<void(ObjectIdentifier, fit::function<void(Status, absl::string_view)>)>
         data_accessor,
     fit::function<bool(IterationStatus, ObjectIdentifier)> callback) {
   auto state = fxl::MakeRefCounted<CollectPiecesState>();

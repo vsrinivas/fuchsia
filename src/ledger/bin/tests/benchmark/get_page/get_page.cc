@@ -22,6 +22,7 @@
 #include "src/ledger/bin/testing/get_page_ensure_initialized.h"
 #include "src/ledger/bin/testing/quit_on_error.h"
 #include "src/ledger/bin/testing/run_with_tracing.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/files/directory.h"
@@ -31,6 +32,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, requests_count, -1, "number of request to GetPage");
 ABSL_FLAG(bool, reuse, false,
@@ -45,7 +47,7 @@ ABSL_FLAG(bool, clear_pages, false,
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/get_page";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/get_page";
 
 // The delay to be used when waiting for a ledger background I/O operation to
 // finish. This is used when it is not possible to wait for a specific event,
@@ -100,7 +102,7 @@ GetPageBenchmark::GetPageBenchmark(async::Loop* loop,
                                    bool clear_pages)
     : loop_(loop),
       random_(0),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       component_context_(std::move(component_context)),
       requests_count_(requests_count),

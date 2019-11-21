@@ -11,7 +11,7 @@
 #include "src/ledger/bin/app/page_usage_listener.h"
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -39,11 +39,12 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
     cleanup_callback = std::move(callback);
   }
 
-  void OnExternallyUsed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
+  void OnExternallyUsed(absl::string_view /*ledger_name*/,
+                        storage::PageIdView /*page_id*/) override {
     ++externally_used_count;
   }
 
-  void OnExternallyUnused(fxl::StringView /*ledger_name*/,
+  void OnExternallyUnused(absl::string_view /*ledger_name*/,
                           storage::PageIdView /*page_id*/) override {
     ++externally_unused_count;
     if (on_OnExternallyUnused_callback_) {
@@ -51,11 +52,12 @@ class FakeDiskCleanupManager : public DiskCleanupManager, public PageUsageListen
     }
   }
 
-  void OnInternallyUsed(fxl::StringView /*ledger_name*/, storage::PageIdView /*page_id*/) override {
+  void OnInternallyUsed(absl::string_view /*ledger_name*/,
+                        storage::PageIdView /*page_id*/) override {
     ++internally_used_count;
   }
 
-  void OnInternallyUnused(fxl::StringView /*ledger_name*/,
+  void OnInternallyUnused(absl::string_view /*ledger_name*/,
                           storage::PageIdView /*page_id*/) override {
     ++internally_unused_count;
     if (on_OnInternallyUnused_callback_) {

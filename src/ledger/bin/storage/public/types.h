@@ -15,8 +15,8 @@
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 

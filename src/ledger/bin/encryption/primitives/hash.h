@@ -8,13 +8,13 @@
 #include <memory>
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
 inline constexpr size_t kHashSize = 32;
 
-std::string SHA256WithLengthHash(fxl::StringView data);
+std::string SHA256WithLengthHash(absl::string_view data);
 
 }  // namespace encryption
 

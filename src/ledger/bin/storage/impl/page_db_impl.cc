@@ -18,7 +18,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -134,7 +135,7 @@ Status PageDbImpl::GetObjectStatusKeys(coroutine::CoroutineHandler* handler,
     std::vector<std::string> suffixes;
     RETURN_ON_ERROR(db_->GetByPrefix(handler, prefix, &suffixes));
     for (const std::string& suffix : suffixes) {
-      (*keys)[fxl::Concatenate({prefix, suffix})] = possible_status;
+      (*keys)[absl::StrCat(prefix, suffix)] = possible_status;
     }
   }
   return Status::OK;
@@ -262,7 +263,7 @@ Status PageDbImpl::GetUnsyncedPieces(CoroutineHandler* handler,
   return Status::OK;
 }
 
-Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler, fxl::StringView key,
+Status PageDbImpl::GetSyncMetadata(CoroutineHandler* handler, absl::string_view key,
                                    std::string* value) {
   return db_->Get(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
@@ -303,9 +304,9 @@ Status PageDbImpl::DeleteMerge(coroutine::CoroutineHandler* handler, CommitIdVie
 }
 
 Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
-                                         fxl::StringView remote_commit_id,
+                                         absl::string_view remote_commit_id,
                                          const ObjectIdentifier& root_node,
-                                         fxl::StringView storage_bytes) {
+                                         absl::string_view storage_bytes) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(
@@ -314,7 +315,7 @@ Status PageDbImpl::AddCommitStorageBytes(CoroutineHandler* handler, const Commit
 }
 
 Status PageDbImpl::DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
-                                fxl::StringView remote_commit_id,
+                                absl::string_view remote_commit_id,
                                 const ObjectIdentifier& root_node) {
   // This should only be called in a batch.
   return Status::ILLEGAL_STATE;
@@ -362,8 +363,8 @@ Status PageDbImpl::MarkCommitIdUnsynced(CoroutineHandler* handler, const CommitI
   return batch->Execute(handler);
 }
 
-Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler, fxl::StringView key,
-                                   fxl::StringView value) {
+Status PageDbImpl::SetSyncMetadata(CoroutineHandler* handler, absl::string_view key,
+                                   absl::string_view value) {
   std::unique_ptr<Batch> batch;
   RETURN_ON_ERROR(StartBatch(handler, &batch));
   RETURN_ON_ERROR(batch->SetSyncMetadata(handler, key, value));
@@ -414,7 +415,7 @@ Status PageDbImpl::SetClock(coroutine::CoroutineHandler* handler, const Clock& e
 }
 
 Status PageDbImpl::GetCommitIdFromRemoteId(coroutine::CoroutineHandler* handler,
-                                           fxl::StringView remote_id, CommitId* commit_id) {
+                                           absl::string_view remote_id, CommitId* commit_id) {
   return db_->Get(handler, RemoteCommitIdToLocalRow::GetKeyFor(remote_id), commit_id);
 }
 

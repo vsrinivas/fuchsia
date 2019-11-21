@@ -9,6 +9,7 @@
 #include "src/ledger/bin/app/token_manager.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -20,7 +21,7 @@ class BackgroundSyncManager : public PageUsageListener {
   class Delegate {
    public:
     virtual ~Delegate() = default;
-    virtual void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+    virtual void TrySyncClosedPage(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
   };
 
   BackgroundSyncManager(Environment* environment, PageUsageDb* db);
@@ -33,10 +34,10 @@ class BackgroundSyncManager : public PageUsageListener {
   void SetDelegate(Delegate* delegate);
 
   // PageUsageListener:
-  void OnExternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnExternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnInternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) override;
 
   // Returns true, if there are no pending operations.
   bool IsDiscardable() const;

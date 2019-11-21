@@ -17,6 +17,7 @@
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
@@ -38,7 +39,7 @@ class EncryptionServiceImpl : public EncryptionService {
                            fit::function<void(Status, std::string)> callback) override;
   void GetObjectName(storage::ObjectIdentifier object_identifier,
                      fit::function<void(Status, std::string)> callback) override;
-  void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
+  void EncryptObject(storage::ObjectIdentifier object_identifier, absl::string_view content,
                      fit::function<void(Status, std::string)> callback) override;
   void DecryptObject(storage::ObjectIdentifier object_identifier, std::string encrypted_data,
                      fit::function<void(Status, std::string)> callback) override;
@@ -48,9 +49,9 @@ class EncryptionServiceImpl : public EncryptionService {
 
   std::string GetEntryId() override;
 
-  std::string GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
+  std::string GetEntryIdForMerge(absl::string_view entry_name, storage::CommitId left_parent_id,
                                  storage::CommitId right_parent_id,
-                                 fxl::StringView operation_list) override;
+                                 absl::string_view operation_list) override;
 
   std::string EncodeCommitId(std::string commit_id) override;
 

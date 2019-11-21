@@ -16,6 +16,7 @@
 #include "src/ledger/bin/tests/integration/integration_test.h"
 #include "src/ledger/bin/tests/integration/test_page_watcher.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
@@ -82,7 +83,8 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
   ASSERT_THAT(repository_connected_hierarchy,
               TopLevelMatches({RepositoryMatches(std::nullopt, {})}));
   const inspect_deprecated::ObjectHierarchy* repositories_hierarchy =
-      repository_connected_hierarchy.GetByPath({kRepositoriesInspectPathComponent.ToString()});
+      repository_connected_hierarchy.GetByPath(
+          {convert::ToString(kRepositoriesInspectPathComponent)});
   ASSERT_NE(nullptr, repositories_hierarchy);
   ASSERT_EQ(1UL, repositories_hierarchy->children().size());
   const inspect_deprecated::ObjectHierarchy& repository_hierarchy =
@@ -118,10 +120,10 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
       fully_connected_hierarchy,
       TopLevelMatches({RepositoryMatches(
           repository_display_name,
-          {LedgerMatches(
-              ledger_name,
-              {PageMatches(page_id.id, {storage::kFirstPageCommitId.ToString()},
-                           {CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {})})})})}));
+          {LedgerMatches(ledger_name,
+                         {PageMatches(page_id.id, {convert::ToString(storage::kFirstPageCommitId)},
+                                      {CommitMatches(convert::ToString(storage::kFirstPageCommitId),
+                                                     {}, {})})})})}));
 
   // Mutate the page.
   page->Put(key, value);
@@ -139,16 +141,17 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
           repository_display_name,
           {LedgerMatches(
               ledger_name,
-              {PageMatches(page_id.id, {std::nullopt},
-                           {CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {}),
-                            CommitMatches(std::nullopt, {storage::kFirstPageCommitId.ToString()},
-                                          {{{key.begin(), key.end()}, {value}}})})})})}));
+              {PageMatches(
+                  page_id.id, {std::nullopt},
+                  {CommitMatches(convert::ToString(storage::kFirstPageCommitId), {}, {}),
+                   CommitMatches(std::nullopt, {convert::ToString(storage::kFirstPageCommitId)},
+                                 {{{key.begin(), key.end()}, {value}}})})})})}));
   const inspect_deprecated::ObjectHierarchy* post_put_heads_node = post_put_hierarchy.GetByPath(
-      {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
-       kLedgersInspectPathComponent.ToString(), convert::ExtendedStringView(ledger_name).ToString(),
-       kPagesInspectPathComponent.ToString(),
-       PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
-       kHeadsInspectPathComponent.ToString()});
+      {convert::ToString(kRepositoriesInspectPathComponent), repository_display_name,
+       convert::ToString(kLedgersInspectPathComponent), convert::ToString(ledger_name),
+       convert::ToString(kPagesInspectPathComponent),
+       PageIdToDisplayName(convert::ToString(page_id.id)),
+       convert::ToString(kHeadsInspectPathComponent)});
   ASSERT_EQ(1UL, post_put_heads_node->children().size());
   const inspect_deprecated::ObjectHierarchy& post_put_head_node =
       post_put_heads_node->children()[0];
@@ -169,10 +172,11 @@ TEST_P(InspectTest, ContentInspectableAfterDisconnection) {
           repository_display_name,
           {LedgerMatches(
               ledger_name,
-              {PageMatches(page_id.id, {post_put_head},
-                           {CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {}),
-                            CommitMatches(post_put_head, {storage::kFirstPageCommitId.ToString()},
-                                          {{{key.begin(), key.end()}, {value}}})})})})}));
+              {PageMatches(
+                  page_id.id, {post_put_head},
+                  {CommitMatches(convert::ToString(storage::kFirstPageCommitId), {}, {}),
+                   CommitMatches(post_put_head, {convert::ToString(storage::kFirstPageCommitId)},
+                                 {{{key.begin(), key.end()}, {value}}})})})})}));
 
   // Disconnect the repository binding.
   repository.Unbind();
@@ -212,7 +216,8 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   ASSERT_THAT(repository_connected_hierarchy,
               TopLevelMatches({RepositoryMatches(std::nullopt, {})}));
   const inspect_deprecated::ObjectHierarchy* repositories_hierarchy =
-      repository_connected_hierarchy.GetByPath({kRepositoriesInspectPathComponent.ToString()});
+      repository_connected_hierarchy.GetByPath(
+          {convert::ToString(kRepositoriesInspectPathComponent)});
   ASSERT_NE(nullptr, repositories_hierarchy);
   ASSERT_EQ(1UL, repositories_hierarchy->children().size());
   const inspect_deprecated::ObjectHierarchy& repository_hierarchy =
@@ -241,10 +246,10 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
       fully_connected_hierarchy,
       TopLevelMatches({RepositoryMatches(
           repository_display_name,
-          {LedgerMatches(
-              ledger_name,
-              {PageMatches(page_id.id, {storage::kFirstPageCommitId.ToString()},
-                           {CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {})})})})}));
+          {LedgerMatches(ledger_name,
+                         {PageMatches(page_id.id, {convert::ToString(storage::kFirstPageCommitId)},
+                                      {CommitMatches(convert::ToString(storage::kFirstPageCommitId),
+                                                     {}, {})})})})}));
 
   // Mutate the page.
   page->Put(key, value);
@@ -269,16 +274,17 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
           repository_display_name,
           {LedgerMatches(
               ledger_name,
-              {PageMatches(page_id.id, {std::nullopt},
-                           {CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {}),
-                            CommitMatches(std::nullopt, {storage::kFirstPageCommitId.ToString()},
-                                          {{{key.begin(), key.end()}, {value}}})})})})}));
+              {PageMatches(
+                  page_id.id, {std::nullopt},
+                  {CommitMatches(convert::ToString(storage::kFirstPageCommitId), {}, {}),
+                   CommitMatches(std::nullopt, {convert::ToString(storage::kFirstPageCommitId)},
+                                 {{{key.begin(), key.end()}, {value}}})})})})}));
   const inspect_deprecated::ObjectHierarchy* post_put_heads_node = post_put_hierarchy.GetByPath(
-      {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
-       kLedgersInspectPathComponent.ToString(), convert::ExtendedStringView(ledger_name).ToString(),
-       kPagesInspectPathComponent.ToString(),
-       PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
-       kHeadsInspectPathComponent.ToString()});
+      {convert::ToString(kRepositoriesInspectPathComponent), repository_display_name,
+       convert::ToString(kLedgersInspectPathComponent), convert::ToString(ledger_name),
+       convert::ToString(kPagesInspectPathComponent),
+       PageIdToDisplayName(convert::ToString(page_id.id)),
+       convert::ToString(kHeadsInspectPathComponent)});
   ASSERT_EQ(1UL, post_put_heads_node->children().size());
   const inspect_deprecated::ObjectHierarchy& post_put_head_node =
       post_put_heads_node->children()[0];
@@ -320,34 +326,33 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   // the entire hierarchy is as expected.
   inspect_deprecated::ObjectHierarchy post_conflict_hierarchy;
   ASSERT_TRUE(app_instance_->Inspect(this, &post_conflict_hierarchy));
-  EXPECT_THAT(
-      post_conflict_hierarchy,
-      TopLevelMatches({RepositoryMatches(
-          repository_display_name,
-          {LedgerMatches(
-              ledger_name,
-              {PageMatches(
-                  page_id.id, {std::nullopt},
-                  {
-                      CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {}),
-                      CommitMatches(post_put_head_id, {storage::kFirstPageCommitId.ToString()},
-                                    {{{key.begin(), key.end()}, {value}}}),
-                      CommitMatches(std::nullopt, {post_put_head_id},
-                                    {{{key.begin(), key.end()},
-                                      {left_conflicting_value, right_conflicting_value}}}),
-                      CommitMatches(std::nullopt, {post_put_head_id},
-                                    {{{key.begin(), key.end()},
-                                      {left_conflicting_value, right_conflicting_value}}}),
-                      _,
-                  })})})}));
+  EXPECT_THAT(post_conflict_hierarchy,
+              TopLevelMatches({RepositoryMatches(
+                  repository_display_name,
+                  {LedgerMatches(
+                      ledger_name,
+                      {PageMatches(
+                          page_id.id, {std::nullopt},
+                          {
+                              CommitMatches(convert::ToString(storage::kFirstPageCommitId), {}, {}),
+                              CommitMatches(post_put_head_id,
+                                            {convert::ToString(storage::kFirstPageCommitId)},
+                                            {{{key.begin(), key.end()}, {value}}}),
+                              CommitMatches(std::nullopt, {post_put_head_id},
+                                            {{{key.begin(), key.end()},
+                                              {left_conflicting_value, right_conflicting_value}}}),
+                              CommitMatches(std::nullopt, {post_put_head_id},
+                                            {{{key.begin(), key.end()},
+                                              {left_conflicting_value, right_conflicting_value}}}),
+                              _,
+                          })})})}));
   const inspect_deprecated::ObjectHierarchy* post_conflict_heads_node =
       post_conflict_hierarchy.GetByPath(
-          {kRepositoriesInspectPathComponent.ToString(), repository_display_name,
-           kLedgersInspectPathComponent.ToString(),
-           convert::ExtendedStringView(ledger_name).ToString(),
-           kPagesInspectPathComponent.ToString(),
-           PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
-           kHeadsInspectPathComponent.ToString()});
+          {convert::ToString(kRepositoriesInspectPathComponent), repository_display_name,
+           convert::ToString(kLedgersInspectPathComponent), convert::ToString(ledger_name),
+           convert::ToString(kPagesInspectPathComponent),
+           PageIdToDisplayName(convert::ToString(page_id.id)),
+           convert::ToString(kHeadsInspectPathComponent)});
   ASSERT_EQ(1UL, post_conflict_heads_node->children().size());
   const inspect_deprecated::ObjectHierarchy& post_conflict_head_node =
       post_conflict_heads_node->children()[0];
@@ -356,15 +361,15 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   EXPECT_NE(post_put_head_id, post_conflict_head_id);
   const inspect_deprecated::ObjectHierarchy* post_conflict_head_commit_parents_node =
       post_conflict_hierarchy.GetByPath({
-          kRepositoriesInspectPathComponent.ToString(),
+          convert::ToString(kRepositoriesInspectPathComponent),
           repository_display_name,
-          kLedgersInspectPathComponent.ToString(),
-          convert::ExtendedStringView(ledger_name).ToString(),
-          kPagesInspectPathComponent.ToString(),
-          PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
-          kCommitsInspectPathComponent.ToString(),
+          convert::ToString(kLedgersInspectPathComponent),
+          convert::ToString(ledger_name),
+          convert::ToString(kPagesInspectPathComponent),
+          PageIdToDisplayName(convert::ToString(page_id.id)),
+          convert::ToString(kCommitsInspectPathComponent),
           CommitIdToDisplayName(post_conflict_head_id),
-          kParentsInspectPathComponent.ToString(),
+          convert::ToString(kParentsInspectPathComponent),
       });
   ASSERT_EQ(post_conflict_head_commit_parents_node->children().size(), 2UL);
   // Arbitrarily assign the IDs of the conflicting commits as "first" and "second"; note that it is
@@ -380,15 +385,15 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
   // |first_conflicting_commit_id|.
   const inspect_deprecated::ObjectHierarchy* post_conflict_first_conflicting_commit_entry_node =
       post_conflict_hierarchy.GetByPath({
-          kRepositoriesInspectPathComponent.ToString(),
+          convert::ToString(kRepositoriesInspectPathComponent),
           repository_display_name,
-          kLedgersInspectPathComponent.ToString(),
-          convert::ExtendedStringView(ledger_name).ToString(),
-          kPagesInspectPathComponent.ToString(),
-          PageIdToDisplayName(convert::ExtendedStringView(page_id.id).ToString()),
-          kCommitsInspectPathComponent.ToString(),
+          convert::ToString(kLedgersInspectPathComponent),
+          convert::ToString(ledger_name),
+          convert::ToString(kPagesInspectPathComponent),
+          PageIdToDisplayName(convert::ToString(page_id.id)),
+          convert::ToString(kCommitsInspectPathComponent),
           post_conflict_head_commit_parents_node->children()[0].name(),
-          kEntriesInspectPathComponent.ToString(),
+          convert::ToString(kEntriesInspectPathComponent),
           KeyToDisplayName({key.begin(), key.end()}),
       });
   bool left_was_first =
@@ -405,8 +410,9 @@ TEST_P(InspectTest, ConflictInCommitHistory) {
               {PageMatches(
                   page_id.id, {std::nullopt},
                   {
-                      CommitMatches(storage::kFirstPageCommitId.ToString(), {}, {}),
-                      CommitMatches(post_put_head_id, {storage::kFirstPageCommitId.ToString()},
+                      CommitMatches(convert::ToString(storage::kFirstPageCommitId), {}, {}),
+                      CommitMatches(post_put_head_id,
+                                    {convert::ToString(storage::kFirstPageCommitId)},
                                     {{{key.begin(), key.end()}, {value}}}),
                       CommitMatches(
                           first_conflicting_commit_id, {post_put_head_id},

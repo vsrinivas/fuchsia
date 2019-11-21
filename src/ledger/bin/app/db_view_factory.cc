@@ -7,11 +7,11 @@
 #include <memory>
 #include <string>
 
-#include <src/lib/fxl/strings/concatenate.h>
-
 #include "src/ledger/bin/app/serialization.h"
 #include "src/ledger/bin/public/status.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -76,12 +76,12 @@ class DbView : public storage::Db {
     ~DbViewBatch() override = default;
 
     Status Put(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
-               fxl::StringView value) override {
-      return batch_->Put(handler, fxl::Concatenate({db_view_->prefix_, key}), value);
+               absl::string_view value) override {
+      return batch_->Put(handler, absl::StrCat(db_view_->prefix_, key), value);
     }
 
     Status Delete(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override {
-      return batch_->Delete(handler, fxl::Concatenate({db_view_->prefix_, key}));
+      return batch_->Delete(handler, absl::StrCat(db_view_->prefix_, key));
     }
 
     Status Execute(coroutine::CoroutineHandler* handler) override {
@@ -105,16 +105,16 @@ class DbView : public storage::Db {
 
   Status Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
              std::string* value) override {
-    return db_->Get(handler, fxl::Concatenate({prefix_, key}), value);
+    return db_->Get(handler, absl::StrCat(prefix_, key), value);
   }
 
   Status HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override {
-    return db_->HasKey(handler, fxl::Concatenate({prefix_, key}));
+    return db_->HasKey(handler, absl::StrCat(prefix_, key));
   }
 
   Status HasPrefix(coroutine::CoroutineHandler* handler,
                    convert::ExtendedStringView prefix) override {
-    return db_->HasPrefix(handler, fxl::Concatenate({prefix_, prefix}));
+    return db_->HasPrefix(handler, absl::StrCat(prefix_, prefix));
   }
 
   // Retrieves the value for the given |key| as a Piece with the provided
@@ -122,15 +122,14 @@ class DbView : public storage::Db {
   Status GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    storage::ObjectIdentifier object_identifier,
                    std::unique_ptr<const storage::Piece>* piece) override {
-    return db_->GetObject(handler, fxl::Concatenate({prefix_, key}), std::move(object_identifier),
-                          piece);
+    return db_->GetObject(handler, absl::StrCat(prefix_, key), std::move(object_identifier), piece);
   }
 
   // Retrieves all keys matching the given |prefix|. |key_suffixes| will be
   // updated to contain the suffixes of corresponding keys.
   Status GetByPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
                      std::vector<std::string>* key_suffixes) override {
-    return db_->GetByPrefix(handler, fxl::Concatenate({prefix_, prefix}), key_suffixes);
+    return db_->GetByPrefix(handler, absl::StrCat(prefix_, prefix), key_suffixes);
   }
 
   // Retrieves all entries matching the given |prefix|. The keys of the
@@ -138,7 +137,7 @@ class DbView : public storage::Db {
   Status GetEntriesByPrefix(coroutine::CoroutineHandler* handler,
                             convert::ExtendedStringView prefix,
                             std::vector<std::pair<std::string, std::string>>* entries) override {
-    return db_->GetEntriesByPrefix(handler, fxl::Concatenate({prefix_, prefix}), entries);
+    return db_->GetEntriesByPrefix(handler, absl::StrCat(prefix_, prefix), entries);
   }
 
   // Retrieves an entry iterator over the entries whose keys start with
@@ -152,7 +151,7 @@ class DbView : public storage::Db {
         const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>
         base_iterator;
     RETURN_ON_ERROR(
-        db_->GetIteratorAtPrefix(handler, fxl::Concatenate({prefix_, prefix}), &base_iterator));
+        db_->GetIteratorAtPrefix(handler, absl::StrCat(prefix_, prefix), &base_iterator));
     *iterator = std::make_unique<SubIterator>(std::move(base_iterator), prefix_);
     return Status::OK;
   }

@@ -14,7 +14,7 @@
 
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 // MessageHolder is used to hold a parsed Flatbuffer message along with its
@@ -74,7 +74,7 @@ class MessageHolder {
 // can be obtained.
 template <class M>
 std::optional<MessageHolder<M>> CreateMessageHolder(
-    fxl::StringView data, fit::function<const M*(convert::ExtendedStringView)> get_message) {
+    absl::string_view data, fit::function<const M*(convert::ExtendedStringView)> get_message) {
   std::unique_ptr<std::vector<uint8_t>> data_vec =
       std::make_unique<std::vector<uint8_t>>(data.begin(), data.end());
 

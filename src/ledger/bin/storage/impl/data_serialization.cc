@@ -7,18 +7,18 @@
 #include <initializer_list>
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
-std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_views) {
+std::string SafeConcatenation(std::initializer_list<absl::string_view> string_views) {
   std::string result;
   size_t result_size = string_views.size() * sizeof(size_t);
-  for (const fxl::StringView& string_view : string_views) {
+  for (const absl::string_view& string_view : string_views) {
     result_size += string_view.size();
   }
   result.reserve(result_size);
-  for (const fxl::StringView& string_view : string_views) {
+  for (const absl::string_view& string_view : string_views) {
     result.append(storage::SerializeData(string_view.size()).data(), sizeof(size_t));
     result.append(string_view.data(), string_view.size());
   }

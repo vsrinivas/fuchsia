@@ -15,7 +15,9 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_page_cloud.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
@@ -54,9 +56,9 @@ class TestPageStorage : public storage::PageStorageEmptyImpl {
     });
   }
 
-  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+  void SetSyncMetadata(absl::string_view key, absl::string_view value,
                        fit::function<void(ledger::Status)> callback) override {
-    sync_metadata[key.ToString()] = value.ToString();
+    sync_metadata[convert::ToString(key)] = convert::ToString(value);
     async::PostTask(dispatcher_,
                     [callback = std::move(callback)]() { callback(ledger::Status::OK); });
   }
@@ -98,7 +100,7 @@ TEST_F(BatchDownloadTest, AddCommit) {
   EXPECT_EQ(error_calls, 0);
   EXPECT_EQ(storage_.received_commits.size(), 1u);
   EXPECT_EQ(storage_.received_commits[id], value);
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "42");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "42");
 }
 
 TEST_F(BatchDownloadTest, AddMultipleCommits) {
@@ -122,7 +124,7 @@ TEST_F(BatchDownloadTest, AddMultipleCommits) {
   EXPECT_EQ(storage_.received_commits.size(), 2u);
   EXPECT_EQ(storage_.received_commits[id1], value1);
   EXPECT_EQ(storage_.received_commits[id2], value2);
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "43");
 }
 
 TEST_F(BatchDownloadTest, FailToAddCommit) {
@@ -140,7 +142,7 @@ TEST_F(BatchDownloadTest, FailToAddCommit) {
   EXPECT_EQ(done_calls, 0);
   EXPECT_EQ(error_calls, 1);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 }
 
 TEST_F(BatchDownloadTest, MissingId) {
@@ -160,7 +162,7 @@ TEST_F(BatchDownloadTest, MissingId) {
   EXPECT_EQ(done_calls, 0);
   EXPECT_EQ(error_calls, 1);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 }
 
 TEST_F(BatchDownloadTest, MissingData) {
@@ -180,7 +182,7 @@ TEST_F(BatchDownloadTest, MissingData) {
   EXPECT_EQ(done_calls, 0);
   EXPECT_EQ(error_calls, 1);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 }
 
 TEST_F(BatchDownloadTest, IdMismatch) {
@@ -200,7 +202,7 @@ TEST_F(BatchDownloadTest, IdMismatch) {
   EXPECT_EQ(done_calls, 0);
   EXPECT_EQ(error_calls, 1);
   EXPECT_TRUE(storage_.received_commits.empty());
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 }
 
 }  // namespace

@@ -12,15 +12,16 @@
 #include <iostream>
 
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace {
-constexpr fxl::StringView kCloudProviderUrl =
+constexpr absl::string_view kCloudProviderUrl =
     "fuchsia-pkg://fuchsia.com/cloud_provider_in_memory#meta/"
     "cloud_provider_in_memory.cmx";
 
-constexpr fxl::StringView kGtestFilter =
+constexpr absl::string_view kGtestFilter =
     "--gtest_filter=-PageCloudTest.Diff_*:PageCloudTest.DiffCompat_*";
 
 }  // namespace
@@ -34,7 +35,7 @@ int main(int argc, char** argv) {
       loop.dispatcher(), component_context.get(),
       [component_launcher = std::move(component_launcher)](auto request) {
         fuchsia::sys::LaunchInfo launch_info;
-        launch_info.url = kCloudProviderUrl.ToString();
+        launch_info.url = convert::ToString(kCloudProviderUrl);
         auto cloud_provider_services =
             sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 
@@ -47,7 +48,7 @@ int main(int argc, char** argv) {
 
   int32_t return_code = -1;
   async::PostTask(loop.dispatcher(), [&launcher, &return_code, &loop] {
-    launcher.Run({kGtestFilter.ToString()}, [&return_code, &loop](int32_t result) {
+    launcher.Run({convert::ToString(kGtestFilter)}, [&return_code, &loop](int32_t result) {
       return_code = result;
       loop.Quit();
     });

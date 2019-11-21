@@ -15,6 +15,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -47,7 +48,7 @@ Status BasePiece::AppendReferences(ObjectReferencesAndPriority* references) cons
 
 InlinePiece::InlinePiece(ObjectIdentifier identifier) : identifier_(std::move(identifier)) {}
 
-fxl::StringView InlinePiece::GetData() const {
+absl::string_view InlinePiece::GetData() const {
   return ExtractObjectDigestData(identifier_.object_digest());
 }
 
@@ -57,14 +58,14 @@ DataChunkPiece::DataChunkPiece(ObjectIdentifier identifier,
                                std::unique_ptr<DataSource::DataChunk> chunk)
     : identifier_(std::move(identifier)), chunk_(std::move(chunk)) {}
 
-fxl::StringView DataChunkPiece::GetData() const { return chunk_->Get(); }
+absl::string_view DataChunkPiece::GetData() const { return chunk_->Get(); }
 
 ObjectIdentifier DataChunkPiece::GetIdentifier() const { return identifier_; }
 
 LevelDBPiece::LevelDBPiece(ObjectIdentifier identifier, std::unique_ptr<leveldb::Iterator> iterator)
     : identifier_(std::move(identifier)), iterator_(std::move(iterator)) {}
 
-fxl::StringView LevelDBPiece::GetData() const {
+absl::string_view LevelDBPiece::GetData() const {
   return convert::ExtendedStringView(iterator_->value());
 }
 
@@ -94,7 +95,7 @@ std::unique_ptr<const Piece> ChunkObject::ReleasePiece() { return std::move(piec
 
 ObjectIdentifier ChunkObject::GetIdentifier() const { return piece_->GetIdentifier(); }
 
-Status ChunkObject::GetData(fxl::StringView* data) const {
+Status ChunkObject::GetData(absl::string_view* data) const {
   *data = piece_->GetData();
   return Status::OK;
 }
@@ -110,7 +111,7 @@ VmoObject::~VmoObject() {
 
 ObjectIdentifier VmoObject::GetIdentifier() const { return identifier_; }
 
-Status VmoObject::GetData(fxl::StringView* data) const {
+Status VmoObject::GetData(absl::string_view* data) const {
   RETURN_ON_ERROR(Initialize());
   *data = data_;
   return Status::OK;
@@ -149,7 +150,7 @@ Status VmoObject::Initialize() const {
     return Status::INTERNAL_ERROR;
   }
 
-  data_ = fxl::StringView(mapped_address, vmo_.size());
+  data_ = absl::string_view(mapped_address, vmo_.size());
   initialized_ = true;
 
   return Status::OK;

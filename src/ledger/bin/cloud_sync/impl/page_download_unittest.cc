@@ -29,6 +29,7 @@
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/backoff/testing/test_backoff.h"
 #include "src/lib/callback/capture.h"
@@ -169,7 +170,7 @@ using PageDownloadTest = BasePageDownloadTest<encryption::FakeEncryptionService>
 // provider and saved in storage.
 TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
@@ -180,13 +181,13 @@ TEST_F(PageDownloadTest, DownloadBacklog) {
   EXPECT_EQ(storage_.received_commits.size(), 2u);
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "43");
   EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
 
 TEST_F(PageDownloadTest, DownloadLongBacklog) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 
   const size_t commit_count = 100'000;
   for (size_t i = 0; i < commit_count; i++) {
@@ -198,7 +199,7 @@ TEST_F(PageDownloadTest, DownloadLongBacklog) {
   ASSERT_TRUE(StartDownloadAndWaitForIdle());
 
   EXPECT_EQ(storage_.received_commits.size(), commit_count);
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "43");
   EXPECT_EQ(states_.back(), DOWNLOAD_IDLE);
 }
 
@@ -224,7 +225,7 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
 
   // Deliver a remote notification.
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1", "content2"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("43"), [] {});
@@ -234,7 +235,7 @@ TEST_F(PageDownloadTest, ReceiveNotifications) {
   EXPECT_EQ(storage_.received_commits.size(), 2u);
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "43");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "43");
 }
 
 // Verify that we retry setting the remote watcher on connection errors
@@ -266,7 +267,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
 
   // Deliver a remote notification.
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
   auto commit_pack = MakeTestCommitPack(&encryption_service_, {"content1"});
   ASSERT_TRUE(commit_pack);
   page_cloud_.set_watcher->OnNewCommits(std::move(*commit_pack), MakeToken("42"), [] {});
@@ -289,7 +290,7 @@ TEST_F(PageDownloadTest, CoalesceMultipleNotifications) {
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content2"));
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content3"));
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "44");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "44");
   EXPECT_EQ(storage_.add_commits_from_sync_calls, 2u);
 }
 
@@ -322,7 +323,7 @@ TEST_F(PageDownloadTest, RetryDownloadBacklog) {
 
   EXPECT_EQ(storage_.received_commits.size(), 1u);
   EXPECT_TRUE(storage_.ReceivedCommitsContains("content1"));
-  EXPECT_EQ(storage_.sync_metadata[kTimestampKey.ToString()], "42");
+  EXPECT_EQ(storage_.sync_metadata[convert::ToString(kTimestampKey)], "42");
 }
 
 // Verifies that a failure to persist the remote commit stops syncing remote
@@ -401,7 +402,7 @@ TEST_F(PageDownloadTest, GetObject) {
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(source, storage::ChangeSource::CLOUD);
   EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
-  EXPECT_EQ(data_chunk->Get().ToString(), "content");
+  EXPECT_EQ(data_chunk->Get(), "content");
   EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
 }
 
@@ -440,7 +441,7 @@ TEST_F(PageDownloadTest, RetryGetObject) {
   EXPECT_EQ(page_cloud_.get_object_calls, 6u);
   EXPECT_EQ(status, ledger::Status::OK);
   EXPECT_EQ(source, storage::ChangeSource::CLOUD);
-  EXPECT_EQ(data_chunk->Get().ToString(), "content");
+  EXPECT_EQ(data_chunk->Get(), "content");
   EXPECT_EQ(is_object_synced, storage::IsObjectSynced::YES);
 }
 
@@ -482,7 +483,7 @@ using FailingDecryptCommitPageDownloadTest =
     BasePageDownloadTest<FailingDecryptCommitEncryptionService>;
 TEST_F(FailingDecryptCommitPageDownloadTest, Fail) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content1"));
   page_cloud_.commits_to_return.push_back(MakeTestCommit(&encryption_service_, "content2"));
@@ -634,7 +635,7 @@ TEST_F(PageDownloadDiffTest, GetDiffFromEmpty) {
                                                  ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
-  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(base_commit, convert::ToString(storage::kFirstPageCommitId));
   EXPECT_EQ(changes, expected_changes);
 
   EXPECT_THAT(states_, ElementsAre(DOWNLOAD_IN_PROGRESS, DOWNLOAD_IDLE));
@@ -852,7 +853,7 @@ TEST_F(PageDownloadDiffTest, NormalizationSortByKey) {
                                                  ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
-  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(base_commit, convert::ToString(storage::kFirstPageCommitId));
   // Entries are received in sorted order.
   EXPECT_EQ(changes, expected_changes);
 
@@ -903,7 +904,7 @@ TEST_F(PageDownloadDiffTest, NormalizationRemoveDuplicates) {
                                                  ToRemoteId("base1"), ToRemoteId("base2")})));
   ASSERT_TRUE(called);
   EXPECT_EQ(status, ledger::Status::OK);
-  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(base_commit, convert::ToString(storage::kFirstPageCommitId));
   // Changes are correctly simplified.
   EXPECT_EQ(changes, expected_changes);
 
@@ -935,7 +936,7 @@ TEST_F(PageDownloadDiffTest, NormalizationDuplicateKeys) {
   ASSERT_TRUE(called);
   // The diff is accepted by PageDownload.
   EXPECT_EQ(status, ledger::Status::OK);
-  EXPECT_EQ(base_commit, storage::kFirstPageCommitId.ToString());
+  EXPECT_EQ(base_commit, convert::ToString(storage::kFirstPageCommitId));
   // Entries are received in sorted order. The order between the two deletions is undefined.
   EXPECT_THAT(changes,
               AnyOf(ElementsAre(expected_changes[0], expected_changes[1], expected_changes[2]),
@@ -1007,7 +1008,7 @@ using FailingDecryptEntryPayloadPageDownloadDiffTest =
     BasePageDownloadDiffTest<FailingDecryptEntryPayloadEncryptionService>;
 TEST_F(FailingDecryptEntryPayloadPageDownloadDiffTest, Fail) {
   EXPECT_EQ(storage_.received_commits.size(), 0u);
-  EXPECT_EQ(storage_.sync_metadata.count(kTimestampKey.ToString()), 0u);
+  EXPECT_EQ(storage_.sync_metadata.count(convert::ToString(kTimestampKey)), 0u);
 
   page_cloud_.diff_to_return = MakeTestDiff().first;
 

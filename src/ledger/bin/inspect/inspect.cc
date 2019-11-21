@@ -6,6 +6,7 @@
 
 #include <fuchsia/ledger/cpp/fidl.h>
 
+#include <cctype>
 #include <string>
 
 #include "src/ledger/bin/app/constants.h"
@@ -19,7 +20,7 @@ namespace {
 
 // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=12294): Support
 // unicode.
-bool IsStringPrintable(const fxl::StringView& input) {
+bool IsStringPrintable(absl::string_view input) {
   // Just ASCII for the time being. Sorry unicode!
   return std::all_of(input.begin(), input.end(),
                      [](unsigned char c) { return c >= 32 && c < 128; });
@@ -28,9 +29,8 @@ bool IsStringPrintable(const fxl::StringView& input) {
 // TODO(https://github.com/abseil/abseil-cpp/issues/141): This shouldn't be
 // necessary; eliminate  it.
 bool IsHex(absl::string_view input) {
-  return (input.size() % 2 == 0) && std::all_of(input.begin(), input.end(), [](unsigned char c) {
-           return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
-         });
+  return (input.size() % 2 == 0) &&
+         std::all_of(input.begin(), input.end(), [](unsigned char c) { return std::isxdigit(c); });
 }
 
 // Modifies |page_id| to be the hex-decoding of |data|. (Preconditions: |data|

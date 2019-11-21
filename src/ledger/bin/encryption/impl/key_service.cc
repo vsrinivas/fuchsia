@@ -11,7 +11,7 @@
 
 #include "src/ledger/bin/encryption/primitives/kdf.h"
 #include "src/lib/callback/scoped_callback.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace encryption {
 
@@ -32,7 +32,7 @@ void KeyService::GetReferenceKey(const std::string& namespace_id,
                                  const std::string& reference_key_id,
                                  fit::function<void(const std::string&)> callback) {
   std::string result =
-      HMAC256KDF(fxl::Concatenate({namespace_id, reference_key_id}), kRandomlyGeneratedKeySize);
+      HMAC256KDF(absl::StrCat(namespace_id, reference_key_id), kRandomlyGeneratedKeySize);
   async::PostTask(dispatcher_, callback::MakeScoped(weak_factory_.GetWeakPtr(),
                                                     [result = std::move(result),
                                                      callback = std::move(callback)]() mutable {
@@ -49,7 +49,7 @@ void KeyService::GetWrappingKey(uint32_t key_index,
       return;
     }
     std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "wrapping"}), kDerivedKeySize);
+        HMAC256KDF(absl::StrCat(master_key, namespace_id_, "wrapping"), kDerivedKeySize);
     callback(Status::OK, derived_key);
   });
 }
@@ -62,7 +62,7 @@ void KeyService::GetChunkingKey(fit::function<void(Status, std::string)> callbac
       return;
     }
     std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "chunking"}), kChunkingKeySize);
+        HMAC256KDF(absl::StrCat(master_key, namespace_id_, "chunking"), kChunkingKeySize);
     callback(Status::OK, derived_key);
   });
 }
@@ -75,7 +75,7 @@ void KeyService::GetPageIdKey(fit::function<void(Status, std::string)> callback)
       return;
     }
     std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "page_id"}), kDerivedKeySize);
+        HMAC256KDF(absl::StrCat(master_key, namespace_id_, "page_id"), kDerivedKeySize);
     callback(Status::OK, derived_key);
   });
 }
@@ -90,7 +90,7 @@ void KeyService::GetEncryptionKey(uint32_t key_index,
       return;
     }
     std::string derived_key =
-        HMAC256KDF(fxl::Concatenate({master_key, namespace_id_, "encryption"}), 16u);
+        HMAC256KDF(absl::StrCat(master_key, namespace_id_, "encryption"), 16u);
     callback(Status::OK, derived_key);
   });
 }
@@ -104,8 +104,8 @@ void KeyService::GetRemoteObjectIdKey(uint32_t key_index,
       callback(status, "");
       return;
     }
-    std::string derived_key = HMAC256KDF(
-        fxl::Concatenate({master_key, namespace_id_, "remote_object_id"}), kDerivedKeySize);
+    std::string derived_key =
+        HMAC256KDF(absl::StrCat(master_key, namespace_id_, "remote_object_id"), kDerivedKeySize);
     callback(Status::OK, derived_key);
   });
 }

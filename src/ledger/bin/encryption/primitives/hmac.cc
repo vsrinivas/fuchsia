@@ -8,9 +8,12 @@
 #include <openssl/hmac.h>
 #include <openssl/sha.h>
 
+#include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
+
 namespace encryption {
 
-std::string SHA256HMAC(fxl::StringView key, fxl::StringView data) {
+std::string SHA256HMAC(absl::string_view key, absl::string_view data) {
   FXL_CHECK(key.size() >= SHA256_DIGEST_LENGTH);
 
   std::string result;

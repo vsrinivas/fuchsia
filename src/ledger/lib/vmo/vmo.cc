@@ -9,6 +9,7 @@
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -60,13 +61,13 @@ bool ContainerFromVmo(const zx::vmo& buffer, uint64_t num_bytes, Container* cont
 
 }  // namespace
 
-bool VmoFromString(const fxl::StringView& string, SizedVmo* sized_vmo) {
-  return VmoFromContainer<fxl::StringView>(string, sized_vmo);
+bool VmoFromString(const absl::string_view& string, SizedVmo* sized_vmo) {
+  return VmoFromContainer<absl::string_view>(string, sized_vmo);
 }
 
-bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr) {
+bool VmoFromString(const absl::string_view& string, fuchsia::mem::Buffer* buffer_ptr) {
   ledger::SizedVmo sized_vmo;
-  if (!VmoFromContainer<fxl::StringView>(string, &sized_vmo)) {
+  if (!VmoFromContainer<absl::string_view>(string, &sized_vmo)) {
     return false;
   }
   *buffer_ptr = std::move(sized_vmo).ToTransport();

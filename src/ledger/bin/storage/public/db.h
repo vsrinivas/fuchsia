@@ -9,6 +9,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -38,7 +39,7 @@ class Db {
     // Inserts the given key-value pair in the database.
     FXL_WARN_UNUSED_RESULT virtual Status Put(coroutine::CoroutineHandler* handler,
                                               convert::ExtendedStringView key,
-                                              fxl::StringView value) = 0;
+                                              absl::string_view value) = 0;
 
     // Deletes the entry in the database with the given |key|.
     FXL_WARN_UNUSED_RESULT virtual Status Delete(coroutine::CoroutineHandler* handler,

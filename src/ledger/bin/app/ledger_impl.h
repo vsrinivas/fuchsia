@@ -15,7 +15,6 @@
 #include "src/ledger/bin/fidl/syncable.h"
 #include "src/ledger/bin/storage/public/ledger_storage.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace ledger {
 

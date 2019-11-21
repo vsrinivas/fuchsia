@@ -19,6 +19,7 @@ source_set("primitives") {
   deps = [
     "//peridot/lib/rng",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/boringssl",
   ]
 
@@ -38,6 +39,7 @@ source_set("unittests") {
     ":primitives",
     "//peridot/lib/rng:testing",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]
 

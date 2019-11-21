@@ -8,20 +8,21 @@
 #include <string>
 
 #include "src/ledger/bin/public/status.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace clocks {
 namespace {
 constexpr size_t kFingerprintSize = 16;
 
-constexpr fxl::StringView kFingerprintKey = "clocks/fingerprint";
-constexpr fxl::StringView kFingerprintUnsyncedKey = "clocks/unsynced";
-constexpr fxl::StringView kCounterKey = "clocks/counter";
+constexpr absl::string_view kFingerprintKey = "clocks/fingerprint";
+constexpr absl::string_view kFingerprintUnsyncedKey = "clocks/unsynced";
+constexpr absl::string_view kCounterKey = "clocks/counter";
 
-fxl::StringView ToStringView(const uint64_t& counter) {
-  return fxl::StringView(reinterpret_cast<const char*>(&counter), sizeof(uint64_t));
+absl::string_view ToStringView(const uint64_t& counter) {
+  return absl::string_view(reinterpret_cast<const char*>(&counter), sizeof(uint64_t));
 }
 
-uint64_t FromStringView(fxl::StringView data) {
+uint64_t FromStringView(absl::string_view data) {
   FXL_DCHECK(data.size() == sizeof(uint64_t));
   uint64_t result;
   memcpy(&result, data.data(), sizeof(uint64_t));
@@ -49,7 +50,7 @@ ledger::Status DeviceIdManagerImpl::InternalInit(coroutine::CoroutineHandler* ha
   if (status == ledger::Status::INTERNAL_NOT_FOUND) {
     char fingerprint_array[kFingerprintSize];
     environment_->random()->Draw(fingerprint_array, kFingerprintSize);
-    fingerprint_ = convert::ToHex(fxl::StringView(fingerprint_array, kFingerprintSize));
+    fingerprint_ = convert::ToHex(absl::string_view(fingerprint_array, kFingerprintSize));
     counter_ = 0;
     std::unique_ptr<storage::Db::Batch> batch;
     RETURN_ON_ERROR(db_->StartBatch(handler, &batch));

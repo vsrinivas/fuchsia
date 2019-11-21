@@ -10,7 +10,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
 namespace {
@@ -62,15 +62,15 @@ TEST_F(DbSerialization, SerializationVersionControl) {
 
   // Object Status: Transient row (prefix '&').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::TRANSIENT, identifier),
-            fxl::Concatenate({"&", identifier_serialization}));
+            absl::StrCat("&", identifier_serialization));
 
   // Object Status: Local row (prefix '\'').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::LOCAL, identifier),
-            fxl::Concatenate({"'", identifier_serialization}));
+            absl::StrCat("'", identifier_serialization));
 
   // Object Status: Synced row (prefix '(').
   EXPECT_EQ(ObjectStatusRow::GetKeyFor(PageDbObjectStatus::SYNCED, identifier),
-            fxl::Concatenate({"(", identifier_serialization}));
+            absl::StrCat("(", identifier_serialization));
 
   // Sync Metadata row (prefix ')').
   EXPECT_EQ(SyncMetadataRow::GetKeyFor("metadata"), ")metadata");

@@ -19,6 +19,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -75,7 +76,7 @@ void TreeNode::FromIdentifier(
 }
 
 Status TreeNode::FromObject(const Object& object, std::unique_ptr<const TreeNode>* node) {
-  fxl::StringView data;
+  absl::string_view data;
   RETURN_ON_ERROR(object.GetData(&data));
   uint8_t level;
   std::vector<Entry> entries;

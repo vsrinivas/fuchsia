@@ -15,9 +15,11 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/callback/waiter.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 namespace {
@@ -107,8 +109,7 @@ PageDownload::PageDownload(callback::ScopedTaskRunner* task_runner, storage::Pag
       page_cloud_(page_cloud),
       delegate_(delegate),
       backoff_(std::move(backoff)),
-      log_prefix_(
-          fxl::Concatenate({"Page ", convert::ToHex(storage->GetId()), " download sync: "})),
+      log_prefix_(absl::StrCat("Page ", convert::ToHex(storage->GetId()), " download sync: ")),
       watcher_binding_(this),
       weak_factory_(this) {}
 
@@ -402,7 +403,7 @@ void PageDownload::DecryptObject(
           return;
         }
         encryption_service_->DecryptObject(
-            object_identifier, content->Get().ToString(),
+            object_identifier, convert::ToString(content->Get()),
             [this, object_identifier, callback = std::move(callback)](encryption::Status status,
                                                                       std::string content) mutable {
               if (status != encryption::Status::OK) {
@@ -493,7 +494,7 @@ void PageDownload::DecodeAndParseDiff(
        callback = std::move(callback)](ledger::Status status,
                                        std::vector<storage::EntryChange> changes) mutable {
         if (!base_remote_commit_id) {
-          callback(status, storage::kFirstPageCommitId.ToString(), std::move(changes));
+          callback(status, convert::ToString(storage::kFirstPageCommitId), std::move(changes));
         } else {
           storage_->GetCommitIdFromRemoteId(
               *base_remote_commit_id,
@@ -577,7 +578,7 @@ void PageDownload::GetDiff(
 }
 
 void PageDownload::HandleGetObjectError(
-    storage::ObjectIdentifier object_identifier, bool is_permanent, fxl::StringView error_name,
+    storage::ObjectIdentifier object_identifier, bool is_permanent, absl::string_view error_name,
     fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                        std::unique_ptr<storage::DataSource::DataChunk>)>
         callback) {
@@ -603,7 +604,7 @@ void PageDownload::HandleGetObjectError(
 
 void PageDownload::HandleGetDiffError(
     storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases, bool is_permanent,
-    fxl::StringView error_name,
+    absl::string_view error_name,
     fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
         callback) {
   if (is_permanent) {
@@ -626,7 +627,7 @@ void PageDownload::HandleGetDiffError(
   });
 }
 
-void PageDownload::HandleDownloadCommitError(fxl::StringView error_description) {
+void PageDownload::HandleDownloadCommitError(absl::string_view error_description) {
   FXL_LOG(ERROR) << log_prefix_ << error_description << " Stopping sync.";
   if (watcher_binding_.is_bound()) {
     watcher_binding_.Unbind();

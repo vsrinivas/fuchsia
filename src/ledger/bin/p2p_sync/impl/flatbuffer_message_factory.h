@@ -8,14 +8,14 @@
 #include <flatbuffers/flatbuffers.h>
 
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 
 // Fill |buffer| with a new |Message| containing a |Response| for an unknown
 // namespace or page.
 void CreateUnknownResponseMessage(flatbuffers::FlatBufferBuilder* buffer,
-                                  fxl::StringView namespace_id, fxl::StringView page_id,
+                                  absl::string_view namespace_id, absl::string_view page_id,
                                   ResponseStatus status);
 }  // namespace p2p_sync
 

@@ -19,6 +19,7 @@ source_set("convert") {
   public_deps = [
     "//sdk/lib/fidl/cpp",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/flatbuffers",
     "//third_party/leveldb",
     "//third_party/rapidjson",

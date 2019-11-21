@@ -8,16 +8,16 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
 
 class FakePiece : public Piece {
  public:
-  FakePiece(ObjectIdentifier identifier, fxl::StringView content);
+  FakePiece(ObjectIdentifier identifier, absl::string_view content);
 
-  fxl::StringView GetData() const override;
+  absl::string_view GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
   Status AppendReferences(ObjectReferencesAndPriority* references) const override;
 
@@ -31,10 +31,10 @@ class FakePiece : public Piece {
 class FakeObject : public Object {
  public:
   explicit FakeObject(std::unique_ptr<const Piece> piece);
-  explicit FakeObject(ObjectIdentifier identifier, fxl::StringView content);
+  explicit FakeObject(ObjectIdentifier identifier, absl::string_view content);
 
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
+  Status GetData(absl::string_view* data) const override;
   Status AppendReferences(ObjectReferencesAndPriority* references) const override;
 
  private:

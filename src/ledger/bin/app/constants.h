@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_APP_CONSTANTS_H_
 #define SRC_LEDGER_BIN_APP_CONSTANTS_H_
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -13,14 +13,14 @@ namespace ledger {
 inline constexpr size_t kMaxKeySize = 256;
 
 // The root Page ID.
-extern const fxl::StringView kRootPageId;
+extern const absl::string_view kRootPageId;
 
 // Filename under which the server id used to sync a given user is stored within
 // the repository dir of that user.
-inline constexpr fxl::StringView kServerIdFilename = "server_id";
+inline constexpr absl::string_view kServerIdFilename = "server_id";
 
 // The serialization version of the repository DB.
-inline constexpr fxl::StringView kRepositoryDbSerializationVersion = "2";
+inline constexpr absl::string_view kRepositoryDbSerializationVersion = "2";
 
 }  // namespace ledger
 

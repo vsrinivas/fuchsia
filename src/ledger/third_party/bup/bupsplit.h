@@ -33,7 +33,7 @@
 #include <lib/fit/function.h>
 #include <stdint.h>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace bup {
 
@@ -81,7 +81,7 @@ class RollSumSplit {
   // If |bits| is not null, and a cut has been found, |*bits| will be the number
   // of trailing 1s in the current hash. It will always be greater of equals to
   // |kBlobBits|.
-  size_t Feed(fxl::StringView buffer, size_t* bits);
+  size_t Feed(absl::string_view buffer, size_t* bits);
 
  private:
   void Add(uint8_t drop, uint8_t add);

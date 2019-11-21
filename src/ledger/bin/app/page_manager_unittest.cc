@@ -40,12 +40,13 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kLedgerName = "ledger_under_test";
-constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
+constexpr absl::string_view kLedgerName = "ledger_under_test";
+constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
 
 class PageManagerTest : public TestWithEnvironment {
  public:
@@ -59,15 +60,15 @@ class PageManagerTest : public TestWithEnvironment {
   void SetUp() override {
     TestWithEnvironment::SetUp();
     page_id_ = RandomId();
-    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
-    attachment_node_ =
-        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
+    top_level_node_ = inspect_deprecated::Node(convert::ToString(kTestTopLevelNodeName));
+    attachment_node_ = top_level_node_.CreateChild(
+        convert::ToString(kSystemUnderTestAttachmentPointPathComponent));
     ledger_merge_manager_ = std::make_unique<LedgerMergeManager>(&environment_);
     storage_ = std::make_unique<storage::fake::FakeLedgerStorage>(&environment_);
     sync_ = std::make_unique<sync_coordinator::FakeLedgerSync>();
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     page_manager_ = std::make_unique<PageManager>(
-        &environment_, kLedgerName.ToString(), convert::ToString(page_id_.id),
+        &environment_, convert::ToString(kLedgerName), convert::ToString(page_id_.id),
         std::vector<PageUsageListener*>{disk_cleanup_manager_.get()}, storage_.get(), sync_.get(),
         ledger_merge_manager_.get(), attachment_node_.CreateChild(convert::ToString(page_id_.id)));
   }
@@ -171,10 +172,11 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenHeadDetacherCalled) {
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &heads_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
-  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+  EXPECT_TRUE(OpenChild(&heads_node,
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &head_node, &test_loop()));
 
   page_detacher();
@@ -220,12 +222,12 @@ TEST_F(PageManagerTest, OnDiscardableCalledWhenCommitDetacherCalled) {
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &commits_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
-                        CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
-                        &test_loop()));
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
+                        &commit_node, &test_loop()));
 
   page_detacher();
   RunLoopUntilIdle();
@@ -269,18 +271,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndLaterThanPageBinding
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &heads_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
-  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+  EXPECT_TRUE(OpenChild(&heads_node,
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &head_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &commits_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
-                        CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
-                        &test_loop()));
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
+                        &commit_node, &test_loop()));
 
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
@@ -341,18 +344,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledInspectEarlierAndPageBindingLater) {
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &heads_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
-  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+  EXPECT_TRUE(OpenChild(&heads_node,
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &head_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &commits_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
-                        CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
-                        &test_loop()));
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
+                        &commit_node, &test_loop()));
 
   page_manager_->GetPage(
       LedgerImpl::Delegate::PageState::NEW, page.NewRequest(),
@@ -425,18 +429,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndInspectLater) {
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &heads_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
-  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+  EXPECT_TRUE(OpenChild(&heads_node,
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &head_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &commits_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
-                        CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
-                        &test_loop()));
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
+                        &commit_node, &test_loop()));
 
   page.Unbind();
   RunLoopUntilIdle();
@@ -497,18 +502,19 @@ TEST_F(PageManagerTest, OnDiscardableCalledPageBindingEarlierAndLaterThanInspect
   EXPECT_TRUE(
       OpenChild(&attachment_node_, convert::ToString(page_id_.id), &page_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> heads_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &heads_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &heads_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> head_node;
-  EXPECT_TRUE(OpenChild(&heads_node, CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+  EXPECT_TRUE(OpenChild(&heads_node,
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                         &head_node, &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commits_node;
-  EXPECT_TRUE(
-      OpenChild(&page_node, kHeadsInspectPathComponent.ToString(), &commits_node, &test_loop()));
+  EXPECT_TRUE(OpenChild(&page_node, convert::ToString(kHeadsInspectPathComponent), &commits_node,
+                        &test_loop()));
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> commit_node;
   EXPECT_TRUE(OpenChild(&commits_node,
-                        CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()), &commit_node,
-                        &test_loop()));
+                        CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
+                        &commit_node, &test_loop()));
 
   commit_node.Unbind();
   head_node.Unbind();
@@ -1054,7 +1060,7 @@ TEST_F(PageManagerTest, StartPageSyncCheckSyncCalled) {
 
   storage_->should_get_page_fail = false;
   PagePtr page;
-  storage::PageId storage_page_id = convert::ExtendedStringView(page_id_.id).ToString();
+  storage::PageId storage_page_id = convert::ToString(page_id_.id);
 
   // Opens the page and starts the sync with the cloud for the first time.
   page_manager_->GetPage(
@@ -1083,7 +1089,7 @@ TEST_F(PageManagerTest, StartPageSyncCheckWithOpenedPage) {
 
   storage_->should_get_page_fail = false;
   PagePtr page;
-  storage::PageId storage_page_id = convert::ExtendedStringView(page_id_.id).ToString();
+  storage::PageId storage_page_id = convert::ToString(page_id_.id);
 
   // Opens the page and starts the sync with the cloud for the first time.
   page_manager_->GetPage(

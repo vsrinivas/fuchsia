@@ -23,7 +23,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/concatenate.h"
 
 namespace ledger {
 namespace {

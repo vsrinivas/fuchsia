@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/ledger_memory_usage.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/socket_pair.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
@@ -31,7 +32,7 @@ class DataSourceTest : public gtest::TestLoopFixture {
       if (received_status == DataSource::Status::ERROR) {
         return;
       }
-      result += data->Get().ToString();
+      result += data->Get();
     });
 
     RunLoopUntilIdle();
@@ -130,7 +131,7 @@ TEST_F(DataSourceTest, SocketMultipleChunk) {
                                       DataSource::Status new_status) {
     EXPECT_NE(DataSource::Status::ERROR, new_status);
     if (new_status == DataSource::Status::TO_BE_CONTINUED) {
-      chunks.push_back(chunk->Get().ToString());
+      chunks.push_back(convert::ToString(chunk->Get()));
     }
     status = new_status;
   });

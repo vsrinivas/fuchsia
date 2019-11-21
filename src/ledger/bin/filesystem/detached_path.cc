@@ -6,7 +6,8 @@
 
 #include <utility>
 
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -25,11 +26,11 @@ DetachedPath& DetachedPath::operator=(const DetachedPath& other) = default;
 
 DetachedPath& DetachedPath::operator=(DetachedPath&&) noexcept = default;
 
-DetachedPath DetachedPath::SubPath(fxl::StringView path) const {
-  return DetachedPath(root_fd_, fxl::Concatenate({path_, "/", path}));
+DetachedPath DetachedPath::SubPath(absl::string_view path) const {
+  return DetachedPath(root_fd_, absl::StrCat(path_, "/", path));
 }
 
-DetachedPath DetachedPath::SubPath(std::initializer_list<fxl::StringView> components) const {
+DetachedPath DetachedPath::SubPath(std::initializer_list<absl::string_view> components) const {
   std::string end_path = path_;
   for (const auto& component : components) {
     end_path.push_back('/');

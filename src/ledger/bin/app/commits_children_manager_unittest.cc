@@ -33,6 +33,7 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
@@ -102,7 +103,8 @@ class SubstitutePageStorage final : public storage::PageStorageEmptyImpl {
   void GetCommit(
       storage::CommitIdView commit_id,
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) override {
-    auto implementation = [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+    auto implementation = [this, commit_id = convert::ToString(commit_id),
+                           callback = std::move(callback)] {
       if (fail_ == 0) {
         callback(storage::Status::INTERNAL_ERROR, nullptr);
         return;
@@ -171,9 +173,9 @@ class SubstituteInspectablePage : public InspectablePage {
 
 TEST_F(CommitsChildrenManagerTest, GetNames) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
-      {storage::kFirstPageCommitId.ToString(), {}}};
+      {convert::ToString(storage::kFirstPageCommitId), {}}};
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       graph, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -191,7 +193,8 @@ TEST_F(CommitsChildrenManagerTest, GetNames) {
       callback::Capture(callback::SetWhenCalled(&callback_called), &names));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
-  EXPECT_THAT(names, ElementsAre(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString())));
+  EXPECT_THAT(names,
+              ElementsAre(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId))));
 }
 
 TEST_F(CommitsChildrenManagerTest, ConcurrentGetNames) {
@@ -199,9 +202,9 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentGetNames) {
   size_t concurrency =
       std::uniform_int_distribution(kMinimumConcurrency, kMaximumConcurrency)(bit_generator);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
-      {storage::kFirstPageCommitId.ToString(), {}}};
+      {convert::ToString(storage::kFirstPageCommitId), {}}};
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       graph, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -221,15 +224,16 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentGetNames) {
   }
   RunLoopUntilIdle();
   ASSERT_EQ(callbacks_called, concurrency);
-  EXPECT_THAT(nameses,
-              Each(ElementsAre(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()))));
+  EXPECT_THAT(
+      nameses,
+      Each(ElementsAre(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)))));
 }
 
 TEST_F(CommitsChildrenManagerTest, Attach) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
-      {storage::kFirstPageCommitId.ToString(), {}}};
+      {convert::ToString(storage::kFirstPageCommitId), {}}};
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       graph, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -246,7 +250,7 @@ TEST_F(CommitsChildrenManagerTest, Attach) {
   commits_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&commits_children_manager)
-      ->Attach(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+      ->Attach(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
@@ -262,7 +266,7 @@ TEST_F(CommitsChildrenManagerTest, Attach) {
 
 TEST_F(CommitsChildrenManagerTest, AttachAbsentCommit) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       std::map<storage::CommitId, std::set<storage::CommitId>>(), environment_.random(),
       test_loop().dispatcher());
@@ -281,7 +285,7 @@ TEST_F(CommitsChildrenManagerTest, AttachAbsentCommit) {
   commits_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&commits_children_manager)
-      ->Attach(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+      ->Attach(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
@@ -345,7 +349,7 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentAttach) {
   }
 
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       graph, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -382,7 +386,7 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentAttach) {
 
 TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingActivePageManager) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
@@ -399,7 +403,7 @@ TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingActivePageManager) {
 
 TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingCommits) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       std::map<storage::CommitId, std::set<storage::CommitId>>(), environment_.random(),
       test_loop().dispatcher());
@@ -424,7 +428,7 @@ TEST_F(CommitsChildrenManagerTest, GetNamesErrorGettingCommits) {
 
 TEST_F(CommitsChildrenManagerTest, AttachErrorGettingActivePageManager) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
@@ -435,7 +439,7 @@ TEST_F(CommitsChildrenManagerTest, AttachErrorGettingActivePageManager) {
   commits_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&commits_children_manager)
-      ->Attach(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+      ->Attach(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
@@ -451,7 +455,7 @@ TEST_F(CommitsChildrenManagerTest, AttachErrorGettingActivePageManager) {
 
 TEST_F(CommitsChildrenManagerTest, AttachErrorGettingCommit) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       std::map<storage::CommitId, std::set<storage::CommitId>>(), environment_.random(),
       test_loop().dispatcher());
@@ -470,7 +474,7 @@ TEST_F(CommitsChildrenManagerTest, AttachErrorGettingCommit) {
   commits_children_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   static_cast<inspect_deprecated::ChildrenManager*>(&commits_children_manager)
-      ->Attach(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()),
+      ->Attach(CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)),
                callback::Capture(callback::SetWhenCalled(&callback_called), &detacher));
   RunLoopUntilIdle();
   ASSERT_TRUE(callback_called);
@@ -486,7 +490,7 @@ TEST_F(CommitsChildrenManagerTest, AttachErrorGettingCommit) {
 
 TEST_F(CommitsChildrenManagerTest, AttachInvalidName) {
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   bool callback_called;
@@ -538,7 +542,7 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentAttachErrorGettingActivePageManager
   }
 
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
   size_t callbacks_called = 0;
@@ -624,7 +628,7 @@ TEST_F(CommitsChildrenManagerTest, ConcurrentAttachErrorGettingCommit) {
       std::uniform_int_distribution<size_t>(0, chosen_commit_ids.size() - 1)(bit_generator);
 
   inspect_deprecated::Node commits_node =
-      inspect_deprecated::Node(kCommitsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kCommitsInspectPathComponent));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       graph, environment_.random(), test_loop().dispatcher());
   page_storage->fail_after_successful_calls(successful_storage_call_count);

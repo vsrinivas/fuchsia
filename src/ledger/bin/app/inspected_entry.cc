@@ -9,6 +9,7 @@
 #include <vector>
 
 #include "src/ledger/bin/inspect/inspect.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 
@@ -16,8 +17,8 @@ namespace ledger {
 
 InspectedEntry::InspectedEntry(inspect_deprecated::Node node, std::vector<uint8_t> value)
     : node_(std::move(node)),
-      value_(
-          node_.CreateByteVectorProperty(kValueInspectPathComponent.ToString(), std::move(value))),
+      value_(node_.CreateByteVectorProperty(convert::ToString(kValueInspectPathComponent),
+                                            std::move(value))),
       outstanding_detachers_(0) {}
 
 InspectedEntry::~InspectedEntry() = default;

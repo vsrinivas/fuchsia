@@ -6,7 +6,6 @@
 
 #include "flatbuffers/flatbuffers.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 namespace {

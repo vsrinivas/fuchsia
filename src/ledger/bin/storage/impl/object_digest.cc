@@ -8,7 +8,7 @@
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/storage/impl/constants.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -77,10 +77,10 @@ ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest) {
   return result;
 }
 
-fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest) {
+absl::string_view ExtractObjectDigestData(const ObjectDigest& object_digest) {
   FXL_DCHECK(IsDigestValid(object_digest));
 
-  fxl::StringView digest = object_digest.Serialize();
+  absl::string_view digest = object_digest.Serialize();
   return digest.substr(1);
 }
 

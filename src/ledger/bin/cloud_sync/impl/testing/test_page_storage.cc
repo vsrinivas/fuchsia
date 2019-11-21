@@ -15,8 +15,10 @@
 #include "src/ledger/bin/cloud_sync/impl/testing/test_commit.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
@@ -162,15 +164,15 @@ void TestPageStorage::MarkPieceSynced(storage::ObjectIdentifier object_identifie
   async::PostTask(dispatcher_, [callback = std::move(callback)] { callback(ledger::Status::OK); });
 }
 
-void TestPageStorage::SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+void TestPageStorage::SetSyncMetadata(absl::string_view key, absl::string_view value,
                                       fit::function<void(ledger::Status)> callback) {
-  sync_metadata[key.ToString()] = value.ToString();
+  sync_metadata[convert::ToString(key)] = convert::ToString(value);
   async::PostTask(dispatcher_, [callback = std::move(callback)] { callback(ledger::Status::OK); });
 }
 
-void TestPageStorage::GetSyncMetadata(fxl::StringView key,
+void TestPageStorage::GetSyncMetadata(absl::string_view key,
                                       fit::function<void(ledger::Status, std::string)> callback) {
-  auto it = sync_metadata.find(key.ToString());
+  auto it = sync_metadata.find(convert::ToString(key));
   if (it == sync_metadata.end()) {
     async::PostTask(dispatcher_, [callback = std::move(callback)] {
       callback(ledger::Status::INTERNAL_NOT_FOUND, "");
@@ -234,7 +236,7 @@ void TestPageStorage::GetDiffForCloud(
 }
 
 void TestPageStorage::GetCommitIdFromRemoteId(
-    fxl::StringView remote_commit_id,
+    absl::string_view remote_commit_id,
     fit::function<void(ledger::Status, storage::CommitId)> callback) {
   auto it = remote_id_to_commit_id.find(remote_commit_id);
   if (it == remote_id_to_commit_id.end()) {

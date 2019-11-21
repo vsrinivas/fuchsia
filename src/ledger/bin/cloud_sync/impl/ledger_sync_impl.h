@@ -17,13 +17,14 @@
 #include "src/ledger/bin/cloud_sync/public/user_config.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
 class LedgerSyncImpl : public LedgerSync {
  public:
   LedgerSyncImpl(ledger::Environment* environment, const UserConfig* user_config,
-                 encryption::EncryptionService* encryption_service, fxl::StringView app_id,
+                 encryption::EncryptionService* encryption_service, absl::string_view app_id,
                  std::unique_ptr<SyncStateWatcher> watcher);
   ~LedgerSyncImpl() override;
 

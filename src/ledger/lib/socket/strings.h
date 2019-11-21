@@ -9,7 +9,7 @@
 
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -18,11 +18,11 @@ namespace ledger {
 // be read from source before the error occurred.
 bool BlockingCopyToString(zx::socket source, std::string* contents);
 
-bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination);
+bool BlockingCopyFromString(absl::string_view source, const zx::socket& destination);
 
 // Copies the string |source| to a temporary socket and returns the
 // consumer handle.
-zx::socket WriteStringToSocket(fxl::StringView source);
+zx::socket WriteStringToSocket(absl::string_view source);
 
 }  // namespace ledger
 

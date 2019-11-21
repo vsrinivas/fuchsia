@@ -33,7 +33,7 @@ peer-to-peer sync is present or absent for a given ledger by adding a
 member to `LedgerManager` and instantiating it in the `LedgerManager`
 constructor with
 ```C++
-sync_property_(inspect_node_.CreateStringProperty(kSyncInspectPathComponent.ToString(),
+sync_property_(inspect_node_.CreateStringProperty(convert::ToString(kSyncInspectPathComponent),
                                                   ledger_sync_ ? "present" : "absent")),
 ```
 

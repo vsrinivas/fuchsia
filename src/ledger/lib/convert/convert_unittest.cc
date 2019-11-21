@@ -6,6 +6,7 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/lib/convert/bytes_test_generated.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace convert {
 namespace {
@@ -53,11 +54,11 @@ TEST(Convert, ToStringView) {
   std::string str = "Hello";
   leveldb::Slice slice(str.data(), str.size());
   ExtendedStringView result = slice;
-  EXPECT_EQ(str, result.ToString());
+  EXPECT_EQ(str, convert::ToString(result));
 
   std::vector<uint8_t> array = ToArray(str);
   result = array;
-  EXPECT_EQ(str, result.ToString());
+  EXPECT_EQ(str, convert::ToString(result));
 }
 
 TEST(Convert, ToFlatBufferVector) {
@@ -82,7 +83,7 @@ TEST(Convert, ImplicitConversion) {
 
   // Suppress check warning that |string_view| is never modified so we could use
   // |esv| instead.
-  fxl::StringView string_view = esv;  // NOLINT
+  absl::string_view string_view = esv;  // NOLINT
   EXPECT_EQ(str, ToString(string_view));
 }
 

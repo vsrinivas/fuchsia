@@ -77,6 +77,7 @@ source_set("object_identifier_lib") {
     "//src/ledger/bin/synchronization:dispatcher_checker",
     "//src/ledger/lib/convert",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]
@@ -90,6 +91,7 @@ source_set("data_serialization") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 }
 
@@ -147,6 +149,7 @@ source_set("lib") {
     "//src/ledger/bin/synchronization:lock",
     "//src/lib/callback",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/trace",
   ]
@@ -187,6 +190,7 @@ source_set("test_utils") {
     "//src/ledger/bin/testing:lib",
     "//src/ledger/lib/vmo",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

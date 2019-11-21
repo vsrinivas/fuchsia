@@ -44,6 +44,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/synchronization/lock.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
@@ -60,8 +61,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -159,7 +159,8 @@ void PageStorageImpl::GetMergeCommitIds(
     fit::function<void(Status, std::vector<CommitId>)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, parent1_id = parent1_id.ToString(), parent2_id = parent2_id.ToString()](
+      [this, parent1_id = convert::ToString(parent1_id),
+       parent2_id = convert::ToString(parent2_id)](
           CoroutineHandler* handler, fit::function<void(Status, std::vector<CommitId>)> callback) {
         std::vector<CommitId> commit_ids;
         Status status = db_->GetMerges(handler, parent1_id, parent2_id, &commit_ids);
@@ -172,7 +173,7 @@ void PageStorageImpl::GetCommit(
   FXL_DCHECK(commit_id.size());
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, commit_id = commit_id.ToString()](
+      [this, commit_id = convert::ToString(commit_id)](
           CoroutineHandler* handler,
           fit::function<void(Status, std::unique_ptr<const Commit>)> callback) {
         std::unique_ptr<const Commit> commit;
@@ -206,7 +207,7 @@ void PageStorageImpl::GetGenerationAndMissingParents(
                 if (status == Status::INTERNAL_NOT_FOUND) {
                   // |result| is alive, because |Waiter::MakeScoped| only calls us if the finalizer
                   // has not run yet.
-                  result_ptr->push_back(parent_id.ToString());
+                  result_ptr->push_back(convert::ToString(parent_id));
                   callback(Status::OK);
                   return;
                 }
@@ -613,7 +614,7 @@ void PageStorageImpl::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
 
         // If the piece is a chunk, then the piece represents the whole object.
         if (digest_info.is_chunk()) {
-          const fxl::StringView data = piece->GetData();
+          const absl::string_view data = piece->GetData();
           ledger::SizedVmo buffer;
           int64_t start = GetObjectPartStart(offset, data.size());
           int64_t length = GetObjectPartLength(max_size, data.size(), start);
@@ -716,21 +717,21 @@ void PageStorageImpl::GetPiece(ObjectIdentifier object_identifier,
       });
 }
 
-void PageStorageImpl::SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+void PageStorageImpl::SetSyncMetadata(absl::string_view key, absl::string_view value,
                                       fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback), [this, key = key.ToString(), value = value.ToString()](
+      std::move(callback), [this, key = convert::ToString(key), value = convert::ToString(value)](
                                CoroutineHandler* handler, fit::function<void(Status)> callback) {
         callback(db_->SetSyncMetadata(handler, key, value));
       });
 }
 
-void PageStorageImpl::GetSyncMetadata(fxl::StringView key,
+void PageStorageImpl::GetSyncMetadata(absl::string_view key,
                                       fit::function<void(Status, std::string)> callback) {
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, key = key.ToString()](CoroutineHandler* handler,
-                                   fit::function<void(Status, std::string)> callback) {
+      [this, key = convert::ToString(key)](CoroutineHandler* handler,
+                                           fit::function<void(Status, std::string)> callback) {
         std::string value;
         Status status = db_->GetSyncMetadata(handler, key, &value);
         callback(status, std::move(value));
@@ -777,7 +778,7 @@ void PageStorageImpl::GetDiffForCloud(
     const Commit& target_commit,
     fit::function<void(Status, CommitIdView, std::vector<EntryChange>)> callback) {
   // Use the first parent as the base commit.
-  const CommitId base_id = target_commit.GetParentIds()[0].ToString();
+  const CommitId base_id = convert::ToString(target_commit.GetParentIds()[0]);
   GetCommit(base_id,
             callback::MakeScoped(
                 weak_factory_.GetWeakPtr(),
@@ -864,7 +865,7 @@ void PageStorageImpl::GetClock(fit::function<void(Status, Clock)> callback) {
       });
 }
 
-void PageStorageImpl::GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+void PageStorageImpl::GetCommitIdFromRemoteId(absl::string_view remote_commit_id,
                                               fit::function<void(Status, CommitId)> callback) {
   auto it = remote_ids_of_commits_being_added_.find(remote_commit_id);
   if (it != remote_ids_of_commits_being_added_.end()) {
@@ -873,7 +874,7 @@ void PageStorageImpl::GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
   }
   coroutine_manager_.StartCoroutine(
       std::move(callback),
-      [this, remote_commit_id = remote_commit_id.ToString()](
+      [this, remote_commit_id = convert::ToString(remote_commit_id)](
           coroutine::CoroutineHandler* handler, fit::function<void(Status, CommitId)> callback) {
         CommitId commit_id;
         Status status = db_->GetCommitIdFromRemoteId(handler, remote_commit_id, &commit_id);
@@ -973,7 +974,7 @@ Status PageStorageImpl::MarkAllPiecesLocal(CoroutineHandler* handler, PageDb::Ba
     if (GetObjectDigestInfo(object_identifier.object_digest()).piece_type == PieceType::INDEX) {
       std::unique_ptr<const Piece> piece;
       RETURN_ON_ERROR(db_->ReadObject(handler, object_identifier, &piece));
-      fxl::StringView content = piece->GetData();
+      absl::string_view content = piece->GetData();
 
       const FileIndex* file_index;
       RETURN_ON_ERROR(FileIndexSerialization::ParseFileIndex(content, &file_index));
@@ -1036,12 +1037,13 @@ void PageStorageImpl::ObjectIsUntracked(ObjectIdentifier object_identifier,
 
 std::string PageStorageImpl::GetEntryId() { return encryption_service_->GetEntryId(); }
 
-std::string PageStorageImpl::GetEntryIdForMerge(fxl::StringView entry_name,
+std::string PageStorageImpl::GetEntryIdForMerge(absl::string_view entry_name,
                                                 CommitIdView left_parent_id,
                                                 CommitIdView right_parent_id,
-                                                fxl::StringView operation_list) {
-  return encryption_service_->GetEntryIdForMerge(entry_name, left_parent_id.ToString(),
-                                                 right_parent_id.ToString(), operation_list);
+                                                absl::string_view operation_list) {
+  return encryption_service_->GetEntryIdForMerge(entry_name, convert::ToString(left_parent_id),
+                                                 convert::ToString(right_parent_id),
+                                                 operation_list);
 }
 
 void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t max_size,
@@ -1051,7 +1053,7 @@ void PageStorageImpl::GetIndexObject(const Piece& piece, int64_t offset, int64_t
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
 
   FXL_DCHECK(digest_info.piece_type == PieceType::INDEX);
-  fxl::StringView content = piece.GetData();
+  absl::string_view content = piece.GetData();
   const FileIndex* file_index;
   Status status = FileIndexSerialization::ParseFileIndex(content, &file_index);
   if (status != Status::OK) {
@@ -1099,7 +1101,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
                                                   int64_t current_position, int64_t object_size,
                                                   Location location,
                                                   fit::function<void(Status)> callback) {
-  fxl::StringView content = piece.GetData();
+  absl::string_view content = piece.GetData();
   ObjectDigestInfo digest_info = GetObjectDigestInfo(piece.GetIdentifier().object_digest());
   if (digest_info.is_inlined() || digest_info.is_chunk()) {
     if (object_size != static_cast<int64_t>(content.size())) {
@@ -1121,7 +1123,7 @@ void PageStorageImpl::FillBufferWithObjectContent(const Piece& piece, ledger::Si
     int64_t read_write_size =
         std::min(static_cast<int64_t>(content.size()) - read_offset, global_size - write_offset);
     FXL_DCHECK(read_write_size > 0);
-    fxl::StringView read_substr = content.substr(read_offset, read_write_size);
+    absl::string_view read_substr = content.substr(read_offset, read_write_size);
     zx_status_t zx_status = vmo.vmo().write(read_substr.data(), write_offset, read_write_size);
     if (zx_status != ZX_OK) {
       FXL_PLOG(ERROR, zx_status) << "Unable to write to vmo";
@@ -1493,7 +1495,8 @@ Status PageStorageImpl::SynchronousInit(CoroutineHandler* handler,
   if (heads.empty()) {
     RETURN_ON_ERROR(db_->AddHead(handler, kFirstPageCommitId, zx::time_utc()));
     std::unique_ptr<const Commit> head_commit;
-    RETURN_ON_ERROR(SynchronousGetCommit(handler, kFirstPageCommitId.ToString(), &head_commit));
+    RETURN_ON_ERROR(
+        SynchronousGetCommit(handler, convert::ToString(kFirstPageCommitId), &head_commit));
     commits.push_back(std::move(head_commit));
   } else {
     auto waiter =
@@ -1672,8 +1675,8 @@ Status PageStorageImpl::SynchronousAddCommitsFromSync(CoroutineHandler* handler,
         ObjectIdentifier base_parent_root;
         RETURN_ON_ERROR(GetBaseParentRootIdentifier(handler, *commit, &base_parent_root));
         parents_to_download.push_back(
-            {std::move(base_parent_root),
-             PageStorage::Location::TreeNodeFromNetwork(commit->GetParentIds()[0].ToString())});
+            {std::move(base_parent_root), PageStorage::Location::TreeNodeFromNetwork(
+                                              convert::ToString(commit->GetParentIds()[0]))});
       }
     }
   }
@@ -1836,10 +1839,10 @@ Status PageStorageImpl::SynchronousAddCommits(CoroutineHandler* handler,
         }
       }
       // Remove the parent from the list of heads.
-      if (!heads_to_add.erase(parent_id.ToString())) {
+      if (!heads_to_add.erase(convert::ToString(parent_id))) {
         // parent_id was not added in the batch: remove it from heads in Db.
         RETURN_ON_ERROR(batch->RemoveHead(handler, parent_id));
-        removed_heads.push_back(parent_id.ToString());
+        removed_heads.push_back(convert::ToString(parent_id));
       }
     }
 
@@ -1976,7 +1979,8 @@ FXL_WARN_UNUSED_RESULT Status PageStorageImpl::GetBaseParentRootIdentifier(
     coroutine::CoroutineHandler* handler, const Commit& commit,
     ObjectIdentifier* base_parent_root) {
   std::unique_ptr<const Commit> base_parent;
-  RETURN_ON_ERROR(SynchronousGetCommit(handler, commit.GetParentIds()[0].ToString(), &base_parent));
+  RETURN_ON_ERROR(
+      SynchronousGetCommit(handler, convert::ToString(commit.GetParentIds()[0]), &base_parent));
   *base_parent_root = base_parent->GetRootIdentifier();
   return Status::OK;
 }
@@ -2014,7 +2018,7 @@ void PageStorageImpl::ChooseDiffBases(CommitIdView target_id,
         }
         for (const auto& commit : unsynced_commits) {
           for (const auto& parent_id : commit->GetParentIds()) {
-            sync_head_ids.insert(parent_id.ToString());
+            sync_head_ids.insert(convert::ToString(parent_id));
           }
         }
         for (const auto& commit : unsynced_commits) {

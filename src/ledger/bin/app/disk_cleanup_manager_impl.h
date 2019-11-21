@@ -12,6 +12,7 @@
 #include "src/ledger/bin/filesystem/detached_path.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -32,10 +33,10 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
   void TryCleanUp(fit::function<void(Status)> callback) override;
 
   // PageUsageListener:
-  void OnExternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnExternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnInternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
-  void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnExternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) override;
+  void OnInternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) override;
 
  private:
   // The state of a page while it is being used by at least one internal or external connection.
@@ -51,7 +52,7 @@ class DiskCleanupManagerImpl : public DiskCleanupManager, public PageUsageListen
   // If there are no active internal or external connections to the page, tries to evict it if is
   // potentially empty, and updates the pages state map by removing that entry.
   void HandlePageIfUnused(std::map<std::pair<std::string, storage::PageId>, PageState>::iterator it,
-                          fxl::StringView ledger_name, storage::PageIdView page_id);
+                          absl::string_view ledger_name, storage::PageIdView page_id);
 
   // Holds information about the state of pages that are currently open by internal or external
   // connections. Entries are removed if there are no active connections.

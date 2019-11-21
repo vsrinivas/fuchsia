@@ -10,15 +10,16 @@
 
 #include "gtest/gtest.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kFileContent = "file content";
+constexpr absl::string_view kFileContent = "file content";
 
 TEST(DirectoryReaderTest, GetDirectoryEntries) {
   scoped_tmpfs::ScopedTmpFS tmpfs;
@@ -30,13 +31,13 @@ TEST(DirectoryReaderTest, GetDirectoryEntries) {
 
   std::set<std::string> expected_entries = {"foo", "bar"};
 
-  EXPECT_TRUE(GetDirectoryEntries(DetachedPath(tmpfs.root_fd()),
-                                  [&expected_entries](fxl::StringView entry) {
-                                    auto entry_iterator = expected_entries.find(entry.ToString());
-                                    EXPECT_NE(entry_iterator, expected_entries.end());
-                                    expected_entries.erase(entry_iterator);
-                                    return true;
-                                  }));
+  EXPECT_TRUE(GetDirectoryEntries(
+      DetachedPath(tmpfs.root_fd()), [&expected_entries](absl::string_view entry) {
+        auto entry_iterator = expected_entries.find(convert::ToString(entry));
+        EXPECT_NE(entry_iterator, expected_entries.end());
+        expected_entries.erase(entry_iterator);
+        return true;
+      }));
   EXPECT_TRUE(expected_entries.empty());
 }
 

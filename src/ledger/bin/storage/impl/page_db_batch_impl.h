@@ -10,6 +10,7 @@
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/db.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -33,10 +34,12 @@ class PageDbBatchImpl : public PageDb::Batch {
                      CommitIdView parent2_id, CommitIdView commit_id) override;
   // Commits.
   Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler, const CommitId& commit_id,
-                               fxl::StringView remote_commit_id, const ObjectIdentifier& root_node,
-                               fxl::StringView storage_bytes) override;
+                               absl::string_view remote_commit_id,
+                               const ObjectIdentifier& root_node,
+                               absl::string_view storage_bytes) override;
   Status DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
-                      fxl::StringView remote_commit_id, const ObjectIdentifier& root_node) override;
+                      absl::string_view remote_commit_id,
+                      const ObjectIdentifier& root_node) override;
 
   // Object data.
   Status WriteObject(coroutine::CoroutineHandler* handler, const Piece& piece,
@@ -55,8 +58,8 @@ class PageDbBatchImpl : public PageDb::Batch {
                               uint64_t generation) override;
 
   // Object sync metadata.
-  Status SetSyncMetadata(coroutine::CoroutineHandler* handler, fxl::StringView key,
-                         fxl::StringView value) override;
+  Status SetSyncMetadata(coroutine::CoroutineHandler* handler, absl::string_view key,
+                         absl::string_view value) override;
 
   // Page online state.
   Status MarkPageOnline(coroutine::CoroutineHandler* handler) override;

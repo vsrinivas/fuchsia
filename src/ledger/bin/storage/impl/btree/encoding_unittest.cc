@@ -13,6 +13,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {

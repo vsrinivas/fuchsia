@@ -23,22 +23,23 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
 namespace {
 
-constexpr fxl::StringView kStagingDirName = "staging";
+constexpr absl::string_view kStagingDirName = "staging";
 
 // Encodes opaque bytes in a way that is usable as a directory name.
-std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64UrlEncode(bytes); }
+std::string GetDirectoryName(absl::string_view bytes) { return absl::WebSafeBase64Escape(bytes); }
 
 // Decodes opaque bytes used as a directory names into an id. This is the
 // opposite transformation of GetDirectoryName.
-std::string GetId(fxl::StringView bytes) {
+std::string GetId(absl::string_view bytes) {
   std::string decoded;
-  bool result = base64url::Base64UrlDecode(bytes, &decoded);
+  bool result = absl::WebSafeBase64Unescape(bytes, &decoded);
   FXL_DCHECK(result);
   return decoded;
 }
@@ -72,7 +73,7 @@ Status LedgerStorageImpl::Init() {
 void LedgerStorageImpl::ListPages(fit::function<void(Status, std::set<PageId>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger", "ledger_storage_list_pages");
   std::set<PageId> page_ids;
-  ledger::GetDirectoryEntries(storage_dir_, [&page_ids](fxl::StringView encoded_page_id) {
+  ledger::GetDirectoryEntries(storage_dir_, [&page_ids](absl::string_view encoded_page_id) {
     if (encoded_page_id != kStagingDirName) {
       page_ids.insert(GetId(encoded_page_id));
     }

@@ -15,8 +15,8 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -76,7 +76,7 @@ void SetEntryIdIfMissing(Entry* entry) {
        entry->priority == KeyPriority::EAGER ? "E" : "L"}));
 }
 
-bool CheckValidTreeNodeSerialization(fxl::StringView data) {
+bool CheckValidTreeNodeSerialization(absl::string_view data) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   if (!VerifyTreeNodeStorageBuffer(verifier)) {
     return false;
@@ -164,7 +164,7 @@ std::string EncodeNode(uint8_t level, const std::vector<Entry>& entries,
   return convert::ToString(builder);
 }
 
-bool DecodeNode(fxl::StringView data, ObjectIdentifierFactory* factory, uint8_t* level,
+bool DecodeNode(absl::string_view data, ObjectIdentifierFactory* factory, uint8_t* level,
                 std::vector<Entry>* res_entries, std::map<size_t, ObjectIdentifier>* res_children) {
   if (!CheckValidTreeNodeSerialization(data)) {
     return false;

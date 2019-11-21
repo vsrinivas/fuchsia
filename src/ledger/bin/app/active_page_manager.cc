@@ -18,6 +18,7 @@
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -49,7 +50,7 @@ void GatherCommits(
        page_storage](Status status, std::unique_ptr<const storage::Commit> commit) mutable {
         if (status == storage::Status::OK) {
           for (const storage::CommitIdView& parent_commit_id_view : commit->GetParentIds()) {
-            storage::CommitId parent_commit_id = parent_commit_id_view.ToString();
+            storage::CommitId parent_commit_id = convert::ToString(parent_commit_id_view);
             auto it = known_commit_ids.find(parent_commit_id);
             if (it == known_commit_ids.end()) {
               ids_to_explore.push(parent_commit_id);
@@ -221,7 +222,7 @@ void ActivePageManager::GetCommits(
   for (std::unique_ptr<const storage::Commit>& head_commit : head_commits) {
     known_commit_ids.insert(head_commit->GetId());
     for (const storage::CommitIdView& parent_commit_id_view : head_commit->GetParentIds()) {
-      storage::CommitId parent_commit_id = parent_commit_id_view.ToString();
+      storage::CommitId parent_commit_id = convert::ToString(parent_commit_id_view);
       ids_to_explore.push(parent_commit_id);
       known_commit_ids.insert(parent_commit_id);
     }

@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/btree/tree_node.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -49,13 +50,13 @@ class BTreeIterator {
 
   // Skips the iteration until the first key that is greater than or equal to
   // |min_key|.
-  Status SkipTo(fxl::StringView min_key);
+  Status SkipTo(absl::string_view min_key);
 
   // Skips to the index where key could be found, within the current node. The
   // current index will only be updated if the new index is after the current
   // one. Returns true if either the key was found in this node, or if it is
   // guaranteed not to be found in any of this nodes children; false otherwise.
-  bool SkipToIndex(fxl::StringView key);
+  bool SkipToIndex(absl::string_view key);
 
   // Returns the identifier of the next child that will be explored, or
   // |nullptr| if it doesn't exist.

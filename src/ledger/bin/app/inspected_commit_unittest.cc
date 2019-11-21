@@ -25,10 +25,12 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -37,7 +39,7 @@ using ::testing::IsEmpty;
 using ::testing::IsTrue;
 using ::testing::UnorderedElementsAreArray;
 
-constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
+constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
 
 constexpr int kMinimumConcurrency = 3;
 constexpr int kMaximumConcurrency = 30;
@@ -235,9 +237,9 @@ class InspectedCommitTest : public TestWithEnvironment {
 
   // gtest::TestWithEnvironment:
   void SetUp() override {
-    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
-    attachment_node_ =
-        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
+    top_level_node_ = inspect_deprecated::Node(convert::ToString(kTestTopLevelNodeName));
+    attachment_node_ = top_level_node_.CreateChild(
+        convert::ToString(kSystemUnderTestAttachmentPointPathComponent));
   }
 
  protected:
@@ -305,8 +307,8 @@ TEST_F(InspectedCommitTest, GetNames) {
   for (const auto& [key, unused_value] : entries) {
     key_display_names.insert(KeyToDisplayName(key));
   }
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -315,11 +317,11 @@ TEST_F(InspectedCommitTest, GetNames) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
   bool on_discardable_called;
@@ -343,8 +345,8 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
   for (const auto& [key, unused_value] : entries) {
     key_display_names.insert(KeyToDisplayName(key));
   }
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -353,11 +355,11 @@ TEST_F(InspectedCommitTest, ConcurrentGetNames) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<std::set<std::string>> nameses{concurrency};
   bool on_discardable_called;
@@ -381,8 +383,8 @@ TEST_F(InspectedCommitTest, Attach) {
   for (const auto& [key, unused_value] : entries) {
     key_display_names.insert(KeyToDisplayName(key));
   }
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -391,11 +393,11 @@ TEST_F(InspectedCommitTest, Attach) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   bool on_discardable_called;
 
@@ -415,8 +417,8 @@ TEST_F(InspectedCommitTest, Attach) {
 }
 
 TEST_F(InspectedCommitTest, AttachAbsentEntry) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       std::map<std::string, std::vector<uint8_t>>{{"one", {1}}, {"two", {2}}},
       environment_.random(), test_loop().dispatcher());
@@ -426,11 +428,11 @@ TEST_F(InspectedCommitTest, AttachAbsentEntry) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   bool on_discardable_called;
 
@@ -469,8 +471,8 @@ TEST_F(InspectedCommitTest, ConcurrentAttach) {
         0u, key_display_names.size() - 1)(bit_generator)];
   }
 
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -483,11 +485,11 @@ TEST_F(InspectedCommitTest, ConcurrentAttach) {
   std::vector<fit::closure> detachers{concurrency};
   bool on_discardable_called;
 
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   inspected_commit.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
   for (size_t index{0}; index < concurrency; index++) {
     static_cast<inspect_deprecated::ChildrenManager*>(&inspected_commit)
@@ -513,8 +515,8 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
   for (const auto& [key, unused_value] : entries) {
     key_display_names.insert(KeyToDisplayName(key));
   }
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -523,11 +525,11 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   bool on_discardable_called;
 
@@ -567,15 +569,15 @@ TEST_F(InspectedCommitTest, OnDiscardableCalledSomeChildrenManagement) {
 }
 
 TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
   bool on_discardable_called;
@@ -590,8 +592,8 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingActivePageManager) {
 }
 
 TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       std::map<std::string, std::vector<uint8_t>>{{"one", {1}}, {"two", {2}}},
       environment_.random(), test_loop().dispatcher());
@@ -602,11 +604,11 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   std::set<std::string> names;
   bool on_discardable_called;
@@ -621,15 +623,15 @@ TEST_F(InspectedCommitTest, GetNamesErrorGettingEntries) {
 }
 
 TEST_F(InspectedCommitTest, AttachInvalidName) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
   bool on_discardable_called;
@@ -653,15 +655,15 @@ TEST_F(InspectedCommitTest, AttachInvalidName) {
 }
 
 TEST_F(InspectedCommitTest, AttachErrorGettingActivePageManager) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
   bool on_discardable_called;
@@ -683,8 +685,8 @@ TEST_F(InspectedCommitTest, AttachErrorGettingActivePageManager) {
 }
 
 TEST_F(InspectedCommitTest, AttachErrorGettingEntry) {
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage =
       std::make_unique<SubstitutePageStorage>(std::map<std::string, std::vector<uint8_t>>{},
                                               environment_.random(), test_loop().dispatcher());
@@ -695,11 +697,11 @@ TEST_F(InspectedCommitTest, AttachErrorGettingEntry) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   bool callback_called;
   fit::closure detacher;
   bool on_discardable_called;
@@ -724,15 +726,15 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingActivePageManager) {
   auto bit_generator = environment_.random()->NewBitGenerator<size_t>();
   size_t concurrency =
       std::uniform_int_distribution(kMinimumConcurrency, kMaximumConcurrency)(bit_generator);
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   SubstituteInspectablePage inspectable_page{nullptr, environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
   bool on_discardable_called;
@@ -786,8 +788,8 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingEntry) {
   size_t successful_storage_call_count =
       std::uniform_int_distribution<size_t>(0, chosen_keys.size() * 2 - 1)(bit_generator);
 
-  inspect_deprecated::Node commit_node =
-      attachment_node_.CreateChild(CommitIdToDisplayName(storage::kFirstPageCommitId.ToString()));
+  inspect_deprecated::Node commit_node = attachment_node_.CreateChild(
+      CommitIdToDisplayName(convert::ToString(storage::kFirstPageCommitId)));
   std::unique_ptr<SubstitutePageStorage> page_storage = std::make_unique<SubstitutePageStorage>(
       entries, environment_.random(), test_loop().dispatcher());
   page_storage->fail_after_successful_calls(successful_storage_call_count);
@@ -797,11 +799,11 @@ TEST_F(InspectedCommitTest, ConcurrentAttachErrorGettingEntry) {
       ActivePageManager::PageStorageState::NEEDS_SYNC);
   SubstituteInspectablePage inspectable_page{std::move(active_page_manager), environment_.random(),
                                              test_loop().dispatcher()};
-  InspectedCommit inspected_commit =
-      InspectedCommit(dispatcher(), std::move(commit_node),
-                      std::make_unique<storage::IdAndParentIdsCommit>(
-                          storage::kFirstPageCommitId.ToString(), std::set<storage::CommitId>()),
-                      ExpiringToken(), &inspectable_page);
+  InspectedCommit inspected_commit = InspectedCommit(
+      dispatcher(), std::move(commit_node),
+      std::make_unique<storage::IdAndParentIdsCommit>(
+          convert::ToString(storage::kFirstPageCommitId), std::set<storage::CommitId>()),
+      ExpiringToken(), &inspectable_page);
   size_t callbacks_called{0};
   std::vector<fit::closure> detachers{concurrency};
   bool on_discardable_called;

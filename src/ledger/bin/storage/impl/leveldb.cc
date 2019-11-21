@@ -13,10 +13,12 @@
 
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/storage/impl/object_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "util/env_fuchsia.h"
 
 namespace storage {
@@ -75,7 +77,7 @@ class BatchImpl : public Db::Batch {
   }
 
   Status Put(CoroutineHandler* handler, convert::ExtendedStringView key,
-             fxl::StringView value) override {
+             absl::string_view value) override {
     FXL_DCHECK(batch_);
     if (MakeEmptySyncCallAndCheck(dispatcher_, handler) == Status::INTERRUPTED) {
       return Status::INTERRUPTED;
@@ -336,7 +338,8 @@ Status LevelDb::GetIteratorAtPrefix(
   if (iterator) {
     std::unique_ptr<
         Iterator<const std::pair<convert::ExtendedStringView, convert::ExtendedStringView>>>
-        row_iterator = std::make_unique<RowIterator>(std::move(local_iterator), prefix.ToString());
+        row_iterator =
+            std::make_unique<RowIterator>(std::move(local_iterator), convert::ToString(prefix));
     iterator->swap(row_iterator);
   }
   return Status::OK;

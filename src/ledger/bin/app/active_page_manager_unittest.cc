@@ -32,6 +32,7 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/ledger/lib/vmo/vector.h"
 #include "src/lib/backoff/exponential_backoff.h"
@@ -115,7 +116,8 @@ class IdsAndParentIdsPageStorage final : public storage::PageStorageEmptyImpl {
   void GetCommit(
       storage::CommitIdView commit_id,
       fit::function<void(Status, std::unique_ptr<const storage::Commit>)> callback) override {
-    auto implementation = [&, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+    auto implementation = [&, commit_id = convert::ToString(commit_id),
+                           callback = std::move(callback)] {
       if (fail_ == 0) {
         callback(storage::Status::INTERNAL_ERROR, nullptr);
         return;
@@ -664,7 +666,7 @@ class EntriesPageStorageActivePageManagerTest
       public WithParamInterface<std::tuple<Synchrony, Synchrony, Synchrony, Synchrony>> {};
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphFullyPresent) {
-  storage::CommitId zero = storage::kFirstPageCommitId.ToString();
+  storage::CommitId zero = convert::ToString(storage::kFirstPageCommitId);
   storage::CommitId one =
       storage::CommitId("00000000000000000000000000000001", storage::kCommitIdSize);
   storage::CommitId two =
@@ -792,7 +794,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitsSuccessGraphPa
 }
 
 TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCommitsInternalError) {
-  storage::CommitId zero = storage::kFirstPageCommitId.ToString();
+  storage::CommitId zero = convert::ToString(storage::kFirstPageCommitId);
   storage::CommitId one =
       storage::CommitId("00000000000000000000000000000001", storage::kCommitIdSize);
   storage::CommitId two =
@@ -866,7 +868,7 @@ TEST_P(IdsAndParentIdsPageStoragePlusFailureIntegerActivePageManagerTest, GetCom
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
-      {storage::kFirstPageCommitId.ToString(), {}}};
+      {convert::ToString(storage::kFirstPageCommitId), {}}};
 
   bool callback_called;
   Status status;
@@ -882,19 +884,20 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitSuccess) {
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommit(
-      storage::kFirstPageCommitId.ToString(),
+      convert::ToString(storage::kFirstPageCommitId),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
   RunLoopUntilIdle();
 
   ASSERT_TRUE(callback_called);
   EXPECT_THAT(status, Eq(Status::OK));
-  EXPECT_THAT(commit, Pointee(storage::MatchesCommit(storage::kFirstPageCommitId.ToString(), {})));
+  EXPECT_THAT(commit,
+              Pointee(storage::MatchesCommit(convert::ToString(storage::kFirstPageCommitId), {})));
   EXPECT_TRUE(on_discardable_called);
 }
 
 TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) {
   std::map<storage::CommitId, std::set<storage::CommitId>> graph = {
-      {storage::kFirstPageCommitId.ToString(), {}}};
+      {convert::ToString(storage::kFirstPageCommitId), {}}};
 
   bool callback_called;
   Status status;
@@ -911,7 +914,7 @@ TEST_P(IdsAndParentIdsPageStorageActivePageManagerTest, GetCommitInternalError) 
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetCommit(
-      storage::kFirstPageCommitId.ToString(),
+      convert::ToString(storage::kFirstPageCommitId),
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &commit));
   RunLoopUntilIdle();
 
@@ -941,7 +944,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesSuccess) {
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
-      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "",
+      storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}}, "",
       [&](const storage::Entry& storage_entry) {
         storage_entries.push_back(storage_entry);
         return true;
@@ -975,7 +978,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetEntriesInternalError) {
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetEntries(
-      storage::IdAndParentIdsCommit(storage::kFirstPageCommitId.ToString(), {}), "",
+      storage::IdAndParentIdsCommit(convert::ToString(storage::kFirstPageCommitId), {}), "",
       [&](const storage::Entry& storage_entry) {
         storage_entries.push_back(storage_entry);
         return true;
@@ -1013,7 +1016,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueSuccess) {
 
   for (const auto& [key, _] : entries) {
     active_page_manager.GetValue(
-        storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, key,
+        storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}}, key,
         [&, key = key](Status status, const std::vector<uint8_t>& value) {
           callbacks_called++;
           statuses.push_back(status);
@@ -1046,7 +1049,8 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetEntryError) {
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
-      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, "my happy fun key",
+      storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}},
+      "my happy fun key",
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
   RunLoopUntilIdle();
 
@@ -1074,7 +1078,7 @@ TEST_P(EntriesPageStorageActivePageManagerTest, GetValueGetObjectPartError) {
   active_page_manager.SetOnDiscardable(callback::SetWhenCalled(&on_discardable_called));
 
   active_page_manager.GetValue(
-      storage::IdAndParentIdsCommit{storage::kFirstPageCommitId.ToString(), {}}, key,
+      storage::IdAndParentIdsCommit{convert::ToString(storage::kFirstPageCommitId), {}}, key,
       callback::Capture(callback::SetWhenCalled(&callback_called), &status, &value));
   RunLoopUntilIdle();
 

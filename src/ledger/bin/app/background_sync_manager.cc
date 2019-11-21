@@ -5,7 +5,9 @@
 
 #include <lib/async/cpp/task.h>
 
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 // #include <algorithm>
 
@@ -59,27 +61,28 @@ void BackgroundSyncManager::SetDelegate(Delegate* delegate) {
   sync_delegate_ = delegate;
 }
 
-void BackgroundSyncManager::OnExternallyUsed(fxl::StringView ledger_name,
+void BackgroundSyncManager::OnExternallyUsed(absl::string_view ledger_name,
                                              storage::PageIdView page_id) {
-  pages_connection_count_[{ledger_name.ToString(), page_id.ToString()}]++;
+  pages_connection_count_[{convert::ToString(ledger_name), convert::ToString(page_id)}]++;
 }
 
-void BackgroundSyncManager::OnExternallyUnused(fxl::StringView ledger_name,
+void BackgroundSyncManager::OnExternallyUnused(absl::string_view ledger_name,
                                                storage::PageIdView page_id) {
-  auto it = pages_connection_count_.find({ledger_name.ToString(), page_id.ToString()});
+  auto it =
+      pages_connection_count_.find({convert::ToString(ledger_name), convert::ToString(page_id)});
   FXL_DCHECK(it != pages_connection_count_.end());
   FXL_DCHECK(it->second > 0);
   it->second--;
   HandlePageIfUnused(it);
 }
 
-void BackgroundSyncManager::OnInternallyUsed(fxl::StringView ledger_name,
+void BackgroundSyncManager::OnInternallyUsed(absl::string_view ledger_name,
                                              storage::PageIdView page_id) {
   // Behavior is the same of external and internal connections.
   OnExternallyUsed(ledger_name, page_id);
 }
 
-void BackgroundSyncManager::OnInternallyUnused(fxl::StringView ledger_name,
+void BackgroundSyncManager::OnInternallyUnused(absl::string_view ledger_name,
                                                storage::PageIdView page_id) {
   // Behavior is the same of external and internal connections.
   OnExternallyUnused(ledger_name, page_id);

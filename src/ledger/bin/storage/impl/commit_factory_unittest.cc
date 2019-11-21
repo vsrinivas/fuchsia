@@ -19,6 +19,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 
@@ -139,7 +140,7 @@ class CommitFactoryTest : public ledger::TestWithEnvironment {
   bool CheckCommitStorageBytes(const std::unique_ptr<const Commit>& commit) {
     std::unique_ptr<const Commit> copy;
     Status status = storage_->GetCommitFactory()->FromStorageBytes(
-        commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
+        commit->GetId(), convert::ToString(commit->GetStorageBytes()), &copy);
     EXPECT_EQ(status, Status::OK);
 
     return CheckCommitEquals(*commit, *copy);
@@ -186,7 +187,7 @@ TEST_F(CommitFactoryTest, CloneCommit) {
       environment_.clock(), environment_.random(), root_node_identifier, std::move(parents));
   std::unique_ptr<const Commit> copy;
   Status status = storage_->GetCommitFactory()->FromStorageBytes(
-      commit->GetId(), commit->GetStorageBytes().ToString(), &copy);
+      commit->GetId(), convert::ToString(commit->GetStorageBytes()), &copy);
   ASSERT_EQ(status, Status::OK);
   std::unique_ptr<const Commit> clone = commit->Clone();
   EXPECT_TRUE(CheckCommitEquals(*copy, *clone));

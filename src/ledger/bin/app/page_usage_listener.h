@@ -6,6 +6,7 @@
 #define SRC_LEDGER_BIN_APP_PAGE_USAGE_LISTENER_H_
 
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -21,17 +22,17 @@ class PageUsageListener {
 
   // Called when an external page connection has been requested. In case of concurrent external
   // connections to the same page, this should only be called once, on the first connection.
-  virtual void OnExternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void OnExternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 
   // Called when the last open external connection to a page is closed.
-  virtual void OnExternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void OnExternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 
   // Called when an internal page connection has been requested. In case of concurrent internal
   // connections to the same page, this should only be called once, on the first connection.
-  virtual void OnInternallyUsed(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void OnInternallyUsed(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 
   // Called when the last open internal connection to a page is closed.
-  virtual void OnInternallyUnused(fxl::StringView ledger_name, storage::PageIdView page_id) = 0;
+  virtual void OnInternallyUnused(absl::string_view ledger_name, storage::PageIdView page_id) = 0;
 };
 
 }  // namespace ledger

@@ -30,7 +30,7 @@
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
 #include "src/lib/fxl/observer_list.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -60,8 +60,8 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   std::string GetEntryId();
 
-  std::string GetEntryIdForMerge(fxl::StringView entry_name, CommitIdView left_parent_id,
-                                 CommitIdView right_parent_id, fxl::StringView operation_list);
+  std::string GetEntryIdForMerge(absl::string_view entry_name, CommitIdView left_parent_id,
+                                 CommitIdView right_parent_id, absl::string_view operation_list);
 
   void SetSyncDelegate(PageSyncDelegate* page_sync) override;
 
@@ -108,9 +108,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                  fit::function<void(Status, std::unique_ptr<const Object>)> callback) override;
   void GetPiece(ObjectIdentifier object_identifier,
                 fit::function<void(Status, std::unique_ptr<const Piece>)> callback) override;
-  void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+  void SetSyncMetadata(absl::string_view key, absl::string_view value,
                        fit::function<void(Status)> callback) override;
-  void GetSyncMetadata(fxl::StringView key,
+  void GetSyncMetadata(absl::string_view key,
                        fit::function<void(Status, std::string)> callback) override;
 
   // Commit contents.
@@ -132,7 +132,7 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
 
   void GetClock(fit::function<void(Status, Clock)> callback) override;
 
-  void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+  void GetCommitIdFromRemoteId(absl::string_view remote_commit_id,
                                fit::function<void(Status, CommitId)> callback) override;
 
   // CommitPrunerDelegate:

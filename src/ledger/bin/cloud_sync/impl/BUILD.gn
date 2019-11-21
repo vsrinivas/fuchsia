@@ -86,6 +86,7 @@ source_set("unittests") {
     "//src/ledger/lib/vmo",
     "//src/lib/backoff/testing",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

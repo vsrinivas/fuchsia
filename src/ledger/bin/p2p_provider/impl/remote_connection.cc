@@ -8,6 +8,7 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_provider {
 RemoteConnection::RemoteConnection() {
@@ -22,7 +23,7 @@ void RemoteConnection::Start(zx::channel channel) {
   message_relay_.SetChannel(std::move(channel));
 }
 
-void RemoteConnection::SendMessage(fxl::StringView data) {
+void RemoteConnection::SendMessage(absl::string_view data) {
   message_relay_.SendMessage(std::vector<uint8_t>(data.begin(), data.end()));
 }
 

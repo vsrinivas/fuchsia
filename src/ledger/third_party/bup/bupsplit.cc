@@ -33,6 +33,8 @@
 #include <memory.h>
 #include <stdint.h>
 
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
+
 namespace bup {
 
 namespace {
@@ -70,7 +72,7 @@ void RollSumSplit::Reset() {
   memset(window_, 0, kWindowSize);
 }
 
-size_t RollSumSplit::Feed(fxl::StringView buffer, size_t* bits) {
+size_t RollSumSplit::Feed(absl::string_view buffer, size_t* bits) {
   for (size_t i = 0; i < buffer.size(); i++) {
     Roll(buffer[i]);
     ++current_length_;

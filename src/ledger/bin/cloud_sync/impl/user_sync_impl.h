@@ -20,6 +20,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/backoff/backoff.h"
 #include "src/lib/callback/scoped_task_runner.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
@@ -36,7 +37,7 @@ class UserSyncImpl : public UserSync, cloud_provider::DeviceSetWatcher {
   void SetSyncWatcher(SyncStateWatcher* watcher) override;
   void Start() override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override;
+      absl::string_view app_id, encryption::EncryptionService* encryption_service) override;
 
   // Returns the path where the device fingerprint is stored.
   ledger::DetachedPath GetFingerprintPath();

@@ -11,6 +11,7 @@
 
 #include "src/ledger/bin/storage/fake/fake_commit.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace storage {
 namespace fake {
@@ -52,7 +53,8 @@ void FakeJournalDelegate::SetValue(convert::ExtendedStringView key, ObjectIdenti
                                    KeyPriority priority) {
   FXL_DCHECK(!is_committed_);
   data_.insert(
-      {key.ToString(), {key.ToString(), std::move(value), priority, EntryId(key.ToString())}});
+      {convert::ToString(key),
+       {convert::ToString(key), std::move(value), priority, EntryId(convert::ToString(key))}});
 }
 
 void FakeJournalDelegate::Delete(convert::ExtendedStringView key) {

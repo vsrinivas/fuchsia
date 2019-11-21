@@ -32,6 +32,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/lib/callback/set_when_called.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -88,7 +89,7 @@ class PageDbTest : public ledger::TestWithEnvironment {
   // Utility function to delete commit |commit_id|. PageDb::DeleteCommit cannot be called directly,
   // the implementation requires it to be part of a batch.
   Status DeleteCommit(CoroutineHandler* handler, const CommitId& commit_id,
-                      fxl::StringView remote_commit_id, const ObjectDigest& root_node_digest) {
+                      absl::string_view remote_commit_id, const ObjectDigest& root_node_digest) {
     std::unique_ptr<PageDbImpl::Batch> batch;
     RETURN_ON_ERROR(page_db_.StartBatch(handler, &batch));
     RETURN_ON_ERROR(batch->DeleteCommit(
@@ -772,8 +773,8 @@ TEST_F(PageDbTest, GetObjectStatusKeys) {
 
 TEST_F(PageDbTest, SyncMetadata) {
   RunInCoroutine([&](CoroutineHandler* handler) {
-    std::vector<std::pair<fxl::StringView, fxl::StringView>> keys_and_values = {{"foo1", "foo2"},
-                                                                                {"bar1", " bar2 "}};
+    std::vector<std::pair<absl::string_view, absl::string_view>> keys_and_values = {
+        {"foo1", "foo2"}, {"bar1", " bar2 "}};
     for (const auto& key_and_value : keys_and_values) {
       auto key = key_and_value.first;
       auto value = key_and_value.second;

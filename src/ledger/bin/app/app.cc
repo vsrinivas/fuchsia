@@ -27,6 +27,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_factory_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/command_line.h"
@@ -92,11 +93,11 @@ class App : public ledger_internal::LedgerController {
 
   bool Start() {
     io_loop_.StartThread("io thread");
-    auto objects = component::Object::Make(kTopLevelNodeName.ToString());
+    auto objects = component::Object::Make(convert::ToString(kTopLevelNodeName));
     auto object_dir = component::ObjectDir(objects);
 
     component_context_->outgoing()
-        ->GetOrCreateDirectory(kInspectNodesDirectory.ToString())
+        ->GetOrCreateDirectory(convert::ToString(kInspectNodesDirectory))
         ->AddEntry(fuchsia::inspect::deprecated::Inspect::Name_,
                    std::make_unique<vfs::Service>(
                        inspect_bindings_.GetHandler(object_dir.object().get())));
@@ -121,7 +122,8 @@ class App : public ledger_internal::LedgerController {
 
     factory_impl_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         environment_.get(), std::move(user_communicator_factory),
-        inspect_objects_.top_level_node.CreateChild(kRepositoriesInspectPathComponent.ToString()));
+        inspect_objects_.top_level_node.CreateChild(
+            convert::ToString(kRepositoriesInspectPathComponent)));
 
     component_context_->outgoing()->AddPublicService<ledger_internal::LedgerRepositoryFactory>(
         [this](fidl::InterfaceRequest<ledger_internal::LedgerRepositoryFactory> request) {

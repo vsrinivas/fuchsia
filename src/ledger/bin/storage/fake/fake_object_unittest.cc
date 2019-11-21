@@ -8,7 +8,7 @@
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -33,7 +33,7 @@ TEST(FakeObjectTest, FakeObject) {
   const ObjectIdentifier identifier = factory.MakeObjectIdentifier(1u, ObjectDigest("some digest"));
   const FakeObject object(std::make_unique<FakePiece>(identifier, content));
 
-  fxl::StringView data;
+  absl::string_view data;
   ASSERT_EQ(object.GetData(&data), Status::OK);
   EXPECT_EQ(data, content);
   EXPECT_EQ(object.GetIdentifier(), identifier);

@@ -20,10 +20,12 @@
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -34,7 +36,7 @@ constexpr size_t kCommitSaltSize = 32;
 
 // Checks whether the given |storage_bytes| are a valid serialization of a
 // commit.
-bool CheckValidSerialization(fxl::StringView storage_bytes) {
+bool CheckValidSerialization(absl::string_view storage_bytes) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(storage_bytes.data()),
                                  storage_bytes.size());
 
@@ -98,7 +100,7 @@ class CommitFactory::CommitImpl : public Commit {
   zx::time_utc GetTimestamp() const override;
   uint64_t GetGeneration() const override;
   ObjectIdentifier GetRootIdentifier() const override;
-  fxl::StringView GetStorageBytes() const override;
+  absl::string_view GetStorageBytes() const override;
   bool IsAlive() const override;
 
  private:
@@ -155,7 +157,7 @@ ObjectIdentifier CommitFactory::CommitImpl::GetRootIdentifier() const {
   return root_node_identifier_;
 }
 
-fxl::StringView CommitFactory::CommitImpl::GetStorageBytes() const {
+absl::string_view CommitFactory::CommitImpl::GetStorageBytes() const {
   return storage_bytes_->bytes();
 }
 
@@ -263,7 +265,7 @@ void CommitFactory::Empty(PageStorage* page_storage,
         auto storage_ptr = fxl::MakeRefCounted<SharedStorageBytes>("");
 
         auto ptr = std::make_unique<CommitImpl>(
-            kFirstPageCommitId.ToString(), zx::time_utc(), 0, std::move(root_identifier),
+            convert::ToString(kFirstPageCommitId), zx::time_utc(), 0, std::move(root_identifier),
             std::vector<CommitIdView>(), "", std::move(storage_ptr), std::move(weak_this));
         callback(Status::OK, std::move(ptr));
       });
@@ -295,16 +297,16 @@ std::vector<std::unique_ptr<const Commit>> CommitFactory::GetHeads() const {
 void CommitFactory::AddCommitDependencies(CommitIdView commit_id,
                                           std::vector<ObjectIdentifier> root_identifiers) {
   auto [it, created] =
-      live_root_identifiers_.try_emplace(commit_id.ToString(), std::move(root_identifiers));
+      live_root_identifiers_.try_emplace(convert::ToString(commit_id), std::move(root_identifiers));
   // TODO(https://bugs.llvm.org/show_bug.cgi?id=43440): Remove lint suppression after clang-tidy
   // understands that post-|try_emplace| use of |root_identifiers| is legitimate if no emplacement
   // occurred.
   FXL_DCHECK(created ||
-             root_identifiers == live_root_identifiers_[commit_id.ToString()]);  // NOLINT
+             root_identifiers == live_root_identifiers_[convert::ToString(commit_id)]);  // NOLINT
 }
 
 void CommitFactory::RemoveCommitDependencies(CommitIdView commit_id) {
-  auto it = live_root_identifiers_.find(commit_id.ToString());
+  auto it = live_root_identifiers_.find(convert::ToString(commit_id));
   if (it != live_root_identifiers_.end()) {
     live_root_identifiers_.erase(it);
   }

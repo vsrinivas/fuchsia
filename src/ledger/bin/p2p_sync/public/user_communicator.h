@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "src/ledger/bin/p2p_sync/public/ledger_communicator.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // UserCommunicator is the user-level object handling peer-to-peer connections

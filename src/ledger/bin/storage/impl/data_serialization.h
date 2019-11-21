@@ -8,12 +8,13 @@
 #include <initializer_list>
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
 template <typename I>
-I DeserializeData(fxl::StringView value) {
+I DeserializeData(absl::string_view value) {
   static_assert(std::is_trivially_copyable<I>::value,
                 "The return type must be trivially copyable.");
   FXL_DCHECK(value.size() == sizeof(I));
@@ -23,15 +24,15 @@ I DeserializeData(fxl::StringView value) {
 }
 
 template <typename I>
-fxl::StringView SerializeData(const I& value) {
+absl::string_view SerializeData(const I& value) {
   static_assert(std::is_trivially_copyable<I>::value,
                 "The parameter type must be trivially copyable.");
-  return fxl::StringView(reinterpret_cast<const char*>(&value), sizeof(I));
+  return absl::string_view(reinterpret_cast<const char*>(&value), sizeof(I));
 }
 
 // Similar to fxl::Concatenate, but additionally inserts the length as a prefix to each of the
 // StringViews. Prevents accidental collisions.
-std::string SafeConcatenation(std::initializer_list<fxl::StringView> string_views);
+std::string SafeConcatenation(std::initializer_list<absl::string_view> string_views);
 
 }  // namespace storage
 

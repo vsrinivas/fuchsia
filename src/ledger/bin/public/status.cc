@@ -5,10 +5,11 @@
 #include "src/ledger/bin/public/status.h"
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
-fxl::StringView StatusToString(Status status) {
+absl::string_view StatusToString(Status status) {
   switch (status) {
     case Status::OK:
       return "OK";

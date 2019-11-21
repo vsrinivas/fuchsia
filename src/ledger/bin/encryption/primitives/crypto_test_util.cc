@@ -4,18 +4,18 @@
 
 #include "src/ledger/bin/encryption/primitives/crypto_test_util.h"
 
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include <cctype>
+
+#include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
-std::string FromHex(fxl::StringView data) {
-  std::string result;
-  result.reserve(data.size() / 2);
-  while (!data.empty()) {
-    result.push_back(fxl::StringToNumber<uint8_t>(data.substr(0, 2), fxl::Base::k16));
-    data = data.substr(2);
-  }
-  return result;
+std::string FromHex(absl::string_view data) {
+  FXL_DCHECK(
+      std::all_of(data.begin(), data.end(), [](unsigned char c) { return std::isxdigit(c); }));
+  return absl::HexStringToBytes(data);
 }
 
 }  // namespace encryption

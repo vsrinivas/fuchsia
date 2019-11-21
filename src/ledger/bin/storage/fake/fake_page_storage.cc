@@ -20,10 +20,12 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -45,7 +47,7 @@ Status ToBuffer(convert::ExtendedStringView value, int64_t offset, int64_t max_s
 
 class FakeRootCommit : public CommitEmptyImpl {
  public:
-  FakeRootCommit() : id_(storage::kFirstPageCommitId.ToString()) {}
+  FakeRootCommit() : id_(convert::ToString(storage::kFirstPageCommitId)) {}
 
   std::unique_ptr<const Commit> Clone() const override {
     return std::make_unique<const FakeRootCommit>();
@@ -96,7 +98,8 @@ void FakePageStorage::GetMergeCommitIds(
     CommitIdView parent1_id, CommitIdView parent2_id,
     fit::function<void(Status, std::vector<CommitId>)> callback) {
   auto [parent_min_id, parent_max_id] = std::minmax(parent1_id, parent2_id);
-  auto it = merges_.find(std::make_pair(parent_min_id.ToString(), parent_max_id.ToString()));
+  auto it = merges_.find(
+      std::make_pair(convert::ToString(parent_min_id), convert::ToString(parent_max_id)));
   auto parents = it != merges_.end() ? it->second : std::vector<CommitId>{};
   callback(Status::OK, std::move(parents));
 }
@@ -107,14 +110,14 @@ void FakePageStorage::GetCommit(
     callback(Status::OK, std::make_unique<const FakeRootCommit>());
     return;
   }
-  auto it = journals_.find(commit_id.ToString());
+  auto it = journals_.find(convert::ToString(commit_id));
   if (it == journals_.end()) {
     callback(Status::INTERNAL_NOT_FOUND, nullptr);
     return;
   }
 
   async::PostTask(environment_->dispatcher(),
-                  [this, commit_id = commit_id.ToString(), callback = std::move(callback)] {
+                  [this, commit_id = convert::ToString(commit_id), callback = std::move(callback)] {
                     callback(Status::OK, std::make_unique<FakeCommit>(journals_[commit_id].get(),
                                                                       &object_identifier_factory_));
                   });
@@ -159,11 +162,11 @@ void FakePageStorage::CommitJournal(
                    Status status, std::unique_ptr<const storage::Commit> commit) {
         std::vector<storage::CommitIdView> parent_ids = commit->GetParentIds();
         if (parent_ids.size() == 2) {
-          merges_[std::minmax(parent_ids[0].ToString(), parent_ids[1].ToString())].push_back(
-              commit->GetId());
+          merges_[std::minmax(convert::ToString(parent_ids[0]), convert::ToString(parent_ids[1]))]
+              .push_back(commit->GetId());
         }
         for (const storage::CommitIdView& parent_id : parent_ids) {
-          auto it = heads_.find(parent_id.ToString());
+          auto it = heads_.find(convert::ToString(parent_id));
           if (it != heads_.end()) {
             heads_.erase(it);
           }
@@ -245,7 +248,7 @@ void FakePageStorage::GetObjectPart(ObjectIdentifier object_identifier, int64_t 
       callback(status, nullptr);
       return;
     }
-    fxl::StringView data = piece->GetData();
+    absl::string_view data = piece->GetData();
     ledger::SizedVmo buffer;
     Status buffer_status = ToBuffer(data, offset, max_size, &buffer);
     if (buffer_status != Status::OK) {
@@ -322,14 +325,13 @@ storage::ObjectIdentifierFactory* FakePageStorage::GetObjectIdentifierFactory() 
   return &object_identifier_factory_;
 }
 
-ObjectDigest FakePageStorage::FakeDigest(fxl::StringView value) const {
+ObjectDigest FakePageStorage::FakeDigest(absl::string_view value) const {
   // Builds a fake ObjectDigest by computing the hash of |value|, and prefixes
   // it with 0xFACEFEED to intentionally make it longer than real object
   // digests, start with a 1 bit, and easy to spot in logs. This is incompatible
   // with real object digests, but is enough for a fake because all clients of
   // the fake should treat object digests as opaque blobs.
-  return ObjectDigest(
-      fxl::Concatenate({"\xFA\xCE\xFE\xED", encryption::SHA256WithLengthHash(value)}));
+  return ObjectDigest(absl::StrCat("\xFA\xCE\xFE\xED", encryption::SHA256WithLengthHash(value)));
 }
 
 void FakePageStorage::SendNextObject() {

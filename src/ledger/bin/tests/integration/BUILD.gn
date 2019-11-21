@@ -102,6 +102,7 @@ source_set("integration_lib") {
     "//src/ledger/bin/testing:ledger_instance_factory",
     "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

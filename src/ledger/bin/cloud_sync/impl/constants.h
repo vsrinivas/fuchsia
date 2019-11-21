@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_CONSTANTS_H_
 #define SRC_LEDGER_BIN_CLOUD_SYNC_IMPL_CONSTANTS_H_
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
 // Key for the timestamp metadata in the SyncMetadata KV store.
-inline constexpr fxl::StringView kTimestampKey = "timestamp";
+inline constexpr absl::string_view kTimestampKey = "timestamp";
 
 }  // namespace cloud_sync
 

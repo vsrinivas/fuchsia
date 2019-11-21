@@ -12,6 +12,7 @@ source_set("cache") {
 
   public_deps = [
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/fit:fit",
   ]
 

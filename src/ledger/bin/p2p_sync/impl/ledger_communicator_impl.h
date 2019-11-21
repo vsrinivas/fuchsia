@@ -18,6 +18,7 @@
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 class PageCommunicatorImpl;
@@ -36,11 +37,11 @@ class LedgerCommunicatorImpl : public LedgerCommunicator {
                       p2p_provider::DeviceChangeType change_type);
 
   // Called when a new request arrived for this ledger from device |source|.
-  void OnNewRequest(const p2p_provider::P2PClientId& source, fxl::StringView page_id,
+  void OnNewRequest(const p2p_provider::P2PClientId& source, absl::string_view page_id,
                     MessageHolder<Request> message);
 
   // Called when a new response arrived for this ledger from device |source|.
-  void OnNewResponse(const p2p_provider::P2PClientId& source, fxl::StringView page_id,
+  void OnNewResponse(const p2p_provider::P2PClientId& source, absl::string_view page_id,
                      MessageHolder<Response> message);
 
   // LedgerCommunicator:

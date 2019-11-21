@@ -9,6 +9,7 @@
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
 #include "src/ledger/bin/p2p_sync/impl/page_communicator_impl.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 LedgerCommunicatorImpl::LedgerCommunicatorImpl(ledger::Environment* environment,
@@ -35,7 +36,8 @@ void LedgerCommunicatorImpl::OnDeviceChange(const p2p_provider::P2PClientId& rem
 }
 
 void LedgerCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& source,
-                                          fxl::StringView page_id, MessageHolder<Request> message) {
+                                          absl::string_view page_id,
+                                          MessageHolder<Request> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {
     // Send unknown page response.
@@ -49,7 +51,7 @@ void LedgerCommunicatorImpl::OnNewRequest(const p2p_provider::P2PClientId& sourc
 }
 
 void LedgerCommunicatorImpl::OnNewResponse(const p2p_provider::P2PClientId& source,
-                                           fxl::StringView page_id,
+                                           absl::string_view page_id,
                                            MessageHolder<Response> message) {
   const auto& it = pages_.find(page_id);
   if (it == pages_.end()) {

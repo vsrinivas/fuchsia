@@ -15,6 +15,7 @@
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
@@ -277,7 +278,7 @@ void BatchUpload::EncodeCommit(
 
   remote_commit_ptr->set_id(convert::ToArray(encryption_service_->EncodeCommitId(commit.GetId())));
   encryption_service_->EncryptCommit(
-      commit.GetStorageBytes().ToString(),
+      convert::ToString(commit.GetStorageBytes()),
       waiter->MakeScoped([callback = waiter->NewCallback(), remote_commit_ptr](
                              encryption::Status status, std::string encrypted_commit) {
         if (status == encryption::Status::OK) {
@@ -332,7 +333,7 @@ void BatchUpload::EncodeDiff(storage::CommitIdView commit_id,
     diff.mutable_base_state()->set_empty_page({});
   } else {
     diff.mutable_base_state()->set_at_commit(
-        convert::ToArray(encryption_service_->EncodeCommitId(commit_id.ToString())));
+        convert::ToArray(encryption_service_->EncodeCommitId(convert::ToString(commit_id))));
   }
 
   for (auto& entry : entries) {

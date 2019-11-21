@@ -8,6 +8,7 @@
 
 #include "lib/fit/result.h"
 #include "src/ledger/bin/fidl/include/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 
 using testing::AllOf;
@@ -18,7 +19,7 @@ namespace ledger {
 
 namespace {
 MATCHER_P(InternalViewMatcher, sub_matcher, "") {  // NOLINT
-  return ExplainMatchResult(sub_matcher, arg.ToString(), result_listener);
+  return ExplainMatchResult(sub_matcher, convert::ToString(arg), result_listener);
 }
 
 MATCHER_P(InternalBufferMatcher, sub_matcher, "") {  // NOLINT

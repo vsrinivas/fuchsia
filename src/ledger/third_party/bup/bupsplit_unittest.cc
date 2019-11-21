@@ -10,6 +10,7 @@
 
 #include "gtest/gtest.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace bup {
 namespace {
@@ -34,7 +35,7 @@ TEST_F(RollSumSplitTest, CheckMinMax) {
   RollSumSplit rh(min, max);
 
   std::string value = GetValue(1024 * 1024);
-  fxl::StringView view = value;
+  absl::string_view view = value;
   while (!view.empty()) {
     size_t index = rh.Feed(view, nullptr);
     if (index > 0) {
@@ -59,7 +60,7 @@ TEST_F(RollSumSplitTest, CheckSameResult) {
   RollSumSplit rh(4 * 1024, 64 * 1024 - 1);
 
   std::string value = GetValue(1024 * 1024);
-  fxl::StringView view = value;
+  absl::string_view view = value;
   std::vector<Cut> feed_all_cuts;
   while (!view.empty()) {
     Cut cut;
@@ -113,7 +114,7 @@ TEST_F(RollSumSplitTest, CheckWindowed) {
 
     // Feed kWindowSize characters.
     std::string value = GetValue(kWindowSize);
-    fxl::StringView view = value;
+    absl::string_view view = value;
     for (size_t i = 0; i < view.size(); ++i) {
       auto f1 = r1.Feed(view.substr(i, 1), nullptr);
       auto f2 = r2.Feed(view.substr(i, 1), nullptr);

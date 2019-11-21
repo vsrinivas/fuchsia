@@ -20,8 +20,10 @@ source_set("socket") {
   ]
 
   public_deps = [
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
     "//src/lib/callback",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/zx",
   ]
 }
@@ -39,8 +41,8 @@ source_set("unittests") {
 
   deps = [
     ":socket",
-    "//src/lib/fxl",
     "//src/lib/testing/loop_fixture",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gtest",
   ]
 }

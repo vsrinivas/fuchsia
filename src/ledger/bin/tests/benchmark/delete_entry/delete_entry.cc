@@ -33,6 +33,7 @@
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
 ABSL_FLAG(ssize_t, transaction_size, -1, "number of element in the transaction");
@@ -42,7 +43,7 @@ ABSL_FLAG(ssize_t, value_size, -1, "size of the values of entries");
 namespace ledger {
 namespace {
 
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/delete_entry";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/delete_entry";
 
 // Benchmark that measures the time taken to delete an entry from a page.
 //
@@ -91,7 +92,7 @@ DeleteEntryBenchmark::DeleteEntryBenchmark(async::Loop* loop,
                                            size_t key_size, size_t value_size)
     : loop_(loop),
       random_(0),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       generator_(&random_),
       page_data_generator_(&random_),
       component_context_(std::move(component_context)),

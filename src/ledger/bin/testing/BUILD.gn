@@ -73,6 +73,7 @@ source_set("lib") {
     "//src/lib/json_parser",
     "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",
@@ -92,6 +93,7 @@ source_set("lib") {
     "//src/lib/callback",
     "//src/lib/fxl",
     "//src/lib/inspect_deprecated:reader",
+    "//third_party/abseil-cpp",
     "//third_party/boringssl",
     "//zircon/public/lib/async-cpp",
   ]
@@ -115,6 +117,7 @@ source_set("ledger_instance_factory") {
     "//src/ledger/bin/fidl/include",
     "//src/ledger/bin/fidl_helpers",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   deps = [
@@ -149,6 +152,7 @@ source_set("get_ledger") {
     "//src/ledger/lib/convert",
     "//src/ledger/lib/vmo",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/fit",
   ]
 
@@ -175,6 +179,7 @@ source_set("run_trace") {
 
   deps = [
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/fdio",
     "//zircon/public/lib/zx",
   ]
@@ -198,6 +203,7 @@ source_set("unittests") {
     "//src/ledger/bin/app:flags",
     "//src/lib/callback",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]

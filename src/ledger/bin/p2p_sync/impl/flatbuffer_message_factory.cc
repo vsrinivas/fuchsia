@@ -5,11 +5,12 @@
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
 
 #include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 
 void CreateUnknownResponseMessage(flatbuffers::FlatBufferBuilder* buffer,
-                                  fxl::StringView namespace_id, fxl::StringView page_id,
+                                  absl::string_view namespace_id, absl::string_view page_id,
                                   ResponseStatus status) {
   flatbuffers::Offset<NamespacePageId> namespace_page_id_offset =
       CreateNamespacePageId(*buffer, convert::ToFlatBufferVector(buffer, namespace_id),

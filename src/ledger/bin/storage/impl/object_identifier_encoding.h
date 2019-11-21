@@ -7,6 +7,7 @@
 
 #include "src/ledger/bin/storage/impl/object_identifier_generated.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
@@ -24,7 +25,7 @@ std::string EncodeObjectIdentifier(const ObjectIdentifier& object_identifier);
 
 // Decodes an ObjectIdentifier from a string. Returns |true| in case of success,
 // |false| otherwise.
-bool DecodeObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+bool DecodeObjectIdentifier(absl::string_view data, ObjectIdentifierFactory* factory,
                             ObjectIdentifier* object_identifier);
 
 // Encodes an ObjectIdentifier for a non-inline piece into a fixed-size string whose prefix is the
@@ -33,7 +34,7 @@ std::string EncodeDigestPrefixedObjectIdentifier(const ObjectIdentifier& object_
 
 // Decodes an ObjectIdentifier encoded with EncodeDigestPrefixedObjectIdentifier. Returns |true| in
 // case of success, |false| otherwise.
-bool DecodeDigestPrefixedObjectIdentifier(fxl::StringView data, ObjectIdentifierFactory* factory,
+bool DecodeDigestPrefixedObjectIdentifier(absl::string_view data, ObjectIdentifierFactory* factory,
                                           ObjectIdentifier* object_identifier);
 
 // Returns whether a |ObjectIdentifierStorage| obtained from flatbuffer is

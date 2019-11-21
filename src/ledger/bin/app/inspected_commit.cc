@@ -16,6 +16,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/inspect.h"
@@ -29,15 +30,16 @@ InspectedCommit::InspectedCommit(async_dispatcher_t* dispatcher, inspect_depreca
       inspectable_page_(inspectable_page),
       commit_(std::move(commit)),
       token_(std::move(token)),
-      parents_node_(node_.CreateChild(kParentsInspectPathComponent.ToString())),
-      entries_node_(node_.CreateChild(kEntriesInspectPathComponent.ToString())),
+      parents_node_(node_.CreateChild(convert::ToString(kParentsInspectPathComponent))),
+      entries_node_(node_.CreateChild(convert::ToString(kEntriesInspectPathComponent))),
       entries_children_manager_retainer_(entries_node_.SetChildrenManager(this)),
       inspected_entry_containers_(dispatcher),
       ongoing_storage_accesses_(0),
       outstanding_detachers_(0),
       weak_factory_(this) {
   for (const storage::CommitIdView& parent_id : commit_->GetParentIds()) {
-    parents_.emplace_back(parents_node_.CreateChild(CommitIdToDisplayName(parent_id.ToString())));
+    parents_.emplace_back(
+        parents_node_.CreateChild(CommitIdToDisplayName(convert::ToString(parent_id))));
   }
   inspected_entry_containers_.SetOnDiscardable([this] { CheckDiscardable(); });
 }

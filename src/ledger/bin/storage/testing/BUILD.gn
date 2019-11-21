@@ -31,6 +31,7 @@ source_set("testing") {
     "//src/ledger/lib/socket",
     "//src/lib/callback",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   configs += [ "//src/ledger:ledger_config" ]

@@ -17,7 +17,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
@@ -43,7 +43,7 @@ void UserSyncImpl::SetSyncWatcher(SyncStateWatcher* watcher) {
 }
 
 std::unique_ptr<LedgerSync> UserSyncImpl::CreateLedgerSync(
-    fxl::StringView app_id, encryption::EncryptionService* encryption_service) {
+    absl::string_view app_id, encryption::EncryptionService* encryption_service) {
   FXL_DCHECK(started_);
 
   auto result = std::make_unique<LedgerSyncImpl>(environment_, &user_config_, encryption_service,

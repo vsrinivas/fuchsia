@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "src/ledger/bin/storage/public/commit.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -32,7 +33,7 @@ class CommitEmptyImpl : public Commit {
 
   ObjectIdentifier GetRootIdentifier() const override;
 
-  fxl::StringView GetStorageBytes() const override;
+  absl::string_view GetStorageBytes() const override;
 
   bool IsAlive() const override;
 };

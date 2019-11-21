@@ -9,7 +9,7 @@
 
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace sync_coordinator {
 
@@ -31,7 +31,7 @@ class UserSync {
   // Returns the Ledger-level synchronization object. The user-level
   // synchronization must be started before calling this method.
   virtual std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id, encryption::EncryptionService* encryption_service) = 0;
+      absl::string_view app_id, encryption::EncryptionService* encryption_service) = 0;
 };
 
 }  // namespace sync_coordinator

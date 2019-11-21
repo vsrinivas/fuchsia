@@ -10,7 +10,7 @@
 #include <ostream>
 
 #include "src/lib/fxl/compiler_specific.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -38,7 +38,7 @@ enum class FXL_WARN_UNUSED_RESULT Status {
 };
 
 // Returns the string representation of |status|.
-fxl::StringView StatusToString(Status status);
+absl::string_view StatusToString(Status status);
 
 // Returns the |zx_status_t| equivalent for the given |status|. This is only
 // valid for non user visible status.

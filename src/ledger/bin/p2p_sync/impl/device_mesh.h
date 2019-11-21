@@ -10,7 +10,6 @@
 
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
 
 namespace p2p_sync {
 // DeviceMesh is used by PageCommunicators to communicate with the device mesh.

@@ -9,6 +9,7 @@
 #include "src/ledger/bin/storage/impl/btree/internal_helper.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -72,7 +73,7 @@ Status BTreeIterator::Init(LocatedObjectIdentifier node_identifier) {
   return Descend(node_identifier.identifier);
 }
 
-Status BTreeIterator::SkipTo(fxl::StringView min_key) {
+Status BTreeIterator::SkipTo(absl::string_view min_key) {
   descending_ = true;
   for (;;) {
     if (SkipToIndex(min_key)) {
@@ -86,7 +87,7 @@ Status BTreeIterator::SkipTo(fxl::StringView min_key) {
   }
 }
 
-bool BTreeIterator::SkipToIndex(fxl::StringView key) {
+bool BTreeIterator::SkipToIndex(absl::string_view key) {
   auto& entries = CurrentNode().entries();
   size_t skip_count = GetEntryOrChildIndex(entries, key);
   if (skip_count < CurrentIndex()) {

@@ -22,6 +22,7 @@
 #include "src/ledger/bin/testing/test_with_environment.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/leveldb/include/leveldb/db.h"
 #include "util/env_fuchsia.h"
 
@@ -36,13 +37,13 @@ ObjectIdentifier CreateObjectIdentifier(ObjectIdentifierFactory* factory, Object
 }
 
 ::testing::AssertionResult CheckObjectValue(const Object& object, ObjectIdentifier identifier,
-                                            fxl::StringView data) {
+                                            absl::string_view data) {
   if (object.GetIdentifier() != identifier) {
     return ::testing::AssertionFailure()
            << "Expected id: " << identifier << ", but got: " << object.GetIdentifier();
   }
 
-  fxl::StringView found_data;
+  absl::string_view found_data;
   Status status = object.GetData(&found_data);
   if (status != Status::OK) {
     return ::testing::AssertionFailure() << "Unable to call GetData on object, status: " << status;
@@ -73,13 +74,13 @@ ObjectIdentifier CreateObjectIdentifier(ObjectIdentifierFactory* factory, Object
 }
 
 ::testing::AssertionResult CheckPieceValue(const Piece& piece, ObjectIdentifier identifier,
-                                           fxl::StringView data) {
+                                           absl::string_view data) {
   if (piece.GetIdentifier() != identifier) {
     return ::testing::AssertionFailure()
            << "Expected id: " << identifier << ", but got: " << piece.GetIdentifier();
   }
 
-  fxl::StringView found_data = piece.GetData();
+  absl::string_view found_data = piece.GetData();
 
   if (data != found_data) {
     return ::testing::AssertionFailure() << "Expected data: " << convert::ToHex(data)

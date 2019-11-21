@@ -56,7 +56,7 @@ class RecordingClient : public P2PProvider::Client {
   }
 
   void OnNewMessage(const P2PClientId& device_name, convert::ExtendedStringView message) override {
-    messages.push_back(Message{device_name, message.ToString()});
+    messages.push_back(Message{device_name, convert::ToString(message)});
   }
 
   FXL_WARN_UNUSED_RESULT bool HasDevicesChanges(size_t new_device_count,

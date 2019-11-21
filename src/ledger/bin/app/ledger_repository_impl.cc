@@ -27,11 +27,13 @@
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
 // Encodes opaque bytes in a way that is usable as a directory name.
-std::string GetDirectoryName(fxl::StringView bytes) { return base64url::Base64UrlEncode(bytes); }
+std::string GetDirectoryName(absl::string_view bytes) { return absl::WebSafeBase64Escape(bytes); }
 }  // namespace
 
 LedgerRepositoryImpl::LedgerRepositoryImpl(
@@ -61,8 +63,9 @@ LedgerRepositoryImpl::LedgerRepositoryImpl(
       coroutine_manager_(environment_->coroutine_service()),
       inspect_node_(std::move(inspect_node)),
       requests_metric_(
-          inspect_node_.CreateUIntMetric(kRequestsInspectPathComponent.ToString(), 0UL)),
-      ledgers_inspect_node_(inspect_node_.CreateChild(kLedgersInspectPathComponent.ToString())) {
+          inspect_node_.CreateUIntMetric(convert::ToString(kRequestsInspectPathComponent), 0UL)),
+      ledgers_inspect_node_(
+          inspect_node_.CreateChild(convert::ToString(kLedgersInspectPathComponent))) {
   bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
   ledger_managers_.SetOnDiscardable([this] { CheckDiscardable(); });
   disk_cleanup_manager_->SetOnDiscardable([this] { CheckDiscardable(); });
@@ -111,7 +114,7 @@ void LedgerRepositoryImpl::BindRepository(
 }
 
 void LedgerRepositoryImpl::PageIsClosedAndSynced(
-    fxl::StringView ledger_name, storage::PageIdView page_id,
+    absl::string_view ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager;
   Status status = GetLedgerManager(ledger_name, &ledger_manager);
@@ -129,7 +132,7 @@ void LedgerRepositoryImpl::PageIsClosedAndSynced(
 }
 
 void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
-    fxl::StringView ledger_name, storage::PageIdView page_id,
+    absl::string_view ledger_name, storage::PageIdView page_id,
     fit::function<void(Status, PagePredicateResult)> callback) {
   LedgerManager* ledger_manager;
   Status status = GetLedgerManager(ledger_name, &ledger_manager);
@@ -145,12 +148,12 @@ void LedgerRepositoryImpl::PageIsClosedOfflineAndEmpty(
   ledger_manager->PageIsClosedOfflineAndEmpty(page_id, std::move(callback));
 }
 
-void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
+void LedgerRepositoryImpl::DeletePageStorage(absl::string_view ledger_name,
                                              storage::PageIdView page_id,
                                              fit::function<void(Status)> callback) {
   coroutine_manager_.StartCoroutine(
-      std::move(callback),
-      [this, page_id, ledger_name = ledger_name.ToString()](coroutine::CoroutineHandler* handler) {
+      std::move(callback), [this, page_id, ledger_name = convert::ToString(ledger_name)](
+                               coroutine::CoroutineHandler* handler) {
         // We need to increase the DeviceId counter each time a page is created then destroyed.
         // There is no correctness issue with increasing this counter too much. Thus, we increase
         // the counter each time a page is evicted/deleted locally. We have to do it before the page
@@ -177,7 +180,7 @@ void LedgerRepositoryImpl::DeletePageStorage(fxl::StringView ledger_name,
       });
 }
 
-void LedgerRepositoryImpl::TrySyncClosedPage(fxl::StringView ledger_name,
+void LedgerRepositoryImpl::TrySyncClosedPage(absl::string_view ledger_name,
                                              storage::PageIdView page_id) {
   LedgerManager* ledger_manager;
   Status status = GetLedgerManager(ledger_name, &ledger_manager);
@@ -193,9 +196,9 @@ void LedgerRepositoryImpl::TrySyncClosedPage(fxl::StringView ledger_name,
 // thread.
 void LedgerRepositoryImpl::GetNames(fit::function<void(std::set<std::string>)> callback) {
   std::set<std::string> child_names;
-  ledger::GetDirectoryEntries(content_path_, [&child_names](fxl::StringView entry) {
+  ledger::GetDirectoryEntries(content_path_, [&child_names](absl::string_view entry) {
     std::string decoded;
-    if (base64url::Base64UrlDecode(entry, &decoded)) {
+    if (absl::WebSafeBase64Unescape(entry, &decoded)) {
       child_names.insert(decoded);
       return true;
     } else {
@@ -356,7 +359,7 @@ void LedgerRepositoryImpl::DiskCleanUp(fit::function<void(Status)> callback) {
   });
 }
 
-DetachedPath LedgerRepositoryImpl::GetPathFor(fxl::StringView ledger_name) {
+DetachedPath LedgerRepositoryImpl::GetPathFor(absl::string_view ledger_name) {
   FXL_DCHECK(!ledger_name.empty());
   return content_path_.SubPath(GetDirectoryName(ledger_name));
 }

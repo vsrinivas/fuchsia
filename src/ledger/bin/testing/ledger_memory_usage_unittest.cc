@@ -16,7 +16,7 @@
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/testing/get_ledger.h"
 #include "src/ledger/bin/testing/run_trace.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace ledger {
 namespace {
@@ -27,9 +27,8 @@ int64_t LaunchTestBenchmark(async::Loop* loop) {
   auto component_context = sys::ComponentContext::Create();
   fuchsia::sys::ComponentControllerPtr component_controller;
 
-  std::vector<std::string> argv{"record",
-                                fxl::Concatenate({"--spec-file=", kTraceTestDataRemotePath,
-                                                  "/memory_usage_test_benchmark.tspec"})};
+  std::vector<std::string> argv{"record", absl::StrCat("--spec-file=", kTraceTestDataRemotePath,
+                                                       "/memory_usage_test_benchmark.tspec")};
   RunTrace(component_context.get(), &component_controller, argv);
 
   int64_t return_code = INT64_MIN;

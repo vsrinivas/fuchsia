@@ -123,7 +123,7 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
   LoopControllerTestLoop loop_controller(test_loop);
   fidl::InterfacePtr<fuchsia::inspect::deprecated::Inspect> inspect_ptr;
   testing::AssertionResult open_child_result =
-      OpenChild(top_level_node, kSystemUnderTestAttachmentPointPathComponent.ToString(),
+      OpenChild(top_level_node, convert::ToString(kSystemUnderTestAttachmentPointPathComponent),
                 &inspect_ptr, &loop_controller);
   if (!open_child_result) {
     return open_child_result;
@@ -145,16 +145,16 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
     std::vector<testing::Matcher<const inspect_deprecated::hierarchy::Property&>> value_matchers;
     for (const auto& value : values) {
       value_matchers.emplace_back(
-          ByteVectorPropertyIs(kValueInspectPathComponent.ToString(), value));
+          ByteVectorPropertyIs(convert::ToString(kValueInspectPathComponent), value));
     }
     entry_matchers.emplace_back(NodeMatches(AllOf(
         NameMatches(KeyToDisplayName(key)), PropertyList(Contains(AnyOfArray(value_matchers))))));
   }
   const testing::Matcher<const inspect_deprecated::ObjectHierarchy&> children_matcher =
       ChildrenMatch(UnorderedElementsAre(
-          AllOf(NodeMatches(NameMatches(kParentsInspectPathComponent.ToString())),
+          AllOf(NodeMatches(NameMatches(convert::ToString(kParentsInspectPathComponent))),
                 ChildrenMatch(UnorderedElementsAreArray(parent_matchers))),
-          AllOf(NodeMatches(NameMatches(kEntriesInspectPathComponent.ToString())),
+          AllOf(NodeMatches(NameMatches(convert::ToString(kEntriesInspectPathComponent))),
                 ChildrenMatch(UnorderedElementsAreArray(entry_matchers)))));
   if (commit_id) {
     return AllOf(NodeMatches(NameMatches(CommitIdToDisplayName(commit_id.value()))),
@@ -178,11 +178,11 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
       head_matchers.push_back(_);
     }
   }
-  return AllOf(NodeMatches(NameMatches(PageIdToDisplayName(page_id.ToString()))),
+  return AllOf(NodeMatches(NameMatches(PageIdToDisplayName(convert::ToString(page_id)))),
                ChildrenMatch(UnorderedElementsAre(
-                   AllOf(NodeMatches(NameMatches(kCommitsInspectPathComponent.ToString())),
+                   AllOf(NodeMatches(NameMatches(convert::ToString(kCommitsInspectPathComponent))),
                          ChildrenMatch(UnorderedElementsAreArray(commit_matchers))),
-                   AllOf(NodeMatches(NameMatches(kHeadsInspectPathComponent.ToString())),
+                   AllOf(NodeMatches(NameMatches(convert::ToString(kHeadsInspectPathComponent))),
                          ChildrenMatch(UnorderedElementsAreArray(head_matchers))))));
 }
 
@@ -190,9 +190,9 @@ testing::AssertionResult Inspect(inspect_deprecated::Node* top_level_node,
     const convert::ExtendedStringView& ledger_name,
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         page_matchers) {
-  return AllOf(NodeMatches(NameMatches(ledger_name.ToString())),
+  return AllOf(NodeMatches(NameMatches(convert::ToString(ledger_name))),
                ChildrenMatch(UnorderedElementsAre(
-                   AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
+                   AllOf(NodeMatches(NameMatches(convert::ToString(kPagesInspectPathComponent))),
                          ChildrenMatch(UnorderedElementsAreArray(page_matchers))))));
 }
 
@@ -200,11 +200,12 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoryMatches(
     std::optional<convert::ExtendedStringView> repository_name,
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         ledger_matchers) {
-  auto children_match = ChildrenMatch(
-      UnorderedElementsAre(AllOf(NodeMatches(NameMatches(kLedgersInspectPathComponent.ToString())),
-                                 ChildrenMatch(UnorderedElementsAreArray(ledger_matchers)))));
+  auto children_match = ChildrenMatch(UnorderedElementsAre(
+      AllOf(NodeMatches(NameMatches(convert::ToString(kLedgersInspectPathComponent))),
+            ChildrenMatch(UnorderedElementsAreArray(ledger_matchers)))));
   if (repository_name) {
-    return AllOf(NodeMatches(NameMatches(repository_name.value().ToString())), children_match);
+    return AllOf(NodeMatches(NameMatches(convert::ToString(repository_name.value()))),
+                 children_match);
   }
   return children_match;
 }
@@ -212,7 +213,7 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoryMatches(
 testing::Matcher<const inspect_deprecated::ObjectHierarchy&> RepositoriesAggregateMatches(
     const std::vector<testing::Matcher<const inspect_deprecated::ObjectHierarchy&>>&
         repository_matchers) {
-  return AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+  return AllOf(NodeMatches(NameMatches(convert::ToString(kRepositoriesInspectPathComponent))),
                ChildrenMatch(UnorderedElementsAreArray(repository_matchers)));
 }
 

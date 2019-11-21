@@ -12,7 +12,7 @@
 #include "src/ledger/bin/storage/public/iterator.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -61,7 +61,7 @@ class PageEvictionDelegate {
   // retrieving information on the page, or when trying to evict it; |OK|
   // otherwise. The boolean in the callback indicates whether the page was
   // evicted.
-  virtual void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+  virtual void TryEvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                             PageEvictionCondition condition,
                             fit::function<void(Status, PageWasEvicted)> callback) = 0;
 };

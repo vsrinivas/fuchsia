@@ -18,6 +18,7 @@
 #include "src/lib/callback/managed_container.h"
 #include "src/lib/callback/scoped_task_runner.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 // PageDownload handles all the download operations (commits and objects) for a page.
@@ -101,18 +102,18 @@ class PageDownload : public cloud_provider::PageCloudWatcher {
           callback);
 
   void HandleGetObjectError(
-      storage::ObjectIdentifier object_identifier, bool is_permanent, fxl::StringView error_name,
+      storage::ObjectIdentifier object_identifier, bool is_permanent, absl::string_view error_name,
       fit::function<void(ledger::Status, storage::ChangeSource, storage::IsObjectSynced,
                          std::unique_ptr<storage::DataSource::DataChunk>)>
           callback);
 
   void HandleGetDiffError(
       storage::CommitId commit_id, std::vector<storage::CommitId> possible_bases, bool is_permanent,
-      fxl::StringView error_name,
+      absl::string_view error_name,
       fit::function<void(ledger::Status, storage::CommitId, std::vector<storage::EntryChange>)>
           callback);
 
-  void HandleDownloadCommitError(fxl::StringView error_description);
+  void HandleDownloadCommitError(absl::string_view error_description);
 
   // Sets the state for commit download.
   void SetCommitState(DownloadSyncState new_state);

@@ -19,6 +19,7 @@
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -40,31 +41,31 @@ class PageEvictionManagerImpl : public PageEvictionManager, public PageEvictionD
 
   void TryEvictPages(PageEvictionPolicy* policy, fit::function<void(Status)> callback) override;
 
-  void MarkPageOpened(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void MarkPageOpened(absl::string_view ledger_name, storage::PageIdView page_id) override;
 
-  void MarkPageClosed(fxl::StringView ledger_name, storage::PageIdView page_id) override;
+  void MarkPageClosed(absl::string_view ledger_name, storage::PageIdView page_id) override;
 
   // PageEvictionDelegate:
-  void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+  void TryEvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                     PageEvictionCondition condition,
                     fit::function<void(Status, PageWasEvicted)> callback) override;
 
  private:
   // Removes the page from the local storage. The caller of this method must
   // ensure that the given page exists.
-  void EvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+  void EvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                  fit::function<void(Status)> callback);
 
   // Checks whether a page can be evicted. A page can be evicted if it is
   // currently closed and either:
   // - has no unsynced commits or objects, or
   // - is empty and offline, i.e. was never synced to the cloud or a peer.
-  Status CanEvictPage(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+  Status CanEvictPage(coroutine::CoroutineHandler* handler, absl::string_view ledger_name,
                       storage::PageIdView page_id, bool* can_evict);
 
   // Checks whether a page is closed, offline and empty, and thus can be
   // evicted.
-  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler, fxl::StringView ledger_name,
+  Status CanEvictEmptyPage(coroutine::CoroutineHandler* handler, absl::string_view ledger_name,
                            storage::PageIdView page_id, bool* can_evict);
 
   // Marks the given page as evicted in the page usage database.

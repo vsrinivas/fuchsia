@@ -19,12 +19,14 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/strings.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/abseil-cpp/absl/strings/str_format.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 using testing::UnorderedElementsAre;
 
@@ -61,9 +63,9 @@ class TrackGetObjectFakePageStorage : public fake::FakePageStorage {
   std::set<std::pair<ObjectIdentifier, Location>> object_requests;
 
  protected:
-  ObjectDigest FakeDigest(fxl::StringView content) const override {
+  ObjectDigest FakeDigest(absl::string_view content) const override {
     // BTree code needs storage to return valid digests.
-    return MakeObjectDigest(content.ToString());
+    return MakeObjectDigest(convert::ToString(content));
   }
 };
 
@@ -128,7 +130,7 @@ TEST_F(BTreeUtilsTest, GetNodeLevel) {
   memset(level_distribution, 0, sizeof(level_distribution));
 
   for (size_t i = 0; i < 1000; ++i) {
-    fxl::StringView key(reinterpret_cast<char*>(&i), sizeof(i));
+    absl::string_view key(reinterpret_cast<char*>(&i), sizeof(i));
     uint8_t node_level =
         std::min(arraysize(level_distribution) - 1,
                  static_cast<size_t>(GetDefaultNodeLevelCalculator()->GetNodeLevel(key)));

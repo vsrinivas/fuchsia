@@ -166,11 +166,11 @@ bool AbslParseFlag(absl::string_view text, GarbageCollectionPolicy* policy, std:
 std::string AbslUnparseFlag(GarbageCollectionPolicy policy) {
   switch (policy) {
     case GarbageCollectionPolicy::NEVER:
-      return std::string(kNeverPolicy);
+      return convert::ToString(kNeverPolicy);
     case GarbageCollectionPolicy::EAGER_LIVE_REFERENCES:
-      return std::string(kEagerPolicy);
+      return convert::ToString(kEagerPolicy);
     case GarbageCollectionPolicy::EAGER_ROOT_NODES:
-      return std::string(kRootNodesPolicy);
+      return convert::ToString(kRootNodesPolicy);
     default:
       return absl::StrCat(policy);
   }

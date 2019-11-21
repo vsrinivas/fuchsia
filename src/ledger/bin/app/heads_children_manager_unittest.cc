@@ -33,6 +33,7 @@
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/testing/page_sync_empty_impl.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/backoff/exponential_backoff.h"
 #include "src/lib/callback/capture.h"
@@ -180,11 +181,11 @@ TEST_P(SynchronyHeadsChildrenManagerTest, GetNames) {
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   std::unique_ptr<HeadCommitsSubstitutePageStorage> page_storage =
       std::make_unique<HeadCommitsSubstitutePageStorage>(graph);
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -216,12 +217,12 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNames) {
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   size_t concurrency = std::get<0>(GetParam());
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   std::unique_ptr<HeadCommitsSubstitutePageStorage> page_storage =
       std::make_unique<HeadCommitsSubstitutePageStorage>(graph);
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -268,11 +269,11 @@ TEST_P(SynchronyHeadsChildrenManagerTest, Attach) {
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   std::unique_ptr<HeadCommitsSubstitutePageStorage> page_storage =
       std::make_unique<HeadCommitsSubstitutePageStorage>(graph);
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -309,9 +310,9 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   std::vector<storage::CommitId> heads{};
   heads.reserve(graph.size());
   for (const auto& [head, _] : graph) {
@@ -323,7 +324,7 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, Attach) {
     attachment_choices.push_back(heads[index % heads.size()]);
   }
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   std::unique_ptr<HeadCommitsSubstitutePageStorage> page_storage =
       std::make_unique<HeadCommitsSubstitutePageStorage>(graph);
   std::unique_ptr<MergeResolver> merger = GetDummyResolver(&environment_, page_storage.get());
@@ -364,12 +365,12 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingActi
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   size_t concurrency = std::get<0>(GetParam());
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   SubstituteInspectablePage inspectable_page{nullptr, std::get<1>(GetParam()),
                                              test_loop().dispatcher()};
   size_t callbacks_called = 0;
@@ -408,12 +409,12 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingComm
   storage::CommitId three =
       storage::CommitId("00000000000000000000000000000003", storage::kCommitIdSize);
   std::map<storage::CommitId, std::set<storage::CommitId>> graph{
-      {one, {storage::kFirstPageCommitId.ToString()}},
-      {two, {storage::kFirstPageCommitId.ToString()}},
-      {three, {storage::kFirstPageCommitId.ToString()}}};
+      {one, {convert::ToString(storage::kFirstPageCommitId)}},
+      {two, {convert::ToString(storage::kFirstPageCommitId)}},
+      {three, {convert::ToString(storage::kFirstPageCommitId)}}};
   size_t concurrency = std::get<0>(GetParam());
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   std::unique_ptr<HeadCommitsSubstitutePageStorage> page_storage =
       std::make_unique<HeadCommitsSubstitutePageStorage>(graph);
   page_storage->fail_after_successful_calls(0);
@@ -453,7 +454,7 @@ TEST_P(SynchronyAndConcurrencyHeadsChildrenManagerTest, GetNamesErrorGettingComm
 
 TEST_F(HeadsChildrenManagerTest, AttachInvalidName) {
   inspect_deprecated::Node heads_node =
-      inspect_deprecated::Node(kHeadsInspectPathComponent.ToString());
+      inspect_deprecated::Node(convert::ToString(kHeadsInspectPathComponent));
   DummyInspectablePage inspectable_page{};
   bool callback_called;
   fit::closure detacher;

@@ -7,7 +7,7 @@
 
 #include <stdint.h>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -15,7 +15,7 @@ namespace storage {
 inline constexpr uint64_t kCommitIdSize = 32;
 
 // The ID of the first commit of a page.
-extern const fxl::StringView kFirstPageCommitId;
+extern const absl::string_view kFirstPageCommitId;
 
 // The size of a device id in number of bytes.
 inline constexpr uint64_t kDeviceIdSize = 32;

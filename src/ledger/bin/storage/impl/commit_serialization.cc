@@ -5,6 +5,7 @@
 #include "src/ledger/bin/storage/impl/commit_generated.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -16,6 +17,6 @@ const IdStorage* ToIdStorage(CommitIdView id) {
 
 CommitIdView ToCommitIdView(const IdStorage* fb_id_storage) {
   return CommitIdView(
-      fxl::StringView(reinterpret_cast<const char*>(fb_id_storage), sizeof(IdStorage)));
+      absl::string_view(reinterpret_cast<const char*>(fb_id_storage), sizeof(IdStorage)));
 }
 }  // namespace storage

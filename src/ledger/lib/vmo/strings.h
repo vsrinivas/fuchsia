@@ -11,15 +11,15 @@
 #include <string>
 
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
 // Make a new shared buffer with the contents of a string.
-bool VmoFromString(const fxl::StringView& string, SizedVmo* handle_ptr);
+bool VmoFromString(const absl::string_view& string, SizedVmo* handle_ptr);
 
 // Make a new shared buffer with the contents of a string.
-bool VmoFromString(const fxl::StringView& string, fuchsia::mem::Buffer* buffer_ptr);
+bool VmoFromString(const absl::string_view& string, fuchsia::mem::Buffer* buffer_ptr);
 
 // Copy the contents of a shared buffer into a string.
 bool StringFromVmo(const SizedVmo& handle, std::string* string_ptr);

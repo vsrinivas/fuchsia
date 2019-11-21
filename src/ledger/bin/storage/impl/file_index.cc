@@ -5,15 +5,16 @@
 #include "src/ledger/bin/storage/impl/file_index.h"
 
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
-bool FileIndexSerialization::CheckValidFileIndexSerialization(fxl::StringView data) {
+bool FileIndexSerialization::CheckValidFileIndexSerialization(absl::string_view data) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(data.data()), data.size());
   return VerifyFileIndexBuffer(verifier);
 }
 
-Status FileIndexSerialization::ParseFileIndex(fxl::StringView content,
+Status FileIndexSerialization::ParseFileIndex(absl::string_view content,
                                               const FileIndex** file_index) {
   if (!CheckValidFileIndexSerialization(content)) {
     return Status::DATA_INTEGRITY_ERROR;

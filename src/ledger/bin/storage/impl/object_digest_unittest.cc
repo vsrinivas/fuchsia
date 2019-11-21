@@ -6,14 +6,17 @@
 
 #include "gtest/gtest.h"
 #include "src/ledger/bin/encryption/primitives/hash.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
 
-fxl::StringView operator"" _s(const char* str, size_t size) { return fxl::StringView(str, size); }
+absl::string_view operator"" _s(const char* str, size_t size) {
+  return absl::string_view(str, size);
+}
 
 // Test for object ids smaller than the inlining threshold.
-using ObjectDigestSmallTest = ::testing::TestWithParam<fxl::StringView>;
+using ObjectDigestSmallTest = ::testing::TestWithParam<absl::string_view>;
 
 TEST_P(ObjectDigestSmallTest, Index) {
   ObjectDigest object_digest = ComputeObjectDigest(PieceType::INDEX, ObjectType::BLOB, GetParam());
@@ -41,7 +44,7 @@ INSTANTIATE_TEST_SUITE_P(ObjectDigestTest, ObjectDigestSmallTest,
                                            "01234567890123456789012345678901"));
 
 // Test for object ids bigger than the inlining threshold.
-using ObjectDigestBigTest = ::testing::TestWithParam<fxl::StringView>;
+using ObjectDigestBigTest = ::testing::TestWithParam<absl::string_view>;
 
 TEST_P(ObjectDigestBigTest, Index) {
   ObjectDigest object_digest =

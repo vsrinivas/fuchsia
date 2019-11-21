@@ -14,7 +14,7 @@
 #include "src/ledger/lib/vmo/sized_vmo.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/files/unique_fd.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -24,7 +24,7 @@ TEST(VMOAndFile, VmoFromFd) {
   fbl::unique_fd fd(openat(tmpfs.root_fd(), "file", O_RDWR | O_CREAT));
   EXPECT_TRUE(fd.is_valid());
 
-  constexpr fxl::StringView payload = "Payload";
+  constexpr absl::string_view payload = "Payload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));
 
   ledger::SizedVmo vmo;
@@ -41,7 +41,7 @@ TEST(VMOAndFile, VmoFromFilename) {
   fbl::unique_fd fd(openat(tmpfs.root_fd(), "file", O_RDWR | O_CREAT));
   EXPECT_TRUE(fd.is_valid());
 
-  constexpr fxl::StringView payload = "Another playload";
+  constexpr absl::string_view payload = "Another playload";
   EXPECT_EQ(static_cast<ssize_t>(payload.size()), write(fd.get(), payload.data(), payload.size()));
   fd.reset();
 

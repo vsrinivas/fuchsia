@@ -18,11 +18,13 @@
 #include "src/ledger/bin/encryption/primitives/hash.h"
 #include "src/ledger/bin/encryption/primitives/hmac.h"
 #include "src/ledger/bin/encryption/primitives/kdf.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/vmo/strings.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/weak_ptr.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 namespace {
@@ -41,7 +43,7 @@ constexpr size_t kKeyIndexCacheSize = 10u;
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted commit.
-bool CheckValidEncryptedCommitSerialization(fxl::StringView storage_bytes) {
+bool CheckValidEncryptedCommitSerialization(absl::string_view storage_bytes) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(storage_bytes.data()),
                                  storage_bytes.size());
 
@@ -50,7 +52,7 @@ bool CheckValidEncryptedCommitSerialization(fxl::StringView storage_bytes) {
 
 // Checks whether the given |storage_bytes| are a valid serialization of an
 // encrypted entry.
-bool CheckValidEncryptedEntrySerialization(fxl::StringView storage_bytes) {
+bool CheckValidEncryptedEntrySerialization(absl::string_view storage_bytes) {
   flatbuffers::Verifier verifier(reinterpret_cast<const unsigned char*>(storage_bytes.data()),
                                  storage_bytes.size());
 
@@ -193,9 +195,9 @@ void EncryptionServiceImpl::GetObjectName(storage::ObjectIdentifier object_ident
 }
 
 void EncryptionServiceImpl::EncryptObject(storage::ObjectIdentifier object_identifier,
-                                          fxl::StringView content,
+                                          absl::string_view content,
                                           fit::function<void(Status, std::string)> callback) {
-  Encrypt(object_identifier.key_index(), content.ToString(), std::move(callback));
+  Encrypt(object_identifier.key_index(), convert::ToString(content), std::move(callback));
 }
 
 void EncryptionServiceImpl::DecryptObject(storage::ObjectIdentifier object_identifier,
@@ -267,13 +269,12 @@ std::string EncryptionServiceImpl::GetEntryId() {
   return entry_id;
 }
 
-std::string EncryptionServiceImpl::GetEntryIdForMerge(fxl::StringView entry_name,
+std::string EncryptionServiceImpl::GetEntryIdForMerge(absl::string_view entry_name,
                                                       storage::CommitId left_parent_id,
                                                       storage::CommitId right_parent_id,
-                                                      fxl::StringView operation_list) {
+                                                      absl::string_view operation_list) {
   // TODO(LE-827): Concatenation is ineffective; consider doing it once per commit.
-  std::string input =
-      fxl::Concatenate({entry_name, left_parent_id, right_parent_id, operation_list});
+  std::string input = absl::StrCat(entry_name, left_parent_id, right_parent_id, operation_list);
   std::string hash = SHA256WithLengthHash(input);
   hash.resize(kEntryIdSize);
   return hash;

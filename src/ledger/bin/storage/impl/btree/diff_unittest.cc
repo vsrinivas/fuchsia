@@ -12,8 +12,10 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace btree {
@@ -38,9 +40,9 @@ class FakePageStorageValidDigest : public fake::FakePageStorage {
   using fake::FakePageStorage::FakePageStorage;
 
  protected:
-  ObjectDigest FakeDigest(fxl::StringView content) const override {
+  ObjectDigest FakeDigest(absl::string_view content) const override {
     // BTree code needs storage to return valid digests.
-    return MakeObjectDigest(content.ToString());
+    return MakeObjectDigest(convert::ToString(content));
   }
 };
 

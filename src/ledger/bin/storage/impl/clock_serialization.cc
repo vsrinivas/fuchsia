@@ -134,7 +134,7 @@ bool ExtractClockFromStorage(std::string data, Clock* clock) {
         }
         DeviceEntry device_entry;
         device_entry.head.commit_id =
-            ToCommitIdView(device_entry_storage->head()->commit_id()).ToString();
+            convert::ToString(ToCommitIdView(device_entry_storage->head()->commit_id()));
         device_entry.head.generation = device_entry_storage->head()->generation();
 
         if (device_entry_storage->cloud()) {
@@ -142,7 +142,7 @@ bool ExtractClockFromStorage(std::string data, Clock* clock) {
             return false;
           }
           device_entry.cloud = {
-              ToCommitIdView(device_entry_storage->cloud()->commit_id()).ToString(),
+              convert::ToString(ToCommitIdView(device_entry_storage->cloud()->commit_id())),
               device_entry_storage->cloud()->generation()};
         }
         clock->emplace(std::move(device_id), std::move(device_entry));

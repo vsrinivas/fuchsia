@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/storage/public/constants.h"
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -12,5 +12,5 @@ namespace {
 constexpr char kFirstPageCommitIdArray[kCommitIdSize] = {};
 }  // namespace
 
-constexpr fxl::StringView kFirstPageCommitId(kFirstPageCommitIdArray, kCommitIdSize);
+constexpr absl::string_view kFirstPageCommitId(kFirstPageCommitIdArray, kCommitIdSize);
 }  // namespace storage

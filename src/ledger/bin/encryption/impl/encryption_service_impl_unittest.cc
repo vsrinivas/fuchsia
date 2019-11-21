@@ -11,7 +11,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 namespace {
@@ -75,7 +75,7 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
     EXPECT_TRUE(called);
   }
 
-  void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
+  void EncryptObject(storage::ObjectIdentifier object_identifier, absl::string_view content,
                      Status* status, std::string* result) {
     bool called;
     encryption_service_.EncryptObject(
@@ -106,9 +106,9 @@ class EncryptionServiceTest : public ledger::TestWithEnvironment {
   }
 
   std::string GetEntryId() { return encryption_service_.GetEntryId(); }
-  std::string GetEntryIdForMerge(fxl::StringView entry_name, storage::CommitId left_parent_id,
+  std::string GetEntryIdForMerge(absl::string_view entry_name, storage::CommitId left_parent_id,
                                  storage::CommitId right_parent_id,
-                                 fxl::StringView operation_list) {
+                                 absl::string_view operation_list) {
     return encryption_service_.GetEntryIdForMerge(entry_name, left_parent_id, right_parent_id,
                                                   operation_list);
   }
@@ -186,7 +186,7 @@ TEST_F(EncryptionServiceTest, EncryptDecryptObject) {
   std::string content(256u, '\0');
   std::unique_ptr<storage::Object> object =
       std::make_unique<storage::fake::FakeObject>(identifier, content);
-  fxl::StringView content_data;
+  absl::string_view content_data;
   ASSERT_EQ(object->GetData(&content_data), ledger::Status::OK);
 
   Status status;

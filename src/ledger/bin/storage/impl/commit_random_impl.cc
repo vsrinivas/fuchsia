@@ -7,6 +7,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -48,6 +49,6 @@ uint64_t CommitRandomImpl::GetGeneration() const { return generation_; }
 
 ObjectIdentifier CommitRandomImpl::GetRootIdentifier() const { return root_node_identifier_; }
 
-fxl::StringView CommitRandomImpl::GetStorageBytes() const { return storage_bytes_; }
+absl::string_view CommitRandomImpl::GetStorageBytes() const { return storage_bytes_; }
 
 }  // namespace storage

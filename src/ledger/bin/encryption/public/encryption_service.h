@@ -13,6 +13,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
@@ -77,7 +78,7 @@ class EncryptionService {
                          fit::function<void(Status, std::string)> callback) = 0;
 
   // Encrypts the given object.
-  virtual void EncryptObject(storage::ObjectIdentifier object_identifier, fxl::StringView content,
+  virtual void EncryptObject(storage::ObjectIdentifier object_identifier, absl::string_view content,
                              fit::function<void(Status, std::string)> callback) = 0;
 
   // Decrypts the given object.
@@ -97,10 +98,10 @@ class EncryptionService {
 
   // This version is used for merge commits to ensure different devices end up with the same entry
   // id for the same merge.
-  virtual std::string GetEntryIdForMerge(fxl::StringView entry_name,
+  virtual std::string GetEntryIdForMerge(absl::string_view entry_name,
                                          storage::CommitId left_parent_id,
                                          storage::CommitId right_parent_id,
-                                         fxl::StringView operation_list) = 0;
+                                         absl::string_view operation_list) = 0;
 };
 
 }  // namespace encryption

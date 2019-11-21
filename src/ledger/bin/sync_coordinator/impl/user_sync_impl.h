@@ -13,7 +13,7 @@
 #include "src/ledger/bin/sync_coordinator/impl/sync_watcher_converter.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace sync_coordinator {
 
@@ -27,7 +27,7 @@ class UserSyncImpl : public UserSync {
   void Start() override;
   void SetWatcher(SyncStateWatcher* watcher) override;
   std::unique_ptr<LedgerSync> CreateLedgerSync(
-      fxl::StringView app_id, encryption::EncryptionService* encryption_service) override;
+      absl::string_view app_id, encryption::EncryptionService* encryption_service) override;
 
  private:
   std::unique_ptr<SyncWatcherConverter> watcher_;

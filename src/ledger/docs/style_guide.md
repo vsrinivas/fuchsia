@@ -43,12 +43,12 @@ call them `on_<event>`.
 
 **Don't**: ~~`fit::function<void(int)> done_callback`~~
 
-### Usage of fxl::StringView vs std::string
+### Usage of absl::string_view vs std::string
 
 This section discusses which string types to use for C++ API arguments.
 
-Use a `fxl::StringView` (non-ref) if the functionality just reads the string:
-`fxl::StringView` can handle any stream of bytes without copies.
+Use a `absl::string_view` (non-ref) if the functionality just reads the string:
+`absl::string_view` can handle any stream of bytes without copies.
 
 Use a `std::string` (non-ref) if:
 
@@ -60,6 +60,6 @@ Use a `std::string` (non-ref) if:
 
 You might want to use a `const std:string&` (const ref), if you need to call a
 function that itself takes a `const std:string&` (and you cannot or don't want
-to change it to take an `fxl::StringView`).
+to change it to take an `absl::string_view`).
 
 [Google C++ Style Guide]: https://google.github.io/styleguide/cppguide.html

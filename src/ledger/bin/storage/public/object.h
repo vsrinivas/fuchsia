@@ -7,7 +7,7 @@
 
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -26,7 +26,7 @@ class Object {
 
   // Returns the data of this object. The returned view is valid as long as this
   // object is not deleted.
-  virtual Status GetData(fxl::StringView* data) const = 0;
+  virtual Status GetData(absl::string_view* data) const = 0;
 
   // Returns a vmo containing the data.
   virtual Status GetVmo(ledger::SizedVmo* vmo) const;
@@ -52,7 +52,7 @@ class Piece {
 
   // Returns the data of this piece. The returned view is valid as long as this
   // piece is not deleted.
-  virtual fxl::StringView GetData() const = 0;
+  virtual absl::string_view GetData() const = 0;
 
   // Adds piece-level references from this piece to other pieces into
   // |references|. Does not clear |references|. Does not add tree-level

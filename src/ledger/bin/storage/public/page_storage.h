@@ -18,7 +18,7 @@
 #include "src/ledger/bin/storage/public/object.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -236,12 +236,12 @@ class PageStorage : public PageSyncClient {
   // Sets the opaque sync metadata associated with this page associated with the
   // given |key|. This state is persisted through restarts and can be retrieved
   // using |GetSyncMetadata()|.
-  virtual void SetSyncMetadata(fxl::StringView key, fxl::StringView value,
+  virtual void SetSyncMetadata(absl::string_view key, absl::string_view value,
                                fit::function<void(Status)> callback) = 0;
 
   // Retrieves the opaque sync metadata associated with this page and the given
   // |key|.
-  virtual void GetSyncMetadata(fxl::StringView key,
+  virtual void GetSyncMetadata(absl::string_view key,
                                fit::function<void(Status, std::string)> callback) = 0;
 
   // Commit contents.
@@ -295,7 +295,7 @@ class PageStorage : public PageSyncClient {
   virtual void GetClock(fit::function<void(Status, Clock)> callback) = 0;
 
   // Finds the commit id of the commit with the given |remote_commit_id|.
-  virtual void GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+  virtual void GetCommitIdFromRemoteId(absl::string_view remote_commit_id,
                                        fit::function<void(Status, CommitId)> callback) = 0;
 };
 

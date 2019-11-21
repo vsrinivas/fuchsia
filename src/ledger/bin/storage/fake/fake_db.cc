@@ -7,7 +7,8 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/ledger/bin/storage/fake/fake_object.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "src/ledger/lib/convert/convert.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -24,7 +25,7 @@ Status MakeEmptySyncCallAndCheck(async_dispatcher_t* dispatcher,
 }
 
 bool StartsWith(const std::string& key, convert::ExtendedStringView prefix) {
-  return fxl::StringView(key.data(), std::min(key.size(), prefix.size())) == prefix;
+  return absl::string_view(key.data(), std::min(key.size(), prefix.size())) == prefix;
 }
 
 class FakeBatch : public Db::Batch {
@@ -36,9 +37,9 @@ class FakeBatch : public Db::Batch {
   ~FakeBatch() override = default;
 
   Status Put(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
-             fxl::StringView value) override {
-    std::string key_str = key.ToString();
-    entries_to_put_[key_str] = value.ToString();
+             absl::string_view value) override {
+    std::string key_str = convert::ToString(key);
+    entries_to_put_[key_str] = convert::ToString(value);
 
     // Inserting an entry means that any previous |Delete| operations on that
     // key are cancelled: erase that key from |entries_to_delete_| if present.
@@ -50,7 +51,7 @@ class FakeBatch : public Db::Batch {
   }
 
   Status Delete(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) override {
-    std::string key_str = key.ToString();
+    std::string key_str = convert::ToString(key);
     entries_to_delete_.insert(key_str);
 
     // Deleting an entry means that any previous |Put| operations on that key
@@ -93,7 +94,7 @@ class PrefixIterator
   PrefixIterator(const std::map<std::string, std::string>& key_value_store,
                  convert::ExtendedStringView prefix)
       : key_value_store_(key_value_store),
-        prefix_(prefix.ToString()),
+        prefix_(convert::ToString(prefix)),
         it_(key_value_store_.lower_bound(prefix_)),
         end_(key_value_store_.end()) {
     UpdateCurrentElement();
@@ -160,7 +161,7 @@ Status FakeDb::StartBatch(coroutine::CoroutineHandler* handler, std::unique_ptr<
 Status FakeDb::Get(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                    std::string* value) {
   FXL_DCHECK(value);
-  auto it = key_value_store_.find(key.ToString());
+  auto it = key_value_store_.find(convert::ToString(key));
   if (it == key_value_store_.end()) {
     return Status::INTERNAL_NOT_FOUND;
   }
@@ -169,7 +170,7 @@ Status FakeDb::Get(coroutine::CoroutineHandler* handler, convert::ExtendedString
 }
 
 Status FakeDb::HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key) {
-  auto it = key_value_store_.find(key.ToString());
+  auto it = key_value_store_.find(convert::ToString(key));
   if (it == key_value_store_.end()) {
     return Status::INTERNAL_NOT_FOUND;
   }
@@ -177,7 +178,7 @@ Status FakeDb::HasKey(coroutine::CoroutineHandler* handler, convert::ExtendedStr
 }
 
 Status FakeDb::HasPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix) {
-  auto it = key_value_store_.lower_bound(prefix.ToString());
+  auto it = key_value_store_.lower_bound(convert::ToString(prefix));
   if (it == key_value_store_.end() || !StartsWith(it->first, prefix)) {
     return Status::INTERNAL_NOT_FOUND;
   }
@@ -186,7 +187,7 @@ Status FakeDb::HasPrefix(coroutine::CoroutineHandler* handler, convert::Extended
 
 Status FakeDb::GetObject(coroutine::CoroutineHandler* handler, convert::ExtendedStringView key,
                          ObjectIdentifier object_identifier, std::unique_ptr<const Piece>* piece) {
-  auto it = key_value_store_.find(key.ToString());
+  auto it = key_value_store_.find(convert::ToString(key));
   if (it == key_value_store_.end()) {
     return Status::INTERNAL_NOT_FOUND;
   }
@@ -199,7 +200,7 @@ Status FakeDb::GetObject(coroutine::CoroutineHandler* handler, convert::Extended
 Status FakeDb::GetByPrefix(coroutine::CoroutineHandler* handler, convert::ExtendedStringView prefix,
                            std::vector<std::string>* key_suffixes) {
   std::vector<std::string> keys_with_prefix;
-  auto it = key_value_store_.lower_bound(prefix.ToString());
+  auto it = key_value_store_.lower_bound(convert::ToString(prefix));
   while (it != key_value_store_.end() && StartsWith(it->first, prefix)) {
     keys_with_prefix.push_back(it->first.substr(prefix.size()));
     ++it;
@@ -212,7 +213,7 @@ Status FakeDb::GetEntriesByPrefix(coroutine::CoroutineHandler* handler,
                                   convert::ExtendedStringView prefix,
                                   std::vector<std::pair<std::string, std::string>>* entries) {
   std::vector<std::pair<std::string, std::string>> entries_with_prefix;
-  auto it = key_value_store_.lower_bound(prefix.ToString());
+  auto it = key_value_store_.lower_bound(convert::ToString(prefix));
   while (it != key_value_store_.end() && StartsWith(it->first, prefix)) {
     entries_with_prefix.emplace_back(it->first.substr(prefix.size()), it->second);
     ++it;

@@ -14,7 +14,7 @@
 #include "src/ledger/bin/storage/impl/page_db.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/concatenate.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -46,9 +46,9 @@ Status PageDbBatchImpl::DeleteMerge(coroutine::CoroutineHandler* handler, Commit
 }
 
 Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler, const CommitId& commit_id,
-                                              fxl::StringView remote_commit_id,
+                                              absl::string_view remote_commit_id,
                                               const ObjectIdentifier& root_node,
-                                              fxl::StringView storage_bytes) {
+                                              absl::string_view storage_bytes) {
   RETURN_ON_ERROR(batch_->Put(
       handler, ReferenceRow::GetKeyForCommit(commit_id, root_node.object_digest()), ""));
   RETURN_ON_ERROR(
@@ -57,7 +57,7 @@ Status PageDbBatchImpl::AddCommitStorageBytes(CoroutineHandler* handler, const C
 }
 
 Status PageDbBatchImpl::DeleteCommit(coroutine::CoroutineHandler* handler, CommitIdView commit_id,
-                                     fxl::StringView remote_commit_id,
+                                     absl::string_view remote_commit_id,
                                      const ObjectIdentifier& root_node) {
   RETURN_ON_ERROR(
       batch_->Delete(handler, ReferenceRow::GetKeyForCommit(commit_id, root_node.object_digest())));
@@ -170,8 +170,8 @@ Status PageDbBatchImpl::MarkCommitIdUnsynced(CoroutineHandler* handler, const Co
   return batch_->Put(handler, UnsyncedCommitRow::GetKeyFor(commit_id), SerializeData(generation));
 }
 
-Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* handler, fxl::StringView key,
-                                        fxl::StringView value) {
+Status PageDbBatchImpl::SetSyncMetadata(CoroutineHandler* handler, absl::string_view key,
+                                        absl::string_view value) {
   return batch_->Put(handler, SyncMetadataRow::GetKeyFor(key), value);
 }
 

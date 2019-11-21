@@ -42,9 +42,9 @@
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -56,9 +56,9 @@ using ::testing::AllOf;
 using ::testing::ElementsAre;
 using ::testing::ElementsAreArray;
 
-constexpr fxl::StringView kLedgerName = "ledger_under_test";
-constexpr fxl::StringView kTestTopLevelNodeName = "top-level-of-test node";
-constexpr fxl::StringView kInspectPathComponent = "test_ledger";
+constexpr absl::string_view kLedgerName = "ledger_under_test";
+constexpr absl::string_view kTestTopLevelNodeName = "top-level-of-test node";
+constexpr absl::string_view kInspectPathComponent = "test_ledger";
 
 PageId RandomId(const Environment& environment) {
   PageId result;
@@ -88,11 +88,11 @@ class LedgerManagerTest : public TestWithEnvironment {
     std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
         std::make_unique<sync_coordinator::FakeLedgerSync>();
     sync_ptr = sync.get();
-    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
+    top_level_node_ = inspect_deprecated::Node(convert::ToString(kTestTopLevelNodeName));
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, kLedgerName.ToString(),
-        top_level_node_.CreateChild(kInspectPathComponent.ToString()),
+        &environment_, convert::ToString(kLedgerName),
+        top_level_node_.CreateChild(convert::ToString(kInspectPathComponent)),
         std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
         std::move(sync), std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
     ResetLedgerPtr();
@@ -359,7 +359,7 @@ TEST_F(LedgerManagerTest, TrySyncClosedPageSyncStarted) {
   PagePtr page;
   PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
 
   EXPECT_EQ(sync_ptr->GetSyncCallsCount(page_id), 0);
 
@@ -385,7 +385,7 @@ TEST_F(LedgerManagerTest, TrySyncClosedPageWithOpenedPage) {
   PagePtr page;
   PageId id = RandomId(environment_);
   storage::PageIdView storage_page_id = convert::ExtendedStringView(id.id);
-  storage::PageId page_id = convert::ExtendedStringView(id.id).ToString();
+  storage::PageId page_id = convert::ToString(id.id);
 
   EXPECT_EQ(sync_ptr->GetSyncCallsCount(page_id), 0);
 
@@ -449,8 +449,8 @@ TEST_F(LedgerManagerTest, GetPageDisconnect) {
       std::make_unique<sync_coordinator::FakeLedgerSync>();
   auto disk_cleanup_manager = std::make_unique<FakeDiskCleanupManager>();
   auto ledger_manager = std::make_unique<LedgerManager>(
-      &environment_, kLedgerName.ToString(),
-      top_level_node_.CreateChild(kInspectPathComponent.ToString()),
+      &environment_, convert::ToString(kLedgerName),
+      top_level_node_.CreateChild(convert::ToString(kInspectPathComponent)),
       std::make_unique<encryption::FakeEncryptionService>(dispatcher()), std::move(storage),
       std::move(sync), std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
 
@@ -499,7 +499,7 @@ testing::Matcher<const inspect_deprecated::ObjectHierarchy&> HierarchyMatcher(
     page_expectations.push_back(NodeMatches(NameMatches(PageIdToDisplayName(page_id))));
   }
   return ChildrenMatch(ElementsAre(ChildrenMatch(
-      ElementsAre(AllOf(NodeMatches(NameMatches(kPagesInspectPathComponent.ToString())),
+      ElementsAre(AllOf(NodeMatches(NameMatches(convert::ToString(kPagesInspectPathComponent))),
                         ChildrenMatch(ElementsAreArray(page_expectations)))))));
 }
 
@@ -522,13 +522,13 @@ class LedgerManagerWithRealStorageTest : public TestWithEnvironment {
         storage::CommitPruningPolicy::NEVER, &device_id_manager_);
     std::unique_ptr<sync_coordinator::FakeLedgerSync> sync =
         std::make_unique<sync_coordinator::FakeLedgerSync>();
-    top_level_node_ = inspect_deprecated::Node(kTestTopLevelNodeName.ToString());
-    attachment_node_ =
-        top_level_node_.CreateChild(kSystemUnderTestAttachmentPointPathComponent.ToString());
+    top_level_node_ = inspect_deprecated::Node(convert::ToString(kTestTopLevelNodeName));
+    attachment_node_ = top_level_node_.CreateChild(
+        convert::ToString(kSystemUnderTestAttachmentPointPathComponent));
     disk_cleanup_manager_ = std::make_unique<FakeDiskCleanupManager>();
     ledger_manager_ = std::make_unique<LedgerManager>(
-        &environment_, kLedgerName.ToString(),
-        attachment_node_.CreateChild(kInspectPathComponent.ToString()),
+        &environment_, convert::ToString(kLedgerName),
+        attachment_node_.CreateChild(convert::ToString(kInspectPathComponent)),
         std::move(encryption_service), std::move(ledger_storage), std::move(sync),
         std::vector<PageUsageListener*>{disk_cleanup_manager_.get()});
   }

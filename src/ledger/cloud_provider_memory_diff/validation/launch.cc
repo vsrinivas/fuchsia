@@ -12,12 +12,13 @@
 #include <iostream>
 
 #include "src/ledger/bin/tests/cloud_provider/launcher/validation_tests_launcher.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace {
 
-constexpr fxl::StringView kCloudProviderUrl =
+constexpr absl::string_view kCloudProviderUrl =
     "fuchsia-pkg://fuchsia.com/cloud_provider_memory_diff#meta/"
     "cloud_provider_memory_diff.cmx";
 }  // namespace
@@ -31,7 +32,7 @@ int main(int argc, char** argv) {
       loop.dispatcher(), component_context.get(),
       [component_launcher = std::move(component_launcher)](auto request) {
         fuchsia::sys::LaunchInfo launch_info;
-        launch_info.url = kCloudProviderUrl.ToString();
+        launch_info.url = convert::ToString(kCloudProviderUrl);
         auto cloud_provider_services =
             sys::ServiceDirectory::CreateWithRequest(&launch_info.directory_request);
 

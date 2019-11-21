@@ -4,8 +4,7 @@
 
 #include "src/ledger/bin/cloud_sync/impl/testing/test_cloud_provider.h"
 
-#include <src/ledger/lib/convert/convert.h>
-
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
 
 namespace cloud_sync {

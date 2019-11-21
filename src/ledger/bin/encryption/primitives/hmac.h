@@ -5,12 +5,12 @@
 #ifndef SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_HMAC_H_
 #define SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_HMAC_H_
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 // Compute the HMAC defined by RFC 2104 using SHA-256 for the hash algorithm.
 // |key| must be at least 256 bits long.
-std::string SHA256HMAC(fxl::StringView key, fxl::StringView data);
+std::string SHA256HMAC(absl::string_view key, absl::string_view data);
 }  // namespace encryption
 
 #endif  // SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_HMAC_H_

@@ -7,10 +7,10 @@
 
 #include <string>
 
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
-std::string FromHex(fxl::StringView data);
+std::string FromHex(absl::string_view data);
 }
 
 #endif  // SRC_LEDGER_BIN_ENCRYPTION_PRIMITIVES_CRYPTO_TEST_UTIL_H_

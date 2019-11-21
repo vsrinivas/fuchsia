@@ -35,6 +35,7 @@ source_set("impl") {
     "//src/ledger/bin/storage/public",
     "//src/ledger/lib/convert",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   deps = [
@@ -71,6 +72,7 @@ source_set("unittests") {
     "//src/ledger/bin/testing/overnet",
     "//src/ledger/lib/vmo",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
 
     # gtest matchers are in gmock.
     "//third_party/googletest:gmock",

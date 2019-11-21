@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include "src/ledger/bin/encryption/primitives/hash.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -16,7 +17,7 @@ bool Commit::TimestampOrdered(const std::unique_ptr<const Commit>& commit1,
          std::forward_as_tuple(commit2->GetTimestamp(), commit2->GetId());
 }
 
-std::string ComputeCommitId(fxl::StringView content) {
+std::string ComputeCommitId(absl::string_view content) {
   return encryption::SHA256WithLengthHash(content);
 }
 

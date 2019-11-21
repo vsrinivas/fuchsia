@@ -6,8 +6,7 @@
 #define SRC_LEDGER_BIN_STORAGE_IMPL_OBJECT_DIGEST_H_
 
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -65,7 +64,7 @@ ObjectDigestInfo GetObjectDigestInfo(const ObjectDigest& object_digest);
 // Extracts the data from |object_digest|. If |object_digest| type is |INLINE|,
 // the returned data is the content of the object, otherwise, it is the hash of
 // the object. The returned view is valid for as long as |object digest|.
-fxl::StringView ExtractObjectDigestData(const ObjectDigest& object_digest);
+absl::string_view ExtractObjectDigestData(const ObjectDigest& object_digest);
 
 // Computes the id of a piece with the given |piece_type|, |object_type| and
 // |content|. The inlined bit of ObjectDigestInfo does not need to be provided

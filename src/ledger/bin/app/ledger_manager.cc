@@ -25,6 +25,7 @@
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/p2p_sync/public/page_communicator.h"
 #include "src/ledger/bin/storage/public/page_storage.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/ensure_called.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/fxl/logging.h"
@@ -50,7 +51,7 @@ LedgerManager::LedgerManager(Environment* environment, std::string ledger_name,
       page_managers_(environment_->dispatcher()),
       page_usage_listeners_(std::move(page_usage_listeners)),
       inspect_node_(std::move(inspect_node)),
-      pages_node_(inspect_node_.CreateChild(kPagesInspectPathComponent.ToString())),
+      pages_node_(inspect_node_.CreateChild(convert::ToString(kPagesInspectPathComponent))),
       children_manager_retainer_(pages_node_.SetChildrenManager(this)),
       weak_factory_(this) {
   bindings_.SetOnDiscardable([this] { CheckDiscardable(); });
@@ -139,9 +140,9 @@ PageManager* LedgerManager::GetOrCreatePageManager(convert::ExtendedStringView p
   }
 
   auto ret = page_managers_.try_emplace(
-      page_id.ToString(), environment_, ledger_name_, page_id.ToString(), page_usage_listeners_,
-      storage_.get(), ledger_sync_.get(), &merge_manager_,
-      pages_node_.CreateChild(PageIdToDisplayName(page_id.ToString())));
+      convert::ToString(page_id), environment_, ledger_name_, convert::ToString(page_id),
+      page_usage_listeners_, storage_.get(), ledger_sync_.get(), &merge_manager_,
+      pages_node_.CreateChild(PageIdToDisplayName(convert::ToString(page_id))));
   FXL_DCHECK(ret.second);
   return &ret.first->second;
 }

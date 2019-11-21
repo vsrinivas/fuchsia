@@ -161,7 +161,7 @@ void P2PProviderImpl::OnDeviceChange(P2PClientId remote_device, DeviceChangeType
 }
 
 std::string P2PProviderImpl::OvernetServiceName() {
-  return std::string(kRespondingServiceName) + kRespondingServiceNameSeparator +
+  return convert::ToString(kRespondingServiceName) + kRespondingServiceNameSeparator +
          std::to_string(kCurrentVersion) + kRespondingServiceNameSeparator + user_id_;
 }
 

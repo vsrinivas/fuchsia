@@ -16,7 +16,9 @@
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/storage/fake/fake_db_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -34,12 +36,12 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
 
   ~FakeDelegate() override = default;
 
-  void TrySyncClosedPage(fxl::StringView ledger_name, storage::PageIdView page_id) override {
-    ++sync_calls_[{ledger_name.ToString(), page_id.ToString()}];
+  void TrySyncClosedPage(absl::string_view ledger_name, storage::PageIdView page_id) override {
+    ++sync_calls_[{convert::ToString(ledger_name), convert::ToString(page_id)}];
     coroutine_manager_.StartCoroutine(
         [db = db_, background_sync_manager = background_sync_manager_,
-         ledger_name_str = ledger_name.ToString(),
-         page_id_str = page_id.ToString()](coroutine::CoroutineHandler* handler) {
+         ledger_name_str = convert::ToString(ledger_name),
+         page_id_str = convert::ToString(page_id)](coroutine::CoroutineHandler* handler) {
           Status status = db->MarkPageOpened(handler, ledger_name_str, page_id_str);
           EXPECT_EQ(status, Status::OK);
           if (status != Status::OK) {
@@ -51,11 +53,11 @@ class FakeDelegate : public BackgroundSyncManager::Delegate {
 
   // Simulates the end of page sync by marking it as closed and sending notifications about page
   // being closed.
-  void FinishSyncPage(fxl::StringView ledger_name, storage::PageIdView page_id) {
+  void FinishSyncPage(absl::string_view ledger_name, storage::PageIdView page_id) {
     coroutine_manager_.StartCoroutine(
         [db = db_, background_sync_manager = background_sync_manager_,
-         ledger_name_str = ledger_name.ToString(),
-         page_id_str = page_id.ToString()](coroutine::CoroutineHandler* handler) {
+         ledger_name_str = convert::ToString(ledger_name),
+         page_id_str = convert::ToString(page_id)](coroutine::CoroutineHandler* handler) {
           Status status = db->MarkPageClosed(handler, ledger_name_str, page_id_str);
           EXPECT_EQ(status, Status::OK);
           if (status != Status::OK) {

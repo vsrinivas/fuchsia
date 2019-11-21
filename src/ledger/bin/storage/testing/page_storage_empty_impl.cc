@@ -7,6 +7,7 @@
 #include <lib/fit/function.h>
 
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -159,13 +160,13 @@ void PageStorageEmptyImpl::GetPiece(
   callback(Status::NOT_IMPLEMENTED, nullptr);
 }
 
-void PageStorageEmptyImpl::SetSyncMetadata(fxl::StringView /*key*/, fxl::StringView /*value*/,
+void PageStorageEmptyImpl::SetSyncMetadata(absl::string_view /*key*/, absl::string_view /*value*/,
                                            fit::function<void(Status)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED);
 }
 
-void PageStorageEmptyImpl::GetSyncMetadata(fxl::StringView /*key*/,
+void PageStorageEmptyImpl::GetSyncMetadata(absl::string_view /*key*/,
                                            fit::function<void(Status, std::string)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "");
@@ -213,7 +214,7 @@ void PageStorageEmptyImpl::GetClock(fit::function<void(Status, Clock)> callback)
   callback(Status::NOT_IMPLEMENTED, {});
 }
 
-void PageStorageEmptyImpl::GetCommitIdFromRemoteId(fxl::StringView remote_commit_id,
+void PageStorageEmptyImpl::GetCommitIdFromRemoteId(absl::string_view remote_commit_id,
                                                    fit::function<void(Status, CommitId)> callback) {
   FXL_NOTIMPLEMENTED();
   callback(Status::NOT_IMPLEMENTED, "");

@@ -14,7 +14,7 @@
 #include <memory>
 
 #include "src/ledger/lib/vmo/sized_vmo.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/flatbuffers/include/flatbuffers/flatbuffers.h"
 
 namespace storage {
@@ -31,7 +31,7 @@ class DataSource {
     DataChunk& operator=(const DataChunk&) = delete;
     virtual ~DataChunk() = default;
 
-    virtual fxl::StringView Get() = 0;
+    virtual absl::string_view Get() = 0;
 
     // Factory methods.
     static std::unique_ptr<DataChunk> Create(std::string value);

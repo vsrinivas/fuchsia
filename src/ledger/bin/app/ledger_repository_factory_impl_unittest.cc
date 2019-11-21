@@ -13,12 +13,12 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/inspect/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/inspect.h"
 #include "src/lib/inspect_deprecated/reader.h"
 #include "src/lib/inspect_deprecated/testing/inspect.h"
@@ -47,7 +47,7 @@ class LedgerRepositoryFactoryImplTest : public TestWithEnvironment {
     top_level_inspect_node_ = inspect_deprecated::Node(kTestTopLevelNodeName);
     repository_factory_ = std::make_unique<LedgerRepositoryFactoryImpl>(
         &environment_, nullptr,
-        top_level_inspect_node_.CreateChild(kRepositoriesInspectPathComponent.ToString()));
+        top_level_inspect_node_.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)));
   }
 
   LedgerRepositoryFactoryImplTest(const LedgerRepositoryFactoryImplTest&) = delete;
@@ -119,8 +119,8 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPINoRepositories) {
   auto hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   EXPECT_THAT(hierarchy, AllOf(NodeMatches(AllOf(NameMatches(kTestTopLevelNodeName),
                                                  MetricList(IsEmpty()), PropertyList(IsEmpty()))),
-                               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(
-                                   NameMatches(kRepositoriesInspectPathComponent.ToString())))))));
+                               ChildrenMatch(UnorderedElementsAre(NodeMatches(AllOf(NameMatches(
+                                   convert::ToString(kRepositoriesInspectPathComponent))))))));
 }
 
 TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwice) {
@@ -151,9 +151,9 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   ASSERT_TRUE(CallGetRepository(first_directory, &first_ledger_repository_ptr));
   auto top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto lone_repository_match = NodeMatches(
-      MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))));
+      MetricList(Contains(UIntMetricIs(convert::ToString(kRequestsInspectPathComponent), 1UL))));
   auto first_inspection_repositories_match =
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      AllOf(NodeMatches(NameMatches(convert::ToString(kRepositoriesInspectPathComponent))),
             ChildrenMatch(UnorderedElementsAre(lone_repository_match)));
   auto first_inspection_top_level_match =
       ChildrenMatch(UnorderedElementsAre(first_inspection_repositories_match));
@@ -168,13 +168,13 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   ASSERT_TRUE(CallGetRepository(second_directory, &second_ledger_repository_ptr));
   top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto second_inspection_two_repositories_match = UnorderedElementsAre(
-      NodeMatches(
-          AllOf(NameMatches(first_repository_name),
-                MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))))),
-      NodeMatches(
-          MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL)))));
+      NodeMatches(AllOf(NameMatches(first_repository_name),
+                        MetricList(Contains(
+                            UIntMetricIs(convert::ToString(kRequestsInspectPathComponent), 1UL))))),
+      NodeMatches(MetricList(
+          Contains(UIntMetricIs(convert::ToString(kRequestsInspectPathComponent), 1UL)))));
   auto second_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      AllOf(NodeMatches(NameMatches(convert::ToString(kRepositoriesInspectPathComponent))),
             ChildrenMatch(second_inspection_two_repositories_match)));
   auto second_inspection_top_level_match = ChildrenMatch(second_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, second_inspection_top_level_match);
@@ -196,14 +196,14 @@ TEST_F(LedgerRepositoryFactoryImplTest, InspectAPITwoRepositoriesOneAccessedTwic
   ASSERT_TRUE(CallGetRepository(first_directory, &first_again_ledger_repository_ptr));
   top_hierarchy = inspect_deprecated::ReadFromObject(top_level_inspect_node_);
   auto third_inspection_two_repositories_match = UnorderedElementsAre(
-      NodeMatches(
-          AllOf(NameMatches(first_repository_name),
-                MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 2UL))))),
-      NodeMatches(AllOf(
-          NameMatches(second_repository_name),
-          MetricList(Contains(UIntMetricIs(kRequestsInspectPathComponent.ToString(), 1UL))))));
+      NodeMatches(AllOf(NameMatches(first_repository_name),
+                        MetricList(Contains(
+                            UIntMetricIs(convert::ToString(kRequestsInspectPathComponent), 2UL))))),
+      NodeMatches(AllOf(NameMatches(second_repository_name),
+                        MetricList(Contains(UIntMetricIs(
+                            convert::ToString(kRequestsInspectPathComponent), 1UL))))));
   auto third_inspection_repositories_match = UnorderedElementsAre(
-      AllOf(NodeMatches(NameMatches(kRepositoriesInspectPathComponent.ToString())),
+      AllOf(NodeMatches(NameMatches(convert::ToString(kRepositoriesInspectPathComponent))),
             ChildrenMatch(third_inspection_two_repositories_match)));
   auto third_inspection_top_level_match = ChildrenMatch(third_inspection_repositories_match);
   EXPECT_THAT(top_hierarchy, third_inspection_top_level_match);
@@ -264,7 +264,7 @@ TEST_F(LedgerRepositoryFactoryImplTest, CloseFactory) {
   auto top_level_inspect_node = inspect_deprecated::Node(kTestTopLevelNodeName);
   auto repository_factory = std::make_unique<LedgerRepositoryFactoryImpl>(
       &environment_, nullptr,
-      top_level_inspect_node.CreateChild(kRepositoriesInspectPathComponent.ToString()));
+      top_level_inspect_node.CreateChild(convert::ToString(kRepositoriesInspectPathComponent)));
 
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> tmpfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();
   ledger_internal::LedgerRepositoryPtr ledger_repository_ptr;

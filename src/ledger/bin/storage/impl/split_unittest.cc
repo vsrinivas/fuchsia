@@ -23,6 +23,7 @@
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace {
@@ -208,7 +209,7 @@ TEST_P(SplitBigValueTest, BigValues) {
   // 2 contents (including 1 termination)
   ASSERT_GE(split_result.calls.size(), 3u);
 
-  fxl::StringView current = content;
+  absl::string_view current = content;
   for (const auto& call : split_result.calls) {
     if (call.status == IterationStatus::IN_PROGRESS &&
         GetObjectDigestInfo(call.digest).is_chunk()) {
@@ -360,7 +361,7 @@ TEST(SplitTest, CollectPieces) {
   CollectPieces(
       MakeIndexId(0, &factory),
       [&objects](ObjectIdentifier object_identifier,
-                 fit::function<void(Status, fxl::StringView)> callback) {
+                 fit::function<void(Status, absl::string_view)> callback) {
         callback(Status::OK, objects[object_identifier]->Get());
       },
       [&status, &identifiers](IterationStatus received_status, ObjectIdentifier identifier) {
@@ -388,7 +389,7 @@ TEST(SplitTest, CollectPiecesError) {
   CollectPieces(
       MakeIndexId(0, &factory),
       [&factory, &called](ObjectIdentifier identifier,
-                          fit::function<void(Status, fxl::StringView)> callback) {
+                          fit::function<void(Status, absl::string_view)> callback) {
         if (called >= nb_successfull_called) {
           callback(Status::INTERNAL_ERROR, "");
           return;

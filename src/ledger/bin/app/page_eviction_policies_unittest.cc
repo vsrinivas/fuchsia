@@ -7,9 +7,11 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/timekeeper/test_clock.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -55,18 +57,18 @@ class FakePageEvictionDelegate : public PageEvictionDelegate {
   FakePageEvictionDelegate& operator=(const FakePageEvictionDelegate&) = delete;
   ~FakePageEvictionDelegate() override = default;
 
-  void TryEvictPage(fxl::StringView ledger_name, storage::PageIdView page_id,
+  void TryEvictPage(absl::string_view ledger_name, storage::PageIdView page_id,
                     PageEvictionCondition condition,
                     fit::function<void(Status, PageWasEvicted)> callback) override {
     if (try_evict_page_status_ != Status::OK) {
       callback(try_evict_page_status_, PageWasEvicted(false));
       return;
     }
-    if (pages_not_to_evict_.find(page_id.ToString()) != pages_not_to_evict_.end()) {
+    if (pages_not_to_evict_.find(convert::ToString(page_id)) != pages_not_to_evict_.end()) {
       callback(Status::OK, PageWasEvicted(false));
       return;
     }
-    evicted_pages_.push_back(page_id.ToString());
+    evicted_pages_.push_back(convert::ToString(page_id));
     callback(Status::OK, PageWasEvicted(true));
   }
 

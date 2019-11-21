@@ -19,7 +19,7 @@
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -79,14 +79,14 @@ class PageDbMutator {
   // Adds the given |commit|, referencing |root_node|, in the database.
   FXL_WARN_UNUSED_RESULT virtual Status AddCommitStorageBytes(coroutine::CoroutineHandler* handler,
                                                               const CommitId& commit_id,
-                                                              fxl::StringView remote_commit_id,
+                                                              absl::string_view remote_commit_id,
                                                               const ObjectIdentifier& root_node,
-                                                              fxl::StringView storage_bytes) = 0;
+                                                              absl::string_view storage_bytes) = 0;
 
   // Deletes the commit with given |commit_id|, referencing |root_node|, from the database.
   FXL_WARN_UNUSED_RESULT virtual Status DeleteCommit(coroutine::CoroutineHandler* handler,
                                                      CommitIdView commit_id,
-                                                     fxl::StringView remote_commit_id,
+                                                     absl::string_view remote_commit_id,
                                                      const ObjectIdentifier& root_node) = 0;
 
   // Object data.
@@ -124,8 +124,8 @@ class PageDbMutator {
 
   // Sets the opaque sync metadata associated with this page for the given key.
   FXL_WARN_UNUSED_RESULT virtual Status SetSyncMetadata(coroutine::CoroutineHandler* handler,
-                                                        fxl::StringView key,
-                                                        fxl::StringView value) = 0;
+                                                        absl::string_view key,
+                                                        absl::string_view value) = 0;
 
   // Updates the online state of the page.
   FXL_WARN_UNUSED_RESULT virtual Status MarkPageOnline(coroutine::CoroutineHandler* handler) = 0;
@@ -267,7 +267,7 @@ class PageDb : public PageDbMutator {
   // Retrieves the opaque sync metadata associated with this page for the given
   // key.
   FXL_WARN_UNUSED_RESULT virtual Status GetSyncMetadata(coroutine::CoroutineHandler* handler,
-                                                        fxl::StringView key,
+                                                        absl::string_view key,
                                                         std::string* value) = 0;
 
   // Returns whether the page is online, i.e. has been synced to the cloud or a
@@ -286,7 +286,7 @@ class PageDb : public PageDbMutator {
                                                  Clock* clock) = 0;
 
   FXL_WARN_UNUSED_RESULT virtual Status GetCommitIdFromRemoteId(
-      coroutine::CoroutineHandler* handler, fxl::StringView remote_id, CommitId* commit_id) = 0;
+      coroutine::CoroutineHandler* handler, absl::string_view remote_id, CommitId* commit_id) = 0;
 };
 
 }  // namespace storage

@@ -29,11 +29,11 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/concatenate.h"
 #include "third_party/abseil-cpp/absl/flags/flag.h"
 #include "third_party/abseil-cpp/absl/flags/parse.h"
 #include "third_party/abseil-cpp/absl/strings/numbers.h"
 #include "third_party/abseil-cpp/absl/strings/str_cat.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 ABSL_FLAG(ssize_t, entry_count, -1, "number of entries to delete");
 ABSL_FLAG(ssize_t, transaction_size, -1, "number of element in the transaction");
@@ -123,7 +123,7 @@ class PutBenchmark : public PageWatcher {
   LedgerMemoryEstimator memory_estimator_;
 };
 
-constexpr fxl::StringView kStoragePath = "/data/benchmark/ledger/put";
+constexpr absl::string_view kStoragePath = "/data/benchmark/ledger/put";
 
 PutBenchmark::PutBenchmark(async::Loop* loop,
                            std::unique_ptr<sys::ComponentContext> component_context,
@@ -134,7 +134,7 @@ PutBenchmark::PutBenchmark(async::Loop* loop,
       random_(seed),
       generator_(&random_),
       page_data_generator_(&random_),
-      tmp_dir_(kStoragePath),
+      tmp_dir_(convert::ToString(kStoragePath)),
       component_context_(std::move(component_context)),
       entry_count_(entry_count),
       transaction_size_(transaction_size),

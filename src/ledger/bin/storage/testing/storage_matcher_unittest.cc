@@ -7,6 +7,7 @@
 #include "gtest/gtest.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/testing/id_and_parent_ids_commit.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace storage {
 namespace {
@@ -39,7 +40,7 @@ TEST(StorageMatcher, MatchesEntry3Parameters) {
 }
 
 TEST(StorageMatcher, MatchesCommit) {
-  CommitId zero = kFirstPageCommitId.ToString();
+  CommitId zero = convert::ToString(kFirstPageCommitId);
   CommitId one = CommitId("00000000000000000000000000000001", kCommitIdSize);
   CommitId two = CommitId("00000000000000000000000000000002", kCommitIdSize);
   CommitId three = CommitId("00000000000000000000000000000003", kCommitIdSize);

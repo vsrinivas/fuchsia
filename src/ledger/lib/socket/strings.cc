@@ -8,6 +8,7 @@
 
 #include "src/ledger/lib/socket/blocking_drain.h"
 #include "src/lib/fxl/logging.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -20,7 +21,7 @@ bool BlockingCopyToString(zx::socket source, std::string* result) {
   });
 }
 
-bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destination) {
+bool BlockingCopyFromString(absl::string_view source, const zx::socket& destination) {
   const char* ptr = source.data();
   size_t to_write = source.size();
   for (;;) {
@@ -45,7 +46,7 @@ bool BlockingCopyFromString(fxl::StringView source, const zx::socket& destinatio
   }
 }
 
-zx::socket WriteStringToSocket(fxl::StringView source) {
+zx::socket WriteStringToSocket(absl::string_view source) {
   // TODO(qsr): Check that source.size() <= socket max capacity when the
   // information is retrievable. Until then use the know socket capacity.
   FXL_DCHECK(source.size() < 256 * 1024);

@@ -6,9 +6,8 @@
 
 #include <lib/fit/function.h>
 
-#include <src/ledger/lib/convert/convert.h>
-
 #include "src/ledger/bin/sync_coordinator/impl/page_sync_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace sync_coordinator {
 

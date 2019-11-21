@@ -44,11 +44,10 @@
 #include "src/lib/files/path.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/io/fd.h"
-#include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/inspect_deprecated/deprecated/expose.h"
 #include "src/lib/inspect_deprecated/deprecated/object_dir.h"
 #include "src/lib/inspect_deprecated/inspect.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -90,11 +89,11 @@ namespace {
 // that the repository will be in a correct state even if the deletion execution
 // is unexpectedly terminated.
 
-constexpr fxl::StringView kCachePath = "cache";
-constexpr fxl::StringView kPageUsageDbPath = "page_usage_db";
-constexpr fxl::StringView kLedgersPath = "ledgers";
-constexpr fxl::StringView kStagingPath = "staging";
-constexpr fxl::StringView kNamePath = "name";
+constexpr absl::string_view kCachePath = "cache";
+constexpr absl::string_view kPageUsageDbPath = "page_usage_db";
+constexpr absl::string_view kLedgersPath = "ledgers";
+constexpr absl::string_view kStagingPath = "staging";
+constexpr absl::string_view kNamePath = "name";
 
 bool GetRepositoryName(rng::Random* random, const DetachedPath& content_path, std::string* name) {
   DetachedPath name_path = content_path.SubPath(kNamePath);

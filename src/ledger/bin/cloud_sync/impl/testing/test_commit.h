@@ -10,6 +10,7 @@
 
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace cloud_sync {
 
@@ -26,7 +27,7 @@ class TestCommit : public storage::CommitEmptyImpl {
 
   const storage::CommitId& GetId() const override;
 
-  fxl::StringView GetStorageBytes() const override;
+  absl::string_view GetStorageBytes() const override;
 
   storage::CommitId id;
   std::string content;

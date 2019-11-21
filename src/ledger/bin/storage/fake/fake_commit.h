@@ -13,6 +13,7 @@
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/bin/storage/testing/commit_empty_impl.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 namespace fake {
@@ -40,7 +41,7 @@ class FakeCommit : public CommitEmptyImpl {
 
   ObjectIdentifier GetRootIdentifier() const override;
 
-  fxl::StringView GetStorageBytes() const override;
+  absl::string_view GetStorageBytes() const override;
 
  private:
   FakeJournalDelegate* journal_;

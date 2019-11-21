@@ -11,6 +11,7 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -35,7 +36,7 @@ void SplitDataSource(DataSource* source, ObjectType type,
                      fit::function<void(IterationStatus, std::unique_ptr<Piece>)> callback);
 
 // Iterates over the children of an index object.
-Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory* factory,
+Status ForEachIndexChild(absl::string_view index_content, ObjectIdentifierFactory* factory,
                          fit::function<Status(ObjectIdentifier)> callback);
 
 // Collects all pieces ids needed to build the object with id |root|. This
@@ -43,7 +44,7 @@ Status ForEachIndexChild(fxl::StringView index_content, ObjectIdentifierFactory*
 // |callback| returned true for the given id.
 void CollectPieces(
     ObjectIdentifier root,
-    fit::function<void(ObjectIdentifier, fit::function<void(Status, fxl::StringView)>)>
+    fit::function<void(ObjectIdentifier, fit::function<void(Status, absl::string_view)>)>
         data_accessor,
     fit::function<bool(IterationStatus, ObjectIdentifier)> callback);
 

@@ -14,7 +14,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/lib/convert/convert.h"
-#include "src/lib/fxl/strings/string_view.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 #include "third_party/leveldb/include/leveldb/iterator.h"
 
 namespace storage {
@@ -30,7 +30,7 @@ class InlinePiece : public BasePiece {
   explicit InlinePiece(ObjectIdentifier identifier);
 
   // Piece:
-  fxl::StringView GetData() const override;
+  absl::string_view GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
 
  private:
@@ -44,7 +44,7 @@ class DataChunkPiece : public BasePiece {
                           std::unique_ptr<DataSource::DataChunk> chunk);
 
   // Piece:
-  fxl::StringView GetData() const override;
+  absl::string_view GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
 
  private:
@@ -58,7 +58,7 @@ class LevelDBPiece : public BasePiece {
   explicit LevelDBPiece(ObjectIdentifier identifier, std::unique_ptr<leveldb::Iterator> iterator);
 
   // Piece:
-  fxl::StringView GetData() const override;
+  absl::string_view GetData() const override;
   ObjectIdentifier GetIdentifier() const override;
 
  private:
@@ -85,7 +85,7 @@ class ChunkObject : public BaseObject {
 
   // Object:
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
+  Status GetData(absl::string_view* data) const override;
 
  private:
   std::unique_ptr<const Piece> piece_;
@@ -99,7 +99,7 @@ class VmoObject : public BaseObject {
 
   // Object:
   ObjectIdentifier GetIdentifier() const override;
-  Status GetData(fxl::StringView* data) const override;
+  Status GetData(absl::string_view* data) const override;
   Status GetVmo(ledger::SizedVmo* vmo) const override;
 
  private:
@@ -109,7 +109,7 @@ class VmoObject : public BaseObject {
   const ObjectIdentifier identifier_;
   ledger::SizedVmo vmo_;
   mutable zx::vmar vmar_;
-  mutable fxl::StringView data_;
+  mutable absl::string_view data_;
 };
 
 }  // namespace storage

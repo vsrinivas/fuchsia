@@ -17,6 +17,7 @@
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace p2p_sync {
 namespace {
@@ -676,7 +677,7 @@ void PageCommunicatorImpl::BuildObjectResponseBuffer(
                        convert::ToFlatBufferVector(
                            buffer, object_response.identifier.object_digest().Serialize()));
     if (object_response.piece) {
-      fxl::StringView data = object_response.piece->GetData();
+      absl::string_view data = object_response.piece->GetData();
       flatbuffers::Offset<Data> fb_data =
           CreateData(*buffer, convert::ToFlatBufferVector(buffer, data));
       ObjectSyncStatus sync_status =

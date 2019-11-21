@@ -37,7 +37,7 @@ std::string ExtendedStringView::ToHex() {
 
 std::vector<uint8_t> ToArray(ExtendedStringView value) { return value.ToArray(); }
 
-std::string ToString(ExtendedStringView value) { return value.ToString(); }
+std::string ToString(ExtendedStringView value) { return std::string(value); }
 
 flatbuffers::Offset<flatbuffers::Vector<uint8_t>> ToFlatBufferVector(
     flatbuffers::FlatBufferBuilder* builder, ExtendedStringView value) {

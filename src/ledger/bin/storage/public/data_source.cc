@@ -9,6 +9,7 @@
 
 #include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/socket/socket_drainer.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace storage {
 
@@ -20,7 +21,7 @@ class StringLikeDataChunk : public DataSource::DataChunk {
   explicit StringLikeDataChunk(S value) : value_(std::move(value)) {}
 
  private:
-  fxl::StringView Get() override { return convert::ExtendedStringView(value_); }
+  absl::string_view Get() override { return convert::ExtendedStringView(value_); }
 
   S value_;
 };
@@ -72,8 +73,8 @@ class VmoDataChunk : public DataSource::DataChunk {
  private:
   uint64_t ToFullPages(uint64_t value) { return (value + PAGE_SIZE - 1) & (~(PAGE_SIZE - 1)); }
 
-  fxl::StringView Get() override {
-    return fxl::StringView(reinterpret_cast<char*>(mapped_address_), vmo_.size());
+  absl::string_view Get() override {
+    return absl::string_view(reinterpret_cast<char*>(mapped_address_), vmo_.size());
   }
 
   ledger::SizedVmo vmo_;
@@ -169,7 +170,7 @@ class FlatBufferDataChunk : public DataSource::DataChunk {
       : value_(std::move(value)) {}
 
  private:
-  fxl::StringView Get() override { return convert::ToStringView(*value_); }
+  absl::string_view Get() override { return convert::ToStringView(*value_); }
 
   std::unique_ptr<flatbuffers::FlatBufferBuilder> value_;
 };

@@ -20,6 +20,7 @@ source_set("public") {
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/storage/public",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 
   deps = [

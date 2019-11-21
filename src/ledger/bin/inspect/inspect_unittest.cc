@@ -10,12 +10,13 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace ledger {
 namespace {
 
 TEST(Inspect, PageIdToDisplayName) {
-  EXPECT_EQ(PageIdToDisplayName(storage::PageId(kRootPageId.ToString())),
+  EXPECT_EQ(PageIdToDisplayName(storage::PageId(convert::ToString(kRootPageId))),
             "00000000000000000000000000000000");
 
   // Taken from a real Ledger-using component!

@@ -24,6 +24,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -72,7 +73,7 @@ Status FillSingleEntry(const storage::Object& object, Entry* entry) {
 
 // Fills an InlinedEntry from the content of object.
 Status FillSingleEntry(const storage::Object& object, InlinedEntry* entry) {
-  fxl::StringView data;
+  absl::string_view data;
   RETURN_ON_ERROR(object.GetData(&data));
   entry->inlined_value = std::make_unique<InlinedValue>();
   entry->inlined_value->value = convert::ToArray(data);
@@ -355,7 +356,7 @@ void PageSnapshotImpl::GetInline(
         }
         PageUtils::ResolveObjectIdentifierAsStringView(
             page_storage_, entry.object_identifier, storage::PageStorage::Location::Local(),
-            [callback = std::move(callback)](Status status, fxl::StringView data_view) {
+            [callback = std::move(callback)](Status status, absl::string_view data_view) {
               if (status == Status::INTERNAL_NOT_FOUND) {
                 callback(Status::OK, ToErrorResult<fuchsia::ledger::PageSnapshot_GetInline_Result>(
                                          fuchsia::ledger::Error::NEEDS_FETCH));

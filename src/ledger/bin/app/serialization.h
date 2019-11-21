@@ -5,7 +5,7 @@
 #ifndef SRC_LEDGER_BIN_APP_SERIALIZATION_H_
 #define SRC_LEDGER_BIN_APP_SERIALIZATION_H_
 
-#include "src/lib/fxl/strings/string_view.h"
+#include <string>
 
 namespace ledger {
 

@@ -25,8 +25,8 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_view.h"
 #include "src/lib/fxl/synchronization/thread_annotations.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 // LevelDbFactory tries to keep an empty, initialized instance of LevelDb always
 // available. It stores this cached instance under cached_db/.
@@ -46,8 +46,8 @@ namespace {
 
 // TODO(LE-635): We need to clean the staging path, so that we don't leave
 // unreachable storage on disk.
-constexpr fxl::StringView kStagingPath = "staging";
-constexpr fxl::StringView kCachedDbPath = "cached_db";
+constexpr absl::string_view kStagingPath = "staging";
+constexpr absl::string_view kCachedDbPath = "cached_db";
 
 constexpr size_t kRandomBytesCount = 16;
 
@@ -326,7 +326,7 @@ Status LevelDbFactory::IOLevelDbFactory::CreateDbThroughStagingPathOnIOThread(
   char name[kRandomBytesCount];
   environment_->random()->Draw(name, kRandomBytesCount);
   ledger::DetachedPath tmp_destination =
-      staging_path_.SubPath(convert::ToHex(fxl::StringView(name, kRandomBytesCount)));
+      staging_path_.SubPath(convert::ToHex(absl::string_view(name, kRandomBytesCount)));
   // Create a LevelDb instance in a temporary path.
   auto result = std::make_unique<LevelDb>(environment_->dispatcher(), tmp_destination);
   RETURN_ON_ERROR(result->Init());

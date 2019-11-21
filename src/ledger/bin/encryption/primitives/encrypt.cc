@@ -4,12 +4,15 @@
 
 #include "src/ledger/bin/encryption/primitives/encrypt.h"
 
-#include <openssl/aead.h>
 #include <zircon/syscalls.h>
+
+#include <openssl/aead.h>
+
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace encryption {
 
-bool AES128GCMSIVEncrypt(rng::Random* random, fxl::StringView key, fxl::StringView data,
+bool AES128GCMSIVEncrypt(rng::Random* random, absl::string_view key, absl::string_view data,
                          std::string* output) {
   if (key.size() != 16) {
     return false;
@@ -49,7 +52,8 @@ bool AES128GCMSIVEncrypt(rng::Random* random, fxl::StringView key, fxl::StringVi
   return true;
 }
 
-bool AES128GCMSIVDecrypt(fxl::StringView key, fxl::StringView encrypted_data, std::string* output) {
+bool AES128GCMSIVDecrypt(absl::string_view key, absl::string_view encrypted_data,
+                         std::string* output) {
   if (key.size() != 16) {
     return false;
   }

@@ -13,6 +13,7 @@
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 
@@ -20,7 +21,7 @@ namespace {
 
 constexpr size_t kMaxInlineDataSize = ZX_CHANNEL_MAX_MSG_BYTES * 9 / 10;
 
-bool LogOnError(Status status, fxl::StringView description) {
+bool LogOnError(Status status, absl::string_view description) {
   if (status != Status::OK) {
     FXL_LOG(ERROR) << description << " failed with status " << fidl::ToUnderlying(status) << ".";
     return true;

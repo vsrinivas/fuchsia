@@ -18,6 +18,7 @@
 #include "src/ledger/bin/storage/impl/data_serialization.h"
 #include "src/ledger/bin/storage/impl/object_identifier_encoding.h"
 #include "src/ledger/bin/storage/public/commit.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 
@@ -110,17 +111,17 @@ void JournalImpl::Put(convert::ExtendedStringView key, ObjectIdentifier object_i
                       KeyPriority priority) {
   FXL_DCHECK(!committed_);
   EntryChange change;
-  change.entry = {key.ToString(), std::move(object_identifier), priority, EntryId()};
+  change.entry = {convert::ToString(key), std::move(object_identifier), priority, EntryId()};
   change.deleted = false;
-  journal_entries_[key.ToString()] = std::move(change);
+  journal_entries_[convert::ToString(key)] = std::move(change);
 }
 
 void JournalImpl::Delete(convert::ExtendedStringView key) {
   FXL_DCHECK(!committed_);
   EntryChange change;
-  change.entry = {key.ToString(), ObjectIdentifier(), KeyPriority::EAGER, EntryId()};
+  change.entry = {convert::ToString(key), ObjectIdentifier(), KeyPriority::EAGER, EntryId()};
   change.deleted = true;
-  journal_entries_[key.ToString()] = std::move(change);
+  journal_entries_[convert::ToString(key)] = std::move(change);
 }
 
 void JournalImpl::Clear() {
