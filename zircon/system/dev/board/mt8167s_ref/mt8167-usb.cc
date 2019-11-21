@@ -58,8 +58,23 @@ constexpr char kSerial[] = "0123456789ABCDEF";
 
 using FunctionDescriptor = fuchsia_hardware_usb_peripheral_FunctionDescriptor;
 
+// Statically assigned dummy MAC address.
+// TODO(fxb/34469): Provide real MAC address via bootloader or some other mechanism.
+static const uint8_t eth_mac_address[] = {
+    0x02, 0x98, 0x8f, 0x3c, 0xd2, 0xaa,
+};
+
 static pbus_metadata_t usb_metadata[] = {
-    {.type = DEVICE_METADATA_USB_CONFIG, .data_buffer = nullptr, .data_size = 0},
+    {
+        .type = DEVICE_METADATA_USB_CONFIG,
+        .data_buffer = nullptr, // Filled in below.
+        .data_size = 0,         // Filled in below.
+    },
+    {
+        .type = DEVICE_METADATA_MAC_ADDRESS,
+        .data_buffer = eth_mac_address,
+        .data_size = sizeof(eth_mac_address),
+    },
 };
 
 const pbus_dev_t usb_dci_dev = []() {
