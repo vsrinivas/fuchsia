@@ -19,6 +19,7 @@ namespace fidlcat {
 
 constexpr int kPatternColorSize = 4;
 constexpr int kPatternSize = 8;
+constexpr int kLineSize = 16;
 
 void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
                 SyscallDisplayDispatcher* dispatcher, std::string_view line_header, int tabs,
@@ -39,8 +40,17 @@ void CantDecode(const uint8_t* bytes, uint32_t num_bytes, uint32_t num_handles,
   }
   os << '\n';
   os << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "data=";
-  const char* separator = " ";
+  const char* separator = "";
   for (uint32_t i = 0; i < num_bytes; ++i) {
+    // Display 16 bytes per line.
+    if (i % kLineSize == 0) {
+      std::vector<char> buffer(sizeof(uint32_t) * kCharactersPerByte + 1);
+      snprintf(buffer.data(), buffer.size(), "%04x", i);
+      os << separator << "\n"
+         << line_header << std::string((tabs + 1) * fidl_codec::kTabSize, ' ') << "  "
+         << buffer.data() << ": ";
+      separator = "";
+    }
     // Display 4 bytes in red then four bytes in black ...
     if (i % kPatternSize == 0) {
       os << dispatcher->colors().red;

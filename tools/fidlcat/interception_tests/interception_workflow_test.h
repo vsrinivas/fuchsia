@@ -107,6 +107,10 @@ class DataForSyscallTest {
 
   size_t num_bytes() const { return sizeof(header_); }
 
+  uint8_t* large_bytes() { return large_bytes_.data(); }
+
+  size_t num_large_bytes() const { return large_bytes_.size(); }
+
   zx_handle_t* handles() { return handles_; }
 
   size_t num_handles() const { return sizeof(handles_) / sizeof(handles_[0]); }
@@ -219,6 +223,7 @@ class DataForSyscallTest {
   bool check_handles_ = false;
   fidl_message_header_t header_;
   fidl_message_header_t header2_;
+  std::vector<uint8_t> large_bytes_;
   zx_handle_t handles_[2] = {0x01234567, 0x89abcdef};
   zx_handle_info_t handle_infos_[2] = {
       {0x01234567, ZX_OBJ_TYPE_CHANNEL,

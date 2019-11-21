@@ -118,7 +118,8 @@ WRITE_DISPLAY_TEST(ZxChannelWrite, ZX_OK,
                    ""
                    "  \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                    "ordinal=77e4cceb00000000\n"
-                   "    data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                   "    data=\n"
+                   "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "  -> \x1B[32mZX_OK\x1B[0m\n");
 
@@ -130,9 +131,43 @@ WRITE_DISPLAY_TEST(ZxChannelWritePeerClosed, ZX_ERR_PEER_CLOSED,
                    ""
                    "  \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                    "ordinal=77e4cceb00000000\n"
-                   "    data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                   "    data=\n"
+                   "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                    ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                    "  -> \x1B[31mZX_ERR_PEER_CLOSED\x1B[0m\n");
+
+#define LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected)                                                \
+  PerformDisplayTest("zx_channel_write@plt",                                                       \
+                     ZxChannelWrite(errno, #errno, kHandle, 0, data().large_bytes(), data().num_large_bytes(), \
+                                    data().handles(), data().num_handles()),                       \
+                     expected)
+
+#define LARGE_WRITE_DISPLAY_TEST(name, errno, expected)                                            \
+  TEST_F(InterceptionWorkflowTestX64, name) { LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected); } \
+  TEST_F(InterceptionWorkflowTestArm, name) { LARGE_WRITE_DISPLAY_TEST_CONTENT(errno, expected); }
+
+LARGE_WRITE_DISPLAY_TEST(ZxChannelWriteLarge, ZX_OK,
+                   "\n"
+                   "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m zx_channel_write("
+                   "handle:\x1B[32mhandle\x1B[0m: \x1B[31mcefa1db0\x1B[0m, "
+                   "options:\x1B[32muint32\x1B[0m: \x1B[34m0\x1B[0m)\n"
+                   ""
+                   "  \x1B[31mCan't decode message num_bytes=100 num_handles=2 ordinal=e1c4a99079645140\n"
+                   "    data=\n"
+                   "      0000: \x1B[31m00, 01, 04, 09\x1B[0m, 10, 19, 24, 31\x1B[31m, "
+                   "40, 51, 64, 79\x1B[0m, 90, a9, c4, e1, \n"
+                   "      0010: \x1B[31m00, 21, 44, 69\x1B[0m, 90, b9, e4, 11\x1B[31m, "
+                   "40, 71, a4, d9\x1B[0m, 10, 49, 84, c1, \n"
+                   "      0020: \x1B[31m00, 41, 84, c9\x1B[0m, 10, 59, a4, f1\x1B[31m, "
+                   "40, 91, e4, 39\x1B[0m, 90, e9, 44, a1, \n"
+                   "      0030: \x1B[31m00, 61, c4, 29\x1B[0m, 90, f9, 64, d1\x1B[31m, "
+                   "40, b1, 24, 99\x1B[0m, 10, 89, 04, 81, \n"
+                   "      0040: \x1B[31m00, 81, 04, 89\x1B[0m, 10, 99, 24, b1\x1B[31m, "
+                   "40, d1, 64, f9\x1B[0m, 90, 29, c4, 61, \n"
+                   "      0050: \x1B[31m00, a1, 44, e9\x1B[0m, 90, 39, e4, 91\x1B[31m, "
+                   "40, f1, a4, 59\x1B[0m, 10, c9, 84, 41, \n"
+                   "      0060: \x1B[31m00, c1, 84, 49\x1B[0m\n"
+                   "  -> \x1B[32mZX_OK\x1B[0m\n");
 
 #define WRITE_ABORTED_TEST_CONTENT(errno, expected)                                                \
   PerformAbortedTest("zx_channel_write@plt",                                                       \
@@ -201,7 +236,8 @@ READ_DISPLAY_TEST(ZxChannelRead, ZX_OK, true, true,
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                   "ordinal=77e4cceb00000000\n"
-                  "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                  "      data=\n"
+                  "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 READ_DISPLAY_TEST(ZxChannelReadShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
@@ -245,7 +281,8 @@ READ_DISPLAY_TEST(ZxChannelReadNoHandles, ZX_OK, true, false,
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message num_bytes=16 num_handles=0 "
                   "ordinal=77e4cceb00000000\n"
-                  "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                  "      data=\n"
+                  "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 // zx_channel_read_etc tests.
@@ -301,7 +338,8 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtc, ZX_OK, true, true,
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                       "ordinal=77e4cceb00000000\n"
-                      "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                      "      data=\n"
+                      "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                       ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 READ_ETC_DISPLAY_TEST(ZxChannelReadEtcShouldWait, ZX_ERR_SHOULD_WAIT, true, true,
@@ -346,7 +384,8 @@ READ_ETC_DISPLAY_TEST(ZxChannelReadEtcNoHandles, ZX_OK, true, false,
                       "  -> \x1B[32mZX_OK\x1B[0m\n"
                       "    \x1B[31mCan't decode message num_bytes=16 num_handles=0 "
                       "ordinal=77e4cceb00000000\n"
-                      "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                      "      data=\n"
+                      "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                       ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 // zx_channel_call tests.
@@ -445,12 +484,14 @@ CALL_DISPLAY_TEST(ZxChannelCall, ZX_OK, true, true,
                   "rd_num_handles:\x1B[32muint32\x1B[0m: \x1B[34m64\x1B[0m)\n"
                   "  \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                   "ordinal=77e4cceb00000000\n"
-                  "    data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                  "    data=\n"
+                  "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
                   "  -> \x1B[32mZX_OK\x1B[0m\n"
                   "    \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
                   "ordinal=77e4cceb00000000\n"
-                  "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+                  "      data=\n"
+                  "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
                   ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 #define CALL_DISPLAY_TEST_WITH_PROCESS_INFO(name, errno, check_bytes, check_handles, expected) \
@@ -476,7 +517,9 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     "  \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
     "ordinal=77e4cceb00000000\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "    data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+    "    data=\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "      0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
     "  -> \x1B[32mZX_OK\x1B[0m\n"
@@ -484,7 +527,9 @@ CALL_DISPLAY_TEST_WITH_PROCESS_INFO(
     "    \x1B[31mCan't decode message num_bytes=16 num_handles=2 "
     "ordinal=77e4cceb00000000\n"
     "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
-    "      data=\x1B[31m aa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
+    "      data=\n"
+    "test_3141 \x1B[31m3141\x1B[0m:\x1B[31m8764\x1B[0m "
+    "        0000: \x1B[31maa, aa, aa, aa\x1B[0m, 00, 00, 00, 01\x1B[31m"
     ", 00, 00, 00, 00\x1B[0m, eb, cc, e4, 77\x1B[0m\n");
 
 }  // namespace fidlcat
