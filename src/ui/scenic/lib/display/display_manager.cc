@@ -10,7 +10,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 void DisplayManager::WaitForDefaultDisplayController(fit::closure display_available_cb) {
   FXL_DCHECK(!default_display_);
@@ -74,5 +74,5 @@ void DisplayManager::OnClientOwnershipChange(bool has_ownership) {
   }
 }
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl

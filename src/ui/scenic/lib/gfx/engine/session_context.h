@@ -15,10 +15,6 @@
 namespace scenic_impl {
 namespace gfx {
 
-class SessionManager;
-class UpdateScheduler;
-class Sysmem;
-class DisplayManager;
 class SceneGraph;
 class View;
 class ViewHolder;

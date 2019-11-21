@@ -57,8 +57,8 @@ void SessionHandlerTest::InitializeSessionHandler() {
 }
 
 void SessionHandlerTest::InitializeDisplayManager() {
-  display_manager_ = std::make_unique<DisplayManager>();
-  display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+  display_manager_ = std::make_unique<display::DisplayManager>();
+  display_manager_->SetDefaultDisplayForTests(std::make_unique<display::Display>(
       /*id*/ 0, /*px-width*/ 0, /*px-height*/ 0));
 }
 

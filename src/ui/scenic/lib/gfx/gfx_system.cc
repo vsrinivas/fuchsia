@@ -31,7 +31,7 @@ static const uint32_t kDumpScenesBufferCapacity = 1024 * 64;
 const char* GfxSystem::kName = "GfxSystem";
 
 GfxSystem::GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher,
-                     Sysmem* sysmem, DisplayManager* display_manager)
+                     Sysmem* sysmem, display::DisplayManager* display_manager)
     : System(std::move(context)),
       display_manager_(display_manager),
       sysmem_(sysmem),

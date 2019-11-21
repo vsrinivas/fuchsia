@@ -51,7 +51,7 @@ class Dependency : public scenic_impl::System {
 
 namespace scenic_impl {
 
-DisplayInfoDelegate::DisplayInfoDelegate(std::shared_ptr<gfx::Display> display_)
+DisplayInfoDelegate::DisplayInfoDelegate(std::shared_ptr<display::Display> display_)
     : display_(display_) {
   FXL_CHECK(display_);
 }
@@ -98,7 +98,7 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
   FXL_DCHECK(!device_watcher_);
 
   fit::bridge<escher::EscherUniquePtr> escher_bridge;
-  fit::bridge<std::shared_ptr<scenic_impl::gfx::Display>> display_bridge;
+  fit::bridge<std::shared_ptr<scenic_impl::display::Display>> display_bridge;
 
   device_watcher_ = fsl::DeviceWatcher::Create(
       kDependencyDir, [this, completer = std::move(escher_bridge.completer)](
@@ -114,18 +114,18 @@ App::App(std::unique_ptr<sys::ComponentContext> app_context, inspect_deprecated:
 
   auto p =
       fit::join_promises(escher_bridge.consumer.promise(), display_bridge.consumer.promise())
-          .and_then(
-              [this](std::tuple<fit::result<escher::EscherUniquePtr>,
-                                fit::result<std::shared_ptr<scenic_impl::gfx::Display>>>& results) {
-                InitializeServices(std::move(std::get<0>(results).value()),
-                                   std::move(std::get<1>(results).value()));
-              });
+          .and_then([this](std::tuple<fit::result<escher::EscherUniquePtr>,
+                                      fit::result<std::shared_ptr<scenic_impl::display::Display>>>&
+                               results) {
+            InitializeServices(std::move(std::get<0>(results).value()),
+                               std::move(std::get<1>(results).value()));
+          });
 
   executor_.schedule_task(std::move(p));
 }
 
 void App::InitializeServices(escher::EscherUniquePtr escher,
-                             std::shared_ptr<gfx::Display> display) {
+                             std::shared_ptr<display::Display> display) {
   if (!display) {
     FXL_LOG(ERROR) << "No default display, Graphics system exiting";
     shutdown_manager_.Shutdown(LifecycleControllerImpl::kShutdownTimeout);

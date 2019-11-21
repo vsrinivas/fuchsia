@@ -15,7 +15,7 @@ namespace test {
 void SessionTest::SetUp() {
   ErrorReportingTest::SetUp();
 
-  display_ = std::make_shared<Display>(
+  display_ = std::make_shared<display::Display>(
       /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       display_,

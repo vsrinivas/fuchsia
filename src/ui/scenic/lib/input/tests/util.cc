@@ -38,7 +38,7 @@ using fuchsia::ui::scenic::SessionListener;
 using scenic_impl::GlobalId;
 using scenic_impl::ResourceId;
 using scenic_impl::Scenic;
-using scenic_impl::gfx::Display;
+using scenic_impl::display::Display;
 using scenic_impl::gfx::Engine;
 using scenic_impl::gfx::GfxSystem;
 using scenic_impl::gfx::test::ReleaseFenceSignallerForTest;

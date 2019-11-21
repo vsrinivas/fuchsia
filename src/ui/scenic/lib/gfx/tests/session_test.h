@@ -55,7 +55,7 @@ class SessionTest : public ErrorReportingTest {
  private:
   SessionContext session_context_;
 
-  std::shared_ptr<Display> display_;
+  std::shared_ptr<display::Display> display_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Session> session_;
 };

@@ -24,12 +24,12 @@ void GfxSystemTest::InitializeScenic(Scenic* scenic) {
   FXL_DCHECK(!command_buffer_sequencer_);
   command_buffer_sequencer_ = std::make_unique<escher::impl::CommandBufferSequencer>();
   auto signaller = std::make_unique<ReleaseFenceSignallerForTest>(command_buffer_sequencer_.get());
-  display_ = std::make_shared<Display>(
+  display_ = std::make_shared<display::Display>(
       /*id*/ 0, /* width */ 0, /* height */ 0);
   frame_scheduler_ = std::make_shared<scheduling::DefaultFrameScheduler>(
       display_, std::make_unique<scheduling::WindowedFramePredictor>(
-                          scheduling::DefaultFrameScheduler::kInitialRenderDuration,
-                          scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
+                    scheduling::DefaultFrameScheduler::kInitialRenderDuration,
+                    scheduling::DefaultFrameScheduler::kInitialUpdateDuration));
   engine_ = std::make_unique<Engine>(context_provider_.context(), frame_scheduler_,
                                      std::move(signaller), escher::EscherWeakPtr());
   frame_scheduler_->SetFrameRenderer(engine_->GetWeakPtr());

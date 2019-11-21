@@ -104,7 +104,7 @@ class InputSystemTest : public scenic_impl::test::ScenicTest {
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
   std::unique_ptr<scenic_impl::gfx::Engine> engine_;
-  std::shared_ptr<scenic_impl::gfx::Display> display_;
+  std::shared_ptr<scenic_impl::display::Display> display_;
 
   scenic_impl::input::InputSystem* input_system_ = nullptr;
 };

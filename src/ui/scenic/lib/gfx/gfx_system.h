@@ -29,7 +29,7 @@ class GfxSystem : public System,
   static const char* kName;
 
   GfxSystem(SystemContext context, Engine* engine, escher::EscherWeakPtr escher, Sysmem* sysmem,
-            DisplayManager* display_manager);
+            display::DisplayManager* display_manager);
 
   GfxSystemWeakPtr GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
@@ -61,7 +61,7 @@ class GfxSystem : public System,
   void DumpSessionMapResources(std::ostream& output,
                                std::unordered_set<GlobalId, GlobalId::Hash>* visited_resources);
 
-  DisplayManager* const display_manager_;
+  display::DisplayManager* const display_manager_;
 
   Sysmem* const sysmem_;
   escher::EscherWeakPtr escher_;

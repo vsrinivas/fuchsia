@@ -37,11 +37,11 @@ class CompositorTest : public SessionTest {
 
   void SetUp() {
     SessionTest::SetUp();
-    display_manager_ = std::make_unique<DisplayManager>();
+    display_manager_ = std::make_unique<display::DisplayManager>();
 
     constexpr float display_width = 1024;
     constexpr float display_height = 768;
-    display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+    display_manager_->SetDefaultDisplayForTests(std::make_unique<display::Display>(
         /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
     sysmem_ = std::make_unique<Sysmem>();
   }
@@ -74,12 +74,12 @@ class CompositorTest : public SessionTest {
                           display_manager_.get(), scene_graph_->GetWeakPtr());
   }
 
-  DisplayManager* display_manager() const { return display_manager_.get(); }
+  display::DisplayManager* display_manager() const { return display_manager_.get(); }
 
  private:
   std::unique_ptr<Sysmem> sysmem_;
   fuchsia::hardware::display::ControllerSyncPtr display_controller_;
-  std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<display::DisplayManager> display_manager_;
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<SceneGraph> scene_graph_;
 };

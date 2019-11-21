@@ -39,10 +39,10 @@ void VkSessionTest::SetUp() {
   SessionTest::SetUp();
 
   sysmem_ = std::make_unique<Sysmem>();
-  display_manager_ = std::make_unique<DisplayManager>();
+  display_manager_ = std::make_unique<display::DisplayManager>();
   constexpr float display_width = 1024;
   constexpr float display_height = 768;
-  display_manager_->SetDefaultDisplayForTests(std::make_unique<Display>(
+  display_manager_->SetDefaultDisplayForTests(std::make_unique<display::Display>(
       /*id*/ 0, /*px-width*/ display_width, /*px-height*/ display_height));
 }
 void VkSessionTest::TearDown() {

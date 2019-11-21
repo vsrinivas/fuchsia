@@ -11,7 +11,7 @@
 #include "src/ui/scenic/lib/display/display_controller_watcher.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 // Discovers and owns the default display controller, and waits for and exposes the default display.
 class DisplayManager {
@@ -66,7 +66,7 @@ class DisplayManager {
   FXL_DISALLOW_COPY_AND_ASSIGN(DisplayManager);
 };
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl
 
 #endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_MANAGER_H_

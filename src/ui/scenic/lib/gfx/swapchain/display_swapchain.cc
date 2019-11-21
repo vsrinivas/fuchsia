@@ -71,7 +71,7 @@ DisplaySwapchain::DisplaySwapchain(
     Sysmem* sysmem,
     std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
     std::shared_ptr<display::DisplayControllerListener> display_controller_listener,
-    Display* display, escher::Escher* escher)
+    display::Display* display, escher::Escher* escher)
     : escher_(escher),
       sysmem_(sysmem),
       display_(display),

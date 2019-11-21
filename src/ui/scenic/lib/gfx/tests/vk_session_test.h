@@ -41,7 +41,7 @@ class VkSessionTest : public SessionTest {
 
  private:
   std::unique_ptr<Sysmem> sysmem_;
-  std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<escher::Escher> escher_;
   std::unique_ptr<escher::ImageFactoryAdapter> image_factory_;
   std::unique_ptr<escher::ReleaseFenceSignaller> release_fence_signaller_;

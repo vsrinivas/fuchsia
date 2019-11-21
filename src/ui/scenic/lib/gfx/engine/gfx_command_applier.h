@@ -18,6 +18,11 @@
 #include "src/ui/scenic/lib/scheduling/id.h"
 
 namespace scenic_impl {
+
+namespace display {
+class DisplayManager;
+}
+
 namespace gfx {
 
 class Image;
@@ -30,6 +35,7 @@ class ImagePipe;
 using ImagePipePtr = fxl::RefPtr<ImagePipe>;
 
 class Session;
+class Sysmem;
 
 // Graphical context for a set of session updates.
 // The CommandContext is only valid during a single processing batch, and should
@@ -40,12 +46,12 @@ class CommandContext {
   CommandContext() = default;
 
   CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                 DisplayManager* display_manager, fxl::WeakPtr<SceneGraph> scene_graph);
+                 display::DisplayManager* display_manager, fxl::WeakPtr<SceneGraph> scene_graph);
 
   escher::BatchGpuUploader* batch_gpu_uploader() const { return batch_gpu_uploader_.get(); }
 
   Sysmem* sysmem() const { return sysmem_; };
-  DisplayManager* display_manager() const { return display_manager_; };
+  display::DisplayManager* display_manager() const { return display_manager_; };
   SceneGraph* scene_graph() const { return scene_graph_.get(); }
 
   // Flush any work accumulated during command processing.
@@ -54,7 +60,7 @@ class CommandContext {
  private:
   std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
   Sysmem* sysmem_ = nullptr;
-  DisplayManager* display_manager_ = nullptr;
+  display::DisplayManager* display_manager_ = nullptr;
   fxl::WeakPtr<SceneGraph> scene_graph_;
 };
 

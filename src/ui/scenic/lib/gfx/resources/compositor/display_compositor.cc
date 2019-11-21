@@ -14,7 +14,7 @@ const ResourceTypeInfo DisplayCompositor::kTypeInfo = {
     ResourceType::kCompositor | ResourceType::kDisplayCompositor, "DisplayCompositor"};
 
 DisplayCompositor::DisplayCompositor(Session* session, SessionId session_id, ResourceId id,
-                                     SceneGraphWeakPtr scene_graph, Display* display,
+                                     SceneGraphWeakPtr scene_graph, display::Display* display,
                                      std::unique_ptr<DisplaySwapchain> display_swapchain)
     : Compositor(session, session_id, id, DisplayCompositor::kTypeInfo, std::move(scene_graph),
                  std::move(display_swapchain)) {

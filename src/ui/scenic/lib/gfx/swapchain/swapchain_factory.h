@@ -9,21 +9,21 @@
 
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/scenic/lib/display/display.h"
+#include "src/ui/scenic/lib/display/display_manager.h"
 #include "src/ui/scenic/lib/gfx/swapchain/display_swapchain.h"
 
 namespace scenic_impl {
 namespace gfx {
 
-class DisplayManager;
 class Sysmem;
 
 class SwapchainFactory {
  public:
   // Create a swapchain for the specified display.  The display must not
   // already be claimed by another swapchain.
-  static std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(Display* display, Sysmem* sysmem,
-                                                                  DisplayManager* display_manager,
-                                                                  escher::Escher* escher);
+  static std::unique_ptr<DisplaySwapchain> CreateDisplaySwapchain(
+      display::Display* display, Sysmem* sysmem, display::DisplayManager* display_manager,
+      escher::Escher* escher);
 
  private:
   SwapchainFactory() = delete;

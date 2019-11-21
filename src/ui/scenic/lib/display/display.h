@@ -18,7 +18,7 @@
 #include "zircon/pixelformat.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 // Display is a placeholder that provides make-believe values for screen
 // resolution, vsync interval, last vsync time, etc.
@@ -80,7 +80,7 @@ class Display : public scheduling::VsyncTiming {
   FXL_DISALLOW_COPY_AND_ASSIGN(Display);
 };
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl
 
 #endif  // SRC_UI_SCENIC_LIB_DISPLAY_DISPLAY_H_

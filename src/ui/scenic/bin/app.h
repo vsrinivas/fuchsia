@@ -23,7 +23,7 @@ namespace scenic_impl {
 
 class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
  public:
-  DisplayInfoDelegate(std::shared_ptr<gfx::Display> display);
+  DisplayInfoDelegate(std::shared_ptr<display::Display> display);
 
   // TODO(fxb/23686): Remove this when we externalize Displays.
   // |Scenic::GetDisplayInfoDelegateDeprecated|
@@ -33,7 +33,7 @@ class DisplayInfoDelegate : public Scenic::GetDisplayInfoDelegateDeprecated {
       fuchsia::ui::scenic::Scenic::GetDisplayOwnershipEventCallback callback) override;
 
  private:
-  std::shared_ptr<gfx::Display> display_ = nullptr;
+  std::shared_ptr<display::Display> display_ = nullptr;
 };
 
 class App {
@@ -42,14 +42,15 @@ class App {
                inspect_deprecated::Node inspect_node, fit::closure quit_callback);
 
  private:
-  void InitializeServices(escher::EscherUniquePtr escher, std::shared_ptr<gfx::Display> display);
+  void InitializeServices(escher::EscherUniquePtr escher,
+                          std::shared_ptr<display::Display> display);
 
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;
   ShutdownManager shutdown_manager_;
 
   gfx::Sysmem sysmem_;
-  gfx::DisplayManager display_manager_;
+  display::DisplayManager display_manager_;
   std::unique_ptr<DisplayInfoDelegate> display_info_delegate_;
   escher::EscherUniquePtr escher_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;

@@ -35,7 +35,7 @@ class GfxSystemTest : public scenic_impl::test::ScenicTest {
 
   sys::testing::ComponentContextProvider context_provider_;
   std::unique_ptr<escher::impl::CommandBufferSequencer> command_buffer_sequencer_;
-  std::shared_ptr<Display> display_;
+  std::shared_ptr<display::Display> display_;
   std::shared_ptr<scheduling::FrameScheduler> frame_scheduler_;
   std::unique_ptr<Engine> engine_;
 

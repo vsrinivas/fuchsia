@@ -67,7 +67,7 @@ constexpr std::array<fuchsia::ui::gfx::Value::Tag, 2> kFloatValueTypes{
 }  // anonymous namespace
 
 CommandContext::CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader, Sysmem* sysmem,
-                               DisplayManager* display_manager,
+                               display::DisplayManager* display_manager,
                                fxl::WeakPtr<SceneGraph> scene_graph)
     : batch_gpu_uploader_(std::move(uploader)),
       sysmem_(sysmem),
@@ -1461,7 +1461,7 @@ ResourcePtr GfxCommandApplier::CreateDisplayCompositor(
     Session* session, CommandContext* command_context, ResourceId id,
     fuchsia::ui::gfx::DisplayCompositorArgs args) {
   FXL_DCHECK(command_context->display_manager());
-  Display* display = command_context->display_manager()->default_display();
+  display::Display* display = command_context->display_manager()->default_display();
   if (!display) {
     session->error_reporter()->ERROR() << "There is no default display available.";
     return nullptr;

@@ -13,7 +13,7 @@
 #include "src/lib/fxl/logging.h"
 
 namespace scenic_impl {
-namespace gfx {
+namespace display {
 
 Display::Display(uint64_t id, uint32_t width_in_px, uint32_t height_in_px,
                  std::vector<zx_pixel_format_t> pixel_formats)
@@ -51,5 +51,5 @@ void Display::OnVsync(zx::time timestamp) {
                 "Vsync interval", vsync_interval_.get());
 }
 
-}  // namespace gfx
+}  // namespace display
 }  // namespace scenic_impl

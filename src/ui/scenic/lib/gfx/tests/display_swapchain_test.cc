@@ -15,8 +15,8 @@
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/layer.h"
 #include "src/ui/scenic/lib/gfx/sysmem.h"
-#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/gfx/tests/error_reporting_test.h"
+#include "src/ui/scenic/lib/scheduling/frame_timings.h"
 #include "src/ui/scenic/lib/scheduling/tests/mocks/frame_scheduler_mocks.h"
 
 namespace scenic_impl {
@@ -34,7 +34,7 @@ using Fixture = gtest::RealLoopFixture;
 
 class DisplaySwapchainTest : public Fixture {
  public:
-  std::unique_ptr<DisplaySwapchain> CreateSwapchain(Display* display) {
+  std::unique_ptr<DisplaySwapchain> CreateSwapchain(display::Display* display) {
     return std::make_unique<DisplaySwapchain>(
         sysmem(), display_manager()->default_display_controller(),
         display_manager()->default_display_controller_listener(), display, escher());
@@ -49,7 +49,7 @@ class DisplaySwapchainTest : public Fixture {
 
     async_set_default_dispatcher(dispatcher());
     sysmem_ = std::make_unique<Sysmem>();
-    display_manager_ = std::make_unique<DisplayManager>();
+    display_manager_ = std::make_unique<display::DisplayManager>();
 
     auto vulkan_device = CreateVulkanDeviceQueues();
     escher_ = std::make_unique<escher::Escher>(vulkan_device);
@@ -113,14 +113,14 @@ class DisplaySwapchainTest : public Fixture {
 
   escher::Escher* escher() { return escher_.get(); }
   Sysmem* sysmem() { return sysmem_.get(); }
-  DisplayManager* display_manager() { return display_manager_.get(); }
+  display::DisplayManager* display_manager() { return display_manager_.get(); }
   Session* session() { return session_.get(); }
-  Display* display() { return display_manager()->default_display(); }
+  display::Display* display() { return display_manager()->default_display(); }
   std::shared_ptr<MockFrameScheduler> scheduler() { return frame_scheduler_; }
 
  private:
   std::unique_ptr<Sysmem> sysmem_;
-  std::unique_ptr<DisplayManager> display_manager_;
+  std::unique_ptr<display::DisplayManager> display_manager_;
   std::unique_ptr<Session> session_;
   std::shared_ptr<MockFrameScheduler> frame_scheduler_;
   std::unique_ptr<escher::Escher> escher_;
