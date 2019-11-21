@@ -118,6 +118,33 @@ TEST(NetStreamTest, RaceClose) {
   std::for_each(workers.begin(), workers.end(), std::mem_fn(&std::thread::join));
 }
 
+TEST(SocketTest, ZXSocketSignalNotPermitted) {
+  fbl::unique_fd fd;
+  ASSERT_TRUE(fd = fbl::unique_fd(socket(AF_INET, SOCK_STREAM, 0))) << strerror(errno);
+
+  zx::channel channel;
+  zx_status_t status;
+  ASSERT_EQ(status = fdio_fd_transfer(fd.get(), channel.reset_and_get_address()), ZX_OK)
+      << zx_status_get_string(status);
+
+  fuchsia::posix::socket::Control_SyncProxy control(std::move(channel));
+
+  fuchsia::io::NodeInfo node_info;
+  ASSERT_EQ(status = control.Describe(&node_info), ZX_OK) << zx_status_get_string(status);
+  ASSERT_EQ(node_info.Which(), fuchsia::io::NodeInfo::Tag::kSocket);
+
+  zx::socket& socket = node_info.socket().socket;
+
+  EXPECT_EQ(status = socket.signal(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
+      << zx_status_get_string(status);
+  EXPECT_EQ(status = socket.signal(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED)
+      << zx_status_get_string(status);
+  EXPECT_EQ(status = socket.signal_peer(ZX_USER_SIGNAL_0, 0), ZX_ERR_ACCESS_DENIED)
+      << zx_status_get_string(status);
+  EXPECT_EQ(status = socket.signal_peer(0, ZX_USER_SIGNAL_0), ZX_ERR_ACCESS_DENIED)
+      << zx_status_get_string(status);
+}
+
 TEST(SocketTest, CloseZXSocketOnClose) {
   int fd;
   ASSERT_GE(fd = socket(AF_INET, SOCK_STREAM, 0), 0) << strerror(errno);

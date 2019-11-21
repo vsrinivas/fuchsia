@@ -760,7 +760,7 @@ func (s *socketImpl) Close() (int32, error) {
 
 func (s *socketImpl) Describe() (io.NodeInfo, error) {
 	var info io.NodeInfo
-	h, err := s.endpoint.peer.Handle().Duplicate(zx.RightSameRights)
+	h, err := s.endpoint.peer.Handle().Duplicate(zx.RightsBasic | zx.RightRead | zx.RightWrite)
 	syslog.VLogTf(syslog.DebugVerbosity, "Describe", "%p: err=%v", s.endpoint, err)
 	if err != nil {
 		return info, err

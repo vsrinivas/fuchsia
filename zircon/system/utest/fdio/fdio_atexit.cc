@@ -29,7 +29,8 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
 
   void Describe(DescribeCompleter::Sync completer) override {
     llcpp::fuchsia::io::Socket socket;
-    zx_status_t status = peer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &socket.socket);
+    zx_status_t status =
+        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }

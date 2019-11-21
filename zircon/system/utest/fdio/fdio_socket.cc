@@ -52,7 +52,8 @@ class Server final : public llcpp::fuchsia::posix::socket::Control::Interface {
 
   void Describe(DescribeCompleter::Sync completer) override {
     llcpp::fuchsia::io::Socket socket;
-    zx_status_t status = peer_.duplicate(ZX_RIGHT_SAME_RIGHTS, &socket.socket);
+    zx_status_t status =
+        peer_.duplicate(ZX_RIGHTS_BASIC | ZX_RIGHT_READ | ZX_RIGHT_WRITE, &socket.socket);
     if (status != ZX_OK) {
       return completer.Close(status);
     }
@@ -358,7 +359,8 @@ auto timeout = [](int client_fd, zx::socket server_socket) {
         break;
       case SO_SNDTIMEO:
         EXPECT_EQ(return_code_and_errno.first, -1);
-        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s", strerror(return_code_and_errno.second));
+        ASSERT_EQ(return_code_and_errno.second, EPIPE, "%s",
+                  strerror(return_code_and_errno.second));
         break;
     }
   }
