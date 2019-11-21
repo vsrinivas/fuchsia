@@ -16,5 +16,6 @@ __BEGIN_CDECLS
 #define FAKE_BTI_PHYS_ADDR PAGE_SIZE
 
 zx_status_t fake_bti_create(zx_handle_t* out);
+void fake_bti_destroy(zx_handle_t h);
 
 __END_CDECLS

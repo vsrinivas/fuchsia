@@ -32,7 +32,7 @@ static bool test_alloc_simple(void) {
   ASSERT_EQ(req->phys_count, 3u, "unexpected phys count");
 
   usb_request_release(req);
-  zx_handle_close(bti_handle);
+  fake_bti_destroy(bti_handle);
   END_TEST;
 }
 
@@ -177,7 +177,7 @@ static bool test_phys_iter(void) {
   ASSERT_EQ(iter.offset, iter.total_iterated, "offset == total_iterated for non scatter gather");
 
   usb_request_release(req);
-  zx_handle_close(bti_handle);
+  fake_bti_destroy(bti_handle);
   END_TEST;
 }
 

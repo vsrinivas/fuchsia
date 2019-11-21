@@ -4,7 +4,6 @@
 
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/fake-bti/bti.h>
-#include <lib/zx/bti.h>
 #include <lib/zx/vmo.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -22,11 +21,11 @@ constexpr uint32_t kHeight = 764;
 constexpr uint32_t kNumberOfBuffers = 8;
 
 TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
-  zx::bti bti;
-  ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK);
+  zx_handle_t bti_handle;
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK);
 
   fuchsia_sysmem_BufferCollectionInfo buffer_collection;
-  ASSERT_EQ(CreateContiguousBufferCollectionInfo(&buffer_collection, bti.get(), kWidth, kHeight,
+  ASSERT_EQ(CreateContiguousBufferCollectionInfo(&buffer_collection, bti_handle, kWidth, kHeight,
                                                  kNumberOfBuffers),
             ZX_OK);
 
@@ -44,18 +43,19 @@ TEST(CreateContiguousBufferCollectionInfo, CreatesCollection) {
 
   // Clean up
   EXPECT_EQ(DestroyContiguousBufferCollection(&buffer_collection), ZX_OK);
+  fake_bti_destroy(bti_handle);
 }
 
 TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
-  zx::bti bti;
-  ASSERT_EQ(fake_bti_create(bti.reset_and_get_address()), ZX_OK);
+  zx_handle_t bti_handle;
+  ASSERT_EQ(fake_bti_create(&bti_handle), ZX_OK);
 
   fuchsia_sysmem_BufferCollectionInfo_2 buffer_collection;
   fuchsia_sysmem_ImageFormat_2 image_format;
 
   EXPECT_EQ(GetImageFormat(image_format, fuchsia_sysmem_PixelFormatType_NV12, kWidth, kHeight),
             ZX_OK);
-  ASSERT_EQ(CreateContiguousBufferCollectionInfo(buffer_collection, image_format, bti.get(),
+  ASSERT_EQ(CreateContiguousBufferCollectionInfo(buffer_collection, image_format, bti_handle,
                                                  kNumberOfBuffers),
             ZX_OK);
 
@@ -73,6 +73,7 @@ TEST(CreateContiguousBufferCollectionInfo2, CreatesCollection2) {
 
   // Clean up
   EXPECT_EQ(DestroyContiguousBufferCollection(buffer_collection), ZX_OK);
+  fake_bti_destroy(bti_handle);
 }
 
 TEST(CreateContiguousBufferCollectionInfo, FailsOnBadHandle) {

@@ -47,16 +47,16 @@ class DmaMgrTest : public zxtest::Test {
     local_mmio_buffer.vmo = ZX_HANDLE_INVALID;
     local_mmio_buffer.offset = 0;
 
-    ASSERT_OK(fake_bti_create(bti_.reset_and_get_address()));
-    ASSERT_OK(DmaManager::Create(bti_, ddk::MmioView(local_mmio_buffer, 0),
+    ASSERT_OK(fake_bti_create(&bti_handle_));
+    ASSERT_OK(DmaManager::Create(*zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
                                  DmaManager::Stream::FullResolution, &full_resolution_dma_));
-    ASSERT_OK(DmaManager::Create(bti_, ddk::MmioView(local_mmio_buffer, 0),
+    ASSERT_OK(DmaManager::Create(*zx::unowned_bti(bti_handle_), ddk::MmioView(local_mmio_buffer, 0),
                                  DmaManager::Stream::Downscaled, &downscaled_dma_));
     zx_status_t status = CreateContiguousBufferCollectionInfo(
-        &full_resolution_buffer_collection_, bti_.get(), kFullResWidth, kFullResHeight,
+        &full_resolution_buffer_collection_, bti_handle_, kFullResWidth, kFullResHeight,
         kFullResNumberOfBuffers);
     ASSERT_OK(status);
-    status = CreateContiguousBufferCollectionInfo(&downscaled_buffer_collection_, bti_.get(),
+    status = CreateContiguousBufferCollectionInfo(&downscaled_buffer_collection_, bti_handle_,
                                                   kDownscaledWidth, kDownscaledHeight,
                                                   kDownscaledNumberOfBuffers);
     mmio_view_.emplace(local_mmio_buffer, 0);
@@ -155,12 +155,16 @@ class DmaMgrTest : public zxtest::Test {
   }
 
   void TearDown() override {
+    if (bti_handle_ != ZX_HANDLE_INVALID) {
+      fake_bti_destroy(bti_handle_);
+    }
+
     ASSERT_OK(DestroyContiguousBufferCollection(&full_resolution_buffer_collection_));
     ASSERT_OK(DestroyContiguousBufferCollection(&downscaled_buffer_collection_));
   }
 
   char local_mmio_buffer_[kLocalBufferSize];
-  zx::bti bti_;
+  zx_handle_t bti_handle_ = ZX_HANDLE_INVALID;
   std::optional<ddk::MmioView> mmio_view_;
   std::unique_ptr<camera::DmaManager> full_resolution_dma_;
   std::unique_ptr<camera::DmaManager> downscaled_dma_;

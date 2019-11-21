@@ -83,7 +83,6 @@ if (current_cpu != "") {
       "$zx/system/dev/lib/device-protocol-pdev:device-protocol-pdev-test",
       "$zx/system/dev/lib/fake-bti/test:fake-bti",
       "$zx/system/dev/lib/fake-mmio-reg:fake-mmio-reg-test",
-      "$zx/system/dev/lib/fake-object/test:fake-object",
       "$zx/system/dev/lib/mock-mmio-reg:mock-mmio-reg-test",
       "$zx/system/dev/lib/mt8167:mt8167-audio-lib-test",
       "$zx/system/dev/lib/scsi:scsilib-disk-test",

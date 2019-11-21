@@ -194,6 +194,10 @@ class TaskTest : public zxtest::Test {
   }
 
   void TearDown() override {
+    if (bti_handle_ != ZX_HANDLE_INVALID) {
+      fake_bti_destroy(bti_handle_.get());
+    }
+
     EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection_));
     EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection_));
   }
@@ -682,6 +686,7 @@ TEST(TaskTest, NonContigVmoTest) {
   // Cleanup
   EXPECT_OK(camera::DestroyContiguousBufferCollection(input_buffer_collection));
   EXPECT_OK(camera::DestroyContiguousBufferCollection(output_buffer_collection));
+  fake_bti_destroy(bti_handle.get());
 }
 
 TEST(TaskTest, InvalidBufferCollectionTest) {
@@ -711,6 +716,7 @@ TEST(TaskTest, InvalidBufferCollectionTest) {
                                kImageFormatTableSize, 0, &frame_callback, &res_callback, bti_handle,
                                fake_canvas);
   EXPECT_NE(ZX_OK, status);
+  fake_bti_destroy(bti_handle.get());
 }
 
 }  // namespace
