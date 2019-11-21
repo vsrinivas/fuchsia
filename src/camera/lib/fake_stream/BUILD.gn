@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("fake_stream") {
+  testonly = true
+
+  public_deps = [
+    ":fake_stream_lib",
+  ]
+}
+
+source_set("fake_stream_lib") {
+  testonly = true
+
+  visibility = [ ":*" ]
+
+  public = [
+    "fake_stream.h",
+  ]
+
+  sources = [
+    "fake_stream.cc",
+    "fake_stream.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/async",
+  ]
+
+  public_deps = [
+    "//sdk/fidl/fuchsia.camera2",
+    "//zircon/public/lib/fit",
+  ]
+}

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/fake_stream_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

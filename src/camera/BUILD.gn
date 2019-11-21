@@ -58,6 +58,7 @@ test_package("camera_tests") {
     "//src/camera/examples/demo/stream_provider/test",
     "//src/camera/examples/demo/test",
     "//src/camera/image_writer/test:image_writer_test",
+    "//src/camera/lib/fake_stream/test",
     "//src/camera/stream_utils/test:stream_utils_test",
   ]
 
@@ -175,6 +176,11 @@ test_package("camera_tests") {
     {
       name = "video_device_client_test"
       manifest = "camera_manager2/test/meta/video_device_client_test.cmx"
+      environments = basic_envs
+    },
+    {
+      name = "fake_stream_test"
+      manifest = "lib/fake_stream/test/test.cmx"
       environments = basic_envs
     },
 
