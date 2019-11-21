@@ -173,8 +173,8 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   // imgbar.srcAccessMask is 0
   //
   imgbar.oldLayout           = render->image_info.imageLayout;
-  imgbar.srcQueueFamilyIndex = device->environment->qfi;
-  imgbar.dstQueueFamilyIndex = device->environment->qfi;
+  imgbar.srcQueueFamilyIndex = device->environment.qfi;
+  imgbar.dstQueueFamilyIndex = device->environment.qfi;
   imgbar.image               = render->image;
 
   //
@@ -212,7 +212,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
       // imgbar.image               -- use default
       //
       uint32_t const src_qfi = (pre_barrier->src_qfi == VK_QUEUE_FAMILY_IGNORED)
-                                 ? device->environment->qfi
+                                 ? device->environment.qfi
                                  : pre_barrier->src_qfi;
 
       imgbar.oldLayout           = pre_barrier->old_layout;
@@ -253,7 +253,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
 
       vkCmdClearColorImage(cb,
                            render->image,
-                           VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
+                           imgbar.newLayout,
                            pre_clear->color,
                            1,
                            &imgbar.subresourceRange);
@@ -268,11 +268,11 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
       // imgbar.image               -- use default
       //
       imgbar.srcAccessMask       = VK_ACCESS_TRANSFER_WRITE_BIT;
-      imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL;
+      imgbar.oldLayout           = imgbar.newLayout;
       imgbar.newLayout           = render->image_info.imageLayout;
-      imgbar.srcQueueFamilyIndex = device->environment->qfi;
+      imgbar.srcQueueFamilyIndex = device->environment.qfi;
 
-      imgbar_count = 1;
+      // imgbar_count is 1
     }
 
   //
@@ -307,7 +307,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   *spn_vk_ds_get_surface_surface(instance, ds_surface) = render->image_info;
 
   // update ds
-  spn_vk_ds_update_surface(instance, device->environment, ds_surface);
+  spn_vk_ds_update_surface(instance, &device->environment, ds_surface);
 
   // bind ds
   spn_vk_ds_bind_render_surface(instance, cb, ds_surface);
@@ -358,8 +358,8 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
     imgbar.srcAccessMask       = imgbar.dstAccessMask;
     imgbar.dstAccessMask       = 0;
     imgbar.oldLayout           = render->image_info.imageLayout;
-    imgbar.srcQueueFamilyIndex = device->environment->qfi;
-    imgbar.dstQueueFamilyIndex = device->environment->qfi;
+    imgbar.srcQueueFamilyIndex = device->environment.qfi;
+    imgbar.dstQueueFamilyIndex = device->environment.qfi;
 
     imgbar_count = 0;
   }
@@ -413,7 +413,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
       imgbar.dstAccessMask       = 0;
       imgbar.oldLayout           = VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL;
       imgbar.newLayout           = render->image_info.imageLayout;
-      imgbar.srcQueueFamilyIndex = device->environment->qfi;  // ignored
+      imgbar.srcQueueFamilyIndex = device->environment.qfi;  // ignored
 
       imgbar_count = 1;
     }
@@ -431,7 +431,7 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
       // imgbar.image               -- use default
       //
       uint32_t const dst_qfi = (post_barrier->dst_qfi == VK_QUEUE_FAMILY_IGNORED)
-                                 ? device->environment->qfi
+                                 ? device->environment.qfi
                                  : post_barrier->dst_qfi;
 
       imgbar.newLayout           = post_barrier->new_layout;

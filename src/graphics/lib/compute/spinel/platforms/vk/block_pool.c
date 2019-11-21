@@ -326,20 +326,20 @@ spn_device_block_pool_create(struct spn_device * const device,
     SPN_VK_BUFFER_OFFSETOF(block_pool, bp_debug, bp_debug) + SPN_BP_DEBUG_SIZE;
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   bp_debug_size,
                                   NULL,
                                   block_pool->bp_debug.d.dbi,
                                   &block_pool->bp_debug.d.dm);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->environment,
+                                  &device->environment,
                                   bp_debug_size,
                                   NULL,
                                   &block_pool->bp_debug.h.dbi,
                                   &block_pool->bp_debug.h.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                block_pool->bp_debug.h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -352,7 +352,7 @@ spn_device_block_pool_create(struct spn_device * const device,
     SPN_VK_BUFFER_OFFSETOF(block_pool, bp_ids, bp_ids) + id_count * sizeof(spn_block_id_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   bp_ids_size,
                                   NULL,
                                   block_pool->bp_ids.dbi,
@@ -363,7 +363,7 @@ spn_device_block_pool_create(struct spn_device * const device,
     SPN_VK_BUFFER_OFFSETOF(block_pool, bp_blocks, bp_blocks) + bp_dwords * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   bp_blocks_size,
                                   NULL,
                                   block_pool->bp_blocks.dbi,
@@ -373,14 +373,14 @@ spn_device_block_pool_create(struct spn_device * const device,
                                   handle_count * sizeof(spn_handle_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   bp_host_map_size,
                                   NULL,
                                   block_pool->bp_host_map.dbi,
                                   &block_pool->bp_host_map.dm);
 
   // update the block pool ds
-  spn_vk_ds_update_block_pool(instance, device->environment, block_pool->ds_block_pool);
+  spn_vk_ds_update_block_pool(instance, &device->environment, block_pool->ds_block_pool);
 
   //
   // initialize the block pool
@@ -440,28 +440,28 @@ spn_device_block_pool_dispose(struct spn_device * const device)
 
 #ifdef SPN_BP_DEBUG
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->environment,
+                                 &device->environment,
                                  &block_pool->bp_debug.h.dbi,
                                  block_pool->bp_debug.h.dm);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  block_pool->bp_debug.d.dbi,
                                  block_pool->bp_debug.d.dm);
 #endif
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  block_pool->bp_host_map.dbi,
                                  block_pool->bp_host_map.dm);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  block_pool->bp_blocks.dbi,
                                  block_pool->bp_blocks.dm);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  block_pool->bp_ids.dbi,
                                  block_pool->bp_ids.dm);
 

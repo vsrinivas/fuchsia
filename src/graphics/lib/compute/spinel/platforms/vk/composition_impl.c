@@ -461,7 +461,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   *spn_vk_ds_get_ttcks_ttcks(instance, ds_ttcks) = impl->vk.ttcks.dbi;
 
   // update TTCKS descriptor set
-  spn_vk_ds_update_ttcks(instance, device->environment, ds_ttcks);
+  spn_vk_ds_update_ttcks(instance, &device->environment, ds_ttcks);
 
   // bind the TTCKS descriptor set
   spn_vk_ds_bind_place_ttpk_ttcks(instance, cb, ds_ttcks);
@@ -478,7 +478,7 @@ spn_ci_flush(struct spn_composition_impl * const impl)
   *spn_vk_ds_get_place_place(instance, ds_place) = impl->vk.rings.d.dbi;
 
   // update PLACE descriptor set
-  spn_vk_ds_update_place(instance, device->environment, ds_place);
+  spn_vk_ds_update_place(instance, &device->environment, ds_place);
 
   // bind PLACE descriptor set
   spn_vk_ds_bind_place_ttpk_place(instance, cb, ds_place);
@@ -794,7 +794,7 @@ spn_ci_unsealed_to_sealing(struct spn_composition_impl * const impl)
   *spn_vk_ds_get_ttcks_ttcks(instance, payload_sealing->ds.ttcks) = impl->vk.ttcks.dbi;
 
   // update TTCKS descriptor set
-  spn_vk_ds_update_ttcks(instance, device->environment, payload_sealing->ds.ttcks);
+  spn_vk_ds_update_ttcks(instance, &device->environment, payload_sealing->ds.ttcks);
 
   //
   // INITIALIZE DISPATCH INDIRECT BUFFER
@@ -1354,14 +1354,14 @@ spn_ci_release(struct spn_composition_impl * const impl)
   // free copyback
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
   // free ttcks
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.ttcks.dbi,
                                  impl->vk.ttcks.dm);
   //
@@ -1370,13 +1370,13 @@ spn_ci_release(struct spn_composition_impl * const impl)
   if (impl->config->composition.vk.rings.d != 0)
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                     device->environment,
+                                     &device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
   //
@@ -1459,13 +1459,13 @@ spn_composition_impl_create(struct spn_device * const       device,
   spn_ring_init(&impl->mapped.cp.ring, config->composition.size.ring);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->environment,
+                                  &device->environment,
                                   ring_size,
                                   NULL,
                                   &impl->vk.rings.h.dbi,
                                   &impl->vk.rings.h.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                impl->vk.rings.h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1475,7 +1475,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   if (config->composition.vk.rings.d != 0)
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                      device->environment,
+                                      &device->environment,
                                       ring_size,
                                       NULL,
                                       &impl->vk.rings.d.dbi,
@@ -1494,7 +1494,7 @@ spn_composition_impl_create(struct spn_device * const       device,
                             config->composition.size.ttcks * sizeof(SPN_TYPE_UVEC2);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   ttcks_size,
                                   NULL,
                                   &impl->vk.ttcks.dbi,
@@ -1506,13 +1506,13 @@ spn_composition_impl_create(struct spn_device * const       device,
   size_t const copyback_size = sizeof(*impl->mapped.cb.extent);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->environment,
+                                  &device->environment,
                                   copyback_size,
                                   NULL,
                                   &impl->vk.copyback.dbi,
                                   &impl->vk.copyback.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                impl->vk.copyback.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1618,7 +1618,7 @@ spn_composition_pre_render_bind_ds(struct spn_composition * const   composition,
   *spn_vk_ds_get_ttcks_ttcks(instance, *ds) = impl->vk.ttcks.dbi;
 
   // update ds
-  spn_vk_ds_update_ttcks(instance, device->environment, *ds);
+  spn_vk_ds_update_ttcks(instance, &device->environment, *ds);
 
   // bind
   spn_vk_ds_bind_render_ttcks(instance, cb, *ds);

@@ -45,7 +45,7 @@ spn_device_queue_pool_create(struct spn_device * const device, uint32_t const qu
   // FIXME(allanmac): for now just return queue 0 but the pool
   // creation needs to be a little bit more sophisticated.
   //
-  vkGetDeviceQueue(device->environment->d, device->environment->qfi, 0, &device->queue_pool->q);
+  vkGetDeviceQueue(device->environment.d, device->environment.qfi, 0, &device->queue_pool->q);
 }
 
 void

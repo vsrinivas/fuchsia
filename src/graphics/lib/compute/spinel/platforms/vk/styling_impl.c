@@ -234,13 +234,13 @@ spn_si_release(struct spn_styling_impl * const impl)
       // Note that we don't have to unmap before freeing
       //
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                     device->environment,
+                                     &device->environment,
                                      &impl->vk.d.dbi,
                                      impl->vk.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.h.dbi,
                                  impl->vk.h.dm);
 
@@ -321,18 +321,18 @@ spn_styling_impl_create(struct spn_device * const   device,
   size_t const styling_size = dwords_count * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->environment,
+                                  &device->environment,
                                   dwords_count * sizeof(uint32_t),
                                   NULL,
                                   &impl->vk.h.dbi,
                                   &impl->vk.h.dm);
 
-  vk(MapMemory(device->environment->d, impl->vk.h.dm, 0, VK_WHOLE_SIZE, 0, (void **)&s->extent));
+  vk(MapMemory(device->environment.d, impl->vk.h.dm, 0, VK_WHOLE_SIZE, 0, (void **)&s->extent));
 
   if (config->styling.vk.d != 0)
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                      device->environment,
+                                      &device->environment,
                                       styling_size,
                                       NULL,
                                       &impl->vk.d.dbi,
@@ -426,7 +426,7 @@ spn_styling_pre_render_bind_ds(struct spn_styling * const         styling,
   *spn_vk_ds_get_styling_styling(instance, *ds) = impl->vk.d.dbi;
 
   // update ds
-  spn_vk_ds_update_styling(instance, device->environment, *ds);
+  spn_vk_ds_update_styling(instance, &device->environment, *ds);
 
   // bind
   spn_vk_ds_bind_render_styling(instance, cb, *ds);

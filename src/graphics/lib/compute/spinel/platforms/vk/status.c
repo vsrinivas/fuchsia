@@ -55,13 +55,13 @@ spn_device_status_create(struct spn_device * const device)
   status->h.dbi = spn_vk_ds_get_status_status(instance, status->ds_status);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->environment,
+                                  &device->environment,
                                   sizeof(*status->h.mapped),
                                   NULL,
                                   status->h.dbi,
                                   &status->h.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                status->h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -69,7 +69,7 @@ spn_device_status_create(struct spn_device * const device)
                (void **)&status->h.mapped));
 
   // update the status ds
-  spn_vk_ds_update_status(instance, device->environment, status->ds_status);
+  spn_vk_ds_update_status(instance, &device->environment, status->ds_status);
 }
 
 //
@@ -85,7 +85,7 @@ spn_device_status_dispose(struct spn_device * const device)
   spn_vk_ds_release_status(instance, status->ds_status);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->environment,
+                                 &device->environment,
                                  status->h.dbi,
                                  status->h.dm);
 

@@ -203,10 +203,10 @@ spn_device_dispatch_create(struct spn_device * const device)
     .sType            = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
     .pNext            = NULL,
     .flags            = VK_COMMAND_POOL_CREATE_RESET_COMMAND_BUFFER_BIT,
-    .queueFamilyIndex = device->environment->qfi
+    .queueFamilyIndex = device->environment.qfi
   };
 
-  vk(CreateCommandPool(device->environment->d, &cpci, device->environment->ac, &dispatch->cp));
+  vk(CreateCommandPool(device->environment.d, &cpci, device->environment.ac, &dispatch->cp));
 
   //
   // create command buffers
@@ -220,7 +220,7 @@ spn_device_dispatch_create(struct spn_device * const device)
     .commandBufferCount = SPN_DISPATCH_ID_COUNT
   };
 
-  vk(AllocateCommandBuffers(device->environment->d, &cbai, dispatch->cbs));
+  vk(AllocateCommandBuffers(device->environment.d, &cbai, dispatch->cbs));
 
   //
   // create fences
@@ -234,7 +234,7 @@ spn_device_dispatch_create(struct spn_device * const device)
 
   for (uint32_t ii = 0; ii < SPN_DISPATCH_ID_COUNT; ii++)
     {
-      vk(CreateFence(device->environment->d, &fci, device->environment->ac, dispatch->fences + ii));
+      vk(CreateFence(device->environment.d, &fci, device->environment.ac, dispatch->fences + ii));
     }
 
   //
@@ -282,14 +282,14 @@ spn_device_dispatch_dispose(struct spn_device * const device)
   // destroy fences
   for (uint32_t ii = 0; ii < SPN_DISPATCH_ID_COUNT; ii++)
     {
-      vkDestroyFence(device->environment->d, dispatch->fences[ii], device->environment->ac);
+      vkDestroyFence(device->environment.d, dispatch->fences[ii], device->environment.ac);
     }
 
   // free command buffers
-  vkFreeCommandBuffers(device->environment->d, dispatch->cp, SPN_DISPATCH_ID_COUNT, dispatch->cbs);
+  vkFreeCommandBuffers(device->environment.d, dispatch->cp, SPN_DISPATCH_ID_COUNT, dispatch->cbs);
 
   // destroy command pool
-  vkDestroyCommandPool(device->environment->d, dispatch->cp, device->environment->ac);
+  vkDestroyCommandPool(device->environment.d, dispatch->cp, device->environment.ac);
 
   // free handle stage ids
   spn_allocator_host_perm_free(&device->allocator.host.perm, dispatch->handle_stage_ids);
@@ -496,7 +496,7 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
   //
   // wait for signalled or timeout
   //
-  switch (vkWaitForFences(device->environment->d, fences_count, fences, wait_all, timeout_ns))
+  switch (vkWaitForFences(device->environment.d, fences_count, fences, wait_all, timeout_ns))
     {
       case VK_SUCCESS:
         break;
@@ -518,7 +518,7 @@ spn_device_dispatch_process_executing(struct spn_device * const   device,
     {
       spn_dispatch_id_t const id = dispatch->indices.executing[ii];
 
-      switch (vkGetFenceStatus(device->environment->d, fences[ii]))
+      switch (vkGetFenceStatus(device->environment.d, fences[ii]))
         {
           case VK_SUCCESS:
             dispatch->indices.complete[dispatch->counts.complete++] = id;
@@ -624,7 +624,7 @@ spn_device_dispatch_acquire(struct spn_device * const  device,
   *id = dispatch->indices.available[--dispatch->counts.available];
 
   // reset the fence
-  vk(ResetFences(device->environment->d, 1, dispatch->fences + *id));
+  vk(ResetFences(device->environment.d, 1, dispatch->fences + *id));
 
   // zero the signals
   struct spn_dispatch_signal * signal = dispatch->signals + *id;
@@ -701,6 +701,10 @@ spn_device_dispatch_set_completion(struct spn_device * const           device,
   return completion->payload;
 }
 
+//
+//
+//
+
 void
 spn_device_dispatch_set_flush_arg(struct spn_device * const device,
                                   spn_dispatch_id_t const   id,
@@ -712,6 +716,17 @@ spn_device_dispatch_set_flush_arg(struct spn_device * const device,
   struct spn_dispatch_flush * const flush = dispatch->flushes + id;
 
   flush->arg = arg;
+}
+
+void
+spn_device_dispatch_reset_flush_arg(struct spn_device * const device, spn_dispatch_id_t const id)
+{
+  struct spn_dispatch * const dispatch = device->dispatch;
+
+  // save pfn and return payload
+  struct spn_dispatch_flush * const flush = dispatch->flushes + id;
+
+  flush->arg = NULL;
 }
 
 //

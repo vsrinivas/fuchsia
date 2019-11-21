@@ -79,10 +79,14 @@ spn_device_create(struct spn_vk_environment * const               environment,
   context->device = device;
 
   //
-  // Keep the environment and a back-pointer to the context
+  // make a copy of the environment
   //
-  device->environment = environment;
-  device->context     = context;
+  device->environment = *environment;
+
+  //
+  // keep a back-pointer to the context
+  //
+  device->context = context;
 
   //
   // create the Spinel instance
@@ -225,17 +229,17 @@ spn_device_dispose(struct spn_device * const device)
   spn_device_handle_pool_dispose(device);
   spn_device_queue_pool_dispose(device);
 
-  spn_allocator_device_temp_dispose(&device->allocator.device.temp.local, device->environment);
-  spn_allocator_device_perm_dispose(&device->allocator.device.perm.coherent, device->environment);
-  spn_allocator_device_perm_dispose(&device->allocator.device.perm.copyback, device->environment);
-  spn_allocator_device_perm_dispose(&device->allocator.device.perm.local, device->environment);
+  spn_allocator_device_temp_dispose(&device->allocator.device.temp.local, &device->environment);
+  spn_allocator_device_perm_dispose(&device->allocator.device.perm.coherent, &device->environment);
+  spn_allocator_device_perm_dispose(&device->allocator.device.perm.copyback, &device->environment);
+  spn_allocator_device_perm_dispose(&device->allocator.device.perm.local, &device->environment);
 
   spn_allocator_host_temp_dispose(&device->allocator.host.temp);
   spn_allocator_host_perm_dispose(&device->allocator.host.perm);
 
-  hotsort_vk_release(device->environment->d, device->environment->ac, device->hs);
+  hotsort_vk_release(device->environment.d, device->environment.ac, device->hs);
 
-  spn_vk_dispose(device->instance, device->environment);
+  spn_vk_dispose(device->instance, &device->environment);
 
   free(device->context);
   free(device);

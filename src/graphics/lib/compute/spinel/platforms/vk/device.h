@@ -21,10 +21,10 @@
 
 struct spn_device
 {
-  struct spn_vk_environment * environment;  // Vulkan environment
-  struct spn_context *        context;      // Spinel abstract interface
-  struct spn_vk *             instance;     // Instance of target state and resources
-  struct hotsort_vk *         hs;           // HotSort instance
+  struct spn_vk_environment environment;  // Vulkan environment
+  struct spn_context *      context;      // Spinel abstract interface
+  struct spn_vk *           instance;     // Instance of target state and resources
+  struct hotsort_vk *       hs;           // HotSort instance
 
   struct
   {

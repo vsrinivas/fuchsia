@@ -512,7 +512,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   *spn_vk_ds_get_paths_copy_pc_ring(instance, ds_pc)  = impl->vk.ring.dbi;
 
   // update PATHS_COPY descriptor set
-  spn_vk_ds_update_paths_copy(instance, device->environment, ds_pc);
+  spn_vk_ds_update_paths_copy(instance, &device->environment, ds_pc);
 
   // bind PATHS_COPY descriptor set
   spn_vk_ds_bind_paths_copy_paths_copy(instance, cb, ds_pc);
@@ -1033,12 +1033,12 @@ spn_pbi_release(struct spn_path_builder_impl * const impl)
   // free device allocations
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.ring.dbi,
                                  impl->vk.ring.dm);
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.alloc.dbi,
                                  impl->vk.alloc.dm);
 
@@ -1108,7 +1108,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   SPN_VK_TRACE_PATH_BUILDER_CREATE(impl, max_in_flight);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                  device->environment,
+                                  &device->environment,
                                   sizeof(uint32_t) * max_in_flight,
                                   NULL,
                                   &impl->vk.alloc.dbi,
@@ -1125,14 +1125,14 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   size_t const   extent_size   = extent_dwords * sizeof(uint32_t);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->environment,
+                                  &device->environment,
                                   extent_size,
                                   NULL,
                                   &impl->vk.ring.dbi,
                                   &impl->vk.ring.dm);
 
   // map and initialize blocks and cmds
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                impl->vk.ring.dm,
                0,
                VK_WHOLE_SIZE,

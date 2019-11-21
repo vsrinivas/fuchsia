@@ -631,7 +631,7 @@ spn_rbi_complete_1(void * pfn_payload)
   *spn_vk_ds_get_raster_ids_raster_ids(instance, payload_2->ds.i) = impl->vk.rings.rc;
 
   // update raster_ids ds
-  spn_vk_ds_update_raster_ids(instance, device->environment, payload_2->ds.i);
+  spn_vk_ds_update_raster_ids(instance, &device->environment, payload_2->ds.i);
 
   // bind raster_ids ds
   spn_vk_ds_bind_rasters_alloc_raster_ids(instance, cb, payload_2->ds.i);
@@ -968,7 +968,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
                                   dbi_rast_cmds);
 
   // update rasterize ds
-  spn_vk_ds_update_rasterize(instance, device->environment, payload_1->ds.r);
+  spn_vk_ds_update_rasterize(instance, &device->environment, payload_1->ds.r);
 
   // bind rasterize ds
   spn_vk_ds_bind_fills_scan_rasterize(instance, cb, payload_1->ds.r);
@@ -994,7 +994,7 @@ spn_rbi_flush(struct spn_raster_builder_impl * const impl)
     dbi_ttrks);
 
   // update ttrks ds
-  spn_vk_ds_update_ttrks(instance, device->environment, payload_1->ds.t);
+  spn_vk_ds_update_ttrks(instance, &device->environment, payload_1->ds.t);
 
   // bind ttrks ds
   spn_vk_ds_bind_rasterize_line_ttrks(instance, cb, payload_1->ds.t);
@@ -1587,7 +1587,7 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   // free copyback
   //
   spn_allocator_device_perm_free(&device->allocator.device.perm.copyback,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.copyback.dbi,
                                  impl->vk.copyback.dm);
   //
@@ -1596,13 +1596,13 @@ spn_rbi_release(struct spn_raster_builder_impl * const impl)
   if (impl->config->raster_builder.vk.rings.d != 0)
     {
       spn_allocator_device_perm_free(&device->allocator.device.perm.local,
-                                     device->environment,
+                                     &device->environment,
                                      &impl->vk.rings.d.dbi,
                                      impl->vk.rings.d.dm);
     }
 
   spn_allocator_device_perm_free(&device->allocator.device.perm.coherent,
-                                 device->environment,
+                                 &device->environment,
                                  &impl->vk.rings.h.dbi,
                                  impl->vk.rings.h.dm);
   //
@@ -1705,13 +1705,13 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   // allocate and map rings
   //
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.coherent,
-                                  device->environment,
+                                  &device->environment,
                                   vk_extent_size,
                                   NULL,
                                   &impl->vk.rings.h.dbi,
                                   &impl->vk.rings.h.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                impl->vk.rings.h.dm,
                0,
                VK_WHOLE_SIZE,
@@ -1729,7 +1729,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   if (config->raster_builder.vk.rings.d != 0)  // FIXME -- this will be improved later
     {
       spn_allocator_device_perm_alloc(&device->allocator.device.perm.local,
-                                      device->environment,
+                                      &device->environment,
                                       vk_extent_size,
                                       NULL,
                                       &impl->vk.rings.d.dbi,
@@ -1754,13 +1754,13 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   size_t const   copyback_size = max_in_flight * sizeof(*impl->mapped.cb.extent);
 
   spn_allocator_device_perm_alloc(&device->allocator.device.perm.copyback,
-                                  device->environment,
+                                  &device->environment,
                                   copyback_size,
                                   NULL,
                                   &impl->vk.copyback.dbi,
                                   &impl->vk.copyback.dm);
 
-  vk(MapMemory(device->environment->d,
+  vk(MapMemory(device->environment.d,
                impl->vk.copyback.dm,
                0,
                VK_WHOLE_SIZE,

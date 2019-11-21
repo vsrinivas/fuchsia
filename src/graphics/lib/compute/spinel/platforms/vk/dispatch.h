@@ -306,6 +306,9 @@ spn_device_dispatch_set_flush_arg(struct spn_device * const device,
                                   spn_dispatch_id_t const   id,
                                   void *                    flush_arg);
 
+void
+spn_device_dispatch_reset_flush_arg(struct spn_device * const device, spn_dispatch_id_t const id);
+
 //
 // Register an unmaterialized handle with a WIP dispatch
 //
