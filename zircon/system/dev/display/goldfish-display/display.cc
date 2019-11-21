@@ -591,15 +591,6 @@ void Display::DisplayControllerImplApplyConfiguration(const display_config_t** d
   }
 }
 
-uint32_t Display::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                           zx_pixel_format_t format) {
-  return width;
-}
-
-zx_status_t Display::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx_vmo_create_contiguous(bti_.get(), size, 0, vmo_out->reset_and_get_address());
-}
-
 zx_status_t Display::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   fbl::AutoLock lock(&lock_);
 

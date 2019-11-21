@@ -24,11 +24,6 @@ void HiDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->cursor_info_count = 0;
 }
 
-uint32_t HiDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                             zx_pixel_format_t format) {
-  return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
 void HiDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
   fbl::AutoLock lock(&display_lock_);
@@ -126,10 +121,6 @@ void HiDisplay::DisplayControllerImplApplyConfiguration(const display_config_t**
   } else {
     current_image_valid_ = false;
   }
-}
-
-zx_status_t HiDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops

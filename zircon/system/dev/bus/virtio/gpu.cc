@@ -241,16 +241,6 @@ void GpuDevice::virtio_gpu_apply_configuration(void* ctx, const display_config_t
   gd->Flush();
 }
 
-uint32_t GpuDevice::virtio_gpu_compute_linear_stride(void* ctx, uint32_t width,
-                                                     zx_pixel_format_t format) {
-  return width;
-}
-
-zx_status_t GpuDevice::virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
-  GpuDevice* gd = static_cast<GpuDevice*>(ctx);
-  return zx_vmo_create_contiguous(gd->bti().get(), size, 0, vmo_out);
-}
-
 zx_status_t GpuDevice::virtio_get_sysmem_connection(void* ctx, zx_handle_t handle) {
   GpuDevice* gd = static_cast<GpuDevice*>(ctx);
   zx_status_t status = sysmem_connect(&gd->sysmem_, handle);
@@ -580,8 +570,6 @@ display_controller_impl_protocol_ops_t GpuDevice::proto_ops = {
     .release_image = GpuDevice::virtio_gpu_release_image,
     .check_configuration = GpuDevice::virtio_gpu_check_configuration,
     .apply_configuration = GpuDevice::virtio_gpu_apply_configuration,
-    .compute_linear_stride = GpuDevice::virtio_gpu_compute_linear_stride,
-    .allocate_vmo = GpuDevice::virtio_gpu_allocate_vmo,
     .get_sysmem_connection = GpuDevice::virtio_get_sysmem_connection,
     .set_buffer_collection_constraints = GpuDevice::virtio_set_buffer_collection_constraints,
     .get_single_buffer_framebuffer = GpuDevice::virtio_get_single_buffer_framebuffer,

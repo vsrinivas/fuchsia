@@ -245,6 +245,7 @@ class Client : private FenceCallback {
   bool is_vc_;
   uint64_t console_fb_display_id_ = -1;
   const uint32_t id_;
+  uint32_t single_buffer_framebuffer_stride_ = 0;
 
   zx_handle_t server_handle_;
   uint64_t next_image_id_ = 1;         // Only INVALID_ID == 0 is invalid

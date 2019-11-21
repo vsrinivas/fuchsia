@@ -252,6 +252,10 @@ void Client::HandleImportVmoImage(
     fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
   auto resp = resp_builder->New<fuchsia_hardware_display_ControllerImportVmoImageResponse>();
   *resp_table = &fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+  if (!single_buffer_framebuffer_stride_) {
+    resp->res = ZX_ERR_INVALID_ARGS;
+    return;
+  }
 
   zx::vmo vmo(req->vmo);
 
@@ -273,11 +277,8 @@ void Client::HandleImportVmoImage(
 
   if (resp->res == ZX_OK) {
     fbl::AllocChecker ac;
-    uint32_t stride = 0;
-    if (is_vc_) {
-      stride = controller_->dc()->ComputeLinearStride(dc_image.width, dc_image.pixel_format);
-    }
-    auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo), stride));
+    auto image = fbl::AdoptRef(
+        new (&ac) Image(controller_, dc_image, std::move(vmo), single_buffer_framebuffer_stride_));
     if (!ac.check()) {
       controller_->dc()->ReleaseImage(&dc_image);
 
@@ -1163,6 +1164,7 @@ void Client::HandleGetSingleBufferFramebuffer(
   *handle_out = vmo.release();
   resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
   resp->stride = stride;
+  single_buffer_framebuffer_stride_ = stride;
 }
 
 void Client::HandleIsCaptureSupported(

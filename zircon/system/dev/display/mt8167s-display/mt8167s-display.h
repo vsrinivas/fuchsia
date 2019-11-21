@@ -79,8 +79,6 @@ class Mt8167sDisplay
                                                    size_t* layer_cfg_result_count);
   void DisplayControllerImplApplyConfiguration(const display_config_t** display_config,
                                                size_t display_count);
-  uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
-  zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
   zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
   zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
                                                                   uint32_t collection);

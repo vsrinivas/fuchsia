@@ -1719,16 +1719,6 @@ void Controller::DisplayControllerImplApplyConfiguration(const display_config_t*
   }
 }
 
-uint32_t Controller::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                              zx_pixel_format_t format) {
-  return fbl::round_up(
-      width, get_tile_byte_width(IMAGE_TYPE_SIMPLE, format) / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
-zx_status_t Controller::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx::vmo::create(size, 0, vmo_out);
-}
-
 zx_status_t Controller::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
   zx_status_t status = sysmem_connect(&sysmem_, connection.release());
   if (status != ZX_OK) {

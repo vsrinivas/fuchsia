@@ -59,9 +59,6 @@ class GpuDevice : public Device {
                                                  size_t* layer_cfg_result_count);
   static void virtio_gpu_apply_configuration(void* ctx, const display_config_t** display_configs,
                                              size_t display_count);
-  static uint32_t virtio_gpu_compute_linear_stride(void* ctx, uint32_t width,
-                                                   zx_pixel_format_t format);
-  static zx_status_t virtio_gpu_allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out);
   static zx_status_t virtio_get_sysmem_connection(void* ctx, zx_handle_t handle);
   static zx_status_t virtio_set_buffer_collection_constraints(void* ctx, const image_t* config,
                                                               zx_unowned_handle_t collection);

@@ -88,9 +88,7 @@ void Mt8167sDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
   args->cursor_info_count = 0;
 }
 
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t Mt8167sDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                                  zx_pixel_format_t format) {
+static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
   return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
 }
 
@@ -117,7 +115,7 @@ zx_status_t Mt8167sDisplay::DisplayControllerImplImportVmoImage(image_t* image, 
     return ZX_ERR_INVALID_ARGS;
   }
 
-  uint32_t stride = DisplayControllerImplComputeLinearStride(image->width, image->pixel_format);
+  uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
   unsigned pixel_size = ZX_PIXEL_FORMAT_BYTES(image->pixel_format);
   size_t size =
       ROUNDUP((stride * image->height * pixel_size) + (offset & (PAGE_SIZE - 1)), PAGE_SIZE);
@@ -340,11 +338,6 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
       }
     }
   }
-}
-
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t Mt8167sDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
 }
 
 zx_status_t Mt8167sDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {

@@ -68,7 +68,7 @@ void populate_added_display_args(vim2_display_t* display, added_display_args_t* 
   args->cursor_info_count = 0;
 }
 
-static uint32_t vim_compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
+static uint32_t compute_linear_stride(void* ctx, uint32_t width, zx_pixel_format_t format) {
   // The vim2 display controller needs buffers with a stride that is an even
   // multiple of 32.
   return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
@@ -114,7 +114,7 @@ static zx_status_t vim_import_vmo_image(void* ctx, image_t* image, zx_handle_t v
     return ZX_ERR_INVALID_ARGS;
 
   import_info->format = image->pixel_format;
-  uint32_t stride = vim_compute_linear_stride(display, image->width, image->pixel_format);
+  uint32_t stride = compute_linear_stride(display, image->width, image->pixel_format);
 
   if (image->pixel_format == ZX_PIXEL_FORMAT_RGB_x888) {
     zx_status_t status = ZX_OK;
@@ -403,7 +403,7 @@ static uint32_t vim_check_configuration(void* ctx, const display_config_t** disp
         .height = height,
     };
     uint32_t bytes_per_row =
-        vim_compute_linear_stride(display, layer->image.width, layer->image.pixel_format) *
+        compute_linear_stride(display, layer->image.width, layer->image.pixel_format) *
         ZX_PIXEL_FORMAT_BYTES(layer->image.pixel_format);
     success = display_configs[0]->layer_list[0]->type == LAYER_TYPE_PRIMARY &&
               layer->transform_mode == FRAME_TRANSFORM_IDENTITY && layer->image.width == width &&
@@ -471,15 +471,6 @@ static void vim_apply_configuration(void* ctx, const display_config_t** display_
   }
 
   mtx_unlock(&display->display_lock);
-}
-
-static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) {
-  vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
-  zx_status_t status = zx_vmo_create_contiguous(display->bti, size, 0, vmo_out);
-  static const char kVmoName[] = "vim_framebuffer";
-  if (status == ZX_OK)
-    zx_object_set_property(*vmo_out, ZX_PROP_NAME, kVmoName, sizeof(kVmoName));
-  return status;
 }
 
 static zx_status_t get_sysmem_connection(void* ctx, zx_handle_t handle) {
@@ -564,8 +555,6 @@ static display_controller_impl_protocol_ops_t display_controller_ops = {
     .release_image = vim_release_image,
     .check_configuration = vim_check_configuration,
     .apply_configuration = vim_apply_configuration,
-    .compute_linear_stride = vim_compute_linear_stride,
-    .allocate_vmo = allocate_vmo,
     .get_sysmem_connection = get_sysmem_connection,
     .set_buffer_collection_constraints = set_buffer_collection_constraints,
     .get_single_buffer_framebuffer = get_single_buffer_framebuffer,

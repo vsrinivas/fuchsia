@@ -62,12 +62,6 @@ void FakeDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t FakeDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                               zx_pixel_format_t format) {
-  return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
-}
-
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 void FakeDisplay::DisplayControllerImplSetDisplayControllerInterface(
     const display_controller_interface_protocol_t* intf) {
   fbl::AutoLock lock(&display_lock_);
@@ -204,11 +198,6 @@ void FakeDisplay::DisplayControllerImplApplyConfiguration(const display_config_t
   } else {
     current_image_valid_ = false;
   }
-}
-
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t FakeDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx::vmo::create(size, 0, vmo_out);
 }
 
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops

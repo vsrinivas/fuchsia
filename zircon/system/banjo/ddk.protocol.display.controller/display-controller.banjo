@@ -402,14 +402,6 @@ protocol DisplayControllerImpl {
     /// The driver must not retain references to the configuration after this function returns.
     ApplyConfiguration(vector<DisplayConfig?> display_config) -> ();
 
-    /// Computes the stride (in pixels) necessary for a linear image with the given width
-    /// and pixel format. Returns 0 on error.
-    ComputeLinearStride(uint32 width, ZxPixelFormat pixel_format) -> (uint32 s);
-
-    /// Allocates a VMO of the requested size which can be used for images.
-    // TODO: move this functionality into a seperate video buffer management system.
-    AllocateVmo(uint64 size) -> (zx.status s, handle<vmo> vmo);
-
     // Connects the handle to the sysmem service.
     GetSysmemConnection(handle<channel> sysmem_handle) -> (zx.status s);
 

@@ -235,9 +235,7 @@ zx_status_t AstroDisplay::DisplayInit() {
   return ZX_OK;
 }
 
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-uint32_t AstroDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
-                                                                zx_pixel_format_t format) {
+static uint32_t ComputeLinearStride(uint32_t width, zx_pixel_format_t format) {
   // The astro display controller needs buffers with a stride that is an even
   // multiple of 32.
   return ROUNDUP(width, 32 / ZX_PIXEL_FORMAT_BYTES(format));
@@ -269,7 +267,7 @@ zx_status_t AstroDisplay::DisplayControllerImplImportVmoImage(image_t* image, zx
     return status;
   }
 
-  uint32_t stride = DisplayControllerImplComputeLinearStride(image->width, image->pixel_format);
+  uint32_t stride = ComputeLinearStride(image->width, image->pixel_format);
 
   canvas_info_t canvas_info;
   canvas_info.height = image->height;
@@ -474,11 +472,6 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration(const display_config_
   }
 }
 
-// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
-zx_status_t AstroDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out) {
-  return zx::vmo::create_contiguous(bti_, size, 0, vmo_out);
-}
-
 void AstroDisplay::DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
 
 void AstroDisplay::DdkRelease() {
@@ -532,7 +525,7 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
   }
 
   format_ = ZX_PIXEL_FORMAT_RGB_x888;
-  stride_ = DisplayControllerImplComputeLinearStride(width_, format_);
+  stride_ = ComputeLinearStride(width_, format_);
 
   if (dc_intf_.is_valid()) {
     added_display_args_t args;
