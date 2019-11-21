@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::prelude::*;
 use futures::Future;
+use hermetic_audio_environment::prelude::*;
 
 pub trait VirtualAudioDevice: Sized {
     fn connect(env: &Environment) -> Result<Self>;

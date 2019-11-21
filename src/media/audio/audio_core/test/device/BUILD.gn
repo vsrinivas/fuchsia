@@ -11,20 +11,11 @@ rustc_test("audio_device_tests_bin") {
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//sdk/fidl/fuchsia.virtualaudio:fuchsia.virtualaudio-rustc",
     "//src/lib/test_util",
-    "//third_party/rust_crates:failure",
+    "//src/media/audio/lib/test/hermetic_audio_environment/rust",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:hex",
-    "//third_party/rust_crates:lazy_static",
-    "//third_party/rust_crates:maplit",
-    "//third_party/rust_crates:rand",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
-    "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
