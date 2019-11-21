@@ -11,7 +11,7 @@ use crate::{
     path::Path,
     point::Point,
     segment::Segment,
-    tile::{TileContour, TileContourBuilder},
+    tile::contour::{TileContour, TileContourBuilder},
 };
 
 mod segments;

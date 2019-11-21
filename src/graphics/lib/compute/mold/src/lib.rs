@@ -25,4 +25,4 @@ const GRID_LIMIT: i32 = 16_777_216 / PIXEL_WIDTH;
 pub use path::Path;
 pub use point::Point;
 pub use raster::{Raster, RasterInner};
-pub use tile::painter::{ColorBuffer, PixelFormat};
+pub use tile::map::painter::{ColorBuffer, PixelFormat};

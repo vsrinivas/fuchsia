@@ -4,7 +4,7 @@
 
 use std::cmp::Ordering;
 
-use crate::{point::Point, GRID_LIMIT, PIXEL_WIDTH};
+use crate::{point::Point, tile::TILE_SHIFT, GRID_LIMIT, PIXEL_SHIFT, PIXEL_WIDTH};
 
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Segment<T> {
@@ -71,6 +71,23 @@ impl Segment<f32> {
 impl Segment<i32> {
     pub fn border(&self) -> Point<i32> {
         Point::new(self.p0.x.min(self.p1.x), self.p0.y.min(self.p1.y)).border()
+    }
+
+    pub fn tile(&self) -> (i32, i32) {
+        let mut p0 = self.p0;
+        p0.x >>= PIXEL_SHIFT;
+        p0.y >>= PIXEL_SHIFT;
+        let mut p1 = self.p1;
+        p1.x >>= PIXEL_SHIFT;
+        p1.y >>= PIXEL_SHIFT;
+
+        let min_x = p0.x.min(p1.x);
+        let min_y = p0.y.min(p1.y);
+
+        let i = min_x >> TILE_SHIFT;
+        let j = min_y >> TILE_SHIFT;
+
+        (i, j)
     }
 
     pub fn double_signed_area(&self) -> i16 {

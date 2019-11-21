@@ -10,7 +10,10 @@ use fuchsia_trace::duration;
 use crate::{
     point::Point,
     segment::Segment,
-    tile::{LayerNode, Layers, Tile, TileOp, TILE_SIZE},
+    tile::{
+        map::{LayerNode, Layers},
+        Tile, TileOp, TILE_SIZE,
+    },
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
