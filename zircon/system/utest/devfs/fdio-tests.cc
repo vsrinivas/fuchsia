@@ -6,7 +6,6 @@
 #include <unistd.h>
 
 #include <fbl/unique_fd.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>

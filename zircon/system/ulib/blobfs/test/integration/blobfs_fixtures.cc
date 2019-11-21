@@ -5,6 +5,7 @@
 #include "blobfs_fixtures.h"
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 
 #include <fvm/format.h>
 #include <zxtest/zxtest.h>
@@ -12,11 +13,11 @@
 namespace {
 
 void CheckBlobfsInfo(fs::FilesystemTest* test) {
-  fuchsia_io_FilesystemInfo info;
+  ::llcpp::fuchsia::io::FilesystemInfo info;
   ASSERT_NO_FAILURES(test->GetFsInfo(&info));
 
   const char kFsName[] = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name);
+  const char* name = reinterpret_cast<const char*>(info.name.data());
   ASSERT_STR_EQ(kFsName, name);
   ASSERT_LE(info.used_nodes, info.total_nodes, "Used nodes greater than free nodes");
   ASSERT_LE(info.used_bytes, info.total_bytes, "Used bytes greater than free bytes");

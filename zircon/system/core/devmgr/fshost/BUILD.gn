@@ -114,6 +114,7 @@ zx_test("fshost-test") {
     ":block-watcher",
     ":fshost-registry",
     ":metrics",
+    "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/cobalt-client",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async",

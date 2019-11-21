@@ -71,7 +71,6 @@ zx_library("blobfs") {
       "$zx/system/ulib/fs/metrics:metrics-inspect.headers",
     ]
     deps += [
-      "$zx/system/fidl/fuchsia-blobfs:c",
       "$zx/system/fidl/fuchsia-blobfs:llcpp",
       "$zx/system/fidl/fuchsia-io:llcpp",
       "$zx/system/ulib/async",

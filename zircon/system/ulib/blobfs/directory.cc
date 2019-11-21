@@ -5,7 +5,7 @@
 #include "directory.h"
 
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
@@ -88,7 +88,7 @@ zx_status_t Directory::Lookup(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 zx_status_t Directory::GetAttributes(fs::VnodeAttributes* a) {
   *a = fs::VnodeAttributes();
   a->mode = V_TYPE_DIR | V_IRUSR;
-  a->inode = fuchsia_io_INO_UNKNOWN;
+  a->inode = ::llcpp::fuchsia::io::INO_UNKNOWN;
   a->content_size = 0;
   a->storage_size = 0;
   a->link_count = 1;
@@ -124,7 +124,7 @@ zx_status_t Directory::Create(fbl::RefPtr<fs::Vnode>* out, fbl::StringPiece name
 constexpr const char kFsName[] = "blobfs";
 
 zx_status_t Directory::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Blobfs name too long");
 
   *info = {};

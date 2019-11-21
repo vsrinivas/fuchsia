@@ -26,7 +26,7 @@
 #include <safemath/checked_math.h>
 
 #ifdef __Fuchsia__
-#include <fuchsia/minfs/c/fidl.h>
+#include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/async/cpp/task.h>
 #include <lib/cksum.h>
 #include <lib/zx/event.h>

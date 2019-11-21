@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <fs/pseudo_dir.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <sys/stat.h>
 
@@ -109,7 +108,7 @@ zx_status_t PseudoDir::AddEntry(fbl::String name, fbl::RefPtr<fs::Vnode> vn) {
     return ZX_ERR_ALREADY_EXISTS;
   }
 
-  Notify(name.ToStringPiece(), fuchsia_io_WATCH_EVENT_ADDED);
+  Notify(name.ToStringPiece(), fio::WATCH_EVENT_ADDED);
   auto entry = std::make_unique<Entry>(next_node_id_++, std::move(name), std::move(vn));
   entries_by_name_.insert(entry.get());
   entries_by_id_.insert(std::move(entry));
@@ -123,7 +122,7 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
   if (it != entries_by_name_.end()) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fuchsia_io_WATCH_EVENT_REMOVED);
+    Notify(name, fio::WATCH_EVENT_REMOVED);
     return ZX_OK;
   }
 
@@ -137,7 +136,7 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name, fs::Vnode* vn) {
   if (it != entries_by_name_.end() && it->node().get() == vn) {
     entries_by_name_.erase(it);
     entries_by_id_.erase(it->id());
-    Notify(name, fuchsia_io_WATCH_EVENT_REMOVED);
+    Notify(name, fio::WATCH_EVENT_REMOVED);
     return ZX_OK;
   }
 
@@ -148,7 +147,7 @@ void PseudoDir::RemoveAllEntries() {
   fbl::AutoLock lock(&mutex_);
 
   for (auto& entry : entries_by_name_) {
-    Notify(entry.name().ToStringPiece(), fuchsia_io_WATCH_EVENT_REMOVED);
+    Notify(entry.name().ToStringPiece(), fio::WATCH_EVENT_REMOVED);
   }
   entries_by_name_.clear();
   entries_by_id_.clear();

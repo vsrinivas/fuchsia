@@ -11,7 +11,6 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/promise.h>

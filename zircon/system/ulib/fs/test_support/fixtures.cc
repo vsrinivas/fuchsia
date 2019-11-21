@@ -5,7 +5,6 @@
 #include "fs/test_support/fixtures.h"
 
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/partition/c/fidl.h>
 #include <fuchsia/hardware/block/volume/c/fidl.h>
@@ -83,14 +82,17 @@ void FilesystemTest::Unmount() {
   mounted_ = false;
 }
 
-void FilesystemTest::GetFsInfo(fuchsia_io_FilesystemInfo* info) {
+void FilesystemTest::GetFsInfo(::llcpp::fuchsia::io::FilesystemInfo* info) {
   fbl::unique_fd fd(open(mount_path(), O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
-  zx_status_t status;
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, info));
-  ASSERT_OK(status);
+  auto result = ::llcpp::fuchsia::io::DirectoryAdmin::Call::QueryFilesystem(
+      zx::unowned_channel(caller.borrow_channel()));
+  ASSERT_OK(result.status());
+  ASSERT_OK(result.value().s);
+  ASSERT_NOT_NULL(result->info);
+  *info = *result->info;
 }
 
 zx_status_t FilesystemTest::CheckFs() {

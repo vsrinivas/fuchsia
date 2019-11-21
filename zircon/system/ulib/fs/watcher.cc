@@ -53,7 +53,7 @@ class WatchBuffer {
 
  private:
   size_t watch_buf_size_ = 0;
-  char watch_buf_[fuchsia_io_MAX_BUF]{};
+  char watch_buf_[fio::MAX_BUF]{};
 };
 
 zx_status_t WatchBuffer::AddMsg(const zx::channel& c, unsigned event, fbl::StringPiece name) {

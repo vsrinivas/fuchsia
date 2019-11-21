@@ -21,6 +21,7 @@
 
 namespace {
 
+namespace fio = ::llcpp::fuchsia::io;
 using fs::FilesystemTest;
 using fs::RamDisk;
 
@@ -234,7 +235,7 @@ void RunFragmentationTest(FilesystemTest* test) {
   size_t kLargeBlocks = blobfs::MerkleTreeBlocks(large_inode) + blobfs::BlobDataBlocks(large_inode);
 
   // We shouldn't have space (before we try allocating) ...
-  fuchsia_io_FilesystemInfo usage;
+  fio::FilesystemInfo usage;
   ASSERT_NO_FAILURES(test->GetFsInfo(&usage));
   ASSERT_LT(usage.total_bytes - usage.used_bytes, kLargeBlocks * blobfs::kBlobfsBlockSize);
 
@@ -400,7 +401,7 @@ TEST_F(BlobfsTestWithFvm, ExtendFailure) {
     return;
   }
 
-  fuchsia_io_FilesystemInfo original_usage;
+  fio::FilesystemInfo original_usage;
   ASSERT_NO_FAILURES(GetFsInfo(&original_usage));
 
   // Create a blob of the maximum size possible without causing an FVM extension.
@@ -414,7 +415,7 @@ TEST_F(BlobfsTestWithFvm, ExtendFailure) {
   fd.reset();
 
   // Ensure that an FVM extension did not occur.
-  fuchsia_io_FilesystemInfo current_usage;
+  fio::FilesystemInfo current_usage;
   ASSERT_NO_FAILURES(GetFsInfo(&current_usage));
   ASSERT_EQ(current_usage.total_bytes, original_usage.total_bytes);
 

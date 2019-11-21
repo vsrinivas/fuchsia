@@ -27,7 +27,7 @@ void ServiceProxyDir::AddEntry(std::string name, fbl::RefPtr<fs::Vnode> node) {
 zx_status_t ServiceProxyDir::GetAttributes(fs::VnodeAttributes* attr) {
   *attr = fs::VnodeAttributes();
   attr->mode = V_TYPE_DIR | V_IRUSR;
-  attr->inode = fuchsia_io_INO_UNKNOWN;
+  attr->inode = fio::INO_UNKNOWN;
   attr->link_count = 1;
   return ZX_OK;
 }

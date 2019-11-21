@@ -6,7 +6,7 @@
 #include <errno.h>
 #include <fcntl.h>
 #include <fuchsia/blobfs/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/fd.h>
 #include <lib/fzl/fdio.h>
 #include <lib/zx/vmo.h>
@@ -34,6 +34,7 @@ namespace {
 using fs::GetTopologicalPath;
 using fs::FilesystemTest;
 using fs::RamDisk;
+namespace fio = ::llcpp::fuchsia::io;
 
 // Go over the parent device logic and test fixture.
 TEST_F(BlobfsTest, Trivial) {}
@@ -408,14 +409,16 @@ void QueryInfo(size_t expected_nodes, size_t expected_bytes) {
   fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
   ASSERT_TRUE(fd);
 
-  zx_status_t status;
-  fuchsia_io_FilesystemInfo info;
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_OK(fuchsia_io_DirectoryAdminQueryFilesystem(caller.borrow_channel(), &status, &info));
-  ASSERT_OK(status);
+  auto query_result =
+      fio::DirectoryAdmin::Call::QueryFilesystem(zx::unowned_channel(caller.borrow_channel()));
+  ASSERT_OK(query_result.status());
+  ASSERT_OK(query_result.value().s);
+  ASSERT_NOT_NULL(query_result.value().info);
+  const fio::FilesystemInfo& info = *query_result.value().info;
 
   const char kFsName[] = "blobfs";
-  const char* name = reinterpret_cast<const char*>(info.name);
+  const char* name = reinterpret_cast<const char*>(info.name.data());
   ASSERT_STR_EQ(kFsName, name, "Unexpected filesystem mounted");
   EXPECT_EQ(info.block_size, blobfs::kBlobfsBlockSize);
   EXPECT_EQ(info.max_filename_size, digest::kSha256HexLength);
@@ -1016,8 +1019,8 @@ void RunInvalidOperationsTest() {
   // Hence we clone the fd into a |canary_channel| which we know will have its peer closed.
   zx::channel canary_channel;
   ASSERT_OK(fdio_fd_clone(fd.get(), canary_channel.reset_and_get_address()));
-  zx_status_t status;
-  ASSERT_EQ(ZX_ERR_PEER_CLOSED, fuchsia_io_DirectoryAdminUnmount(canary_channel.get(), &status));
+  ASSERT_EQ(ZX_ERR_PEER_CLOSED,
+            fio::DirectoryAdmin::Call::Unmount(zx::unowned_channel(canary_channel)).status());
   zx_signals_t pending;
   EXPECT_OK(canary_channel.wait_one(ZX_CHANNEL_PEER_CLOSED, zx::time::infinite_past(), &pending));
 
@@ -1152,24 +1155,16 @@ TEST_F(BlobfsTest, MultipleWrites) { RunMultipleWritesTest(); }
 TEST_F(BlobfsTestWithFvm, MultipleWrites) { RunMultipleWritesTest(); }
 
 zx_status_t DirectoryAdminGetDevicePath(fbl::unique_fd directory, std::string* path) {
-  char buffer[fuchsia_io_MAX_PATH];
-  zx_status_t status;
-  size_t path_len;
   fzl::FdioCaller caller(std::move(directory));
-
-  zx_status_t io_status = fuchsia_io_DirectoryAdminGetDevicePath(caller.borrow_channel(), &status,
-                                                                 buffer, sizeof(buffer), &path_len);
-
-  if (io_status != ZX_OK) {
-    return io_status;
+  auto result =
+      fio::DirectoryAdmin::Call::GetDevicePath(zx::unowned_channel(caller.borrow_channel()));
+  if (result.status() != ZX_OK) {
+    return result.status();
   }
-
-  if (status != ZX_OK) {
-    return status;
+  if (result->s != ZX_OK) {
+    return result->s;
   }
-
-  std::string device_path(buffer, path_len);
-  path->assign(device_path);
+  path->assign(std::string(result->path.begin(), result->path.size()));
   return ZX_OK;
 }
 
@@ -1234,8 +1229,9 @@ void OpenBlockDevice(const std::string& path,
   zx::channel channel, server;
   ASSERT_OK(zx::channel::create(0, &channel, &server));
   fzl::FdioCaller caller(std::move(fd));
-  ASSERT_OK(fuchsia_io_NodeClone(caller.borrow_channel(), fuchsia_io_CLONE_FLAG_SAME_RIGHTS,
-                                 server.release()));
+  ASSERT_OK(fio::Node::Call::Clone(zx::unowned_channel(caller.borrow_channel()),
+                                   fio::CLONE_FLAG_SAME_RIGHTS, std::move(server))
+                .status());
   ASSERT_OK(block_client::RemoteBlockDevice::Create(std::move(channel), block_device));
 }
 

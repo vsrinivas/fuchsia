@@ -11,9 +11,7 @@
 #include <utility>
 
 #ifdef __Fuchsia__
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
-#include <fuchsia/minfs/c/fidl.h>
 #include <fuchsia/minfs/llcpp/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>

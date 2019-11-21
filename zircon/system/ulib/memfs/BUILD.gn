@@ -17,7 +17,7 @@ zx_library("memfs-cpp") {
     "vmo.cc",
   ]
   deps = [
-    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",
     "$zx/system/ulib/fbl",

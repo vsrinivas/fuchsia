@@ -5,7 +5,6 @@
 #include <fs/internal/node_connection.h>
 
 #include <fcntl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>

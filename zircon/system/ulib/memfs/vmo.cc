@@ -121,7 +121,7 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
       return status;
     }
   }
-  if (flags & fuchsia_io_VMO_FLAG_WRITE) {
+  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -130,8 +130,8 @@ zx_status_t VnodeVmo::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
   // to the underlying VMO can both be satisfied due to the immutability of
   // Vmofiles.
-  rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
 
   zx_handle_t vmo;
   zx_status_t status = zx_handle_duplicate(vmo_, rights, &vmo);

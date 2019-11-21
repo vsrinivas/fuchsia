@@ -7,6 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/driver.h>
 #include <fbl/vector.h>
+#include <fuchsia/io/c/fidl.h>
 #include <zxtest/zxtest.h>
 
 #include "multiple-device-test.h"

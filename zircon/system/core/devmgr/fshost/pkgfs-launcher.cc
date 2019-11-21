@@ -5,6 +5,7 @@
 #include "pkgfs-launcher.h"
 
 #include <fcntl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
@@ -26,6 +27,8 @@
 
 #include "../shared/fdio.h"
 #include "fshost-fs-provider.h"
+
+namespace fio = ::llcpp::fuchsia::io;
 
 namespace devmgr {
 namespace {
@@ -97,7 +100,7 @@ zx_status_t pkgfs_ldsvc_load_blob(void* ctx, const char* prefix, const char* nam
 
   int fd;
   zx_status_t status = fdio_open_fd_at(
-      fs_blob_fd, blob, fuchsia_io_OPEN_RIGHT_READABLE | fuchsia_io_OPEN_RIGHT_EXECUTABLE, &fd);
+      fs_blob_fd, blob, fio::OPEN_RIGHT_READABLE | fio::OPEN_RIGHT_EXECUTABLE, &fd);
   if (status != ZX_OK) {
     return status;
   }

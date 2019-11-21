@@ -5,7 +5,7 @@
 #ifndef ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_ALLOCATOR_H_
 #define ZIRCON_SYSTEM_ULIB_BLOBFS_ALLOCATOR_ALLOCATOR_H_
 
-#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/blobfs/llcpp/fidl.h>
 #include <inttypes.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>

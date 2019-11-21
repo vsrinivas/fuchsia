@@ -4,7 +4,6 @@
 
 #include <fs/lazy_dir.h>
 
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 
 #include <fs/vfs.h>

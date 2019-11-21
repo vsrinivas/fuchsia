@@ -470,7 +470,7 @@ zx_status_t Blobfs::Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
         !GetNode(node_index)->header.IsExtentContainer()) {
       Digest digest(GetNode(node_index)->merkle_root_hash);
       auto name = digest.ToString();
-      uint64_t ino = fuchsia_io_INO_UNKNOWN;
+      uint64_t ino = ::llcpp::fuchsia::io::INO_UNKNOWN;
       if (df.Next(name.ToStringPiece(), VTYPE_TO_DTYPE(V_TYPE_FILE), ino) != ZX_OK) {
         break;
       }

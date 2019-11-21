@@ -66,9 +66,7 @@ zx_library("minfs") {
     deps += [
       "$zx/system/fidl/fuchsia-device:c",
       "$zx/system/fidl/fuchsia-device:llcpp",
-      "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-minfs:c",
       "$zx/system/fidl/fuchsia-minfs:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",

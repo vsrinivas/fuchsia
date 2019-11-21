@@ -5,7 +5,7 @@
 #ifndef FS_TEST_SUPPORT_FIXTURES_H_
 #define FS_TEST_SUPPORT_FIXTURES_H_
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 
 #include <string>
 
@@ -47,7 +47,7 @@ class FilesystemTest : public zxtest::Test {
   void Unmount();
 
   // Queries the filesystem for generic info.
-  void GetFsInfo(fuchsia_io_FilesystemInfo* info);
+  void GetFsInfo(::llcpp::fuchsia::io::FilesystemInfo* info);
 
   void set_read_only(bool read_only) { read_only_ = read_only; }
   const std::string& device_path() const { return device_path_; }

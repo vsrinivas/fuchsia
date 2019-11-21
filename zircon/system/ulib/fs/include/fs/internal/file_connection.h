@@ -9,7 +9,6 @@
 #error "Fuchsia-only header"
 #endif
 
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/fidl-utils/bind.h>
 

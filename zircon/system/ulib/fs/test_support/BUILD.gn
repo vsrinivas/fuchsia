@@ -13,7 +13,7 @@ zx_library("test_support") {
   ]
 
   public_deps = [
-    "$zx/system/fidl/fuchsia-io:c",
+    "$zx/system/fidl/fuchsia-io:llcpp",
     "$zx/system/ulib/devmgr-integration-test:headers",
     "$zx/system/ulib/fbl:headers",
     "$zx/system/ulib/fs-management:headers",

@@ -30,7 +30,6 @@
 #include <fs/vfs_types.h>
 
 #ifdef __Fuchsia__
-#include <fuchsia/io/c/fidl.h>
 #include <fuchsia/io/llcpp/fidl.h>
 #include <lib/zx/channel.h>
 #include <zircon/device/vfs.h>

@@ -7,7 +7,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/fidl/cpp/message_part.h>
 #include <lib/fidl/epitaph.h>
 #include <lib/fidl/txn_header.h>

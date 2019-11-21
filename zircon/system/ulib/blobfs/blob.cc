@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <ctype.h>
 #include <fuchsia/device/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/sync/completion.h>
 #include <stdlib.h>
 #include <string.h>
@@ -928,7 +928,7 @@ zx_status_t Blob::Truncate(size_t len) {
 constexpr const char kFsName[] = "blobfs";
 
 zx_status_t Blob::QueryFilesystem(::llcpp::fuchsia::io::FilesystemInfo* info) {
-  static_assert(fbl::constexpr_strlen(kFsName) + 1 < fuchsia_io_MAX_FS_NAME_BUFFER,
+  static_assert(fbl::constexpr_strlen(kFsName) + 1 < ::llcpp::fuchsia::io::MAX_FS_NAME_BUFFER,
                 "Blobfs name too long");
 
   *info = {};
@@ -952,9 +952,9 @@ zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_l
 zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
 
-  if (flags & fuchsia_io_VMO_FLAG_WRITE) {
+  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_WRITE) {
     return ZX_ERR_NOT_SUPPORTED;
-  } else if (flags & fuchsia_io_VMO_FLAG_EXACT) {
+  } else if (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXACT) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -963,8 +963,8 @@ zx_status_t Blob::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
   // We can ignore fuchsia_io_VMO_FLAG_PRIVATE, since private / shared access
   // to the underlying VMO can both be satisfied with a clone due to
   // the immutability of blobfs blobs.
-  rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
   return CloneVmo(rights, out_vmo, out_size);
 }
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/io/c/fidl.h>
+#include <fuchsia/io/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/async/cpp/task.h>
@@ -97,10 +97,14 @@ class AsyncTearDownVnode : public FdCountVnode {
 
 bool send_sync(const zx::channel& client) {
   BEGIN_HELPER;
-  fuchsia_io_NodeSyncRequest request;
-  zx_txid_t txid = 5;
-  fidl_init_txn_header(&request.hdr, txid, fuchsia_io_NodeSyncGenOrdinal);
-  ASSERT_EQ(client.write(0, &request, sizeof(request), nullptr, 0), ZX_OK);
+  fidl::Buffer<::llcpp::fuchsia::io::Node::SyncRequest> buffer;
+  memset(buffer.view().begin(), 0, buffer.view().capacity());
+  fidl::BytePart bytes = buffer.view();
+  bytes.set_actual(bytes.capacity());
+  fidl::DecodedMessage<::llcpp::fuchsia::io::Node::SyncRequest> message(std::move(bytes));
+  ::llcpp::fuchsia::io::Node::SetTransactionHeaderFor::SyncRequest(message);
+  message.message()->_hdr.txid = 5;
+  ASSERT_EQ(fidl::Write(client, std::move(message)), ZX_OK);
   END_HELPER;
 }
 
@@ -324,7 +328,8 @@ bool TestTeardownSlowClone() {
 
   zx::channel client2, server2;
   ASSERT_EQ(zx::channel::create(0, &client2, &server2), ZX_OK);
-  ASSERT_EQ(fuchsia_io_NodeClone(client.get(), 0, server2.release()), ZX_OK);
+  ::llcpp::fuchsia::io::Node::SyncClient fidl_client2(std::move(client2));
+  ASSERT_EQ(fidl_client2.Clone(0, std::move(server2)).status(), ZX_OK);
 
   // The connection is now:
   // - In a sync callback,

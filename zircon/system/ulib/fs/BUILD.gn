@@ -81,8 +81,7 @@ zx_library("fs") {
       "$zx/system/ulib/fit:headers",
       "$zx/system/ulib/zx:headers",
 
-      # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
-      "$zx/system/fidl/fuchsia-io:c.headers",
+      # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
       "$zx/system/fidl/fuchsia-io:llcpp.headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
@@ -93,9 +92,8 @@ zx_library("fs") {
     ]
     deps += [
       "$zx/system/fidl/fuchsia-cobalt:c",
-      "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-mem:c",
+      "$zx/system/fidl/fuchsia-mem:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
@@ -154,8 +152,7 @@ if (is_fuchsia) {
       "$zx/system/ulib/fzl:headers",
       "$zx/system/ulib/zx:headers",
 
-      # <fs/vnode.h> has #include <fuchsia/io/c/fidl.h>.
-      "$zx/system/fidl/fuchsia-io:c.headers",
+      # <fs/vnode.h> has #include <fuchsia/io/llcpp/fidl.h>.
       "$zx/system/fidl/fuchsia-io:llcpp.headers",
 
       # <fs/trace.h> has #include <trace/event.h>.
@@ -166,9 +163,8 @@ if (is_fuchsia) {
     ]
     deps = [
       "$zx/system/fidl/fuchsia-cobalt:c",
-      "$zx/system/fidl/fuchsia-io:c",
       "$zx/system/fidl/fuchsia-io:llcpp",
-      "$zx/system/fidl/fuchsia-mem:c",
+      "$zx/system/fidl/fuchsia-mem:llcpp",
       "$zx/system/ulib/async",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/cobalt-client",

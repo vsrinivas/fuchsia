@@ -99,11 +99,11 @@ zx_status_t VnodeFile::GetVmo(int flags, zx::vmo* out_vmo, size_t* out_size) {
 
   // Let clients map and set the names of their VMOs.
   zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHTS_PROPERTY;
-  rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-  rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-  rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+  rights |= (flags & ::llcpp::fuchsia::io::VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
   zx::vmo result;
-  if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
+  if (flags & ::llcpp::fuchsia::io::VMO_FLAG_PRIVATE) {
     if ((status = vmo_.create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, length_, &result)) != ZX_OK) {
       return status;
     }

@@ -5,7 +5,6 @@
 #include "fs/test_support/test_support.h"
 
 #include <fcntl.h>
-#include <fuchsia/device/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <lib/fzl/fdio.h>
 #include <limits.h>

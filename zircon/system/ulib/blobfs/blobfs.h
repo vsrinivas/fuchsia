@@ -12,9 +12,8 @@
 #error Fuchsia-only Header
 #endif
 
-#include <fuchsia/blobfs/c/fidl.h>
+#include <fuchsia/blobfs/llcpp/fidl.h>
 #include <fuchsia/hardware/block/c/fidl.h>
-#include <fuchsia/io/c/fidl.h>
 #include <lib/fzl/resizeable-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
