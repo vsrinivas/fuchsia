@@ -61,6 +61,8 @@ Metrics::Metrics(zx::duration poll_frequency, async_dispatcher_t* dispatcher,
           {"Undigested", MemoryMetricDimensionBucket::Undigested},
           {"Fshost", MemoryMetricDimensionBucket::Fshost},
           {"Flutter", MemoryMetricDimensionBucket::Flutter},
+          {"Archivist", MemoryMetricDimensionBucket::Archivist},
+          {"Cobalt", MemoryMetricDimensionBucket::Cobalt},
       }) {
   task_.PostDelayed(dispatcher_, zx::usec(1));
 }

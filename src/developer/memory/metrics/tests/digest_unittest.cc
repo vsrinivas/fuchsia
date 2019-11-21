@@ -146,7 +146,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
       &c, {
               .vmos =
                   {
-                      {.koid = 1, .name = "", .committed_bytes = 1},
+                      {.koid = 1, .name = "zbi-decompressed", .committed_bytes = 1},
                       {.koid = 2, .name = "magma_create_buffer", .committed_bytes = 2},
                       {.koid = 3, .name = "Sysmem:buf", .committed_bytes = 3},
                       {.koid = 4, .name = "test", .committed_bytes = 4},
@@ -164,6 +164,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 16, .name = "test", .committed_bytes = 16},
                       {.koid = 17, .name = "test", .committed_bytes = 17},
                       {.koid = 18, .name = "test", .committed_bytes = 18},
+                      {.koid = 19, .name = "test", .committed_bytes = 19},
+                      {.koid = 20, .name = "test", .committed_bytes = 20},
                   },
               .processes =
                   {
@@ -184,7 +186,9 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                       {.koid = 15, .name = "web_engine_exe:gpu", .vmos = {15}},
                       {.koid = 16, .name = "chromium.cmx", .vmos = {16}},
                       {.koid = 17, .name = "fshost", .vmos = {17}},
-                      {.koid = 18, .name = "new", .vmos = {18}},
+                      {.koid = 18, .name = "archivist.cmx", .vmos = {18}},
+                      {.koid = 19, .name = "cobalt.cmx", .vmos = {19}},
+                      {.koid = 20, .name = "new", .vmos = {20}},
                   },
           });
   Digester digester;
@@ -193,6 +197,8 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
 
   ConfirmBuckets(d, {
                         {"Web", 45U},
+                        {"Cobalt", 19U},
+                        {"Archivist", 18U},
                         {"Fshost", 17U},
                         {"Cast", 13U},
                         {"Pkgfs", 12U},
@@ -207,7 +213,7 @@ TEST_F(DigestUnitTest, DefaultBuckets) {
                         {"Video Buffer", 3U},
                         {"Graphics", 2U},
                         {"ZBI Buffer", 1U},
-                        {"Undigested", 18U},
+                        {"Undigested", 20U},
                     });
 }
 

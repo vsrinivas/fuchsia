@@ -11,7 +11,7 @@
 namespace memory {
 
 const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
-    {"ZBI Buffer", "bin/bootsvc", ""},
+    {"ZBI Buffer", ".*", "zbi-decompressed"},
     {"Graphics", ".*", "magma_create_buffer"},
     {"Video Buffer", "devhost:sys", "Sysmem.*"},
     {"Fshost", "fshost", ".*"},
@@ -26,6 +26,8 @@ const std::vector<const BucketMatch> Digester::kDefaultBucketMatches = {
     {"Amber", "amber.cmx", ".*"},
     {"Pkgfs", "pkgfs", ".*"},
     {"Cast", "cast_agent.cmx", ".*"},
+    {"Archivist", "archivist.cmx", ".*"},
+    {"Cobalt", "cobalt.cmx", ".*"},
 };
 
 BucketMatch::BucketMatch(const std::string& name, const std::string& process,

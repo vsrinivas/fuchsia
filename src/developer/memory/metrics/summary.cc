@@ -12,10 +12,11 @@ namespace memory {
 
 const std::vector<const NameMatch> Summary::kNameMatches = {
     {"blob-[0-9a-f]{1,3}", "[blobs]"},
-    {"pthread_t:0x[0-9a-f]{1,12}", "[pthreads]"},
-    {"data:.*so.*", "[data]"},
+    {"thrd_t:0x.*|initial-thread|pthread_t:0x.*", "[stacks]"},
+    {"data:.*", "[data]"},
     {"", "[unnamed]"},
-    {"scudo:.*", "[scudo]"}};
+    {"scudo:.*", "[scudo]"},
+    {".*\\.so.*", "[libraries]"}};
 
 Namer::Namer(const std::vector<const NameMatch>& name_matches)
     : regex_matches_(name_matches.size()) {
