@@ -60,7 +60,7 @@ TEST_F(TelDriverUnitTest, EthArpHandling) {
   };
   device->EthClientInit(&ifc);
   device->EthTxListNodeInit();
-  device->EthMtxInit();
+
   qmi_usb::EthArpFrame eth_arp_frame;
   std::copy(kEthClientMacAddr.begin(), kEthClientMacAddr.end(), eth_arp_frame.eth_hdr.src_mac_addr);
   std::copy(kEthBroadcastMacAddr.begin(), kEthBroadcastMacAddr.end(), eth_arp_frame.eth_hdr.dst_mac_addr);

@@ -163,8 +163,7 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
 
   void EthClientInit(const ethernet_ifc_protocol_t* ifc);
   void EthTxListNodeInit();
-  void EthMtxInit();
-  
+
   // DDK Mixin methods
   zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
   void DdkUnbindNew(ddk::UnbindTxn txn);
@@ -190,7 +189,7 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
 
   // Ethernet
   zx_device_t* eth_zxdev_;
-  mtx_t ethernet_mutex_;
+  fbl::Mutex eth_mutex_;
   std::unique_ptr<ddk::EthernetIfcProtocolClient> eth_ifc_ptr_;
   std::unique_ptr<std::array<uint8_t, kMacAddrLen>> eth_dst_mac_addr_;
   EthTxStats eth_tx_stats_;
@@ -205,11 +204,12 @@ class Device : public ddk::Device<Device, ddk::UnbindableNew, ddk::Messageable>,
   //                   It will always be false in current code
 
   // Send context
-  mtx_t tx_mutex_;
+  fbl::Mutex tx_mutex_;
   uint8_t tx_endpoint_addr_;
-  list_node_t tx_txn_bufs_;       // list of usb_request_t
-  list_node_t tx_pending_infos_;  // list of txn_info_t, TODO(jiamingw): rename
-  uint64_t tx_endpoint_delay_;    // wait time between 2 transmit requests
+  list_node_t tx_txn_bufs_ __TA_GUARDED(tx_mutex_);  // list of usb_request_t
+  list_node_t tx_pending_infos_
+      __TA_GUARDED(tx_mutex_);  // list of txn_info_t, TODO(jiamingw): rename
+  uint64_t tx_endpoint_delay_;  // wait time between 2 transmit requests
 
   // Receive context
   uint8_t rx_endpoint_addr_;

@@ -91,13 +91,12 @@ zx_status_t Device::HandleArpReq(const ArpFrame& arp_frame) {
 
   // TODO (jiamingw): understand the reason to sleep here.
   zx_nanosleep(zx_deadline_after(ZX_USEC(tx_endpoint_delay_)));
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock lock(&eth_mutex_);
   if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
     // TODO (jiamingw): Log arp response.
     zxlogf(INFO, "qmi-usb-transport: Replying Arp Msg\n");
     eth_ifc_ptr_->Recv(reinterpret_cast<const uint8_t*>(&eth_arp_resp), kArpSize + kEthFrameHdrSize, 0);
   }
-  mtx_unlock(&ethernet_mutex_);
 
   return ZX_OK;
 }
@@ -186,9 +185,8 @@ zx_status_t inline Device::SendLocked(const uint8_t* byte_data, size_t length) {
 }
 
 void Device::QmiUpdateOnlineStatus(bool is_online) {
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock lock(&eth_mutex_);
   if ((is_online && online_) || (!is_online && !online_)) {
-    mtx_unlock(&ethernet_mutex_);
     return;
   }
 
@@ -207,7 +205,6 @@ void Device::QmiUpdateOnlineStatus(bool is_online) {
       eth_ifc_ptr_->Status(0);
     }
   }
-  mtx_unlock(&ethernet_mutex_);
 }
 
 zx_status_t Device::SetAsyncWait() {
@@ -343,13 +340,11 @@ zx_status_t Device::EthernetImplQuery(uint32_t options, ethernet_info_t* info) {
 
 zx_status_t Device::EthernetImplStart(const ethernet_ifc_protocol_t* ifc) {
   zxlogf(INFO, "qmi-usb-transport: EthernetImplStart called\n");
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock lock(&eth_mutex_);
   if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
-    mtx_unlock(&ethernet_mutex_);
     return ZX_ERR_ALREADY_BOUND;
   }
-  eth_ifc_ptr_.reset(new ddk::EthernetIfcProtocolClient(ifc));
-  mtx_unlock(&ethernet_mutex_);
+  eth_ifc_ptr_ = std::make_unique<ddk::EthernetIfcProtocolClient>(ifc);
   return ZX_OK;
 }
 
@@ -360,9 +355,8 @@ zx_status_t Device::EthernetImplSetParam(uint32_t param, int32_t value, const vo
 
 void Device::EthernetImplStop() {
   zxlogf(INFO, "qmi-usb-transport: %s called\n", __FUNCTION__);
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock lock(&eth_mutex_);
   eth_ifc_ptr_.reset();
-  mtx_unlock(&ethernet_mutex_);
 }
 
 void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
@@ -408,18 +402,20 @@ void Device::EthernetImplQueueTx(uint32_t options, ethernet_netbuf_t* netbuf,
         return;
       }
 
-      mtx_lock(&tx_mutex_);
-      if (device_unbound_) {
-        status = ZX_ERR_IO_NOT_PRESENT;
-      } else {
-        auto eth_ip = static_cast<const EthFrame*>(netbuf->data_buffer);
-        status = SendLocked(eth_ip->eth_payload, eth_payload_len);
-        if (status == ZX_ERR_SHOULD_WAIT) {
-          // No buffers available, queue it up
-          list_add_tail(&tx_pending_infos_, &txn->node);
+      {
+        fbl::AutoLock lock(&tx_mutex_);
+
+        if (device_unbound_) {
+          status = ZX_ERR_IO_NOT_PRESENT;
+        } else {
+          auto eth_ip = static_cast<const EthFrame*>(netbuf->data_buffer);
+          status = SendLocked(eth_ip->eth_payload, eth_payload_len);
+          if (status == ZX_ERR_SHOULD_WAIT) {
+            // No buffers available, queue it up
+            list_add_tail(&tx_pending_infos_, &txn->node);
+          }
         }
       }
-      mtx_unlock(&tx_mutex_);
 
       if (status != ZX_ERR_SHOULD_WAIT) {
         complete_txn(txn, status);
@@ -650,12 +646,10 @@ void Device::UsbRecv(usb_request_t* request) {
 
   // Copy ethernet frame payload.
   std::copy(eth_frame_payload, &eth_frame_payload[eth_frame_payload_len], eth_ip->eth_payload);
-
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock lock(&eth_mutex_);
   if (eth_ifc_ptr_ && eth_ifc_ptr_->is_valid()) {
     eth_ifc_ptr_->Recv(eth_frame_arr, eth_frame_payload_len + kEthFrameHdrSize, 0);
   }
-  mtx_unlock(&ethernet_mutex_);
 }
 
 static void usb_read_complete(void* ctx, usb_request_t* request) {
@@ -706,7 +700,8 @@ void Device::UsbWriteCompleteHandler(usb_request_t* request) {
   }
 
   // Return transmission buffer to pool
-  mtx_lock(&tx_mutex_);
+  fbl::AutoLock tx_lock(&tx_mutex_);
+
   zx_status_t status = usb_req_list_add_tail(&tx_txn_bufs_, request, parent_req_size_);
   ZX_DEBUG_ASSERT(status == ZX_OK);
 
@@ -739,14 +734,12 @@ void Device::UsbWriteCompleteHandler(usb_request_t* request) {
     }
   }
 
-  mtx_unlock(&tx_mutex_);
+  tx_lock.release();
 
-  mtx_lock(&ethernet_mutex_);
+  fbl::AutoLock eth_lock(&eth_mutex_);
   if (additional_tx_queued) {
     complete_txn(txn, send_status);
   }
-  mtx_unlock(&ethernet_mutex_);
-
   // When the interface is offline, the transaction will complete with status
   // set to ZX_ERR_IO_NOT_PRESENT. There's not much we can do except ignore it.
 }
@@ -781,12 +774,7 @@ void Device::EthTxListNodeInit() {
   list_initialize(&tx_pending_infos_);
 }
 
-void Device::EthMtxInit() {
-  mtx_init(&ethernet_mutex_, mtx_plain);
-  mtx_init(&tx_mutex_, mtx_plain);
-}
-
-zx_status_t Device::Bind() {
+zx_status_t Device::Bind() __TA_NO_THREAD_SAFETY_ANALYSIS {
   zx_status_t status;
   usb_request_t* int_buf = nullptr;
 
@@ -802,7 +790,6 @@ zx_status_t Device::Bind() {
   // Initialize context
   memcpy(&usb_, &usb, sizeof(usb_));
   EthTxListNodeInit();
-  EthMtxInit();
 
   parent_req_size_ = usb_get_request_size(&usb_);
   uint64_t req_size = parent_req_size_ + sizeof(usb_req_internal_t);
