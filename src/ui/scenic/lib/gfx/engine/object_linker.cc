@@ -14,11 +14,10 @@
 namespace scenic_impl {
 namespace gfx {
 
-void ObjectLinkerBase::Link::LinkFailed() {
-  Invalidate();
-  if (link_failed_) {
-    link_failed_();
-    link_failed_ = nullptr;
+void ObjectLinkerBase::Link::LinkInvalidated(bool on_destruction) {
+  if (link_invalidated_) {
+    link_invalidated_(on_destruction);
+    link_invalidated_ = nullptr;
   }
 }
 
@@ -73,7 +72,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
   auto endpoint_iter = endpoints.find(endpoint_id);
   if (endpoint_iter == endpoints.end()) {
     FXL_LOG(ERROR) << "Attempted to remove an unknown endpoint " << endpoint_id
-                   << "from ObjectLinker";
+                   << " from ObjectLinker";
     return;
   }
 
@@ -94,7 +93,7 @@ void ObjectLinkerBase::DestroyEndpoint(zx_koid_t endpoint_id, bool is_import) {
     // called on it yet (so no callbacks exist).
     peer_endpoint.peer_endpoint_id = ZX_KOID_INVALID;
     FXL_DCHECK(peer_endpoint.link);
-    peer_endpoint.link->LinkFailed();
+    peer_endpoint.link->Invalidate(false);
   }
 
   // At this point it is safe to completely erase the endpoint for the object.
@@ -121,7 +120,7 @@ void ObjectLinkerBase::InitializeEndpoint(ObjectLinkerBase::Link* link, zx_koid_
   // endpoint is created, but before Initialize() is called on it.
   zx_koid_t peer_endpoint_id = endpoint.peer_endpoint_id;
   if (peer_endpoint_id == ZX_KOID_INVALID) {
-    link->LinkFailed();
+    link->Invalidate(false);
     return;
   }
 
@@ -204,7 +203,7 @@ std::unique_ptr<async::Wait> ObjectLinkerBase::WaitForPeerDeath(zx_handle_t endp
                                                 // peer_endpoint_id being marked as invalid.
                                                 endpoint.peer_endpoint_id = ZX_KOID_INVALID;
                                                 if (endpoint.link) {
-                                                  endpoint.link->LinkFailed();
+                                                  endpoint.link->Invalidate(false);
                                                 }
                                               }));
 

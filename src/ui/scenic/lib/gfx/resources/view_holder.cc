@@ -42,7 +42,7 @@ void ViewHolder::Connect(ViewLinker::ExportLink link) {
   view_holder_koid_ = link_->endpoint_id();
   gfx_session_->TrackViewHolder(GetWeakPtr());
   link_->Initialize(fit::bind_member(this, &ViewHolder::LinkResolved),
-                    fit::bind_member(this, &ViewHolder::LinkDisconnected));
+                    fit::bind_member(this, &ViewHolder::LinkInvalidated));
 }
 
 void ViewHolder::LinkResolved(View* view) {
@@ -66,7 +66,13 @@ void ViewHolder::LinkResolved(View* view) {
   SendViewPropertiesChangedEvent();
 }
 
-void ViewHolder::LinkDisconnected() {
+void ViewHolder::LinkInvalidated(bool on_link_destruction) {
+  // The link is only destroyed when this ViewHolder is being destroyed, and therefore all cleanup
+  // can be skipped anyway.
+  if (on_link_destruction) {
+    return;
+  }
+
   // The child is already dead (or never existed) and it cleans things up in its
   // destructor, including Detaching any child Nodes.
   view_ = nullptr;

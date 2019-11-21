@@ -101,7 +101,7 @@ class View final : public Resource {
  private:
   // |ViewLinker::ExportCallbacks|
   void LinkResolved(ViewHolder* view_holder);
-  void LinkDisconnected();
+  void LinkInvalidated(bool on_link_destruction);
 
   // Sends an event to our SessionListener.
   void SendViewHolderConnectedEvent();

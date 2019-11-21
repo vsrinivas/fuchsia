@@ -75,7 +75,7 @@ class ViewHolder final : public Node {
  private:
   // |ViewLinker::ImportCallbacks|
   void LinkResolved(View* view);
-  void LinkDisconnected();
+  void LinkInvalidated(bool on_link_destruction);
 
   void ResetRenderEvent();
   void CloseRenderEvent();

@@ -40,12 +40,12 @@ class ObjectLinkerBase {
     virtual ~Link() = default;
 
    protected:
-    virtual void Invalidate() = 0;
+    virtual void Invalidate(bool on_destruction) = 0;
     // Must be virtual so ObjectLinker::Link can pull the typed PeerObject from `peer_link`.
     virtual void LinkResolved(ObjectLinkerBase::Link* peer_link) = 0;
-    void LinkFailed();
+    void LinkInvalidated(bool on_destruction);
 
-    fit::closure link_failed_;
+    fit::function<void(bool on_destruction)> link_invalidated_;
 
     friend class ObjectLinkerBase;
   };
@@ -149,28 +149,30 @@ class ObjectLinker : public ObjectLinkerBase {
     using PeerObj = typename std::conditional<is_import, Export, Import>::type;
 
     Link() = default;
-    virtual ~Link() { Invalidate(); }
+    virtual ~Link() { Invalidate(true); }
     Link(Link&& other) { *this = std::move(other); }
-    Link& operator=(nullptr_t) { Invalidate(); }
+    Link& operator=(nullptr_t) { Invalidate(false); }
     Link& operator=(Link&& other);
 
     bool valid() const { return linker_ && endpoint_id_ != ZX_KOID_INVALID; }
     bool initialized() const { return valid() && link_resolved_; }
     zx_koid_t endpoint_id() const { return endpoint_id_; }
-    void LinkResolved(ObjectLinkerBase::Link* peer_link) override;
 
     // Initialize the Link with an |object| and callbacks for |link_resolved|
-    // and |link_failed| events, making it ready for connection to its
-    // peer.
+    // and |link_failed| events, making it ready for connection to its peer.
+    // peer. The |link_failed| event is guaranteed to be called regardless of
+    // whether or not the |link_resolved| callback is, including if this Link
+    // is destroyed, in which case |on_destruction| will be true.
     void Initialize(fit::function<void(PeerObj peer_object)> link_resolved = nullptr,
-                    fit::closure link_failed = nullptr);
+                    fit::function<void(bool on_destruction)> link_failed = nullptr);
 
    private:
     // Kept private so only an ObjectLinker can construct a valid Link.
     Link(Obj object, zx_koid_t endpoint_id, fxl::WeakPtr<ObjectLinker> linker)
         : object_(std::move(object)), endpoint_id_(endpoint_id), linker_(std::move(linker)) {}
 
-    void Invalidate() override;
+    void LinkResolved(ObjectLinkerBase::Link* peer_link) override;
+    void Invalidate(bool on_destruction) override;
 
     std::optional<Obj> object_;
     zx_koid_t endpoint_id_ = ZX_KOID_INVALID;
@@ -231,12 +233,12 @@ template <typename Export, typename Import>
 template <bool is_import>
 auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> Link& {
   // Invalidate the existing Link if its still valid.
-  Invalidate();
+  Invalidate(false);
 
   // Move data from the other Link and manually invalidate it, so it won't destroy
   // its endpoint when it dies.
   link_resolved_ = std::move(other.link_resolved_);
-  link_failed_ = std::move(other.link_failed_);
+  link_invalidated_ = std::move(other.link_invalidated_);
   object_ = std::move(other.object_);
   linker_ = std::move(other.linker_);
   endpoint_id_ = std::move(other.endpoint_id_);
@@ -252,26 +254,28 @@ auto ObjectLinker<Export, Import>::Link<is_import>::operator=(Link&& other) -> L
 template <typename Export, typename Import>
 template <bool is_import>
 void ObjectLinker<Export, Import>::Link<is_import>::Initialize(
-    fit::function<void(PeerObj peer_object)> link_resolved, fit::closure link_failed) {
+    fit::function<void(PeerObj peer_object)> link_resolved,
+    fit::function<void(bool on_destruction)> link_invalidated) {
   FXL_DCHECK(valid());
   FXL_DCHECK(!initialized());
   FXL_DCHECK(link_resolved);
 
   link_resolved_ = std::move(link_resolved);
-  link_failed_ = std::move(link_failed);
+  link_invalidated_ = std::move(link_invalidated);
 
   linker_->InitializeEndpoint(this, endpoint_id_, is_import);
 }
 
 template <typename Export, typename Import>
 template <bool is_import>
-void ObjectLinker<Export, Import>::Link<is_import>::Invalidate() {
+void ObjectLinker<Export, Import>::Link<is_import>::Invalidate(bool on_destruction) {
   if (valid()) {
     linker_->DestroyEndpoint(endpoint_id_, is_import);
   }
   linker_.reset();
   link_resolved_ = nullptr;
   endpoint_id_ = ZX_KOID_INVALID;
+  LinkInvalidated(on_destruction);
 }
 
 template <typename Export, typename Import>

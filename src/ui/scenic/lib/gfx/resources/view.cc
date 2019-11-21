@@ -80,7 +80,7 @@ void View::Connect(ViewLinker::ImportLink link) {
 
   link_ = std::move(link);
   link_->Initialize(fit::bind_member(this, &View::LinkResolved),
-                    fit::bind_member(this, &View::LinkDisconnected));
+                    fit::bind_member(this, &View::LinkInvalidated));
 }
 
 void View::SignalRender() {
@@ -114,7 +114,13 @@ void View::LinkResolved(ViewHolder* view_holder) {
       ViewTreeConnectToParent{.child = view_ref_koid_, .parent = view_holder_->view_holder_koid()});
 }
 
-void View::LinkDisconnected() {
+void View::LinkInvalidated(bool on_link_destruction) {
+  // The link is only destroyed when this View is being destroyed, and therefore all cleanup can
+  // be skipped anyway.
+  if (on_link_destruction) {
+    return;
+  }
+
   // The connection ViewHolder no longer exists, detach the phantom node from
   // the ViewHolder.
   node_->Detach(error_reporter_.get());
