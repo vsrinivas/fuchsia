@@ -33,8 +33,9 @@ namespace {
           auto status = event.ToStatus();
           std::cout << "  Command Status: " << status.ToString() << " (id=" << id << ")"
                     << std::endl;
-          if (status != ::bt::hci::StatusCode::kSuccess)
+          if (status) {
             complete_cb();
+          }
           return;
         }
         cb(id, event);
