@@ -10,9 +10,13 @@ use {
     fuchsia_inspect::{self as inspect, Property},
     fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
     fuchsia_zircon as zx,
-    futures::{Future, StreamExt},
+    futures::{
+        task::{Context, Poll, Waker},
+        Future, StreamExt,
+    },
     parking_lot::Mutex,
-    std::sync::Arc,
+    std::pin::Pin,
+    std::sync::{Arc, Weak},
 };
 
 use crate::inspect_types::{RemoteCapabilitiesInspect, RemotePeerInspect};
@@ -125,7 +129,37 @@ impl Peer {
                 }
             }
             fx_log_info!("Peer {} disconnected", id);
+            peer.upgrade().map(|p| p.lock().disconnected());
         });
+    }
+
+    /// Returns a future that will complete when the peer disconnects.
+    #[allow(dead_code)] // TODO(41346) - unused temporarily
+    pub fn closed(&self) -> ClosedPeer {
+        ClosedPeer { inner: Arc::downgrade(&self.inner) }
+    }
+}
+
+/// Future for the closed() future.
+pub struct ClosedPeer {
+    inner: Weak<Mutex<PeerInner>>,
+}
+
+#[must_use = "futures do nothing unless you `.await` or poll them"]
+impl Future for ClosedPeer {
+    type Output = ();
+
+    fn poll(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+        match self.inner.upgrade() {
+            None => Poll::Ready(()),
+            Some(inner) => match inner.lock().closed_wakers.as_mut() {
+                None => Poll::Ready(()),
+                Some(wakers) => {
+                    wakers.push(cx.waker().clone());
+                    Poll::Pending
+                }
+            },
+        }
     }
 }
 
@@ -148,6 +182,9 @@ struct PeerInner {
     local: Streams,
     /// The inspect data for this peer.
     inspect: RemotePeerInspect,
+    /// Wakers that are to be woken when the peer disconnects.  If None, the peers have been woken
+    /// and this peer is disconnected.
+    closed_wakers: Option<Vec<Waker>>,
 }
 
 impl PeerInner {
@@ -161,7 +198,13 @@ impl PeerInner {
             };
             stream.set_endpoint_update_callback(Some(Box::new(callback)));
         }
-        Self { peer: Arc::new(peer), opening: None, local: streams, inspect }
+        Self {
+            peer: Arc::new(peer),
+            opening: None,
+            local: streams,
+            inspect,
+            closed_wakers: Some(Vec::new()),
+        }
     }
 
     /// Returns an endpoint from the local set or a BadAcpSeid error if it doesn't exist.
@@ -169,6 +212,13 @@ impl PeerInner {
         self.local
             .get_endpoint(&local_id)
             .ok_or(avdtp::Error::RequestInvalid(avdtp::ErrorCode::BadAcpSeid))
+    }
+
+    /// To be called when the peer disconnects. Wakes waiters on the closed peer.
+    fn disconnected(&mut self) {
+        for waker in self.closed_wakers.take().unwrap_or_else(Vec::new) {
+            waker.wake();
+        }
     }
 
     /// Provide a new established L2CAP channel to this remote peer.
@@ -312,6 +362,33 @@ mod tests {
 
     use super::*;
     use fidl_fuchsia_bluetooth_bredr::ServiceClassProfileIdentifier;
+    use futures::pin_mut;
+
+    #[test]
+    fn test_disconnected() {
+        let mut exec = fasync::Executor::new().expect("executor should build");
+
+        let (remote, signaling) = zx::Socket::create(zx::SocketOpts::DATAGRAM).unwrap();
+
+        let id = PeerId(1);
+
+        let avdtp = avdtp::Peer::new(signaling).expect("peer should be creatable");
+        let inspect = inspect::Inspector::new();
+        let inspect = inspect.root().create_child(format!("peer {}", id));
+
+        let peer = Peer::create(id, avdtp, Streams::new(), inspect);
+
+        let closed_fut = peer.closed();
+
+        pin_mut!(closed_fut);
+
+        assert!(exec.run_until_stalled(&mut closed_fut).is_pending());
+
+        // Close the remote socket.
+        drop(remote);
+
+        assert!(exec.run_until_stalled(&mut closed_fut).is_ready());
+    }
 
     #[test]
     /// Test if the version check correctly returns the flag
