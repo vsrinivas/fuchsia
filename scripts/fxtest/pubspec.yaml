@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+name: fxtest
+
+# NOTE: This is used only when actively developing `fx test`, or when
+# manually running its unit tests by navigating to this directory and
+# executing `pub run test`. These values have NOTHING to do with what
+# will be executed in a Fuchsia build - that is entirely dependent on
+# the library values frozen in the Fuchsia tree and referenced in
+# BUILD.gn.
+dependencies:
+  args: ^1.5.2
+  async: ^2.4.0
+  io: ^0.3.3
+  meta: ^1.1.7
+  path: ^1.6.4
+  pedantic: ^1.8.0+1
+
+dev_dependencies:
+  test: ^1.9.3

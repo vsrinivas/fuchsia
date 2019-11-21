@@ -1,0 +1,34 @@
+#!/bin/bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### [EXPERIMENTAL] Entry point for all Fuchsia tests (host and target)
+
+## usage:
+##  fx test {[testName ...] --host --device}
+##
+## examples:
+##  - Execute all tests
+##  fx test
+##
+## - Execute the test component available at this URL
+##  fx test fuchsia-pkg://host.com/testName/etc
+##
+##  - Execute the test whose package URL's `packageName` component matches the value
+##  fx test testName
+##
+##  - Execute all tests at and below this path
+##  fx test //subtree/path
+##
+## Multiple test names can be supplied in the same invocation, e.g.:
+##  fx test //subtree/path //another/path fuchsia-pkg://...
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+cd "${FUCHSIA_BUILD_DIR}"
+
+exec "${PREBUILT_DART_DIR}/bin/dart" \
+  --packages="${FUCHSIA_DIR}/scripts/fxtest/fxtest.packages" \
+  "${FUCHSIA_DIR}/scripts/fxtest/bin/main.dart" "$@"

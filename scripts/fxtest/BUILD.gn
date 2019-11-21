@@ -1,0 +1,50 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart_tool.gni")
+import("//build/dart/test.gni")
+
+dart_tool("fxtest") {
+  package_name = "fxtest"
+  main_dart = "bin/main.dart"
+
+  sources = [
+    "checkers.dart",
+    "cmd.dart",
+    "exceptions.dart",
+    "output_formatter.dart",
+    "test_definition.dart",
+    "test_event.dart",
+    "test_flags.dart",
+    "test_runner.dart",
+  ]
+
+  deps = [
+    "//third_party/dart-pkg/pub/args",
+    "//third_party/dart-pkg/pub/async",
+    "//third_party/dart-pkg/pub/io",
+    "//third_party/dart-pkg/pub/meta",
+    "//third_party/dart-pkg/pub/path",
+    "//third_party/dart-pkg/pub/pedantic",
+  ]
+}
+
+dart_test("fxtest_tests") {
+  sources = [
+    "fxtest_test.dart",
+  ]
+
+  deps = [
+    ":fxtest_dart_library",
+    "//third_party/dart-pkg/pub/test",
+  ]
+}
+
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":fxtest_tests($host_toolchain)",
+  ]
+}
