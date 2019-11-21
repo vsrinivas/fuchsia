@@ -96,7 +96,7 @@ void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
   FX_DCHECK(renderer->is_audio_renderer());
   AUD_VLOG(TRACE) << "Adding renderer route graph: " << renderer.get();
 
-  renderers_.insert({renderer.get(), {renderer, {}}});
+  renderers_.insert({renderer.get(), RoutableOwnedObject{renderer, {}}});
 }
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
@@ -112,7 +112,7 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
   }
 
   const bool was_unrouted = !it->second.profile.routable;
-  it->second.profile = profile;
+  it->second.profile = std::move(profile);
   if (!it->second.profile.routable) {
     it->second.ref->Unlink();
   } else if (was_unrouted) {
@@ -137,7 +137,7 @@ void RouteGraph::AddCapturer(fbl::RefPtr<AudioObject> capturer) {
   FX_DCHECK(capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding capturer to route graph: " << capturer.get();
 
-  capturers_.insert({capturer.get(), {capturer, {}}});
+  capturers_.insert({capturer.get(), RoutableOwnedObject{capturer, {}}});
 }
 
 void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile profile) {
@@ -151,7 +151,7 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
   }
 
   const bool was_unrouted = !it->second.profile.routable;
-  it->second.profile = profile;
+  it->second.profile = std::move(profile);
   if (!it->second.profile.routable) {
     it->second.ref->Unlink();
   } else if (was_unrouted) {
@@ -177,7 +177,7 @@ void RouteGraph::AddLoopbackCapturer(fbl::RefPtr<AudioObject> loopback_capturer)
   FX_DCHECK(loopback_capturer->is_audio_capturer());
   AUD_VLOG(TRACE) << "Adding loopback capturer to route graph: " << loopback_capturer.get();
 
-  loopback_capturers_.insert({loopback_capturer.get(), {loopback_capturer, {}}});
+  loopback_capturers_.insert({loopback_capturer.get(), RoutableOwnedObject{loopback_capturer, {}}});
 }
 
 // TODO(39627): Only accept capturers of loopback type.
@@ -193,7 +193,7 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
   }
 
   const bool was_unrouted = !it->second.profile.routable;
-  it->second.profile = profile;
+  it->second.profile = std::move(profile);
   if (!it->second.profile.routable) {
     it->second.ref->Unlink();
   } else if (was_unrouted) {

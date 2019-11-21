@@ -124,6 +124,11 @@ class AudioCapturerImpl : public AudioObject,
     Shutdown,
   };
 
+  static bool StateIsRoutable(AudioCapturerImpl::State state) {
+    return state != AudioCapturerImpl::State::WaitingForVmo &&
+           state != AudioCapturerImpl::State::Shutdown;
+  }
+
   struct PendingCaptureBuffer;
 
   using PcbAllocatorTraits =

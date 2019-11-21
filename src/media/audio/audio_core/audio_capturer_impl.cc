@@ -414,9 +414,10 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
       << "No links should be established before a capturer has a payload buffer";
   volume_manager_.NotifyStreamChanged(this);
   if (loopback_) {
-    route_graph_.SetLoopbackCapturerRoutingProfile(this, {.routable = true});
+    route_graph_.SetLoopbackCapturerRoutingProfile(this,
+                                                   {.routable = true, .usage = GetStreamUsage()});
   } else {
-    route_graph_.SetCapturerRoutingProfile(this, {.routable = true});
+    route_graph_.SetCapturerRoutingProfile(this, {.routable = true, .usage = GetStreamUsage()});
   }
 
   cleanup.cancel();
@@ -924,6 +925,8 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
       usage_ = usage;
       volume_manager_.NotifyStreamChanged(this);
       State state = state_.load();
+      route_graph_.SetCapturerRoutingProfile(
+          this, {.routable = StateIsRoutable(state_), .usage = GetStreamUsage()});
       if (state == State::OperatingAsync) {
         ReportStart();
       }

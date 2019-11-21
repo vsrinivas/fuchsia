@@ -156,6 +156,8 @@ void AudioRendererImpl::SetUsage(fuchsia::media::AudioRenderUsage usage) {
       ReportStop();
       usage_ = usage;
       volume_manager_.NotifyStreamChanged(this);
+      route_graph_.SetRendererRoutingProfile(
+          this, {.routable = format_valid(), .usage = GetStreamUsage()});
       if (IsOperating())
         ReportStart();
       return;
@@ -375,7 +377,7 @@ void AudioRendererImpl::SetPcmStreamType(fuchsia::media::AudioStreamType format)
   cfg.frames_per_second = format.frames_per_second;
   format_ = Format::Create(cfg);
 
-  route_graph_.SetRendererRoutingProfile(this, {.routable = true});
+  route_graph_.SetRendererRoutingProfile(this, {.routable = true, .usage = GetStreamUsage()});
   volume_manager_.NotifyStreamChanged(this);
 
   // Things went well, cancel the cleanup hook. If our config had been validated previously, it will

@@ -9,6 +9,7 @@
 #include <gtest/gtest.h>
 
 #include "src/media/audio/audio_core/audio_admin.h"
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/process_config.h"
 #include "src/media/audio/audio_core/stream_volume_manager.h"
 #include "src/media/audio/audio_core/testing/fake_audio_device.h"
@@ -16,6 +17,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -41,10 +43,15 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
         volume_manager_(dispatcher()),
         route_graph_(routing_config_),
         vmar_(fzl::VmarManager::Create(kAudioRendererUnittestVmarSize, nullptr,
-                                       kAudioRendererUnittestVmarFlags)) {}
+                                       kAudioRendererUnittestVmarFlags)) {
+    fzl::VmoMapper vmo_mapper;
+    FX_CHECK(vmo_mapper.CreateAndMap(kAudioRendererUnittestVmarSize,
+                                     /*flags=*/0, nullptr, &vmo_) == ZX_OK);
+  }
 
  protected:
   void SetUp() override {
+    Logging::Init(-media::audio::SPEW, {"audio_core"});
     testing::ThreadingModelFixture::SetUp();
 
     auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);
@@ -105,8 +112,15 @@ class AudioRendererImplTest : public testing::ThreadingModelFixture {
   fuchsia::media::AudioRendererPtr fidl_renderer_;
   fbl::RefPtr<AudioRendererImpl> renderer_;
 
+  zx::vmo vmo_;
   fbl::RefPtr<fzl::VmarManager> vmar_;
   ProcessConfig::Handle config_handle_;
+
+  fuchsia::media::AudioStreamType stream_type_ = {
+      .sample_format = fuchsia::media::AudioSampleFormat::FLOAT,
+      .channels = 1,
+      .frames_per_second = kAudioRendererUnittestFrameRate,
+  };
 };
 
 constexpr zx::duration kMinLeadTime = zx::nsec(123456789);
@@ -171,6 +185,27 @@ TEST_F(AudioRendererImplTest, AllocatePacketQueueForLinks) {
       ASSERT_FALSE(pkt);
     }
   });
+}
+
+TEST_F(AudioRendererImplTest, RegistersWithRouteGraphIfHasUsageStreamTypeAndBuffers) {
+  EXPECT_EQ(renderer_->dest_link_count(), 0u);
+
+  zx::vmo duplicate;
+  ASSERT_EQ(
+      vmo_.duplicate(ZX_RIGHT_TRANSFER | ZX_RIGHT_WRITE | ZX_RIGHT_READ | ZX_RIGHT_MAP, &duplicate),
+      ZX_OK);
+
+  auto output = testing::FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  route_graph_.AddOutput(output.get());
+  RunLoopUntilIdle();
+
+  route_graph_.AddRenderer(renderer_);
+  fidl_renderer_->SetPcmStreamType(stream_type_);
+  fidl_renderer_->AddPayloadBuffer(0, std::move(duplicate));
+  fidl_renderer_->SetUsage(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT);
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(renderer_->dest_link_count(), 1u);
 }
 
 }  // namespace

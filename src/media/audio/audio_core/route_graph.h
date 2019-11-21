@@ -24,6 +24,7 @@ namespace media::audio {
 // particular input or output to the mixer.
 struct RoutingProfile {
   bool routable = false;
+  fuchsia::media::Usage usage = {};
 };
 
 // |RouteGraph| is responsible for managing connections between inputs and outputs of the mixer.
