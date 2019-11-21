@@ -801,11 +801,13 @@ zx_status_t AmlogicVideo::InitDecoder() {
   if (is_tee_available_) {
     zx_status_t status = PreloadFirmwareViaTee();
     if (status != ZX_OK) {
-      LOG(ERROR, "PreloadFirmwareViaTee() failed - status: %d", status);
-      return status;
+      is_tee_available_ = false;
+      // TODO(jbauman): Fail this function when everyone's updated their bootloaders.
+      LOG(INFO, "Preloading firmware failed with status %d. protected decode won't work.", status);
+    } else {
+      // TODO(dustingreen): Remove log spam after secure decode works.
+      LOG(INFO, "PreloadFirmwareViaTee() succeeded.");
     }
-    // TODO(dustingreen): Remove log spam after secure decode works.
-    LOG(INFO, "PreloadFirmwareViaTee() succeeded.");
   } else {
     LOG(INFO, "!is_tee_available_");
   }
