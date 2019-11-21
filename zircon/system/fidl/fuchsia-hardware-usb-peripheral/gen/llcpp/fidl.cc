@@ -193,7 +193,7 @@ void Events::SetTransactionHeaderFor::FunctionsClearedRequest(const ::fidl::Deco
 }
 
 ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::Device_SetConfiguration_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::~Device_SetConfiguration_Result() {
@@ -201,22 +201,22 @@ void Events::SetTransactionHeaderFor::FunctionsClearedRequest(const ::fidl::Deco
 }
 
 void ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_SetConfiguration_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::MoveImpl_(Device_SetConfiguration_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -233,20 +233,20 @@ void ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result
 
 
 ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

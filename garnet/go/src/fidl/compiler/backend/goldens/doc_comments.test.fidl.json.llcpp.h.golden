@@ -106,14 +106,13 @@ extern "C" const fidl_type_t v1_test_name_UnionTable;
 struct Union {
   enum class Tag : fidl_union_tag_t {
     kField = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Union();
   ~Union();
 
   Union(Union&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -126,9 +125,9 @@ struct Union {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Field() const { return tag_ == Tag::kField; }
+  bool is_Field() const { return ordinal_ == Ordinal::kField; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Union WithField(int32_t&& val) {
@@ -190,7 +189,10 @@ struct Union {
   // union member comment #3
   int32_t const & Field() const { return Field_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_UnionTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_UnionTable;
@@ -203,10 +205,15 @@ struct Union {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kField = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Union&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t Field_;
   };

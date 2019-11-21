@@ -9,7 +9,7 @@ namespace fuchsia {
 namespace cobalt {
 
 ::llcpp::fuchsia::cobalt::Value::Value() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::cobalt::Value::~Value() {
@@ -17,25 +17,25 @@ namespace cobalt {
 }
 
 void ::llcpp::fuchsia::cobalt::Value::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::cobalt::Value::MoveImpl_(Value&& other) {
-  switch (other.which()) {
-  case Tag::kStringValue:
+  switch (other.ordinal_) {
+  case Ordinal::kStringValue:
     mutable_string_value() = std::move(other.mutable_string_value());
     break;
-  case Tag::kIntValue:
+  case Ordinal::kIntValue:
     mutable_int_value() = std::move(other.mutable_int_value());
     break;
-  case Tag::kDoubleValue:
+  case Ordinal::kDoubleValue:
     mutable_double_value() = std::move(other.mutable_double_value());
     break;
-  case Tag::kIndexValue:
+  case Ordinal::kIndexValue:
     mutable_index_value() = std::move(other.mutable_index_value());
     break;
   default:
@@ -54,38 +54,38 @@ void ::llcpp::fuchsia::cobalt::Value::SizeAndOffsetAssertionHelper() {
 
 
 ::fidl::StringView& ::llcpp::fuchsia::cobalt::Value::mutable_string_value() {
-  if (which() != Tag::kStringValue) {
+  if (ordinal_ != Ordinal::kStringValue) {
     Destroy();
     new (&string_value_) ::fidl::StringView;
   }
-  tag_ = Tag::kStringValue;
+  ordinal_ = Ordinal::kStringValue;
   return string_value_;
 }
 
 int64_t& ::llcpp::fuchsia::cobalt::Value::mutable_int_value() {
-  if (which() != Tag::kIntValue) {
+  if (ordinal_ != Ordinal::kIntValue) {
     Destroy();
     new (&int_value_) int64_t;
   }
-  tag_ = Tag::kIntValue;
+  ordinal_ = Ordinal::kIntValue;
   return int_value_;
 }
 
 double& ::llcpp::fuchsia::cobalt::Value::mutable_double_value() {
-  if (which() != Tag::kDoubleValue) {
+  if (ordinal_ != Ordinal::kDoubleValue) {
     Destroy();
     new (&double_value_) double;
   }
-  tag_ = Tag::kDoubleValue;
+  ordinal_ = Ordinal::kDoubleValue;
   return double_value_;
 }
 
 uint32_t& ::llcpp::fuchsia::cobalt::Value::mutable_index_value() {
-  if (which() != Tag::kIndexValue) {
+  if (ordinal_ != Ordinal::kIndexValue) {
     Destroy();
     new (&index_value_) uint32_t;
   }
-  tag_ = Tag::kIndexValue;
+  ordinal_ = Ordinal::kIndexValue;
   return index_value_;
 }
 
@@ -4081,7 +4081,7 @@ void SystemDataUpdater::SetTransactionHeaderFor::SetChannelResponse(const ::fidl
 }
 
 ::llcpp::fuchsia::cobalt::EventPayload::EventPayload() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::cobalt::EventPayload::~EventPayload() {
@@ -4089,40 +4089,40 @@ void SystemDataUpdater::SetTransactionHeaderFor::SetChannelResponse(const ::fidl
 }
 
 void ::llcpp::fuchsia::cobalt::EventPayload::Destroy() {
-  switch (which()) {
-  case Tag::kEvent:
+  switch (ordinal_) {
+  case Ordinal::kEvent:
     event_.~Event();
     break;
-  case Tag::kEventCount:
+  case Ordinal::kEventCount:
     event_count_.~CountEvent();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::cobalt::EventPayload::MoveImpl_(EventPayload&& other) {
-  switch (other.which()) {
-  case Tag::kEvent:
+  switch (other.ordinal_) {
+  case Ordinal::kEvent:
     mutable_event() = std::move(other.mutable_event());
     break;
-  case Tag::kEventCount:
+  case Ordinal::kEventCount:
     mutable_event_count() = std::move(other.mutable_event_count());
     break;
-  case Tag::kElapsedMicros:
+  case Ordinal::kElapsedMicros:
     mutable_elapsed_micros() = std::move(other.mutable_elapsed_micros());
     break;
-  case Tag::kFps:
+  case Ordinal::kFps:
     mutable_fps() = std::move(other.mutable_fps());
     break;
-  case Tag::kMemoryBytesUsed:
+  case Ordinal::kMemoryBytesUsed:
     mutable_memory_bytes_used() = std::move(other.mutable_memory_bytes_used());
     break;
-  case Tag::kStringEvent:
+  case Ordinal::kStringEvent:
     mutable_string_event() = std::move(other.mutable_string_event());
     break;
-  case Tag::kIntHistogram:
+  case Ordinal::kIntHistogram:
     mutable_int_histogram() = std::move(other.mutable_int_histogram());
     break;
   default:
@@ -4144,65 +4144,65 @@ void ::llcpp::fuchsia::cobalt::EventPayload::SizeAndOffsetAssertionHelper() {
 
 
 ::llcpp::fuchsia::cobalt::Event& ::llcpp::fuchsia::cobalt::EventPayload::mutable_event() {
-  if (which() != Tag::kEvent) {
+  if (ordinal_ != Ordinal::kEvent) {
     Destroy();
     new (&event_) ::llcpp::fuchsia::cobalt::Event;
   }
-  tag_ = Tag::kEvent;
+  ordinal_ = Ordinal::kEvent;
   return event_;
 }
 
 ::llcpp::fuchsia::cobalt::CountEvent& ::llcpp::fuchsia::cobalt::EventPayload::mutable_event_count() {
-  if (which() != Tag::kEventCount) {
+  if (ordinal_ != Ordinal::kEventCount) {
     Destroy();
     new (&event_count_) ::llcpp::fuchsia::cobalt::CountEvent;
   }
-  tag_ = Tag::kEventCount;
+  ordinal_ = Ordinal::kEventCount;
   return event_count_;
 }
 
 int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_elapsed_micros() {
-  if (which() != Tag::kElapsedMicros) {
+  if (ordinal_ != Ordinal::kElapsedMicros) {
     Destroy();
     new (&elapsed_micros_) int64_t;
   }
-  tag_ = Tag::kElapsedMicros;
+  ordinal_ = Ordinal::kElapsedMicros;
   return elapsed_micros_;
 }
 
 float& ::llcpp::fuchsia::cobalt::EventPayload::mutable_fps() {
-  if (which() != Tag::kFps) {
+  if (ordinal_ != Ordinal::kFps) {
     Destroy();
     new (&fps_) float;
   }
-  tag_ = Tag::kFps;
+  ordinal_ = Ordinal::kFps;
   return fps_;
 }
 
 int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_memory_bytes_used() {
-  if (which() != Tag::kMemoryBytesUsed) {
+  if (ordinal_ != Ordinal::kMemoryBytesUsed) {
     Destroy();
     new (&memory_bytes_used_) int64_t;
   }
-  tag_ = Tag::kMemoryBytesUsed;
+  ordinal_ = Ordinal::kMemoryBytesUsed;
   return memory_bytes_used_;
 }
 
 ::fidl::StringView& ::llcpp::fuchsia::cobalt::EventPayload::mutable_string_event() {
-  if (which() != Tag::kStringEvent) {
+  if (ordinal_ != Ordinal::kStringEvent) {
     Destroy();
     new (&string_event_) ::fidl::StringView;
   }
-  tag_ = Tag::kStringEvent;
+  ordinal_ = Ordinal::kStringEvent;
   return string_event_;
 }
 
 ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>& ::llcpp::fuchsia::cobalt::EventPayload::mutable_int_histogram() {
-  if (which() != Tag::kIntHistogram) {
+  if (ordinal_ != Ordinal::kIntHistogram) {
     Destroy();
     new (&int_histogram_) ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>;
   }
-  tag_ = Tag::kIntHistogram;
+  ordinal_ = Ordinal::kIntHistogram;
   return int_histogram_;
 }
 

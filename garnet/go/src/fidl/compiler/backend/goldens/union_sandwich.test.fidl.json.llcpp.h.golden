@@ -38,14 +38,13 @@ extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize8Alignment4Tabl
 struct UnionSize8Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionSize8Alignment4();
   ~UnionSize8Alignment4();
 
   UnionSize8Alignment4(UnionSize8Alignment4&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -58,9 +57,9 @@ struct UnionSize8Alignment4 {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize8Alignment4 WithVariant(uint32_t&& val) {
@@ -104,7 +103,10 @@ struct UnionSize8Alignment4 {
 
   uint32_t const & variant() const { return variant_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize8Alignment4Table;
   static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize8Alignment4Table;
@@ -117,10 +119,15 @@ struct UnionSize8Alignment4 {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kVariant = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(UnionSize8Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     uint32_t variant_;
   };
@@ -153,14 +160,13 @@ extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize36Alignment4Tab
 struct UnionSize36Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionSize36Alignment4();
   ~UnionSize36Alignment4();
 
   UnionSize36Alignment4(UnionSize36Alignment4&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -173,9 +179,9 @@ struct UnionSize36Alignment4 {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize36Alignment4 WithVariant(::fidl::Array<uint8_t, 32>&& val) {
@@ -219,7 +225,10 @@ struct UnionSize36Alignment4 {
 
   ::fidl::Array<uint8_t, 32> const & variant() const { return variant_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize36Alignment4Table;
   static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize36Alignment4Table;
@@ -232,10 +241,15 @@ struct UnionSize36Alignment4 {
   static constexpr uint32_t AltMaxOutOfLine = 32;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kVariant = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(UnionSize36Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::fidl::Array<uint8_t, 32> variant_;
   };
@@ -268,14 +282,13 @@ extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize12Alignment4Tab
 struct UnionSize12Alignment4 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionSize12Alignment4();
   ~UnionSize12Alignment4();
 
   UnionSize12Alignment4(UnionSize12Alignment4&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -288,9 +301,9 @@ struct UnionSize12Alignment4 {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize12Alignment4 WithVariant(::fidl::Array<uint8_t, 6>&& val) {
@@ -334,7 +347,10 @@ struct UnionSize12Alignment4 {
 
   ::fidl::Array<uint8_t, 6> const & variant() const { return variant_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize12Alignment4Table;
   static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize12Alignment4Table;
@@ -347,10 +363,15 @@ struct UnionSize12Alignment4 {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kVariant = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(UnionSize12Alignment4&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::fidl::Array<uint8_t, 6> variant_;
   };
@@ -402,14 +423,13 @@ extern "C" const fidl_type_t v1_test_fidl_unionsandwich_UnionSize24Alignment8Tab
 struct UnionSize24Alignment8 {
   enum class Tag : fidl_union_tag_t {
     kVariant = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   UnionSize24Alignment8();
   ~UnionSize24Alignment8();
 
   UnionSize24Alignment8(UnionSize24Alignment8&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -422,9 +442,9 @@ struct UnionSize24Alignment8 {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_variant() const { return tag_ == Tag::kVariant; }
+  bool is_variant() const { return ordinal_ == Ordinal::kVariant; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static UnionSize24Alignment8 WithVariant(::llcpp::test::fidl::unionsandwich::StructSize16Alignment8&& val) {
@@ -468,7 +488,10 @@ struct UnionSize24Alignment8 {
 
   ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8 const & variant() const { return variant_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_fidl_unionsandwich_UnionSize24Alignment8Table;
   static constexpr const fidl_type_t* AltType = &v1_test_fidl_unionsandwich_UnionSize24Alignment8Table;
@@ -481,10 +504,15 @@ struct UnionSize24Alignment8 {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kVariant = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(UnionSize24Alignment8&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8 variant_;
   };

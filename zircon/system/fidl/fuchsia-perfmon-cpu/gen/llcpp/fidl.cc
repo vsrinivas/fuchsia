@@ -10,7 +10,7 @@ namespace perfmon {
 namespace cpu {
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::Controller_Start_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::~Controller_Start_Result() {
@@ -18,22 +18,22 @@ namespace cpu {
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_Start_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::MoveImpl_(Controller_Start_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -50,26 +50,26 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::SizeAndOffsetAsser
 
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response& ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::Controller_StageConfig_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::~Controller_StageConfig_Result() {
@@ -77,22 +77,22 @@ int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::mutable_err() 
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_StageConfig_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::MoveImpl_(Controller_StageConfig_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -109,26 +109,26 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::SizeAndOffse
 
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response& ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::Controller_Initialize_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::~Controller_Initialize_Result() {
@@ -136,22 +136,22 @@ int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::mutable_
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_Initialize_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::MoveImpl_(Controller_Initialize_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -168,20 +168,20 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::SizeAndOffset
 
 
 ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response& ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

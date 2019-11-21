@@ -136,7 +136,7 @@ void DirectoryWatcher::SetTransactionHeaderFor::OnEventRequest(const ::fidl::Dec
 }
 
 ::llcpp::fuchsia::io::NodeInfo::NodeInfo() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::io::NodeInfo::~NodeInfo() {
@@ -144,61 +144,61 @@ void DirectoryWatcher::SetTransactionHeaderFor::OnEventRequest(const ::fidl::Dec
 }
 
 void ::llcpp::fuchsia::io::NodeInfo::Destroy() {
-  switch (which()) {
-  case Tag::kService:
+  switch (ordinal_) {
+  case Ordinal::kService:
     service_.~Service();
     break;
-  case Tag::kFile:
+  case Ordinal::kFile:
     file_.~FileObject();
     break;
-  case Tag::kDirectory:
+  case Ordinal::kDirectory:
     directory_.~DirectoryObject();
     break;
-  case Tag::kPipe:
+  case Ordinal::kPipe:
     pipe_.~Pipe();
     break;
-  case Tag::kVmofile:
+  case Ordinal::kVmofile:
     vmofile_.~Vmofile();
     break;
-  case Tag::kDevice:
+  case Ordinal::kDevice:
     device_.~Device();
     break;
-  case Tag::kTty:
+  case Ordinal::kTty:
     tty_.~Tty();
     break;
-  case Tag::kSocket:
+  case Ordinal::kSocket:
     socket_.~Socket();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::io::NodeInfo::MoveImpl_(NodeInfo&& other) {
-  switch (other.which()) {
-  case Tag::kService:
+  switch (other.ordinal_) {
+  case Ordinal::kService:
     mutable_service() = std::move(other.mutable_service());
     break;
-  case Tag::kFile:
+  case Ordinal::kFile:
     mutable_file() = std::move(other.mutable_file());
     break;
-  case Tag::kDirectory:
+  case Ordinal::kDirectory:
     mutable_directory() = std::move(other.mutable_directory());
     break;
-  case Tag::kPipe:
+  case Ordinal::kPipe:
     mutable_pipe() = std::move(other.mutable_pipe());
     break;
-  case Tag::kVmofile:
+  case Ordinal::kVmofile:
     mutable_vmofile() = std::move(other.mutable_vmofile());
     break;
-  case Tag::kDevice:
+  case Ordinal::kDevice:
     mutable_device() = std::move(other.mutable_device());
     break;
-  case Tag::kTty:
+  case Ordinal::kTty:
     mutable_tty() = std::move(other.mutable_tty());
     break;
-  case Tag::kSocket:
+  case Ordinal::kSocket:
     mutable_socket() = std::move(other.mutable_socket());
     break;
   default:
@@ -221,74 +221,74 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
 
 
 ::llcpp::fuchsia::io::Service& ::llcpp::fuchsia::io::NodeInfo::mutable_service() {
-  if (which() != Tag::kService) {
+  if (ordinal_ != Ordinal::kService) {
     Destroy();
     new (&service_) ::llcpp::fuchsia::io::Service;
   }
-  tag_ = Tag::kService;
+  ordinal_ = Ordinal::kService;
   return service_;
 }
 
 ::llcpp::fuchsia::io::FileObject& ::llcpp::fuchsia::io::NodeInfo::mutable_file() {
-  if (which() != Tag::kFile) {
+  if (ordinal_ != Ordinal::kFile) {
     Destroy();
     new (&file_) ::llcpp::fuchsia::io::FileObject;
   }
-  tag_ = Tag::kFile;
+  ordinal_ = Ordinal::kFile;
   return file_;
 }
 
 ::llcpp::fuchsia::io::DirectoryObject& ::llcpp::fuchsia::io::NodeInfo::mutable_directory() {
-  if (which() != Tag::kDirectory) {
+  if (ordinal_ != Ordinal::kDirectory) {
     Destroy();
     new (&directory_) ::llcpp::fuchsia::io::DirectoryObject;
   }
-  tag_ = Tag::kDirectory;
+  ordinal_ = Ordinal::kDirectory;
   return directory_;
 }
 
 ::llcpp::fuchsia::io::Pipe& ::llcpp::fuchsia::io::NodeInfo::mutable_pipe() {
-  if (which() != Tag::kPipe) {
+  if (ordinal_ != Ordinal::kPipe) {
     Destroy();
     new (&pipe_) ::llcpp::fuchsia::io::Pipe;
   }
-  tag_ = Tag::kPipe;
+  ordinal_ = Ordinal::kPipe;
   return pipe_;
 }
 
 ::llcpp::fuchsia::io::Vmofile& ::llcpp::fuchsia::io::NodeInfo::mutable_vmofile() {
-  if (which() != Tag::kVmofile) {
+  if (ordinal_ != Ordinal::kVmofile) {
     Destroy();
     new (&vmofile_) ::llcpp::fuchsia::io::Vmofile;
   }
-  tag_ = Tag::kVmofile;
+  ordinal_ = Ordinal::kVmofile;
   return vmofile_;
 }
 
 ::llcpp::fuchsia::io::Device& ::llcpp::fuchsia::io::NodeInfo::mutable_device() {
-  if (which() != Tag::kDevice) {
+  if (ordinal_ != Ordinal::kDevice) {
     Destroy();
     new (&device_) ::llcpp::fuchsia::io::Device;
   }
-  tag_ = Tag::kDevice;
+  ordinal_ = Ordinal::kDevice;
   return device_;
 }
 
 ::llcpp::fuchsia::io::Tty& ::llcpp::fuchsia::io::NodeInfo::mutable_tty() {
-  if (which() != Tag::kTty) {
+  if (ordinal_ != Ordinal::kTty) {
     Destroy();
     new (&tty_) ::llcpp::fuchsia::io::Tty;
   }
-  tag_ = Tag::kTty;
+  ordinal_ = Ordinal::kTty;
   return tty_;
 }
 
 ::llcpp::fuchsia::io::Socket& ::llcpp::fuchsia::io::NodeInfo::mutable_socket() {
-  if (which() != Tag::kSocket) {
+  if (ordinal_ != Ordinal::kSocket) {
     Destroy();
     new (&socket_) ::llcpp::fuchsia::io::Socket;
   }
-  tag_ = Tag::kSocket;
+  ordinal_ = Ordinal::kSocket;
   return socket_;
 }
 

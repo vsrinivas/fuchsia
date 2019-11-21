@@ -299,7 +299,7 @@ void Provider::SetTransactionHeaderFor::OpenControllerResponse(const ::fidl::Dec
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::Controller_StartCapture_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::~Controller_StartCapture_Result() {
@@ -307,22 +307,22 @@ void Provider::SetTransactionHeaderFor::OpenControllerResponse(const ::fidl::Dec
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_StartCapture_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::MoveImpl_(Controller_StartCapture_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -339,26 +339,26 @@ void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::SizeAn
 
 
 ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Controller_ReleaseCapture_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::~Controller_ReleaseCapture_Result() {
@@ -366,22 +366,22 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mu
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_ReleaseCapture_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::MoveImpl_(Controller_ReleaseCapture_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -398,26 +398,26 @@ void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Size
 
 
 ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Controller_IsCaptureSupported_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::~Controller_IsCaptureSupported_Result() {
@@ -425,22 +425,22 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_IsCaptureSupported_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::MoveImpl_(Controller_IsCaptureSupported_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -457,26 +457,26 @@ void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::
 
 
 ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::Controller_ImportImageForCapture_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::~Controller_ImportImageForCapture_Result() {
@@ -484,22 +484,22 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Resu
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_ImportImageForCapture_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::MoveImpl_(Controller_ImportImageForCapture_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -516,20 +516,20 @@ void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Resul
 
 
 ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

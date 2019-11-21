@@ -11,7 +11,7 @@ namespace cpu {
 namespace insntrace {
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Controller_Terminate_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::~Controller_Terminate_Result() {
@@ -19,22 +19,22 @@ namespace insntrace {
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_Terminate_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::MoveImpl_(Controller_Terminate_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -51,26 +51,26 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Si
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::Controller_ReleaseThreadBuffer_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::~Controller_ReleaseThreadBuffer_Result() {
@@ -78,22 +78,22 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_ReleaseThreadBuffer_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::MoveImpl_(Controller_ReleaseThreadBuffer_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -110,26 +110,26 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::Controller_Initialize_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::~Controller_Initialize_Result() {
@@ -137,22 +137,22 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuf
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_Initialize_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::MoveImpl_(Controller_Initialize_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -169,26 +169,26 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::S
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::Controller_AssignThreadBuffer_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::~Controller_AssignThreadBuffer_Result() {
@@ -196,22 +196,22 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Resul
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_AssignThreadBuffer_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::MoveImpl_(Controller_AssignThreadBuffer_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -228,26 +228,26 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_R
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::Controller_AllocateBuffer_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::~Controller_AllocateBuffer_Result() {
@@ -255,22 +255,22 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuff
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Controller_AllocateBuffer_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::MoveImpl_(Controller_AllocateBuffer_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -287,20 +287,20 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Resul
 
 
 ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

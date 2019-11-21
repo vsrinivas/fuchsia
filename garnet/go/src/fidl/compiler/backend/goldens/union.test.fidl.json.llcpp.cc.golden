@@ -9,7 +9,7 @@ namespace test {
 namespace name {
 
 ::llcpp::test::name::Union::Union() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::test::name::Union::~Union() {
@@ -17,22 +17,22 @@ namespace name {
 }
 
 void ::llcpp::test::name::Union::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::test::name::Union::MoveImpl_(Union&& other) {
-  switch (other.which()) {
-  case Tag::kPrimitive:
+  switch (other.ordinal_) {
+  case Ordinal::kPrimitive:
     mutable_Primitive() = std::move(other.mutable_Primitive());
     break;
-  case Tag::kStringNeedsConstructor:
+  case Ordinal::kStringNeedsConstructor:
     mutable_StringNeedsConstructor() = std::move(other.mutable_StringNeedsConstructor());
     break;
-  case Tag::kVectorStringAlsoNeedsConstructor:
+  case Ordinal::kVectorStringAlsoNeedsConstructor:
     mutable_VectorStringAlsoNeedsConstructor() = std::move(other.mutable_VectorStringAlsoNeedsConstructor());
     break;
   default:
@@ -50,35 +50,35 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
-  if (which() != Tag::kPrimitive) {
+  if (ordinal_ != Ordinal::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
   }
-  tag_ = Tag::kPrimitive;
+  ordinal_ = Ordinal::kPrimitive;
   return Primitive_;
 }
 
 ::fidl::StringView& ::llcpp::test::name::Union::mutable_StringNeedsConstructor() {
-  if (which() != Tag::kStringNeedsConstructor) {
+  if (ordinal_ != Ordinal::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
   }
-  tag_ = Tag::kStringNeedsConstructor;
+  ordinal_ = Ordinal::kStringNeedsConstructor;
   return StringNeedsConstructor_;
 }
 
 ::fidl::VectorView<::fidl::StringView>& ::llcpp::test::name::Union::mutable_VectorStringAlsoNeedsConstructor() {
-  if (which() != Tag::kVectorStringAlsoNeedsConstructor) {
+  if (ordinal_ != Ordinal::kVectorStringAlsoNeedsConstructor) {
     Destroy();
     new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorView<::fidl::StringView>;
   }
-  tag_ = Tag::kVectorStringAlsoNeedsConstructor;
+  ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
   return VectorStringAlsoNeedsConstructor_;
 }
 
 
 ::llcpp::test::name::ReverseOrdinalUnion::ReverseOrdinalUnion() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::test::name::ReverseOrdinalUnion::~ReverseOrdinalUnion() {
@@ -86,19 +86,19 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
 }
 
 void ::llcpp::test::name::ReverseOrdinalUnion::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::test::name::ReverseOrdinalUnion::MoveImpl_(ReverseOrdinalUnion&& other) {
-  switch (other.which()) {
-  case Tag::kFirst:
+  switch (other.ordinal_) {
+  case Ordinal::kFirst:
     mutable_first() = std::move(other.mutable_first());
     break;
-  case Tag::kSecond:
+  case Ordinal::kSecond:
     mutable_second() = std::move(other.mutable_second());
     break;
   default:
@@ -115,26 +115,26 @@ void ::llcpp::test::name::ReverseOrdinalUnion::SizeAndOffsetAssertionHelper() {
 
 
 uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_first() {
-  if (which() != Tag::kFirst) {
+  if (ordinal_ != Ordinal::kFirst) {
     Destroy();
     new (&first_) uint32_t;
   }
-  tag_ = Tag::kFirst;
+  ordinal_ = Ordinal::kFirst;
   return first_;
 }
 
 uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_second() {
-  if (which() != Tag::kSecond) {
+  if (ordinal_ != Ordinal::kSecond) {
     Destroy();
     new (&second_) uint32_t;
   }
-  tag_ = Tag::kSecond;
+  ordinal_ = Ordinal::kSecond;
   return second_;
 }
 
 
 ::llcpp::test::name::FieldCollision::FieldCollision() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::test::name::FieldCollision::~FieldCollision() {
@@ -142,16 +142,16 @@ uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_second() {
 }
 
 void ::llcpp::test::name::FieldCollision::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::test::name::FieldCollision::MoveImpl_(FieldCollision&& other) {
-  switch (other.which()) {
-  case Tag::kFieldCollisionTag:
+  switch (other.ordinal_) {
+  case Ordinal::kFieldCollisionTag:
     mutable_field_collision_tag() = std::move(other.mutable_field_collision_tag());
     break;
   default:
@@ -167,17 +167,17 @@ void ::llcpp::test::name::FieldCollision::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
-  if (which() != Tag::kFieldCollisionTag) {
+  if (ordinal_ != Ordinal::kFieldCollisionTag) {
     Destroy();
     new (&field_collision_tag_) int32_t;
   }
-  tag_ = Tag::kFieldCollisionTag;
+  ordinal_ = Ordinal::kFieldCollisionTag;
   return field_collision_tag_;
 }
 
 
 ::llcpp::test::name::ExplicitUnion::ExplicitUnion() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::test::name::ExplicitUnion::~ExplicitUnion() {
@@ -185,19 +185,19 @@ int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
 }
 
 void ::llcpp::test::name::ExplicitUnion::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::test::name::ExplicitUnion::MoveImpl_(ExplicitUnion&& other) {
-  switch (other.which()) {
-  case Tag::kPrimitive:
+  switch (other.ordinal_) {
+  case Ordinal::kPrimitive:
     mutable_Primitive() = std::move(other.mutable_Primitive());
     break;
-  case Tag::kStringNeedsConstructor:
+  case Ordinal::kStringNeedsConstructor:
     mutable_StringNeedsConstructor() = std::move(other.mutable_StringNeedsConstructor());
     break;
   default:
@@ -214,20 +214,20 @@ void ::llcpp::test::name::ExplicitUnion::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::test::name::ExplicitUnion::mutable_Primitive() {
-  if (which() != Tag::kPrimitive) {
+  if (ordinal_ != Ordinal::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
   }
-  tag_ = Tag::kPrimitive;
+  ordinal_ = Ordinal::kPrimitive;
   return Primitive_;
 }
 
 ::fidl::StringView& ::llcpp::test::name::ExplicitUnion::mutable_StringNeedsConstructor() {
-  if (which() != Tag::kStringNeedsConstructor) {
+  if (ordinal_ != Ordinal::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
   }
-  tag_ = Tag::kStringNeedsConstructor;
+  ordinal_ = Ordinal::kStringNeedsConstructor;
   return StringNeedsConstructor_;
 }
 

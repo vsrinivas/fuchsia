@@ -22,14 +22,13 @@ struct {{ .Name }} {
   {{- range $index, $member := .Members }}
     {{ $member.TagName }} = {{ $index }},
   {{- end }}
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   {{ .Name }}();
   ~{{ .Name }}();
 
   {{ .Name }}({{ .Name }}&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -42,11 +41,11 @@ struct {{ .Name }} {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
   {{- range $index, $member := .Members }}
 
-  bool is_{{ .Name }}() const { return tag_ == Tag::{{ .TagName }}; }
+  bool is_{{ .Name }}() const { return ordinal_ == Ordinal::{{ .TagName }}; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static {{ $.Name }} With{{ .UpperCamelCaseName }}({{ .Type.LLDecl }}&& val) {
@@ -109,7 +108,10 @@ struct {{ .Name }} {
   {{ .Type.LLDecl }} const & {{ .Name }}() const { return {{ .StorageName }}; }
   {{- end }}
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &{{ .TableType }};
   static constexpr const fidl_type_t* AltType = &{{ .V1TableType }};
@@ -122,12 +124,19 @@ struct {{ .Name }} {
   static constexpr uint32_t AltMaxOutOfLine = {{ .MaxOutOfLineV1NoEE }};
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+  {{- range $index, $member := .Members }}
+    {{ $member.TagName }} = {{ $index }},
+  {{- end }}
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_({{ .Name }}&& other);
   static void SizeAndOffsetAssertionHelper();
 
   {{- /* All fields are private to maintain standard layout */}}
-  Tag tag_;
+  Ordinal ordinal_;
   union {
   {{- range .Members }}
     {{ .Type.LLDecl }} {{ .StorageName }};
@@ -140,7 +149,7 @@ struct {{ .Name }} {
 {{- $union := . }}
 
 {{ .Namespace }}::{{ .Name }}::{{ .Name }}() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 {{ .Namespace }}::{{ .Name }}::~{{ .Name }}() {
@@ -148,10 +157,10 @@ struct {{ .Name }} {
 }
 
 void {{ .Namespace }}::{{ .Name }}::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   {{- range $index, $member := .Members }}
   {{- if $member.Type.LLDtor }}
-  case Tag::{{ $member.TagName }}:
+  case Ordinal::{{ $member.TagName }}:
     {{ $member.StorageName }}.{{ $member.Type.LLDtor }}();
     break;
   {{- end }}
@@ -159,13 +168,13 @@ void {{ .Namespace }}::{{ .Name }}::Destroy() {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void {{ .Namespace }}::{{ .Name }}::MoveImpl_({{ .Name }}&& other) {
-  switch (other.which()) {
+  switch (other.ordinal_) {
   {{- range $index, $member := .Members }}
-  case Tag::{{ $member.TagName }}:
+  case Ordinal::{{ $member.TagName }}:
     mutable_{{ .Name }}() = std::move(other.mutable_{{ .Name }}());
     break;
   {{- end }}
@@ -184,11 +193,11 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
 
 {{ range $index, $member := .Members }}
 {{ .Type.LLDecl }}& {{ $union.Namespace }}::{{ $union.Name }}::mutable_{{ .Name }}() {
-  if (which() != Tag::{{ .TagName }}) {
+  if (ordinal_ != Ordinal::{{ .TagName }}) {
     Destroy();
     new (&{{ .StorageName }}) {{ .Type.LLDecl }};
   }
-  tag_ = Tag::{{ .TagName }};
+  ordinal_ = Ordinal::{{ .TagName }};
   return {{ .StorageName }};
 }
 {{ "" }}

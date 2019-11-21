@@ -244,14 +244,13 @@ struct NewDevice_Write_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NewDevice_Write_Result();
   ~NewDevice_Write_Result();
 
   NewDevice_Write_Result(NewDevice_Write_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -264,9 +263,9 @@ struct NewDevice_Write_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NewDevice_Write_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response&& val) {
@@ -310,7 +309,7 @@ struct NewDevice_Write_Result {
 
   ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NewDevice_Write_Result WithErr(int32_t&& val) {
@@ -354,7 +353,10 @@ struct NewDevice_Write_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Write_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Write_ResultTable;
@@ -367,10 +369,16 @@ struct NewDevice_Write_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NewDevice_Write_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response response_;
     int32_t err_;
@@ -401,14 +409,13 @@ struct NewDevice_Read_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NewDevice_Read_Result();
   ~NewDevice_Read_Result();
 
   NewDevice_Read_Result(NewDevice_Read_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -421,9 +428,9 @@ struct NewDevice_Read_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NewDevice_Read_Result WithResponse(::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response&& val) {
@@ -467,7 +474,7 @@ struct NewDevice_Read_Result {
 
   ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NewDevice_Read_Result WithErr(int32_t&& val) {
@@ -511,7 +518,10 @@ struct NewDevice_Read_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_serial_NewDevice_Read_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_serial_NewDevice_Read_ResultTable;
@@ -524,10 +534,16 @@ struct NewDevice_Read_Result {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NewDevice_Read_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response response_;
     int32_t err_;

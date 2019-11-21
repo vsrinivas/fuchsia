@@ -122,14 +122,13 @@ struct Action {
     kAsyncRemoveDevice = 3,
     kUnbindReply = 4,
     kAddDevice = 5,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Action();
   ~Action();
 
   Action(Action&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -142,9 +141,9 @@ struct Action {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_return_status() const { return tag_ == Tag::kReturnStatus; }
+  bool is_return_status() const { return ordinal_ == Ordinal::kReturnStatus; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithReturnStatus(int32_t&& val) {
@@ -194,7 +193,7 @@ struct Action {
   // Return this status.
   int32_t const & return_status() const { return return_status_; }
 
-  bool is_write() const { return tag_ == Tag::kWrite; }
+  bool is_write() const { return ordinal_ == Ordinal::kWrite; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithWrite(::fidl::VectorView<uint8_t>&& val) {
@@ -244,7 +243,7 @@ struct Action {
   // Write these bytes to the buffer associated with the hook.
   ::fidl::VectorView<uint8_t> const & write() const { return write_; }
 
-  bool is_create_thread() const { return tag_ == Tag::kCreateThread; }
+  bool is_create_thread() const { return ordinal_ == Ordinal::kCreateThread; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithCreateThread(::zx::channel&& val) {
@@ -294,7 +293,7 @@ struct Action {
   // Create a new thread with a processing loop.
   ::zx::channel const & create_thread() const { return create_thread_; }
 
-  bool is_async_remove_device() const { return tag_ == Tag::kAsyncRemoveDevice; }
+  bool is_async_remove_device() const { return ordinal_ == Ordinal::kAsyncRemoveDevice; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithAsyncRemoveDevice(bool&& val) {
@@ -344,7 +343,7 @@ struct Action {
   // Invoke device_async_remove() on our device.
   bool const & async_remove_device() const { return async_remove_device_; }
 
-  bool is_unbind_reply() const { return tag_ == Tag::kUnbindReply; }
+  bool is_unbind_reply() const { return ordinal_ == Ordinal::kUnbindReply; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithUnbindReply(::llcpp::fuchsia::device::mock::UnbindReplyAction&& val) {
@@ -394,7 +393,7 @@ struct Action {
   // Signal that the unbind has completed.
   ::llcpp::fuchsia::device::mock::UnbindReplyAction const & unbind_reply() const { return unbind_reply_; }
 
-  bool is_add_device() const { return tag_ == Tag::kAddDevice; }
+  bool is_add_device() const { return ordinal_ == Ordinal::kAddDevice; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Action WithAddDevice(::llcpp::fuchsia::device::mock::AddDeviceAction&& val) {
@@ -444,7 +443,10 @@ struct Action {
   // Create a new child device
   ::llcpp::fuchsia::device::mock::AddDeviceAction const & add_device() const { return add_device_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_mock_ActionTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_mock_ActionTable;
@@ -457,10 +459,20 @@ struct Action {
   static constexpr uint32_t AltMaxOutOfLine = 16400;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kReturnStatus = 0,
+    kWrite = 1,
+    kCreateThread = 2,
+    kAsyncRemoveDevice = 3,
+    kUnbindReply = 4,
+    kAddDevice = 5,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Action&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t return_status_;
     ::fidl::VectorView<uint8_t> write_;

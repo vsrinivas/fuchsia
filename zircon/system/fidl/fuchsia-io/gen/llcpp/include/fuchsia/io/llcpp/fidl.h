@@ -677,14 +677,13 @@ struct NodeInfo {
     kDevice = 5,
     kTty = 6,
     kSocket = 7,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NodeInfo();
   ~NodeInfo();
 
   NodeInfo(NodeInfo&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -697,9 +696,9 @@ struct NodeInfo {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_service() const { return tag_ == Tag::kService; }
+  bool is_service() const { return ordinal_ == Ordinal::kService; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithService(::llcpp::fuchsia::io::Service&& val) {
@@ -743,7 +742,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Service const & service() const { return service_; }
 
-  bool is_file() const { return tag_ == Tag::kFile; }
+  bool is_file() const { return ordinal_ == Ordinal::kFile; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithFile(::llcpp::fuchsia::io::FileObject&& val) {
@@ -787,7 +786,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::FileObject const & file() const { return file_; }
 
-  bool is_directory() const { return tag_ == Tag::kDirectory; }
+  bool is_directory() const { return ordinal_ == Ordinal::kDirectory; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithDirectory(::llcpp::fuchsia::io::DirectoryObject&& val) {
@@ -831,7 +830,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::DirectoryObject const & directory() const { return directory_; }
 
-  bool is_pipe() const { return tag_ == Tag::kPipe; }
+  bool is_pipe() const { return ordinal_ == Ordinal::kPipe; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithPipe(::llcpp::fuchsia::io::Pipe&& val) {
@@ -875,7 +874,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Pipe const & pipe() const { return pipe_; }
 
-  bool is_vmofile() const { return tag_ == Tag::kVmofile; }
+  bool is_vmofile() const { return ordinal_ == Ordinal::kVmofile; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithVmofile(::llcpp::fuchsia::io::Vmofile&& val) {
@@ -919,7 +918,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Vmofile const & vmofile() const { return vmofile_; }
 
-  bool is_device() const { return tag_ == Tag::kDevice; }
+  bool is_device() const { return ordinal_ == Ordinal::kDevice; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithDevice(::llcpp::fuchsia::io::Device&& val) {
@@ -963,7 +962,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Device const & device() const { return device_; }
 
-  bool is_tty() const { return tag_ == Tag::kTty; }
+  bool is_tty() const { return ordinal_ == Ordinal::kTty; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithTty(::llcpp::fuchsia::io::Tty&& val) {
@@ -1007,7 +1006,7 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Tty const & tty() const { return tty_; }
 
-  bool is_socket() const { return tag_ == Tag::kSocket; }
+  bool is_socket() const { return ordinal_ == Ordinal::kSocket; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NodeInfo WithSocket(::llcpp::fuchsia::io::Socket&& val) {
@@ -1051,7 +1050,10 @@ struct NodeInfo {
 
   ::llcpp::fuchsia::io::Socket const & socket() const { return socket_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_io_NodeInfoTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_io_NodeInfoTable;
@@ -1064,10 +1066,22 @@ struct NodeInfo {
   static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kService = 0,
+    kFile = 1,
+    kDirectory = 2,
+    kPipe = 3,
+    kVmofile = 4,
+    kDevice = 5,
+    kTty = 6,
+    kSocket = 7,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NodeInfo&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::io::Service service_;
     ::llcpp::fuchsia::io::FileObject file_;

@@ -167,7 +167,7 @@ void Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(const ::f
 }
 
 ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::NameLookup_LookupHostname_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::~NameLookup_LookupHostname_Result() {
@@ -175,25 +175,25 @@ void Connectivity::SetTransactionHeaderFor::OnNetworkReachableResponse(const ::f
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~NameLookup_LookupHostname_Response();
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     err_.~LookupError();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::MoveImpl_(NameLookup_LookupHostname_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -210,26 +210,26 @@ void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::SizeAndOffsetAsser
 
 
 ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response& ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 ::llcpp::fuchsia::net::LookupError& ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) ::llcpp::fuchsia::net::LookupError;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::NameLookup_LookupIp_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::~NameLookup_LookupIp_Result() {
@@ -237,25 +237,25 @@ void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::SizeAndOffsetAsser
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~NameLookup_LookupIp_Response();
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     err_.~LookupError();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::MoveImpl_(NameLookup_LookupIp_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -272,26 +272,26 @@ void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::SizeAndOffsetAssertionHe
 
 
 ::llcpp::fuchsia::net::NameLookup_LookupIp_Response& ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupIp_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 ::llcpp::fuchsia::net::LookupError& ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) ::llcpp::fuchsia::net::LookupError;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::net::IpAddress::IpAddress() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::net::IpAddress::~IpAddress() {
@@ -299,25 +299,25 @@ void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::SizeAndOffsetAssertionHe
 }
 
 void ::llcpp::fuchsia::net::IpAddress::Destroy() {
-  switch (which()) {
-  case Tag::kIpv4:
+  switch (ordinal_) {
+  case Ordinal::kIpv4:
     ipv4_.~Ipv4Address();
     break;
-  case Tag::kIpv6:
+  case Ordinal::kIpv6:
     ipv6_.~Ipv6Address();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::net::IpAddress::MoveImpl_(IpAddress&& other) {
-  switch (other.which()) {
-  case Tag::kIpv4:
+  switch (other.ordinal_) {
+  case Ordinal::kIpv4:
     mutable_ipv4() = std::move(other.mutable_ipv4());
     break;
-  case Tag::kIpv6:
+  case Ordinal::kIpv6:
     mutable_ipv6() = std::move(other.mutable_ipv6());
     break;
   default:
@@ -334,20 +334,20 @@ void ::llcpp::fuchsia::net::IpAddress::SizeAndOffsetAssertionHelper() {
 
 
 ::llcpp::fuchsia::net::Ipv4Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv4() {
-  if (which() != Tag::kIpv4) {
+  if (ordinal_ != Ordinal::kIpv4) {
     Destroy();
     new (&ipv4_) ::llcpp::fuchsia::net::Ipv4Address;
   }
-  tag_ = Tag::kIpv4;
+  ordinal_ = Ordinal::kIpv4;
   return ipv4_;
 }
 
 ::llcpp::fuchsia::net::Ipv6Address& ::llcpp::fuchsia::net::IpAddress::mutable_ipv6() {
-  if (which() != Tag::kIpv6) {
+  if (ordinal_ != Ordinal::kIpv6) {
     Destroy();
     new (&ipv6_) ::llcpp::fuchsia::net::Ipv6Address;
   }
-  tag_ = Tag::kIpv6;
+  ordinal_ = Ordinal::kIpv6;
   return ipv6_;
 }
 

@@ -67,14 +67,13 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   WithErrorSyntax_ResponseAsStruct_Result();
   ~WithErrorSyntax_ResponseAsStruct_Result();
 
   WithErrorSyntax_ResponseAsStruct_Result(WithErrorSyntax_ResponseAsStruct_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -87,9 +86,9 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ResponseAsStruct_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response&& val) {
@@ -133,7 +132,7 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ResponseAsStruct_Result WithErr(uint32_t&& val) {
@@ -177,7 +176,10 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
 
   uint32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ResponseAsStruct_ResultTable;
@@ -190,10 +192,16 @@ struct WithErrorSyntax_ResponseAsStruct_Result {
   static constexpr uint32_t AltMaxOutOfLine = 24;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(WithErrorSyntax_ResponseAsStruct_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response response_;
     uint32_t err_;
@@ -224,14 +232,13 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   WithErrorSyntax_ErrorAsPrimitive_Result();
   ~WithErrorSyntax_ErrorAsPrimitive_Result();
 
   WithErrorSyntax_ErrorAsPrimitive_Result(WithErrorSyntax_ErrorAsPrimitive_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -244,9 +251,9 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ErrorAsPrimitive_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response&& val) {
@@ -290,7 +297,7 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ErrorAsPrimitive_Result WithErr(uint32_t&& val) {
@@ -334,7 +341,10 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
 
   uint32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsPrimitive_ResultTable;
@@ -347,10 +357,16 @@ struct WithErrorSyntax_ErrorAsPrimitive_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(WithErrorSyntax_ErrorAsPrimitive_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response response_;
     uint32_t err_;
@@ -1392,14 +1408,13 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   WithErrorSyntax_ErrorAsEnum_Result();
   ~WithErrorSyntax_ErrorAsEnum_Result();
 
   WithErrorSyntax_ErrorAsEnum_Result(WithErrorSyntax_ErrorAsEnum_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1412,9 +1427,9 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ErrorAsEnum_Result WithResponse(::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response&& val) {
@@ -1458,7 +1473,7 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static WithErrorSyntax_ErrorAsEnum_Result WithErr(::llcpp::test::name::ErrorEnun&& val) {
@@ -1502,7 +1517,10 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
 
   ::llcpp::test::name::ErrorEnun const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_WithErrorSyntax_ErrorAsEnum_ResultTable;
@@ -1515,10 +1533,16 @@ struct WithErrorSyntax_ErrorAsEnum_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(WithErrorSyntax_ErrorAsEnum_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response response_;
     ::llcpp::test::name::ErrorEnun err_;

@@ -1293,14 +1293,13 @@ struct Coordinator_AddDevice_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_AddDevice_Result();
   ~Coordinator_AddDevice_Result();
 
   Coordinator_AddDevice_Result(Coordinator_AddDevice_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1313,9 +1312,9 @@ struct Coordinator_AddDevice_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response&& val) {
@@ -1359,7 +1358,7 @@ struct Coordinator_AddDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddDevice_Result WithErr(int32_t&& val) {
@@ -1403,7 +1402,10 @@ struct Coordinator_AddDevice_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDevice_ResultTable;
@@ -1416,10 +1418,16 @@ struct Coordinator_AddDevice_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_AddDevice_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response response_;
     int32_t err_;
@@ -1450,14 +1458,13 @@ struct Coordinator_AddDeviceInvisible_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_AddDeviceInvisible_Result();
   ~Coordinator_AddDeviceInvisible_Result();
 
   Coordinator_AddDeviceInvisible_Result(Coordinator_AddDeviceInvisible_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1470,9 +1477,9 @@ struct Coordinator_AddDeviceInvisible_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddDeviceInvisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response&& val) {
@@ -1516,7 +1523,7 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddDeviceInvisible_Result WithErr(int32_t&& val) {
@@ -1560,7 +1567,10 @@ struct Coordinator_AddDeviceInvisible_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddDeviceInvisible_ResultTable;
@@ -1573,10 +1583,16 @@ struct Coordinator_AddDeviceInvisible_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_AddDeviceInvisible_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response response_;
     int32_t err_;
@@ -1627,14 +1643,13 @@ struct DeviceController_Unbind_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   DeviceController_Unbind_Result();
   ~DeviceController_Unbind_Result();
 
   DeviceController_Unbind_Result(DeviceController_Unbind_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1647,9 +1662,9 @@ struct DeviceController_Unbind_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static DeviceController_Unbind_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response&& val) {
@@ -1693,7 +1708,7 @@ struct DeviceController_Unbind_Result {
 
   ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static DeviceController_Unbind_Result WithErr(int32_t&& val) {
@@ -1737,7 +1752,10 @@ struct DeviceController_Unbind_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_Unbind_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_Unbind_ResultTable;
@@ -1750,10 +1768,16 @@ struct DeviceController_Unbind_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(DeviceController_Unbind_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response_;
     int32_t err_;
@@ -1784,14 +1808,13 @@ struct DeviceController_CompleteRemoval_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   DeviceController_CompleteRemoval_Result();
   ~DeviceController_CompleteRemoval_Result();
 
   DeviceController_CompleteRemoval_Result(DeviceController_CompleteRemoval_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1804,9 +1827,9 @@ struct DeviceController_CompleteRemoval_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static DeviceController_CompleteRemoval_Result WithResponse(::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response&& val) {
@@ -1850,7 +1873,7 @@ struct DeviceController_CompleteRemoval_Result {
 
   ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static DeviceController_CompleteRemoval_Result WithErr(int32_t&& val) {
@@ -1894,7 +1917,10 @@ struct DeviceController_CompleteRemoval_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceController_CompleteRemoval_ResultTable;
@@ -1907,10 +1933,16 @@ struct DeviceController_CompleteRemoval_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(DeviceController_CompleteRemoval_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response response_;
     int32_t err_;
@@ -1956,14 +1988,13 @@ struct Coordinator_RunCompatibilityTests_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_RunCompatibilityTests_Result();
   ~Coordinator_RunCompatibilityTests_Result();
 
   Coordinator_RunCompatibilityTests_Result(Coordinator_RunCompatibilityTests_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1976,9 +2007,9 @@ struct Coordinator_RunCompatibilityTests_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_RunCompatibilityTests_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response&& val) {
@@ -2022,7 +2053,7 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_RunCompatibilityTests_Result WithErr(int32_t&& val) {
@@ -2066,7 +2097,10 @@ struct Coordinator_RunCompatibilityTests_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_RunCompatibilityTests_ResultTable;
@@ -2079,10 +2113,16 @@ struct Coordinator_RunCompatibilityTests_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_RunCompatibilityTests_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response response_;
     int32_t err_;
@@ -2113,14 +2153,13 @@ struct Coordinator_PublishMetadata_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_PublishMetadata_Result();
   ~Coordinator_PublishMetadata_Result();
 
   Coordinator_PublishMetadata_Result(Coordinator_PublishMetadata_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2133,9 +2172,9 @@ struct Coordinator_PublishMetadata_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_PublishMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response&& val) {
@@ -2179,7 +2218,7 @@ struct Coordinator_PublishMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_PublishMetadata_Result WithErr(int32_t&& val) {
@@ -2223,7 +2262,10 @@ struct Coordinator_PublishMetadata_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_PublishMetadata_ResultTable;
@@ -2236,10 +2278,16 @@ struct Coordinator_PublishMetadata_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_PublishMetadata_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response response_;
     int32_t err_;
@@ -2270,14 +2318,13 @@ struct Coordinator_MakeVisible_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_MakeVisible_Result();
   ~Coordinator_MakeVisible_Result();
 
   Coordinator_MakeVisible_Result(Coordinator_MakeVisible_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2290,9 +2337,9 @@ struct Coordinator_MakeVisible_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_MakeVisible_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response&& val) {
@@ -2336,7 +2383,7 @@ struct Coordinator_MakeVisible_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_MakeVisible_Result WithErr(int32_t&& val) {
@@ -2380,7 +2427,10 @@ struct Coordinator_MakeVisible_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_MakeVisible_ResultTable;
@@ -2393,10 +2443,16 @@ struct Coordinator_MakeVisible_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_MakeVisible_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response response_;
     int32_t err_;
@@ -2429,14 +2485,13 @@ struct Coordinator_LoadFirmware_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_LoadFirmware_Result();
   ~Coordinator_LoadFirmware_Result();
 
   Coordinator_LoadFirmware_Result(Coordinator_LoadFirmware_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2449,9 +2504,9 @@ struct Coordinator_LoadFirmware_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_LoadFirmware_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response&& val) {
@@ -2495,7 +2550,7 @@ struct Coordinator_LoadFirmware_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_LoadFirmware_Result WithErr(int32_t&& val) {
@@ -2539,7 +2594,10 @@ struct Coordinator_LoadFirmware_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_LoadFirmware_ResultTable;
@@ -2552,10 +2610,16 @@ struct Coordinator_LoadFirmware_Result {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_LoadFirmware_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response response_;
     int32_t err_;
@@ -2586,14 +2650,13 @@ struct Coordinator_GetTopologicalPath_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_GetTopologicalPath_Result();
   ~Coordinator_GetTopologicalPath_Result();
 
   Coordinator_GetTopologicalPath_Result(Coordinator_GetTopologicalPath_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2606,9 +2669,9 @@ struct Coordinator_GetTopologicalPath_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response&& val) {
@@ -2652,7 +2715,7 @@ struct Coordinator_GetTopologicalPath_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetTopologicalPath_Result WithErr(int32_t&& val) {
@@ -2696,7 +2759,10 @@ struct Coordinator_GetTopologicalPath_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetTopologicalPath_ResultTable;
@@ -2709,10 +2775,16 @@ struct Coordinator_GetTopologicalPath_Result {
   static constexpr uint32_t AltMaxOutOfLine = 1040;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_GetTopologicalPath_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response response_;
     int32_t err_;
@@ -2743,14 +2815,13 @@ struct Coordinator_GetMetadata_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_GetMetadata_Result();
   ~Coordinator_GetMetadata_Result();
 
   Coordinator_GetMetadata_Result(Coordinator_GetMetadata_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2763,9 +2834,9 @@ struct Coordinator_GetMetadata_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response&& val) {
@@ -2809,7 +2880,7 @@ struct Coordinator_GetMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetMetadata_Result WithErr(int32_t&& val) {
@@ -2853,7 +2924,10 @@ struct Coordinator_GetMetadata_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadata_ResultTable;
@@ -2866,10 +2940,16 @@ struct Coordinator_GetMetadata_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8208;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_GetMetadata_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response response_;
     int32_t err_;
@@ -2900,14 +2980,13 @@ struct Coordinator_GetMetadataSize_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_GetMetadataSize_Result();
   ~Coordinator_GetMetadataSize_Result();
 
   Coordinator_GetMetadataSize_Result(Coordinator_GetMetadataSize_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -2920,9 +2999,9 @@ struct Coordinator_GetMetadataSize_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetMetadataSize_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response&& val) {
@@ -2966,7 +3045,7 @@ struct Coordinator_GetMetadataSize_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_GetMetadataSize_Result WithErr(int32_t&& val) {
@@ -3010,7 +3089,10 @@ struct Coordinator_GetMetadataSize_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_GetMetadataSize_ResultTable;
@@ -3023,10 +3105,16 @@ struct Coordinator_GetMetadataSize_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_GetMetadataSize_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response response_;
     int32_t err_;
@@ -3057,14 +3145,13 @@ struct Coordinator_DirectoryWatch_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_DirectoryWatch_Result();
   ~Coordinator_DirectoryWatch_Result();
 
   Coordinator_DirectoryWatch_Result(Coordinator_DirectoryWatch_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -3077,9 +3164,9 @@ struct Coordinator_DirectoryWatch_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_DirectoryWatch_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response&& val) {
@@ -3123,7 +3210,7 @@ struct Coordinator_DirectoryWatch_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_DirectoryWatch_Result WithErr(int32_t&& val) {
@@ -3167,7 +3254,10 @@ struct Coordinator_DirectoryWatch_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_DirectoryWatch_ResultTable;
@@ -3180,10 +3270,16 @@ struct Coordinator_DirectoryWatch_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_DirectoryWatch_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response response_;
     int32_t err_;
@@ -3214,14 +3310,13 @@ struct Coordinator_BindDevice_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_BindDevice_Result();
   ~Coordinator_BindDevice_Result();
 
   Coordinator_BindDevice_Result(Coordinator_BindDevice_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -3234,9 +3329,9 @@ struct Coordinator_BindDevice_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_BindDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response&& val) {
@@ -3280,7 +3375,7 @@ struct Coordinator_BindDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_BindDevice_Result WithErr(int32_t&& val) {
@@ -3324,7 +3419,10 @@ struct Coordinator_BindDevice_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_BindDevice_ResultTable;
@@ -3337,10 +3435,16 @@ struct Coordinator_BindDevice_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_BindDevice_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response response_;
     int32_t err_;
@@ -3371,14 +3475,13 @@ struct Coordinator_AddMetadata_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_AddMetadata_Result();
   ~Coordinator_AddMetadata_Result();
 
   Coordinator_AddMetadata_Result(Coordinator_AddMetadata_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -3391,9 +3494,9 @@ struct Coordinator_AddMetadata_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddMetadata_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response&& val) {
@@ -3437,7 +3540,7 @@ struct Coordinator_AddMetadata_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddMetadata_Result WithErr(int32_t&& val) {
@@ -3481,7 +3584,10 @@ struct Coordinator_AddMetadata_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddMetadata_ResultTable;
@@ -3494,10 +3600,16 @@ struct Coordinator_AddMetadata_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_AddMetadata_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response response_;
     int32_t err_;
@@ -3528,14 +3640,13 @@ struct Coordinator_AddCompositeDevice_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Coordinator_AddCompositeDevice_Result();
   ~Coordinator_AddCompositeDevice_Result();
 
   Coordinator_AddCompositeDevice_Result(Coordinator_AddCompositeDevice_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -3548,9 +3659,9 @@ struct Coordinator_AddCompositeDevice_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddCompositeDevice_Result WithResponse(::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response&& val) {
@@ -3594,7 +3705,7 @@ struct Coordinator_AddCompositeDevice_Result {
 
   ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Coordinator_AddCompositeDevice_Result WithErr(int32_t&& val) {
@@ -3638,7 +3749,10 @@ struct Coordinator_AddCompositeDevice_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_Coordinator_AddCompositeDevice_ResultTable;
@@ -3651,10 +3765,16 @@ struct Coordinator_AddCompositeDevice_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Coordinator_AddCompositeDevice_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response response_;
     int32_t err_;

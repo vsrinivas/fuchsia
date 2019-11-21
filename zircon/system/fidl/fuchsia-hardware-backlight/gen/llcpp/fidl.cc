@@ -10,7 +10,7 @@ namespace hardware {
 namespace backlight {
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Device_GetStateNormalized_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::~Device_GetStateNormalized_Result() {
@@ -18,22 +18,22 @@ namespace backlight {
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_GetStateNormalized_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::MoveImpl_(Device_GetStateNormalized_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -50,26 +50,26 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Si
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Device_GetStateAbsolute_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::~Device_GetStateAbsolute_Result() {
@@ -77,22 +77,22 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_GetStateAbsolute_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::MoveImpl_(Device_GetStateAbsolute_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -109,26 +109,26 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Size
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Device_SetStateNormalized_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::~Device_SetStateNormalized_Result() {
@@ -136,22 +136,22 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_SetStateNormalized_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::MoveImpl_(Device_SetStateNormalized_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -168,26 +168,26 @@ void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Si
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Device_SetStateAbsolute_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::~Device_SetStateAbsolute_Result() {
@@ -195,22 +195,22 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_SetStateAbsolute_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::MoveImpl_(Device_SetStateAbsolute_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -227,26 +227,26 @@ void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Size
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Device_GetMaxAbsoluteBrightness_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::~Device_GetMaxAbsoluteBrightness_Result() {
@@ -254,22 +254,22 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Device_GetMaxAbsoluteBrightness_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -286,20 +286,20 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Resu
 
 
 ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

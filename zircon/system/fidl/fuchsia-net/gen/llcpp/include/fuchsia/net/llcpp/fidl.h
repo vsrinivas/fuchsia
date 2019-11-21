@@ -299,14 +299,13 @@ struct NameLookup_LookupHostname_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NameLookup_LookupHostname_Result();
   ~NameLookup_LookupHostname_Result();
 
   NameLookup_LookupHostname_Result(NameLookup_LookupHostname_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -319,9 +318,9 @@ struct NameLookup_LookupHostname_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameLookup_LookupHostname_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupHostname_Response&& val) {
@@ -365,7 +364,7 @@ struct NameLookup_LookupHostname_Result {
 
   ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameLookup_LookupHostname_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
@@ -409,7 +408,10 @@ struct NameLookup_LookupHostname_Result {
 
   ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupHostname_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupHostname_ResultTable;
@@ -422,10 +424,16 @@ struct NameLookup_LookupHostname_Result {
   static constexpr uint32_t AltMaxOutOfLine = 272;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NameLookup_LookupHostname_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response response_;
     ::llcpp::fuchsia::net::LookupError err_;
@@ -518,14 +526,13 @@ struct NameLookup_LookupIp_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NameLookup_LookupIp_Result();
   ~NameLookup_LookupIp_Result();
 
   NameLookup_LookupIp_Result(NameLookup_LookupIp_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -538,9 +545,9 @@ struct NameLookup_LookupIp_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameLookup_LookupIp_Result WithResponse(::llcpp::fuchsia::net::NameLookup_LookupIp_Response&& val) {
@@ -584,7 +591,7 @@ struct NameLookup_LookupIp_Result {
 
   ::llcpp::fuchsia::net::NameLookup_LookupIp_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameLookup_LookupIp_Result WithErr(::llcpp::fuchsia::net::LookupError&& val) {
@@ -628,7 +635,10 @@ struct NameLookup_LookupIp_Result {
 
   ::llcpp::fuchsia::net::LookupError const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_net_NameLookup_LookupIp_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_NameLookup_LookupIp_ResultTable;
@@ -641,10 +651,16 @@ struct NameLookup_LookupIp_Result {
   static constexpr uint32_t AltMaxOutOfLine = 5424;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NameLookup_LookupIp_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::net::NameLookup_LookupIp_Response response_;
     ::llcpp::fuchsia::net::LookupError err_;
@@ -659,14 +675,13 @@ struct IpAddress {
   enum class Tag : fidl_union_tag_t {
     kIpv4 = 0,
     kIpv6 = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   IpAddress();
   ~IpAddress();
 
   IpAddress(IpAddress&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -679,9 +694,9 @@ struct IpAddress {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_ipv4() const { return tag_ == Tag::kIpv4; }
+  bool is_ipv4() const { return ordinal_ == Ordinal::kIpv4; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static IpAddress WithIpv4(::llcpp::fuchsia::net::Ipv4Address&& val) {
@@ -725,7 +740,7 @@ struct IpAddress {
 
   ::llcpp::fuchsia::net::Ipv4Address const & ipv4() const { return ipv4_; }
 
-  bool is_ipv6() const { return tag_ == Tag::kIpv6; }
+  bool is_ipv6() const { return ordinal_ == Ordinal::kIpv6; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static IpAddress WithIpv6(::llcpp::fuchsia::net::Ipv6Address&& val) {
@@ -769,7 +784,10 @@ struct IpAddress {
 
   ::llcpp::fuchsia::net::Ipv6Address const & ipv6() const { return ipv6_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_net_IpAddressTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_net_IpAddressTable;
@@ -782,10 +800,16 @@ struct IpAddress {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kIpv4 = 0,
+    kIpv6 = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(IpAddress&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::net::Ipv4Address ipv4_;
     ::llcpp::fuchsia::net::Ipv6Address ipv6_;

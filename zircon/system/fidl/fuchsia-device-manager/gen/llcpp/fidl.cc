@@ -962,7 +962,7 @@ void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(c
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Coordinator_AddDevice_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::~Coordinator_AddDevice_Result() {
@@ -970,22 +970,22 @@ void DevhostController::SetTransactionHeaderFor::CreateCompositeDeviceResponse(c
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_AddDevice_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::MoveImpl_(Coordinator_AddDevice_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1002,26 +1002,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::SizeAndOff
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Coordinator_AddDeviceInvisible_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::~Coordinator_AddDeviceInvisible_Result() {
@@ -1029,22 +1029,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutabl
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_AddDeviceInvisible_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::MoveImpl_(Coordinator_AddDeviceInvisible_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1061,26 +1061,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::S
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::DeviceController_Unbind_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::~DeviceController_Unbind_Result() {
@@ -1088,22 +1088,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Resul
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~DeviceController_Unbind_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::MoveImpl_(DeviceController_Unbind_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1120,26 +1120,26 @@ void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::SizeAndO
 
 
 ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::DeviceController_CompleteRemoval_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::~DeviceController_CompleteRemoval_Result() {
@@ -1147,22 +1147,22 @@ int32_t& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::muta
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~DeviceController_CompleteRemoval_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::MoveImpl_(DeviceController_CompleteRemoval_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1179,26 +1179,26 @@ void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result:
 
 
 ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Coordinator_RunCompatibilityTests_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::~Coordinator_RunCompatibilityTests_Result() {
@@ -1206,22 +1206,22 @@ int32_t& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Res
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_RunCompatibilityTests_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::MoveImpl_(Coordinator_RunCompatibilityTests_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1238,26 +1238,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Coordinator_PublishMetadata_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::~Coordinator_PublishMetadata_Result() {
@@ -1265,22 +1265,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Re
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_PublishMetadata_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::MoveImpl_(Coordinator_PublishMetadata_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1297,26 +1297,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Size
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Coordinator_MakeVisible_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::~Coordinator_MakeVisible_Result() {
@@ -1324,22 +1324,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_MakeVisible_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::MoveImpl_(Coordinator_MakeVisible_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1356,26 +1356,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::SizeAndO
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Coordinator_LoadFirmware_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::~Coordinator_LoadFirmware_Result() {
@@ -1383,22 +1383,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::muta
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_LoadFirmware_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::MoveImpl_(Coordinator_LoadFirmware_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1415,26 +1415,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::SizeAnd
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Coordinator_GetTopologicalPath_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::~Coordinator_GetTopologicalPath_Result() {
@@ -1442,22 +1442,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mut
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_GetTopologicalPath_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::MoveImpl_(Coordinator_GetTopologicalPath_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1474,26 +1474,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::S
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Coordinator_GetMetadata_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::~Coordinator_GetMetadata_Result() {
@@ -1501,22 +1501,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Resul
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_GetMetadata_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::MoveImpl_(Coordinator_GetMetadata_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1533,26 +1533,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::SizeAndO
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Coordinator_GetMetadataSize_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::~Coordinator_GetMetadataSize_Result() {
@@ -1560,22 +1560,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::muta
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_GetMetadataSize_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::MoveImpl_(Coordinator_GetMetadataSize_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1592,26 +1592,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Size
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Coordinator_DirectoryWatch_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::~Coordinator_DirectoryWatch_Result() {
@@ -1619,22 +1619,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_DirectoryWatch_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::MoveImpl_(Coordinator_DirectoryWatch_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1651,26 +1651,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::SizeA
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Coordinator_BindDevice_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::~Coordinator_BindDevice_Result() {
@@ -1678,22 +1678,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::m
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_BindDevice_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::MoveImpl_(Coordinator_BindDevice_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1710,26 +1710,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::SizeAndOf
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Coordinator_AddMetadata_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::~Coordinator_AddMetadata_Result() {
@@ -1737,22 +1737,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutab
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_AddMetadata_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::MoveImpl_(Coordinator_AddMetadata_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1769,26 +1769,26 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::SizeAndO
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Coordinator_AddCompositeDevice_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::~Coordinator_AddCompositeDevice_Result() {
@@ -1796,22 +1796,22 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::muta
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Coordinator_AddCompositeDevice_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::MoveImpl_(Coordinator_AddCompositeDevice_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1828,20 +1828,20 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::S
 
 
 ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

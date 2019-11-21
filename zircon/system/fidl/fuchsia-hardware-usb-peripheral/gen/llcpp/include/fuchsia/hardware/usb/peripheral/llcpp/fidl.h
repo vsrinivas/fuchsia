@@ -290,14 +290,13 @@ struct Device_SetConfiguration_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_SetConfiguration_Result();
   ~Device_SetConfiguration_Result();
 
   Device_SetConfiguration_Result(Device_SetConfiguration_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -310,9 +309,9 @@ struct Device_SetConfiguration_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetConfiguration_Result WithResponse(::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response&& val) {
@@ -356,7 +355,7 @@ struct Device_SetConfiguration_Result {
 
   ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetConfiguration_Result WithErr(int32_t&& val) {
@@ -400,7 +399,10 @@ struct Device_SetConfiguration_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_usb_peripheral_Device_SetConfiguration_ResultTable;
@@ -413,10 +415,16 @@ struct Device_SetConfiguration_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_SetConfiguration_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response response_;
     int32_t err_;

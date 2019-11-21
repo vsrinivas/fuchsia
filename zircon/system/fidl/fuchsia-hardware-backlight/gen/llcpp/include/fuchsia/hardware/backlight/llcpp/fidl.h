@@ -86,14 +86,13 @@ struct Device_GetStateNormalized_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_GetStateNormalized_Result();
   ~Device_GetStateNormalized_Result();
 
   Device_GetStateNormalized_Result(Device_GetStateNormalized_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -106,9 +105,9 @@ struct Device_GetStateNormalized_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response&& val) {
@@ -152,7 +151,7 @@ struct Device_GetStateNormalized_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetStateNormalized_Result WithErr(int32_t&& val) {
@@ -196,7 +195,10 @@ struct Device_GetStateNormalized_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateNormalized_ResultTable;
@@ -209,10 +211,16 @@ struct Device_GetStateNormalized_Result {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_GetStateNormalized_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response response_;
     int32_t err_;
@@ -243,14 +251,13 @@ struct Device_GetStateAbsolute_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_GetStateAbsolute_Result();
   ~Device_GetStateAbsolute_Result();
 
   Device_GetStateAbsolute_Result(Device_GetStateAbsolute_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -263,9 +270,9 @@ struct Device_GetStateAbsolute_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response&& val) {
@@ -309,7 +316,7 @@ struct Device_GetStateAbsolute_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetStateAbsolute_Result WithErr(int32_t&& val) {
@@ -353,7 +360,10 @@ struct Device_GetStateAbsolute_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetStateAbsolute_ResultTable;
@@ -366,10 +376,16 @@ struct Device_GetStateAbsolute_Result {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_GetStateAbsolute_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response response_;
     int32_t err_;
@@ -400,14 +416,13 @@ struct Device_SetStateNormalized_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_SetStateNormalized_Result();
   ~Device_SetStateNormalized_Result();
 
   Device_SetStateNormalized_Result(Device_SetStateNormalized_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -420,9 +435,9 @@ struct Device_SetStateNormalized_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetStateNormalized_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response&& val) {
@@ -466,7 +481,7 @@ struct Device_SetStateNormalized_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetStateNormalized_Result WithErr(int32_t&& val) {
@@ -510,7 +525,10 @@ struct Device_SetStateNormalized_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateNormalized_ResultTable;
@@ -523,10 +541,16 @@ struct Device_SetStateNormalized_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_SetStateNormalized_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response response_;
     int32_t err_;
@@ -557,14 +581,13 @@ struct Device_SetStateAbsolute_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_SetStateAbsolute_Result();
   ~Device_SetStateAbsolute_Result();
 
   Device_SetStateAbsolute_Result(Device_SetStateAbsolute_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -577,9 +600,9 @@ struct Device_SetStateAbsolute_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetStateAbsolute_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response&& val) {
@@ -623,7 +646,7 @@ struct Device_SetStateAbsolute_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_SetStateAbsolute_Result WithErr(int32_t&& val) {
@@ -667,7 +690,10 @@ struct Device_SetStateAbsolute_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_SetStateAbsolute_ResultTable;
@@ -680,10 +706,16 @@ struct Device_SetStateAbsolute_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_SetStateAbsolute_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response response_;
     int32_t err_;
@@ -714,14 +746,13 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Device_GetMaxAbsoluteBrightness_Result();
   ~Device_GetMaxAbsoluteBrightness_Result();
 
   Device_GetMaxAbsoluteBrightness_Result(Device_GetMaxAbsoluteBrightness_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -734,9 +765,9 @@ struct Device_GetMaxAbsoluteBrightness_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetMaxAbsoluteBrightness_Result WithResponse(::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response&& val) {
@@ -780,7 +811,7 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Device_GetMaxAbsoluteBrightness_Result WithErr(int32_t&& val) {
@@ -824,7 +855,10 @@ struct Device_GetMaxAbsoluteBrightness_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_backlight_Device_GetMaxAbsoluteBrightness_ResultTable;
@@ -837,10 +871,16 @@ struct Device_GetMaxAbsoluteBrightness_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Device_GetMaxAbsoluteBrightness_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response response_;
     int32_t err_;

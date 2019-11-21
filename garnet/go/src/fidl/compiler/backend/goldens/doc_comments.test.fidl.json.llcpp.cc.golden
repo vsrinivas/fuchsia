@@ -9,7 +9,7 @@ namespace test {
 namespace name {
 
 ::llcpp::test::name::Union::Union() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::test::name::Union::~Union() {
@@ -17,16 +17,16 @@ namespace name {
 }
 
 void ::llcpp::test::name::Union::Destroy() {
-  switch (which()) {
+  switch (ordinal_) {
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::test::name::Union::MoveImpl_(Union&& other) {
-  switch (other.which()) {
-  case Tag::kField:
+  switch (other.ordinal_) {
+  case Ordinal::kField:
     mutable_Field() = std::move(other.mutable_Field());
     break;
   default:
@@ -42,11 +42,11 @@ void ::llcpp::test::name::Union::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::test::name::Union::mutable_Field() {
-  if (which() != Tag::kField) {
+  if (ordinal_ != Ordinal::kField) {
     Destroy();
     new (&Field_) int32_t;
   }
-  tag_ = Tag::kField;
+  ordinal_ = Ordinal::kField;
   return Field_;
 }
 

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/fidl_llcpp_types_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

@@ -1092,7 +1092,7 @@ void Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(const ::fid
 }
 
 ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SecureMem_SetPhysicalSecureHeaps_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::~SecureMem_SetPhysicalSecureHeaps_Result() {
@@ -1100,22 +1100,22 @@ void Allocator::SetTransactionHeaderFor::BindSharedCollectionRequest(const ::fid
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~SecureMem_SetPhysicalSecureHeaps_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_SetPhysicalSecureHeaps_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1132,26 +1132,26 @@ void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SizeAndO
 
 
 ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SecureMem_GetPhysicalSecureHeaps_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::~SecureMem_GetPhysicalSecureHeaps_Result() {
@@ -1159,22 +1159,22 @@ int32_t& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::muta
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~SecureMem_GetPhysicalSecureHeaps_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::MoveImpl_(SecureMem_GetPhysicalSecureHeaps_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1191,20 +1191,20 @@ void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SizeAndO
 
 
 ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

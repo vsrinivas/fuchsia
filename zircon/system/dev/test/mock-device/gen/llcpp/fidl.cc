@@ -10,7 +10,7 @@ namespace device {
 namespace mock {
 
 ::llcpp::fuchsia::device::mock::Action::Action() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::mock::Action::~Action() {
@@ -18,40 +18,40 @@ namespace mock {
 }
 
 void ::llcpp::fuchsia::device::mock::Action::Destroy() {
-  switch (which()) {
-  case Tag::kCreateThread:
+  switch (ordinal_) {
+  case Ordinal::kCreateThread:
     create_thread_.~channel();
     break;
-  case Tag::kUnbindReply:
+  case Ordinal::kUnbindReply:
     unbind_reply_.~UnbindReplyAction();
     break;
-  case Tag::kAddDevice:
+  case Ordinal::kAddDevice:
     add_device_.~AddDeviceAction();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::mock::Action::MoveImpl_(Action&& other) {
-  switch (other.which()) {
-  case Tag::kReturnStatus:
+  switch (other.ordinal_) {
+  case Ordinal::kReturnStatus:
     mutable_return_status() = std::move(other.mutable_return_status());
     break;
-  case Tag::kWrite:
+  case Ordinal::kWrite:
     mutable_write() = std::move(other.mutable_write());
     break;
-  case Tag::kCreateThread:
+  case Ordinal::kCreateThread:
     mutable_create_thread() = std::move(other.mutable_create_thread());
     break;
-  case Tag::kAsyncRemoveDevice:
+  case Ordinal::kAsyncRemoveDevice:
     mutable_async_remove_device() = std::move(other.mutable_async_remove_device());
     break;
-  case Tag::kUnbindReply:
+  case Ordinal::kUnbindReply:
     mutable_unbind_reply() = std::move(other.mutable_unbind_reply());
     break;
-  case Tag::kAddDevice:
+  case Ordinal::kAddDevice:
     mutable_add_device() = std::move(other.mutable_add_device());
     break;
   default:
@@ -72,56 +72,56 @@ void ::llcpp::fuchsia::device::mock::Action::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::fuchsia::device::mock::Action::mutable_return_status() {
-  if (which() != Tag::kReturnStatus) {
+  if (ordinal_ != Ordinal::kReturnStatus) {
     Destroy();
     new (&return_status_) int32_t;
   }
-  tag_ = Tag::kReturnStatus;
+  ordinal_ = Ordinal::kReturnStatus;
   return return_status_;
 }
 
 ::fidl::VectorView<uint8_t>& ::llcpp::fuchsia::device::mock::Action::mutable_write() {
-  if (which() != Tag::kWrite) {
+  if (ordinal_ != Ordinal::kWrite) {
     Destroy();
     new (&write_) ::fidl::VectorView<uint8_t>;
   }
-  tag_ = Tag::kWrite;
+  ordinal_ = Ordinal::kWrite;
   return write_;
 }
 
 ::zx::channel& ::llcpp::fuchsia::device::mock::Action::mutable_create_thread() {
-  if (which() != Tag::kCreateThread) {
+  if (ordinal_ != Ordinal::kCreateThread) {
     Destroy();
     new (&create_thread_) ::zx::channel;
   }
-  tag_ = Tag::kCreateThread;
+  ordinal_ = Ordinal::kCreateThread;
   return create_thread_;
 }
 
 bool& ::llcpp::fuchsia::device::mock::Action::mutable_async_remove_device() {
-  if (which() != Tag::kAsyncRemoveDevice) {
+  if (ordinal_ != Ordinal::kAsyncRemoveDevice) {
     Destroy();
     new (&async_remove_device_) bool;
   }
-  tag_ = Tag::kAsyncRemoveDevice;
+  ordinal_ = Ordinal::kAsyncRemoveDevice;
   return async_remove_device_;
 }
 
 ::llcpp::fuchsia::device::mock::UnbindReplyAction& ::llcpp::fuchsia::device::mock::Action::mutable_unbind_reply() {
-  if (which() != Tag::kUnbindReply) {
+  if (ordinal_ != Ordinal::kUnbindReply) {
     Destroy();
     new (&unbind_reply_) ::llcpp::fuchsia::device::mock::UnbindReplyAction;
   }
-  tag_ = Tag::kUnbindReply;
+  ordinal_ = Ordinal::kUnbindReply;
   return unbind_reply_;
 }
 
 ::llcpp::fuchsia::device::mock::AddDeviceAction& ::llcpp::fuchsia::device::mock::Action::mutable_add_device() {
-  if (which() != Tag::kAddDevice) {
+  if (ordinal_ != Ordinal::kAddDevice) {
     Destroy();
     new (&add_device_) ::llcpp::fuchsia::device::mock::AddDeviceAction;
   }
-  tag_ = Tag::kAddDevice;
+  ordinal_ = Ordinal::kAddDevice;
   return add_device_;
 }
 

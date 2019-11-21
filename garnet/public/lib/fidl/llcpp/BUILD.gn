@@ -96,9 +96,18 @@ executable("fidl_llcpp_types_test_bin") {
   ]
 }
 
-unittest_package("fidl_llcpp_types_test") {
+package("fidl_llcpp_types_test") {
+  testonly = true
+
   deps = [
     ":fidl_llcpp_types_test_bin",
+  ]
+
+  meta = [
+    {
+      path = "fidl_llcpp_types_test.cmx"
+      dest = "fidl_llcpp_types_test.cmx"
+    },
   ]
 
   tests = [

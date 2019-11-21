@@ -64,14 +64,13 @@ struct TestDevice_ScheduleWork_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_ScheduleWork_Result();
   ~TestDevice_ScheduleWork_Result();
 
   TestDevice_ScheduleWork_Result(TestDevice_ScheduleWork_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -84,9 +83,9 @@ struct TestDevice_ScheduleWork_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_ScheduleWork_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response&& val) {
@@ -130,7 +129,7 @@ struct TestDevice_ScheduleWork_Result {
 
   ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_ScheduleWork_Result WithErr(int32_t&& val) {
@@ -174,7 +173,10 @@ struct TestDevice_ScheduleWork_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWork_ResultTable;
@@ -187,10 +189,16 @@ struct TestDevice_ScheduleWork_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_ScheduleWork_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response response_;
     int32_t err_;
@@ -221,14 +229,13 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_ScheduleWorkDifferentThread_Result();
   ~TestDevice_ScheduleWorkDifferentThread_Result();
 
   TestDevice_ScheduleWorkDifferentThread_Result(TestDevice_ScheduleWorkDifferentThread_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -241,9 +248,9 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_ScheduleWorkDifferentThread_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response&& val) {
@@ -287,7 +294,7 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
 
   ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_ScheduleWorkDifferentThread_Result WithErr(int32_t&& val) {
@@ -331,7 +338,10 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_ScheduleWorkDifferentThread_ResultTable;
@@ -344,10 +354,16 @@ struct TestDevice_ScheduleWorkDifferentThread_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_ScheduleWorkDifferentThread_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response response_;
     int32_t err_;
@@ -378,14 +394,13 @@ struct TestDevice_GetDoneEvent_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_GetDoneEvent_Result();
   ~TestDevice_GetDoneEvent_Result();
 
   TestDevice_GetDoneEvent_Result(TestDevice_GetDoneEvent_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -398,9 +413,9 @@ struct TestDevice_GetDoneEvent_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetDoneEvent_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response&& val) {
@@ -444,7 +459,7 @@ struct TestDevice_GetDoneEvent_Result {
 
   ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetDoneEvent_Result WithErr(int32_t&& val) {
@@ -488,7 +503,10 @@ struct TestDevice_GetDoneEvent_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetDoneEvent_ResultTable;
@@ -501,10 +519,16 @@ struct TestDevice_GetDoneEvent_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_GetDoneEvent_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response response_;
     int32_t err_;
@@ -535,14 +559,13 @@ struct TestDevice_GetChannel_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_GetChannel_Result();
   ~TestDevice_GetChannel_Result();
 
   TestDevice_GetChannel_Result(TestDevice_GetChannel_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -555,9 +578,9 @@ struct TestDevice_GetChannel_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetChannel_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response&& val) {
@@ -601,7 +624,7 @@ struct TestDevice_GetChannel_Result {
 
   ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetChannel_Result WithErr(int32_t&& val) {
@@ -645,7 +668,10 @@ struct TestDevice_GetChannel_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_TestDevice_GetChannel_ResultTable;
@@ -658,10 +684,16 @@ struct TestDevice_GetChannel_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_GetChannel_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response response_;
     int32_t err_;
@@ -1327,14 +1359,13 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   OwnedChannelDevice_ScheduleWork_Result();
   ~OwnedChannelDevice_ScheduleWork_Result();
 
   OwnedChannelDevice_ScheduleWork_Result(OwnedChannelDevice_ScheduleWork_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1347,9 +1378,9 @@ struct OwnedChannelDevice_ScheduleWork_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static OwnedChannelDevice_ScheduleWork_Result WithResponse(::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response&& val) {
@@ -1393,7 +1424,7 @@ struct OwnedChannelDevice_ScheduleWork_Result {
 
   ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static OwnedChannelDevice_ScheduleWork_Result WithErr(int32_t&& val) {
@@ -1437,7 +1468,10 @@ struct OwnedChannelDevice_ScheduleWork_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_schedule_work_test_OwnedChannelDevice_ScheduleWork_ResultTable;
@@ -1450,10 +1484,16 @@ struct OwnedChannelDevice_ScheduleWork_Result {
   static constexpr uint32_t AltMaxOutOfLine = 80;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(OwnedChannelDevice_ScheduleWork_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response response_;
     int32_t err_;

@@ -132,7 +132,7 @@ void NewDeviceProxy::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::De
 }
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::NewDevice_Write_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::~NewDevice_Write_Result() {
@@ -140,22 +140,22 @@ void NewDeviceProxy::SetTransactionHeaderFor::GetChannelRequest(const ::fidl::De
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~NewDevice_Write_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::MoveImpl_(NewDevice_Write_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -172,26 +172,26 @@ void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::SizeAndOffsetAs
 
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::NewDevice_Read_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::~NewDevice_Read_Result() {
@@ -199,22 +199,22 @@ int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_err
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~NewDevice_Read_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::MoveImpl_(NewDevice_Read_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -231,20 +231,20 @@ void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::SizeAndOffsetAss
 
 
 ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response& ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

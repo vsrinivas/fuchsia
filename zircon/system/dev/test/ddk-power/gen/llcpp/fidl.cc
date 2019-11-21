@@ -11,7 +11,7 @@ namespace power {
 namespace test {
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::TestDevice_GetCurrentDevicePowerState_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::~TestDevice_GetCurrentDevicePowerState_Result() {
@@ -19,22 +19,22 @@ namespace test {
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_GetCurrentDevicePowerState_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -51,26 +51,26 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerStat
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::~TestDevice_GetCurrentDeviceAutoSuspendConfig_Result() {
@@ -78,22 +78,22 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePower
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_GetCurrentDeviceAutoSuspendConfig_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::MoveImpl_(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -110,26 +110,26 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspe
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::TestDevice_GetCurrentDevicePerformanceState_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::~TestDevice_GetCurrentDevicePerformanceState_Result() {
@@ -137,22 +137,22 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoS
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_GetCurrentDevicePerformanceState_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::MoveImpl_(TestDevice_GetCurrentDevicePerformanceState_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -169,26 +169,26 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerforman
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::TestDevice_AddDeviceWithPowerArgs_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::~TestDevice_AddDeviceWithPowerArgs_Result() {
@@ -196,22 +196,22 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerfo
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_AddDeviceWithPowerArgs_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::MoveImpl_(TestDevice_AddDeviceWithPowerArgs_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -228,20 +228,20 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Re
 
 
 ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

@@ -82,14 +82,13 @@ struct NameProvider_GetDeviceName_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   NameProvider_GetDeviceName_Result();
   ~NameProvider_GetDeviceName_Result();
 
   NameProvider_GetDeviceName_Result(NameProvider_GetDeviceName_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -102,9 +101,9 @@ struct NameProvider_GetDeviceName_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameProvider_GetDeviceName_Result WithResponse(::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response&& val) {
@@ -148,7 +147,7 @@ struct NameProvider_GetDeviceName_Result {
 
   ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static NameProvider_GetDeviceName_Result WithErr(int32_t&& val) {
@@ -192,7 +191,10 @@ struct NameProvider_GetDeviceName_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_NameProvider_GetDeviceName_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_NameProvider_GetDeviceName_ResultTable;
@@ -205,10 +207,16 @@ struct NameProvider_GetDeviceName_Result {
   static constexpr uint32_t AltMaxOutOfLine = 272;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(NameProvider_GetDeviceName_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response_;
     int32_t err_;
@@ -470,14 +478,13 @@ struct Controller_GetPowerStateMapping_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_GetPowerStateMapping_Result();
   ~Controller_GetPowerStateMapping_Result();
 
   Controller_GetPowerStateMapping_Result(Controller_GetPowerStateMapping_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -490,9 +497,9 @@ struct Controller_GetPowerStateMapping_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetPowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response&& val) {
@@ -536,7 +543,7 @@ struct Controller_GetPowerStateMapping_Result {
 
   ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetPowerStateMapping_Result WithErr(int32_t&& val) {
@@ -580,7 +587,10 @@ struct Controller_GetPowerStateMapping_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetPowerStateMapping_ResultTable;
@@ -593,10 +603,16 @@ struct Controller_GetPowerStateMapping_Result {
   static constexpr uint32_t AltMaxOutOfLine = 56;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_GetPowerStateMapping_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response response_;
     int32_t err_;
@@ -656,14 +672,13 @@ struct Controller_GetDevicePowerCaps_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_GetDevicePowerCaps_Result();
   ~Controller_GetDevicePowerCaps_Result();
 
   Controller_GetDevicePowerCaps_Result(Controller_GetDevicePowerCaps_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -676,9 +691,9 @@ struct Controller_GetDevicePowerCaps_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetDevicePowerCaps_Result WithResponse(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response&& val) {
@@ -722,7 +737,7 @@ struct Controller_GetDevicePowerCaps_Result {
 
   ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetDevicePowerCaps_Result WithErr(int32_t&& val) {
@@ -766,7 +781,10 @@ struct Controller_GetDevicePowerCaps_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetDevicePowerCaps_ResultTable;
@@ -779,10 +797,16 @@ struct Controller_GetDevicePowerCaps_Result {
   static constexpr uint32_t AltMaxOutOfLine = 120;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_GetDevicePowerCaps_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response response_;
     int32_t err_;
@@ -813,14 +837,13 @@ struct Controller_Resume_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_Resume_Result();
   ~Controller_Resume_Result();
 
   Controller_Resume_Result(Controller_Resume_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -833,9 +856,9 @@ struct Controller_Resume_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Resume_Result WithResponse(::llcpp::fuchsia::device::Controller_Resume_Response&& val) {
@@ -879,7 +902,7 @@ struct Controller_Resume_Result {
 
   ::llcpp::fuchsia::device::Controller_Resume_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Resume_Result WithErr(int32_t&& val) {
@@ -923,7 +946,10 @@ struct Controller_Resume_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Resume_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Resume_ResultTable;
@@ -936,10 +962,16 @@ struct Controller_Resume_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_Resume_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_Resume_Response response_;
     int32_t err_;
@@ -1025,14 +1057,13 @@ struct Controller_UpdatePowerStateMapping_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_UpdatePowerStateMapping_Result();
   ~Controller_UpdatePowerStateMapping_Result();
 
   Controller_UpdatePowerStateMapping_Result(Controller_UpdatePowerStateMapping_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1045,9 +1076,9 @@ struct Controller_UpdatePowerStateMapping_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_UpdatePowerStateMapping_Result WithResponse(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response&& val) {
@@ -1091,7 +1122,7 @@ struct Controller_UpdatePowerStateMapping_Result {
 
   ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_UpdatePowerStateMapping_Result WithErr(int32_t&& val) {
@@ -1135,7 +1166,10 @@ struct Controller_UpdatePowerStateMapping_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_UpdatePowerStateMapping_ResultTable;
@@ -1148,10 +1182,16 @@ struct Controller_UpdatePowerStateMapping_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_UpdatePowerStateMapping_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response response_;
     int32_t err_;
@@ -1182,14 +1222,13 @@ struct Controller_ScheduleUnbind_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_ScheduleUnbind_Result();
   ~Controller_ScheduleUnbind_Result();
 
   Controller_ScheduleUnbind_Result(Controller_ScheduleUnbind_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1202,9 +1241,9 @@ struct Controller_ScheduleUnbind_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ScheduleUnbind_Result WithResponse(::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response&& val) {
@@ -1248,7 +1287,7 @@ struct Controller_ScheduleUnbind_Result {
 
   ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ScheduleUnbind_Result WithErr(int32_t&& val) {
@@ -1292,7 +1331,10 @@ struct Controller_ScheduleUnbind_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_ScheduleUnbind_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_ScheduleUnbind_ResultTable;
@@ -1305,10 +1347,16 @@ struct Controller_ScheduleUnbind_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_ScheduleUnbind_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response response_;
     int32_t err_;
@@ -1339,14 +1387,13 @@ struct Controller_Rebind_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_Rebind_Result();
   ~Controller_Rebind_Result();
 
   Controller_Rebind_Result(Controller_Rebind_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1359,9 +1406,9 @@ struct Controller_Rebind_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Rebind_Result WithResponse(::llcpp::fuchsia::device::Controller_Rebind_Response&& val) {
@@ -1405,7 +1452,7 @@ struct Controller_Rebind_Result {
 
   ::llcpp::fuchsia::device::Controller_Rebind_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Rebind_Result WithErr(int32_t&& val) {
@@ -1449,7 +1496,10 @@ struct Controller_Rebind_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Rebind_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Rebind_ResultTable;
@@ -1462,10 +1512,16 @@ struct Controller_Rebind_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_Rebind_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_Rebind_Response response_;
     int32_t err_;
@@ -1496,14 +1552,13 @@ struct Controller_GetTopologicalPath_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_GetTopologicalPath_Result();
   ~Controller_GetTopologicalPath_Result();
 
   Controller_GetTopologicalPath_Result(Controller_GetTopologicalPath_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1516,9 +1571,9 @@ struct Controller_GetTopologicalPath_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetTopologicalPath_Result WithResponse(::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response&& val) {
@@ -1562,7 +1617,7 @@ struct Controller_GetTopologicalPath_Result {
 
   ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_GetTopologicalPath_Result WithErr(int32_t&& val) {
@@ -1606,7 +1661,10 @@ struct Controller_GetTopologicalPath_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_GetTopologicalPath_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_GetTopologicalPath_ResultTable;
@@ -1619,10 +1677,16 @@ struct Controller_GetTopologicalPath_Result {
   static constexpr uint32_t AltMaxOutOfLine = 1040;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_GetTopologicalPath_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response response_;
     int32_t err_;
@@ -1653,14 +1717,13 @@ struct Controller_Bind_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_Bind_Result();
   ~Controller_Bind_Result();
 
   Controller_Bind_Result(Controller_Bind_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1673,9 +1736,9 @@ struct Controller_Bind_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Bind_Result WithResponse(::llcpp::fuchsia::device::Controller_Bind_Response&& val) {
@@ -1719,7 +1782,7 @@ struct Controller_Bind_Result {
 
   ::llcpp::fuchsia::device::Controller_Bind_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Bind_Result WithErr(int32_t&& val) {
@@ -1763,7 +1826,10 @@ struct Controller_Bind_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_Controller_Bind_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_Controller_Bind_ResultTable;
@@ -1776,10 +1842,16 @@ struct Controller_Bind_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_Bind_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::Controller_Bind_Response response_;
     int32_t err_;

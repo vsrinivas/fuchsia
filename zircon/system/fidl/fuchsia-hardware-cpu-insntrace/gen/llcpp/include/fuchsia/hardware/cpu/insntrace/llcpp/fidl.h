@@ -99,14 +99,13 @@ struct Controller_Terminate_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_Terminate_Result();
   ~Controller_Terminate_Result();
 
   Controller_Terminate_Result(Controller_Terminate_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -119,9 +118,9 @@ struct Controller_Terminate_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Terminate_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response&& val) {
@@ -165,7 +164,7 @@ struct Controller_Terminate_Result {
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Terminate_Result WithErr(int32_t&& val) {
@@ -209,7 +208,10 @@ struct Controller_Terminate_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_insntrace_Controller_Terminate_ResultTable;
@@ -222,10 +224,16 @@ struct Controller_Terminate_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_Terminate_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response response_;
     int32_t err_;
@@ -256,14 +264,13 @@ struct Controller_ReleaseThreadBuffer_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_ReleaseThreadBuffer_Result();
   ~Controller_ReleaseThreadBuffer_Result();
 
   Controller_ReleaseThreadBuffer_Result(Controller_ReleaseThreadBuffer_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -276,9 +283,9 @@ struct Controller_ReleaseThreadBuffer_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ReleaseThreadBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response&& val) {
@@ -322,7 +329,7 @@ struct Controller_ReleaseThreadBuffer_Result {
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ReleaseThreadBuffer_Result WithErr(int32_t&& val) {
@@ -366,7 +373,10 @@ struct Controller_ReleaseThreadBuffer_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_insntrace_Controller_ReleaseThreadBuffer_ResultTable;
@@ -379,10 +389,16 @@ struct Controller_ReleaseThreadBuffer_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_ReleaseThreadBuffer_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response response_;
     int32_t err_;
@@ -413,14 +429,13 @@ struct Controller_Initialize_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_Initialize_Result();
   ~Controller_Initialize_Result();
 
   Controller_Initialize_Result(Controller_Initialize_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -433,9 +448,9 @@ struct Controller_Initialize_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Initialize_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response&& val) {
@@ -479,7 +494,7 @@ struct Controller_Initialize_Result {
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_Initialize_Result WithErr(int32_t&& val) {
@@ -523,7 +538,10 @@ struct Controller_Initialize_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_insntrace_Controller_Initialize_ResultTable;
@@ -536,10 +554,16 @@ struct Controller_Initialize_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_Initialize_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response response_;
     int32_t err_;
@@ -570,14 +594,13 @@ struct Controller_AssignThreadBuffer_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_AssignThreadBuffer_Result();
   ~Controller_AssignThreadBuffer_Result();
 
   Controller_AssignThreadBuffer_Result(Controller_AssignThreadBuffer_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -590,9 +613,9 @@ struct Controller_AssignThreadBuffer_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_AssignThreadBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response&& val) {
@@ -636,7 +659,7 @@ struct Controller_AssignThreadBuffer_Result {
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_AssignThreadBuffer_Result WithErr(int32_t&& val) {
@@ -680,7 +703,10 @@ struct Controller_AssignThreadBuffer_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_insntrace_Controller_AssignThreadBuffer_ResultTable;
@@ -693,10 +719,16 @@ struct Controller_AssignThreadBuffer_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_AssignThreadBuffer_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response response_;
     int32_t err_;
@@ -749,14 +781,13 @@ struct Controller_AllocateBuffer_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_AllocateBuffer_Result();
   ~Controller_AllocateBuffer_Result();
 
   Controller_AllocateBuffer_Result(Controller_AllocateBuffer_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -769,9 +800,9 @@ struct Controller_AllocateBuffer_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_AllocateBuffer_Result WithResponse(::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response&& val) {
@@ -815,7 +846,7 @@ struct Controller_AllocateBuffer_Result {
 
   ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_AllocateBuffer_Result WithErr(int32_t&& val) {
@@ -859,7 +890,10 @@ struct Controller_AllocateBuffer_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_cpu_insntrace_Controller_AllocateBuffer_ResultTable;
@@ -872,10 +906,16 @@ struct Controller_AllocateBuffer_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_AllocateBuffer_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response response_;
     int32_t err_;

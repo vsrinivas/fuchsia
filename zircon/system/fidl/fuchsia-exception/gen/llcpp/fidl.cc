@@ -9,7 +9,7 @@ namespace fuchsia {
 namespace exception {
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::ProcessLimbo_RemoveFilters_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::~ProcessLimbo_RemoveFilters_Result() {
@@ -17,22 +17,22 @@ namespace exception {
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~ProcessLimbo_RemoveFilters_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::MoveImpl_(ProcessLimbo_RemoveFilters_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -49,26 +49,26 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::SizeAndOffs
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::ProcessLimbo_ReleaseProcess_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::~ProcessLimbo_ReleaseProcess_Result() {
@@ -76,22 +76,22 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~ProcessLimbo_ReleaseProcess_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::MoveImpl_(ProcessLimbo_ReleaseProcess_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -108,26 +108,26 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::SizeAndOff
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::ProcessLimbo_AppendFilters_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::~ProcessLimbo_AppendFilters_Result() {
@@ -135,22 +135,22 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutabl
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~ProcessLimbo_AppendFilters_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::MoveImpl_(ProcessLimbo_AppendFilters_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -167,20 +167,20 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::SizeAndOffs
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -357,7 +357,7 @@ auto ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder::set_thread(
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::ProcessLimbo_WatchProcessesWaitingOnException_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::~ProcessLimbo_WatchProcessesWaitingOnException_Result() {
@@ -365,22 +365,22 @@ auto ::llcpp::fuchsia::exception::ProcessExceptionMetadata::Builder::set_thread(
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~ProcessLimbo_WatchProcessesWaitingOnException_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::MoveImpl_(ProcessLimbo_WatchProcessesWaitingOnException_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -397,20 +397,20 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -456,7 +456,7 @@ auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_thread(::zx::th
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::ProcessLimbo_RetrieveException_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::~ProcessLimbo_RetrieveException_Result() {
@@ -464,22 +464,22 @@ auto ::llcpp::fuchsia::exception::ProcessException::Builder::set_thread(::zx::th
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~ProcessLimbo_RetrieveException_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::MoveImpl_(ProcessLimbo_RetrieveException_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -496,20 +496,20 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::SizeAnd
 
 
 ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

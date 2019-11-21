@@ -66,14 +66,13 @@ struct Value {
     kIntValue = 1,
     kDoubleValue = 2,
     kIndexValue = 3,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Value();
   ~Value();
 
   Value(Value&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -86,9 +85,9 @@ struct Value {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_string_value() const { return tag_ == Tag::kStringValue; }
+  bool is_string_value() const { return ordinal_ == Ordinal::kStringValue; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithStringValue(::fidl::StringView&& val) {
@@ -132,7 +131,7 @@ struct Value {
 
   ::fidl::StringView const & string_value() const { return string_value_; }
 
-  bool is_int_value() const { return tag_ == Tag::kIntValue; }
+  bool is_int_value() const { return ordinal_ == Ordinal::kIntValue; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithIntValue(int64_t&& val) {
@@ -176,7 +175,7 @@ struct Value {
 
   int64_t const & int_value() const { return int_value_; }
 
-  bool is_double_value() const { return tag_ == Tag::kDoubleValue; }
+  bool is_double_value() const { return ordinal_ == Ordinal::kDoubleValue; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithDoubleValue(double&& val) {
@@ -220,7 +219,7 @@ struct Value {
 
   double const & double_value() const { return double_value_; }
 
-  bool is_index_value() const { return tag_ == Tag::kIndexValue; }
+  bool is_index_value() const { return ordinal_ == Ordinal::kIndexValue; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Value WithIndexValue(uint32_t&& val) {
@@ -264,7 +263,10 @@ struct Value {
 
   uint32_t const & index_value() const { return index_value_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_cobalt_ValueTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_ValueTable;
@@ -277,10 +279,18 @@ struct Value {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kStringValue = 0,
+    kIntValue = 1,
+    kDoubleValue = 2,
+    kIndexValue = 3,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Value&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::fidl::StringView string_value_;
     int64_t int_value_;
@@ -3867,14 +3877,13 @@ struct EventPayload {
     kMemoryBytesUsed = 4,
     kStringEvent = 5,
     kIntHistogram = 6,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   EventPayload();
   ~EventPayload();
 
   EventPayload(EventPayload&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -3887,9 +3896,9 @@ struct EventPayload {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_event() const { return tag_ == Tag::kEvent; }
+  bool is_event() const { return ordinal_ == Ordinal::kEvent; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithEvent(::llcpp::fuchsia::cobalt::Event&& val) {
@@ -3933,7 +3942,7 @@ struct EventPayload {
 
   ::llcpp::fuchsia::cobalt::Event const & event() const { return event_; }
 
-  bool is_event_count() const { return tag_ == Tag::kEventCount; }
+  bool is_event_count() const { return ordinal_ == Ordinal::kEventCount; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithEventCount(::llcpp::fuchsia::cobalt::CountEvent&& val) {
@@ -3977,7 +3986,7 @@ struct EventPayload {
 
   ::llcpp::fuchsia::cobalt::CountEvent const & event_count() const { return event_count_; }
 
-  bool is_elapsed_micros() const { return tag_ == Tag::kElapsedMicros; }
+  bool is_elapsed_micros() const { return ordinal_ == Ordinal::kElapsedMicros; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithElapsedMicros(int64_t&& val) {
@@ -4021,7 +4030,7 @@ struct EventPayload {
 
   int64_t const & elapsed_micros() const { return elapsed_micros_; }
 
-  bool is_fps() const { return tag_ == Tag::kFps; }
+  bool is_fps() const { return ordinal_ == Ordinal::kFps; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithFps(float&& val) {
@@ -4065,7 +4074,7 @@ struct EventPayload {
 
   float const & fps() const { return fps_; }
 
-  bool is_memory_bytes_used() const { return tag_ == Tag::kMemoryBytesUsed; }
+  bool is_memory_bytes_used() const { return ordinal_ == Ordinal::kMemoryBytesUsed; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithMemoryBytesUsed(int64_t&& val) {
@@ -4109,7 +4118,7 @@ struct EventPayload {
 
   int64_t const & memory_bytes_used() const { return memory_bytes_used_; }
 
-  bool is_string_event() const { return tag_ == Tag::kStringEvent; }
+  bool is_string_event() const { return ordinal_ == Ordinal::kStringEvent; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithStringEvent(::fidl::StringView&& val) {
@@ -4153,7 +4162,7 @@ struct EventPayload {
 
   ::fidl::StringView const & string_event() const { return string_event_; }
 
-  bool is_int_histogram() const { return tag_ == Tag::kIntHistogram; }
+  bool is_int_histogram() const { return ordinal_ == Ordinal::kIntHistogram; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static EventPayload WithIntHistogram(::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>&& val) {
@@ -4197,7 +4206,10 @@ struct EventPayload {
 
   ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket> const & int_histogram() const { return int_histogram_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_cobalt_EventPayloadTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_cobalt_EventPayloadTable;
@@ -4210,10 +4222,21 @@ struct EventPayload {
   static constexpr uint32_t AltMaxOutOfLine = 8016;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kEvent = 0,
+    kEventCount = 1,
+    kElapsedMicros = 2,
+    kFps = 3,
+    kMemoryBytesUsed = 4,
+    kStringEvent = 5,
+    kIntHistogram = 6,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(EventPayload&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::cobalt::Event event_;
     ::llcpp::fuchsia::cobalt::CountEvent event_count_;

@@ -639,14 +639,13 @@ struct Controller_StartCapture_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_StartCapture_Result();
   ~Controller_StartCapture_Result();
 
   Controller_StartCapture_Result(Controller_StartCapture_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -659,9 +658,9 @@ struct Controller_StartCapture_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_StartCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response&& val) {
@@ -705,7 +704,7 @@ struct Controller_StartCapture_Result {
 
   ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_StartCapture_Result WithErr(int32_t&& val) {
@@ -749,7 +748,10 @@ struct Controller_StartCapture_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_StartCapture_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_StartCapture_ResultTable;
@@ -762,10 +764,16 @@ struct Controller_StartCapture_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_StartCapture_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response response_;
     int32_t err_;
@@ -796,14 +804,13 @@ struct Controller_ReleaseCapture_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_ReleaseCapture_Result();
   ~Controller_ReleaseCapture_Result();
 
   Controller_ReleaseCapture_Result(Controller_ReleaseCapture_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -816,9 +823,9 @@ struct Controller_ReleaseCapture_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ReleaseCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response&& val) {
@@ -862,7 +869,7 @@ struct Controller_ReleaseCapture_Result {
 
   ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ReleaseCapture_Result WithErr(int32_t&& val) {
@@ -906,7 +913,10 @@ struct Controller_ReleaseCapture_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ReleaseCapture_ResultTable;
@@ -919,10 +929,16 @@ struct Controller_ReleaseCapture_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_ReleaseCapture_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response response_;
     int32_t err_;
@@ -953,14 +969,13 @@ struct Controller_IsCaptureSupported_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_IsCaptureSupported_Result();
   ~Controller_IsCaptureSupported_Result();
 
   Controller_IsCaptureSupported_Result(Controller_IsCaptureSupported_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -973,9 +988,9 @@ struct Controller_IsCaptureSupported_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_IsCaptureSupported_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response&& val) {
@@ -1019,7 +1034,7 @@ struct Controller_IsCaptureSupported_Result {
 
   ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_IsCaptureSupported_Result WithErr(int32_t&& val) {
@@ -1063,7 +1078,10 @@ struct Controller_IsCaptureSupported_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_IsCaptureSupported_ResultTable;
@@ -1076,10 +1094,16 @@ struct Controller_IsCaptureSupported_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_IsCaptureSupported_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response response_;
     int32_t err_;
@@ -1110,14 +1134,13 @@ struct Controller_ImportImageForCapture_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Controller_ImportImageForCapture_Result();
   ~Controller_ImportImageForCapture_Result();
 
   Controller_ImportImageForCapture_Result(Controller_ImportImageForCapture_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1130,9 +1153,9 @@ struct Controller_ImportImageForCapture_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ImportImageForCapture_Result WithResponse(::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response&& val) {
@@ -1176,7 +1199,7 @@ struct Controller_ImportImageForCapture_Result {
 
   ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Controller_ImportImageForCapture_Result WithErr(int32_t&& val) {
@@ -1220,7 +1243,10 @@ struct Controller_ImportImageForCapture_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_hardware_display_Controller_ImportImageForCapture_ResultTable;
@@ -1233,10 +1259,16 @@ struct Controller_ImportImageForCapture_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Controller_ImportImageForCapture_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response response_;
     int32_t err_;

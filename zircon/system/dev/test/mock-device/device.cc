@@ -438,10 +438,6 @@ zx_status_t ProcessActions(fidl::VectorView<device_mock::Action> actions,
         ZX_ASSERT(status == ZX_OK);
         break;
       }
-      case device_mock::Action::Tag::Invalid: {
-        printf("Received unknown mock device action.\n");
-        return ZX_ERR_INVALID_ARGS;
-      }
     }
   }
 

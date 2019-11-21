@@ -9,7 +9,7 @@ namespace fuchsia {
 namespace paver {
 
 ::llcpp::fuchsia::paver::ReadResult::ReadResult() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::paver::ReadResult::~ReadResult() {
@@ -17,25 +17,25 @@ namespace paver {
 }
 
 void ::llcpp::fuchsia::paver::ReadResult::Destroy() {
-  switch (which()) {
-  case Tag::kInfo:
+  switch (ordinal_) {
+  case Ordinal::kInfo:
     info_.~ReadInfo();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::paver::ReadResult::MoveImpl_(ReadResult&& other) {
-  switch (other.which()) {
-  case Tag::kErr:
+  switch (other.ordinal_) {
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
-  case Tag::kEof:
+  case Ordinal::kEof:
     mutable_eof() = std::move(other.mutable_eof());
     break;
-  case Tag::kInfo:
+  case Ordinal::kInfo:
     mutable_info() = std::move(other.mutable_info());
     break;
   default:
@@ -53,29 +53,29 @@ void ::llcpp::fuchsia::paver::ReadResult::SizeAndOffsetAssertionHelper() {
 
 
 int32_t& ::llcpp::fuchsia::paver::ReadResult::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
-  if (which() != Tag::kEof) {
+  if (ordinal_ != Ordinal::kEof) {
     Destroy();
     new (&eof_) bool;
   }
-  tag_ = Tag::kEof;
+  ordinal_ = Ordinal::kEof;
   return eof_;
 }
 
 ::llcpp::fuchsia::paver::ReadInfo& ::llcpp::fuchsia::paver::ReadResult::mutable_info() {
-  if (which() != Tag::kInfo) {
+  if (ordinal_ != Ordinal::kInfo) {
     Destroy();
     new (&info_) ::llcpp::fuchsia::paver::ReadInfo;
   }
-  tag_ = Tag::kInfo;
+  ordinal_ = Ordinal::kInfo;
   return info_;
 }
 
@@ -364,7 +364,7 @@ void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::Deco
 }
 
 ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Paver_WipeVolume_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::~Paver_WipeVolume_Result() {
@@ -372,22 +372,22 @@ void PayloadStream::SetTransactionHeaderFor::ReadDataResponse(const ::fidl::Deco
 }
 
 void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Paver_WipeVolume_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::MoveImpl_(Paver_WipeVolume_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -404,26 +404,26 @@ void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::SizeAndOffsetAssertionHel
 
 
 ::llcpp::fuchsia::paver::Paver_WipeVolume_Response& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_WipeVolume_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Paver_QueryConfigurationStatus_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::~Paver_QueryConfigurationStatus_Result() {
@@ -431,22 +431,22 @@ int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
 }
 
 void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Paver_QueryConfigurationStatus_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::MoveImpl_(Paver_QueryConfigurationStatus_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -463,26 +463,26 @@ void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::SizeAndOffs
 
 
 ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Paver_QueryActiveConfiguration_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::~Paver_QueryActiveConfiguration_Result() {
@@ -490,22 +490,22 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable
 }
 
 void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Paver_QueryActiveConfiguration_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::MoveImpl_(Paver_QueryActiveConfiguration_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -522,26 +522,26 @@ void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::SizeAndOffs
 
 
 ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Paver_ReadAsset_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::~Paver_ReadAsset_Result() {
@@ -549,22 +549,22 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable
 }
 
 void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~Paver_ReadAsset_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::MoveImpl_(Paver_ReadAsset_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -581,20 +581,20 @@ void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::SizeAndOffsetAssertionHelp
 
 
 ::llcpp::fuchsia::paver::Paver_ReadAsset_Response& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_ReadAsset_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

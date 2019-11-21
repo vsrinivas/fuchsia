@@ -12,7 +12,7 @@ namespace work {
 namespace test {
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::TestDevice_ScheduleWork_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::~TestDevice_ScheduleWork_Result() {
@@ -20,22 +20,22 @@ namespace test {
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_ScheduleWork_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::MoveImpl_(TestDevice_ScheduleWork_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -52,26 +52,26 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Res
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::TestDevice_ScheduleWorkDifferentThread_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::~TestDevice_ScheduleWorkDifferentThread_Result() {
@@ -79,22 +79,22 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_ScheduleWorkDifferentThread_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::MoveImpl_(TestDevice_ScheduleWorkDifferentThread_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -111,26 +111,26 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDiff
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::TestDevice_GetDoneEvent_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::~TestDevice_GetDoneEvent_Result() {
@@ -138,22 +138,22 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_GetDoneEvent_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::MoveImpl_(TestDevice_GetDoneEvent_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -170,26 +170,26 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Res
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::TestDevice_GetChannel_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::~TestDevice_GetChannel_Result() {
@@ -197,22 +197,22 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_GetChannel_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::MoveImpl_(TestDevice_GetChannel_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -229,20 +229,20 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Resul
 
 
 ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -960,7 +960,7 @@ void TestDevice::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::Decod
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::OwnedChannelDevice_ScheduleWork_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::~OwnedChannelDevice_ScheduleWork_Result() {
@@ -968,22 +968,22 @@ void TestDevice::SetTransactionHeaderFor::GetChannelResponse(const ::fidl::Decod
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~OwnedChannelDevice_ScheduleWork_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::MoveImpl_(OwnedChannelDevice_ScheduleWork_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -1000,20 +1000,20 @@ void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_Schedule
 
 
 ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response& ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

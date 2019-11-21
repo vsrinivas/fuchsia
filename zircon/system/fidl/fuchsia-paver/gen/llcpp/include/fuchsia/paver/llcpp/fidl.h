@@ -89,14 +89,13 @@ struct ReadResult {
     kErr = 0,
     kEof = 1,
     kInfo = 2,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   ReadResult();
   ~ReadResult();
 
   ReadResult(ReadResult&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -109,9 +108,9 @@ struct ReadResult {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ReadResult WithErr(int32_t&& val) {
@@ -161,7 +160,7 @@ struct ReadResult {
   // Error encountered while reading data.
   int32_t const & err() const { return err_; }
 
-  bool is_eof() const { return tag_ == Tag::kEof; }
+  bool is_eof() const { return ordinal_ == Ordinal::kEof; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ReadResult WithEof(bool&& val) {
@@ -211,7 +210,7 @@ struct ReadResult {
   // End of file reached.
   bool const & eof() const { return eof_; }
 
-  bool is_info() const { return tag_ == Tag::kInfo; }
+  bool is_info() const { return ordinal_ == Ordinal::kInfo; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ReadResult WithInfo(::llcpp::fuchsia::paver::ReadInfo&& val) {
@@ -261,7 +260,10 @@ struct ReadResult {
   // Information about location of successfully read data within pre-registered VMO.
   ::llcpp::fuchsia::paver::ReadInfo const & info() const { return info_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_paver_ReadResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_ReadResultTable;
@@ -274,10 +276,17 @@ struct ReadResult {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kErr = 0,
+    kEof = 1,
+    kInfo = 2,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(ReadResult&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t err_;
     bool eof_;
@@ -600,14 +609,13 @@ struct Paver_WipeVolume_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Paver_WipeVolume_Result();
   ~Paver_WipeVolume_Result();
 
   Paver_WipeVolume_Result(Paver_WipeVolume_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -620,9 +628,9 @@ struct Paver_WipeVolume_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_WipeVolume_Result WithResponse(::llcpp::fuchsia::paver::Paver_WipeVolume_Response&& val) {
@@ -666,7 +674,7 @@ struct Paver_WipeVolume_Result {
 
   ::llcpp::fuchsia::paver::Paver_WipeVolume_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_WipeVolume_Result WithErr(int32_t&& val) {
@@ -710,7 +718,10 @@ struct Paver_WipeVolume_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_WipeVolume_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_WipeVolume_ResultTable;
@@ -723,10 +734,16 @@ struct Paver_WipeVolume_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Paver_WipeVolume_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::paver::Paver_WipeVolume_Response response_;
     int32_t err_;
@@ -757,14 +774,13 @@ struct Paver_QueryConfigurationStatus_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Paver_QueryConfigurationStatus_Result();
   ~Paver_QueryConfigurationStatus_Result();
 
   Paver_QueryConfigurationStatus_Result(Paver_QueryConfigurationStatus_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -777,9 +793,9 @@ struct Paver_QueryConfigurationStatus_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_QueryConfigurationStatus_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response&& val) {
@@ -823,7 +839,7 @@ struct Paver_QueryConfigurationStatus_Result {
 
   ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_QueryConfigurationStatus_Result WithErr(int32_t&& val) {
@@ -867,7 +883,10 @@ struct Paver_QueryConfigurationStatus_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryConfigurationStatus_ResultTable;
@@ -880,10 +899,16 @@ struct Paver_QueryConfigurationStatus_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Paver_QueryConfigurationStatus_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response_;
     int32_t err_;
@@ -914,14 +939,13 @@ struct Paver_QueryActiveConfiguration_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Paver_QueryActiveConfiguration_Result();
   ~Paver_QueryActiveConfiguration_Result();
 
   Paver_QueryActiveConfiguration_Result(Paver_QueryActiveConfiguration_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -934,9 +958,9 @@ struct Paver_QueryActiveConfiguration_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_QueryActiveConfiguration_Result WithResponse(::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response&& val) {
@@ -980,7 +1004,7 @@ struct Paver_QueryActiveConfiguration_Result {
 
   ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_QueryActiveConfiguration_Result WithErr(int32_t&& val) {
@@ -1024,7 +1048,10 @@ struct Paver_QueryActiveConfiguration_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_QueryActiveConfiguration_ResultTable;
@@ -1037,10 +1064,16 @@ struct Paver_QueryActiveConfiguration_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Paver_QueryActiveConfiguration_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response_;
     int32_t err_;
@@ -1071,14 +1104,13 @@ struct Paver_ReadAsset_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Paver_ReadAsset_Result();
   ~Paver_ReadAsset_Result();
 
   Paver_ReadAsset_Result(Paver_ReadAsset_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -1091,9 +1123,9 @@ struct Paver_ReadAsset_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_ReadAsset_Result WithResponse(::llcpp::fuchsia::paver::Paver_ReadAsset_Response&& val) {
@@ -1137,7 +1169,7 @@ struct Paver_ReadAsset_Result {
 
   ::llcpp::fuchsia::paver::Paver_ReadAsset_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Paver_ReadAsset_Result WithErr(int32_t&& val) {
@@ -1181,7 +1213,10 @@ struct Paver_ReadAsset_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_paver_Paver_ReadAsset_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_paver_Paver_ReadAsset_ResultTable;
@@ -1194,10 +1229,16 @@ struct Paver_ReadAsset_Result {
   static constexpr uint32_t AltMaxOutOfLine = 16;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Paver_ReadAsset_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::paver::Paver_ReadAsset_Response response_;
     int32_t err_;

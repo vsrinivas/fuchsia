@@ -60,14 +60,13 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_GetCurrentDevicePowerState_Result();
   ~TestDevice_GetCurrentDevicePowerState_Result();
 
   TestDevice_GetCurrentDevicePowerState_Result(TestDevice_GetCurrentDevicePowerState_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -80,9 +79,9 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePowerState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response&& val) {
@@ -126,7 +125,7 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePowerState_Result WithErr(int32_t&& val) {
@@ -170,7 +169,10 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePowerState_ResultTable;
@@ -183,10 +185,16 @@ struct TestDevice_GetCurrentDevicePowerState_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_GetCurrentDevicePowerState_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response response_;
     int32_t err_;
@@ -219,14 +227,13 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_GetCurrentDeviceAutoSuspendConfig_Result();
   ~TestDevice_GetCurrentDeviceAutoSuspendConfig_Result();
 
   TestDevice_GetCurrentDeviceAutoSuspendConfig_Result(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -239,9 +246,9 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response&& val) {
@@ -285,7 +292,7 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDeviceAutoSuspendConfig_Result WithErr(int32_t&& val) {
@@ -329,7 +336,10 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDeviceAutoSuspendConfig_ResultTable;
@@ -342,10 +352,16 @@ struct TestDevice_GetCurrentDeviceAutoSuspendConfig_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_GetCurrentDeviceAutoSuspendConfig_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response response_;
     int32_t err_;
@@ -376,14 +392,13 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_GetCurrentDevicePerformanceState_Result();
   ~TestDevice_GetCurrentDevicePerformanceState_Result();
 
   TestDevice_GetCurrentDevicePerformanceState_Result(TestDevice_GetCurrentDevicePerformanceState_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -396,9 +411,9 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePerformanceState_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response&& val) {
@@ -442,7 +457,7 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
 
   ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_GetCurrentDevicePerformanceState_Result WithErr(int32_t&& val) {
@@ -486,7 +501,10 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_GetCurrentDevicePerformanceState_ResultTable;
@@ -499,10 +517,16 @@ struct TestDevice_GetCurrentDevicePerformanceState_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_GetCurrentDevicePerformanceState_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response response_;
     int32_t err_;
@@ -533,14 +557,13 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   enum class Tag : fidl_union_tag_t {
     kResponse = 0,
     kErr = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   TestDevice_AddDeviceWithPowerArgs_Result();
   ~TestDevice_AddDeviceWithPowerArgs_Result();
 
   TestDevice_AddDeviceWithPowerArgs_Result(TestDevice_AddDeviceWithPowerArgs_Result&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -553,9 +576,9 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_response() const { return tag_ == Tag::kResponse; }
+  bool is_response() const { return ordinal_ == Ordinal::kResponse; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_AddDeviceWithPowerArgs_Result WithResponse(::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response&& val) {
@@ -599,7 +622,7 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
   ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response const & response() const { return response_; }
 
-  bool is_err() const { return tag_ == Tag::kErr; }
+  bool is_err() const { return ordinal_ == Ordinal::kErr; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static TestDevice_AddDeviceWithPowerArgs_Result WithErr(int32_t&& val) {
@@ -643,7 +666,10 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
 
   int32_t const & err() const { return err_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
   static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_power_test_TestDevice_AddDeviceWithPowerArgs_ResultTable;
@@ -656,10 +682,16 @@ struct TestDevice_AddDeviceWithPowerArgs_Result {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kResponse = 0,
+    kErr = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(TestDevice_AddDeviceWithPowerArgs_Result&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response response_;
     int32_t err_;

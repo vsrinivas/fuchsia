@@ -11,7 +11,7 @@ namespace devhost {
 namespace test {
 
 ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::TestDevice_AddChildDevice_Result() {
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::~TestDevice_AddChildDevice_Result() {
@@ -19,22 +19,22 @@ namespace test {
 }
 
 void ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::Destroy() {
-  switch (which()) {
-  case Tag::kResponse:
+  switch (ordinal_) {
+  case Ordinal::kResponse:
     response_.~TestDevice_AddChildDevice_Response();
     break;
   default:
     break;
   }
-  tag_ = Tag::Invalid;
+  ordinal_ = Ordinal::Invalid;
 }
 
 void ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::MoveImpl_(TestDevice_AddChildDevice_Result&& other) {
-  switch (other.which()) {
-  case Tag::kResponse:
+  switch (other.ordinal_) {
+  case Ordinal::kResponse:
     mutable_response() = std::move(other.mutable_response());
     break;
-  case Tag::kErr:
+  case Ordinal::kErr:
     mutable_err() = std::move(other.mutable_err());
     break;
   default:
@@ -51,20 +51,20 @@ void ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::
 
 
 ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response& ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::mutable_response() {
-  if (which() != Tag::kResponse) {
+  if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response;
   }
-  tag_ = Tag::kResponse;
+  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
 int32_t& ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::mutable_err() {
-  if (which() != Tag::kErr) {
+  if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
   }
-  tag_ = Tag::kErr;
+  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

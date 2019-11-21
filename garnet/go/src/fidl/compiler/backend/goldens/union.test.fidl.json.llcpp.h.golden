@@ -35,14 +35,13 @@ struct Union {
     kPrimitive = 0,
     kStringNeedsConstructor = 1,
     kVectorStringAlsoNeedsConstructor = 2,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   Union();
   ~Union();
 
   Union(Union&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -55,9 +54,9 @@ struct Union {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Union WithPrimitive(int32_t&& val) {
@@ -101,7 +100,7 @@ struct Union {
 
   int32_t const & Primitive() const { return Primitive_; }
 
-  bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Union WithStringNeedsConstructor(::fidl::StringView&& val) {
@@ -145,7 +144,7 @@ struct Union {
 
   ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
 
-  bool is_VectorStringAlsoNeedsConstructor() const { return tag_ == Tag::kVectorStringAlsoNeedsConstructor; }
+  bool is_VectorStringAlsoNeedsConstructor() const { return ordinal_ == Ordinal::kVectorStringAlsoNeedsConstructor; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static Union WithVectorStringAlsoNeedsConstructor(::fidl::VectorView<::fidl::StringView>&& val) {
@@ -189,7 +188,10 @@ struct Union {
 
   ::fidl::VectorView<::fidl::StringView> const & VectorStringAlsoNeedsConstructor() const { return VectorStringAlsoNeedsConstructor_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_UnionTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_UnionTable;
@@ -202,10 +204,17 @@ struct Union {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kPrimitive = 0,
+    kStringNeedsConstructor = 1,
+    kVectorStringAlsoNeedsConstructor = 2,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(Union&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t Primitive_;
     ::fidl::StringView StringNeedsConstructor_;
@@ -220,14 +229,13 @@ struct ReverseOrdinalUnion {
   enum class Tag : fidl_union_tag_t {
     kFirst = 0,
     kSecond = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   ReverseOrdinalUnion();
   ~ReverseOrdinalUnion();
 
   ReverseOrdinalUnion(ReverseOrdinalUnion&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -240,9 +248,9 @@ struct ReverseOrdinalUnion {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_first() const { return tag_ == Tag::kFirst; }
+  bool is_first() const { return ordinal_ == Ordinal::kFirst; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ReverseOrdinalUnion WithFirst(uint32_t&& val) {
@@ -286,7 +294,7 @@ struct ReverseOrdinalUnion {
 
   uint32_t const & first() const { return first_; }
 
-  bool is_second() const { return tag_ == Tag::kSecond; }
+  bool is_second() const { return ordinal_ == Ordinal::kSecond; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ReverseOrdinalUnion WithSecond(uint32_t&& val) {
@@ -330,7 +338,10 @@ struct ReverseOrdinalUnion {
 
   uint32_t const & second() const { return second_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_ReverseOrdinalUnionTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_ReverseOrdinalUnionTable;
@@ -343,10 +354,16 @@ struct ReverseOrdinalUnion {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kFirst = 0,
+    kSecond = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(ReverseOrdinalUnion&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     uint32_t first_;
     uint32_t second_;
@@ -376,14 +393,13 @@ extern "C" const fidl_type_t v1_test_name_FieldCollisionTable;
 struct FieldCollision {
   enum class Tag : fidl_union_tag_t {
     kFieldCollisionTag = 0,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   FieldCollision();
   ~FieldCollision();
 
   FieldCollision(FieldCollision&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -396,9 +412,9 @@ struct FieldCollision {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_field_collision_tag() const { return tag_ == Tag::kFieldCollisionTag; }
+  bool is_field_collision_tag() const { return ordinal_ == Ordinal::kFieldCollisionTag; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static FieldCollision WithFieldCollisionTag(int32_t&& val) {
@@ -442,7 +458,10 @@ struct FieldCollision {
 
   int32_t const & field_collision_tag() const { return field_collision_tag_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_FieldCollisionTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_FieldCollisionTable;
@@ -455,10 +474,15 @@ struct FieldCollision {
   static constexpr uint32_t AltMaxOutOfLine = 8;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kFieldCollisionTag = 0,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(FieldCollision&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t field_collision_tag_;
   };
@@ -471,14 +495,13 @@ struct ExplicitUnion {
   enum class Tag : fidl_union_tag_t {
     kPrimitive = 0,
     kStringNeedsConstructor = 1,
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   ExplicitUnion();
   ~ExplicitUnion();
 
   ExplicitUnion(ExplicitUnion&& other) {
-    tag_ = Tag::Invalid;
+    ordinal_ = Ordinal::Invalid;
     if (this != &other) {
       MoveImpl_(std::move(other));
     }
@@ -491,9 +514,9 @@ struct ExplicitUnion {
     return *this;
   }
 
-  bool has_invalid_tag() const { return tag_ == Tag::Invalid; }
+  bool has_invalid_tag() const { return ordinal_ == Ordinal::Invalid; }
 
-  bool is_Primitive() const { return tag_ == Tag::kPrimitive; }
+  bool is_Primitive() const { return ordinal_ == Ordinal::kPrimitive; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ExplicitUnion WithPrimitive(int32_t&& val) {
@@ -537,7 +560,7 @@ struct ExplicitUnion {
 
   int32_t const & Primitive() const { return Primitive_; }
 
-  bool is_StringNeedsConstructor() const { return tag_ == Tag::kStringNeedsConstructor; }
+  bool is_StringNeedsConstructor() const { return ordinal_ == Ordinal::kStringNeedsConstructor; }
 
   // TODO(fxb/41475) Remove this in favor of the pointer version.
   static ExplicitUnion WithStringNeedsConstructor(::fidl::StringView&& val) {
@@ -581,7 +604,10 @@ struct ExplicitUnion {
 
   ::fidl::StringView const & StringNeedsConstructor() const { return StringNeedsConstructor_; }
 
-  Tag which() const { return tag_; }
+  Tag which() const {
+    ZX_ASSERT(!has_invalid_tag());
+    return static_cast<Tag>(ordinal_);
+  }
 
   static constexpr const fidl_type_t* Type = &test_name_ExplicitUnionTable;
   static constexpr const fidl_type_t* AltType = &v1_test_name_ExplicitUnionTable;
@@ -594,10 +620,16 @@ struct ExplicitUnion {
   static constexpr uint32_t AltMaxOutOfLine = 4294967295;
 
  private:
+  enum class Ordinal : fidl_union_tag_t {
+    kPrimitive = 0,
+    kStringNeedsConstructor = 1,
+    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
+  };
+
   void Destroy();
   void MoveImpl_(ExplicitUnion&& other);
   static void SizeAndOffsetAssertionHelper();
-  Tag tag_;
+  Ordinal ordinal_;
   union {
     int32_t Primitive_;
     ::fidl::StringView StringNeedsConstructor_;

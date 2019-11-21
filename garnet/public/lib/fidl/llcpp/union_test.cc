@@ -19,7 +19,7 @@ namespace llcpp_test = ::llcpp::fidl::llcpp::types::test;
 TEST(UnionPayload, Primitive) {
   {
     llcpp_test::TestUnion test_union;
-    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    EXPECT_TRUE(test_union.has_invalid_tag());
     test_union.set_primitive(5);
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kPrimitive, test_union.which());
     EXPECT_EQ(5, test_union.primitive());
@@ -31,16 +31,23 @@ TEST(UnionPayload, Primitive) {
   }
 }
 
+TEST(UnionPayload, WhichDisallowedWhenUninitialized) {
+  llcpp_test::TestUnion test_union;
+  ASSERT_DEATH({
+    test_union.which();
+  }, "!has_invalid_tag()");
+}
+
 TEST(UnionPayload, CopyableStruct) {
   {
     llcpp_test::TestUnion test_union;
-    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    EXPECT_TRUE(test_union.has_invalid_tag());
     test_union.set_copyable(llcpp_test::CopyableStruct{.x = 5});
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kCopyable, test_union.which());
   }
   {
     llcpp_test::TestUnion test_union;
-    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    EXPECT_TRUE(test_union.has_invalid_tag());
     llcpp_test::CopyableStruct copyable_struct{.x = 5};
     test_union.set_copyable(copyable_struct);
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kCopyable, test_union.which());
@@ -55,13 +62,13 @@ TEST(UnionPayload, MoveOnlyStruct) {
   // Move-only types are only settable as rvalue reference.
   {
     llcpp_test::TestUnion test_union;
-    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    EXPECT_TRUE(test_union.has_invalid_tag());
     test_union.set_move_only(llcpp_test::MoveOnlyStruct{.h = zx::handle()});
     EXPECT_EQ(llcpp_test::TestUnion::Tag::kMoveOnly, test_union.which());
   }
   {
     llcpp_test::TestUnion test_union;
-    EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union.which());
+    EXPECT_TRUE(test_union.has_invalid_tag());
     zx::event event;
     ASSERT_EQ(ZX_OK, zx::event::create(0, &event));
     llcpp_test::MoveOnlyStruct move_only_struct{.h = std::move(event)};
@@ -82,7 +89,7 @@ TEST(MoveUnion, Primitive) {
   llcpp_test::TestUnion test_union_b;
   test_union_a.set_primitive(5);
   test_union_b = std::move(test_union_a);
-  EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union_a.which());
+  EXPECT_TRUE(test_union_a.has_invalid_tag());
   EXPECT_EQ(llcpp_test::TestUnion::Tag::kPrimitive, test_union_b.which());
   EXPECT_EQ(5, test_union_b.primitive());
 }
@@ -92,7 +99,7 @@ TEST(MoveUnion, CopyableStruct) {
   llcpp_test::TestUnion test_union_b;
   test_union_a.set_copyable(llcpp_test::CopyableStruct{.x = 5});
   test_union_b = std::move(test_union_a);
-  EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union_a.which());
+  EXPECT_TRUE(test_union_a.has_invalid_tag());
   EXPECT_EQ(llcpp_test::TestUnion::Tag::kCopyable, test_union_b.which());
   EXPECT_EQ(5, test_union_b.copyable().x);
 }
@@ -105,7 +112,7 @@ TEST(MoveUnion, MoveOnlyStruct) {
   llcpp_test::MoveOnlyStruct move_only_struct{.h = std::move(event)};
   test_union_a.set_move_only(std::move(move_only_struct));
   test_union_b = std::move(test_union_a);
-  EXPECT_EQ(llcpp_test::TestUnion::Tag::Invalid, test_union_a.which());
+  EXPECT_TRUE(test_union_a.has_invalid_tag());
   EXPECT_EQ(llcpp_test::TestUnion::Tag::kMoveOnly, test_union_b.which());
   EXPECT_NE(ZX_HANDLE_INVALID, test_union_b.move_only().h);
 }
