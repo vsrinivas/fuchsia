@@ -65,7 +65,7 @@ fn main() -> Result<(), Error> {
         let mut fs = ServiceFs::new_local();
         fs.take_and_serve_directory_handle()?;
         let inspector = fuchsia_inspect::Inspector::new();
-        inspector.export(&mut fs);
+        inspector.serve(&mut fs)?;
         let root = inspector.root();
         let configuration_node =
             inspect::ConfigurationNode::new(root.create_child("configuration"));

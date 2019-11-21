@@ -53,7 +53,7 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let inspector = Inspector::new();
     let mut fs = ServiceFs::new();
-    inspector.export(&mut fs);
+    inspector.serve(&mut fs)?;
 
     let account_handler = Arc::new(AccountHandler::new(lifetime, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {

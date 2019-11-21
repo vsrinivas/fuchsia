@@ -198,9 +198,9 @@ Add the following to your initialization code:
 // This creates the root of an inspect tree.
 let inspector = inspect::Inspector::new();
 
-// This exports the VMO to the default path for reading at the standard
-// location "/root.inspect".
-inspector.export(&mut fs);
+// This serves the inspect Tree to the default path for reading at the standard
+// location "/diagnostics/fuchsia.inspect.Tree".
+inspector.serve(&mut fs)?;
 
 // This will give you a reference to the root node of the inspect tree.
 let root = inspector.root();

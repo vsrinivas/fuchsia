@@ -14,6 +14,7 @@ use {
     },
     core::marker::PhantomData,
     failure::{bail, format_err, Error},
+    fidl_fuchsia_inspect::TreeProxy,
     fuchsia_zircon::Vmo,
     maplit::btreemap,
     num_traits::bounds::Bounded,
@@ -91,6 +92,10 @@ impl NodeHierarchy {
 
     pub async fn try_from_inspector(inspector: &Inspector) -> Result<Self, Error> {
         tree_reader::read(inspector).await
+    }
+
+    pub async fn try_from_tree(tree: &TreeProxy) -> Result<Self, Error> {
+        tree_reader::read(tree).await
     }
 
     /// Sorts the properties and children of the node hierarchy by name.

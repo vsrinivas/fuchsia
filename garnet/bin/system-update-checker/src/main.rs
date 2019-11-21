@@ -82,7 +82,7 @@ async fn main() -> Result<(), Error> {
         })
         .add_fidl_service(move |stream| IncomingServices::Provider(stream, info_handler.clone()));
 
-    inspector.export(&mut fs);
+    inspector.serve(&mut fs)?;
 
     fs.take_and_serve_directory_handle().context("ServiceFs::take_and_serve_directory_handle")?;
     futures.push(

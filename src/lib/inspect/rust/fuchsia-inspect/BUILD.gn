@@ -11,10 +11,13 @@ rustc_library("fuchsia-inspect") {
   with_unit_tests = true
 
   deps = [
+    "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/pseudo-fs-mt",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/lib/mapped-vmo",
@@ -25,6 +28,7 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:derivative",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:glob",
     "//third_party/rust_crates:lazy_static",
     "//third_party/rust_crates:maplit",
     "//third_party/rust_crates:num-derive",
@@ -32,6 +36,7 @@ rustc_library("fuchsia-inspect") {
     "//third_party/rust_crates:parking_lot",
     "//third_party/rust_crates:paste",
     "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
+    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
@@ -39,7 +44,22 @@ rustc_library("fuchsia-inspect") {
 test_package("fuchsia_inspect_tests") {
   deps = [
     ":fuchsia-inspect_test",
+    "test:inspect_test_component",
   ]
+
+  binaries = [
+    {
+      name = "inspect_test_component"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/inspect_test_component.cmx")
+      dest = "inspect_test_component.cmx"
+    },
+  ]
+
   tests = [
     {
       name = "fuchsia_inspect_lib_test"

@@ -196,7 +196,7 @@ fn main() -> Result<(), Error> {
         .add_fidl_service(rewrite_cb)
         .add_fidl_service(admin_cb);
 
-    inspector.export(&mut fs);
+    inspector.serve(&mut fs)?;
 
     fs.take_and_serve_directory_handle()?;
 

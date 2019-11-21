@@ -6,6 +6,7 @@ use {
     crate::Inspector,
     async_trait::async_trait,
     failure::{bail, format_err, Error},
+    fidl_fuchsia_inspect::{TreeMarker, TreeNameIteratorMarker, TreeProxy},
     fuchsia_zircon as zx,
 };
 
@@ -40,5 +41,33 @@ impl ReadableTree for Inspector {
             Some(cb_result) => cb_result.await,
             None => bail!("failed to load tree name = {:?}", name),
         }
+    }
+}
+
+#[async_trait]
+impl ReadableTree for TreeProxy {
+    async fn vmo(&self) -> Result<zx::Vmo, Error> {
+        let tree_content = self.get_content().await?;
+        tree_content.buffer.map(|b| b.vmo).ok_or(format_err!("failed to fetch vmo"))
+    }
+
+    async fn tree_names(&self) -> Result<Vec<String>, Error> {
+        let (name_iterator, server_end) =
+            fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
+        self.list_children_names(server_end)?;
+        let mut names = vec![];
+        loop {
+            let subset_names = name_iterator.get_next().await?;
+            if subset_names.is_empty() {
+                return Ok(names);
+            }
+            names.extend(subset_names.into_iter());
+        }
+    }
+
+    async fn read_tree(&self, name: &str) -> Result<Self, Error> {
+        let (child_tree, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
+        self.open_child(name, server_end)?;
+        Ok(child_tree)
     }
 }

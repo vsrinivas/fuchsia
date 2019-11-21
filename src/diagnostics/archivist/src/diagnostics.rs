@@ -1,5 +1,6 @@
 use {
     crate::archive::EventFileGroupStatsMap,
+    failure::Error,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_inspect::{component, Node, UintProperty},
     lazy_static::lazy_static,
@@ -49,8 +50,8 @@ pub fn root() -> &'static Node {
     component::inspector().root()
 }
 
-pub fn export(service_fs: &mut ServiceFs<impl ServiceObjTrait>) {
-    component::inspector().export(service_fs);
+pub fn serve(service_fs: &mut ServiceFs<impl ServiceObjTrait>) -> Result<(), Error> {
+    component::inspector().serve(service_fs)
 }
 
 pub(crate) fn set_group_stats(stats: &EventFileGroupStatsMap) {

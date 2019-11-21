@@ -147,7 +147,7 @@ async fn main() -> Result<(), Error> {
     fs.dir("objects").add_fidl_service(move |stream| {
         spawn_inspect_server(stream, example_table.get_node_object());
     });
-    inspector.export(&mut fs);
+    inspector.serve(&mut fs)?;
     fs.take_and_serve_directory_handle()?;
 
     Ok(fs.collect().await)

@@ -1,5 +1,15 @@
 {
     "program": {
         "binary": "test/fuchsia_inspect_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "hub"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
     }
 }

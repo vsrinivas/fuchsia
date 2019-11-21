@@ -160,8 +160,8 @@ fn main() -> Result<(), Error> {
     // inspect tree to which further children objects can be added.
     let inspector = inspect::Inspector::new();
 
-    // Exports the Inspect VMO at the standard location "/root.inspect".
-    inspector.export(&mut fs);
+    // Serves the Inspect Tree at the standard location "/diagnostics/fuchsia.inspect.Tree"
+    inspector.serve(&mut fs)?;
 
     // Create a CEO |Employee| nested underneath the |root_object|.
     // The name "reporting_tree" will appear as a child of the root object.

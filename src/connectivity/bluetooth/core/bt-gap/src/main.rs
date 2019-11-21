@@ -110,7 +110,7 @@ async fn run() -> Result<(), Error> {
         GenericAccessService { hd: hd.clone(), generic_access_req_stream }.run().map(|()| Ok(()));
 
     let mut fs = ServiceFs::new();
-    inspect.export(&mut fs);
+    inspect.serve(&mut fs)?;
     fs.dir("svc")
         .add_fidl_service(move |s| control_service(control_hd.clone(), s))
         .add_service_at(CentralMarker::NAME, move |chan| {

@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("inspect_test_component") {
+  testonly = true
+  edition = "2018"
+  source_root = "main.rs"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//src/lib/inspect/rust/fuchsia-inspect",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}

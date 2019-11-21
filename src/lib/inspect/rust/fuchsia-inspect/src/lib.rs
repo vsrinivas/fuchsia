@@ -15,10 +15,18 @@ use {
     },
     derivative::Derivative,
     failure::{format_err, Error},
+    fidl::endpoints::DiscoverableService,
+    fidl_fuchsia_inspect::TreeMarker,
+    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fuchsia_async as fasync,
     fuchsia_component::server::{ServiceFs, ServiceObjTrait},
     fuchsia_syslog::macros::*,
+    fuchsia_vfs_pseudo_fs_mt::{
+        directory::entry::DirectoryEntry, execution_scope::ExecutionScope, path::Path,
+        pseudo_directory, service as pseudo_fs_service,
+    },
     fuchsia_zircon::{self as zx, HandleBased},
-    futures::future::BoxFuture,
+    futures::{future::BoxFuture, prelude::*},
     mapped_vmo::Mapping,
     parking_lot::Mutex,
     paste,
@@ -39,6 +47,9 @@ pub mod testing;
 mod service;
 mod state;
 mod utils;
+
+/// Directory where the diagnostics service should be added.
+pub const SERVICE_DIR: &str = "diagnostics";
 
 /// Root of the Inspect API
 #[derive(Clone)]
@@ -147,9 +158,11 @@ impl Inspector {
             .unwrap_or(None)
     }
 
-    /// Exports the VMO backing this Inspector at the standard location in the
-    /// supplied ServiceFs.
-    pub fn export<ServiceObjTy: ServiceObjTrait>(&self, service_fs: &mut ServiceFs<ServiceObjTy>) {
+    /// Spawns a server for handling inspect `Tree` requests in the diagnostics directory.
+    pub fn serve<'a, ServiceObjTy: ServiceObjTrait>(
+        &self,
+        service_fs: &mut ServiceFs<ServiceObjTy>,
+    ) -> Result<(), Error> {
         self.duplicate_vmo()
             .ok_or(format_err!("Failed to duplicate VMO"))
             .and_then(|vmo| {
@@ -165,6 +178,26 @@ impl Inspector {
             .unwrap_or_else(|e| {
                 fx_log_err!("Failed to expose vmo. Error: {:?}", e);
             });
+
+        let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
+        let inspector_clone = self.clone();
+        let dir = pseudo_directory! {
+            TreeMarker::SERVICE_NAME => pseudo_fs_service::host(move |stream| {
+                let inspector_clone_clone = inspector_clone.clone();
+                async move {
+                    service::handle_request_stream(inspector_clone_clone, stream).await
+                        .unwrap_or_else(|e| fx_log_err!("failed to run server: {:?}", e));
+                }
+                .boxed()
+            }),
+        };
+
+        let server_end = server.into_channel().into();
+        let scope = ExecutionScope::from_executor(Box::new(fasync::EHandle::local()));
+        dir.open(scope, OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, 0, Path::empty(), server_end);
+        service_fs.add_remote(SERVICE_DIR, proxy);
+
+        Ok(())
     }
 
     /// Get the root of the VMO object.
@@ -937,13 +970,25 @@ mod tests {
     use {
         super::*,
         crate::{
+            assert_inspect_tree,
             format::{block::LinkNodeDisposition, block_type::BlockType, constants},
             heap::Heap,
+            reader::NodeHierarchy,
         },
+        failure::bail,
+        fdio,
+        fidl::endpoints::DiscoverableService,
+        fidl_fuchsia_sys::ComponentControllerEvent,
+        fuchsia_async as fasync,
+        fuchsia_component::client,
         fuchsia_component::server::ServiceObj,
-        futures::prelude::*,
+        glob::glob,
         mapped_vmo::Mapping,
     };
+
+    const TEST_COMPONENT_CMX: &str = "inspect_test_component.cmx";
+    const TEST_COMPONENT_URL: &str =
+        "fuchsia-pkg://fuchsia.com/fuchsia_inspect_tests#meta/inspect_test_component.cmx";
 
     #[test]
     fn inspector_new() {
@@ -990,16 +1035,16 @@ mod tests {
         assert!(!no_op_node.is_valid());
     }
 
-    #[test]
-    fn new_no_op() {
+    #[fasync::run_singlethreaded(test)]
+    async fn new_no_op() -> Result<(), Error> {
         let mut fs: ServiceFs<ServiceObj<'_, ()>> = ServiceFs::new();
 
         let inspector = Inspector::new_no_op();
         assert!(!inspector.is_valid());
         assert!(!inspector.root().is_valid());
 
-        // Ensure export doesn't crash on a No-Op inspector
-        inspector.export(&mut fs);
+        // Ensure serve doesn't crash on a No-Op inspector
+        inspector.serve(&mut fs)
     }
 
     #[test]
@@ -1461,5 +1506,56 @@ mod tests {
         assert_inspect_tree!(inspector, root: {
             b: 2u64,
         });
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn connect_to_service() -> Result<(), Error> {
+        let mut service_fs = ServiceFs::new();
+        let env = service_fs.create_nested_environment("test")?;
+        let mut app = client::launch(&env.launcher(), TEST_COMPONENT_URL.to_string(), None)?;
+
+        fasync::spawn(service_fs.collect());
+
+        let mut component_stream = app.controller().take_event_stream();
+        match component_stream
+            .next()
+            .await
+            .expect("component event stream ended before termination event")?
+        {
+            ComponentControllerEvent::OnTerminated { return_code, termination_reason } => {
+                bail!(
+                    "Component terminated unexpectedly. Code: {}. Reason: {:?}",
+                    return_code,
+                    termination_reason
+                );
+            }
+            ComponentControllerEvent::OnDirectoryReady {} => {
+                let pattern = format!(
+                    "/hub/r/test/*/c/{}/*/out/diagnostics/{}",
+                    TEST_COMPONENT_CMX,
+                    TreeMarker::SERVICE_NAME
+                );
+                let path = glob(&pattern)?.next().unwrap().expect("failed to parse glob");
+                let (tree, server_end) =
+                    fidl::endpoints::create_proxy::<TreeMarker>().expect("failed to create proxy");
+                fdio::service_connect(
+                    &path.to_string_lossy().to_string(),
+                    server_end.into_channel(),
+                )
+                .expect("failed to connect to service");
+
+                let hierarchy = NodeHierarchy::try_from_tree(&tree).await?;
+                assert_inspect_tree!(hierarchy, root: {
+                    int: 3i64,
+                    "lazy-node": {
+                        a: "test",
+                        child: {
+                            double: 3.14,
+                        },
+                    }
+                });
+                app.kill().map_err(|e| format_err!("failed to kill component: {}", e))
+            }
+        }
     }
 }

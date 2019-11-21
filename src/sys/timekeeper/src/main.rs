@@ -27,7 +27,7 @@ async fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
 
     info!("diagnostics initialized, connecting notifier to servicefs.");
-    diagnostics::INSPECTOR.export(&mut fs);
+    diagnostics::INSPECTOR.serve(&mut fs)?;
 
     let source = initial_utc_source("/config/build-info/minimum-utc-stamp".as_ref())?;
     let notifier = Notifier::new(source);

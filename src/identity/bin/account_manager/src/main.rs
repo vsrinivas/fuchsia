@@ -87,11 +87,12 @@ fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
+    let mut executor = fasync::Executor::new().context("Error creating executor")?;
+
     let mut fs = ServiceFs::new();
     let inspector = Inspector::new();
-    inspector.export(&mut fs);
+    inspector.serve(&mut fs)?;
 
-    let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let account_manager = Arc::new(
         AccountManager::new(PathBuf::from(DATA_DIR), &auth_provider_config, &inspector).map_err(
             |e| {

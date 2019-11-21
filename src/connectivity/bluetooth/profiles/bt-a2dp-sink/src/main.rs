@@ -459,7 +459,7 @@ async fn main() -> Result<(), Error> {
 
     let inspect = inspect::Inspector::new();
     let mut fs = ServiceFs::new();
-    inspect.export(&mut fs);
+    inspect.serve(&mut fs)?;
 
     let pool_clone = controller_pool.clone();
     fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connected(s));

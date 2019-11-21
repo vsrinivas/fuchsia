@@ -39,7 +39,7 @@ fn main() -> Result<(), Error> {
     }
 
     let mut fs = ServiceFs::new();
-    diagnostics::export(&mut fs);
+    diagnostics::serve(&mut fs)?;
     fs.add_remote(
         "archive",
         io_util::open_directory_in_namespace(

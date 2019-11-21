@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![cfg(test)]
-
 use {
     crate::{reader::ReadableTree, Inspector},
     failure::{Error, ResultExt},
@@ -19,39 +17,44 @@ use {
 
 /// Runs a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
 /// associated with the given tree on `get_content` and allows to open linked trees (lazy nodes).
-pub fn spawn_tree_server(inspector: Inspector, mut stream: TreeRequestStream) {
-    fasync::spawn(
-        async move {
-            while let Some(request) =
-                stream.try_next().await.context("Error running tree server")?
-            {
-                match request {
-                    TreeRequest::GetContent { responder } => {
-                        let vmo = inspector.duplicate_vmo();
-                        let buffer_data =
-                            vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
-                        let content = TreeContent {
-                            buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
-                            state: Some(TreeState::InUse),
-                        };
-                        responder.send(content)?;
-                    }
-                    TreeRequest::ListChildrenNames { tree_iterator, .. } => {
-                        let values = inspector.tree_names().await?;
-                        let request_stream = tree_iterator.into_stream()?;
-                        spawn_tree_name_iterator_server(values, request_stream)
-                    }
-                    TreeRequest::OpenChild { child_name, tree, .. } => {
-                        if let Ok(inspector) = inspector.read_tree(&child_name).await {
-                            spawn_tree_server(inspector, tree.into_stream()?)
-                        }
-                    }
+pub async fn handle_request_stream(
+    inspector: Inspector,
+    mut stream: TreeRequestStream,
+) -> Result<(), Error> {
+    while let Some(request) = stream.try_next().await.context("Error running tree server")? {
+        match request {
+            TreeRequest::GetContent { responder } => {
+                let vmo = inspector.duplicate_vmo();
+                let buffer_data = vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
+                let content = TreeContent {
+                    buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
+                    state: Some(TreeState::InUse),
+                };
+                responder.send(content)?;
+            }
+            TreeRequest::ListChildrenNames { tree_iterator, .. } => {
+                let values = inspector.tree_names().await?;
+                let request_stream = tree_iterator.into_stream()?;
+                spawn_tree_name_iterator_server(values, request_stream)
+            }
+            TreeRequest::OpenChild { child_name, tree, .. } => {
+                if let Ok(inspector) = inspector.read_tree(&child_name).await {
+                    spawn(inspector, tree.into_stream()?)
                 }
             }
-            Ok(())
         }
-        .unwrap_or_else(|e: Error| fx_log_err!("error running tree server: {:?}", e)),
-    )
+    }
+    Ok(())
+}
+
+/// Spawns a server for the `fuchsia.inspect.Tree` protocol. This protocol returns the VMO
+/// associated with the given tree on `get_content` and allows to open linked trees (lazy nodes).
+fn spawn(inspector: Inspector, stream: TreeRequestStream) {
+    fasync::spawn(async move {
+        handle_request_stream(inspector, stream)
+            .await
+            .unwrap_or_else(|e: Error| fx_log_err!("error running tree server: {:?}", e));
+    });
 }
 
 /// Runs a server for the `fuchsia.inspect.TreeNameIterator` protocol. This protocol returns the
@@ -172,7 +175,7 @@ mod tests {
     fn spawn_server() -> Result<TreeProxy, Error> {
         let inspector = test_inspector();
         let (tree, request_stream) = fidl::endpoints::create_proxy_and_stream::<TreeMarker>()?;
-        spawn_tree_server(inspector, request_stream);
+        spawn(inspector, request_stream);
         Ok(tree)
     }
 
