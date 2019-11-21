@@ -832,7 +832,7 @@ int SystemInstance::FuchsiaStarter(devmgr::Coordinator* coordinator) {
   bool autorun_started = false;
   bool drivers_loaded = false;
 
-  size_t appmgr_timeout = 20;
+  size_t appmgr_timeout = 40;
   zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
   do {
