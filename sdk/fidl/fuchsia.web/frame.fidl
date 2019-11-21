@@ -181,6 +181,13 @@ protocol Frame {
     ///   acknowledgement callback has been processed. If this happens, the [`fuchsia.web.Frame`]
     ///   will be closed with `ERR_BAD_STATE`.
     SetUrlRequestRewriteRules(vector<UrlRequestRewriteRule>:MAX_RULE_COUNT rules) -> ();
+
+    /// Sets `session_id` to pass to the [`fuchsia.media.AudioConsumer`] when playing audio. The
+    /// specified value is not applied retroactively to audio streams that were started before this
+    /// message is processed. If the caller needs to ensure the value is applied to all streams it
+    /// should call this method before [`fuchsia.web.Frame/GetNavigationController`].
+    [Transitional]
+    SetMediaSessionId(uint64 session_id);
 };
 
 table WebMessage {
