@@ -13,6 +13,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/modular/session/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/wlan/service/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -75,6 +76,8 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   FuturePtr<> StopBaseShell();
 
   FuturePtr<> StopTokenManagerFactoryApp();
+
+  FuturePtr<> StopScenic();
 
   // Starts the basemgr functionalities in the following order:
   // 1. Initialize session provider.
@@ -173,6 +176,7 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
 
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> token_manager_factory_app_;
   fuchsia::auth::TokenManagerFactoryPtr token_manager_factory_;
+  fuchsia::ui::lifecycle::LifecycleControllerPtr scenic_lifecycle_controller_;
 
   bool base_shell_running_{};
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> base_shell_app_;

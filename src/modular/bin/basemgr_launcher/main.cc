@@ -19,6 +19,7 @@
 #include <src/lib/fxl/command_line.h>
 #include <src/modular/lib/modular_config/modular_config.h>
 #include <src/modular/lib/modular_config/modular_config_constants.h>
+#include <zxtest/zxtest.h>
 
 constexpr char kBasemgrUrl[] = "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx";
 constexpr char kBasemgrHubPath[] = "/hub/c/basemgr.cmx/*/out/debug/basemgr";
@@ -35,7 +36,6 @@ std::string FindBasemgrDebugService() {
 void ShutdownBasemgr() {
   // Get a connection to basemgr in order to shut it down.
   std::string service_path = FindBasemgrDebugService();
-
   fuchsia::modular::internal::BasemgrDebugPtr basemgr;
   auto request = basemgr.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
@@ -43,6 +43,9 @@ void ShutdownBasemgr() {
   }
 
   basemgr->Shutdown();
+  // Make sure this binary will wait for basemgr to shutdown first.
+  basemgr.set_error_handler([](zx_status_t status) { ASSERT_OK(status); });
+  return;
 }
 
 std::unique_ptr<vfs::PseudoDir> CreateConfigPseudoDir(std::string config_str) {

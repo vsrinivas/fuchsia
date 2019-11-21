@@ -15,6 +15,10 @@
 #include "lib/sys/cpp/testing/test_with_environment.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
+#include "src/ui/scenic/lib/scenic/scenic.h"
+
+constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
+constexpr char kScenicGlobPath[] = "/hub/r/env/*/c/scenic.cmx";
 
 class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
  public:
@@ -24,6 +28,8 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
  protected:
   void SetUp() override {
     // Setup an enclosing environment with AccountManager and DeviceSettings services for basemgr.
+    // Add Scenic to ensure that it shuts down nicely when basemgr shuts down.
+    // Add Presenter to ensure no false negatives for Scenic being launched.
     auto enclosing_env_services = interceptor_.MakeEnvironmentServices(real_env());
     enclosing_env_services->AddServiceWithLaunchInfo(
         fuchsia::sys::LaunchInfo{
@@ -33,6 +39,10 @@ class BasemgrLauncherTest : public sys::testing::TestWithEnvironment {
         fuchsia::sys::LaunchInfo{.url = "fuchsia-pkg://fuchsia.com/device_settings_manager#meta/"
                                         "device_settings_manager.cmx"},
         fuchsia::devicesettings::DeviceSettingsManager::Name_);
+
+    enclosing_env_services->AddServiceWithLaunchInfo(
+        fuchsia::sys::LaunchInfo{.url = "fuchsia-pkg://fuchsia.com/scenic#meta/scenic.cmx"},
+        fuchsia::ui::scenic::Scenic::Name_);
 
     env_ = sys::testing::EnclosingEnvironment::Create("env", real_env(),
                                                       std::move(enclosing_env_services));
@@ -76,8 +86,6 @@ TEST_F(BasemgrLauncherTest, BaseShellArg) {
 }
 
 TEST_F(BasemgrLauncherTest, BasemgrLauncherDestroysRunningBasemgr) {
-  constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
-
   // Launch and intercept basemgr.
   RunBasemgrLauncher({});
 
@@ -130,8 +138,6 @@ TEST_F(BasemgrLauncherTest, BadArgs) {
 }
 
 TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
-  constexpr char kBasemgrHubPathForTests[] = "/hub/r/env/*/c/basemgr.cmx/*/out/debug/basemgr";
-
   // Launch and intercept basemgr.
   RunBasemgrLauncher({});
 
@@ -151,4 +157,29 @@ TEST_F(BasemgrLauncherTest, ShutdownBasemgrCommand) {
   // Check that the instance of basemgr no longer exists in the hub and it did not restart.
   RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
   RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
+}
+
+TEST_F(BasemgrLauncherTest, ShutdownBasemgrShutsdownScenic) {
+  // Launch and intercept basemgr.
+  RunBasemgrLauncher({});
+
+  // Get the exact service path, which includes a unique id, of the basemgr instance.
+  std::string service_path;
+  RunLoopUntil([&] {
+    files::Glob glob(kBasemgrHubPathForTests);
+    if (glob.size() == 1) {
+      service_path = *glob.begin();
+      return true;
+    }
+    return false;
+  });
+
+  RunBasemgrLauncher({"shutdown"});
+
+  // Check that the instance of basemgr no longer exists in the hub and it did not restart.
+  RunLoopUntil([&] { return files::Glob(service_path).size() == 0; });
+  RunLoopUntil([&] { return files::Glob(kBasemgrHubPathForTests).size() == 0; });
+
+  // Ensure that scenic also shutdown properly.
+  RunLoopUntil([&] { return files::Glob(kScenicGlobPath).size() == 0; });
 }

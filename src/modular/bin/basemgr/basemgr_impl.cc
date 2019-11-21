@@ -7,6 +7,8 @@
 #include <fuchsia/ui/app/cpp/fidl.h>
 #include <lib/ui/scenic/cpp/view_token_pair.h>
 
+#include <zxtest/zxtest.h>
+
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fxl/logging.h"
 #include "src/modular/bin/basemgr/intl_property_provider_impl/intl_property_provider_impl.h"
@@ -151,6 +153,27 @@ FuturePtr<> BasemgrImpl::StopTokenManagerFactoryApp() {
   return Future<>::CreateCompleted("StopTokenManagerFactoryApp completed");
 }
 
+FuturePtr<> BasemgrImpl::StopScenic() {
+  auto fut = Future<>::Create("StopScenic");
+  if (!presenter_) {
+    FXL_LOG(INFO) << "StopScenic: no presenter; assuming that Scenic has not been launched";
+    fut->Complete();
+    return fut;
+  }
+
+  // Lazily connect to lifecycle controller, instead of keeping open an often-unused channel.
+  component_context_services_->Connect(scenic_lifecycle_controller_.NewRequest());
+  scenic_lifecycle_controller_->Terminate();
+
+  scenic_lifecycle_controller_.set_error_handler([fut](zx_status_t status) {
+    FXL_CHECK(status == ZX_ERR_PEER_CLOSED)
+        << "LifecycleController experienced some error other than PEER_CLOSED : " << status
+        << std::endl;
+    fut->Complete();
+  });
+  return fut;
+}
+
 void BasemgrImpl::Start() {
   // Wait for persistent data to come up.
   if (config_.basemgr_config().use_minfs()) {
@@ -237,7 +260,10 @@ void BasemgrImpl::Shutdown() {
       FXL_DLOG(INFO) << "- fuchsia::modular::UserProvider down";
       StopTokenManagerFactoryApp()->Then([this] {
         FXL_DLOG(INFO) << "- fuchsia::auth::TokenManagerFactory down";
-        on_shutdown_();
+        StopScenic()->Then([this] {
+          FXL_DLOG(INFO) << "- fuchsia::ui::Scenic down";
+          on_shutdown_();
+        });
       });
     });
   });
@@ -257,7 +283,6 @@ void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
                           fuchsia::auth::TokenManagerPtr ledger_token_manager,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
-
   auto did_start_session = session_provider_->StartSession(
       std::move(view_token), std::move(account), std::move(ledger_token_manager),
       std::move(agent_token_manager));
