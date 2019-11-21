@@ -1,45 +1,40 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
+import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
 
-rustc_binary("bt-cli") {
-  name = "bt_cli"
+rustc_library("bt-fidl-mocks") {
+  name = "bt_fidl_mocks"
+  version = "0.1.0"
   edition = "2018"
   with_unit_tests = true
 
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
     "//sdk/fidl/fuchsia.bluetooth.control:fuchsia.bluetooth.control-rustc",
-    "//src/connectivity/bluetooth/lib/bt-fidl-mocks",
+    "//sdk/fidl/fuchsia.bluetooth.sys:fuchsia.bluetooth.sys-rustc",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:parking_lot",
-    "//third_party/rust_crates:pin-utils",
-    "//third_party/rust_crates:regex",
-    "//third_party/rust_crates/transitional/rustyline",
   ]
 }
 
 test_package("tests") {
-  package_name = "bt-cli-tests"
+  package_name = "bt-fidl-mocks-tests"
 
   deps = [
-    ":bt-cli_test",
+    ":bt-fidl-mocks_test",
   ]
 
   tests = [
     {
-      name = "bt_cli_bin_test"
-      dest = "bt-cli-unittests"
+      name = "bt_fidl_mocks_lib_test"
+      dest = "bt-fidl-mocks-unittests"
       environments = basic_envs
     },
   ]

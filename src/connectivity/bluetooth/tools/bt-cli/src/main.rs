@@ -481,8 +481,15 @@ fn main() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl_fuchsia_bluetooth_control as control;
-    use parking_lot::Mutex;
+    use {
+        bt_fidl_mocks::control::ControlMock,
+        failure::err_msg,
+        fidl_fuchsia_bluetooth_control as control,
+        fuchsia_bluetooth::bt_fidl_status,
+        fuchsia_zircon::{Duration, DurationNum},
+        futures::join,
+        parking_lot::Mutex,
+    };
 
     fn peer(connected: bool, bonded: bool) -> Peer {
         control::RemoteDevice {
@@ -615,7 +622,7 @@ mod tests {
 
     // Test that command lines entered parse correctly to the expected disconnect calls
     #[test]
-    fn test_disconnect() {
+    fn test_parse_disconnect() {
         let state = Mutex::new(state_with(peer(true, false)));
         let cases = vec![
             // valid peer id
@@ -644,5 +651,45 @@ mod tests {
         let args: Vec<&str> = args.iter().map(|s| s.as_str()).collect();
         let args: &[&str] = &*args;
         parse_disconnect(args, state)
+    }
+
+    fn timeout() -> Duration {
+        20.seconds()
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_disconnect() {
+        let peer = peer(true, false);
+        let peer_id = peer.identifier.clone();
+
+        let args = vec![peer_id.as_str()];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+
+        let cmd = disconnect(args.as_slice(), &state, &proxy);
+        let mock_expect = mock.expect_disconnect(peer_id.clone(), bt_fidl_status!());
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        let _ = mock_result.expect("mock FIDL expectation not satisfied");
+        assert_eq!("".to_string(), result.expect("expected success"));
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_disconnect_error() {
+        let peer = peer(true, false);
+        let peer_id = peer.identifier.clone();
+
+        let args = vec![peer_id.as_str()];
+        let state = Mutex::new(state_with(peer));
+        let (proxy, mut mock) = ControlMock::new(timeout()).expect("failed to create mock");
+
+        let error_msg = "oopsy daisy";
+        let cmd = disconnect(args.as_slice(), &state, &proxy);
+        let mock_expect =
+            mock.expect_disconnect(peer_id.clone(), bt_fidl_status!(Failed, err_msg(error_msg)));
+        let (result, mock_result) = join!(cmd, mock_expect);
+
+        let _ = mock_result.expect("mock FIDL expectation not satisfied");
+        assert!(result.expect("expected a result").contains(error_msg));
     }
 }

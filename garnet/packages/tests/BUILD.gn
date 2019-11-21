@@ -1041,6 +1041,7 @@ group("bluetooth") {
     "//src/connectivity/bluetooth/hci/emulator",
     "//src/connectivity/bluetooth/lib/bt-avctp:tests",
     "//src/connectivity/bluetooth/lib/bt-avdtp:tests",
+    "//src/connectivity/bluetooth/lib/bt-fidl-mocks:tests",
     "//src/connectivity/bluetooth/lib/fuchsia-bluetooth:tests",
     "//src/connectivity/bluetooth/profiles/bt-a2dp-sink:tests",
     "//src/connectivity/bluetooth/tests",

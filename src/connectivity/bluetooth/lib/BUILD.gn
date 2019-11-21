@@ -9,6 +9,7 @@ group("lib") {
     "bt-a2dp:tests",
     "bt-avdtp",
     "bt-avdtp:tests",
+    "bt-fidl-mocks:tests",
     "fidl",
     "fidl:tests",
     "fuchsia-audio-device-output",
