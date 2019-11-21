@@ -12,7 +12,7 @@
 #include <task-utils/walker.h>
 
 #include "gtest/gtest.h"
-#include "tools/shell/lib/js_testing_utils.h"
+#include "src/developer/shell/lib/js_testing_utils.h"
 
 namespace shell {
 

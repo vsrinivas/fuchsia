@@ -11,13 +11,13 @@
 #include <set>
 #include <vector>
 
+#include "src/developer/shell/lib/qjs_util.h"
+#include "src/developer/shell/lib/zx.h"
 #include "src/lib/fidl_codec/library_loader.h"
 #include "src/lib/fidl_codec/wire_parser.h"
 #include "third_party/quickjs/quickjs.h"
 #include "third_party/rapidjson/include/rapidjson/stringbuffer.h"
 #include "third_party/rapidjson/include/rapidjson/writer.h"
-#include "tools/shell/lib/qjs_util.h"
-#include "tools/shell/lib/zx.h"
 
 namespace shell::fidl {
 

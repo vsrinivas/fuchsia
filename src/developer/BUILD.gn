@@ -23,6 +23,7 @@ group("tests") {
     "//src/developer/feedback:tests",
     "//src/developer/fuchsia-criterion:fuchsia-criterion-tests",
     "//src/developer/kcounter_inspect/tests:kcounter_inspect_tests",
+    "//src/developer/shell:tests",
     "//src/developer/tracing:tests",
   ]
 }

@@ -136,10 +136,10 @@ group("rootjob_svc_allowlist") {
     "//garnet/tests/benchmarks/input_latency:garnet_input_latency_benchmarks",
     "//src/developer/debug/debug_agent:debug_agent",
     "//src/developer/debug/debug_agent:debug_agent_tests",
+    "//src/developer/shell:shell_tests",
     "//src/ledger:ledger_tests",
     "//src/ledger/bin/tests/benchmark:ledger_benchmarks",
     "//src/lib/process_builder:process_builder_tests",
     "//src/sys/component_manager:component_manager_tests",
-    "//tools/shell:shell_tests",
   ]
 }

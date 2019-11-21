@@ -9,10 +9,10 @@ import("//build/test/test_package.gni")
 test("shell_tests_bin") {
   deps = [
     "//sdk/lib/fidl/cpp/test",
+    "//src/developer/shell/console:tests",
+    "//src/developer/shell/lib:tests",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
-    "//tools/shell/console:tests",
-    "//tools/shell/lib:tests",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
   ]
@@ -68,7 +68,7 @@ test_package("shell_tests") {
   deps = [
     ":generate_fidl_json",
     ":shell_tests_bin",
-    "//tools/shell/lib:js_libs",
+    "//src/developer/shell/lib:js_libs",
   ]
   tests = [
     {
@@ -80,6 +80,14 @@ test_package("shell_tests") {
           [ "$target_gen_dir/lib/libs.manifest" ]
 }
 
+group("tests") {
+  testonly = true
+
+  deps = [
+    ":shell_tests",
+  ]
+}
+
 executable("bin") {
   output_name = "josh"
 
@@ -88,8 +96,8 @@ executable("bin") {
   ]
 
   deps = [
-    "//tools/shell/console",
-    "//tools/shell/lib",
+    "//src/developer/shell/console",
+    "//src/developer/shell/lib",
   ]
 
   libs = [ "zircon" ]
@@ -106,7 +114,7 @@ package("josh") {
   deps = [
     ":bin",
     ":generate_fidl_json",
-    "//tools/shell/lib:js_libs",
+    "//src/developer/shell/lib:js_libs",
   ]
   binaries = [
     {

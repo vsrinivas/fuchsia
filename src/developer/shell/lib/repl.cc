@@ -12,9 +12,9 @@
 
 namespace shell::repl {
 
-Repl::Repl(JSContext* ctx, const std::string& prompt) 
-    : li_([this](const std::string& s) { HandleLine(s); }, prompt), 
-      ctx_(ctx), 
+Repl::Repl(JSContext* ctx, const std::string& prompt)
+    : li_([this](const std::string& s) { HandleLine(s); }, prompt),
+      ctx_(ctx),
       output_fd_(stdout),
       exit_shell_cmd_(false) {
   li_.Show();
@@ -38,13 +38,11 @@ void Repl::HandleLine(const std::string& line) {
   std::string cmd = mexpr_ + line;
   std::string shell_cmd = GetAndExecuteShellCmd(cmd);
   if (shell_cmd == "\\q") {
-    exit_shell_cmd_ =  true;
-  }
-  else if (shell_cmd != "") {
+    exit_shell_cmd_ = true;
+  } else if (shell_cmd != "") {
     mexpr_ = "";
     exit_shell_cmd_ = false;
-  }
-  else{
+  } else {
     std::string open_symbols = OpenSymbols(cmd);
     if (open_symbols.empty()) {
       mexpr_ = "";

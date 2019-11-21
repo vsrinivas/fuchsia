@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
-#define TOOLS_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
+#ifndef SRC_DEVELOPER_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
+#define SRC_DEVELOPER_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
 
 #include <optional>
 #include <string>
@@ -27,4 +27,4 @@ cmdline::Status ParseCommandLine(int argc, const char** argv, CommandLineOptions
                                  std::vector<std::string>* params);
 }  // namespace shell
 
-#endif  // TOOLS_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_
+#endif  // SRC_DEVELOPER_SHELL_CONSOLE_COMMAND_LINE_OPTIONS_H_

@@ -6,12 +6,12 @@
 
 #include <string.h>
 
+#include "src/developer/shell/lib/fdio.h"
+#include "src/developer/shell/lib/fidl.h"
+#include "src/developer/shell/lib/zx.h"
 #include "src/lib/fxl/logging.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
-#include "tools/shell/lib/fdio.h"
-#include "tools/shell/lib/fidl.h"
-#include "tools/shell/lib/zx.h"
 
 namespace shell {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_SHELL_LIB_QJS_UTIL_H_
-#define TOOLS_SHELL_LIB_QJS_UTIL_H_
+#ifndef SRC_DEVELOPER_SHELL_LIB_QJS_UTIL_H_
+#define SRC_DEVELOPER_SHELL_LIB_QJS_UTIL_H_
 
 #include "third_party/quickjs/quickjs.h"
 
@@ -27,4 +27,4 @@ class CStringHolder {
 
 }  // namespace shell
 
-#endif  // TOOLS_SHELL_LIB_QJS_UTIL_H_
+#endif  // SRC_DEVELOPER_SHELL_LIB_QJS_UTIL_H_

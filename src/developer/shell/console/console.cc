@@ -8,11 +8,11 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/shell/console/command_line_options.h"
+#include "src/developer/shell/lib/li.h"
+#include "src/developer/shell/lib/runtime.h"
 #include "third_party/quickjs/quickjs-libc.h"
 #include "third_party/quickjs/quickjs.h"
-#include "tools/shell/console/command_line_options.h"
-#include "tools/shell/lib/li.h"
-#include "tools/shell/lib/runtime.h"
 
 namespace shell {
 

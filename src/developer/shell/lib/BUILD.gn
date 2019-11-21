@@ -89,7 +89,9 @@ source_set("tests") {
   ]
   deps = [
     ":lib",
+    "//sdk/lib/fidl/cpp:test_support",
     "//sdk/lib/fidl/cpp/test",
+    "//src/developer/shell/console",
     "//src/lib/fidl_codec:json_for_test",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-loop",

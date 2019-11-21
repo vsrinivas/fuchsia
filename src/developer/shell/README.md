@@ -45,6 +45,6 @@ Note that available FIDL libraries are available off of a global object called
 `fidling`.  If a FIDL library you want is not available, please contact the OWNERS
 of this directory.
 
-If you want to try the shell, add the package "//tools/shell:josh" to the packages
-available, shell into the device, and type "josh".
+If you want to try the shell, add the package "//src/developer/shell:josh" to
+the packages available, shell into the device, and type "josh".
 

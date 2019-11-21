@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "tools/shell/lib/zx.h"
+#include "src/developer/shell/lib/zx.h"
 
 #include <memory>
 #include <string>
 
 #include "gtest/gtest.h"
-#include "tools/shell/lib/js_testing_utils.h"
-#include "tools/shell/lib/runtime.h"
+#include "src/developer/shell/lib/js_testing_utils.h"
+#include "src/developer/shell/lib/runtime.h"
 
 namespace shell {
 

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_SHELL_LIB_FDIO_H_
-#define TOOLS_SHELL_LIB_FDIO_H_
+#ifndef SRC_DEVELOPER_SHELL_LIB_FDIO_H_
+#define SRC_DEVELOPER_SHELL_LIB_FDIO_H_
 
 #include "third_party/quickjs/quickjs.h"
 
@@ -14,4 +14,4 @@ JSModuleDef *FdioModuleInit(JSContext *ctx, const char *module_name);
 
 }  // namespace shell::fdio
 
-#endif  // TOOLS_SHELL_LIB_FDIO_H_
+#endif  // SRC_DEVELOPER_SHELL_LIB_FDIO_H_

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef TOOLS_SHELL_LIB_FIDL_H_
-#define TOOLS_SHELL_LIB_FIDL_H_
+#ifndef SRC_DEVELOPER_SHELL_LIB_FIDL_H_
+#define SRC_DEVELOPER_SHELL_LIB_FIDL_H_
 
 #include <string>
 
@@ -17,4 +17,4 @@ JSModuleDef *FidlModuleInit(JSContext *ctx, const char *module_name, const std::
 
 }  // namespace shell::fidl
 
-#endif  // TOOLS_SHELL_LIB_FIDL_H_
+#endif  // SRC_DEVELOPER_SHELL_LIB_FIDL_H_
