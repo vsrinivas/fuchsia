@@ -54,7 +54,7 @@ impl ByteFraction {
                     number -= 1;
                 }
 
-                let capped = area & 0b11111111;
+                let capped = area & 0b1111_1111;
 
                 if number & 0b1 == 0 {
                     capped as u8

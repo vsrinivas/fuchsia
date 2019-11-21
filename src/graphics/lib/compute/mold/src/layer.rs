@@ -45,6 +45,7 @@ impl Content {
     }
 }
 
+/// A layer containing a raster and [`Op`]s related to it.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub struct Layer {
     pub(crate) content: Content,
@@ -54,6 +55,16 @@ pub struct Layer {
 }
 
 impl Layer {
+    /// Creates a new layer from a `raster` and `ops` that will be executed on the [tiles] where
+    /// this raster is printed.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::{Layer, Raster};
+    /// let layer = Layer::new(Raster::empty(), vec![]);
+    /// ```
+    ///
+    /// [tiles]: crate::tile
     pub fn new(raster: Raster, ops: Vec<Op>) -> Self {
         Self {
             content: Content::Raster(raster),

@@ -28,7 +28,7 @@ use std::{fmt, iter::FromIterator, ops::Range};
 
 use crate::{point::Point, segment::Segment};
 
-const COMPACT_DIFF_MASK: i32 = 0b111111;
+const COMPACT_DIFF_MASK: i32 = 0b11_1111;
 const COMPACT_DIFF_DX_SHIFT: u16 = 32 - COMPACT_DIFF_MASK.leading_zeros() as u16;
 const COMPACT_DIFF_SHIFT_TO_I32: i32 = 32 - COMPACT_DIFF_DX_SHIFT as i32;
 
@@ -60,9 +60,9 @@ impl CompactDiff {
     }
 }
 
-const RASTER_COMMAND_MASK: u8 = 0b1000000;
-const RASTER_COMMAND_MOVE: u8 = 0b0000000;
-const RASTER_COMMAND_SEGMENT: u8 = 0b1000000;
+const RASTER_COMMAND_MASK: u8 = 0b100_0000;
+const RASTER_COMMAND_MOVE: u8 = 0b000_0000;
+const RASTER_COMMAND_SEGMENT: u8 = 0b100_0000;
 
 pub struct RasterSegments {
     commands: Vec<u8>,

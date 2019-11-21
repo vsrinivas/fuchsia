@@ -37,9 +37,9 @@ impl Color {
         let green = u16::from((self.alpha * self.green).value());
         let blue = u16::from((self.alpha * self.blue).value());
 
-        let red = (red & 0b1111_1000) << 8;
-        let green = (green & 0b1111_1100) << 3;
-        let blue = blue >> 3;
+        let red = ((red >> 3) & 0b1_1111) << 11;
+        let green = ((green >> 2) & 0b111_1111) << 5;
+        let blue = (blue >> 3) & 0b1_1111;
 
         red | green | blue
     }

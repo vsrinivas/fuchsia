@@ -2,6 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![deny(missing_docs)]
+
+//! Efficient CPU-backed tiled vector-content renderer with a Spinel-like API.
+
 mod layer;
 mod path;
 mod point;
@@ -26,4 +30,4 @@ pub use layer::Layer;
 pub use path::Path;
 pub use point::Point;
 pub use raster::{Raster, RasterInner};
-pub use tile::map::painter::{ColorBuffer, PixelFormat};
+pub use tile::map::painter::buffer::{ColorBuffer, PixelFormat};

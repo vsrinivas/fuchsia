@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::mem;
-
 #[cfg(feature = "tracing")]
 use fuchsia_trace::duration;
 
@@ -17,31 +15,15 @@ use crate::{
     PIXEL_SHIFT, PIXEL_WIDTH,
 };
 
+pub(crate) mod buffer;
 mod byte_fraction;
 mod color;
 mod segments;
 
+use buffer::{ColorBuffer, PixelFormat};
 use byte_fraction::ByteFraction;
 use color::Color;
 use segments::TileSegments;
-
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum PixelFormat {
-    RGBA8888,
-    BGRA8888,
-    RGB565,
-}
-
-pub trait ColorBuffer: Clone + Send + Sync {
-    fn pixel_format(&self) -> PixelFormat;
-    fn stride(&self) -> usize;
-    unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize);
-
-    unsafe fn write_color_at<C: Copy + Sized>(&mut self, offset: usize, src: &[C]) {
-        let size = mem::size_of::<C>();
-        self.write_at(offset * size, src.as_ptr() as *const u8, src.len() * size);
-    }
-}
 
 #[derive(Debug)]
 pub(crate) struct Context<'m, B: ColorBuffer> {
@@ -151,13 +133,13 @@ impl Painter {
         &mut self,
         segments: impl Iterator<Item = Segment<i32>>,
         translation: Point<i32>,
-        tile_i: usize,
-        tile_j: usize,
+        i: usize,
+        j: usize,
         fill_rule: FillRule,
     ) {
         let delta = Point::new(
-            (translation.x - (tile_i * TILE_SIZE) as i32) * PIXEL_WIDTH,
-            (translation.y - (tile_j * TILE_SIZE) as i32) * PIXEL_WIDTH,
+            (translation.x - (i * TILE_SIZE) as i32) * PIXEL_WIDTH,
+            (translation.y - (j * TILE_SIZE) as i32) * PIXEL_WIDTH,
         );
 
         for i in 0..TILE_SIZE * (TILE_SIZE + 1) {
@@ -251,7 +233,7 @@ impl Painter {
             self.color_acc[i].red += cover * self.color_wip[i].red;
             self.color_acc[i].green += cover * self.color_wip[i].green;
             self.color_acc[i].blue += cover * self.color_wip[i].blue;
-            self.color_acc[i].alpha = self.color_acc[i].alpha - cover * self.color_wip[i].alpha;
+            self.color_acc[i].alpha -= cover * self.color_wip[i].alpha;
         }
     }
 
@@ -262,7 +244,7 @@ impl Painter {
             self.color_acc[i].red += cover_min * self.color_wip[i].red;
             self.color_acc[i].green += cover_min * self.color_wip[i].green;
             self.color_acc[i].blue += cover_min * self.color_wip[i].blue;
-            self.color_acc[i].alpha = self.color_acc[i].alpha - cover_min * self.color_wip[i].alpha;
+            self.color_acc[i].alpha -= cover_min * self.color_wip[i].alpha;
         }
     }
 
@@ -364,8 +346,8 @@ impl Painter {
         duration!(
             "gfx",
             "Painter::execute",
-            "i" => context.tile.tile_i as u64,
-            "j" => context.tile.tile_j as u64
+            "i" => context.tile.i as u64,
+            "j" => context.tile.j as u64
         );
 
         while let Some((segments, ops)) = self.process_layer(&context) {
@@ -377,15 +359,15 @@ impl Painter {
                     Op::CoverWipNonZero => self.cover_wip(
                         segments.clone(),
                         segments.translation,
-                        context.tile.tile_i,
-                        context.tile.tile_j,
+                        context.tile.i,
+                        context.tile.j,
                         FillRule::NonZero,
                     ),
                     Op::CoverWipEvenOdd => self.cover_wip(
                         segments.clone(),
                         segments.translation,
-                        context.tile.tile_i,
-                        context.tile.tile_j,
+                        context.tile.i,
+                        context.tile.j,
                         FillRule::EvenOdd,
                     ),
                     Op::CoverWipMask => self.cover_wip_mask(),
@@ -407,16 +389,16 @@ impl Painter {
             }
         }
 
-        for tile_j in 0..TILE_SIZE {
-            let x = context.tile.tile_i * TILE_SIZE;
-            let y = context.tile.tile_j * TILE_SIZE + tile_j;
+        for j in 0..TILE_SIZE {
+            let x = context.tile.i * TILE_SIZE;
+            let y = context.tile.j * TILE_SIZE + j;
 
             if y < context.height {
                 let buffer_index = x + y * context.buffer.stride();
-                let tile_index = tile_j * TILE_SIZE;
+                let index = j * TILE_SIZE;
                 let delta = (context.width - x).min(TILE_SIZE);
 
-                let tile_range = tile_index..tile_index + delta;
+                let tile_range = index..index + delta;
 
                 unsafe {
                     Self::write_row(&mut context.buffer, buffer_index, &self.color_acc[tile_range]);

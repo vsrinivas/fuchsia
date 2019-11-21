@@ -298,11 +298,11 @@ mod tests {
         match from {
             Some((from_i, from_j)) => {
                 contour.for_each_tile_from(map.tiles_mut(), from_i, from_j, |tile| {
-                    tiles.push((tile.tile_i, tile.tile_j))
+                    tiles.push((tile.i, tile.j))
                 })
             }
             None => contour
-                .for_each_tile(map.tiles_mut(), |tile| tiles.push((tile.tile_i, tile.tile_j))),
+                .for_each_tile(map.tiles_mut(), |tile| tiles.push((tile.i, tile.j))),
         }
 
         tiles

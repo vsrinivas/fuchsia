@@ -60,7 +60,7 @@ impl Raster {
 
     fn build_contour(segments: &RasterSegments) -> Contour {
         #[cfg(feature = "tracing")]
-        duration!("gfx", "Raster::contour");
+        duration!("gfx", "Raster::build_contour");
         let mut contour_builder = ContourBuilder::new();
 
         for segment in segments.iter() {
@@ -184,7 +184,7 @@ impl Raster {
         }
     }
 
-    fn from_segments_and_contour<'r>(segments: RasterSegments, contour: Contour) -> Self {
+    fn from_segments_and_contour(segments: RasterSegments, contour: Contour) -> Self {
         Self {
             inner: Rc::new(RasterInner { segments, contour }),
             translation: Point::new(0, 0),

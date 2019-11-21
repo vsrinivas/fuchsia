@@ -20,11 +20,11 @@ use crate::{
     point::Point,
     raster::RasterSegments,
     segment::Segment,
-    tile::{Op, Tile, TILE_SIZE},
+    tile::{Op, Tile, TILE_MASK, TILE_SHIFT},
     PIXEL_WIDTH,
 };
 
-use painter::{ColorBuffer, Context, Painter, PixelFormat};
+use painter::{buffer::{ColorBuffer, PixelFormat}, Context, Painter};
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
@@ -42,6 +42,29 @@ pub(crate) struct Tiles {
 }
 
 impl Tiles {
+    pub fn new(width: usize, height: usize) -> Self {
+        fn round_up(n: usize) -> usize {
+            if n & TILE_MASK as usize == 0 {
+                n >> TILE_SHIFT as usize
+            } else {
+                (n >> TILE_SHIFT as usize) + 1
+            }
+        }
+
+        let width = round_up(width);
+        let height = round_up(height);
+
+        let mut tiles = Vec::with_capacity(width * height);
+
+        for j in 0..height {
+            for i in 0..width {
+                tiles.push(Tile::new(i, j));
+            }
+        }
+
+        Self { tiles, width, height }
+    }
+
     pub fn width(&self) -> usize {
         self.width
     }
@@ -91,7 +114,7 @@ impl Tiles {
             .par_iter()
             .map(|tile| Context {
                 tile,
-                index: tile.tile_i + tile.tile_j * tile_width,
+                index: tile.i + tile.j * tile_width,
                 width,
                 height,
                 layers,
@@ -147,6 +170,9 @@ impl<'m> Layers<'m> {
 // of the `Map` through an `Option<HashMap<_, _>>`.
 unsafe impl Sync for Layers<'_> {}
 
+/// A map of [tiles].
+///
+/// [tiles]: crate::tile
 #[derive(Debug, Default)]
 pub struct Map {
     tiles: Tiles,
@@ -156,32 +182,15 @@ pub struct Map {
 }
 
 impl Map {
-    fn round_up(n: usize) -> usize {
-        if n % TILE_SIZE == 0 {
-            n / TILE_SIZE
-        } else {
-            n / TILE_SIZE + 1
-        }
-    }
-
+    /// Creates a new map `width` pixels wide and `height` pixels high.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::Map;
+    /// let map = Map::new(800, 600);
+    /// ```
     pub fn new(width: usize, height: usize) -> Self {
-        let tile_width = Self::round_up(width);
-        let tile_height = Self::round_up(height);
-
-        let mut tiles = Vec::with_capacity(tile_width * tile_height);
-
-        for j in 0..tile_height {
-            for i in 0..tile_width {
-                tiles.push(Tile::new(i, j));
-            }
-        }
-
-        Self {
-            tiles: Tiles { tiles, width: tile_width, height: tile_height },
-            layers: BTreeMap::new(),
-            width,
-            height,
-        }
+        Self { tiles: Tiles::new(width, height), layers: BTreeMap::new(), width, height }
     }
 
     #[cfg(test)]
@@ -189,14 +198,45 @@ impl Map {
         &mut self.tiles
     }
 
+    /// Width of the map, in pixels.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::Map;
+    /// let map = Map::new(800, 600);
+    /// assert_eq!(map.width(), 800);
+    /// ```
     pub fn width(&self) -> usize {
         self.width
     }
 
+    /// Height of the map, in pixels.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::Map;
+    /// let map = Map::new(800, 600);
+    /// assert_eq!(map.height(), 600);
+    /// ```
     pub fn height(&self) -> usize {
         self.height
     }
 
+    /// During rendering, execute `ops` batch on *all* tiles.
+    ///
+    /// # Ordering
+    ///
+    /// `id`s specify the order in which the batches will be executed, with lower ids being executed
+    /// first.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::{Map, Op};
+    /// let mut map = Map::new(800, 600);
+    /// map.global(0, vec![
+    ///     Op::CoverWipZero,
+    /// ]);
+    /// ```
     pub fn global(&mut self, id: u32, ops: Vec<Op>) {
         self.print(id, Layer::maxed(ops));
     }
@@ -205,6 +245,21 @@ impl Map {
         content.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
     }
 
+    /// During rendering, execute `ops` batch on tiles touched by `layer`.
+    ///
+    /// # Ordering
+    ///
+    /// `id`s specify the order in which the batches will be executed, with lower ids being executed
+    /// first. It will also blend lower ids on top of higher ones.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::{Layer, Raster, tile::{Map, Op}};
+    /// let mut map = Map::new(800, 600);
+    /// map.print(0, Layer::new(Raster::empty(), vec![
+    ///     Op::CoverWipZero,
+    /// ]));
+    /// ```
     pub fn print(&mut self, id: u32, layer: Layer) {
         if !layer.ops.is_empty() && self.layers.get(&id) != Some(&layer) {
             if let Some(old_layer) = self.layers.get(&id) {
@@ -217,6 +272,19 @@ impl Map {
         }
     }
 
+    /// Remove all rendering operations on `id`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::tile::{Map, Op};
+    /// let mut map = Map::new(800, 600);
+    /// map.global(0, vec![
+    ///     Op::CoverWipZero,
+    /// ]);
+    /// // render one frame
+    /// map.remove(0);
+    /// // next frame id == 0 will be skipped
+    /// ```
     pub fn remove(&mut self, id: u32) {
         if let Some(layer) = self.layers.get(&id) {
             let content = layer.content.clone();
@@ -287,6 +355,48 @@ impl Map {
         }
     }
 
+    /// Render map into `buffer`.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::ptr;
+    /// # use crate::mold::{ColorBuffer, PixelFormat, tile::{Map, Op}};
+    /// #[derive(Clone, Debug)]
+    /// struct BitMap {
+    ///     buffer: *mut u8,
+    /// }
+    ///
+    /// unsafe impl Send for BitMap {}
+    /// unsafe impl Sync for BitMap {}
+    ///
+    /// impl ColorBuffer for BitMap {
+    ///     // ...
+    /// #     fn pixel_format(&self) -> PixelFormat {
+    /// #         PixelFormat::RGBA8888
+    /// #     }
+    /// #
+    /// #     fn stride(&self) -> usize {
+    /// #         1
+    /// #     }
+    /// #
+    /// #     unsafe fn write_at(&mut self, offset: usize, src: *const u8, len: usize) {
+    /// #         let dst = self.buffer.add(offset);
+    /// #         ptr::copy_nonoverlapping(src, dst, len);
+    /// #     }
+    /// }
+    ///
+    /// let mut buffer = [0u8; 4];
+    /// let mut bitmap = BitMap { buffer: buffer.as_mut_ptr() };
+    /// const WHITE: u32 = 0xFFFF_FFFF;
+    ///
+    /// let mut map = Map::new(1, 1);
+    /// map.global(0, vec![
+    ///     Op::ColorAccBackground(WHITE),
+    /// ]);
+    /// map.render(bitmap);
+    ///
+    /// assert_eq!(u32::from_be_bytes(buffer), WHITE);
+    /// ```
     pub fn render<B: ColorBuffer>(&mut self, buffer: B) {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::render");
@@ -308,6 +418,21 @@ impl Map {
         }
     }
 
+    /// Render map into a `Vec`-backed bitmap.
+    ///
+    /// # Examples
+    /// ```
+    /// # use std::ptr;
+    /// # use crate::mold::{tile::{Map, Op}};
+    /// const WHITE: u32 = 0xFFFF_FFFF;
+    ///
+    /// let mut map = Map::new(1, 1);
+    /// map.global(0, vec![
+    ///     Op::ColorAccBackground(WHITE),
+    /// ]);
+    ///
+    /// assert_eq!(map.render_to_bitmap(), vec![WHITE]);
+    /// ```
     pub fn render_to_bitmap(&mut self) -> Vec<u32> {
         let mut bitmap = vec![0u32; self.width * self.height];
 
@@ -316,6 +441,17 @@ impl Map {
         bitmap
     }
 
+    /// Resets map by clearing all the operations previously submitted.
+    ///
+    /// # Examples
+    /// ```
+    /// # use crate::mold::{Layer, Raster, tile::{Map, Op}};
+    /// let mut map = Map::new(800, 600);
+    /// map.print(0, Layer::new(Raster::empty(), vec![
+    ///     Op::CoverWipZero,
+    /// ]));
+    /// map.reset(); // previous print removed
+    /// ```
     pub fn reset(&mut self) {
         self.tiles.tiles.iter_mut().for_each(Tile::reset);
     }
@@ -355,7 +491,7 @@ impl ColorBuffer for BitMap {
 pub(crate) mod tests {
     use super::*;
 
-    use crate::{Path, Point, Raster};
+    use crate::{Path, Point, Raster, tile::TILE_SIZE};
 
     const HALF: usize = TILE_SIZE / 2;
 
