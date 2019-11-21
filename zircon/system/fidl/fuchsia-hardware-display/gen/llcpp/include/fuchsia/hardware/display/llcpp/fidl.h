@@ -3018,15 +3018,43 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReleaseImage ReleaseImage(::fidl::BytePart _request_buffer, uint64_t image_id);
 
+    // Imports an event into the driver and associates it with the given id.
+    //
+    // It is illegal for id to be equal to invalidId, and it is undefined to
+    // import one event with two different ids or to import two different events
+    // with the same id (note that ids map well to koids).
+    //
+    // If a client is reusing events, they must clear the signal
+    // before referencing the id again.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ImportEvent ImportEvent(::zx::event event, uint64_t id);
 
+    // Imports an event into the driver and associates it with the given id.
+    //
+    // It is illegal for id to be equal to invalidId, and it is undefined to
+    // import one event with two different ids or to import two different events
+    // with the same id (note that ids map well to koids).
+    //
+    // If a client is reusing events, they must clear the signal
+    // before referencing the id again.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ImportEvent ImportEvent(::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
 
+    // Releases the event imported with the given id.
+    //
+    // If any images are currently using the given event, the event
+    // will still be waited up or signaled as appropriate before its
+    // resources are released. It is an error to reuse an ID while the
+    // active config has references to it.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::ReleaseEvent ReleaseEvent(uint64_t id);
 
+    // Releases the event imported with the given id.
+    //
+    // If any images are currently using the given event, the event
+    // will still be waited up or signaled as appropriate before its
+    // resources are released. It is an error to reuse an ID while the
+    // active config has references to it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ReleaseEvent ReleaseEvent(::fidl::BytePart _request_buffer, uint64_t id);
 
@@ -3232,15 +3260,43 @@ class Controller final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReleaseImage ReleaseImage(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t image_id);
 
+    // Imports an event into the driver and associates it with the given id.
+    //
+    // It is illegal for id to be equal to invalidId, and it is undefined to
+    // import one event with two different ids or to import two different events
+    // with the same id (note that ids map well to koids).
+    //
+    // If a client is reusing events, they must clear the signal
+    // before referencing the id again.
     // Allocates 32 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ImportEvent ImportEvent(zx::unowned_channel _client_end, ::zx::event event, uint64_t id);
 
+    // Imports an event into the driver and associates it with the given id.
+    //
+    // It is illegal for id to be equal to invalidId, and it is undefined to
+    // import one event with two different ids or to import two different events
+    // with the same id (note that ids map well to koids).
+    //
+    // If a client is reusing events, they must clear the signal
+    // before referencing the id again.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ImportEvent ImportEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::event event, uint64_t id);
 
+    // Releases the event imported with the given id.
+    //
+    // If any images are currently using the given event, the event
+    // will still be waited up or signaled as appropriate before its
+    // resources are released. It is an error to reuse an ID while the
+    // active config has references to it.
     // Allocates 24 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::ReleaseEvent ReleaseEvent(zx::unowned_channel _client_end, uint64_t id);
 
+    // Releases the event imported with the given id.
+    //
+    // If any images are currently using the given event, the event
+    // will still be waited up or signaled as appropriate before its
+    // resources are released. It is an error to reuse an ID while the
+    // active config has references to it.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ReleaseEvent ReleaseEvent(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, uint64_t id);
 
@@ -3433,8 +3489,22 @@ class Controller final {
 
     static ::fidl::internal::StatusAndError ReleaseImage(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseImageRequest> params);
 
+    // Imports an event into the driver and associates it with the given id.
+    //
+    // It is illegal for id to be equal to invalidId, and it is undefined to
+    // import one event with two different ids or to import two different events
+    // with the same id (note that ids map well to koids).
+    //
+    // If a client is reusing events, they must clear the signal
+    // before referencing the id again.
     static ::fidl::internal::StatusAndError ImportEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ImportEventRequest> params);
 
+    // Releases the event imported with the given id.
+    //
+    // If any images are currently using the given event, the event
+    // will still be waited up or signaled as appropriate before its
+    // resources are released. It is an error to reuse an ID while the
+    // active config has references to it.
     static ::fidl::internal::StatusAndError ReleaseEvent(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ReleaseEventRequest> params);
 
     static ::fidl::DecodeResult<CreateLayerResponse> CreateLayer(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
