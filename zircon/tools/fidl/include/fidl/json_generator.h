@@ -25,7 +25,9 @@ struct NameLocation {
   // TODO(FIDL-596): We are incorrectly assuming that the provided name is not
   // anonymous, and relying on callers to avoid derefencing a nullptr
   // location.
-  explicit NameLocation(const flat::Name& name) : NameLocation(*name.maybe_location()) {}
+  explicit NameLocation(const flat::Name& name) : NameLocation(name.location().value()) {
+    assert(name.location().has_value() && "NameLocation was passed an anonymous name");
+  }
 
   const std::string filename;
   SourceFile::Position position;

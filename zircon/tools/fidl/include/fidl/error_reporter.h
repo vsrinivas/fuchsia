@@ -5,6 +5,7 @@
 #ifndef ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_
 #define ZIRCON_TOOLS_FIDL_INCLUDE_FIDL_ERROR_REPORTER_H_
 
+#include <optional>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -58,18 +59,12 @@ class ErrorReporter {
   };
 
   void ReportErrorWithSquiggle(const SourceLocation& location, std::string_view message);
-  void ReportError(const SourceLocation& location, std::string_view message) {
-    ReportError(&location, message);
-  }
-  void ReportError(const SourceLocation* maybe_location, std::string_view message);
+  void ReportError(const std::optional<SourceLocation>& location, std::string_view message);
   void ReportError(const Token& token, std::string_view message);
   void ReportError(std::string_view message);
 
   void ReportWarningWithSquiggle(const SourceLocation& location, std::string_view message);
-  void ReportWarning(const SourceLocation& location, std::string_view message) {
-    ReportWarning(&location, message);
-  }
-  void ReportWarning(const SourceLocation* maybe_location, std::string_view message);
+  void ReportWarning(const std::optional<SourceLocation>& location, std::string_view message);
   void ReportWarning(const Token& token, std::string_view message);
 
   void PrintReports();

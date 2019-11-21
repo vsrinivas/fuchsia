@@ -433,7 +433,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", *value.ordinal, Position::kFirst);
     if (value.maybe_used) {
-      assert(!value.maybe_location);
+      assert(!value.location);
       GenerateObjectMember("reserved", false);
       GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
       GenerateObjectMember("name", value.maybe_used->name);
@@ -447,9 +447,9 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
       GenerateObjectMember("alignment", deprecated_type_shape.Alignment());
       GenerateObjectMember("max_handles", deprecated_type_shape.MaxHandles());
     } else {
-      assert(value.maybe_location);
+      assert(value.location);
       GenerateObjectMember("reserved", true);
-      GenerateObjectMember("location", NameLocation(*value.maybe_location));
+      GenerateObjectMember("location", NameLocation(value.location.value()));
     }
   });
 }
@@ -508,7 +508,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("xunion_ordinal", value.xunion_ordinal, Position::kFirst);
     if (value.maybe_used) {
-      assert(!value.maybe_location);
+      assert(!value.location);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
@@ -523,7 +523,7 @@ void JSONGenerator::Generate(const flat::Union::Member& value) {
       GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
-      GenerateObjectMember("location", NameLocation(*value.maybe_location));
+      GenerateObjectMember("location", NameLocation(value.location.value()));
     }
   });
 }
@@ -549,7 +549,7 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
   GenerateObject([&]() {
     GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
     if (value.maybe_used) {
-      assert(!value.maybe_location);
+      assert(!value.location);
       GenerateObjectMember("reserved", false);
       GenerateObjectMember("name", value.maybe_used->name);
       GenerateTypeAndFromTypeAlias(*value.maybe_used->type_ctor);
@@ -564,7 +564,7 @@ void JSONGenerator::Generate(const flat::XUnion::Member& value) {
       GenerateObjectMember("offset", deprecated_field_shape.Offset());
     } else {
       GenerateObjectMember("reserved", true);
-      GenerateObjectMember("location", NameLocation(*value.maybe_location));
+      GenerateObjectMember("location", NameLocation(value.location.value()));
     }
   });
 }

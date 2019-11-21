@@ -20,6 +20,7 @@
 #include <memory>
 #include <optional>
 #include <set>
+#include <string>
 #include <string_view>
 #include <type_traits>
 #include <variant>
@@ -70,11 +71,11 @@ struct Name final {
   Name& operator=(Name&&) = default;
 
   const Library* library() const { return library_; }
-  const SourceLocation* maybe_location() const {
-    if (std::holds_alternative<AnonymousName>(name_)) {
-      return nullptr;
-    }
-    return &std::get<SourceLocation>(name_);
+
+  std::optional<SourceLocation> location() const {
+    return std::holds_alternative<SourceLocation>(name_)
+               ? std::make_optional(std::get<SourceLocation>(name_))
+               : std::nullopt;
   }
   const std::string_view name_part() const {
     if (std::holds_alternative<AnonymousName>(name_)) {
@@ -932,10 +933,12 @@ struct TableMember : public Object {
         maybe_used(std::make_unique<Used>(std::move(type), std::move(name),
                                           std::move(maybe_default_value), std::move(attributes))) {}
   TableMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
-      : ordinal(std::move(ordinal)), maybe_location(std::make_unique<SourceLocation>(location)) {}
+      : ordinal(std::move(ordinal)), location(location) {}
+
   std::unique_ptr<raw::Ordinal32> ordinal;
+
   // The location for reserved table members.
-  std::unique_ptr<SourceLocation> maybe_location;
+  std::optional<SourceLocation> location;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -987,12 +990,12 @@ struct UnionMember : public Object {
       : xunion_ordinal(std::move(xunion_ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
   UnionMember(std::unique_ptr<raw::Ordinal32> xunion_ordinal, SourceLocation location)
-      : xunion_ordinal(std::move(xunion_ordinal)),
-        maybe_location(std::make_unique<SourceLocation>(location)) {}
+      : xunion_ordinal(std::move(xunion_ordinal)), location(location) {}
 
   std::unique_ptr<raw::Ordinal32> xunion_ordinal;
+
   // The location for reserved members.
-  std::unique_ptr<SourceLocation> maybe_location;
+  std::optional<SourceLocation> location;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -1054,11 +1057,12 @@ struct XUnionMember : public Object {
       : ordinal(std::move(ordinal)),
         maybe_used(std::make_unique<Used>(std::move(type_ctor), name, std::move(attributes))) {}
   XUnionMember(std::unique_ptr<raw::Ordinal32> ordinal, SourceLocation location)
-      : ordinal(std::move(ordinal)), maybe_location(std::make_unique<SourceLocation>(location)) {}
+      : ordinal(std::move(ordinal)), location(location) {}
 
   std::unique_ptr<raw::Ordinal32> ordinal;
+
   // The location for reserved members.
-  std::unique_ptr<SourceLocation> maybe_location;
+  std::optional<SourceLocation> location;
 
   std::unique_ptr<Used> maybe_used;
 
@@ -1166,35 +1170,34 @@ class TypeTemplate {
 
   const Name* name() const { return &name_; }
 
-  virtual bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  virtual bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
                       const std::optional<types::HandleSubtype>& handle_subtype, const Size* size,
                       types::Nullability nullability, std::unique_ptr<Type>* out_type,
                       std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const = 0;
 
  protected:
-  bool MustBeParameterized(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "must be parametrized");
+  bool MustBeParameterized(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "must be parametrized");
   }
-  bool MustHaveSize(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "must have size");
+  bool MustHaveSize(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "must have size");
   }
-  bool MustHaveNonZeroSize(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "must have non-zero size");
+  bool MustHaveNonZeroSize(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "must have non-zero size");
   }
-  bool CannotBeParameterized(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "cannot be parametrized");
+  bool CannotBeParameterized(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "cannot be parametrized");
   }
-  bool CannotHaveSize(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "cannot have size");
+  bool CannotHaveSize(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "cannot have size");
   }
-  bool CannotBeNullable(const SourceLocation* maybe_location) const {
-    return Fail(maybe_location, "cannot be nullable");
+  bool CannotBeNullable(const std::optional<SourceLocation>& location) const {
+    return Fail(location, "cannot be nullable");
   }
-  bool Fail(const SourceLocation* maybe_location, const std::string& content) const;
+  bool Fail(const std::optional<SourceLocation>& location, const std::string& content) const;
 
   Typespace* typespace_;
 
- protected:
   Name name_;
 
  private:
@@ -1383,13 +1386,8 @@ class Library {
 
  private:
   bool Fail(std::string_view message);
-  bool Fail(const SourceLocation& location, std::string_view message) {
-    return Fail(&location, message);
-  }
-  bool Fail(const SourceLocation* maybe_location, std::string_view message);
-  bool Fail(const Name& name, std::string_view message) {
-    return Fail(name.maybe_location(), message);
-  }
+  bool Fail(const std::optional<SourceLocation>& location, std::string_view message);
+  bool Fail(const Name& name, std::string_view message) { return Fail(name.location(), message); }
   bool Fail(const Decl& decl, std::string_view message) { return Fail(decl.name, message); }
 
   void ValidateAttributesPlacement(AttributeSchema::Placement placement,

@@ -342,7 +342,7 @@ Token Lexer::Lex() {
             std::string msg("invalid character '");
             msg.append(location.data());
             msg.append("'");
-            error_reporter_->ReportError(&location, msg);
+            error_reporter_->ReportError(location, msg);
             continue;
           }
         }  // switch
@@ -384,7 +384,7 @@ Token Lexer::Lex() {
         std::string msg("invalid character '");
         msg.append(location.data());
         msg.append("'");
-        error_reporter_->ReportError(&location, msg);
+        error_reporter_->ReportError(location, msg);
         continue;
       }
     }  // switch

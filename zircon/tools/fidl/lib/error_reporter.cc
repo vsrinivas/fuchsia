@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <cassert>
-
 #include "fidl/error_reporter.h"
+
+#include <cassert>
 
 #include "fidl/source_location.h"
 #include "fidl/token.h"
@@ -25,18 +25,17 @@ std::string MakeSquiggle(const std::string& surrounding_line, int column) {
   return squiggle;
 }
 
-std::string Format(std::string qualifier, const SourceLocation* maybe_location,
+std::string Format(std::string qualifier, const std::optional<SourceLocation>& location,
                    std::string_view message, size_t squiggle_size = 0u) {
-  if (!maybe_location) {
+  if (!location) {
     std::string error = qualifier;
     error.append(": ");
     error.append(message);
     return error;
   }
 
-  const auto& location = *maybe_location;
   SourceFile::Position position;
-  std::string surrounding_line = std::string(location.SourceLine(&position));
+  std::string surrounding_line = std::string(location->SourceLine(&position));
   assert(surrounding_line.find('\n') == std::string::npos &&
          "A single line should not contain a newline character");
 
@@ -59,7 +58,7 @@ std::string Format(std::string qualifier, const SourceLocation* maybe_location,
 
   // Many editors and IDEs recognize errors in the form of
   // filename:linenumber:column: error: descriptive-test-here\n
-  std::string error = location.position_str();
+  std::string error = location->position_str();
   error.append(": ");
   error.append(qualifier);
   error.append(": ");
@@ -93,8 +92,9 @@ void ErrorReporter::AddWarning(std::string formatted_message) {
 //     filename:line:col: error: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportError(const SourceLocation* maybe_location, std::string_view message) {
-  auto error = Format("error", maybe_location, message);
+void ErrorReporter::ReportError(const std::optional<SourceLocation>& location,
+                                std::string_view message) {
+  auto error = Format("error", location, message);
   AddError(std::move(error));
 }
 
@@ -107,7 +107,7 @@ void ErrorReporter::ReportError(const SourceLocation* maybe_location, std::strin
 void ErrorReporter::ReportErrorWithSquiggle(const SourceLocation& location,
                                             std::string_view message) {
   auto token_data = location.data();
-  auto error = Format("error", &location, message, token_data.size());
+  auto error = Format("error", std::make_optional(location), message, token_data.size());
   AddError(std::move(error));
 }
 
@@ -136,8 +136,9 @@ void ErrorReporter::ReportError(std::string_view message) {
 //     filename:line:col: warning: message
 //     sourceline
 //        ^
-void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, std::string_view message) {
-  auto warning = Format("warning", maybe_location, message);
+void ErrorReporter::ReportWarning(const std::optional<SourceLocation>& location,
+                                  std::string_view message) {
+  auto warning = Format("warning", location, message);
   AddWarning(std::move(warning));
 }
 
@@ -150,7 +151,7 @@ void ErrorReporter::ReportWarning(const SourceLocation* maybe_location, std::str
 void ErrorReporter::ReportWarningWithSquiggle(const SourceLocation& location,
                                               std::string_view message) {
   auto token_data = location.data();
-  auto warning = Format("warning", &location, message, token_data.size());
+  auto warning = Format("warning", std::make_optional(location), message, token_data.size());
   AddWarning(std::move(warning));
 }
 

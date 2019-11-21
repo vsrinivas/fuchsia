@@ -192,7 +192,7 @@ bool IsSimple(const Type* type, const TypeShape& typeshape, ErrorReporter* error
           std::string message("union '");
           message.append(identifier_type->name.name_part());
           message.append("' is not allowed to be simple");
-          error_reporter->ReportError(identifier_type->name.maybe_location(), message);
+          error_reporter->ReportError(identifier_type->name.location(), message);
           return false;
         }
       }
@@ -262,15 +262,14 @@ bool Typespace::CreateNotOwned(const flat::Name& name, const Type* arg_type,
   // return it rather than create a new one. Lookup must be by name,
   // arg_type, size, and nullability.
 
-  auto maybe_location = name.maybe_location();
   auto type_template = LookupTemplate(name);
   if (type_template == nullptr) {
     std::string message("unknown type ");
     message.append(name.name_full());
-    error_reporter_->ReportError(maybe_location, message);
+    error_reporter_->ReportError(name.location(), message);
     return false;
   }
-  return type_template->Create(maybe_location, arg_type, handle_subtype, size, nullability,
+  return type_template->Create(name.location(), arg_type, handle_subtype, size, nullability,
                                out_type, out_from_type_alias);
 }
 
@@ -291,11 +290,12 @@ const TypeTemplate* Typespace::LookupTemplate(const flat::Name& name) const {
   return nullptr;
 }
 
-bool TypeTemplate::Fail(const SourceLocation* maybe_location, const std::string& content) const {
+bool TypeTemplate::Fail(const std::optional<SourceLocation>& location,
+                        const std::string& content) const {
   std::string message(NameFlatName(name_));
   message.append(" ");
   message.append(content);
-  error_reporter_->ReportError(maybe_location, message);
+  error_reporter_->ReportError(location, message);
   return false;
 }
 
@@ -305,18 +305,18 @@ class PrimitiveTypeTemplate : public TypeTemplate {
                         const std::string& name, types::PrimitiveSubtype subtype)
       : TypeTemplate(Name(nullptr, name), typespace, error_reporter), subtype_(subtype) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(maybe_location);
+      return CannotBeParameterized(location);
     if (maybe_size != nullptr)
-      return CannotHaveSize(maybe_location);
+      return CannotHaveSize(location);
     if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(maybe_location);
+      return CannotBeNullable(location);
 
     *out_type = std::make_unique<PrimitiveType>(name_, subtype_);
     return true;
@@ -331,14 +331,14 @@ class BytesTypeTemplate final : public TypeTemplate {
   BytesTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter), uint8_type_(kUint8Type) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (maybe_arg_type != nullptr)
-      return CannotBeParameterized(maybe_location);
+      return CannotBeParameterized(location);
     if (size == nullptr)
       size = &max_size;
 
@@ -360,20 +360,20 @@ class ArrayTypeTemplate final : public TypeTemplate {
   ArrayTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "array"), typespace, error_reporter) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(maybe_location);
+      return MustBeParameterized(location);
     if (size == nullptr)
-      return MustHaveSize(maybe_location);
+      return MustHaveSize(location);
     if (size->value == 0)
-      return MustHaveNonZeroSize(maybe_location);
+      return MustHaveNonZeroSize(location);
     if (nullability == types::Nullability::kNullable)
-      return CannotBeNullable(maybe_location);
+      return CannotBeNullable(location);
 
     *out_type = std::make_unique<ArrayType>(name_, arg_type, size);
     return true;
@@ -385,14 +385,14 @@ class VectorTypeTemplate final : public TypeTemplate {
   VectorTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "vector"), typespace, error_reporter) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(maybe_location);
+      return MustBeParameterized(location);
     if (size == nullptr)
       size = &max_size;
 
@@ -409,14 +409,14 @@ class StringTypeTemplate final : public TypeTemplate {
   StringTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "string"), typespace, error_reporter) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type != nullptr)
-      return CannotBeParameterized(maybe_location);
+      return CannotBeParameterized(location);
     if (size == nullptr)
       size = &max_size;
 
@@ -433,14 +433,14 @@ class HandleTypeTemplate final : public TypeTemplate {
   HandleTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "handle"), typespace, error_reporter) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& opt_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(maybe_arg_type == nullptr);
 
     if (maybe_size != nullptr)
-      return CannotHaveSize(maybe_location);
+      return CannotHaveSize(location);
 
     auto handle_subtype = opt_handle_subtype.value_or(types::HandleSubtype::kHandle);
 
@@ -454,21 +454,21 @@ class RequestTypeTemplate final : public TypeTemplate {
   RequestTypeTemplate(Typespace* typespace, ErrorReporter* error_reporter)
       : TypeTemplate(Name(nullptr, "request"), typespace, error_reporter) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
     assert(!no_handle_subtype);
 
     if (arg_type == nullptr)
-      return MustBeParameterized(maybe_location);
+      return MustBeParameterized(location);
     if (arg_type->kind != Type::Kind::kIdentifier)
-      return Fail(maybe_location, "must be a protocol");
+      return Fail(location, "must be a protocol");
     auto protocol_type = static_cast<const IdentifierType*>(arg_type);
     if (protocol_type->type_decl->kind != Decl::Kind::kProtocol)
-      return Fail(maybe_location, "must be a protocol");
+      return Fail(location, "must be a protocol");
     if (maybe_size != nullptr)
-      return CannotHaveSize(maybe_location);
+      return CannotHaveSize(location);
 
     *out_type = std::make_unique<RequestHandleType>(name_, protocol_type, nullability);
     return true;
@@ -488,7 +488,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
         library_(library),
         type_decl_(type_decl) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* size,
               types::Nullability nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -505,7 +505,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
     }
     switch (type_decl_->kind) {
       case Decl::Kind::kService:
-        return Fail(maybe_location, "cannot use services in other declarations");
+        return Fail(location, "cannot use services in other declarations");
 
       case Decl::Kind::kProtocol:
         break;
@@ -519,7 +519,7 @@ class TypeDeclTypeTemplate final : public TypeTemplate {
       case Decl::Kind::kEnum:
       case Decl::Kind::kTable:
         if (nullability == types::Nullability::kNullable)
-          return CannotBeNullable(maybe_location);
+          return CannotBeNullable(location);
         break;
 
       default:
@@ -542,7 +542,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
                         Library* library, TypeAlias* decl)
       : TypeTemplate(std::move(name), typespace, error_reporter), decl_(decl) {}
 
-  bool Create(const SourceLocation* maybe_location, const Type* maybe_arg_type,
+  bool Create(const std::optional<SourceLocation>& location, const Type* maybe_arg_type,
               const std::optional<types::HandleSubtype>& no_handle_subtype, const Size* maybe_size,
               types::Nullability maybe_nullability, std::unique_ptr<Type>* out_type,
               std::optional<TypeConstructor::FromTypeAlias>* out_from_type_alias) const {
@@ -551,7 +551,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Type* arg_type = nullptr;
     if (decl_->partial_type_ctor->maybe_arg_type_ctor) {
       if (maybe_arg_type) {
-        return Fail(maybe_location, "cannot parametrize twice");
+        return Fail(location, "cannot parametrize twice");
       }
       arg_type = decl_->partial_type_ctor->maybe_arg_type_ctor->type;
     } else {
@@ -561,7 +561,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     const Size* size = nullptr;
     if (decl_->partial_type_ctor->maybe_size) {
       if (maybe_size) {
-        return Fail(maybe_location, "cannot bound twice");
+        return Fail(location, "cannot bound twice");
       }
       size = static_cast<const Size*>(&decl_->partial_type_ctor->maybe_size->Value());
     } else {
@@ -571,7 +571,7 @@ class TypeAliasTypeTemplate final : public TypeTemplate {
     types::Nullability nullability;
     if (decl_->partial_type_ctor->nullability == types::Nullability::kNullable) {
       if (maybe_nullability == types::Nullability::kNullable) {
-        return Fail(maybe_location, "cannot indicate nullability twice");
+        return Fail(location, "cannot indicate nullability twice");
       }
       nullability = types::Nullability::kNullable;
     } else {
@@ -854,7 +854,7 @@ bool ResultShapeConstraint(ErrorReporter* error_reporter, const raw::Attribute& 
 
   if (!error_primitive || (error_primitive->subtype != types::PrimitiveSubtype::kInt32 &&
                            error_primitive->subtype != types::PrimitiveSubtype::kUint32)) {
-    error_reporter->ReportError(decl->name.maybe_location(),
+    error_reporter->ReportError(decl->name.location(),
                                 "invalid error type: must be int32, uint32 or an enum therof");
     return false;
   }
@@ -906,7 +906,7 @@ bool TransportConstraint(ErrorReporter* error_reporter, const raw::Attribute& at
         first = false;
         out << t;
       }
-      error_reporter->ReportError(decl->name.maybe_location(), out.str());
+      error_reporter->ReportError(decl->name.location(), out.str());
       return false;
     }
   }
@@ -1171,8 +1171,8 @@ bool Library::Fail(std::string_view message) {
   return false;
 }
 
-bool Library::Fail(const SourceLocation* maybe_location, std::string_view message) {
-  error_reporter_->ReportError(maybe_location, message);
+bool Library::Fail(const std::optional<SourceLocation>& location, std::string_view message) {
+  error_reporter_->ReportError(location, message);
   return false;
 }
 
@@ -1324,9 +1324,9 @@ bool Library::RegisterDecl(std::unique_ptr<Decl> decl) {
     message.append(name->name_part());
     return Fail(*name, message);
   }
-  if (name->maybe_location()) {
-    if (dependencies_.Contains(name->maybe_location()->source_file().filename(),
-                               {name->maybe_location()->data()})) {
+  if (name->location()) {
+    if (dependencies_.Contains(name->location()->source_file().filename(),
+                               {name->location()->data()})) {
       std::string message = "Declaration name '";
       message.append(name->name_full());
       message.append(
@@ -1603,9 +1603,8 @@ bool Library::ConsumeProtocolDeclaration(
     auto composed_protocol_name = CompileCompoundIdentifier(protocol_name.get());
     if (!composed_protocol_name)
       return false;
-    auto maybe_location = composed_protocol_name.value().maybe_location();
     if (!composed_protocols.insert(std::move(composed_protocol_name.value())).second)
-      return Fail(maybe_location, "protocol composed multiple times");
+      return Fail(composed_protocol_name->location(), "protocol composed multiple times");
   }
 
   std::vector<Protocol::Method> methods;
@@ -1785,8 +1784,8 @@ bool Library::ConsumeUnionDeclaration(std::unique_ptr<raw::UnionDeclaration> uni
 
   auto attributes = std::move(union_declaration->attributes);
 
-  return RegisterDecl(std::make_unique<Union>(std::move(attributes), std::move(name),
-                                              std::move(members)));
+  return RegisterDecl(
+      std::make_unique<Union>(std::move(attributes), std::move(name), std::move(members)));
 }
 
 bool Library::ConsumeXUnionDeclaration(std::unique_ptr<raw::XUnionDeclaration> xunion_declaration) {
@@ -2009,7 +2008,7 @@ bool Library::ResolveIdentifierConstant(IdentifierConstant* identifier_constant,
     default: {
       std::ostringstream msg_stream;
       msg_stream << NameFlatConstant(identifier_constant) << " is a type, but a value was expected";
-      return Fail(identifier_constant->name.maybe_location(), msg_stream.str());
+      return Fail(identifier_constant->name.location(), msg_stream.str());
     }
   }
 
@@ -2957,9 +2956,9 @@ bool Library::CompileProtocol(Protocol* protocol_declaration) {
         return Fail(name, message);
       }
       auto composed_protocol = static_cast<const Protocol*>(decl);
-      auto maybe_location = composed_protocol->name.maybe_location();
-      assert(maybe_location);
-      if (method_scope.protocols.Insert(composed_protocol, *maybe_location).ok()) {
+      auto location = composed_protocol->name.location();
+      assert(location);
+      if (method_scope.protocols.Insert(composed_protocol, location.value()).ok()) {
         if (!Visitor(composed_protocol, Visitor))
           return false;
       } else {
@@ -3252,7 +3251,7 @@ bool Library::ResolveSizeBound(TypeConstructor* type_ctor, const Size** out_size
     }
   }
   if (!size_constant->IsResolved()) {
-    return Fail(type_ctor->name.maybe_location(), "unable to parse size bound");
+    return Fail(type_ctor->name.location(), "unable to parse size bound");
   }
   if (out_size) {
     *out_size = static_cast<const Size*>(&size_constant->Value());
