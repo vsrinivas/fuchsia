@@ -262,14 +262,10 @@ toc:
   path: /docs/reference/syscalls/system_mexec_payload_get.md
 - title: "zx_system_powerctl"
   path: /docs/reference/syscalls/system_powerctl.md
-- title: "zx_task_bind_exception_port"
-  path: /docs/reference/syscalls/task_bind_exception_port.md
 - title: "zx_task_create_exception_channel"
   path: /docs/reference/syscalls/task_create_exception_channel.md
 - title: "zx_task_kill"
   path: /docs/reference/syscalls/task_kill.md
-- title: "zx_task_resume_from_exception"
-  path: /docs/reference/syscalls/task_resume_from_exception.md
 - title: "zx_task_suspend"
   path: /docs/reference/syscalls/task_suspend.md
 - title: "zx_task_suspend_token"

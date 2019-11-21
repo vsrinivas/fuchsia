@@ -10,12 +10,6 @@ protocol task {
     // TODO(scottmg): Need something like handle<task> in this file to mean {job, process, thread}.
     // Or otherwise some way to express multiple options for constraints on inputs in this protocol.
 
-    // TODO(ZX-2967): No rights required on either?
-    /// Bind to, or unbind from, the exception port corresponding to a given job, process, or thread.
-    /// Rights: port must be of type ZX_OBJ_TYPE_PORT.
-    task_bind_exception_port(handle handle, handle<port> port, uint64 key, uint32 options)
-        -> (status status);
-
     /// Suspend the given task. Currently only thread or process handles may be suspended.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
     task_suspend(handle handle) -> (status status, handle token);
@@ -23,13 +17,6 @@ protocol task {
     /// Suspend the given task. Currently only thread or process handles may be suspended.
     /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD or ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_WRITE.
     task_suspend_token(handle handle) -> (status status, handle token);
-
-    // TODO(ZX-2967): No rights required on either?
-    /// Resume the given task after an exception has been reported.
-    /// Rights: handle must be of type ZX_OBJ_TYPE_THREAD.
-    /// Rights: port must be of type ZX_OBJ_TYPE_PORT.
-    task_resume_from_exception(handle<thread> handle, handle<port> port, uint32 options)
-        -> (status status);
 
     /// Create an exception channel for a given job, process, or thread.
     /// Rights: handle must have ZX_RIGHT_INSPECT and have ZX_RIGHT_DUPLICATE and have ZX_RIGHT_TRANSFER and have ZX_RIGHT_MANAGE_THREAD.

@@ -39,7 +39,6 @@
 ## Tasks (Thread, Process, or Job)
 + [task_create_exception_channel](task_create_exception_channel.md) - create an exception channel on a task
 + [task_kill](task_kill.md) - cause a task to stop running
-+ [task_resume_from_exception](task_resume_from_exception.md) - resume a task from a previously caught exception
 + [task_suspend](task_suspend.md) - cause a task to be suspended
 
 ## Profiles
