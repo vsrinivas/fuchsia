@@ -8,7 +8,7 @@ use fidl_fuchsia_update::{
 };
 use fidl_fuchsia_update_channelcontrol::ChannelControlMarker;
 use fuchsia_async as fasync;
-use fuchsia_component::client::{launch, launcher};
+use fuchsia_component::client::connect_to_service;
 use futures::prelude::*;
 
 mod args;
@@ -37,14 +37,10 @@ async fn monitor_state(monitor: MonitorProxy) -> Result<(), Error> {
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     // Launch the server and connect to the omaha client service.
-    let args::Update { server_url, cmd } = argh::from_env();
-    let launcher = launcher().context("Failed to open launcher service")?;
-    let app =
-        launch(&launcher, server_url, None).context("Failed to launch omaha client service")?;
+    let args::Update { cmd } = argh::from_env();
     match cmd {
         args::Command::Channel(args::Channel { cmd }) => {
-            let channel_control = app
-                .connect_to_service::<ChannelControlMarker>()
+            let channel_control = connect_to_service::<ChannelControlMarker>()
                 .context("Failed to connect to channel control service")?;
 
             match cmd {
@@ -73,13 +69,12 @@ async fn main() -> Result<(), Error> {
             }
         }
         args::Command::State(_) | args::Command::CheckNow(_) | args::Command::Monitor(_) => {
-            let omaha_client = app
-                .connect_to_service::<ManagerMarker>()
+            let update_manager = connect_to_service::<ManagerMarker>()
                 .context("Failed to connect to omaha client manager service")?;
 
             match cmd {
                 args::Command::State(_) => {
-                    let state = omaha_client.get_state().await?;
+                    let state = update_manager.get_state().await?;
                     print_state(state);
                 }
                 args::Command::CheckNow(args::CheckNow { service_initiated, monitor }) => {
@@ -93,18 +88,18 @@ async fn main() -> Result<(), Error> {
                     if monitor {
                         let (client_proxy, server_end) =
                             fidl::endpoints::create_proxy::<MonitorMarker>()?;
-                        let result = omaha_client.check_now(options, Some(server_end)).await?;
+                        let result = update_manager.check_now(options, Some(server_end)).await?;
                         println!("Check started result: {:?}", result);
                         monitor_state(client_proxy).await?;
                     } else {
-                        let result = omaha_client.check_now(options, None).await?;
+                        let result = update_manager.check_now(options, None).await?;
                         println!("Check started result: {:?}", result);
                     }
                 }
                 args::Command::Monitor(_) => {
                     let (client_proxy, server_end) =
                         fidl::endpoints::create_proxy::<MonitorMarker>()?;
-                    omaha_client.add_monitor(server_end)?;
+                    update_manager.add_monitor(server_end)?;
                     monitor_state(client_proxy).await?;
                 }
                 _ => {}

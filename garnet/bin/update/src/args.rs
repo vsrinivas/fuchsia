@@ -7,14 +7,6 @@ use argh::FromArgs;
 #[derive(Debug, Eq, FromArgs, PartialEq)]
 /// Manage updates.
 pub struct Update {
-    /// URL of fuchsia.update server
-    #[argh(
-        option,
-        long = "server",
-        default = "\"fuchsia-pkg://fuchsia.com/omaha_client#meta/omaha_client_service.cmx\".to_string()"
-    )]
-    pub server_url: String,
-
     #[argh(subcommand)]
     pub cmd: Command,
 }
@@ -102,9 +94,6 @@ pub struct Monitor {}
 mod tests {
     use super::*;
 
-    const SERVERL_URL: &'static str =
-        "fuchsia-pkg://fuchsia.com/omaha_client#meta/omaha_client_service.cmx";
-
     #[test]
     fn test_unknown_option() {
         assert!(Update::from_args(&["update"], &["--unkown"]).is_err());
@@ -116,18 +105,11 @@ mod tests {
     }
 
     #[test]
-    fn test_server_url() {
-        let update = Update::from_args(&["update"], &["--server", "url", "state"]).unwrap();
-        assert_eq!(update, Update { server_url: "url".to_string(), cmd: Command::State(State {}) });
-    }
-
-    #[test]
     fn test_channel_get() {
         let update = Update::from_args(&["update"], &["channel", "get"]).unwrap();
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::Channel(Channel { cmd: channel::Command::Get(channel::Get {}) })
             }
         );
@@ -139,7 +121,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::Channel(Channel {
                     cmd: channel::Command::Target(channel::Target {})
                 })
@@ -153,7 +134,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::Channel(Channel {
                     cmd: channel::Command::Set(channel::Set { channel: "new-channel".to_string() })
                 })
@@ -167,7 +147,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::Channel(Channel { cmd: channel::Command::List(channel::List {}) })
             }
         );
@@ -178,7 +157,7 @@ mod tests {
         let update = Update::from_args(&["update"], &["state"]).unwrap();
         assert_eq!(
             update,
-            Update { server_url: SERVERL_URL.to_string(), cmd: Command::State(State {}) }
+            Update { cmd: Command::State(State {}) }
         );
     }
 
@@ -188,7 +167,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::CheckNow(CheckNow { service_initiated: false, monitor: false })
             }
         );
@@ -199,7 +177,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::CheckNow(CheckNow { service_initiated: false, monitor: true })
             }
         );
@@ -210,7 +187,6 @@ mod tests {
         assert_eq!(
             update,
             Update {
-                server_url: SERVERL_URL.to_string(),
                 cmd: Command::CheckNow(CheckNow { service_initiated: true, monitor: false })
             }
         );
@@ -220,7 +196,7 @@ mod tests {
         let update = Update::from_args(&["update"], &["monitor"]).unwrap();
         assert_eq!(
             update,
-            Update { server_url: SERVERL_URL.to_string(), cmd: Command::Monitor(Monitor {}) }
+            Update { cmd: Command::Monitor(Monitor {}) }
         );
     }
 }
