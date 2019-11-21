@@ -3,9 +3,15 @@
         "binary": "test/routing_integration_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

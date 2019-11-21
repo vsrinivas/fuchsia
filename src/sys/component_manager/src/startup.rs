@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::model::testing::breakpoints::BreakpointSystem;
 use {
     crate::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
@@ -50,6 +51,14 @@ pub struct Arguments {
     /// root realm.
     pub use_builtin_vmex: bool,
 
+    /// If true, component manager will be in debug mode. In this mode, the breakpoints FIDL
+    /// service will be exposed via the ServiceFs directory (usually the out dir). ComponentManager
+    /// will not start until it is resumed by the breakpoints FIDL API.
+    ///
+    /// This is done so that an external component (say an integration test) can register
+    /// breakpoints before ComponentManager has begun.
+    pub debug: bool,
+
     /// URL of the root component to launch.
     pub root_component_url: String,
 }
@@ -73,6 +82,8 @@ impl Arguments {
                 args.use_builtin_process_launcher = true;
             } else if arg == "--use-builtin-vmex" {
                 args.use_builtin_vmex = true;
+            } else if arg == "--debug" {
+                args.debug = true;
             } else if arg.starts_with("--") {
                 return Err(format_err!("Unrecognized flag: {}", arg));
             } else {
@@ -242,7 +253,14 @@ pub async fn builtin_environment_setup(
     model.root_realm.hooks.install(realm_capability_host.hooks()).await;
     model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
     let hub = Hub::new(args.root_component_url.clone())?;
-    Ok(BuiltinEnvironment::new(builtin_capabilities, realm_capability_host, hub))
+    let breakpoint_system = {
+        if args.debug {
+            Some(BreakpointSystem::new())
+        } else {
+            None
+        }
+    };
+    Ok(BuiltinEnvironment::new(builtin_capabilities, realm_capability_host, hub, breakpoint_system))
 }
 
 #[cfg(test)]
@@ -256,6 +274,7 @@ mod tests {
         let unknown_flag = || "--unknown".to_string();
         let use_builtin_launcher = || "--use-builtin-process-launcher".to_string();
         let use_builtin_vmex = || "--use-builtin-vmex".to_string();
+        let debug = || "--debug".to_string();
 
         // Zero or multiple positional arguments is an error; must be exactly one URL.
         assert!(Arguments::new(vec![]).is_err());
@@ -304,7 +323,18 @@ mod tests {
             Arguments {
                 use_builtin_process_launcher: true,
                 use_builtin_vmex: true,
-                root_component_url: dummy_url()
+                root_component_url: dummy_url(),
+                debug: false,
+            }
+        );
+        assert_eq!(
+            Arguments::new(vec![dummy_url(), use_builtin_launcher(), use_builtin_vmex(), debug()])
+                .expect("Unexpected error with option"),
+            Arguments {
+                use_builtin_process_launcher: true,
+                use_builtin_vmex: true,
+                root_component_url: dummy_url(),
+                debug: true,
             }
         );
 

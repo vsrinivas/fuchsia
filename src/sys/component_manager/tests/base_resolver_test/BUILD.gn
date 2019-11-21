@@ -14,16 +14,11 @@ rustc_test("base_resolver_test_bin") {
   deps = [
     "//garnet/examples/fidl/services:echo-rustc",
     "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//src/sys/component_manager:lib",
+    "//src/sys/component_manager/tests:test_utils",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 }
 
@@ -35,11 +30,12 @@ rustc_binary("root_component_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-vfs/pseudo-fs",
     "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/lib/directory_broker",
     "//third_party/rust_crates:failure",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -53,6 +49,9 @@ test_package("base_resolver_test") {
     "//garnet/examples/fidl/echo_server_rust:echo_server_rust_bin",
   ]
 
+  components =
+      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
+
   binaries = [
     {
       name = "root_component"
@@ -64,6 +63,10 @@ test_package("base_resolver_test") {
   ]
 
   meta = [
+    {
+      path = rebase_path("meta/component_manager_without_loader.cmx")
+      dest = "component_manager_without_loader.cmx"
+    },
     {
       path = rebase_path("meta/root.cml")
       dest = "root.cm"

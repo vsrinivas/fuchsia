@@ -8,12 +8,10 @@ use {
         startup,
     },
     failure::{self, Error},
-    fidl::endpoints::ClientEnd,
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_io::{DirectoryMarker, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl_fuchsia_io::{OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     fidl_fuchsia_session::LauncherMarker,
     fuchsia_component::server::{ServiceFs, ServiceObj},
-    fuchsia_zircon as zx,
     futures::prelude::*,
     log::*,
     std::{path::PathBuf, process},
@@ -81,12 +79,11 @@ async fn main() -> Result<(), Error> {
         }
     };
 
-    let (client_chan, server_chan) = zx::Channel::create().unwrap();
     let model = startup::model_setup(&args).await?;
     let builtin_environment =
         startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
             .await?;
-    builtin_environment.bind_hub(&model, Some(server_chan.into())).await?;
+    let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();
     match model.bind(&root_moniker).await {
@@ -99,10 +96,6 @@ async fn main() -> Result<(), Error> {
             process::exit(1)
         }
     }
-
-    let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
-        .into_proxy()
-        .expect("failed to create directory proxy");
 
     // List the services exposed by the root component (i.e., the session manager).
     let expose_dir_proxy = io_util::open_directory(

@@ -30,6 +30,7 @@ async fn new_model_with(
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url: "".to_string(),
+        debug: false,
     };
     let model = Arc::new(Model::new(ModelParams {
         root_component_url: "test:///root".to_string(),

@@ -28,6 +28,7 @@ async fn create_model(root_component_url: &str) -> Result<(Arc<Model>, BuiltinEn
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url,
+        debug: false,
     };
     let model = startup::model_setup(&args).await?;
     let builtin_environment =

@@ -14,11 +14,8 @@ use {
 
 #[fasync::run_singlethreaded(test)]
 async fn route_echo_service() -> Result<(), Error> {
-    test_utils::launch_and_wait_for_msg(
-        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/component_manager.cmx".to_string(),
-        Some(vec![
-            "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/echo_realm.cm".to_string()
-        ]),
+    test_utils::launch_component_and_expect_output(
+        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/echo_realm.cm",
         "Hippos rule!\n".to_string(),
     )
     .await
@@ -29,12 +26,8 @@ async fn route_echo_service() -> Result<(), Error> {
 // 'route_dirs_from_sibling.cml' for more details.
 #[fasync::run_singlethreaded(test)]
 async fn route_directories_from_sibling() -> Result<(), Error> {
-    test_utils::launch_and_wait_for_msg(
-        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/component_manager.cmx".to_string(),
-        Some(vec![
-            "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/route_dirs_from_sibling.cm"
-                .to_string(),
-        ]),
+    test_utils::launch_component_and_expect_output(
+        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/route_dirs_from_sibling.cm",
         "All tests passed\n".to_string(),
     )
     .await
@@ -84,11 +77,9 @@ async fn route_directories_from_component_manager_namespace() -> Result<(), Erro
         ("/read_exec".to_string(), rx_channel.into()),
     ];
 
-    test_utils::launch_and_wait_for_msg_with_extra_dirs(
-        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/component_manager.cmx".to_string(),
-        Some(vec!["fuchsia-pkg://fuchsia.com/routing_integration_test#meta/check_dir_rights.cm"
-            .to_string()]),
-        Some(dir_handles),
+    test_utils::launch_component_and_expect_output_with_extra_dirs(
+        "fuchsia-pkg://fuchsia.com/routing_integration_test#meta/check_dir_rights.cm",
+        dir_handles,
         "All tests passed\n".to_string(),
     )
     .await

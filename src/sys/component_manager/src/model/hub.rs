@@ -624,14 +624,13 @@ mod tests {
             ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
             UseLegacyServiceDecl, UseSource,
         },
-        fidl::endpoints::{ClientEnd, ServerEnd},
+        fidl::endpoints::ServerEnd,
         fidl_fuchsia_io::{
             DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
             OPEN_RIGHT_WRITABLE,
         },
         fidl_fuchsia_io2 as fio2, fidl_fuchsia_sys2 as fsys,
         fuchsia_vfs_pseudo_fs::directory::entry::DirectoryEntry,
-        fuchsia_zircon as zx,
         std::{convert::TryFrom, iter, path::Path},
     };
 
@@ -733,6 +732,7 @@ mod tests {
             use_builtin_process_launcher: false,
             use_builtin_vmex: false,
             root_component_url: root_component_url.clone(),
+            debug: false,
         };
         let model = Arc::new(model::Model::new(model::ModelParams {
             root_component_url,
@@ -746,11 +746,10 @@ mod tests {
         )
         .await
         .expect("failed to set up builtin environment");
-        let (client_chan, server_chan) = zx::Channel::create().unwrap();
-        builtin_environment
-            .bind_hub(&model, Some(server_chan.into()))
+        let hub_proxy = builtin_environment
+            .bind_service_fs_for_hub(&model)
             .await
-            .expect("unable to bind hub");
+            .expect("unable to bind service_fs");
 
         model.root_realm.hooks.install(additional_hooks).await;
 
@@ -758,10 +757,6 @@ mod tests {
         let res = model.bind(&root_moniker).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
-
-        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan)
-            .into_proxy()
-            .expect("failed to create directory proxy");
 
         (model, builtin_environment, hub_proxy)
     }

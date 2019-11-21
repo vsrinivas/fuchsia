@@ -15,7 +15,6 @@ use {
     },
     failure::{Error, ResultExt},
     fuchsia_async as fasync, fuchsia_syslog as syslog,
-    std::sync::Arc,
 };
 
 // TODO: This is a white box test so that we can use hooks. Really this should be a black box test,
@@ -32,19 +31,19 @@ async fn destruction() -> Result<(), Error> {
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url,
+        debug: false,
     };
     let model = startup::model_setup(&args).await?;
     let _builtin_environment =
         startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default()).await;
     let test_hook = TestHook::new();
 
-    let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+    let breakpoint_system = BreakpointSystem::new();
     let breakpoint_receiver =
-        breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
-    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
+        breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
 
     model.root_realm.hooks.install(test_hook.hooks()).await;
-    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
+    model.root_realm.hooks.install(breakpoint_system.hooks()).await;
 
     let root_moniker = model::AbsoluteMoniker::root();
     model.bind(&root_moniker).await?;

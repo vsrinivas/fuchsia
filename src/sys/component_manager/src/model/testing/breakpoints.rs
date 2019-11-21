@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 use {
+    crate::model::testing::breakpoints_capability::{
+        BreakpointCapabilityHook, BreakpointCapabilityProvider,
+    },
     crate::model::*,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
     lazy_static::lazy_static,
@@ -63,13 +66,14 @@ impl BreakpointInvocationSender {
     }
 }
 
+#[derive(Clone)]
 pub struct BreakpointInvocationReceiver {
-    rx: Mutex<mpsc::Receiver<BreakpointInvocation>>,
+    rx: Arc<Mutex<mpsc::Receiver<BreakpointInvocation>>>,
 }
 
 impl BreakpointInvocationReceiver {
     fn new(rx: mpsc::Receiver<BreakpointInvocation>) -> Self {
-        Self { rx: Mutex::new(rx) }
+        Self { rx: Arc::new(Mutex::new(rx)) }
     }
 
     /// Receives an invocation from the sender.
@@ -103,7 +107,7 @@ pub struct BreakpointRegistry {
 }
 
 impl BreakpointRegistry {
-    pub fn new() -> Self {
+    fn new() -> Self {
         Self { sender_map: Arc::new(Mutex::new(HashMap::new())) }
     }
 
@@ -153,16 +157,23 @@ impl BreakpointRegistry {
     }
 }
 
-/// A hook registered with all lifecycle events. When any event is received from
-/// component manager, a list of BreakpointInvocationSenders are obtained from the
-/// BreakpointRegistry and a BreakpointInvocation is sent via each.
-pub struct BreakpointHook {
-    inner: Arc<BreakpointHookInner>,
+/// A self-contained system for breakpoints. Contains the registry and the hook
+/// responsible for implmenting basic breakpoint functionality. If this object is dropped,
+/// there are no guarantees about breakpoint functionality.
+pub struct BreakpointSystem {
+    registry: Arc<BreakpointRegistry>,
+    hook: Arc<BreakpointHook>,
 }
 
-impl BreakpointHook {
-    pub fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
-        Self { inner: Arc::new(BreakpointHookInner::new(breakpoint_registry)) }
+impl BreakpointSystem {
+    pub fn new() -> Self {
+        let registry = Arc::new(BreakpointRegistry::new());
+        let hook = Arc::new(BreakpointHook::new(registry.clone()));
+        Self { registry, hook }
+    }
+
+    pub async fn register(&self, event_types: Vec<EventType>) -> BreakpointInvocationReceiver {
+        self.registry.register(event_types).await
     }
 
     /// This hook must be registered with all events.
@@ -175,28 +186,45 @@ impl BreakpointHook {
                 EventType::CapabilityUse,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
+                EventType::RootRealmCreated,
                 EventType::RouteFrameworkCapability,
                 EventType::StopInstance,
             ],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
+            callback: Arc::downgrade(&self.hook) as Weak<dyn Hook>,
         }]
     }
-}
 
-struct BreakpointHookInner {
-    breakpoint_registry: Arc<BreakpointRegistry>,
-}
+    /// Creates a capability hook that can be attached to a realm, so that components
+    /// can request the BreakpointCapability.
+    pub fn create_capability_hook(&self) -> BreakpointCapabilityHook {
+        BreakpointCapabilityHook::new(self.registry.clone())
+    }
 
-impl BreakpointHookInner {
-    fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
-        Self { breakpoint_registry }
+    /// Creates a capability provider used for debugging purposes.
+    /// You probably want a BreakpointCapabilityProvider routed to you via
+    /// BreakpointCapabilityHook instead of using this method.
+    pub fn create_capability_provider(&self) -> BreakpointCapabilityProvider {
+        BreakpointCapabilityProvider::new(self.registry.clone())
     }
 }
 
-impl Hook for BreakpointHookInner {
+/// A hook registered with all lifecycle events. When any event is received from
+/// component manager, a list of BreakpointInvocationSenders are obtained from the
+/// BreakpointRegistry and a BreakpointInvocation is sent via each.
+struct BreakpointHook {
+    registry: Arc<BreakpointRegistry>,
+}
+
+impl BreakpointHook {
+    fn new(registry: Arc<BreakpointRegistry>) -> Self {
+        Self { registry }
+    }
+}
+
+impl Hook for BreakpointHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
         Box::pin(async move {
-            self.breakpoint_registry.send(event).await?;
+            self.registry.send(event).await?;
             Ok(())
         })
     }

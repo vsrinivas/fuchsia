@@ -7,6 +7,12 @@
       "url": "fuchsia-pkg://fuchsia.com/echo_server#meta/echo_server.cm",
     },
   ],
+  "use": [
+    {
+      "legacy_service": "/svc/fuchsia.sys2.Realm",
+      "from": "framework",
+    },
+  ],
   "expose": [
     { "directory": "/pkgfs", "from": "self", "rights": ["r*"] },
   ]

@@ -5,7 +5,7 @@
 use {
     component_manager_lib::{
         klog,
-        model::{AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model},
+        model::{hooks::Event, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model},
         startup,
     },
     failure::{Error, ResultExt},
@@ -51,7 +51,14 @@ async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnviro
     let builtin_environment =
         startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
             .await?;
-    builtin_environment.bind_hub_to_outgoing_dir(&model).await?;
+    builtin_environment.bind_service_fs_to_out(&model).await?;
+
+    // If a debug breakpoint system is set up, then this event will cause
+    // component manager to block until the Breakpoint FIDL protocol tells it to resume.
+    // TODO(xbhatnag): Make this event more generic by dispatching it from within Model or Realm.
+    let event = Event::RootRealmCreated { realm: model.root_realm.clone() };
+    model.root_realm.hooks.dispatch(&event).await?;
+
     let root_moniker = AbsoluteMoniker::root();
     model
         .bind(&root_moniker)

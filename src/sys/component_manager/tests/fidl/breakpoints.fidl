@@ -32,25 +32,31 @@ const uint64 MAX_CAPABILITY_PATH_LENGTH = 50;
 /// They are FIDL versions of the EventType enum in hooks.rs and have
 /// the same meaning.
 enum EventType {
+    /// An instance was bound to successfully.
+    /// This instance is now running.
+    /// TODO(xbhatnag): Rename this event to START_INSTANCE
+    BIND_INSTANCE = 0;
+
     /// An instance was stopped successfully.
     /// This event must occur before PostDestroyInstance.
-    STOP_INSTANCE = 0;
+    STOP_INSTANCE = 1;
 
     /// The component subtree rooted at this instance is about to be destroyed.
     /// The instance may have been stopped by this point.
     /// This event must occur before PostDestroyInstance.
-    //TODO(fxb/39417): Ensure the instance is stopped before this event.
-    PRE_DESTROY_INSTANCE = 1;
+    /// TODO(fxb/39417): Ensure the instance is stopped before this event.
+    PRE_DESTROY_INSTANCE = 2;
 
     /// The component subtree rooted at this instance has been destroyed.
     /// All instances under this subtree have been stopped by this point.
-    POST_DESTROY_INSTANCE = 2;
+    POST_DESTROY_INSTANCE = 3;
 
     /// A capability has been requested for use by the component.
     /// A component uses a capability by creating a channel and providing
     /// the server end of the channel to the component manager for routing
     /// to a particular capability.
-    CAPABILITY_USE = 3;
+    /// TODO(xbhatnag): Rename this event to USE_CAPABILITY
+    CAPABILITY_USE = 4;
 };
 
 /// A protocol used in testing by a component instance to block the

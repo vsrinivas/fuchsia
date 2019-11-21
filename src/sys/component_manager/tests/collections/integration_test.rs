@@ -24,13 +24,9 @@ async fn collections() -> Result<(), Error> {
     events.iter().for_each(|s| {
         out.push_str(&format!("{}\n", s));
     });
-    test_utils::launch_and_wait_for_msg(
-        "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/component_manager.cmx"
-            .to_string(),
-        Some(vec![
-            "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/collection_realm.cm"
-                .to_string(),
-        ]),
+
+    test_utils::launch_component_and_expect_output(
+        "fuchsia-pkg://fuchsia.com/collections_integration_test#meta/collection_realm.cm",
         out,
     )
     .await

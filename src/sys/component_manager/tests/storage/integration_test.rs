@@ -19,7 +19,6 @@ use {
     io_util::{self, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
     lazy_static::lazy_static,
     std::path::PathBuf,
-    std::sync::Arc,
 };
 
 lazy_static! {
@@ -50,6 +49,7 @@ async fn storage() -> Result<(), Error> {
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url,
+        debug: false,
     };
     let model = startup::model_setup(&args).await?;
     let _builtin_environment =
@@ -83,6 +83,7 @@ async fn storage_from_collection() -> Result<(), Error> {
         use_builtin_process_launcher: false,
         use_builtin_vmex: false,
         root_component_url,
+        debug: false,
     };
     let model = startup::model_setup(&args).await?;
     let builtin_environment =
@@ -91,13 +92,12 @@ async fn storage_from_collection() -> Result<(), Error> {
 
     let test_hook = TestHook::new();
 
-    let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+    let breakpoint_system = BreakpointSystem::new();
     let breakpoint_receiver =
-        breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
-    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
+        breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
 
     model.root_realm.hooks.install(test_hook.hooks()).await;
-    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
+    model.root_realm.hooks.install(breakpoint_system.hooks()).await;
     let root_moniker = AbsoluteMoniker::root();
     model.bind(&root_moniker).await.context("could not bind to root realm")?;
 

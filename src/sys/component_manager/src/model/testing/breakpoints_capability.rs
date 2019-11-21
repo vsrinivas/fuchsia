@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    component_manager_lib::{capability::*, model::testing::breakpoints::*, model::*},
+    crate::{capability::*, model::testing::breakpoints::*, model::*},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync, fuchsia_zircon as zx,
     futures::{future::BoxFuture, StreamExt},
@@ -57,10 +57,9 @@ impl BreakpointCapabilityHookInner {
             (None, ComponentManagerCapability::LegacyService(source_path))
                 if *source_path == *BREAKPOINTS_SERVICE =>
             {
-                return Ok(Some(
-                    Box::new(BreakpointCapability::new(self.breakpoint_registry.clone()))
-                        as Box<dyn ComponentManagerCapabilityProvider>,
-                ))
+                return Ok(Some(Box::new(BreakpointCapabilityProvider::new(
+                    self.breakpoint_registry.clone(),
+                )) as Box<dyn ComponentManagerCapabilityProvider>))
             }
             (c, _) => return Ok(c),
         };
@@ -85,12 +84,12 @@ impl Hook for BreakpointCapabilityHookInner {
 
 /// Server end of Breakpoints framework service.
 /// A component can use FIDL calls to register breakpoints and expect/resume invocations.
-pub struct BreakpointCapability {
+pub struct BreakpointCapabilityProvider {
     breakpoint_registry: Arc<BreakpointRegistry>,
 }
 
-impl BreakpointCapability {
-    fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
+impl BreakpointCapabilityProvider {
+    pub fn new(breakpoint_registry: Arc<BreakpointRegistry>) -> Self {
         Self { breakpoint_registry }
     }
 
@@ -202,28 +201,53 @@ impl BreakpointCapability {
     }
 
     /// Loops indefinitely, processing Breakpoint FIDL requests received over a channel
-    async fn looper(server_end: zx::Channel, breakpoint_registry: Arc<BreakpointRegistry>) {
-        let mut stream = ServerEnd::<fbreak::BreakpointsMarker>::new(server_end)
-            .into_stream()
-            .expect("could not convert channel into stream");
-
+    ///
+    /// root_realm_receiver is provided when the "--debug" flag is passed into component manager.
+    /// It is a receiver for RootRealmCreated events. When this receiver is provided,
+    /// component manager will halt until the Breakpoint FIDL service connects, sets up breakpoints
+    /// and calls resume().
+    async fn serve(
+        mut stream: fbreak::BreakpointsRequestStream,
+        breakpoint_registry: Arc<BreakpointRegistry>,
+        root_realm_created_receiver: Option<BreakpointInvocationReceiver>,
+    ) {
         let receiver = Self::register_breakpoints(&mut stream, &breakpoint_registry).await;
+
+        // If the receiver is specified, wait for a resume to unpause the component manager.
+        if let Some(receiver) = root_realm_created_receiver {
+            let invocation = receiver.receive().await;
+            Self::resume_invocation(&mut stream, invocation).await;
+        }
 
         while let Some(invocation) = Self::expect_invocation(&mut stream, &receiver).await {
             Self::resume_invocation(&mut stream, invocation).await;
         }
     }
 
-    async fn open_async(&self, server_end: zx::Channel) -> Result<(), ModelError> {
+    pub fn serve_async(
+        &self,
+        stream: fbreak::BreakpointsRequestStream,
+        root_realm_created_receiver: Option<BreakpointInvocationReceiver>,
+    ) -> Result<(), ModelError> {
         let breakpoint_registry = self.breakpoint_registry.clone();
         fasync::spawn(async move {
-            Self::looper(server_end, breakpoint_registry).await;
+            Self::serve(stream, breakpoint_registry, root_realm_created_receiver).await;
         });
         Ok(())
     }
+
+    /// This function is usually called when components inside component manager have been
+    /// routed to the BreakpointCapability service. There is no root_realm_created_receiver
+    /// here because the root realm must already have been created by this point.
+    async fn open_async(&self, server_end: zx::Channel) -> Result<(), ModelError> {
+        let stream = ServerEnd::<fbreak::BreakpointsMarker>::new(server_end)
+            .into_stream()
+            .expect("could not convert channel into stream");
+        self.serve_async(stream, None)
+    }
 }
 
-impl ComponentManagerCapabilityProvider for BreakpointCapability {
+impl ComponentManagerCapabilityProvider for BreakpointCapabilityProvider {
     fn open(
         &self,
         _flags: u32,
@@ -237,6 +261,7 @@ impl ComponentManagerCapabilityProvider for BreakpointCapability {
 
 fn convert_event_type(event_type: fbreak::EventType) -> EventType {
     match event_type {
+        fbreak::EventType::BindInstance => EventType::BindInstance,
         fbreak::EventType::StopInstance => EventType::StopInstance,
         fbreak::EventType::PreDestroyInstance => EventType::PreDestroyInstance,
         fbreak::EventType::PostDestroyInstance => EventType::PostDestroyInstance,

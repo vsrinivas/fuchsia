@@ -22,10 +22,12 @@ pub enum EventType {
     AddDynamicChild,
 
     /// An instance was bound to. If the instance is executable, it is also started.
+    /// TODO(xbhatnag): Rename this event to StartInstance
     BindInstance,
 
     /// A capability was used by an instance. An instance uses a capability when
     /// it creates a channel and provides the server end to ComponentManager for routing.
+    /// TODO(xbhatnag): Rename this event to UseCapability
     CapabilityUse,
 
     /// An instance was destroyed successfully. The instance is stopped and no longer
@@ -35,6 +37,15 @@ pub enum EventType {
     /// Destruction of an instance has begun. The instance may/may not be stopped by this point.
     /// The instance still exists in the parent's realm but will soon be removed.
     PreDestroyInstance,
+
+    /// The root realm has been created.
+    /// At this point, the manifest for the root component has been resolved and a RealmState
+    /// has been created for the root realm.
+    /// If this component has an execution, an instance will be started shortly after this event.
+    /// This event occurs exactly once in the lifetime of component manager and is used
+    /// for debugging purposes.
+    /// TODO(xbhatnag): Consider making this event more generic (PreBindInstance)
+    RootRealmCreated,
 
     /// A builtin capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
@@ -87,6 +98,9 @@ pub enum Event {
     PreDestroyInstance {
         realm: Arc<Realm>,
     },
+    RootRealmCreated {
+        realm: Arc<Realm>,
+    },
     RouteBuiltinCapability {
         // This is always the root realm.
         realm: Arc<Realm>,
@@ -117,6 +131,7 @@ impl Event {
             Event::CapabilityUse { realm, .. } => realm.clone(),
             Event::PostDestroyInstance { realm } => realm.clone(),
             Event::PreDestroyInstance { realm } => realm.clone(),
+            Event::RootRealmCreated { realm, .. } => realm.clone(),
             Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
             Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
             Event::StopInstance { realm } => realm.clone(),
@@ -130,6 +145,7 @@ impl Event {
             Event::CapabilityUse { .. } => EventType::CapabilityUse,
             Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
+            Event::RootRealmCreated { .. } => EventType::RootRealmCreated,
             Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
             Event::StopInstance { .. } => EventType::StopInstance,

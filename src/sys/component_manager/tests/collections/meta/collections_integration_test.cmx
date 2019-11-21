@@ -3,8 +3,14 @@
         "binary": "test/collections_integration_test"
     },
     "sandbox": {
+        "features": [
+            "hub"
+        ],
         "services": [
-            "fuchsia.sys.Launcher"
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader",
+            "fuchsia.sys.Environment",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

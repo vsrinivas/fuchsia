@@ -378,6 +378,7 @@ mod tests {
                 use_builtin_process_launcher: false,
                 use_builtin_vmex: false,
                 root_component_url: "".to_string(),
+                debug: false,
             };
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
@@ -609,16 +610,14 @@ mod tests {
 
         let hook = Arc::new(TestHook::new());
 
-        let breakpoint_registry = Arc::new(testing::breakpoints::BreakpointRegistry::new());
-        let breakpoint_receiver = breakpoint_registry
+        let breakpoint_system = testing::breakpoints::BreakpointSystem::new();
+        let breakpoint_receiver = breakpoint_system
             .register(vec![EventType::PreDestroyInstance, EventType::PostDestroyInstance])
             .await;
-        let breakpoint_hook =
-            testing::breakpoints::BreakpointHook::new(breakpoint_registry.clone());
 
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
-        hooks.append(&mut breakpoint_hook.hooks());
+        hooks.append(&mut breakpoint_system.hooks());
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks)
                 .await;

@@ -120,6 +120,7 @@ impl RoutingTest {
             use_builtin_process_launcher: false,
             use_builtin_vmex: false,
             root_component_url: "".to_string(),
+            debug: false,
         };
         let echo_service = Arc::new(EchoService::new());
         let namespaces = runner.namespaces.clone();
@@ -211,11 +212,10 @@ impl RoutingTest {
             Some(collection.to_string()),
             instance.clone(),
         ));
-        let breakpoint_registry = Arc::new(BreakpointRegistry::new());
+        let breakpoint_system = BreakpointSystem::new();
         let breakpoint_receiver =
-            breakpoint_registry.register(vec![EventType::PostDestroyInstance]).await;
-        let breakpoint_hook = Arc::new(BreakpointHook::new(breakpoint_registry.clone()));
-        self.model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
+            breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
+        self.model.root_realm.hooks.install(breakpoint_system.hooks()).await;
         capability_util::call_destroy_child(
             component_resolved_url,
             self.namespaces.clone(),

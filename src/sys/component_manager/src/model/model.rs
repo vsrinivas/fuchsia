@@ -5,19 +5,24 @@
 use {
     crate::{
         framework::*,
+        model::testing::breakpoints::*,
         model::{runner::Runner, *},
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::BuiltinRootCapabilities,
     },
     cm_rust::{data, CapabilityPath},
     failure::format_err,
-    fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
-    fidl_fuchsia_io::{self as fio, DirectoryProxy, OPEN_RIGHT_READABLE, OPEN_RIGHT_WRITABLE},
+    fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServerEnd},
+    fidl_fuchsia_io::{
+        self as fio, DirectoryMarker, DirectoryProxy, MODE_TYPE_DIRECTORY, OPEN_RIGHT_READABLE,
+        OPEN_RIGHT_WRITABLE,
+    },
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
-    fuchsia_runtime::HandleType,
+    fuchsia_component::server::*,
     fuchsia_zircon as zx,
     futures::future::join_all,
     futures::lock::Mutex,
+    futures::stream::StreamExt,
     std::sync::Arc,
 };
 
@@ -57,6 +62,7 @@ pub struct BuiltinEnvironment {
     pub builtin_capabilities: Arc<BuiltinRootCapabilities>,
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
+    pub breakpoint_system: Option<BreakpointSystem>,
 }
 
 impl BuiltinEnvironment {
@@ -64,27 +70,102 @@ impl BuiltinEnvironment {
         builtin_capabilities: Arc<BuiltinRootCapabilities>,
         realm_capability_host: RealmCapabilityHost,
         hub: Hub,
+        breakpoint_system: Option<BreakpointSystem>,
     ) -> Self {
-        Self { builtin_capabilities, realm_capability_host, hub }
+        Self { builtin_capabilities, realm_capability_host, hub, breakpoint_system }
     }
 
-    pub async fn bind_hub_to_outgoing_dir(&self, model: &Model) -> Result<(), ModelError> {
-        let outgoing_dir_channel =
-            fuchsia_runtime::take_startup_handle(HandleType::DirectoryRequest.into())
-                .map(|handle| zx::Channel::from(handle));
-        self.bind_hub(model, outgoing_dir_channel).await
+    /// Setup a ServiceFs that contains the Hub and (optionally) the breakpoints service
+    async fn create_service_fs<'a>(
+        model: &Model,
+        hub: &Hub,
+        breakpoint_system: &Option<BreakpointSystem>,
+    ) -> Result<ServiceFs<ServiceObj<'a, ()>>, ModelError> {
+        // Create the ServiceFs
+        let mut service_fs = ServiceFs::new();
+
+        // Setup the hub
+        let (hub_proxy, hub_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+        hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, hub_server_end.into_channel())
+            .await?;
+        model.root_realm.hooks.install(hub.hooks()).await;
+        service_fs.add_remote("hub", hub_proxy);
+
+        // Setup the debug breakpoint system (optionally)
+        if let Some(breakpoint_system) = breakpoint_system {
+            // Install the breakpoint hooks at the root component.
+            // This ensures that all events will reach this breakpoint system.
+            model.root_realm.hooks.install(breakpoint_system.hooks()).await;
+
+            // Register for RootRealmCreated event to halt the ComponentManager
+            let root_realm_created_receiver =
+                breakpoint_system.register(vec![EventType::RootRealmCreated]).await;
+
+            // Setup a capability provider for external use. This provider is not used
+            // by components within component manager, hence there is no associated hook for it.
+            // Instead, it is used by external components that wish to debug component manager.
+            let breakpoint_capability_provider = breakpoint_system.create_capability_provider();
+            service_fs.dir("svc").add_fidl_service(move |stream| {
+                breakpoint_capability_provider
+                    .serve_async(stream, Some(root_realm_created_receiver.clone()))
+                    .expect("failed to serve debug breakpoint capability");
+            });
+        }
+
+        Ok(service_fs)
     }
 
-    pub async fn bind_hub(
+    /// Bind ServiceFs to a provided channel
+    async fn bind_service_fs(&self, model: &Model, channel: zx::Channel) -> Result<(), ModelError> {
+        let mut service_fs =
+            Self::create_service_fs(model, &self.hub, &self.breakpoint_system).await?;
+
+        // Bind to the channel
+        service_fs
+            .serve_connection(channel)
+            .map_err(|err| ModelError::namespace_creation_failed(err))?;
+
+        // Start up ServiceFs
+        fasync::spawn(async move {
+            service_fs.collect::<()>().await;
+        });
+        Ok(())
+    }
+
+    /// Bind ServiceFs to the outgoing directory of this component, if it exists.
+    pub async fn bind_service_fs_to_out(&self, model: &Model) -> Result<(), ModelError> {
+        if let Some(handle) = fuchsia_runtime::take_startup_handle(
+            fuchsia_runtime::HandleType::DirectoryRequest.into(),
+        ) {
+            self.bind_service_fs(model, zx::Channel::from(handle)).await?;
+        }
+        Ok(())
+    }
+
+    /// Bind ServiceFs to a new channel and return the Hub directory.
+    /// Used mainly by integration tests.
+    pub async fn bind_service_fs_for_hub(
         &self,
         model: &Model,
-        channel: Option<fuchsia_zircon::Channel>,
-    ) -> Result<(), ModelError> {
-        if let Some(channel) = channel {
-            self.hub.open_root(OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE, channel).await?;
-        };
-        model.root_realm.hooks.install(self.hub.hooks()).await;
-        Ok(())
+    ) -> Result<DirectoryProxy, ModelError> {
+        // Create a channel that ServiceFs will operate on
+        let (service_fs_proxy, service_fs_server_end) = create_proxy::<DirectoryMarker>().unwrap();
+
+        self.bind_service_fs(model, service_fs_server_end.into_channel()).await?;
+
+        // Open the Hub from within ServiceFs
+        let (hub_client_end, hub_server_end) = create_endpoints::<DirectoryMarker>().unwrap();
+        service_fs_proxy
+            .open(
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                "hub",
+                ServerEnd::new(hub_server_end.into_channel()),
+            )
+            .map_err(|err| ModelError::namespace_creation_failed(err))?;
+        let hub_proxy = hub_client_end.into_proxy().unwrap();
+
+        Ok(hub_proxy)
     }
 }
 

@@ -3,22 +3,20 @@
 // found in the LICENSE file.
 
 use {
-    breakpoints_capability::*,
     component_manager_lib::{
         model::{
-            self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker,
-            BuiltinEnvironment, ComponentManagerConfig, Model,
+            self, hooks::*, testing::breakpoints::*, testing::breakpoints_capability::*,
+            testing::test_helpers, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig,
+            Model,
         },
         startup,
     },
     failure::{self, Error},
-    fidl::endpoints::ClientEnd,
     fidl_fidl_examples_routing_echo as fecho,
     fidl_fuchsia_io::{
-        DirectoryEvent, DirectoryMarker, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE,
-        OPEN_RIGHT_READABLE,
+        DirectoryEvent, DirectoryProxy, MODE_TYPE_SERVICE, OPEN_FLAG_DESCRIBE, OPEN_RIGHT_READABLE,
     },
-    fidl_fuchsia_test_hub as fhub, fuchsia_zircon as zx,
+    fidl_fuchsia_test_hub as fhub,
     futures::TryStreamExt,
     hub_test_hook::*,
     std::{
@@ -32,7 +30,7 @@ struct TestRunner {
     pub model: Arc<Model>,
     pub builtin_environment: BuiltinEnvironment,
     hub_test_hook: Arc<HubTestHook>,
-    _breakpoint_hook: BreakpointHook,
+    _breakpoint_system: BreakpointSystem,
     _breakpoint_capability_hook: BreakpointCapabilityHook,
     breakpoint_receiver: BreakpointInvocationReceiver,
     hub_proxy: DirectoryProxy,
@@ -54,14 +52,13 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
 async fn register_breakpoints(
     model: &Model,
     event_types: Vec<EventType>,
-) -> (BreakpointHook, BreakpointCapabilityHook, BreakpointInvocationReceiver) {
-    let breakpoint_registry = Arc::new(BreakpointRegistry::new());
-    let breakpoint_receiver = breakpoint_registry.register(event_types).await;
-    let breakpoint_hook = BreakpointHook::new(breakpoint_registry.clone());
-    let breakpoint_capability_hook = BreakpointCapabilityHook::new(breakpoint_registry.clone());
-    model.root_realm.hooks.install(breakpoint_hook.hooks()).await;
+) -> (BreakpointSystem, BreakpointCapabilityHook, BreakpointInvocationReceiver) {
+    let breakpoint_system = BreakpointSystem::new();
+    let breakpoint_capability_hook = breakpoint_system.create_capability_hook();
+    let breakpoint_receiver = breakpoint_system.register(event_types).await;
+    model.root_realm.hooks.install(breakpoint_system.hooks()).await;
     model.root_realm.hooks.install(breakpoint_capability_hook.hooks()).await;
-    (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver)
+    (breakpoint_system, breakpoint_capability_hook, breakpoint_receiver)
 }
 
 impl TestRunner {
@@ -73,24 +70,26 @@ impl TestRunner {
         root_component_url: &str,
         event_types: Vec<EventType>,
     ) -> Result<Self, Error> {
-        // TODO(xbhatnag): Explain this in more detail. Setting use_builtin_process_launcher to false is non-obvious.
         let args = startup::Arguments {
             use_builtin_process_launcher: false,
             use_builtin_vmex: false,
             root_component_url: root_component_url.to_string(),
+            debug: false,
         };
         let model = startup::model_setup(&args).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
         let builtin_environment =
             startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
                 .await?;
-        let (client_chan, server_chan) = zx::Channel::create()?;
-        let hub_proxy = ClientEnd::<DirectoryMarker>::new(client_chan).into_proxy()?;
-        builtin_environment.bind_hub(&model, server_chan.into()).await?;
 
-        let (breakpoint_hook, breakpoint_capability_hook, breakpoint_receiver) =
+        // Setup ServiceFs
+        let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
+
+        // Setup the breakpoints system for the test and the components in the tree.
+        let (breakpoint_system, breakpoint_capability_hook, breakpoint_receiver) =
             register_breakpoints(&model, event_types).await;
 
+        // Bind the model, starting the root component
         let root_moniker = model::AbsoluteMoniker::root();
         let res = model.bind(&root_moniker).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
@@ -101,7 +100,7 @@ impl TestRunner {
             builtin_environment,
             hub_proxy,
             hub_test_hook,
-            _breakpoint_hook: breakpoint_hook,
+            _breakpoint_system: breakpoint_system,
             _breakpoint_capability_hook: breakpoint_capability_hook,
             breakpoint_receiver,
         })

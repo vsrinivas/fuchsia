@@ -70,9 +70,6 @@ test_package("routing_integration_test") {
     "//examples/components/routing/echo_server",
   ]
 
-  components =
-      [ "//src/sys/component_manager:component_manager_as_v1_component" ]
-
   meta = [
     {
       path = rebase_path("//examples/components/routing/meta/echo_server.cml")
