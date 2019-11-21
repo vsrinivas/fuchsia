@@ -75,32 +75,39 @@ void Cobalt::SetUpLogger() {
       });
 }
 
-void Cobalt::Log(const Event& event) {
-  logger_->LogEvent(event.metric_id, event.event_code, [=](Status status) {
+void Cobalt::Log(Event event) {
+  // We copy the integer fields of |event| becuase the order of evaluation of function parameters in
+  // underfined and event may be moved before its metric_id and event_code are evaluated.
+  uint32_t metric_id = event.metric_id;
+  uint32_t event_code = event.event_code;
+
+  logger_->LogEvent(metric_id, event_code, [event = std::move(event)](Status status) mutable {
     if (status != Status::OK) {
       FX_LOGS(INFO) << StringPrintf("Cobalt logging error: status %s, event %s",
                                     ToString(status).c_str(), event.ToString().c_str());
     }
+    event.callback(status);
   });
 }
 
 void Cobalt::FlushPendingEvents() {
-  for (const auto& event : earliest_pending_events_) {
+  for (auto& event : earliest_pending_events_) {
     if (!logger_) {
       FX_LOGS(ERROR) << "Logger no longer available, stopping flushing of queue";
       return;
     }
-    Log(event);
+    Log(std::move(event));
     earliest_pending_events_.pop_front();
   }
 }
 
-void Cobalt::Log(uint32_t metric_id, uint32_t event_code) {
-  Event event(metric_id, event_code);
+void Cobalt::Log(uint32_t metric_id, uint32_t event_code,
+                 fit::callback<void(fuchsia::cobalt::Status)> callback) {
+  Event event(metric_id, event_code, std::move(callback));
   if (can_log_event_) {
-    Log(event);
+    Log(std::move(event));
   } else if (earliest_pending_events_.size() < kMaxQueueSize) {
-    earliest_pending_events_.push_back(event);
+    earliest_pending_events_.push_back(std::move(event));
   } else {
     FX_LOGS(WARNING) << fxl::StringPrintf("Dropping Cobalt event %s - pending queue is full",
                                           event.ToString().c_str());

@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_FEEDBACK_FEEDBACK_UTILS_COBALT_LOGGER_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/sys/cpp/service_directory.h>
 
 #include <deque>
@@ -19,20 +20,32 @@ class Cobalt {
   // We expect fuchsia.cobalt.LoggerFactory to be in |services|.
   Cobalt(std::shared_ptr<sys::ServiceDirectory> services);
 
-  // Log an event with fuchsia.cobalt.Logger with the provided parameters. If |logger_| is closed,
-  // keeps the parameters to try again later.
-  void Log(uint32_t metric_id, uint32_t event_code);
+  // Log an event with fuchsia.cobalt.Logger with the provided parameters. If the service is not
+  // accessible, keep the parameters to try again later.
+  void Log(
+      uint32_t metric_id, uint32_t event_code,
+      fit::callback<void(fuchsia::cobalt::Status)> callback = [](fuchsia::cobalt::Status) {});
 
  private:
   struct Event {
-    Event(uint32_t metric_id, uint32_t event_code) : metric_id(metric_id), event_code(event_code) {}
+    Event(uint32_t metric_id, uint32_t event_code,
+          fit::callback<void(fuchsia::cobalt::Status)> callback)
+        : metric_id(metric_id), event_code(event_code), callback(std::move(callback)) {}
+
+    // Make this object move only
+    Event(const Event& other) = delete;
+    Event& operator=(const Event& other) = delete;
+    Event(Event&& other) = default;
+    Event& operator=(Event&& other) = default;
+
     uint32_t metric_id = 0;
     uint32_t event_code = 0;
+    fit::callback<void(fuchsia::cobalt::Status)> callback;
     std::string ToString() const;
   };
 
   void SetUpLogger();
-  void Log(const Event& event);
+  void Log(Event event);
   void FlushPendingEvents();
 
   std::shared_ptr<sys::ServiceDirectory> services_;

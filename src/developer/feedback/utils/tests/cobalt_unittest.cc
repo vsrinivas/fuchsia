@@ -27,6 +27,8 @@ constexpr uint32_t kMaxQueueSize = 500u;
 constexpr uint32_t kMetricIdStart = 1u;
 constexpr uint32_t kEventCodeStart = std::numeric_limits<uint32_t>::max();
 
+using fuchsia::cobalt::Status;
+
 class CobaltTest : public gtest::TestLoopFixture {
  public:
   CobaltTest() : service_directory_provider_(dispatcher()) {
@@ -90,6 +92,22 @@ TEST_F(CobaltTest, Check_Log) {
     RunLoopUntilIdle();
     CheckStubLastEvents(metric_id, event_code);
   }
+}
+
+TEST_F(CobaltTest, Check_CallbackExecutes) {
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+
+  // The logger will always return Status::OK due to the way logger factory was setup so a default
+  // value is used that is not Status::OK to ensure the assignment happens
+  Status log_event_status = Status::INVALID_ARGUMENTS;
+  uint32_t metric_id = NextMetricId();
+  uint32_t event_code = NextEventCode();
+
+  cobalt_->Log(metric_id, event_code,
+               [&log_event_status](Status status) { log_event_status = status; });
+  RunLoopUntilIdle();
+  CheckStubLastEvents(metric_id, event_code);
+  EXPECT_EQ(log_event_status, Status::OK);
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection) {
