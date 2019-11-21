@@ -26,27 +26,46 @@ var (
 	timeoutPayloadReceived error = fmt.Errorf("payloadreceived")
 )
 
+type endpointWithAttributes struct {
+	stack.LinkEndpoint
+	capabilities    stack.LinkEndpointCapabilities
+	maxHeaderLength uint16
+}
+
+func (ep *endpointWithAttributes) Capabilities() stack.LinkEndpointCapabilities {
+	return ep.LinkEndpoint.Capabilities() | ep.capabilities
+}
+
+func (ep *endpointWithAttributes) MaxHeaderLength() uint16 {
+	return ep.LinkEndpoint.MaxHeaderLength() + ep.maxHeaderLength
+}
+
 func TestEndpointAttributes(t *testing.T) {
-	const zero = stack.LinkEndpointCapabilities(0)
+	ep1 := bridge.NewEndpoint(&endpointWithAttributes{
+		LinkEndpoint:    channel.New(1, 101, ""),
+		capabilities:    stack.CapabilityLoopback,
+		maxHeaderLength: 5,
+	})
+	ep2 := bridge.NewEndpoint(&endpointWithAttributes{
+		LinkEndpoint:    channel.New(1, 100, ""),
+		capabilities:    stack.CapabilityLoopback | stack.CapabilityResolutionRequired,
+		maxHeaderLength: 10,
+	})
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{ep1, ep2})
 
-	resolutionRequired := stack.LinkEndpointCapabilities(stack.CapabilityResolutionRequired)
-	if got := bridge.CombineCapabilities(resolutionRequired, zero); got != resolutionRequired {
-		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", resolutionRequired, zero, got, resolutionRequired)
+	if got, want := bridgeEP.Capabilities(), stack.CapabilityResolutionRequired; got != want {
+		t.Errorf("got Capabilities = %b, want = %b", got, want)
 	}
 
-	loopback := stack.LinkEndpointCapabilities(stack.CapabilityLoopback)
-	if got := bridge.CombineCapabilities(loopback, zero); got != zero {
-		t.Errorf("got bridge.Combinecapabilities(%#v, %#v) == %#v, want == %#v", loopback, zero, got, zero)
+	if got, want := bridgeEP.MaxHeaderLength(), ep2.MaxHeaderLength(); got != want {
+		t.Errorf("got MaxHeaderLength = %d, want = %d", got, want)
 	}
 
-	ep1 := bridge.NewEndpoint(channel.New(1, 101, ""))
-	ep2 := bridge.NewEndpoint(channel.New(1, 100, ""))
-	bridge := bridge.New([]*bridge.BridgeableEndpoint{ep1, ep2})
-	if bridge.MTU() != 100 {
-		t.Errorf("got bridge.MTU() == %d but want 100", bridge.MTU())
+	if got, want := bridgeEP.MTU(), ep2.MTU(); got != want {
+		t.Errorf("got MTU = %d, want = %d", got, want)
 	}
 
-	if linkAddr := bridge.LinkAddress(); linkAddr[0]&0x2 == 0 {
+	if linkAddr := bridgeEP.LinkAddress(); linkAddr[0]&0x2 == 0 {
 		t.Errorf("bridge.LinkAddress() expected to be locally administered MAC address, got: %s", linkAddr)
 	}
 }
@@ -70,13 +89,13 @@ func TestEndpoint_Wait(t *testing.T) {
 		LinkEndpoint: ep,
 		ch:           make(chan struct{}),
 	}
-	bridge := bridge.New([]*bridge.BridgeableEndpoint{
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{
 		bridge.NewEndpoint(&ep1),
 		bridge.NewEndpoint(&ep2),
 	})
 	ch := make(chan struct{})
 	go func() {
-		bridge.Wait()
+		bridgeEP.Wait()
 		close(ch)
 	}()
 
@@ -445,9 +464,9 @@ func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*st
 	if err := stk.CreateNIC(2, bep2); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	bridge := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
+	bridgeEP := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
 	bID := tcpip.NICID(3)
-	if err := stk.CreateNIC(bID, bridge); err != nil {
+	if err := stk.CreateNIC(bID, bridgeEP); err != nil {
 		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.IPv4ProtocolNumber, baddr); err != nil {
@@ -457,7 +476,7 @@ func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*st
 		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 
-	return stk, bridge, nil
+	return stk, bridgeEP, nil
 }
 
 func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, addr tcpip.Address, payload string) ([]byte, error) {

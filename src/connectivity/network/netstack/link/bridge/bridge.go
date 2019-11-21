@@ -4,6 +4,7 @@ package bridge
 
 import (
 	"hash/fnv"
+	"math"
 	"sort"
 	"strings"
 	"sync"
@@ -36,33 +37,35 @@ type Endpoint struct {
 // packets written to it and received from any of its constituent links.
 //
 // The new link will have the minumum of the MTUs, the maximum of the max
-// header lengths, and minimum set of the capabilities.  This function takes
+// header lengths, and minimum set of the capabilities. This function takes
 // ownership of `links`.
 func New(links []*BridgeableEndpoint) *Endpoint {
 	sort.Slice(links, func(i, j int) bool {
 		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
 	})
-	ep := &Endpoint{links: make(map[tcpip.LinkAddress]*BridgeableEndpoint)}
-	h := fnv.New64()
-	if len(links) > 0 {
-		l := links[0]
-		ep.capabilities = l.Capabilities()
-		ep.mtu = l.MTU()
-		ep.maxHeaderLength = l.MaxHeaderLength()
+	ep := &Endpoint{
+		links: make(map[tcpip.LinkAddress]*BridgeableEndpoint),
+		mtu:   math.MaxUint32,
 	}
+	h := fnv.New64()
 	for _, l := range links {
 		linkAddress := l.LinkAddress()
 		ep.links[linkAddress] = l
-		// Only capabilities that exist on all the links should be reported.
-		ep.capabilities = CombineCapabilities(ep.capabilities, l.Capabilities())
+
+		// mtu is the maximum write size, which is the minimum of any link's mtu.
 		if mtu := l.MTU(); mtu < ep.mtu {
 			ep.mtu = mtu
 		}
+
+		// Resolution is required if any link requires it.
+		ep.capabilities |= l.Capabilities() & stack.CapabilityResolutionRequired
+
 		// maxHeaderLength is the space to reserve for possible addition
-		// headers.  We want to reserve enough to suffice for all links.
+		// headers. We want to reserve enough to suffice for all links.
 		if maxHeaderLength := l.MaxHeaderLength(); maxHeaderLength > ep.maxHeaderLength {
 			ep.maxHeaderLength = maxHeaderLength
 		}
+
 		if _, err := h.Write([]byte(linkAddress)); err != nil {
 			panic(err)
 		}
@@ -159,17 +162,6 @@ func (ep *Endpoint) Path() string {
 // work.
 func (ep *Endpoint) SetPromiscuousMode(bool) error {
 	return nil
-}
-
-// CombineCapabilities returns the capabilities restricted by the most
-// restrictive of the inputs.
-func CombineCapabilities(a, b stack.LinkEndpointCapabilities) stack.LinkEndpointCapabilities {
-	newCapabilities := a
-	// Take the minimum of CapabilityLoopback.
-	newCapabilities &= b | ^(stack.CapabilityLoopback)
-	// Take the maximum of CapabilityResolutionRequired.
-	newCapabilities |= b & stack.CapabilityResolutionRequired
-	return newCapabilities
 }
 
 func (ep *Endpoint) MTU() uint32 {
