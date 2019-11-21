@@ -56,7 +56,7 @@ namespace fsocket = ::llcpp::fuchsia::posix::socket;
   }
 
 MAKE_GET_SERVICE(get_socket_provider, fsocket::Provider)
-MAKE_GET_SERVICE(get_namelookup, fnet::NameLookup)
+MAKE_GET_SERVICE(get_name_lookup, fnet::NameLookup)
 
 __EXPORT
 int socket(int domain, int type, int protocol) {
@@ -347,8 +347,8 @@ int accept4(int fd, struct sockaddr* __restrict addr, socklen_t* __restrict len,
 __EXPORT
 int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const char* name,
                           int family) {
-  fnet::NameLookup::SyncClient* namelookup;
-  zx_status_t status = get_namelookup(&namelookup);
+  fnet::NameLookup::SyncClient* name_lookup;
+  zx_status_t status = get_name_lookup(&name_lookup);
   if (status != ZX_OK) {
     errno = fdio_status_to_errno(status);
     return EAI_SYSTEM;
@@ -372,8 +372,8 @@ int _getaddrinfo_from_dns(struct address buf[MAXADDRS], char canon[256], const c
   // Explicitly allocating message buffers to avoid heap allocation.
   fidl::Buffer<fnet::NameLookup::LookupIpRequest> request_buffer;
   fidl::Buffer<fnet::NameLookup::LookupIpResponse> response_buffer;
-  auto result = namelookup->LookupIp(request_buffer.view(), fidl::StringView(name, strlen(name)),
-                                     options, response_buffer.view());
+  auto result = name_lookup->LookupIp(request_buffer.view(), fidl::StringView(name, strlen(name)),
+                                      options, response_buffer.view());
   status = result.status();
   if (status != ZX_OK) {
     errno = fdio_status_to_errno(status);
