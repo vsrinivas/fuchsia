@@ -879,6 +879,70 @@ void CodecAdapterVp9::FrameWasOutput() {
   video_->TryToReschedule();
 }
 
+void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data) {
+  video_->AssertVideoDecoderLockHeld();
+  if (use_parser_) {
+    // Should match protectedness of current stream buffer.
+    // TODO(fxb/35200): Set to true for protected inputs.
+    if (ZX_OK !=
+        video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false)) {
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    // Pass nullptr because we'll handle syncing updates manually.
+    if (ZX_OK != video_->parser()->InitializeEsParser(nullptr)) {
+      DECODE_ERROR("InitializeEsParser failed");
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    if (data.size() + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
+      // We don't want the parser to hang waiting for output buffer space, since new space will
+      // never be released to it since we need to manually update the read pointer. TODO(fxb/41825):
+      // Handle copying only as much as can fit and waiting for kVp9InputBufferEmpty to continue
+      // copying the remainder.
+      DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",
+                   video_->GetStreamBufferEmptySpace(), data.size() + sizeof(kFlushThroughZeroes));
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+
+    video_->parser()->SyncFromDecoderInstance(video_->current_instance());
+    if (ZX_OK != video_->parser()->ParseVideo(data.data(), data.size())) {
+      DECODE_ERROR("Parsing video failed");
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+
+    if (ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
+      DECODE_ERROR("Parsing video timed out");
+      video_->parser()->CancelParsing();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    if (ZX_OK != video_->parser()->ParseVideo(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
+      DECODE_ERROR("Parsing flush-through zeros failed");
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    if (ZX_OK != video_->parser()->WaitForParsingCompleted(ZX_SEC(10))) {
+      DECODE_ERROR("Parsing flush-through zeros timed out");
+      video_->parser()->CancelParsing();
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+
+    video_->parser()->SyncToDecoderInstance(video_->current_instance());
+  } else {
+    if (ZX_OK != video_->ProcessVideoNoParser(data.data(), data.size())) {
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
+      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+      return;
+    }
+  }
+}
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   if (queued_frame_sizes_.size()) {
@@ -905,14 +969,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       std::vector<uint8_t> split_data;
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
                       new_stream_ivf_len - kHeaderSkipBytes, &split_data);
-      if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
-        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-        return;
-      }
-      if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
-        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-        return;
-      }
+      SubmitDataToStreamBuffer(split_data);
       // Intentionally not including kFlushThroughZeroes - this only includes
       // data in AMLV frames.
       decoder->UpdateDecodeSize(split_data.size());
@@ -931,24 +988,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
     SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);
 
     parsed_video_size_ += split_data.size() + kFlushThroughBytes;
-
-    // If attempting to over-fill the ring buffer, this will fail, currently.
-    // That should be rare, since only one superframe will be in the ringbuffer
-    // at a time.
-    // TODO: Check for short writes and either feed in extra data as space is
-    // made or resize the buffer to fit.
-    if (ZX_OK != video_->ProcessVideoNoParser(split_data.data(), split_data.size())) {
-      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-      return;
-    }
-
-    // Always flush through padding before calling UpdateDecodeSize or else the
-    // decoder may not see the data because it's stuck in a fifo somewhere and
-    // we can get hangs.
-    if (ZX_OK != video_->ProcessVideoNoParser(kFlushThroughZeroes, sizeof(kFlushThroughZeroes))) {
-      OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
-      return;
-    }
+    SubmitDataToStreamBuffer(split_data);
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
 
     if (queued_frame_sizes_.size() == 0) {

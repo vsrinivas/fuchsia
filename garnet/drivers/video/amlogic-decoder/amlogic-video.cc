@@ -289,21 +289,10 @@ fuchsia::sysmem::AllocatorSyncPtr& AmlogicVideo::SysmemAllocatorSyncPtr() {
 // This parser handles MPEG elementary streams.
 zx_status_t AmlogicVideo::InitializeEsParser() {
   std::lock_guard<std::mutex> lock(video_decoder_lock_);
-  // Only ever allow one parser, since it takes ownership of the interrupt
-  // handle.
-  if (!parser_)
-    parser_ = std::make_unique<Parser>(this, std::move(parser_interrupt_handle_));
   return parser_->InitializeEsParser(current_instance_.get());
 }
 
-zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
-                                               uint32_t* written_out) {
-  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(), written_out);
-}
-
-zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
-                                                       uint32_t write_offset,
-                                                       uint32_t* written_out) {
+uint32_t AmlogicVideo::GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset) {
   uint32_t read_offset = core_->GetReadOffset();
   uint32_t available_space;
   if (read_offset > write_offset) {
@@ -314,6 +303,22 @@ zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_
   // Subtract 8 to ensure the read pointer doesn't become equal to the write
   // pointer, as that means the buffer is empty.
   available_space = available_space > 8 ? available_space - 8 : 0;
+  return available_space;
+}
+
+uint32_t AmlogicVideo::GetStreamBufferEmptySpace() {
+  return GetStreamBufferEmptySpaceAfterOffset(core_->GetStreamInputOffset());
+}
+
+zx_status_t AmlogicVideo::ProcessVideoNoParser(const void* data, uint32_t len,
+                                               uint32_t* written_out) {
+  return ProcessVideoNoParserAtOffset(data, len, core_->GetStreamInputOffset(), written_out);
+}
+
+zx_status_t AmlogicVideo::ProcessVideoNoParserAtOffset(const void* data, uint32_t len,
+                                                       uint32_t write_offset,
+                                                       uint32_t* written_out) {
+  uint32_t available_space = GetStreamBufferEmptySpaceAfterOffset(write_offset);
   if (!written_out) {
     if (len > available_space) {
       DECODE_ERROR("Video too large\n");
@@ -525,8 +530,8 @@ zx_status_t AmlogicVideo::TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType ind
   params.arg2 = static_cast<uint32_t>(vdec);
   zx_status_t status = zx_smc_call(secure_monitor_.get(), &params, &result);
   if (status != ZX_OK) {
-    LOG(ERROR, "Failed to kFuncIdLoadVideoFirmware - index: %u vdec: %u status: %d",
-        index, vdec, status);
+    LOG(ERROR, "Failed to kFuncIdLoadVideoFirmware - index: %u vdec: %u status: %d", index, vdec,
+        status);
     return status;
   }
   if (result.arg0 != 0) {
@@ -706,6 +711,7 @@ zx_status_t AmlogicVideo::InitRegisters(zx_device_t* parent) {
     status = ZX_ERR_INTERNAL;
     return status;
   }
+  parser_ = std::make_unique<Parser>(this, std::move(parser_interrupt_handle_));
 
   return ZX_OK;
 }

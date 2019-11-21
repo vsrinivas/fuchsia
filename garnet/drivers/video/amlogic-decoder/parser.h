@@ -38,7 +38,7 @@ class Parser final {
   __WARN_UNUSED_RESULT
   zx_status_t InitializeEsParser(DecoderInstance* instance);
   __WARN_UNUSED_RESULT
-  zx_status_t ParseVideo(void* data, uint32_t len);
+  zx_status_t ParseVideo(const void* data, uint32_t len);
   __WARN_UNUSED_RESULT
   zx_status_t ParseVideoPhysical(zx_paddr_t paddr, uint32_t len);
 
@@ -59,6 +59,14 @@ class Parser final {
   zx_status_t WaitForParsingCompleted(zx_duration_t deadline);
   void CancelParsing();
   void SetOutputLocation(zx_paddr_t paddr, uint32_t len);
+
+  // Set the parser output buffer and ringbuffer pointers from a current decoder instance.
+  void SyncFromDecoderInstance(DecoderInstance*);
+  // Copy the parser write pointer into a current decoder instance. Only the write pointer is synced
+  // because it's assumed that the decoder has up-to-date copies of the other input registers. In
+  // particular, it might have processed video and modified the read pointer since the last
+  // SyncFromDecoderInstance.
+  void SyncToDecoderInstance(DecoderInstance*);
 
  private:
   Owner* owner_;

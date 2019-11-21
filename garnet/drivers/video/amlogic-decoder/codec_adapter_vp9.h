@@ -73,14 +73,13 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   void QueueInputItem(CodecInputItem input_item);
   CodecInputItem DequeueInputItem();
   void ProcessInput();
-  bool IsCurrentOutputBufferCollectionUsable(
-      uint32_t frame_count, uint32_t coded_width, uint32_t coded_height, uint32_t stride,
-      uint32_t display_width, uint32_t display_height);
-  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count,
-                                      uint32_t width, uint32_t height,
-                                      uint32_t stride, uint32_t display_width,
-                                      uint32_t display_height, bool has_sar,
-                                      uint32_t sar_width, uint32_t sar_height);
+  bool IsCurrentOutputBufferCollectionUsable(uint32_t frame_count, uint32_t coded_width,
+                                             uint32_t coded_height, uint32_t stride,
+                                             uint32_t display_width, uint32_t display_height);
+  zx_status_t InitializeFramesHandler(::zx::bti bti, uint32_t frame_count, uint32_t width,
+                                      uint32_t height, uint32_t stride, uint32_t display_width,
+                                      uint32_t display_height, bool has_sar, uint32_t sar_width,
+                                      uint32_t sar_height);
 
   void OnCoreCodecEos();
   void OnCoreCodecFailStream(fuchsia::media::StreamError error);
@@ -89,9 +88,12 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   bool IsPortSecurePermitted(CodecPort port);
   bool IsPortSecure(CodecPort port);
   bool IsOutputSecure();
+  void SubmitDataToStreamBuffer(const std::vector<uint8_t>& data);
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
+  // TODO(fxb/35200): Enable for secure input.
+  bool use_parser_ = false;
 
   fuchsia::media::FormatDetails initial_input_format_details_;
 

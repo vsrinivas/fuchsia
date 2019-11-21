@@ -296,7 +296,7 @@ class TestVP9 {
     video.reset();
   }
 
-  static void DecodeResetHardware(const char* filename) {
+  static void DecodeResetHardware(const char* filename, bool use_parser) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -344,14 +344,29 @@ class TestVP9 {
     ASSERT_NE(nullptr, test_ivf);
     auto aml_data = ConvertIvfToAmlVFrames(test_ivf->ptr, test_ivf->size);
     video->core_->InitializeDirectInput();
-    // Only use the first 50 frames to save time.
-    for (uint32_t i = 0; i < 50; i++) {
-      EXPECT_EQ(ZX_OK,
-                video->ProcessVideoNoParser(aml_data[i].data.data(), aml_data[i].data.size()));
+    const uint8_t kPadding[16384] = {};
+    if (use_parser) {
+      std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
+      EXPECT_EQ(ZX_OK, video->parser()->InitializeEsParser(nullptr));
+      video->parser()->SyncFromDecoderInstance(video->current_instance());
+      for (uint32_t i = 0; i < 50; i++) {
+        EXPECT_EQ(ZX_OK,
+                  video->parser()->ParseVideo(aml_data[i].data.data(), aml_data[i].data.size()));
+        EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(1)));
+      }
+      // Force all frames to be processed.
+      EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(kPadding, sizeof(kPadding)));
+      EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(1)));
+      video->parser()->SyncToDecoderInstance(video->current_instance());
+    } else {
+      // Only use the first 50 frames to save time.
+      for (uint32_t i = 0; i < 50; i++) {
+        EXPECT_EQ(ZX_OK,
+                  video->ProcessVideoNoParser(aml_data[i].data.data(), aml_data[i].data.size()));
+      }
+      // Force all frames to be processed.
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(kPadding, sizeof(kPadding)));
     }
-    // Force all frames to be processed.
-    uint8_t padding[16384] = {};
-    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(padding, sizeof(padding)));
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       static_cast<Vp9Decoder*>(video->video_decoder())->UpdateDecodeSize(50);
@@ -541,6 +556,9 @@ INSTANTIATE_TEST_SUITE_P(VP9CompressionOptional, VP9Compression, ::testing::Bool
 
 TEST(VP9, DecodePerFrame) { TestVP9::DecodePerFrame(); }
 
-TEST(VP9, DecodeResetHardware) { TestVP9::DecodeResetHardware("/tmp/bearvp9reset.yuv"); }
+TEST(VP9, DecodeResetHardware) { TestVP9::DecodeResetHardware("/tmp/bearvp9reset.yuv", false); }
+TEST(VP9, DecodeResetHardwareWithParser) {
+  TestVP9::DecodeResetHardware("/tmp/bearvp9resetwithparser.yuv", true);
+}
 
 TEST(VP9, DecodeMultiInstance) { TestVP9::DecodeMultiInstance(); }

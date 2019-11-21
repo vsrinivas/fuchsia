@@ -90,20 +90,22 @@ zx_status_t Parser::InitializeEsParser(DecoderInstance* instance) {
     instance->core()->InitializeParserInput();
   }
 
-  // 512 bytes includes some padding to force the parser to read it completely.
-  constexpr uint32_t kSearchPatternSize = 512;
-  zx_status_t status = io_buffer_init(&search_pattern_, owner_->bti()->get(), kSearchPatternSize,
-                                      IO_BUFFER_RW | IO_BUFFER_CONTIG);
-  if (status != ZX_OK) {
-    DECODE_ERROR("Failed to create search pattern buffer");
-    return status;
+  if (!io_buffer_is_valid(&search_pattern_)) {
+    // 512 bytes includes some padding to force the parser to read it completely.
+    constexpr uint32_t kSearchPatternSize = 512;
+    zx_status_t status = io_buffer_init(&search_pattern_, owner_->bti()->get(), kSearchPatternSize,
+                                        IO_BUFFER_RW | IO_BUFFER_CONTIG);
+    if (status != ZX_OK) {
+      DECODE_ERROR("Failed to create search pattern buffer");
+      return status;
+    }
+    SetIoBufferName(&search_pattern_, "ParserSearchPattern");
+
+    uint8_t input_search_pattern[kSearchPatternSize] = {0, 0, 1, 0xff};
+
+    memcpy(io_buffer_virt(&search_pattern_), input_search_pattern, kSearchPatternSize);
+    io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
   }
-  SetIoBufferName(&search_pattern_, "ParserSearchPattern");
-
-  uint8_t input_search_pattern[kSearchPatternSize] = {0, 0, 1, 0xff};
-
-  memcpy(io_buffer_virt(&search_pattern_), input_search_pattern, kSearchPatternSize);
-  io_buffer_cache_flush(&search_pattern_, 0, kSearchPatternSize);
 
   // This check exists so we can call InitializeEsParser() more than once, when
   // called from CodecImpl (indirectly via a CodecAdapter).
@@ -163,7 +165,37 @@ void Parser::SetOutputLocation(zx_paddr_t paddr, uint32_t len) {
       .WriteTo(owner_->mmio()->parser);
 }
 
-zx_status_t Parser::ParseVideo(void* data, uint32_t len) {
+void Parser::SyncFromDecoderInstance(DecoderInstance* instance) {
+  StreamBuffer* buffer = instance->stream_buffer();
+  uint32_t buffer_address = truncate_to_32(buffer->buffer().phys_base());
+  // Sync start and end pointers every time so using the same parser with multiple decoder instances
+  // is less error-prone.
+  ParserVideoStartPtr::Get().FromValue(buffer_address).WriteTo(owner_->mmio()->parser);
+  ParserVideoEndPtr::Get()
+      .FromValue(buffer_address + buffer->buffer().size() - 8)
+      .WriteTo(owner_->mmio()->parser);
+  ParserVideoRp::Get()
+      .FromValue(instance->core()->GetReadOffset() + buffer_address)
+      .WriteTo(owner_->mmio()->parser);
+  ParserVideoWp::Get()
+      .FromValue(instance->core()->GetStreamInputOffset() + buffer_address)
+      .WriteTo(owner_->mmio()->parser);
+  // Keeps bytes in the same order as they were input.
+  ParserEsControl::Get()
+      .ReadFrom(owner_->mmio()->parser)
+      .set_video_manual_read_ptr_update(true)
+      .set_video_write_endianness(0x7)
+      .WriteTo(owner_->mmio()->parser);
+}
+
+void Parser::SyncToDecoderInstance(DecoderInstance* instance) {
+  // The ParserVideoWp is the only ringbuffer register that should by changed by the process of
+  // parsing.
+  instance->core()->UpdateWritePointer(
+      ParserVideoWp::Get().ReadFrom(owner_->mmio()->parser).reg_value());
+}
+
+zx_status_t Parser::ParseVideo(const void* data, uint32_t len) {
 #if ZX_DEBUG_ASSERT_IMPLEMENTED
   {
     std::lock_guard<std::mutex> lock(parser_running_lock_);
@@ -206,6 +238,9 @@ zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
 
   PfifoRdPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
   PfifoWrPtr::Get().FromValue(0).WriteTo(owner_->mmio()->parser);
+
+  // es_pack_size seems to be the amount of data that will be just copied through without attempting
+  // to search for a start code.
   ParserControl::Get()
       .ReadFrom(owner_->mmio()->parser)
       .set_es_pack_size(len)
@@ -233,6 +268,7 @@ zx_status_t Parser::ParseVideoPhysical(zx_paddr_t paddr, uint32_t len) {
     parser_running_ = true;
   }
 
+  // This data is after es_pack_size, so the parser will search for the search pattern in it.
   ParserFetchAddr::Get()
       .FromValue(truncate_to_32(io_buffer_phys(&search_pattern_)))
       .WriteTo(owner_->mmio()->parser);

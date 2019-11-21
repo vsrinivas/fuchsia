@@ -50,11 +50,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
   __WARN_UNUSED_RESULT DeviceType device_type() override { return device_type_; }
   __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override { return firmware_.get(); }
-  [[nodiscard]]
-  bool is_tee_available() override { return is_tee_available_; }
-  [[nodiscard]]
-  zx_status_t TeeSmcLoadVideoFirmware(FirmwareBlob::FirmwareType index,
-                                      FirmwareBlob::FirmwareVdecLoadMode vdec) override;
+  [[nodiscard]] bool is_tee_available() override { return is_tee_available_; }
+  [[nodiscard]] zx_status_t TeeSmcLoadVideoFirmware(
+      FirmwareBlob::FirmwareType index, FirmwareBlob::FirmwareVdecLoadMode vdec) override;
   __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
                                                                     uint32_t offset, uint32_t width,
                                                                     uint32_t height, uint32_t wrap,
@@ -114,6 +112,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   __WARN_UNUSED_RESULT
   zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
 
+  [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
+
+  // Similar to GetStreamBufferEmptySpaceAfterOffset, but uses the current core write offset.
+  [[nodiscard]] uint32_t GetStreamBufferEmptySpace();
+
   __WARN_UNUSED_RESULT DecoderCore* hevc_core() const { return hevc_core_.get(); }
   __WARN_UNUSED_RESULT DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
 
@@ -130,6 +133,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   }
   __WARN_UNUSED_RESULT
   VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) { return video_decoder_; }
+  [[nodiscard]] DecoderInstance* current_instance() __TA_REQUIRES(video_decoder_lock_) {
+    return current_instance_.get();
+  }
 
   // This should be called only to mollify the lock detection in cases where
   // it's guaranteed that the video decoder lock is already held. This can't
