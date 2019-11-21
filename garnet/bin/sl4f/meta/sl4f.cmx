@@ -22,6 +22,7 @@
             "fuchsia.posix.socket.Provider",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
+            "fuchsia.paver.Paver",
             "fuchsia.process.Launcher",
             "fuchsia.setui.SetUiService",
             "fuchsia.sys.Launcher",

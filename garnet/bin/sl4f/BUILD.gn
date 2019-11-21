@@ -81,6 +81,7 @@ rustc_library("lib") {
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/system/fidl/fuchsia-paver:fuchsia-paver-rustc",
   ]
 
   test_deps = [

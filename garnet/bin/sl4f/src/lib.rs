@@ -15,6 +15,7 @@ pub mod factory_store;
 pub mod file;
 pub mod logging;
 pub mod netstack;
+pub mod paver;
 pub mod scenic;
 pub mod server;
 pub mod setui;

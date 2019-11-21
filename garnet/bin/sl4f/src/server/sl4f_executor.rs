@@ -28,6 +28,7 @@ use crate::factory_store::commands::factory_store_method_to_fidl;
 use crate::file::commands::file_method_to_fidl;
 use crate::logging::commands::logging_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
+use crate::paver::commands::paver_method_to_fidl;
 use crate::scenic::commands::scenic_method_to_fidl;
 use crate::setui::commands::setui_method_to_fidl;
 use crate::test::commands::test_method_to_fidl;
@@ -180,6 +181,9 @@ async fn method_to_fidl(
         }
         FacadeType::Wlan => {
             wlan_method_to_fidl(method_name, args, sl4f_session.read().get_wlan_facade()).await
+        }
+        FacadeType::Paver => {
+            paver_method_to_fidl(method_name, args, sl4f_session.read().get_paver_facade()).await
         }
         _ => {
             Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_type).to_string())

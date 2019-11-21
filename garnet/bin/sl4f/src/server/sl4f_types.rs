@@ -125,6 +125,7 @@ pub enum FacadeType {
     TraceutilFacade,
     WebdriverFacade,
     Wlan,
+    Paver,
     Undefined,
 }
 
@@ -149,6 +150,7 @@ impl FacadeType {
             "test_facade" => FacadeType::TestFacade,
             "webdriver_facade" => FacadeType::WebdriverFacade,
             "wlan" => FacadeType::Wlan,
+            "paver" => FacadeType::Paver,
             _ => FacadeType::Undefined,
         }
     }

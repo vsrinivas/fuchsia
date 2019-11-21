@@ -49,6 +49,9 @@ use crate::logging::facade::LoggingFacade;
 // Netstack related includes
 use crate::netstack::facade::NetstackFacade;
 
+// Paver related includes
+use crate::paver::facade::PaverFacade;
+
 // Scenic related includes
 use crate::scenic::facade::ScenicFacade;
 
@@ -106,6 +109,9 @@ pub struct Sl4f {
     // netstack_facade: Thread safe object for state for netstack functions.
     netstack_facade: Arc<NetstackFacade>,
 
+    // paver_facade: Thread safe object for state for paver functions.
+    paver_facade: Arc<PaverFacade>,
+
     // profile_server_facade: Thread safe object for state for prifle server functions.
     profile_server_facade: Arc<ProfileServerFacade>,
 
@@ -145,6 +151,7 @@ impl Sl4f {
         let gatt_server_facade = Arc::new(GattServerFacade::new());
         let logging_facade = Arc::new(LoggingFacade::new());
         let netstack_facade = Arc::new(NetstackFacade::new());
+        let paver_facade = Arc::new(PaverFacade::new());
         let profile_server_facade = Arc::new(ProfileServerFacade::new());
         let scenic_facade = Arc::new(ScenicFacade::new());
         let setui_facade = Arc::new(SetUiFacade::new()?);
@@ -164,6 +171,7 @@ impl Sl4f {
             gatt_server_facade,
             logging_facade,
             netstack_facade,
+            paver_facade,
             profile_server_facade,
             scenic_facade,
             setui_facade,
@@ -217,6 +225,10 @@ impl Sl4f {
 
     pub fn get_logging_facade(&self) -> Arc<LoggingFacade> {
         self.logging_facade.clone()
+    }
+
+    pub fn get_paver_facade(&self) -> Arc<PaverFacade> {
+        self.paver_facade.clone()
     }
 
     pub fn get_profile_server_facade(&self) -> Arc<ProfileServerFacade> {

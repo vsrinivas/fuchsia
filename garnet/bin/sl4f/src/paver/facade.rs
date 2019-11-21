@@ -1,0 +1,370 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+use failure::Error;
+use fidl_fuchsia_paver::{PaverMarker, PaverProxy};
+use fuchsia_component::client::connect_to_service;
+use fuchsia_zircon::Status;
+use parking_lot::{RwLock, RwLockUpgradableReadGuard};
+use serde_derive::{Deserialize, Serialize};
+
+use super::types::{Asset, Configuration, ConfigurationStatus};
+
+/// Facade providing access to paver service.
+#[derive(Debug)]
+pub struct PaverFacade {
+    proxy: RwLock<Option<PaverProxy>>,
+}
+
+impl PaverFacade {
+    /// Creates a new [PaverFacade] with no active connection to the paver service.
+    pub fn new() -> Self {
+        Self { proxy: RwLock::new(None) }
+    }
+
+    #[cfg(test)]
+    fn new_with_proxy(proxy: PaverProxy) -> Self {
+        Self { proxy: RwLock::new(Some(proxy)) }
+    }
+
+    /// Return a cached connection to the paver service, or try to connect and cache the connection
+    /// for later.
+    fn proxy(&self) -> Result<PaverProxy, Error> {
+        let lock = self.proxy.upgradable_read();
+        if let Some(proxy) = lock.as_ref() {
+            Ok(proxy.clone())
+        } else {
+            let proxy = connect_to_service::<PaverMarker>()?;
+            *RwLockUpgradableReadGuard::upgrade(lock) = Some(proxy.clone());
+            Ok(proxy)
+        }
+    }
+
+    /// Queries the active boot configuration, if the current bootloader supports it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an Err(_) if
+    ///  * connecting to the paver service fails, or
+    ///  * the paver service returns an unexpected error
+    pub(super) async fn query_active_configuration(
+        &self,
+    ) -> Result<QueryActiveConfigurationResult, Error> {
+        match self.proxy()?.query_active_configuration().await?.map_err(Status::from_raw) {
+            Ok(config) => Ok(QueryActiveConfigurationResult::Success(config.into())),
+            Err(Status::NOT_SUPPORTED) => Ok(QueryActiveConfigurationResult::NotSupported),
+            Err(err) => bail!("unexpected failure status: {}", err),
+        }
+    }
+
+    /// Queries the bootable status of the given configuration, if the current bootloader supports
+    /// it.
+    ///
+    /// # Errors
+    ///
+    /// Returns an Err(_) if
+    ///  * connecting to the paver service fails, or
+    ///  * the paver service returns an unexpected error
+    pub(super) async fn query_configuration_status(
+        &self,
+        args: QueryConfigurationStatusRequest,
+    ) -> Result<QueryConfigurationStatusResult, Error> {
+        match self
+            .proxy()?
+            .query_configuration_status(args.configuration.into())
+            .await?
+            .map_err(Status::from_raw)
+        {
+            Ok(status) => Ok(QueryConfigurationStatusResult::Success(status.into())),
+            Err(Status::NOT_SUPPORTED) => Ok(QueryConfigurationStatusResult::NotSupported),
+            Err(err) => bail!("unexpected failure status: {}", err),
+        }
+    }
+
+    /// Given a configuration and asset identifier, read that image and return it as a base64
+    /// encoded String.
+    ///
+    /// # Errors
+    ///
+    /// Returns an Err(_) if
+    ///  * connecting to the paver service fails, or
+    ///  * the paver service returns an unexpected error
+    pub(super) async fn read_asset(&self, args: ReadAssetRequest) -> Result<String, Error> {
+        let buffer = self
+            .proxy()?
+            .read_asset(args.configuration.into(), args.asset.into())
+            .await?
+            .map_err(Status::from_raw)?;
+
+        let mut res = vec![0; buffer.size as usize];
+        buffer.vmo.read(&mut res[..], 0)?;
+        Ok(base64::encode(&res))
+    }
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum QueryActiveConfigurationResult {
+    Success(Configuration),
+    NotSupported,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+pub(super) struct QueryConfigurationStatusRequest {
+    configuration: Configuration,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub(super) enum QueryConfigurationStatusResult {
+    Success(ConfigurationStatus),
+    NotSupported,
+}
+
+#[derive(Debug, Deserialize, Serialize, PartialEq, Eq, Clone)]
+pub(super) struct ReadAssetRequest {
+    configuration: Configuration,
+    asset: Asset,
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common_utils::test::assert_value_round_trips_as;
+    use fidl_fuchsia_paver::PaverRequest;
+    use futures::{future::Future, join, stream::StreamExt};
+    use matches::assert_matches;
+    use serde_json::json;
+
+    #[test]
+    fn serde_query_active_configuration_result() {
+        assert_value_round_trips_as(
+            QueryActiveConfigurationResult::NotSupported,
+            json!("not_supported"),
+        );
+        assert_value_round_trips_as(
+            QueryActiveConfigurationResult::Success(Configuration::A),
+            json!({"success": "a"}),
+        );
+    }
+
+    #[test]
+    fn serde_query_configuration_status_result() {
+        assert_value_round_trips_as(
+            QueryConfigurationStatusResult::NotSupported,
+            json!("not_supported"),
+        );
+        assert_value_round_trips_as(
+            QueryConfigurationStatusResult::Success(ConfigurationStatus::Healthy),
+            json!({"success": "healthy"}),
+        );
+    }
+
+    #[test]
+    fn serde_query_configuration_request() {
+        assert_value_round_trips_as(
+            QueryConfigurationStatusRequest { configuration: Configuration::Recovery },
+            json!({"configuration": "recovery"}),
+        );
+    }
+
+    #[test]
+    fn serde_read_asset_request() {
+        assert_value_round_trips_as(
+            ReadAssetRequest {
+                configuration: Configuration::A,
+                asset: Asset::VerifiedBootMetadata,
+            },
+            json!({"configuration": "a", "asset": "verified_boot_metadata"}),
+        );
+    }
+
+    struct MockPaverBuilder {
+        expected: Vec<Box<dyn FnOnce(PaverRequest) + 'static>>,
+    }
+
+    impl MockPaverBuilder {
+        fn new() -> Self {
+            Self { expected: vec![] }
+        }
+
+        fn push(mut self, request: impl FnOnce(PaverRequest) + 'static) -> Self {
+            self.expected.push(Box::new(request));
+            self
+        }
+
+        fn expect_query_active_configuration(self, res: Result<Configuration, Status>) -> Self {
+            self.push(move |req| match req {
+                PaverRequest::QueryActiveConfiguration { responder } => {
+                    responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_query_configuration_status(
+            self,
+            config: Configuration,
+            res: Result<ConfigurationStatus, Status>,
+        ) -> Self {
+            self.push(move |req| match req {
+                PaverRequest::QueryConfigurationStatus { configuration, responder } => {
+                    assert_eq!(Configuration::from(configuration), config);
+                    responder.send(&mut res.map(Into::into).map_err(|e| e.into_raw())).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn expect_read_asset(
+            self,
+            expected_request: ReadAssetRequest,
+            response: &'static [u8],
+        ) -> Self {
+            let buf = fidl_fuchsia_mem::Buffer {
+                vmo: fuchsia_zircon::Vmo::create(response.len() as u64).unwrap(),
+                size: response.len() as u64,
+            };
+            buf.vmo.write(response, 0).unwrap();
+
+            self.push(move |req| match req {
+                PaverRequest::ReadAsset { configuration, asset, responder } => {
+                    let request = ReadAssetRequest {
+                        configuration: configuration.into(),
+                        asset: asset.into(),
+                    };
+                    assert_eq!(request, expected_request);
+
+                    responder.send(&mut Ok(buf)).unwrap()
+                }
+                req => panic!("unexpected request: {:?}", req),
+            })
+        }
+
+        fn build(self) -> (PaverFacade, impl Future<Output = ()>) {
+            let (proxy, mut stream) =
+                fidl::endpoints::create_proxy_and_stream::<PaverMarker>().unwrap();
+            let fut = async move {
+                for expected in self.expected {
+                    expected(stream.next().await.unwrap().unwrap());
+                }
+                assert_matches!(stream.next().await, None);
+            };
+
+            (PaverFacade::new_with_proxy(proxy), fut)
+        }
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_active_configuration_ok() {
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_query_active_configuration(Ok(Configuration::A))
+            .expect_query_active_configuration(Ok(Configuration::B))
+            .build();
+
+        let test = async move {
+            assert_matches!(
+                facade.query_active_configuration().await,
+                Ok(QueryActiveConfigurationResult::Success(Configuration::A))
+            );
+            assert_matches!(
+                facade.query_active_configuration().await,
+                Ok(QueryActiveConfigurationResult::Success(Configuration::B))
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_active_configuration_not_supported() {
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_query_active_configuration(Err(Status::NOT_SUPPORTED))
+            .build();
+
+        let test = async move {
+            assert_matches!(
+                facade.query_active_configuration().await,
+                Ok(QueryActiveConfigurationResult::NotSupported)
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_configuration_status_ok() {
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_query_configuration_status(Configuration::A, Ok(ConfigurationStatus::Healthy))
+            .expect_query_configuration_status(
+                Configuration::B,
+                Ok(ConfigurationStatus::Unbootable),
+            )
+            .build();
+
+        let test = async move {
+            assert_matches!(
+                facade
+                    .query_configuration_status(QueryConfigurationStatusRequest {
+                        configuration: Configuration::A
+                    })
+                    .await,
+                Ok(QueryConfigurationStatusResult::Success(ConfigurationStatus::Healthy))
+            );
+            assert_matches!(
+                facade
+                    .query_configuration_status(QueryConfigurationStatusRequest {
+                        configuration: Configuration::B
+                    })
+                    .await,
+                Ok(QueryConfigurationStatusResult::Success(ConfigurationStatus::Unbootable))
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn query_configuration_status_not_supported() {
+        let (facade, paver) = MockPaverBuilder::new()
+            .expect_query_configuration_status(Configuration::A, Err(Status::NOT_SUPPORTED))
+            .build();
+
+        let test = async move {
+            assert_matches!(
+                facade
+                    .query_configuration_status(QueryConfigurationStatusRequest {
+                        configuration: Configuration::A
+                    })
+                    .await,
+                Ok(QueryConfigurationStatusResult::NotSupported)
+            );
+        };
+
+        join!(paver, test);
+    }
+
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn read_asset_ok() {
+        const FILE_CONTENTS: &[u8] = b"hello world!";
+        const FILE_CONTENTS_AS_BASE64: &str = "aGVsbG8gd29ybGQh";
+
+        let request = ReadAssetRequest {
+            configuration: Configuration::A,
+            asset: Asset::VerifiedBootMetadata,
+        };
+
+        let (facade, paver) =
+            MockPaverBuilder::new().expect_read_asset(request.clone(), FILE_CONTENTS).build();
+
+        let test = async move {
+            assert_matches!(
+                facade.read_asset(request).await,
+                Ok(s) if s == FILE_CONTENTS_AS_BASE64
+            );
+        };
+
+        join!(paver, test);
+    }
+}
