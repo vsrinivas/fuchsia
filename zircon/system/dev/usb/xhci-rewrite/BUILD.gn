@@ -1,0 +1,31 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+zx_test("xhci-unittest") {
+  output_name = "xhci-unittest"
+  sources = [
+    "synchronous_executor.cc",
+    "synchronous_executor_test.cc",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk.protocol.acpi",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
+    "$zx/system/banjo/ddk.protocol.platform.device",
+    "$zx/system/banjo/ddk.protocol.serialimpl.async",
+    "$zx/system/dev/lib/device-protocol-platform-device",
+    "$zx/system/dev/lib/fake-mmio-reg",
+    "$zx/system/dev/lib/fake_ddk",
+    "$zx/system/fidl/fuchsia-hardware-serial:c",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fit",
+    "$zx/system/ulib/hwreg",
+    "$zx/system/ulib/mock-function",
+    "$zx/system/ulib/zircon",
+    "$zx/system/ulib/zircon-internal",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxtest",
+  ]
+}
