@@ -15,6 +15,8 @@
 #include <lib/sysconfig/sync-client.h>
 #include <lib/zx/clock.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/status.h>
+#include <zircon/types.h>
 
 #include "payload-streamer.h"
 
@@ -85,9 +87,10 @@ void Paver::reset_exit_code() { exit_code_.store(ZX_OK); }
 
 int Paver::StreamBuffer() {
   zx::time last_reported = zx::clock::get_monotonic();
+  size_t decommitted_offset = 0;
   int result = 0;
-  auto callback = [this, &last_reported, &result](void* buf, size_t read_offset, size_t size,
-                                                  size_t* actual) {
+  auto callback = [this, &last_reported, &decommitted_offset, &result](
+                      void* buf, size_t read_offset, size_t size, size_t* actual) {
     if (read_offset >= size_) {
       *actual = 0;
       return ZX_OK;
@@ -110,6 +113,23 @@ int Paver::StreamBuffer() {
     size = std::min(size, write_offset - read_offset);
     memcpy(buf, buffer() + read_offset, size);
     *actual = size;
+
+    // Best effort try to decommit pages we have already copied. This will prevent us from
+    // running out of memory.
+    ZX_ASSERT(read_offset + size > decommitted_offset);
+    const size_t decommit_size =
+        fbl::round_down(read_offset + size - decommitted_offset, ZX_PAGE_SIZE);
+    // TODO(surajmalhotra): Tune this in case we decommit too aggresively.
+    if (decommit_size > 0) {
+      if (auto status = buffer_mapper_.vmo().op_range(ZX_VMO_OP_DECOMMIT, decommitted_offset,
+                                                      decommit_size, nullptr, 0);
+          status != ZX_OK) {
+        printf("netsvc: Failed to decommit offset 0x%zx with size: 0x%zx: %s\n", decommitted_offset,
+               decommit_size, zx_status_get_string(status));
+      }
+      decommitted_offset += decommit_size;
+    }
+
     zx::time curr_time = zx::clock::get_monotonic();
     if (curr_time - last_reported >= zx::sec(1)) {
       float complete = (static_cast<float>(read_offset) / static_cast<float>(size_)) * 100.f;

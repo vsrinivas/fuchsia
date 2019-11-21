@@ -4,19 +4,24 @@
 
 #include "paver.h"
 
-#include <algorithm>
-
-#include <fs/pseudo_dir.h>
-#include <fs/service.h>
-#include <fs/synchronous_vfs.h>
 #include <fuchsia/paver/llcpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/driver-integration-test/fixture.h>
 #include <lib/fidl-async/cpp/bind.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/time.h>
 #include <zircon/boot/netboot.h>
+
+#include <algorithm>
+#include <memory>
+
+#include <fs/pseudo_dir.h>
+#include <fs/service.h>
+#include <fs/synchronous_vfs.h>
 #include <zxtest/zxtest.h>
+#include "lib/sync/completion.h"
+#include "zircon/time.h"
 
 namespace {
 constexpr char kFakeData[] = "lalala";
@@ -172,24 +177,35 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     status = [&]() {
       size_t data_transferred = 0;
       for (;;) {
-        auto result = stream.ReadData();
-        if (!result.ok()) {
-          return result.status();
+        if (wait_for_start_signal_) {
+          sync_completion_wait(&start_signal_, ZX_TIME_INFINITE);
+          sync_completion_reset(&start_signal_);
+        } else {
+          signal_size_ = expected_payload_size_ + 1;
         }
-        const auto& response = result.value();
-        switch (response.result.which()) {
-          case ::llcpp::fuchsia::paver::ReadResult::Tag::kErr:
-            return response.result.err();
-          case ::llcpp::fuchsia::paver::ReadResult::Tag::kEof:
-            return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
-          case ::llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
-            data_transferred += response.result.info().size;
-            continue;
-          default:
-            return ZX_ERR_INTERNAL;
+        while (data_transferred < signal_size_) {
+          auto result = stream.ReadData();
+          if (!result.ok()) {
+            return result.status();
+          }
+          const auto& response = result.value();
+          switch (response.result.which()) {
+            case ::llcpp::fuchsia::paver::ReadResult::Tag::kErr:
+              return response.result.err();
+            case ::llcpp::fuchsia::paver::ReadResult::Tag::kEof:
+              return data_transferred == expected_payload_size_ ? ZX_OK : ZX_ERR_INVALID_ARGS;
+            case ::llcpp::fuchsia::paver::ReadResult::Tag::kInfo:
+              data_transferred += response.result.info().size;
+              continue;
+            default:
+              return ZX_ERR_INTERNAL;
+          }
         }
+        sync_completion_signal(&done_signal_);
       }
     }();
+
+    sync_completion_signal(&done_signal_);
 
     completer.Reply(status);
   }
@@ -225,11 +241,24 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     completer.Reply(ZX_OK);
   }
 
+  void WaitForWritten(size_t size) {
+    signal_size_ = size;
+    sync_completion_signal(&start_signal_);
+    sync_completion_wait(&done_signal_, ZX_TIME_INFINITE);
+    sync_completion_reset(&done_signal_);
+  }
+
   Command last_command() { return last_command_; }
   void set_expected_payload_size(size_t size) { expected_payload_size_ = size; }
   void set_abr_supported(bool supported) { abr_supported_ = supported; }
+  void set_wait_for_start_signal(bool wait) { wait_for_start_signal_ = wait; }
 
  private:
+  bool wait_for_start_signal_ = false;
+  sync_completion_t start_signal_;
+  sync_completion_t done_signal_;
+  std::atomic<size_t> signal_size_;
+
   Command last_command_ = Command::kUnknown;
   size_t expected_payload_size_ = 0;
   bool abr_supported_ = false;
@@ -558,6 +587,35 @@ TEST_F(PaverTest, WriteFvmManySmallWrites) {
     ASSERT_EQ(paver_.Write(kFakeData, &size, offset), TFTP_NO_ERROR);
     ASSERT_EQ(size, std::min(sizeof(kFakeData), 1024 - offset));
   }
+  paver_.Close();
+  Wait();
+  ASSERT_OK(paver_.exit_code());
+  ASSERT_EQ(fake_svc_.fake_paver().last_command(), Command::kWriteVolumes);
+}
+
+// We attempt to write more data than we have memory to ensure we are not keeping the file in memory
+// the entire time.
+TEST_F(PaverTest, WriteFvmManyLargeWrites) {
+  constexpr size_t kChunkSize = 1 << 20; // 1MiB
+  auto fake_data = std::make_unique<uint8_t[]>(kChunkSize);
+  memset(fake_data.get(), 0x4F, kChunkSize);
+
+  const size_t payload_size = zx_system_get_physmem();
+
+  fake_svc_.fake_paver().set_expected_payload_size(payload_size);
+  fake_svc_.fake_paver().set_wait_for_start_signal(true);
+  ASSERT_EQ(paver_.OpenWrite(NB_FVM_FILENAME, payload_size), TFTP_NO_ERROR);
+  for (size_t offset = 0; offset < payload_size; offset += kChunkSize) {
+    size_t size = std::min(kChunkSize, payload_size - offset);
+    ASSERT_EQ(paver_.Write(fake_data.get(), &size, offset), TFTP_NO_ERROR);
+    ASSERT_EQ(size, std::min(kChunkSize, payload_size - offset));
+    // Stop and wait for all the data to be consumed, as we write data much faster than it can be
+    // consumed.
+    if ((offset / kChunkSize) % 100 == 0) {
+      fake_svc_.fake_paver().WaitForWritten(offset);
+    }
+  }
+  fake_svc_.fake_paver().WaitForWritten(payload_size + 1);
   paver_.Close();
   Wait();
   ASSERT_OK(paver_.exit_code());
