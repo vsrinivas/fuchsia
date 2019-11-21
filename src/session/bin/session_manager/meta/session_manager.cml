@@ -40,5 +40,16 @@
             "from": "realm",
             "to": [ "#session" ]
         },
+        {
+            "directory": "/dev/class/input-report",
+            "from": "realm",
+            "to": [ "#session" ],
+            "rights": [ "r*" ]
+        },
+        {
+            "legacy_service": "/svc/fuchsia.logger.LogSink",
+            "from": "realm",
+            "to": [ "#session" ],
+        },
     ],
 }

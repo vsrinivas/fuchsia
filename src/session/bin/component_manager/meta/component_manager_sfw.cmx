@@ -3,6 +3,9 @@
         "binary": "bin/component_manager_sfw"
     },
     "sandbox": {
+        "dev": [
+            "class/input-report"
+        ],
         "features": [
             "deprecated-ambient-replace-as-executable"
         ],

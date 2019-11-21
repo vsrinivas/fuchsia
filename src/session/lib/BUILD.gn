@@ -5,6 +5,7 @@
 group("all") {
   deps = [
     "//src/session/lib/element_management",
+    "//src/session/lib/input",
     "//src/session/lib/realm_management",
   ]
 }
@@ -14,6 +15,7 @@ group("tests") {
 
   deps = [
     "//src/session/lib/element_management:element_management_tests",
+    "//src/session/lib/input:input_tests",
     "//src/session/lib/realm_management:realm_management_tests",
   ]
 }
