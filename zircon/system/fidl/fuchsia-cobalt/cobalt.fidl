@@ -183,6 +183,46 @@ protocol LoggerFactory {
                                       ReleaseStage release_stage,
                                       request<LoggerSimple> logger)
         -> (Status status);
+
+    // Creates a Logger for the project with the given ID, using the state of
+    // the metrics registry that is bundled with Cobalt.
+    //
+    // WARNING: This version of CreateLogger does not allow the client to
+    // provide Cobalt with an updated version of the metrics registry. Therefore
+    // only metrics that were already registered at the time Cobalt was built
+    // may be used. This method may be appropriate in the case where it is known
+    // that new versions of the calling package will only be installed along
+    // with new versions of Cobalt. For other cases consider the method
+    // CreateLogger() above.
+    //
+    // `project_id` The ID of the client's Cobalt project.
+    //
+    // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
+    // project with the given name in the version of the metrics registry that
+    // is bundled with Cobalt.
+    CreateLoggerFromProjectId(uint32 project_id,
+                              request<Logger> logger)
+        -> (Status status);
+
+    // Creates a LoggerSimple for the project with the given ID, using the
+    // state of the metrics registry that is bundled with Cobalt.
+    //
+    // WARNING: This version of CreateLoggerSimple does not allow the client to
+    // provide Cobalt with an updated version of the metrics registry. Therefore
+    // only metrics that were already registered at the time Cobalt was built
+    // may be used. This method may be appropriate in the case where it is known
+    // that new versions of the calling package will only be installed along
+    // with new versions of Cobalt. For other cases consider the method
+    // CreateLoggerSimple() above.
+    //
+    // `project_id` The ID of the client's Cobalt project.
+    //
+    // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
+    // project with the given name in the version of the metrics registry that
+    // is bundled with Cobalt.
+    CreateLoggerSimpleFromProjectId(uint32 project_id,
+                                    request<LoggerSimple> logger)
+        -> (Status status);
 };
 
 /////////////////////////////////////////////////////////////////////

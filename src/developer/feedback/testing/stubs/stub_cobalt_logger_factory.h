@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_COBALT_LOGGER_FACTORY_H_
-#define SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_COBALT_LOGGER_FACTORY_H_
+#ifndef SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
+#define SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
 
 #include <fuchsia/cobalt/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -146,6 +146,16 @@ class StubCobaltLoggerFactory : public fuchsia::cobalt::LoggerFactory {
       fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectNameCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
+  void CreateLoggerFromProjectId(
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+      fuchsia::cobalt::LoggerFactory::CreateLoggerFromProjectIdCallback callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
+  void CreateLoggerSimpleFromProjectId(
+      uint32_t project_id, ::fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> logger,
+      fuchsia::cobalt::LoggerFactory::CreateLoggerSimpleFromProjectIdCallback callback) override {
+    FXL_NOTIMPLEMENTED();
+  }
 
  protected:
   StubLogger logger_;
@@ -175,4 +185,4 @@ class StubCobaltLoggerFactoryDelaysReturn : public StubCobaltLoggerFactory {
 
 }  // namespace feedback
 
-#endif  // SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_TESTS_STUB_COBALT_LOGGER_FACTORY_H_
+#endif  // SRC_DEVELOPER_FEEDBACK_TESTING_STUBS_STUB_COBALT_LOGGER_FACTORY_H_
