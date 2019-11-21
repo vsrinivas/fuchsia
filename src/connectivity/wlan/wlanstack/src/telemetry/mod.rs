@@ -68,7 +68,7 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
             futures.push(fut);
         }
 
-        while let Some((id, iface, stats_result)) = futures.next().await {
+        while let Some((id, _iface, stats_result)) = futures.next().await {
             match stats_result {
                 Ok(current_stats) => match last_reported_stats.entry(id) {
                     Entry::Vacant(entry) => {
@@ -82,14 +82,7 @@ pub async fn report_telemetry_periodically(ifaces_map: Arc<IfaceMap>, mut sender
                 },
                 Err(e) => {
                     last_reported_stats.remove(&id);
-                    error!(
-                        "Failed to get the stats for iface '{:?}': {}",
-                        match &iface.device {
-                            Some(device) => device.path().to_string_lossy().into_owned(),
-                            None => "TODO(WLAN-927)".to_string(),
-                        },
-                        e
-                    );
+                    error!("Failed to get the stats for iface '{}': {}", id, e);
                 }
             };
         }
@@ -1237,10 +1230,9 @@ mod tests {
         let mlme_query = MlmeQueryProxy::new(proxy);
         let device_info = fake_device_info();
         let iface_device = IfaceDevice {
-            phy_ownership: device::DirectMlmeChannel::NotSupported,
+            phy_ownership: device::PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
             sme_server: device::SmeServer::Client(sme_sender),
             stats_sched,
-            device: None,
             mlme_query,
             device_info,
         };

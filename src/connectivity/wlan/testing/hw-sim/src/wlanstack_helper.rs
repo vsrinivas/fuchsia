@@ -56,18 +56,11 @@ mod tests {
     };
 
     fn fake_iface_item(iface_id: u16) -> IfaceListItem {
-        IfaceListItem { iface_id, path: format!("") }
+        IfaceListItem { iface_id }
     }
 
     fn fake_query_iface_response() -> QueryIfaceResponse {
-        QueryIfaceResponse {
-            role: Client,
-            id: 0,
-            phy_id: 0,
-            phy_assigned_id: 0,
-            dev_path: format!(""),
-            mac_addr: [0; 6],
-        }
+        QueryIfaceResponse { role: Client, id: 0, phy_id: 0, phy_assigned_id: 0, mac_addr: [0; 6] }
     }
 
     fn test_matching_iface_id<F: Fn(&QueryIfaceResponse) -> bool>(

@@ -23,21 +23,13 @@ use {
 };
 
 use crate::{
-    device_watch::{self, NewIfaceDevice},
-    inspect,
+    device_watch, inspect,
     mlme_query_proxy::MlmeQueryProxy,
     station,
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
     ServiceCfg,
 };
-
-// TODO(WLAN-927): Obsolete once all drivers support this feature.
-#[derive(Debug)]
-pub enum DirectMlmeChannel<S> {
-    NotSupported,
-    Supported(S),
-}
 
 /// Iface's PHY information.
 #[derive(Debug, PartialEq)]
@@ -55,9 +47,7 @@ pub struct NewIface {
     // Information about this iface's PHY.
     pub phy_ownership: PhyOwnership,
     // A channel to communicate with the iface's underlying MLME.
-    // The MLME proxy is only available if the device driver indicates support in its
-    // feature flags. See WLAN-927 (direct SME Channel support).
-    pub mlme_channel: DirectMlmeChannel<fidl_mlme::MlmeProxy>,
+    pub mlme_channel: fidl_mlme::MlmeProxy,
 }
 
 pub struct PhyDevice {
@@ -76,13 +66,9 @@ pub enum SmeServer {
 }
 
 pub struct IfaceDevice {
-    // If the iface's underlying driver supports the direct SME Channel feature, the iface can
-    // be mapped to its PHY; otherwise, an iface cannot be linked to its PHY.
-    pub phy_ownership: DirectMlmeChannel<PhyOwnership>,
+    pub phy_ownership: PhyOwnership,
     pub sme_server: SmeServer,
     pub stats_sched: StatsScheduler,
-    // TODO(WLAN-927): Remove. Present for drivers which don't support new SME channel.
-    pub device: Option<wlan_dev::Device>,
     pub mlme_query: MlmeQueryProxy,
     pub device_info: DeviceInfo,
 }
@@ -141,109 +127,6 @@ async fn serve_phy(
     inspect_log!(inspect_tree.device_events.lock(), msg: format!("phy removed: #{}", id));
 }
 
-pub async fn serve_ifaces(
-    cfg: ServiceCfg,
-    ifaces: Arc<IfaceMap>,
-    cobalt_sender: CobaltSender,
-    inspect_tree: Arc<inspect::WlanstackTree>,
-    isolated_devmgr: bool,
-) -> Result<Void, Error> {
-    #[allow(deprecated)]
-    let new_ifaces = if isolated_devmgr {
-        device_watch::watch_iface_devices::<wlan_dev::IsolatedDeviceEnv>()?.left_stream()
-    } else {
-        device_watch::watch_iface_devices::<wlan_dev::RealDeviceEnv>()?.right_stream()
-    };
-    pin_mut!(new_ifaces);
-    let mut active_ifaces = FuturesUnordered::new();
-    loop {
-        select! {
-            new_iface = new_ifaces.next().fuse() => match new_iface {
-                None => bail!("new iface stream unexpectedly finished"),
-                Some(Err(e)) => bail!("new iface stream returned an error: {}", e),
-                Some(Ok(new_iface)) => {
-                    let iface_id = new_iface.id;
-
-                    let inspect_tree = inspect_tree.clone();
-                    let iface_tree_holder = inspect_tree.create_iface_child(iface_id);
-                    #[allow(deprecated)]
-                    let fut = query_and_serve_iface_deprecated(
-                    cfg.clone(),
-                            new_iface, &ifaces, cobalt_sender.clone(), iface_tree_holder
-                        ).then(move |_| async move {
-                            inspect_tree.notify_iface_removed(iface_id);
-                        });
-                    active_ifaces.push(fut);
-                }
-            },
-            () = active_ifaces.select_next_some() => {},
-        }
-    }
-}
-
-#[deprecated(note = "function is obsolete once WLAN-927 landed")]
-async fn query_and_serve_iface_deprecated(
-    cfg: ServiceCfg,
-    new_iface: NewIfaceDevice,
-    ifaces: &IfaceMap,
-    cobalt_sender: CobaltSender,
-    iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
-) {
-    let NewIfaceDevice { id, device, proxy } = new_iface;
-    let event_stream = proxy.take_event_stream();
-    let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
-
-    let device_info = match proxy.query_device_info().await {
-        Ok(x) => x,
-        Err(e) => {
-            error!("Failed to query new iface '{}': {}", device.path().display(), e);
-            return;
-        }
-    };
-    let result = create_sme(
-        cfg,
-        proxy.clone(),
-        event_stream,
-        &device_info,
-        stats_reqs,
-        cobalt_sender,
-        iface_tree_holder,
-    );
-    let (sme, sme_fut) = match result {
-        Ok(x) => x,
-        Err(e) => {
-            error!("Failed to create SME for new iface '{}': {}", device.path().display(), e);
-            return;
-        }
-    };
-
-    info!(
-        "new iface #{} with role '{:?}': {}",
-        id,
-        device_info.role,
-        device.path().to_string_lossy()
-    );
-    let mlme_query = MlmeQueryProxy::new(proxy);
-    ifaces.insert(
-        id,
-        IfaceDevice {
-            phy_ownership: DirectMlmeChannel::NotSupported,
-            sme_server: sme,
-            stats_sched,
-            device: Some(device),
-            mlme_query,
-            device_info,
-        },
-    );
-
-    let r = sme_fut.await;
-    if let Err(e) = r {
-        error!("Error serving station for iface #{}: {}", id, e);
-    }
-    ifaces.remove(&id);
-    info!("iface removed: {}", id);
-}
-
 pub async fn query_and_serve_iface(
     cfg: ServiceCfg,
     id: u16,
@@ -279,14 +162,7 @@ pub async fn query_and_serve_iface(
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
     ifaces.insert(
         id,
-        IfaceDevice {
-            phy_ownership: DirectMlmeChannel::Supported(phy_ownership),
-            sme_server: sme,
-            stats_sched,
-            device: None,
-            mlme_query,
-            device_info,
-        },
+        IfaceDevice { phy_ownership, sme_server: sme, stats_sched, mlme_query, device_info },
     );
 
     let result = sme_fut.await.map_err(|e| format_err!("error while serving SME: {}", e));
@@ -433,10 +309,9 @@ mod tests {
         iface_map.insert(
             5,
             IfaceDevice {
-                phy_ownership: DirectMlmeChannel::NotSupported,
+                phy_ownership: PhyOwnership { phy_id: 0, phy_assigned_id: 0 },
                 sme_server: SmeServer::Client(sender),
                 stats_sched,
-                device: None,
                 mlme_query: MlmeQueryProxy::new(mlme_proxy),
                 device_info: fake_device_info(),
             },

@@ -26,7 +26,7 @@ use fuchsia_async as fasync;
 use fuchsia_cobalt::{CobaltConnector, CobaltSender, ConnectionType};
 use fuchsia_component::server::{ServiceFs, ServiceObjLocal};
 use fuchsia_inspect::Inspector;
-use futures::future::{try_join, try_join5};
+use futures::future::{try_join, try_join4};
 use futures::prelude::*;
 use log::info;
 use std::sync::Arc;
@@ -88,29 +88,14 @@ async fn main() -> Result<(), Error> {
         .serve(ConnectionType::project_name(wlan_metrics_registry::PROJECT_NAME));
     let telemetry_server =
         telemetry::report_telemetry_periodically(ifaces.clone(), cobalt_sender.clone());
-    // TODO(WLAN-927): Remove once drivers support SME channel.
-    let iface_server = device::serve_ifaces(
-        cfg.clone(),
-        ifaces.clone(),
-        cobalt_sender.clone(),
-        inspect_tree.clone(),
-        cfg.isolated_devmgr,
-    )
-    .map_ok(|x| match x {});
     let (watcher_service, watcher_fut) =
         watcher_service::serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
     let serve_fidl_fut =
         serve_fidl(cfg, fs, phys, ifaces, watcher_service, inspect_tree, cobalt_sender);
     let services_server = try_join(serve_fidl_fut, watcher_fut);
 
-    try_join5(
-        services_server,
-        phy_server,
-        iface_server,
-        cobalt_reporter.map(Ok),
-        telemetry_server.map(Ok),
-    )
-    .await?;
+    try_join4(services_server, phy_server, cobalt_reporter.map(Ok), telemetry_server.map(Ok))
+        .await?;
     Ok(())
 }
 

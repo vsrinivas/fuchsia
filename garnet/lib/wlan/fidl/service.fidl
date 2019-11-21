@@ -28,7 +28,6 @@ struct QueryPhyResponse {
 
 struct IfaceListItem {
     uint16 iface_id;
-    string path;
 };
 
 struct QueryIfaceResponse {
@@ -40,10 +39,6 @@ struct QueryIfaceResponse {
     uint16 phy_id;
     /// Local ID assigned by this iface's PHY.
     uint16 phy_assigned_id;
-    /// The iface's device path.
-    /// Note: This field is deprecated.
-    /// Ifaces will soon have no device path.
-    string dev_path;
     /// The iface's MAC.
     array<uint8>:6 mac_addr;
 };

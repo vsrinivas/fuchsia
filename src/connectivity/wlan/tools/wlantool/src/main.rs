@@ -635,12 +635,11 @@ async fn get_peer_addrs(
 
 fn format_iface_query_response(resp: QueryIfaceResponse) -> String {
     format!(
-        "QueryIfaceResponse {{ role: {:?}, id: {}, phy_id: {}, phy_assigned_id: {}, dev_path: \"{}\", mac_addr: {} }}",
+        "QueryIfaceResponse {{ role: {:?}, id: {}, phy_id: {}, phy_assigned_id: {}, mac_addr: {} }}",
         resp.role,
         resp.id,
         resp.phy_id,
         resp.phy_assigned_id,
-        resp.dev_path,
         MacAddr(resp.mac_addr)
     )
 }

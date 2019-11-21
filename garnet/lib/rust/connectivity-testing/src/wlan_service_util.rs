@@ -243,7 +243,7 @@ mod tests {
         let iface_id_list: Vec<u16> = vec![0, 1, 35, 36];
         let mut iface_list_vec = vec![];
         for id in &iface_id_list {
-            iface_list_vec.push(IfaceListItem { iface_id: *id, path: "/foo/bar/".to_string() });
+            iface_list_vec.push(IfaceListItem { iface_id: *id });
         }
 
         let fut = get_iface_list(&wlan_service);
@@ -867,7 +867,6 @@ mod tests {
             id: 0,
             phy_id: 0,
             phy_assigned_id: 0,
-            dev_path: String::new(),
             mac_addr,
         }
     }

@@ -4,7 +4,7 @@
 
 use {
     failure::format_err,
-    fidl_fuchsia_wlan_device as fidl_wlan_dev, fidl_fuchsia_wlan_mlme as fidl_mlme,
+    fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fuchsia_vfs_watcher::{WatchEvent, Watcher},
     fuchsia_zircon::Status as zx_Status,
     futures::prelude::*,
@@ -20,25 +20,10 @@ pub struct NewPhyDevice {
     pub device: wlan_dev::Device,
 }
 
-pub struct NewIfaceDevice {
-    pub id: u16,
-    pub proxy: fidl_mlme::MlmeProxy,
-    pub device: wlan_dev::Device,
-}
-
 pub fn watch_phy_devices<E: wlan_dev::DeviceEnv>(
 ) -> io::Result<impl Stream<Item = Result<NewPhyDevice, failure::Error>>> {
     Ok(watch_new_devices::<_, E>(E::PHY_PATH)?.try_filter_map(|path| {
         future::ready(Ok(handle_open_error(&path, new_phy::<E>(&path), "phy")))
-    }))
-}
-
-#[deprecated(note = "function is obsolete once WLAN-927 landed")]
-pub fn watch_iface_devices<E: wlan_dev::DeviceEnv>(
-) -> io::Result<impl Stream<Item = Result<NewIfaceDevice, failure::Error>>> {
-    #[allow(deprecated)]
-    Ok(watch_new_devices::<_, E>(E::IFACE_PATH)?.try_filter_map(|path| {
-        future::ready(Ok(handle_open_error(&path, new_iface::<E>(&path), "iface")))
     }))
 }
 
@@ -84,14 +69,6 @@ fn new_phy<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewPhyDevice, failu
     Ok(NewPhyDevice { id, proxy, device })
 }
 
-#[deprecated(note = "function is obsolete once WLAN-927 landed")]
-fn new_iface<E: wlan_dev::DeviceEnv>(path: &PathBuf) -> Result<NewIfaceDevice, failure::Error> {
-    let id = id_from_path(path)?;
-    let device = E::device_from_path(path)?;
-    let proxy = wlan_dev::connect_wlan_iface(&device)?;
-    Ok(NewIfaceDevice { id, proxy, device })
-}
-
 fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
     let file_name = path.file_name().ok_or_else(|| format_err!("Invalid device path"))?;
     let file_name_str =
@@ -107,6 +84,7 @@ mod tests {
         super::*,
         fidl_fuchsia_wlan_common as fidl_common,
         fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy},
+        fidl_fuchsia_wlan_mlme as fidl_mlme,
         fidl_fuchsia_wlan_tap as fidl_wlantap,
         fuchsia_async::{self as fasync},
         fuchsia_zircon::prelude::*,
