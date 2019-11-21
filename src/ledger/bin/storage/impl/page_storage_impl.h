@@ -10,7 +10,6 @@
 
 #include <vector>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/clocks/public/device_id_manager.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
 #include "src/ledger/bin/environment/environment.h"
@@ -22,6 +21,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/managed_container.h"

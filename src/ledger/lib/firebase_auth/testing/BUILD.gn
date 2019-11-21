@@ -27,7 +27,7 @@ source_set("testing") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/fxl",
   ]
@@ -56,7 +56,7 @@ source_set("service_account_provider") {
 
   deps = [
     "//peridot/lib/base64url",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/json_parser",
     "//third_party/boringssl",

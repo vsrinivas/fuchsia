@@ -17,7 +17,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/disk_cleanup_manager_impl.h"
 #include "src/ledger/bin/encryption/fake/fake_encryption_service.h"
@@ -35,6 +34,7 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/callback/waiter.h"

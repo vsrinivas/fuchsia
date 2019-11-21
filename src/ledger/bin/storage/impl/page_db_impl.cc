@@ -8,7 +8,6 @@
 #include <iterator>
 #include <string>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/impl/clock_serialization.h"
 #include "src/ledger/bin/storage/impl/constants.h"
 #include "src/ledger/bin/storage/impl/data_serialization.h"
@@ -17,6 +16,7 @@
 #include "src/ledger/bin/storage/impl/object_impl.h"
 #include "src/ledger/bin/storage/impl/page_db_batch_impl.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
 

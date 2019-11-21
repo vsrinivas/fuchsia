@@ -12,7 +12,6 @@
 
 #include <set>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/background_sync_manager.h"
 #include "src/ledger/bin/app/db_view_factory.h"
 #include "src/ledger/bin/app/disk_cleanup_manager.h"
@@ -31,6 +30,7 @@
 #include "src/ledger/bin/p2p_sync/public/user_communicator.h"
 #include "src/ledger/bin/storage/public/db_factory.h"
 #include "src/ledger/bin/sync_coordinator/public/user_sync.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/files/unique_fd.h"

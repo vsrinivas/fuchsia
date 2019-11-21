@@ -17,7 +17,6 @@ source_set("impl") {
   ]
 
   public_deps = [
-    "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.overnet",
     "//sdk/fidl/fuchsia.overnet.protocol",
     "//sdk/lib/fidl/cpp",
@@ -25,13 +24,14 @@ source_set("impl") {
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/filesystem",
     "//src/ledger/bin/p2p_provider/public",
+    "//src/ledger/lib/convert",
     "//src/lib/fxl",
   ]
 
   deps = [
-    "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.modular.auth",
     "//src/ledger/bin/environment",
+    "//src/ledger/lib/convert",
     "//src/lib/backoff",
     "//src/lib/callback",
     "//src/lib/component/cpp:deprecated_service_provider",

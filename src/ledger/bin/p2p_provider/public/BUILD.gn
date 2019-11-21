@@ -17,6 +17,6 @@ source_set("public") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
   ]
 }

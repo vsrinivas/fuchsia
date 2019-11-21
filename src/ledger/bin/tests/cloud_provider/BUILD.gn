@@ -17,9 +17,9 @@ executable("cloud_provider") {
 
   deps = [
     "//peridot/lib/base64url",
-    "//peridot/lib/convert",
     "//peridot/lib/rng:testing",
     "//src/ledger/bin/fidl/include",
+    "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/uuid",
   ]

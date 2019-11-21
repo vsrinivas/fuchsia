@@ -8,9 +8,9 @@
 #include <lib/fidl/cpp/binding.h>
 #include <lib/gtest/test_loop_fixture.h>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/cloud_provider_firestore/bin/app/testing/test_credentials_provider.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/test_firestore_service.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/macros.h"

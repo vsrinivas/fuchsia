@@ -12,8 +12,8 @@
 #include <map>
 #include <string>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/encryption/public/encryption_service.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace encryption {
 

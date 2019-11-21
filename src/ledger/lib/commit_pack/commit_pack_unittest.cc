@@ -5,7 +5,7 @@
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 
 #include <gtest/gtest.h>
-#include <peridot/lib/convert/convert.h>
+#include <src/ledger/lib/convert/convert.h>
 
 namespace cloud_provider {
 namespace {

@@ -16,12 +16,12 @@
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/impl/make_client_id.h"
 #include "src/ledger/bin/p2p_provider/impl/static_user_id_provider.h"
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {

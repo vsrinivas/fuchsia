@@ -5,8 +5,8 @@
 #ifndef SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 #define SRC_LEDGER_BIN_P2P_PROVIDER_PUBLIC_P2P_PROVIDER_H_
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/macros.h"
 
 namespace p2p_provider {

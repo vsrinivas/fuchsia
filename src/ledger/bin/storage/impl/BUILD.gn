@@ -73,9 +73,9 @@ source_set("object_identifier_lib") {
   public_deps = [
     ":data_serialization",
     ":object_identifier",
-    "//peridot/lib/convert",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/synchronization:dispatcher_checker",
+    "//src/ledger/lib/convert",
     "//src/lib/fxl",
   ]
 
@@ -154,7 +154,7 @@ source_set("lib") {
   public_deps = [
     ":data_serialization",
     ":object_identifier_lib",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/coroutine",
     "//src/ledger/third_party/bup",
     "//third_party/leveldb",

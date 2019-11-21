@@ -30,7 +30,7 @@ source_set("firestore") {
 
   deps = [
     "//peridot/lib/base64url",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
   ]
 
   public_configs = [ "//third_party/googleapis:googleapis_config" ]
@@ -48,9 +48,9 @@ source_set("unittests") {
   deps = [
     ":firestore",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/convert",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/cloud_provider_firestore/bin/firestore/testing",
+    "//src/ledger/lib/convert",
     "//src/lib/fxl:printers",
     "//third_party/protobuf:protobuf_full",
   ]

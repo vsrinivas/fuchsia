@@ -9,7 +9,6 @@ group("lib") {
   deps = [
     ":peridot_lib_unittests",
     "base64url",
-    "convert",
     "ledger_client",
     "rapidjson",
     "rng",
@@ -23,7 +22,6 @@ executable("peridot_lib_unittests") {
 
   deps = [
     "//peridot/lib/base64url:unittests",
-    "//peridot/lib/convert:unittests",
     "//peridot/lib/ledger_client:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",

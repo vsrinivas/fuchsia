@@ -5,8 +5,8 @@
 #ifndef SRC_LEDGER_BIN_P2P_SYNC_IMPL_ENCODING_H_
 #define SRC_LEDGER_BIN_P2P_SYNC_IMPL_ENCODING_H_
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace p2p_sync {
 

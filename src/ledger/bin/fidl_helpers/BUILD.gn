@@ -48,7 +48,7 @@ source_set("unittests") {
   deps = [
     ":message_relay",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

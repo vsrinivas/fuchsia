@@ -5,7 +5,7 @@
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
 
 #include "peridot/lib/base64url/base64url.h"
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 namespace {

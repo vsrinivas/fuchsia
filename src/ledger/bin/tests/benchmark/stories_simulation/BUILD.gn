@@ -16,13 +16,13 @@ executable("ledger_benchmark_stories_simulation") {
   testonly = true
 
   deps = [
-    "//peridot/lib/convert",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",

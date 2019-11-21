@@ -17,13 +17,13 @@ source_set("testing") {
   ]
 
   public_deps = [
-    "//peridot/lib/convert",
     "//peridot/lib/rng",
     "//peridot/lib/rng:system",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//sdk/lib/sys/cpp",
     "//src/ledger/cloud_provider_firestore/bin/fidl",
     "//src/ledger/cloud_provider_firestore/bin/include",
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/firebase_auth/testing:service_account_provider",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

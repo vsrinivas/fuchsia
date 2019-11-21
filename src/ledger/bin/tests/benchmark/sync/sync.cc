@@ -15,7 +15,6 @@
 
 #include <trace/event.h>
 
-#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/rng/test_random.h"
 #include "src/ledger/bin/app/flags.h"
 #include "src/ledger/bin/fidl/include/types.h"
@@ -27,6 +26,7 @@
 #include "src/ledger/bin/testing/run_with_tracing.h"
 #include "src/ledger/bin/testing/sync_params.h"
 #include "src/ledger/cloud_provider_firestore/bin/testing/cloud_provider_factory.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/scoped_temp_dir.h"

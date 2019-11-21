@@ -16,11 +16,11 @@ source_set("sync") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/bin/storage/public",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

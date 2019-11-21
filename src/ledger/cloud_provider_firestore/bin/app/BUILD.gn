@@ -57,9 +57,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
     "//src/ledger/bin/app:serialization_version",
     "//src/ledger/lib/commit_pack",
+    "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//src/lib/fsl",
   ]
@@ -79,11 +79,11 @@ source_set("unittests") {
   deps = [
     ":lib",
     "//garnet/public/lib/gtest",
-    "//peridot/lib/convert",
     "//peridot/lib/rng:testing",
     "//sdk/lib/fidl/cpp",
     "//src/ledger/cloud_provider_firestore/bin/app/testing",
     "//src/ledger/cloud_provider_firestore/bin/firestore/testing",
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/firebase_auth/testing",
     "//src/lib/callback",
     "//src/lib/fxl:printers",

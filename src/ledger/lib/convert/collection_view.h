@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_CONVERT_COLLECTION_VIEW_H_
-#define PERIDOT_LIB_CONVERT_COLLECTION_VIEW_H_
+#ifndef SRC_LEDGER_LIB_CONVERT_COLLECTION_VIEW_H_
+#define SRC_LEDGER_LIB_CONVERT_COLLECTION_VIEW_H_
 
 #include <algorithm>
 #include <iterator>
@@ -76,4 +76,4 @@ class CollectionView {
 
 }  // namespace convert
 
-#endif  // PERIDOT_LIB_CONVERT_COLLECTION_VIEW_H_
+#endif  // SRC_LEDGER_LIB_CONVERT_COLLECTION_VIEW_H_

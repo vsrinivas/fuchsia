@@ -9,7 +9,6 @@
 
 #include <flatbuffers/flatbuffers.h>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/p2p_provider/public/types.h"
 #include "src/ledger/bin/p2p_sync/impl/commit_batch.h"
@@ -21,6 +20,7 @@
 #include "src/ledger/bin/storage/public/page_storage.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/public/page_sync_delegate.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/auto_cleanable.h"

@@ -6,11 +6,11 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/storage/fake/fake_object_identifier_factory.h"
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace storage {
 namespace {

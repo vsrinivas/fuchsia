@@ -21,7 +21,6 @@
 // directly as it is private to the library.
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/device_mesh.h"
 #include "src/ledger/bin/p2p_sync/impl/encoding.h"
 #include "src/ledger/bin/p2p_sync/impl/message_generated.h"
@@ -33,6 +32,7 @@
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
 #include "src/ledger/bin/storage/testing/storage_matcher.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine_impl.h"
 
 using storage::MatchesCommitIdAndBytes;

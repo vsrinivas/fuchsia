@@ -4,13 +4,13 @@
 
 #include "src/ledger/cloud_provider_firestore/bin/firestore/encoding.h"
 
+#include <string>
+
 #include <google/protobuf/util/time_util.h>
 #include <gtest/gtest.h>
 
-#include <string>
-
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/cloud_provider_firestore/bin/firestore/testing/encoding.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace cloud_provider_firestore {
 

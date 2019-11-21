@@ -20,8 +20,8 @@ executable("ledger_test_instance_provider_bin") {
   configs += [ "//src/ledger:ledger_config" ]
 
   public_deps = [
-    "//peridot/lib/convert",
     "//peridot/lib/scoped_tmpfs",
+    "//src/ledger/lib/convert",
   ]
 }
 

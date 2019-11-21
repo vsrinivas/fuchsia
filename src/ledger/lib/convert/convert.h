@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_LIB_CONVERT_CONVERT_H_
-#define PERIDOT_LIB_CONVERT_CONVERT_H_
+#ifndef SRC_LEDGER_LIB_CONVERT_CONVERT_H_
+#define SRC_LEDGER_LIB_CONVERT_CONVERT_H_
 
 #include <lib/fidl/cpp/vector.h>
 
@@ -112,4 +112,4 @@ struct StringViewComparator {
 
 }  // namespace convert
 
-#endif  // PERIDOT_LIB_CONVERT_CONVERT_H_
+#endif  // SRC_LEDGER_LIB_CONVERT_CONVERT_H_

@@ -6,8 +6,8 @@
 
 #include "gtest/gtest.h"
 #include "message_generated.h"
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/p2p_sync/impl/flatbuffer_message_factory.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/macros.h"
 
 namespace p2p_sync {

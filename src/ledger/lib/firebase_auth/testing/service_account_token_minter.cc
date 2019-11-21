@@ -18,7 +18,7 @@
 #include <rapidjson/writer.h>
 
 #include "peridot/lib/base64url/base64url.h"
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/arraysize.h"

@@ -16,7 +16,6 @@
 #include <type_traits>
 #include <vector>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/app/ledger_impl.h"
 #include "src/ledger/bin/app/merging/ledger_merge_manager.h"
 #include "src/ledger/bin/app/page_availability_manager.h"
@@ -29,6 +28,7 @@
 #include "src/ledger/bin/fidl/syncable/syncable_binding.h"
 #include "src/ledger/bin/storage/public/types.h"
 #include "src/ledger/bin/sync_coordinator/public/ledger_sync.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/weak_ptr.h"

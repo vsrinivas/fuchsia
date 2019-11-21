@@ -4,7 +4,7 @@
 
 #include "src/ledger/bin/p2p_provider/public/types.h"
 
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace p2p_provider {
 P2PClientId::P2PClientId(std::vector<uint8_t> data) : data_(std::move(data)) {}

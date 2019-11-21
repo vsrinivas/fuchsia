@@ -12,7 +12,6 @@
 
 #include <fuzzer/FuzzedDataProvider.h>
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/environment/environment.h"
 #include "src/ledger/bin/environment/test_loop_notification.h"
 #include "src/ledger/bin/p2p_provider/impl/p2p_provider_impl.h"
@@ -20,6 +19,7 @@
 #include "src/ledger/bin/p2p_sync/impl/user_communicator_impl.h"
 #include "src/ledger/bin/storage/public/page_sync_client.h"
 #include "src/ledger/bin/storage/testing/page_storage_empty_impl.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
 

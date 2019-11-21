@@ -23,7 +23,6 @@ executable("integration") {
   deps = [
     ":integration_lib",
     "//garnet/public/lib/timekeeper:testing",
-    "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.modular.auth",
     "//sdk/lib/fidl/cpp",
@@ -45,6 +44,7 @@ executable("integration") {
     "//src/ledger/bin/testing/overnet",
     "//src/ledger/bin/tests/integration/sync",
     "//src/ledger/cloud_provider_memory_diff/cpp",
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/socket",
     "//src/lib/callback",
     "//src/lib/fsl",
@@ -68,7 +68,7 @@ source_set("integration_lib") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/ledger/lib/socket",
   ]
 

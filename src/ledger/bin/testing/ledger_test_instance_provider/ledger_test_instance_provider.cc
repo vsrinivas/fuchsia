@@ -11,9 +11,9 @@
 
 #include <cstdlib>
 
-#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/flags.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/io/fd.h"
 #include "src/lib/fxl/strings/string_view.h"
 
@@ -46,7 +46,6 @@ int main(int argc, char const *argv[]) {
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr repository_factory;
   sys::ServiceDirectory child_services(std::move(child_directory));
   child_services.Connect(repository_factory.NewRequest());
-
 
   // Create memfs.
   auto memfs = std::make_unique<scoped_tmpfs::ScopedTmpFS>();

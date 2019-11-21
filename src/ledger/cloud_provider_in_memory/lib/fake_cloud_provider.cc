@@ -4,7 +4,7 @@
 
 #include "src/ledger/cloud_provider_in_memory/lib/fake_cloud_provider.h"
 
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace ledger {
 

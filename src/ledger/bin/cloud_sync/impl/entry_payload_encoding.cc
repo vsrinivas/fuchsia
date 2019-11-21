@@ -4,9 +4,9 @@
 
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 
-#include "peridot/lib/convert/convert.h"
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_generated.h"
 #include "src/ledger/bin/storage/public/types.h"
+#include "src/ledger/lib/convert/convert.h"
 
 namespace cloud_sync {
 

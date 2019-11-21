@@ -23,7 +23,7 @@ source_set("overnet") {
 
   deps = [
     "//garnet/public/lib/test_runner/cpp/reporting",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//third_party/googletest:gtest",
@@ -41,11 +41,11 @@ source_set("unittests") {
 
   deps = [
     ":overnet",
-    "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.overnet",
     "//src/ledger/bin/environment",
     "//src/ledger/bin/fidl_helpers:message_relay",
     "//src/ledger/bin/testing:lib",
+    "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",

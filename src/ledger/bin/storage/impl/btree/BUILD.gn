@@ -36,11 +36,11 @@ source_set("lib") {
   deps = [
     ":internal",
     ":tree_node_storage",
-    "//peridot/lib/convert",
     "//src/ledger/bin/encryption/primitives",
     "//src/ledger/bin/storage/impl:data_serialization",
     "//src/ledger/bin/storage/impl:object_identifier_lib",
     "//src/ledger/bin/storage/public",
+    "//src/ledger/lib/convert",
     "//src/lib/callback",
     "//src/lib/fxl",
     "//third_party/murmurhash",

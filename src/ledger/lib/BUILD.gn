@@ -6,6 +6,7 @@ group("lib") {
   testonly = true
   deps = [
     ":ledger_lib_unittests",
+    "convert",
     "coroutine",
     "firebase_auth",
     "socket",
@@ -17,6 +18,7 @@ executable("ledger_lib_unittests") {
 
   deps = [
     "//src/ledger/lib/commit_pack:unittests",
+    "//src/ledger/lib/convert:unittests",
     "//src/ledger/lib/coroutine:unittests",
     "//src/ledger/lib/coroutine/context:unittests",
     "//src/ledger/lib/firebase_auth:unittests",

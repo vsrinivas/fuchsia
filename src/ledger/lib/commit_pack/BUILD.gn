@@ -11,7 +11,7 @@ source_set("commit_pack") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
   ]
 
   public_deps = [
@@ -31,7 +31,7 @@ source_set("unittests") {
 
   deps = [
     ":commit_pack",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
     "//third_party/googletest:gtest",
   ]
 }
@@ -42,6 +42,6 @@ fuzzer("commit_pack_fuzzer") {
   ]
   deps = [
     ":commit_pack",
-    "//peridot/lib/convert",
+    "//src/ledger/lib/convert",
   ]
 }

@@ -7,7 +7,7 @@
 #include <fuchsia/ledger/cloud/c/fidl.h>
 #include <lib/fidl/cpp/encoder.h>
 
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/vmo/vector.h"
 
 namespace cloud_provider {

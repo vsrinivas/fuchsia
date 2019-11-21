@@ -28,9 +28,9 @@ source_set("lib") {
   ]
 
   deps = [
-    "//peridot/lib/convert",
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/fidl_helpers",
+    "//src/ledger/lib/convert",
     "//third_party/murmurhash",
   ]
 

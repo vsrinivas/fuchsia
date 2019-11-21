@@ -7,7 +7,7 @@
 #include <lib/fit/function.h>
 #include <lib/zx/vmar.h>
 
-#include "peridot/lib/convert/convert.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/socket/socket_drainer.h"
 
 namespace storage {

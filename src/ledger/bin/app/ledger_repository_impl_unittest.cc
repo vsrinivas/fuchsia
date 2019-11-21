@@ -14,7 +14,6 @@
 #include <vector>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/convert/convert.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/app/db_view_factory.h"
@@ -36,6 +35,7 @@
 #include "src/ledger/bin/testing/fake_disk_cleanup_manager.h"
 #include "src/ledger/bin/testing/inspect.h"
 #include "src/ledger/bin/testing/test_with_environment.h"
+#include "src/ledger/lib/convert/convert.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
