@@ -91,9 +91,6 @@ class Resource : public fxl::RefCountedThreadSafe<Resource> {
   Resource(Session* session, SessionId session_id, ResourceId id,
            const ResourceTypeInfo& type_info);
 
-  // TODO(before-submit): necessary?
-  friend class ResourceMap;
-
  private:
   Session* const session_DEPRECATED_;
   const GlobalId global_id_;

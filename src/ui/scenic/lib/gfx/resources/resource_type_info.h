@@ -35,35 +35,34 @@ enum ResourceType : uint64_t {
 
   // Views.
   kView = 1ul << 16,
-  // TODO(before-submit): put in order
-  kViewNode = 1ul << 36,
-  kViewHolder = 1ul << 17,
+  kViewNode = 1ul << 17,
+  kViewHolder = 1ul << 18,
 
   // Nodes.
-  kNode = 1ul << 18,
-  kClipNode = 1ul << 19,
-  kEntityNode = 1ul << 20,
-  kOpacityNode = 1ul << 21,
-  kShapeNode = 1ul << 22,
+  kNode = 1ul << 19,
+  kClipNode = 1ul << 20,
+  kEntityNode = 1ul << 21,
+  kOpacityNode = 1ul << 22,
+  kShapeNode = 1ul << 23,
 
   // Compositor, layers.
-  kCompositor = 1ul << 23,
-  kDisplayCompositor = 1ul << 24,
-  kLayer = 1ul << 25,
-  kLayerStack = 1ul << 26,
+  kCompositor = 1ul << 24,
+  kDisplayCompositor = 1ul << 25,
+  kLayer = 1ul << 26,
+  kLayerStack = 1ul << 27,
 
   // Scene, camera, lighting.
-  kScene = 1ul << 27,
-  kCamera = 1ul << 28,
-  kStereoCamera = 1ul << 29,
-  kLight = 1ul << 30,
-  kAmbientLight = 1ul << 31,
-  kDirectionalLight = 1ul << 32,
-  kPointLight = 1ul << 33,
-  kRenderer = 1ul << 34,
+  kScene = 1ul << 28,
+  kCamera = 1ul << 29,
+  kStereoCamera = 1ul << 30,
+  kLight = 1ul << 31,
+  kAmbientLight = 1ul << 32,
+  kDirectionalLight = 1ul << 33,
+  kPointLight = 1ul << 34,
+  kRenderer = 1ul << 35,
 
   // Animation
-  kVariable = 1ul << 35,
+  kVariable = 1ul << 36,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

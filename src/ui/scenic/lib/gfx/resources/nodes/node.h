@@ -137,7 +137,6 @@ class Node : public Resource {
 
  private:
   // Describes the manner in which a node is related to its parent.
-  // TODO(before-submit): if there is only kChild, delete.
   enum class ParentRelation { kNone, kChild };
 
   // Identifies a specific spatial property.

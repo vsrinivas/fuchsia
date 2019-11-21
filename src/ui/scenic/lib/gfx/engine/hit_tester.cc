@@ -92,7 +92,7 @@ void HitTest(Node* root, const escher::ray4& ray, HitAccumulator<NodeHit>* accum
       // Add all children to the stack.
       // Since each descendant is added to the stack and then processed in opposite order, the
       // actual traversal order here ends up being back-to-front.
-      ForEachDirectDescendantFrontToBack(
+      ForEachChildFrontToBack(
           *current_node.node, [&stack, &local_ray, &local_intersection](Node* node) {
             stack.push(
                 {.node = node, .parent_ray = local_ray, .parent_intersection = local_intersection});

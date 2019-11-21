@@ -27,12 +27,6 @@ void ForEachChildFrontToBack(const Node& node, const Callable& func) {
   }
 }
 
-// TODO(before-submit): replace with ForEachChildFrontToBack().
-template <typename Callable>
-void ForEachDirectDescendantFrontToBack(const Node& node, const Callable& func) {
-  ForEachChildFrontToBack(node, func);
-}
-
 //
 // Traversals with early termination once the functor returns true.
 //

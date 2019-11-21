@@ -288,7 +288,7 @@ void Engine::UpdateMetrics(Node* node, const fuchsia::ui::gfx::Metrics& parent_m
     updated_nodes->push_back(node);
   }
 
-  ForEachDirectDescendantFrontToBack(*node, [this, &local_metrics, updated_nodes](Node* node) {
+  ForEachChildFrontToBack(*node, [this, &local_metrics, updated_nodes](Node* node) {
     UpdateMetrics(node, local_metrics, updated_nodes);
   });
 }

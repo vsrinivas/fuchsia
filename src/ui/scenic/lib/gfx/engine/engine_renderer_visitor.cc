@@ -81,7 +81,7 @@ void EngineRendererVisitor::Visit(ViewHolder* r) {
     ++draw_call_count_;
   }
 
-  ForEachDirectDescendantFrontToBack(*r, [this](Node* node) { node->Accept(this); });
+  ForEachChildFrontToBack(*r, [this](Node* node) { node->Accept(this); });
   transform_stack->Pop();
 }
 
@@ -105,7 +105,7 @@ void EngineRendererVisitor::VisitNode(Node* r) {
   transform_stack->PushTransform(static_cast<escher::mat4>(r->transform()));
   transform_stack->AddClipPlanes(r->clip_planes());
 
-  ForEachDirectDescendantFrontToBack(*r, [this](Node* node) { node->Accept(this); });
+  ForEachChildFrontToBack(*r, [this](Node* node) { node->Accept(this); });
 
   transform_stack->Pop();
 }

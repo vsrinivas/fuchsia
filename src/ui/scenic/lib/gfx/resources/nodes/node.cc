@@ -38,7 +38,7 @@ Node::Node(Session* session, SessionId session_id, ResourceId node_id,
 }
 
 Node::~Node() {
-  ForEachDirectDescendantFrontToBack(*this, [](Node* node) {
+  ForEachChildFrontToBack(*this, [](Node* node) {
     FXL_DCHECK(node->parent_relation_ != ParentRelation::kNone);
     // Detach without affecting parent Node (because thats us) or firing the
     // on_detached_cb_ (because that shouldn't be up to us).
@@ -286,7 +286,7 @@ bool Node::SendSizeChangeHint(float width_change_factor, float height_change_fac
     event_reporter()->EnqueueEvent(std::move(event));
   }
 
-  ForEachDirectDescendantFrontToBack(
+  ForEachChildFrontToBack(
       *this, [width_change_factor, height_change_factor](Node* node) {
         node->SendSizeChangeHint(width_change_factor, height_change_factor);
       });
@@ -315,7 +315,7 @@ Node::IntersectionInfo Node::GetIntersection(const escher::ray4& ray,
 void Node::InvalidateGlobalTransform() {
   if (!global_transform_dirty_) {
     global_transform_dirty_ = true;
-    ForEachDirectDescendantFrontToBack(*this,
+    ForEachChildFrontToBack(*this,
                                        [](Node* node) { node->InvalidateGlobalTransform(); });
   }
 }
@@ -353,7 +353,7 @@ void Node::RefreshScene(Scene* new_scene) {
   scene_ = new_scene;
   OnSceneChanged();
 
-  ForEachDirectDescendantFrontToBack(*this, [this](Node* node) { node->RefreshScene(scene_); });
+  ForEachChildFrontToBack(*this, [this](Node* node) { node->RefreshScene(scene_); });
 }
 
 ViewPtr Node::FindOwningView() const {

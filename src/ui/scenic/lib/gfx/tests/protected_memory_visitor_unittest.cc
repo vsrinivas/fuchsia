@@ -89,7 +89,8 @@ TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForChildProtectedImage) {
   ASSERT_TRUE(visitor.HasProtectedMemoryUse());
 }
 
-// TODO(before-submit): file bug to use View/ViewHolder.
+// TODO(41883): This test was disabled when ResourceLinker was deleted from Scenic.
+// It should be rewritten to use View/ViewHolder.
 /*
 TEST_F(ProtectedMemoryVisitorTest, ReturnsTrueForImportedProtectedImage) {
   ProtectedMemoryVisitor visitor;
