@@ -46,7 +46,7 @@ template("go_fuzzer") {
     name = "${fuzzer_name}_wrapper"
     source_dir = "${target_gen_dir}"
     sources = [
-      "${fuzzer_name}_main.go",
+      "${fuzzer_name}_wrapper.go",
     ]
 
     forward_variables_from(invoker, [ "deps" ])
