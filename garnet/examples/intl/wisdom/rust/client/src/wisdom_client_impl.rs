@@ -15,7 +15,8 @@ use {
     std::convert::TryFrom,
 };
 
-/// TODO
+// [START loader_example]
+/// A client implementation that connects to the Wisdom server.
 pub struct Client {
     // The proxy for calling into the Wisdom service.
     wisdom: fwisdom::IntlWisdomServer_Proxy,
@@ -24,6 +25,7 @@ pub struct Client {
     #[allow(dead_code)]
     icu_data_loader: icu_data::Loader,
 }
+// [END loader_example]
 
 impl Client {
     /// Creates a new Client.  `wisdom` is the async proxy used to call into

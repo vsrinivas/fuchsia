@@ -12,6 +12,7 @@ use {
     icu_data,
 };
 
+// [START loader_example]
 fn main() -> Result<(), Error> {
     // Force the loading of ICU data at the beginning of the program.  Since
     // Fuchsia's ICU does not have `libicudata.so`, we must load the data here
@@ -29,6 +30,7 @@ fn main() -> Result<(), Error> {
     executor.run_singlethreaded(fs.collect::<()>());
     Ok(())
 }
+// [END loader_example]
 
 async fn run_service(mut stream: fwisdom::IntlWisdomServer_RequestStream) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {

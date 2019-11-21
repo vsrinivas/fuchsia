@@ -14,11 +14,13 @@
 //!
 //! Example use:
 //!
-//!    fn basic() {
-//!        let _loader = Loader::new().expect("loader is constructed with success");
-//!        let _loader2 = Loader::new().expect("second initialization is a no-operation");
-//!        let _loader3 = _loader2.clone();  // It is OK to clone a loader and keep it around.
-//!    }
+//! ```
+//! fn basic() {
+//!     let _loader = Loader::new().expect("loader is constructed with success");
+//!     let _loader2 = Loader::new().expect("second initialization is a no-operation");
+//!     let _loader3 = _loader2.clone();  // It is OK to clone a loader and keep it around.
+//! }
+//! ```
 
 use {
     failure::format_err,
@@ -164,6 +166,7 @@ impl Loader {
 mod tests {
     use super::*;
 
+    // [START loader_example]
     #[test]
     fn initialization() {
         let _loader = Loader::new().expect("loader is constructed with success");
@@ -178,4 +181,5 @@ mod tests {
         let _loader2 = Loader::new().expect("loader is just fine with a second initialization");
         let _loader3 = _loader2.clone();
     }
+    // [START loader_example]
 }
