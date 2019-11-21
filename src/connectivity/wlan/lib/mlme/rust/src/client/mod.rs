@@ -30,7 +30,7 @@ use {
             parse_ht_capabilities, parse_vht_capabilities, rsn::rsne, IE_PREFIX_LEN,
             SUPPORTED_RATES_MAX_LEN,
         },
-        mac::{self, Aid, Bssid, MacAddr, OptionalField, Presence},
+        mac::{self, Aid, Bssid, MacAddr, OptionalField, PowerState, Presence},
         sequence::SequenceManager,
     },
     zerocopy::ByteSlice,
@@ -437,6 +437,32 @@ impl Client {
         if let Err(e) = result {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
+    }
+    // See `SetPowerManagement` in the C++ implementation.
+    // TODO(fxb/39899): The Rust crate does not yet support channel scheduling. When channel
+    //                  scheduling is available, use this code and remove the `allow(dead_code)`
+    //                  attribute. See fxr/335090.
+    /// Sends a power management data frame to the associated AP indicating that the client has
+    /// entered the given power state. See `PowerState`.
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the client is not associated with an AP or if the data frame cannot be
+    /// sent to the AP.
+    #[allow(dead_code)]
+    fn send_power_state_frame(&mut self, state: PowerState) -> Result<(), Error> {
+        let mut buffer = self.buf_provider.get_buffer(mac::FixedDataHdrFields::len(
+            mac::Addr4::ABSENT,
+            mac::QosControl::ABSENT,
+            mac::HtControl::ABSENT,
+        ))?;
+        let mut writer = BufferWriter::new(&mut buffer[..]);
+        write_power_state_frame(&mut writer, self.bssid, self.iface_mac, &mut self.seq_mgr, state)?;
+        let n = writer.bytes_written();
+        let buffer = OutBuf::from(buffer, n);
+        self.device
+            .send_wlan_frame(buffer, TxFlags::NONE)
+            .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
 }
 
@@ -871,5 +897,16 @@ mod tests {
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
         client.send_ps_poll_frame(0xABCD).expect("failed sending PS POLL frame");
+    }
+
+    #[test]
+    fn send_power_state_frame() {
+        let mut device = FakeDevice::new();
+        let device = device.as_device();
+        let mut scheduler = FakeScheduler::new();
+        let scheduler = scheduler.as_scheduler();
+        let mut client = make_client_station(device, scheduler);
+        client.send_power_state_frame(PowerState::DOZE).expect("failed sending doze frame");
+        client.send_power_state_frame(PowerState::AWAKE).expect("failed sending awake frame");
     }
 }

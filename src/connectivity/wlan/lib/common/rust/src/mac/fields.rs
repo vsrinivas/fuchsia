@@ -73,6 +73,21 @@ impl CtrlSubtype {
     pub const CF_END_ACK: Self = Self(0b1111);
 }
 
+/// The power management state of a station.
+///
+/// Represents the possible power states for doze BI from table 11-3 of IEEE-802.11-2016.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub struct PowerState(bool);
+
+impl PowerState {
+    /// The awake power management state. When in this state, stations are expected to be reliable
+    /// and handle transmitted frames.
+    pub const AWAKE: Self = Self(false);
+    /// The doze power management state. When in this state, stations may be less reliable and APs
+    /// should typically buffer frames.
+    pub const DOZE: Self = Self(true);
+}
+
 // IEEE Std 802.11-2016, 9.2.4.1.1
 #[bitfield(
     0..=1   protocol_version,
@@ -87,7 +102,7 @@ impl CtrlSubtype {
     9       from_ds,
     10      more_fragments,
     11      retry,
-    12      power_mgmt,
+    12      power_mgmt as PowerState(bool),
     13      more_data,
     14      protected,
     15      htc_order

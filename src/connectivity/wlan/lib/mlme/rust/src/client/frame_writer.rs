@@ -9,7 +9,7 @@ use {
         appendable::Appendable,
         data_writer,
         ie::{rsn::rsne, *},
-        mac::{self, Aid, Bssid, MacAddr},
+        mac::{self, Aid, Bssid, MacAddr, PowerState},
         mgmt_writer,
         sequence::SequenceManager,
     },
@@ -189,6 +189,36 @@ pub fn write_ps_poll_frame<B: Appendable>(
     })?;
 
     Ok(())
+}
+
+pub fn write_power_state_frame<B>(
+    buffer: &mut B,
+    bssid: Bssid,
+    source: MacAddr,
+    sequencer: &mut SequenceManager,
+    state: PowerState,
+) -> Result<(), Error>
+where
+    B: Appendable,
+{
+    let control = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::DATA)
+        .with_data_subtype(mac::DataSubtype(0).with_null(true))
+        .with_to_ds(true)
+        .with_power_mgmt(state);
+    data_writer::write_data_hdr(
+        buffer,
+        mac::FixedDataHdrFields {
+            frame_ctrl: control,
+            duration: 0,
+            addr1: bssid.0,
+            addr2: source,
+            addr3: bssid.0,
+            seq_ctrl: mac::SequenceControl(0).with_seq_num(sequencer.next_sns1(&bssid.0) as u16),
+        },
+        mac::OptionalDataHdrFields::none(),
+    )
+    .map_err(|error| error.into())
 }
 
 #[cfg(test)]
@@ -472,5 +502,30 @@ mod tests {
             2, 2, 2, 2, 2, 2, // TA
         ];
         assert_eq!(&expected[..], &buf[..])
+    }
+
+    #[test]
+    fn power_state_frame() {
+        let mut buffer = vec![];
+        let mut sequencer = SequenceManager::new();
+        write_power_state_frame(
+            &mut buffer,
+            Bssid([1; 6]),
+            [2; 6],
+            &mut sequencer,
+            PowerState::DOZE,
+        )
+        .expect("failed writing frame");
+        assert_eq!(
+            &[
+                0b01001000, 0b00010001, // Frame control.
+                0, 0, // Duration.
+                1, 1, 1, 1, 1, 1, // BSSID.
+                2, 2, 2, 2, 2, 2, // MAC address.
+                1, 1, 1, 1, 1, 1, // BSSID.
+                0x10, 0, // Sequence control.
+            ],
+            &buffer[..]
+        );
     }
 }
