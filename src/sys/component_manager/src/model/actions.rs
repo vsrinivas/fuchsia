@@ -545,9 +545,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             // The leaves could be stopped in any order.
@@ -623,9 +623,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(events, Vec::<Lifecycle>::new());
@@ -696,9 +696,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(events, vec![Lifecycle::Stop(vec!["a:0"].into())]);
@@ -784,9 +784,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             let mut first: Vec<_> = events.drain(0..2).collect();
@@ -803,6 +803,622 @@ mod tests {
                     Lifecycle::Stop(vec!["a:0"].into())
                 ]
             );
+        }
+    }
+
+    /// Shut down `a`:
+    ///   a
+    ///    \
+    ///     b
+    ///   / | \
+    ///  c<-d->e
+    /// In this case C and E use a service provided by d
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_deps() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "e".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    offers: vec![
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("c".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("e".to_string()),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "d",
+                ComponentDecl {
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "e",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(vec!["a:0"].into()).await;
+        let realm_b = test.look_up(vec!["a:0", "b:0"].into()).await;
+        let realm_c = test.look_up(vec!["a:0", "b:0", "c:0"].into()).await;
+        let realm_d = test.look_up(vec!["a:0", "b:0", "d:0"].into()).await;
+        let realm_e = test.look_up(vec!["a:0", "b:0", "e:0"].into()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&realm_e).await);
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        assert!(is_shut_down(&realm_e).await);
+
+        {
+            let mut events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+            let mut first: Vec<_> = events.drain(0..2).collect();
+            first.sort_unstable();
+            let mut expected: Vec<_> = vec![
+                Lifecycle::Stop(vec!["a:0", "b:0", "c:0"].into()),
+                Lifecycle::Stop(vec!["a:0", "b:0", "e:0"].into()),
+            ];
+            assert_eq!(first, expected);
+
+            let next: Vec<_> = events.drain(0..1).collect();
+            expected = vec![Lifecycle::Stop(vec!["a:0", "b:0", "d:0"].into())];
+            assert_eq!(next, expected);
+
+            assert_eq!(
+                events,
+                vec![
+                    Lifecycle::Stop(vec!["a:0", "b:0"].into()),
+                    Lifecycle::Stop(vec!["a:0"].into())
+                ]
+            );
+        }
+    }
+
+    /// Shut down `a`:
+    ///    a
+    ///     \
+    ///      b
+    ///   / / \  \
+    ///  c<-d->e->f
+    /// In this case C and E use a service provided by D and
+    /// F uses a service provided by E, shutdown order should be
+    /// {F}, {C, E}, {D}, {B}, {A}
+    /// Note that C must stop before D, but may stop before or after
+    /// either of F and E.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_out_and_longer_chain() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "e".to_string(),
+                            url: "test:///e".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "f".to_string(),
+                            url: "test:///f".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    offers: vec![
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("c".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("e".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("e".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                            target: OfferTarget::Child("f".to_string()),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "d",
+                ComponentDecl {
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "e",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "f",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(moniker_a.clone()).await;
+        let realm_b = test.look_up(moniker_b.clone()).await;
+        let realm_c = test.look_up(moniker_c.clone()).await;
+        let realm_d = test.look_up(moniker_d.clone()).await;
+        let realm_e = test.look_up(moniker_e.clone()).await;
+        let realm_f = test.look_up(moniker_f.clone()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&realm_e).await);
+        assert!(is_executing(&realm_f).await);
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        assert!(is_shut_down(&realm_e).await);
+        assert!(is_shut_down(&realm_f).await);
+
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
+        // technically we could just depend on 'D' since it is the last of b's
+        // children, but we add all the children for resilence against the
+        // future
+        comes_after.insert(
+            moniker_b.clone(),
+            vec![moniker_c.clone(), moniker_d.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(moniker_d.clone(), vec![moniker_c.clone(), moniker_e.clone()]);
+        comes_after.insert(moniker_c.clone(), vec![]);
+        comes_after.insert(moniker_e.clone(), vec![moniker_f.clone()]);
+        comes_after.insert(moniker_f.clone(), vec![]);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+
+            for e in events {
+                match e {
+                    Lifecycle::Stop(moniker) => match comes_after.remove(&moniker) {
+                        Some(dependents) => {
+                            for d in dependents {
+                                if comes_after.contains_key(&d) {
+                                    panic!("{} stopped before its dependent {}", moniker, d);
+                                }
+                            }
+                        }
+                        None => {
+                            panic!("{} was unknown or shut down more than once", moniker);
+                        }
+                    },
+                    _ => {
+                        panic!("Unexpected lifecycle type");
+                    }
+                }
+            }
+        }
+    }
+
+    /// Shut down `a`:
+    ///           a
+    ///
+    ///           |
+    ///
+    ///     +---- b ----+
+    ///    /             \
+    ///   /     /   \     \
+    ///
+    ///  c <~~ d ~~> e ~~> f
+    ///          \       /
+    ///           +~~>~~+
+    /// In this case C and E use a service provided by D and
+    /// F uses a services provided by E and D, shutdown order should be F must
+    /// stop before E and {C,E,F} must stop before D. C may stop before or
+    /// after either of {F, E}.
+    #[fuchsia_async::run_singlethreaded(test)]
+    async fn shutdown_with_multiple_out_multiple_in() {
+        let components = vec![
+            (
+                "root",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "a".to_string(),
+                        url: "test:///a".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "a",
+                ComponentDecl {
+                    children: vec![ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Eager,
+                    }],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "b",
+                ComponentDecl {
+                    children: vec![
+                        ChildDecl {
+                            name: "c".to_string(),
+                            url: "test:///c".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "d".to_string(),
+                            url: "test:///d".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "e".to_string(),
+                            url: "test:///e".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                        ChildDecl {
+                            name: "f".to_string(),
+                            url: "test:///f".to_string(),
+                            startup: fsys::StartupMode::Eager,
+                        },
+                    ],
+                    offers: vec![
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("c".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("e".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("d".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target: OfferTarget::Child("f".to_string()),
+                        }),
+                        OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                            source: OfferServiceSource::Child("e".to_string()),
+                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                            target: OfferTarget::Child("f".to_string()),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "c",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "d",
+                ComponentDecl {
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "e",
+                ComponentDecl {
+                    uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                        source: UseSource::Realm,
+                        source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                    })],
+                    exposes: vec![ExposeDecl::LegacyService(ExposeLegacyServiceDecl {
+                        source: ExposeSource::Self_,
+                        source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        target: ExposeTarget::Realm,
+                    })],
+                    ..default_component_decl()
+                },
+            ),
+            (
+                "f",
+                ComponentDecl {
+                    uses: vec![
+                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                            source: UseSource::Realm,
+                            source_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceE").unwrap(),
+                        }),
+                        UseDecl::LegacyService(UseLegacyServiceDecl {
+                            source: UseSource::Realm,
+                            source_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                            target_path: CapabilityPath::try_from("/svc/serviceD").unwrap(),
+                        }),
+                    ],
+                    ..default_component_decl()
+                },
+            ),
+        ];
+        let moniker_a: AbsoluteMoniker = vec!["a:0"].into();
+        let moniker_b: AbsoluteMoniker = vec!["a:0", "b:0"].into();
+        let moniker_c: AbsoluteMoniker = vec!["a:0", "b:0", "c:0"].into();
+        let moniker_d: AbsoluteMoniker = vec!["a:0", "b:0", "d:0"].into();
+        let moniker_e: AbsoluteMoniker = vec!["a:0", "b:0", "e:0"].into();
+        let moniker_f: AbsoluteMoniker = vec!["a:0", "b:0", "f:0"].into();
+        let test = ActionsTest::new("root", components, None).await;
+        let realm_a = test.look_up(moniker_a.clone()).await;
+        let realm_b = test.look_up(moniker_b.clone()).await;
+        let realm_c = test.look_up(moniker_c.clone()).await;
+        let realm_d = test.look_up(moniker_d.clone()).await;
+        let realm_e = test.look_up(moniker_e.clone()).await;
+        let realm_f = test.look_up(moniker_f.clone()).await;
+
+        // Component startup was eager, so they should all have an `Execution`.
+        test.model.bind(&realm_a.abs_moniker).await.expect("could not bind to a");
+        assert!(is_executing(&realm_a).await);
+        assert!(is_executing(&realm_b).await);
+        assert!(is_executing(&realm_c).await);
+        assert!(is_executing(&realm_d).await);
+        assert!(is_executing(&realm_e).await);
+        assert!(is_executing(&realm_f).await);
+
+        // Register shutdown action on "a", and wait for it. This should cause all components
+        // to shut down, in bottom-up order.
+        execute_action(test.model.clone(), realm_a.clone(), Action::Shutdown)
+            .await
+            .expect("shutdown failed");
+        assert!(is_shut_down(&realm_a).await);
+        assert!(is_shut_down(&realm_b).await);
+        assert!(is_shut_down(&realm_c).await);
+        assert!(is_shut_down(&realm_d).await);
+        assert!(is_shut_down(&realm_e).await);
+        assert!(is_shut_down(&realm_f).await);
+
+        let mut comes_after: HashMap<AbsoluteMoniker, Vec<AbsoluteMoniker>> = HashMap::new();
+        comes_after.insert(moniker_a.clone(), vec![moniker_b.clone()]);
+        // technically we could just depend on 'D' since it is the last of b's
+        // children, but we add all the children for resilence against the
+        // future
+        comes_after.insert(
+            moniker_b.clone(),
+            vec![moniker_c.clone(), moniker_d.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(
+            moniker_d.clone(),
+            vec![moniker_c.clone(), moniker_e.clone(), moniker_f.clone()],
+        );
+        comes_after.insert(moniker_c.clone(), vec![]);
+        comes_after.insert(moniker_e.clone(), vec![moniker_f.clone()]);
+        comes_after.insert(moniker_f.clone(), vec![]);
+        {
+            let events: Vec<_> = test
+                .test_hook
+                .lifecycle()
+                .into_iter()
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
+                })
+                .collect();
+
+            for e in events {
+                match e {
+                    Lifecycle::Stop(moniker) => {
+                        let dependents = comes_after.remove(&moniker).expect(&format!(
+                            "{} was unknown or shut down more than once",
+                            moniker
+                        ));
+                        for d in dependents {
+                            if comes_after.contains_key(&d) {
+                                panic!("{} stopped before its dependent {}", moniker, d);
+                            }
+                        }
+                    }
+                    _ => {
+                        panic!("Unexpected lifecycle type");
+                    }
+                }
+            }
         }
     }
 
@@ -913,9 +1529,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             let expected: Vec<_> = vec![
@@ -1001,9 +1617,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(
@@ -1147,9 +1763,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             // The leaves could be stopped in any order.
@@ -1177,9 +1793,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) => true,
+                    _ => false,
                 })
                 .collect();
             // The leaves could be stopped in any order.
@@ -1234,9 +1850,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(
@@ -1371,9 +1987,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(
@@ -1449,9 +2065,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(
@@ -1567,9 +2183,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
 
@@ -1692,9 +2308,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Stop(_) | Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             assert_eq!(
@@ -1846,9 +2462,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             // The leaves could be stopped in any order.
@@ -1876,9 +2492,9 @@ mod tests {
                 .test_hook
                 .lifecycle()
                 .into_iter()
-                .filter_map(|e| match e {
-                    Lifecycle::Destroy(_) => Some(e),
-                    _ => None,
+                .filter(|e| match e {
+                    Lifecycle::Destroy(_) => true,
+                    _ => false,
                 })
                 .collect();
             // The leaves could be stopped in any order.
