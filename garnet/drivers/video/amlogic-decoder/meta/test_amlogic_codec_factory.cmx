@@ -1,10 +1,18 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx"
+            }
+        }
+    },
     "program": {
         "binary": "test/test_amlogic_codec_factory"
     },
     "sandbox": {
         "services": [
-            "fuchsia.medicodec.CodecFactory"
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }
