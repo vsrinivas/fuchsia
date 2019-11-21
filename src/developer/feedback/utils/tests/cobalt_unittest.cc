@@ -12,6 +12,7 @@
 #include <memory>
 #include <vector>
 
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -36,7 +37,7 @@ class CobaltTest : public gtest::TestLoopFixture {
   }
 
  protected:
-  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactory> stub_logger_factory) {
+  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> stub_logger_factory) {
     stub_logger_factory_ = std::move(stub_logger_factory);
     if (stub_logger_factory_) {
       FXL_CHECK(service_directory_provider_.AddService(stub_logger_factory_->GetHandler()) ==
@@ -50,11 +51,11 @@ class CobaltTest : public gtest::TestLoopFixture {
   }
 
   void CheckStubLastEvents(uint32_t metric_id, uint32_t event_code) {
-    EXPECT_EQ(stub_logger_factory_->last_metric_id(), metric_id);
-    EXPECT_EQ(stub_logger_factory_->last_event_code(), event_code);
+    EXPECT_EQ(stub_logger_factory_->LastMetricId(), metric_id);
+    EXPECT_EQ(stub_logger_factory_->LastEventCode(), event_code);
   }
 
-  bool WasLogEventCalled() { return stub_logger_factory_->was_log_event_called(); }
+  bool WasLogEventCalled() { return stub_logger_factory_->WasLogEventCalled(); }
 
   void CloseAllConnections() { stub_logger_factory_->CloseAllConnections(); }
   void CloseFactoryConnection() { stub_logger_factory_->CloseFactoryConnection(); }
@@ -69,7 +70,7 @@ class CobaltTest : public gtest::TestLoopFixture {
 
  private:
   sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::unique_ptr<StubCobaltLoggerFactory> stub_logger_factory_;
+  std::unique_ptr<StubCobaltLoggerFactoryBase> stub_logger_factory_;
 
   // Define |next_metric_id| and |next_event_code| such that it's highly  unlikely that they'll ever
   // share the same value. Additionally, select starting values that are not the default constructed
@@ -95,19 +96,17 @@ TEST_F(CobaltTest, Check_Log) {
 }
 
 TEST_F(CobaltTest, Check_CallbackExecutes) {
-  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactory>());
+  SetUpCobaltLoggerFactory(
+      std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
 
-  // The logger will always return Status::OK due to the way logger factory was setup so a default
-  // value is used that is not Status::OK to ensure the assignment happens
-  Status log_event_status = Status::INVALID_ARGUMENTS;
+  Status log_event_status = Status::OK;
   uint32_t metric_id = NextMetricId();
   uint32_t event_code = NextEventCode();
 
   cobalt_->Log(metric_id, event_code,
                [&log_event_status](Status status) { log_event_status = status; });
   RunLoopUntilIdle();
-  CheckStubLastEvents(metric_id, event_code);
-  EXPECT_EQ(log_event_status, Status::OK);
+  EXPECT_EQ(log_event_status, Status::INVALID_ARGUMENTS);
 }
 
 TEST_F(CobaltTest, Check_LoggerLosesConnection) {
@@ -143,8 +142,8 @@ TEST_F(CobaltTest, Check_QueueReachesMaxSize) {
   // queue.
   const zx::duration delay(zx::min(1));
 
-  SetUpCobaltLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactoryDelaysReturn>(dispatcher(), delay));
+  SetUpCobaltLoggerFactory(std::make_unique<StubCobaltLoggerFactoryDelaysCallback>(
+      std::make_unique<StubCobaltLogger>(), dispatcher(), delay));
 
   uint32_t metric_id = 0;
   uint32_t event_code = 0;

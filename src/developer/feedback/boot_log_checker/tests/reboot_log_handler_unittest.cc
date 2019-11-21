@@ -14,6 +14,7 @@
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 #include "src/developer/feedback/boot_log_checker/tests/stub_network_reachability_provider.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/scoped_temp_dir.h"
@@ -50,7 +51,7 @@ class RebootLogHandlerTest : public UnitTestFixture {
     }
   }
 
-  void SetUpLoggerFactory(std::unique_ptr<StubCobaltLoggerFactory> logger_factory) {
+  void SetUpLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
     logger_factory_ = std::move(logger_factory);
     if (logger_factory_) {
       InjectServiceProvider(logger_factory_.get());
@@ -77,7 +78,7 @@ class RebootLogHandlerTest : public UnitTestFixture {
  protected:
   std::unique_ptr<StubConnectivity> network_reachability_provider_;
   std::unique_ptr<StubCrashReporter> crash_reporter_;
-  std::unique_ptr<StubCobaltLoggerFactory> logger_factory_;
+  std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
   std::string reboot_log_path_;
 
  private:
@@ -104,8 +105,8 @@ TEST_F(RebootLogHandlerTest, Succeed_KernelPanicCrashLogPresent) {
   EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), "fuchsia-kernel-panic");
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 
-  EXPECT_EQ(logger_factory_->last_metric_id(), cobalt_registry::kRebootMetricId);
-  EXPECT_EQ(logger_factory_->last_event_code(),
+  EXPECT_EQ(logger_factory_->LastMetricId(), cobalt_registry::kRebootMetricId);
+  EXPECT_EQ(logger_factory_->LastEventCode(),
             cobalt_registry::RebootMetricDimensionReason::KernelPanic);
 }
 
@@ -125,8 +126,8 @@ TEST_F(RebootLogHandlerTest, Succeed_OutOfMemoryLogPresent) {
   EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), "fuchsia-oom");
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 
-  EXPECT_EQ(logger_factory_->last_metric_id(), cobalt_registry::kRebootMetricId);
-  EXPECT_EQ(logger_factory_->last_event_code(), cobalt_registry::RebootMetricDimensionReason::Oom);
+  EXPECT_EQ(logger_factory_->LastMetricId(), cobalt_registry::kRebootMetricId);
+  EXPECT_EQ(logger_factory_->LastEventCode(), cobalt_registry::RebootMetricDimensionReason::Oom);
 }
 
 TEST_F(RebootLogHandlerTest, Succeed_UnrecognizedCrashTypeInRebootLog) {
@@ -145,8 +146,8 @@ TEST_F(RebootLogHandlerTest, Succeed_UnrecognizedCrashTypeInRebootLog) {
   EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), "fuchsia-kernel-panic");
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), reboot_log.c_str());
 
-  EXPECT_EQ(logger_factory_->last_metric_id(), cobalt_registry::kRebootMetricId);
-  EXPECT_EQ(logger_factory_->last_event_code(),
+  EXPECT_EQ(logger_factory_->LastMetricId(), cobalt_registry::kRebootMetricId);
+  EXPECT_EQ(logger_factory_->LastEventCode(),
             cobalt_registry::RebootMetricDimensionReason::KernelPanic);
 }
 
@@ -256,8 +257,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerClosesConnection) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactory>(StubCobaltLoggerFactory::FAIL_CLOSE_CONNECTIONS));
+  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactoryClosesConnection>());
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);
@@ -271,8 +271,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToCreateLogger) {
   WriteRebootLogContents();
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
-  SetUpLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactory>(StubCobaltLoggerFactory::FAIL_CREATE_LOGGER));
+  SetUpLoggerFactory(std::make_unique<StubCobaltLoggerFactoryFailsToCreateLogger>());
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);
@@ -287,7 +286,7 @@ TEST_F(RebootLogHandlerTest, Fail_CobaltLoggerFailsToLogEvent) {
   SetUpNetworkReachabilityProvider(std::make_unique<StubConnectivity>());
   SetUpCrashReporter(std::make_unique<StubCrashReporter>());
   SetUpLoggerFactory(
-      std::make_unique<StubCobaltLoggerFactory>(StubCobaltLoggerFactory::FAIL_LOG_EVENT));
+      std::make_unique<StubCobaltLoggerFactory>(std::make_unique<StubCobaltLoggerFailsLogEvent>()));
 
   fit::result<void> result = HandleRebootLog(reboot_log_path_);
   EXPECT_EQ(result.state(), kPending);

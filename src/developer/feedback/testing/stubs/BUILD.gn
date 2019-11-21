@@ -5,7 +5,14 @@
 source_set("stub_cobalt_logger_factory") {
   testonly = true
 
+  public = [
+    "stub_cobalt_logger.h",
+    "stub_cobalt_logger_factory.h",
+  ]
+
   sources = [
+    "stub_cobalt_logger.cc",
+    "stub_cobalt_logger.h",
     "stub_cobalt_logger_factory.cc",
     "stub_cobalt_logger_factory.h",
   ]
