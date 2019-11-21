@@ -100,7 +100,9 @@ impl IncomingNamespace {
                     )?;
                 }
                 cm_rust::UseDecl::Runner(_) => {
-                    return Err(ModelError::unsupported("Runner capability"))
+                    // Runner capabilities are handled in model::model,
+                    // as these are capabilities used by the framework itself
+                    // and not given to components directly.
                 }
             }
         }

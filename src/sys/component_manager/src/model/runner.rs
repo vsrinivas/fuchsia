@@ -50,6 +50,13 @@ pub enum RunnerError {
         #[fail(cause)]
         err: ClonableError,
     },
+    #[fail(display = "failed to connect to the runner: {}", err)]
+    RunnerConnectionError {
+        #[fail(cause)]
+        err: ClonableError,
+    },
+    #[fail(display = "remote runners unsupported")]
+    Unsupported,
 }
 
 impl RunnerError {
@@ -68,6 +75,10 @@ impl RunnerError {
     pub fn component_runtime_directory_error(err: impl Into<Error>) -> RunnerError {
         RunnerError::ComponentRuntimeDirectoryError { err: err.into().into() }
     }
+
+    pub fn runner_connection_error(err: impl Into<Error>) -> RunnerError {
+        RunnerError::RunnerConnectionError { err: err.into().into() }
+    }
 }
 
 /// A null runner for components without a runtime environment.
@@ -84,5 +95,31 @@ impl Runner for NullRunner {
         _server_end: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
         Box::pin(async { Ok(()) })
+    }
+}
+
+/// A runner provided by another component.
+///
+/// Currently, this is just a stub, and not actually implemented.
+///
+/// TODO(fxb/4761): Implement.
+pub struct RemoteRunner {
+    #[allow(dead_code)]
+    client: fsys::ComponentRunnerProxy,
+}
+
+impl RemoteRunner {
+    pub fn new(client: fsys::ComponentRunnerProxy) -> RemoteRunner {
+        RemoteRunner { client }
+    }
+}
+
+impl Runner for RemoteRunner {
+    fn start(
+        &self,
+        _start_info: fsys::ComponentStartInfo,
+        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
+    ) -> BoxFuture<Result<(), RunnerError>> {
+        Box::pin(async { Err(RunnerError::Unsupported) })
     }
 }

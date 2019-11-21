@@ -72,6 +72,7 @@ rustc_library("lib") {
   # above, which has the benefit of keeping unneeded deps out of the production
   # binary and allows depending on 'testonly' targets.
   test_deps = [
+    "//third_party/rust_crates:matches",
     "//src/lib/process_builder:test-util-fidl-rustc",
     "//src/sys/lib/directory_broker",
   ]

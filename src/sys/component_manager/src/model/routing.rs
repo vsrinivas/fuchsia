@@ -5,8 +5,8 @@
 use {
     crate::{capability::*, model::*},
     cm_rust::{
-        self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeSource, ExposeTarget,
-        OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
+        self, CapabilityPath, ExposeDecl, ExposeDirectoryDecl, ExposeTarget, OfferDecl,
+        OfferDirectorySource, OfferRunnerSource, OfferServiceSource, OfferStorageSource,
         StorageDecl, StorageDirectorySource, UseDecl, UseStorageDecl,
     },
     failure::format_err,
@@ -28,6 +28,14 @@ enum OfferSource<'a> {
     Directory(&'a OfferDirectorySource),
     Storage(&'a OfferStorageSource),
     Runner(&'a OfferRunnerSource),
+}
+
+/// Describes the source of a capability, for any type of capability.
+#[derive(Debug)]
+enum ExposeSource<'a> {
+    LegacyService(&'a cm_rust::ExposeSource),
+    Directory(&'a cm_rust::ExposeSource),
+    Runner(&'a cm_rust::ExposeSource),
 }
 
 /// Describes the source of a capability, as determined by `find_capability_source`
@@ -59,18 +67,26 @@ pub async fn route_use_capability<'a>(
     abs_moniker: AbsoluteMoniker,
     server_chan: zx::Channel,
 ) -> Result<(), ModelError> {
-    if let UseDecl::Storage(use_storage) = use_decl {
-        return route_and_open_storage_capability(
-            model,
-            &use_storage,
-            open_mode,
-            abs_moniker,
-            server_chan,
-        )
-        .await;
+    match use_decl {
+        UseDecl::Service(_)
+        | UseDecl::LegacyService(_)
+        | UseDecl::Directory(_)
+        | UseDecl::Runner(_) => {
+            let source = find_used_capability_source(model, use_decl, &abs_moniker).await?;
+            open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan)
+                .await
+        }
+        UseDecl::Storage(storage_decl) => {
+            route_and_open_storage_capability(
+                model,
+                storage_decl,
+                open_mode,
+                abs_moniker,
+                server_chan,
+            )
+            .await
+        }
     }
-    let source = find_used_capability_source(model, use_decl, &abs_moniker).await?;
-    open_capability_at_source(model, flags, open_mode, relative_path, source, server_chan).await
 }
 
 /// Finds the source of the expose capability used at `source_path` by
@@ -414,15 +430,15 @@ pub async fn find_exposed_root_directory_capability<'a>(
             .clone()
     };
     match &expose_dir_decl.source {
-        ExposeSource::Framework => {
+        cm_rust::ExposeSource::Framework => {
             return Err(ModelError::capability_discovery_error(format_err!(
                 "root realm cannot expose framework directories"
             )))
         }
-        ExposeSource::Self_ => {
+        cm_rust::ExposeSource::Self_ => {
             return Ok((expose_dir_decl.source_path.clone(), model.root_realm.clone()))
         }
-        ExposeSource::Child(_) => {
+        cm_rust::ExposeSource::Child(_) => {
             let mut wp = WalkPosition {
                 capability: RoutedCapability::Expose(ExposeDecl::Directory(
                     expose_dir_decl.clone(),
@@ -549,7 +565,8 @@ async fn walk_offer_chain<'a>(
             }
             OfferSource::LegacyService(OfferServiceSource::Realm)
             | OfferSource::Directory(OfferDirectorySource::Realm)
-            | OfferSource::Storage(OfferStorageSource::Realm) => {
+            | OfferSource::Storage(OfferStorageSource::Realm)
+            | OfferSource::Runner(OfferRunnerSource::Realm) => {
                 // The offered capability comes from the realm, so follow the
                 // parent
                 pos.capability = RoutedCapability::Offer(offer.clone());
@@ -566,8 +583,29 @@ async fn walk_offer_chain<'a>(
                     current_realm.clone(),
                 )));
             }
+            OfferSource::Runner(OfferRunnerSource::Self_) => {
+                // The offered capability comes from the current component.
+                // Find the current component's Runner declaration.
+                let cap = RoutedCapability::Offer(offer.clone());
+                return Ok(Some(CapabilitySource::Component(
+                    RoutedCapability::Runner(
+                        cap.find_runner_source(decl)
+                            .ok_or(ModelError::capability_discovery_error(format_err!(
+                                concat!(
+                                    "component {} attempted to offer runner {:?}, ",
+                                    "but no matching runner declaration was found"
+                                ),
+                                pos.moniker(),
+                                cap.source_name().unwrap(),
+                            )))?
+                            .clone(),
+                    ),
+                    current_realm.clone(),
+                )));
+            }
             OfferSource::LegacyService(OfferServiceSource::Child(child_name))
-            | OfferSource::Directory(OfferDirectorySource::Child(child_name)) => {
+            | OfferSource::Directory(OfferDirectorySource::Child(child_name))
+            | OfferSource::Runner(OfferRunnerSource::Child(child_name)) => {
                 // The offered capability comes from a child, break the loop
                 // and begin walking the expose chain.
                 pos.capability = RoutedCapability::Offer(offer.clone());
@@ -590,10 +628,6 @@ async fn walk_offer_chain<'a>(
                     storage.clone(),
                     current_realm.clone(),
                 )));
-            }
-            OfferSource::Runner(_) => {
-                // TODO(fxb/4761) implement runner support
-                return Err(ModelError::unsupported("runner capability"));
             }
         }
     }
@@ -631,10 +665,9 @@ async fn walk_expose_chain<'a>(
             )))?;
         let (source, target) = match expose {
             ExposeDecl::Service(_) => return Err(ModelError::unsupported("Service capability")),
-            ExposeDecl::LegacyService(ls) => (&ls.source, &ls.target),
-            ExposeDecl::Directory(d) => (&d.source, &d.target),
-            // TODO(fxb/4761): Implement runner routing.
-            ExposeDecl::Runner(_) => return Err(ModelError::unsupported("runner capability")),
+            ExposeDecl::LegacyService(ls) => (ExposeSource::LegacyService(&ls.source), &ls.target),
+            ExposeDecl::Directory(d) => (ExposeSource::Directory(&d.source), &d.target),
+            ExposeDecl::Runner(r) => (ExposeSource::Runner(&r.source), &r.target),
         };
         if target != &ExposeTarget::Realm {
             return Err(ModelError::capability_discovery_error(format_err!(
@@ -644,7 +677,8 @@ async fn walk_expose_chain<'a>(
             )));
         }
         match source {
-            ExposeSource::Self_ => {
+            ExposeSource::LegacyService(cm_rust::ExposeSource::Self_)
+            | ExposeSource::Directory(cm_rust::ExposeSource::Self_) => {
                 // The offered capability comes from the current component, return our
                 // current location in the tree.
                 return Ok(CapabilitySource::Component(
@@ -652,7 +686,29 @@ async fn walk_expose_chain<'a>(
                     current_realm.clone(),
                 ));
             }
-            ExposeSource::Child(child_name) => {
+            ExposeSource::Runner(cm_rust::ExposeSource::Self_) => {
+                // The exposed capability comes from the current component.
+                // Find the current component's Runner declaration.
+                let cap = RoutedCapability::Expose(expose.clone());
+                return Ok(CapabilitySource::Component(
+                    RoutedCapability::Runner(
+                        cap.find_runner_source(realm_state.decl())
+                            .ok_or(ModelError::capability_discovery_error(format_err!(
+                                concat!(
+                                    "component {} attempted to expose runner {:?}, ",
+                                    "but no matching runner declaration was found"
+                                ),
+                                pos.moniker(),
+                                cap.source_name().unwrap(),
+                            )))?
+                            .clone(),
+                    ),
+                    current_realm.clone(),
+                ));
+            }
+            ExposeSource::LegacyService(cm_rust::ExposeSource::Child(child_name))
+            | ExposeSource::Directory(cm_rust::ExposeSource::Child(child_name))
+            | ExposeSource::Runner(cm_rust::ExposeSource::Child(child_name)) => {
                 // The offered capability comes from a child, so follow the child.
                 pos.capability = RoutedCapability::Expose(expose.clone());
                 let partial = PartialMoniker::new(child_name.to_string(), None);
@@ -666,7 +722,8 @@ async fn walk_expose_chain<'a>(
                     )?);
                 continue;
             }
-            ExposeSource::Framework => {
+            ExposeSource::LegacyService(cm_rust::ExposeSource::Framework)
+            | ExposeSource::Directory(cm_rust::ExposeSource::Framework) => {
                 let capability = ComponentManagerCapability::framework_from_expose_decl(expose)
                     .map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(
@@ -676,6 +733,12 @@ async fn walk_expose_chain<'a>(
                         ))
                     })?;
                 return Ok(CapabilitySource::Framework(capability, current_realm.clone()));
+            }
+            ExposeSource::Runner(cm_rust::ExposeSource::Framework) => {
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "component {} attempted to use runner from framework",
+                    pos.moniker().clone()
+                )));
             }
         }
     }

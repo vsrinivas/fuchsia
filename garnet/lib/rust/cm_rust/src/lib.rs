@@ -344,6 +344,11 @@ impl ComponentDecl {
     pub fn find_collection<'a>(&'a self, collection_name: &str) -> Option<&'a CollectionDecl> {
         self.collections.iter().find(|c| c.name == collection_name)
     }
+
+    /// Returns the `RunnerDecl` corresponding to `runner_name`.
+    pub fn find_runner_source<'a>(&'a self, runner_name: &str) -> Option<&'a RunnerDecl> {
+        self.runners.iter().find(|s| &s.name == runner_name)
+    }
 }
 
 #[derive(Debug, Clone, PartialEq)]
@@ -588,6 +593,10 @@ pub struct CapabilityName(pub String);
 impl CapabilityName {
     pub fn to_string(&self) -> String {
         self.0.to_string()
+    }
+
+    pub fn str(&self) -> &str {
+        &self.0
     }
 }
 

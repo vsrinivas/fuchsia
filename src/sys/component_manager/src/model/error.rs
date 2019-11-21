@@ -62,6 +62,8 @@ pub enum ModelError {
     RemoveEntryError { entry_name: String },
     #[fail(display = "open directory error")]
     OpenDirectoryError { moniker: AbsoluteMoniker, relative_path: String },
+    #[fail(display = "insufficient resources to complete operation")]
+    InsufficientResources,
 }
 
 impl ModelError {

@@ -4,10 +4,11 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseRunnerDecl, UseStorageDecl},
-    fidl::endpoints::Proxy,
+    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    fidl::endpoints::{create_endpoints, Proxy},
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
+    futures::future::{BoxFuture, FutureExt},
     futures::lock::{Mutex, MutexLockFuture},
     std::convert::TryInto,
     std::iter::Iterator,
@@ -130,36 +131,60 @@ impl Realm {
     }
 
     /// Resolves a runner for this component.
-    pub async fn resolve_runner(
-        &self,
-        model: &Model,
-    ) -> Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError> {
-        // Fetch component declaration.
-        let state = self.lock_state().await;
-        let decl = state.as_ref().expect("resolve_runner: not resolved").decl();
+    //
+    // We use an explicit `BoxFuture` here instead of a standard async
+    // function because we may need to recurse to resolve the runner:
+    //
+    //   resolve_runner -> route_use_capability -> bind -> resolve_runner
+    //
+    // Rust 1.40 doesn't support recursive async functions, so we
+    // manually write out the type.
+    pub fn resolve_runner<'a>(
+        &'a self,
+        model: &'a Model,
+    ) -> BoxFuture<'a, Result<Arc<dyn Runner + Send + Sync + 'static>, ModelError>> {
+        async move {
+            // Fetch component declaration.
+            let state = self.lock_state().await;
+            let decl = state.as_ref().expect("resolve_runner: not resolved").decl();
 
-        // Return an error if there are any explicit "use" runner declarations.
-        //
-        // TODO(fxb/4761): Resolve the runner component if we find one.
-        for use_decl in decl.uses.iter() {
-            if let UseDecl::Runner(UseRunnerDecl { source_name }) = use_decl {
-                return Err(ModelError::unsupported(format!(
-                    "attempted to use custom runner '{}', but they are not implemented yet",
-                    source_name
-                )));
+            // Find any explicit "use" runner declaration, resolve that.
+            let runner_decl = decl.uses.iter().find_map(|u| match u {
+                UseDecl::Runner(runner) => Some(runner.clone()),
+                _ => return None,
+            });
+            if let Some(runner_decl) = runner_decl {
+                // Open up a channel to the runner.
+                let (client_channel, server_channel) =
+                    create_endpoints::<fsys::ComponentRunnerMarker>()
+                        .map_err(|_| ModelError::InsufficientResources)?;
+                routing::route_use_capability(
+                    &model,
+                    /*flags=*/ 0,
+                    /*open_mode=*/ 0,
+                    String::new(),
+                    &UseDecl::Runner(runner_decl),
+                    self.abs_moniker.clone(),
+                    server_channel.into_channel(),
+                )
+                .await?;
+
+                return Ok(Arc::new(RemoteRunner::new(client_channel.into_proxy().unwrap()))
+                    as Arc<dyn Runner + Send + Sync>);
+            }
+
+            // Otherwise, fall back to some defaults.
+            //
+            // If we have a binary defined, use the ELF loader. Otherwise, just use the
+            // NullRunner.
+            //
+            // TODO(fxb/4761): We want all runners to be routed. This should eventually be removed.
+            match decl.program {
+                Some(_) => Ok(model.elf_runner.clone()),
+                None => Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>),
             }
         }
-
-        // Otherwise, fall back to some defaults.
-        //
-        // If we have a binary defined, use the ELF loader. Otherwise, just use the
-        // NullRunner.
-        //
-        // TODO(fxb/4761): We want all runners to be routed. This should eventually be removed.
-        match decl.program {
-            Some(_) => Ok(model.elf_runner.clone()),
-            None => Ok(Arc::new(NullRunner {}) as Arc<dyn Runner + Send + Sync>),
-        }
+        .boxed()
     }
 
     /// Register an action on a realm.

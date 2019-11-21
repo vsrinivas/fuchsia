@@ -1,23 +1,23 @@
 use {
     crate::model::*,
     cm_rust::{
-        self, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
-        ExposeLegacyServiceDecl, ExposeServiceDecl, OfferDecl, OfferDirectoryDecl,
-        OfferLegacyServiceDecl, OfferServiceDecl, OfferTarget, StorageDecl, UseDecl,
-        UseDirectoryDecl, UseLegacyServiceDecl,
+        self, CapabilityName, CapabilityPath, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
+        ExposeLegacyServiceDecl, ExposeRunnerDecl, ExposeServiceDecl, OfferDecl,
+        OfferDirectoryDecl, OfferLegacyServiceDecl, OfferRunnerDecl, OfferServiceDecl, OfferTarget,
+        RunnerDecl, StorageDecl, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl,
     },
     fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,
 };
 
-/// A capability being routed, which is represented by one of `use`, `offer`, or `expose`,
-/// or `storage`.
+/// A capability being routed.
 #[derive(Debug)]
 pub enum RoutedCapability {
     Use(UseDecl),
     Expose(ExposeDecl),
     Offer(OfferDecl),
     Storage(StorageDecl),
+    Runner(RunnerDecl),
 }
 
 impl RoutedCapability {
@@ -45,7 +45,21 @@ impl RoutedCapability {
                 OfferDecl::Directory(OfferDirectoryDecl { source_path, .. }) => Some(source_path),
                 _ => None,
             },
+            RoutedCapability::Runner(RunnerDecl { source_path, .. }) => Some(source_path),
             RoutedCapability::Storage(_) => None,
+        }
+    }
+
+    /// Return the source name of the capability, if one exists.
+    pub fn source_name<'a>(&self) -> Option<&CapabilityName> {
+        match self {
+            RoutedCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
+                source_name, ..
+            })) => Some(source_name),
+            RoutedCapability::Offer(OfferDecl::Runner(OfferRunnerDecl { source_name, .. })) => {
+                Some(source_name)
+            }
+            _ => None,
         }
     }
 
@@ -70,6 +84,15 @@ impl RoutedCapability {
                 RoutedCapability::Expose(ExposeDecl::Directory(parent_expose)),
                 ExposeDecl::Directory(expose),
             ) => parent_expose.source_path == expose.target_path,
+            // Runner exposed to me that has a matching `expose` or `offer`.
+            (
+                RoutedCapability::Offer(OfferDecl::Runner(parent_offer)),
+                ExposeDecl::Runner(expose),
+            ) => parent_offer.source_name == expose.target_name,
+            (
+                RoutedCapability::Expose(ExposeDecl::Runner(parent_expose)),
+                ExposeDecl::Runner(expose),
+            ) => parent_expose.source_name == expose.target_name,
             // Directory exposed to me that matches a `storage` declaration which consumes it.
             (RoutedCapability::Storage(parent_storage), ExposeDecl::Directory(expose)) => {
                 parent_storage.source_path == expose.target_path
@@ -173,6 +196,24 @@ impl RoutedCapability {
                 offer.target(),
                 offer.type_(),
             ),
+            // Runners offered from parent.
+            (RoutedCapability::Use(UseDecl::Runner(child_use)), OfferDecl::Runner(offer)) => {
+                Self::is_offer_runner_match(
+                    child_moniker,
+                    &child_use.source_name,
+                    &offer.target,
+                    &offer.target_name,
+                )
+            }
+            (
+                RoutedCapability::Offer(OfferDecl::Runner(child_offer)),
+                OfferDecl::Runner(parent_offer),
+            ) => Self::is_offer_runner_match(
+                child_moniker,
+                &child_offer.source_name,
+                &parent_offer.target,
+                &parent_offer.target_name,
+            ),
             _ => false,
         })
     }
@@ -210,6 +251,12 @@ impl RoutedCapability {
             .collect()
     }
 
+    /// Given a offer/expose of a Runner from `Self`, return the associated RunnerDecl,
+    /// if it exists.
+    pub fn find_runner_source<'a>(&self, decl: &'a ComponentDecl) -> Option<&'a RunnerDecl> {
+        decl.find_runner_source(self.source_name()?.str())
+    }
+
     fn is_offer_service_match(
         child_moniker: &ChildMoniker,
         paths: &HashSet<&CapabilityPath>,
@@ -239,6 +286,15 @@ impl RoutedCapability {
         // ...and the child/collection names must match.
         target_matches_moniker(parent_target, child_moniker)
     }
+
+    fn is_offer_runner_match(
+        child_moniker: &ChildMoniker,
+        source_name: &CapabilityName,
+        target: &OfferTarget,
+        target_name: &CapabilityName,
+    ) -> bool {
+        source_name == target_name && target_matches_moniker(target, child_moniker)
+    }
 }
 
 /// Returns if `parent_target` refers to a the child `child_moniker`.
@@ -258,7 +314,8 @@ mod tests {
         super::*,
         crate::model::testing::test_helpers::default_component_decl,
         cm_rust::{
-            ExposeSource, ExposeTarget, OfferServiceSource, ServiceSource, StorageDirectorySource,
+            ExposeRunnerDecl, ExposeSource, ExposeTarget, OfferServiceSource, ServiceSource,
+            StorageDirectorySource, UseRunnerDecl,
         },
     };
 
@@ -403,6 +460,76 @@ mod tests {
         let moniker = ChildMoniker::new("child".to_string(), None, 0);
         let sources = capability.find_offer_service_sources(&decl, &moniker);
         assert_eq!(sources, vec![&net_service, &log_service])
+    }
+
+    #[test]
+    fn find_offer_source_runner() {
+        // Parents offers runner named "elf" to "child".
+        let parent_decl = ComponentDecl {
+            offers: vec![
+                // Offer as "elf" to child "child".
+                OfferDecl::Runner(cm_rust::OfferRunnerDecl {
+                    source: cm_rust::OfferRunnerSource::Self_,
+                    source_name: "source".into(),
+                    target: cm_rust::OfferTarget::Child("child".to_string()),
+                    target_name: "elf".into(),
+                }),
+            ],
+            ..default_component_decl()
+        };
+
+        // A child named "child" uses a runner "elf" offered by its parent. Should successfully
+        // match the declaration.
+        let child_cap =
+            RoutedCapability::Use(UseDecl::Runner(UseRunnerDecl { source_name: "elf".into() }));
+        assert_eq!(
+            child_cap.find_offer_source(&parent_decl, &"child:0".into()),
+            Some(&parent_decl.offers[0])
+        );
+
+        // Mismatched child name.
+        assert_eq!(child_cap.find_offer_source(&parent_decl, &"other-child:0".into()), None);
+
+        // Mismatched cap name.
+        let misnamed_child_cap =
+            RoutedCapability::Use(UseDecl::Runner(UseRunnerDecl { source_name: "dwarf".into() }));
+        assert_eq!(misnamed_child_cap.find_offer_source(&parent_decl, &"child:0".into()), None);
+    }
+
+    #[test]
+    fn find_expose_source_runner() {
+        // A child named "child" exposes a runner "elf" to its parent.
+        let child_decl = ComponentDecl {
+            exposes: vec![
+                // Expose as "elf" to Realm.
+                ExposeDecl::Runner(cm_rust::ExposeRunnerDecl {
+                    source: cm_rust::ExposeSource::Self_,
+                    source_name: "source".into(),
+                    target: cm_rust::ExposeTarget::Realm,
+                    target_name: "elf".into(),
+                }),
+            ],
+            ..default_component_decl()
+        };
+
+        // A parent exposes a runner "elf" with a child as its source. Should successfully match the
+        // declaration.
+        let parent_cap = RoutedCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
+            source: ExposeSource::Child("child".into()),
+            source_name: "elf".into(),
+            target: ExposeTarget::Realm,
+            target_name: "parent_elf".into(),
+        }));
+        assert_eq!(parent_cap.find_expose_source(&child_decl), Some(&child_decl.exposes[0]));
+
+        // If the name is mismatched, we shouldn't find anything though.
+        let misnamed_parent_cap = RoutedCapability::Expose(ExposeDecl::Runner(ExposeRunnerDecl {
+            source: ExposeSource::Child("child".into()),
+            source_name: "dwarf".into(),
+            target: ExposeTarget::Realm,
+            target_name: "parent_elf".into(),
+        }));
+        assert_eq!(misnamed_parent_cap.find_expose_source(&child_decl), None);
     }
 
     #[test]

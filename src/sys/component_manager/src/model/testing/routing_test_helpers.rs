@@ -458,6 +458,11 @@ impl RoutingTest {
                 out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
             }
         }
+        for runner in decl.runners.iter() {
+            if runner.source == cm_rust::RunnerSource::Self_ {
+                out_dir.get_or_insert(OutDir::new()).add_runner_service(runner.source_path.clone())
+            }
+        }
         if let Some(out_dir) = out_dir {
             runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
         }
@@ -870,11 +875,12 @@ pub struct OutDir {
     // multithreaded rust vfs is implemented.
     host_service: bool,
     test_dir_proxy: Option<Arc<DirectoryProxy>>,
+    runners: Vec<CapabilityPath>,
 }
 
 impl OutDir {
     pub fn new() -> OutDir {
-        OutDir { host_service: false, test_dir_proxy: None }
+        OutDir { host_service: false, test_dir_proxy: None, runners: Vec::new() }
     }
     /// Adds `svc/foo` to the out directory, which implements `fidl.examples.echo.Echo`.
     pub fn add_service(&mut self) {
@@ -890,6 +896,11 @@ impl OutDir {
         ));
     }
 
+    /// Adds a runner to the out directory at the given path.
+    pub fn add_runner_service(&mut self, service_path: CapabilityPath) {
+        self.runners.push(service_path);
+    }
+
     /// Build the output directory.
     async fn build_out_dir(&self) -> Result<directory::simple::Simple<'_>, failure::Error> {
         let mut tree = TreeBuilder::empty_dir();
@@ -898,6 +909,16 @@ impl OutDir {
         if self.host_service {
             tree.add_entry(&["svc", "foo"], DirectoryBroker::new(Box::new(Self::echo_server_fn)))?;
             tree.add_entry(&["svc", "file"], read_only(|| Ok(b"hippos".to_vec())))?;
+        }
+
+        // Add any required runner services.
+        for runner in self.runners.iter() {
+            // TODO(fxb/4761): We use an echo service here for now, but should actually
+            // be exposing a ComponentRunner service. None of our tests notice yet,
+            // though.
+            let path = runner.split();
+            let path = path.iter().map(|x| x as &str).collect::<Vec<_>>();
+            tree.add_entry(&path, DirectoryBroker::new(Box::new(Self::echo_server_fn)))?;
         }
 
         // Add `data/` if required.

@@ -13,10 +13,11 @@ use {
         },
     },
     cm_rust::{
-        self, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
-        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, OfferDecl,
-        OfferDirectoryDecl, OfferDirectorySource, OfferLegacyServiceDecl, OfferServiceSource,
-        OfferTarget, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseSource,
+        self, CapabilityName, CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
+        ExposeDirectoryDecl, ExposeLegacyServiceDecl, ExposeRunnerDecl, ExposeSource, ExposeTarget,
+        OfferDecl, OfferDirectoryDecl, OfferDirectorySource, OfferLegacyServiceDecl,
+        OfferRunnerDecl, OfferRunnerSource, OfferServiceSource, OfferTarget, RunnerDecl,
+        RunnerSource, UseDecl, UseDirectoryDecl, UseLegacyServiceDecl, UseRunnerDecl, UseSource,
     },
     failure::Error,
     fidl::endpoints::ServerEnd,
@@ -24,6 +25,7 @@ use {
     fuchsia_zircon as zx,
     futures::{future::BoxFuture, lock::Mutex, TryStreamExt},
     log::*,
+    matches::assert_matches,
     std::{
         convert::{TryFrom, TryInto},
         sync::{Arc, Weak},
@@ -1781,6 +1783,164 @@ async fn use_in_collection_not_offered() {
         CheckUse::LegacyService { path: default_service_capability(), should_succeed: false },
     )
     .await;
+}
+
+///   a
+///    \
+///     b
+///      \
+///       c
+///
+/// a: declares runner "elf" as service "/svc/runner" from self.
+/// a: offers runner "elf" from self to "b" as "dwarf".
+/// b: offers runner "dwarf" from parent to "c" as "hobbit".
+/// c: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_grandparent() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Runner(OfferRunnerDecl {
+                    source: OfferRunnerSource::Self_,
+                    source_name: CapabilityName("elf".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                    target_name: CapabilityName("dwarf".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                runners: vec![RunnerDecl {
+                    name: "elf".to_string(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                offers: vec![OfferDecl::Runner(OfferRunnerDecl {
+                    source: OfferRunnerSource::Realm,
+                    source_name: CapabilityName("dwarf".to_string()),
+                    target: OfferTarget::Child("c".to_string()),
+                    target_name: CapabilityName("hobbit".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "c".to_string(),
+                    url: "test:///c".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "c",
+            ComponentDecl {
+                uses: vec![UseDecl::Runner(UseRunnerDecl {
+                    source_name: CapabilityName("hobbit".to_string()),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+
+    // Try to bind "c:0". We expect to invoke a custom runner, which will
+    // return "RunnerError::Unsupported" at this time.
+    //
+    // TODO(fxb/4761): Implement support for custom runners, turning this
+    // error into a success.
+    let universe = RoutingTest::new("a", components).await;
+    assert_matches!(
+        universe
+            .bind_instance(&vec!["b:0", "c:0"].into())
+            .await
+            .expect_err("expected bind to fail")
+            .downcast::<ModelError>(),
+        Ok(ModelError::RunnerError { err: RunnerError::Unsupported })
+    );
+}
+
+///   a
+///  / \
+/// r   b
+///
+/// r: declares runner "elf" as service "/svc/runner" from self.
+/// r: exposes runner "elf" to "a" as "dwarf".
+/// a: offers runner "dwarf" from "r" to "b" as "hobbit".
+/// b: uses runner "hobbit".
+#[fuchsia_async::run_singlethreaded(test)]
+async fn use_runner_from_silbing() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::Runner(OfferRunnerDecl {
+                    source: OfferRunnerSource::Child("r".to_string()),
+                    source_name: CapabilityName("dwarf".to_string()),
+                    target: OfferTarget::Child("b".to_string()),
+                    target_name: CapabilityName("hobbit".to_string()),
+                })],
+                children: vec![
+                    ChildDecl {
+                        name: "b".to_string(),
+                        url: "test:///b".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                    ChildDecl {
+                        name: "r".to_string(),
+                        url: "test:///r".to_string(),
+                        startup: fsys::StartupMode::Lazy,
+                    },
+                ],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "r",
+            ComponentDecl {
+                exposes: vec![ExposeDecl::Runner(ExposeRunnerDecl {
+                    source: ExposeSource::Self_,
+                    source_name: CapabilityName("elf".to_string()),
+                    target: ExposeTarget::Realm,
+                    target_name: CapabilityName("dwarf".to_string()),
+                })],
+                runners: vec![RunnerDecl {
+                    name: "elf".to_string(),
+                    source: RunnerSource::Self_,
+                    source_path: CapabilityPath::try_from("/svc/runner").unwrap(),
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::Runner(UseRunnerDecl {
+                    source_name: CapabilityName("hobbit".to_string()),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+
+    // Try to bind "b:0". We expect to invoke a custom runner, which will
+    // return "RunnerError::Unsupported" at this time.
+    //
+    // TODO(fxb/4761): Implement support for custom runners, turning this
+    // error into a success.
+    let universe = RoutingTest::new("a", components).await;
+    assert_matches!(
+        universe
+            .bind_instance(&vec!["b:0"].into())
+            .await
+            .expect_err("expected bind to fail")
+            .downcast::<ModelError>(),
+        Ok(ModelError::RunnerError { err: RunnerError::Unsupported })
+    );
 }
 
 #[fuchsia_async::run_singlethreaded(test)]
