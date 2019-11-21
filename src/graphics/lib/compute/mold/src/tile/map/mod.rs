@@ -16,9 +16,9 @@ use fuchsia_trace::{self, duration};
 use rayon::prelude::*;
 
 use crate::{
-    layer::Layer,
+    layer::{Content, Layer},
     point::Point,
-    raster::{Raster, RasterSegments},
+    raster::RasterSegments,
     segment::Segment,
     tile::{Op, Tile, TILE_SIZE},
     PIXEL_WIDTH,
@@ -59,19 +59,19 @@ impl Tiles {
         height: usize,
         segment: &Segment<i32>,
         segment_range: Range<usize>,
-        raster: &Raster,
+        content: &Content,
         is_partial: bool,
     ) {
         let p0 = segment.p0;
         let segment = segment.translate(Point::new(
-            raster.translation().x * PIXEL_WIDTH,
-            raster.translation().y * PIXEL_WIDTH,
+            content.translation().x * PIXEL_WIDTH,
+            content.translation().y * PIXEL_WIDTH,
         ));
         let (i, j) = segment.tile();
         let i = i.max(0);
 
         if 0 <= j && (j as usize) < height {
-            raster.contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
+            content.contour().for_each_tile_from(self, i as usize, j as usize, |tile| {
                 if !is_partial || tile.needs_render {
                     tile.push_segment(p0, segment_range.clone());
                 }
@@ -130,7 +130,7 @@ impl<'m> Layers<'m> {
     }
 
     pub fn segments(&self, id: &u32) -> Option<&RasterSegments> {
-        self.layers.get(id).map(|layer| layer.raster.segments())
+        self.layers.get(id).map(|layer| layer.content.segments())
     }
 
     pub fn ops(&self, id: &u32) -> Option<&[Op]> {
@@ -139,8 +139,8 @@ impl<'m> Layers<'m> {
 }
 
 // This is safe as long as:
-//   1. The `Rc` in `Layer.raster` is not cloned.
-//   2. The `Cell` in the `Layer.new_segments` is not mutated.
+//   1. The potential `Rc` in `Layer.content` is not cloned.
+//   2. The `Cell` in the `Layer.needs_render` is not mutated.
 //
 // The interface above is made to ensure these requirements. The reference to the `HashMap` is
 // mutable in oder to guarantee unique access without having to move th whole `HashMap` in and out
@@ -198,29 +198,29 @@ impl Map {
     }
 
     pub fn global(&mut self, id: u32, ops: Vec<Op>) {
-        self.print(id, Layer::new(Raster::maxed(), ops));
+        self.print(id, Layer::maxed(ops));
     }
 
-    fn touch_tiles(&mut self, raster: Raster) {
-        raster.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+    fn touch_tiles(&mut self, content: &Content) {
+        content.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
     }
 
     pub fn print(&mut self, id: u32, layer: Layer) {
         if !layer.ops.is_empty() && self.layers.get(&id) != Some(&layer) {
             if let Some(old_layer) = self.layers.get(&id) {
-                let raster = old_layer.raster.clone();
-                self.touch_tiles(raster);
+                let content = old_layer.content.clone();
+                self.touch_tiles(&content);
             }
 
             self.layers.insert(id, layer.clone());
-            self.touch_tiles(layer.raster);
+            self.touch_tiles(&layer.content);
         }
     }
 
     pub fn remove(&mut self, id: u32) {
         if let Some(layer) = self.layers.get(&id) {
-            let raster = layer.raster.clone();
-            self.touch_tiles(raster);
+            let content = layer.content.clone();
+            self.touch_tiles(&content);
             self.layers.remove(&id);
         }
     }
@@ -228,14 +228,14 @@ impl Map {
     fn print_changes(tiles: &mut Tiles, height: usize, id: u32, layer: &Layer) {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::print_changes");
-        let raster = layer.raster.clone();
-        raster.contour().for_each_tile(tiles, |tile| {
+        let content = layer.content.clone();
+        content.contour().for_each_tile(tiles, |tile| {
             if !layer.is_partial.get() || tile.needs_render {
-                tile.new_layer(id, raster.translation());
+                tile.new_layer(id, content.translation());
             }
         });
 
-        let mut segments = raster.segments().iter();
+        let mut segments = content.segments().iter();
         let mut prev_index = segments.index();
 
         while let Some(segment) = segments.next() {
@@ -243,7 +243,7 @@ impl Map {
                 height,
                 &segment,
                 prev_index..segments.index(),
-                &raster,
+                &content,
                 layer.is_partial.get(),
             );
             prev_index = segments.index();
@@ -254,9 +254,9 @@ impl Map {
         #[cfg(feature = "tracing")]
         duration!("gfx", "Map::reprint_all");
         for layer in self.layers.values() {
-            if layer.new_segments.get() {
-                let raster = layer.raster.clone();
-                raster.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
+            if layer.needs_render.get() {
+                let content = layer.content.clone();
+                content.contour().for_each_tile(&mut self.tiles, |tile| tile.needs_render = true);
             }
         }
 
@@ -265,7 +265,7 @@ impl Map {
                 for node in &tile.layers {
                     if let LayerNode::Layer(id, _) = node {
                         if let Some(layer) = self.layers.get(id) {
-                            if !layer.new_segments.get() {
+                            if !layer.needs_render.get() {
                                 layer.is_partial.set(true);
                             }
                         }
@@ -278,10 +278,10 @@ impl Map {
         }
 
         for (id, layer) in &self.layers {
-            if layer.new_segments.get() || layer.is_partial.get() {
+            if layer.needs_render.get() || layer.is_partial.get() {
                 Self::print_changes(&mut self.tiles, self.height, *id, layer);
 
-                layer.new_segments.set(false);
+                layer.needs_render.set(false);
                 layer.is_partial.set(false);
             }
         }
@@ -355,7 +355,7 @@ impl ColorBuffer for BitMap {
 pub(crate) mod tests {
     use super::*;
 
-    use crate::{Path, Point};
+    use crate::{Path, Point, Raster};
 
     const HALF: usize = TILE_SIZE / 2;
 

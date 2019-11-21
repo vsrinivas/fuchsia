@@ -69,8 +69,8 @@ pub struct RasterSegments {
 }
 
 impl RasterSegments {
-    pub fn new() -> Self {
-        Self { commands: vec![] }
+    pub const fn new() -> Self {
+        Self { commands: Vec::new() }
     }
 
     pub fn iter(&self) -> RasterSegmentsIter {

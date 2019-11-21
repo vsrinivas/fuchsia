@@ -116,13 +116,6 @@ impl Raster {
         Self::from_segments(iter::empty())
     }
 
-    pub(crate) fn maxed() -> Self {
-        let inner =
-            RasterInner { segments: RasterSegments::new(), contour: ContourBuilder::maxed() };
-
-        Self { inner: Rc::new(inner), translation: Point::new(0, 0), translated_contour: None }
-    }
-
     /// Creates a new raster from an `Iterator` of `paths`.
     ///
     /// # Examples

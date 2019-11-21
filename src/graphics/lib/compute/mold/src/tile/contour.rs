@@ -58,11 +58,11 @@ impl ContourBuilder {
         Self { tiles: FxHashSet::default() }
     }
 
-    pub fn empty() -> Contour {
-        Contour::Tiles(vec![])
+    pub const fn empty() -> Contour {
+        Contour::Tiles(Vec::new())
     }
 
-    pub fn maxed() -> Contour {
+    pub const fn maxed() -> Contour {
         Contour::Maxed
     }
 
