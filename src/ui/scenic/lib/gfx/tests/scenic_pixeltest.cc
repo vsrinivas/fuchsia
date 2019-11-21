@@ -462,7 +462,16 @@ TEST_F(ScenicPixelTest, PoseBuffer) {
   device.freeMemory(memory);
 }
 
-TEST_F(ScenicPixelTest, Opacity) {
+struct OpacityTestParams {
+  float opacity;
+  scenic::Color expected_color;
+};
+
+class ParameterizedOpacityPixelTest : public ScenicPixelTest,
+                                      public ::testing::WithParamInterface<OpacityTestParams> {
+};
+
+TEST_P(ParameterizedOpacityPixelTest, CheckPixels) {
   constexpr auto COMPARE_COLOR = [](const scenic::Color& color_1, const scenic::Color& color_2,
                                     int max_error) {
     EXPECT_TRUE(abs(color_1.r - color_2.r) <= max_error &&
@@ -471,35 +480,35 @@ TEST_F(ScenicPixelTest, Opacity) {
         << "Color " << color_1 << " and " << color_2 << " don't match.";
   };
 
-  constexpr int kNumTests = 3;
+  OpacityTestParams test_params = GetParam();
 
-  // We use the same background/foreground color for each test iteration, but
-  // vary the opacity.  When the opacity is 0% we expect the pure background
-  // color, and when it is 100% we expect the pure foreground color.  When
-  // opacity is 50% we expect a blend of the two.
-  float opacities[kNumTests] = {0.f, 0.5f, 1.f};
-  scenic::Color expected_colors[kNumTests] = {
-      {0xff, 0x00, 0xf0, 0xff}, {0x80, 0x80, 0x80, 0xff}, {0x00, 0xff, 0x0f, 0xff}};
+  scenic::OpacityView view(CreatePresentationContext());
 
-  for (int i = 0; i < kNumTests; ++i) {
-    scenic::OpacityView view(CreatePresentationContext());
+  view.set_background_color(0xff, 0x00, 0xf0);
+  view.set_foreground_color(0x00, 0xff, 0x0f);
+  view.set_foreground_opacity(test_params.opacity);
 
-    view.set_background_color(0xff, 0x00, 0xf0);
-    view.set_foreground_color(0x00, 0xff, 0x0f);
-    view.set_foreground_opacity(opacities[i]);
+  RunUntilPresent(&view);
+  scenic::Screenshot screenshot = TakeScreenshot();
+  ASSERT_FALSE(screenshot.empty());
 
-    RunUntilPresent(&view);
-    scenic::Screenshot screenshot = TakeScreenshot();
-    ASSERT_FALSE(screenshot.empty());
+  // We could assert on each pixel individually, but a histogram might give us
+  // a more meaningful failure.
+  std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
 
-    // We could assert on each pixel individually, but a histogram might give us
-    // a more meaningful failure.
-    std::map<scenic::Color, size_t> histogram = screenshot.Histogram();
-
-    // There should be only one color here in the histogram.
-    COMPARE_COLOR(histogram.begin()->first, expected_colors[i], 1);
-  }
+  // There should be only one color here in the histogram.
+  COMPARE_COLOR(histogram.begin()->first, test_params.expected_color, 1);
 }
+
+// We use the same background/foreground color for each test iteration, but
+// vary the opacity.  When the opacity is 0% we expect the pure background
+// color, and when it is 100% we expect the pure foreground color.  When
+// opacity is 50% we expect a blend of the two.
+INSTANTIATE_TEST_SUITE_P(
+    Opacity, ParameterizedOpacityPixelTest,
+    ::testing::Values(OpacityTestParams{.opacity = 0.0f, .expected_color = {0xff, 0x00, 0xf0, 0xff}},
+                      OpacityTestParams{.opacity = 0.5f, .expected_color = {0x80, 0x80, 0x80, 0xff}},
+                      OpacityTestParams{.opacity = 1.0f, .expected_color = {0x00, 0xff, 0x0f, 0xff}}));
 
 TEST_F(ScenicPixelTest, ViewBoundClipping) {
   auto test_session = SetUpTestSession();
