@@ -9,16 +9,16 @@
 namespace scenic_impl {
 
 LifecycleControllerImpl::LifecycleControllerImpl(sys::ComponentContext* app_context,
-                                                 fxl::WeakPtr<ShutdownManager> shutdown_manager)
+                                                 std::weak_ptr<ShutdownManager> shutdown_manager)
     : shutdown_manager_(std::move(shutdown_manager)) {
   FXL_DCHECK(app_context);
-  FXL_DCHECK(shutdown_manager_);
+  FXL_DCHECK(shutdown_manager_.lock());
   app_context->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void LifecycleControllerImpl::Terminate() {
-  if (shutdown_manager_) {
-    shutdown_manager_->Shutdown(kShutdownTimeout);
+  if (auto strong = shutdown_manager_.lock()) {
+    strong->Shutdown(kShutdownTimeout);
   } else {
     FXL_LOG(WARNING)
         << "LifecycleControllerImpl::Terminate(): no shutdown manager available; ignoring request.";

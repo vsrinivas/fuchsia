@@ -5,6 +5,8 @@
 #ifndef SRC_UI_SCENIC_LIB_SHUTDOWN_LIFECYCLE_CONTROLLER_IMPL_H_
 #define SRC_UI_SCENIC_LIB_SHUTDOWN_LIFECYCLE_CONTROLLER_IMPL_H_
 
+#include <memory>
+
 #include <fuchsia/ui/lifecycle/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
@@ -25,14 +27,14 @@ class LifecycleControllerImpl : public fuchsia::ui::lifecycle::LifecycleControll
   // |app_context| is used to publish this service.
   // |shutdown_manager| is used to actually perform the shutdown.
   LifecycleControllerImpl(sys::ComponentContext* app_context,
-                          fxl::WeakPtr<ShutdownManager> shutdown_manager);
+                          std::weak_ptr<ShutdownManager> shutdown_manager);
 
   // [fuchsia::ui::lifecycle::LifecycleController]
   void Terminate() override;
 
  private:
   fidl::BindingSet<fuchsia::ui::lifecycle::LifecycleController> bindings_;
-  fxl::WeakPtr<ShutdownManager> shutdown_manager_;
+  std::weak_ptr<ShutdownManager> shutdown_manager_;
 };
 
 }  // namespace scenic_impl

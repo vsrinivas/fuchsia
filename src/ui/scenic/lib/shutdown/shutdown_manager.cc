@@ -11,13 +11,20 @@
 
 namespace scenic_impl {
 
-ShutdownManager::ShutdownManager(async_dispatcher_t* dispatcher, fit::closure quit_callback,
-                                 fit::closure timeout_callback)
+ShutdownManager::ShutdownManager(async_dispatcher_t* dispatcher, QuitCallback quit_callback,
+                                 TimeoutCallback timeout_callback)
     : executor_(dispatcher),
       quit_callback_(std::move(quit_callback)),
       timeout_callback_(std::move(timeout_callback)),
       shared_bool_(std::make_shared<std::atomic_bool>()) {
   shared_bool_->store(false);
+}
+
+std::shared_ptr<ShutdownManager> ShutdownManager::New(async_dispatcher_t* dispatcher,
+                                                      QuitCallback quit_callback,
+                                                      TimeoutCallback timeout_callback) {
+  return std::shared_ptr<ShutdownManager>(new ShutdownManager(dispatcher, std::move(quit_callback),
+                                           std::move(timeout_callback)));
 }
 
 ShutdownManager::~ShutdownManager() {
@@ -60,6 +67,7 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
     bool was_set = shared_bool_->exchange(true);
     FXL_DCHECK(!was_set);
     quit_callback_();
+    timeout_callback_(false);
     return;
   }
 
@@ -81,15 +89,36 @@ void ShutdownManager::Shutdown(zx::duration timeout) {
                             });
   executor_.schedule_task(std::move(joined_promise));
 
-  std::thread timeout_thread(
-      [timeout, shared_bool = shared_bool_, cb = std::move(timeout_callback_)] {
-        std::this_thread::sleep_for(std::chrono::nanoseconds(timeout.get()));
+  std::thread timeout_thread([shared_bool = shared_bool_,
+                              // We'll keep waking up to see if the deadline has been reached.
+                              deadline = clock_callback_() + timeout,
+                              timeout_cb = std::move(timeout_callback_),
+                              clock_cb = std::move(clock_callback_)] {
+    while (true) {
+      if (shared_bool->load()) {
+        // Exit as early as possible if we notice that the shutdown promises have been completed.
+        timeout_cb(false);
+        return;
+      }
+      zx::time now = clock_cb();
+      if (deadline <= now) {
+        // Deadline has been reached.  Avoid race condition by trying to atomically "claim" the
+        // right to run the timeout callback.
         bool was_set = shared_bool->exchange(true);
-        if (!was_set) {
-          cb();
-        }
-      });
+        timeout_cb(!was_set);
+        return;
+      }
+
+      // Go back to sleep; try again later.
+      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+  });
   timeout_thread.detach();
 };
+
+void ShutdownManager::set_clock_callback(fit::function<zx::time()> cb) {
+  FXL_DCHECK(state_ == State::kInit);
+  clock_callback_ = std::move(cb);
+}
 
 }  // namespace scenic_impl

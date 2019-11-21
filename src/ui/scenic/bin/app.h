@@ -47,7 +47,7 @@ class App {
 
   async::Executor executor_;
   std::unique_ptr<sys::ComponentContext> app_context_;
-  ShutdownManager shutdown_manager_;
+  std::shared_ptr<ShutdownManager> shutdown_manager_;
 
   gfx::Sysmem sysmem_;
   display::DisplayManager display_manager_;
