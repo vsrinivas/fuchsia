@@ -83,14 +83,14 @@ type checkParams struct {
 func check(t *testing.T, err error, params checkParams) {
 	t.Helper()
 	if err != nil {
-		t.Errorf("After cache.%s, cache.lookup returned error: %v", params.funcName, err)
+		t.Errorf("after cache.%s, cache.lookup returned error: %s", params.funcName, err)
 	}
 	if len(params.gotResources) != params.wantLen {
-		t.Errorf("cache.%s failed. Got Resource length %d. Want %d.", params.funcName, len(params.gotResources), params.wantLen)
+		t.Errorf("got cache.%s with the resource length = %d, want %d.", params.funcName, len(params.gotResources), params.wantLen)
 	}
 	for _, rr := range params.gotResources {
 		if rr.Header.Name != params.wantName {
-			t.Errorf("got cache.%s(...) = %v, want = %v", params.funcName, rr.Header.Name, params.wantName)
+			t.Errorf("got cache.%s(...) = %s, want %s", params.funcName, rr.Header.Name, params.wantName)
 		}
 	}
 }
@@ -341,7 +341,7 @@ func TestCNAMELoop(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		if _, err := cache.lookup(fooExampleQuestion, visited, 0); err != errCNAMELoop {
-			t.Errorf("cache.lookup got an unexpected error. Got %v, Want %v", err, errCNAMELoop)
+			t.Errorf("got cache.lookup failed with error = %v, want %s", err, errCNAMELoop)
 		}
 	}
 }
@@ -372,7 +372,7 @@ func TestCNAMELevel(t *testing.T) {
 	{
 		visited := make(map[dnsmessage.Name]struct{})
 		if _, err := cache.lookup(makeQuestion(string(name)), visited, 0); err != errCNAMELevel {
-			t.Errorf("cache.lookup got an unexpected error. Got %v, Want %v", err, errCNAMELevel)
+			t.Errorf("got cache.lookup failed with error = %s, want %s", err, errCNAMELevel)
 		}
 	}
 }

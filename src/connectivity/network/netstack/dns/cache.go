@@ -62,13 +62,11 @@ func newCache() cacheInfo {
 // Returns a list of Resources that match the given Question (same class and type and matching domain name).
 func (cache *cacheInfo) lookup(question dnsmessage.Question, visited map[dnsmessage.Name]struct{}, level uint8) ([]dnsmessage.Resource, error) {
 	if level > maxCNAMELevel {
-		syslog.WarnTf(tag, "The question %v lookup exceeds  maxCNAMELevel: %v.", question, maxCNAMELevel)
-		return []dnsmessage.Resource{}, errCNAMELevel
+		return nil, errCNAMELevel
 	}
 	if _, ok := visited[question.Name]; ok {
 		// By the robustness principle, domain software should not fail when presented with CNAME chains or loops;
 		// CNAME chains should be followed and CNAME loops signalled as an error. (RFC 1034 Section 5.2.2)
-		syslog.ErrorTf(tag, "There is a loop of CNAME aliases.")
 		return nil, errCNAMELoop
 	}
 
@@ -262,6 +260,9 @@ func newCachedResolver(fallback Resolver) Resolver {
 		if err == nil && len(rrs) != 0 {
 			syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache hit %v(%v) => %v", question.Name, question.Type, rrs)
 			return dnsmessage.Name{}, rrs, dnsmessage.Message{}, nil
+		}
+		if err != nil {
+			syslog.ErrorTf(tag, "DNS cache lookup failed for the message %v(%v) with error: %s", question.Name, question.Type, err)
 		}
 
 		syslog.VLogTf(syslog.TraceVerbosity, tag, "DNS cache miss for the message %v(%v)", question.Name, question.Type)
