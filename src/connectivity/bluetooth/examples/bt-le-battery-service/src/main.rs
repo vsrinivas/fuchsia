@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use {
+    argh::FromArgs,
     failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth_gatt as gatt, fidl_fuchsia_power as fpower,
     fuchsia_async::{
         self as fasync,
-        futures::{select, FutureExt, TryStreamExt},
+        futures::{try_join, TryStreamExt},
     },
     fuchsia_component::client::connect_to_service,
     parking_lot::Mutex,
-    pin_utils::pin_mut,
     std::collections::HashSet,
 };
 
@@ -129,11 +129,40 @@ async fn battery_manager_watcher(
         // acknowledge watch notification
         responder.send()?;
     }
+
+    println!("BatteryInfoWatcher was closed; battery level no longer available.");
     Ok(())
 }
 
-fn main() -> Result<(), Error> {
-    let mut exec = fasync::Executor::new()?;
+/// Command line options
+#[derive(FromArgs)]
+struct Options {
+    /// attribute permissions for Battery Level chracteristic (values: "enc", "auth")
+    #[argh(option)]
+    security: Option<String>,
+}
+
+#[fasync::run_singlethreaded]
+async fn main() -> Result<(), Error> {
+    let args: Options = argh::from_env();
+    let security = Box::new(match args.security {
+        None => gatt::SecurityRequirements {
+            encryption_required: false,
+            authentication_required: false,
+            authorization_required: false,
+        },
+        Some(s) if s == "enc" => gatt::SecurityRequirements {
+            encryption_required: true,
+            authentication_required: false,
+            authorization_required: false,
+        },
+        Some(s) if s == "auth" => gatt::SecurityRequirements {
+            encryption_required: true,
+            authentication_required: true,
+            authorization_required: false,
+        },
+        Some(s) => bail!("invalid security value: {}", s),
+    });
 
     // Create endpoints for the required services.
     let (battery_info_watch_client, battery_info_request_stream) =
@@ -148,27 +177,15 @@ fn main() -> Result<(), Error> {
     // Initialize internal state.
     let state = BatteryState::new(service_proxy);
 
-    // Require encryption to access the battery level.
-    let read_sec = Box::new(gatt::SecurityRequirements {
-        encryption_required: true,
-        authentication_required: false,
-        authorization_required: false,
-    });
-    let update_sec = Box::new(gatt::SecurityRequirements {
-        encryption_required: true,
-        authentication_required: false,
-        authorization_required: false,
-    });
-
     // Build a GATT Battery service.
     let characteristic = gatt::Characteristic {
         id: BATTERY_LEVEL_ID,
         type_: BATTERY_LEVEL_UUID.to_string(),
         properties: gatt::PROPERTY_READ | gatt::PROPERTY_NOTIFY,
         permissions: Some(Box::new(gatt::AttributePermissions {
-            read: Some(read_sec),
+            read: Some(security.clone()),
             write: None,
-            update: Some(update_sec),
+            update: Some(security),
         })),
         descriptors: None,
     };
@@ -183,27 +200,16 @@ fn main() -> Result<(), Error> {
     // Register the local battery watcher with the battery manager service.
     battery_manager_server.watch(battery_info_watch_client)?;
 
-    let main_fut = async move {
-        // Publish the local gatt service delegate with the gatt service.
-        let status =
-            gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
-        if let Some(error) = status.error {
-            bail!("Failed to publish battery service to gatt server: {:?}", error);
-        }
-        println!("Published Battery Service to local device database.");
+    // Publish the local gatt service delegate with the gatt service.
+    let status =
+        gatt_server.publish_service(&mut service_info, delegate_client, service_server).await?;
+    if let Some(error) = status.error {
+        bail!("Failed to publish battery service to gatt server: {:?}", error);
+    }
+    println!("Published Battery Service to local device database.");
 
-        // Start the gatt service delegate and battery watcher server.
-        let service_delegate = gatt_service_delegate(&state, delegate_request_stream);
-        let battery_watcher = battery_manager_watcher(&state, battery_info_request_stream);
-        pin_mut!(service_delegate);
-        pin_mut!(battery_watcher);
-        select! {
-            res = service_delegate.fuse() => res?,
-            res = battery_watcher.fuse() => res?,
-        };
-
-        Ok(())
-    };
-
-    exec.run_singlethreaded(main_fut)
+    // Start the gatt service delegate and battery watcher server.
+    let service_delegate = gatt_service_delegate(&state, delegate_request_stream);
+    let battery_watcher = battery_manager_watcher(&state, battery_info_request_stream);
+    try_join!(service_delegate, battery_watcher).map(|((), ())| ())
 }
