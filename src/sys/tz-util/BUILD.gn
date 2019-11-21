@@ -12,7 +12,7 @@ executable("bin") {
   ]
 
   deps = [
-    "//sdk/fidl/fuchsia.timezone",
+    "//sdk/fidl/fuchsia.deprecatedtimezone",
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",

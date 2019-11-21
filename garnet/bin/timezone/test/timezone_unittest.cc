@@ -12,7 +12,7 @@
 namespace time_zone {
 namespace test {
 
-using namespace fuchsia::timezone;
+using namespace fuchsia::deprecatedtimezone;
 using namespace time_zone;
 
 constexpr char kIcuDataPath[] = "/pkg/data/icudtl.dat";

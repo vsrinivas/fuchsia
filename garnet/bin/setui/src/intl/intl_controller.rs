@@ -109,8 +109,10 @@ impl IntlController {
     /// Errors are only logged as this is an intermediate step in a migration.
     /// TODO(fxb/41639): remove this
     fn write_intl_info_to_service(&self, info: IntlInfo) {
-        let service_result =
-            self.service_context_handle.write().connect::<fidl_fuchsia_timezone::TimezoneMarker>();
+        let service_result = self
+            .service_context_handle
+            .write()
+            .connect::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>();
 
         if service_result.is_err() {
             fx_log_err!("Failed to connect to fuchsia.timezone");

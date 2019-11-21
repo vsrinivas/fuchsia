@@ -9,7 +9,7 @@
 use {
     chrono::prelude::*,
     failure::{Error, ResultExt},
-    fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime, fidl_fuchsia_timezone as ftz,
+    fidl_fuchsia_deprecatedtimezone as ftz, fidl_fuchsia_net as fnet, fidl_fuchsia_time as ftime,
     fuchsia_async::{self as fasync, DurationExt},
     fuchsia_component::server::ServiceFs,
     fuchsia_zircon as zx,
@@ -75,8 +75,8 @@ fn initial_utc_source(backstop_path: &Path) -> Result<Option<ftime::UtcSource>, 
 ///
 /// Checks for network connectivity before attempting any time updates.
 ///
-/// Actual updates are performed by calls to  `fuchsia.timezone.TimeService` which we plan
-/// to deprecate.
+/// Actual updates are performed by calls to  `fuchsia.deprecatedtimezone.TimeService` which we
+/// plan to deprecate.
 async fn maintain_utc(
     notifs: Notifier,
     time_service: ftz::TimeServiceProxy,

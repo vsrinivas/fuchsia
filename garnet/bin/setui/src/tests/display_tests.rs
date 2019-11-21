@@ -119,14 +119,17 @@ async fn test_display_failure() {
                     .into_stream()?;
             Ok(())
         }
-        fidl_fuchsia_timezone::TimezoneMarker::NAME => {
+        fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME => {
             let mut timezone_stream =
-                ServerEnd::<fidl_fuchsia_timezone::TimezoneMarker>::new(channel).into_stream()?;
+                ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
+                    .into_stream()?;
             fasync::spawn(async move {
                 while let Some(req) = timezone_stream.try_next().await.unwrap() {
                     #[allow(unreachable_patterns)]
                     match req {
-                        fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
+                        fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
+                            responder,
+                        } => {
                             responder.send("PDT").unwrap();
                         }
                         _ => {}

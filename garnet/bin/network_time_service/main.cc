@@ -35,7 +35,7 @@ int main(int argc, char** argv) {
   network_time_service::TimeServiceImpl svc(sys::ComponentContext::Create(), config_path.c_str(),
                                             rtc_path.c_str());
   if (immediate) {
-    svc.Update(3, fuchsia::timezone::TimeService::UpdateCallback([&loop](bool success) {
+    svc.Update(3, fuchsia::deprecatedtimezone::TimeService::UpdateCallback([&loop](bool success) {
                  FX_LOGS(INFO) << "time sync result was " << success;
                  loop.Shutdown();
                }));
