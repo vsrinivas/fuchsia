@@ -139,36 +139,32 @@ TEST_F(GuestConfigParserTest, NetSpecArg) {
 }
 
 TEST_F(GuestConfigParserTest, InterruptSpecArg) {
-  const char* argv[] = {"exe_name", "--interrupt=32,2", "--interrupt=33,4"};
+  const char* argv[] = {"exe_name", "--interrupt=32", "--interrupt=33"};
   ASSERT_EQ(ZX_OK, parser_.ParseArgcArgv(arraysize(argv), const_cast<char**>(argv)));
   ASSERT_EQ(2ul, config_.interrupts().size());
 
-  const InterruptSpec& spec0 = config_.interrupts()[0];
-  ASSERT_EQ(32u, spec0.vector);
-  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
+  const uint32_t& spec0 = config_.interrupts()[0];
+  ASSERT_EQ(32u, spec0);
 
-  const InterruptSpec& spec1 = config_.interrupts()[1];
-  ASSERT_EQ(33u, spec1.vector);
-  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
+  const uint32_t& spec1 = config_.interrupts()[1];
+  ASSERT_EQ(33u, spec1);
 }
 
 TEST_F(GuestConfigParserTest, InterruptSpecJson) {
   ASSERT_EQ(ZX_OK, parser_.ParseConfig(
                        R"JSON({
           "interrupt": [
-            "32,2",
-            "33,4"
+            "32",
+            "33"
           ]
         })JSON"));
   ASSERT_EQ(2ul, config_.interrupts().size());
 
-  const InterruptSpec& spec0 = config_.interrupts()[0];
-  ASSERT_EQ(32u, spec0.vector);
-  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_LOW, spec0.options);
+  const uint32_t& spec0 = config_.interrupts()[0];
+  ASSERT_EQ(32u, spec0);
 
-  const InterruptSpec& spec1 = config_.interrupts()[1];
-  ASSERT_EQ(33u, spec1.vector);
-  ASSERT_EQ(ZX_INTERRUPT_MODE_EDGE_HIGH, spec1.options);
+  const uint32_t& spec1 = config_.interrupts()[1];
+  ASSERT_EQ(33u, spec1);
 }
 
 TEST_F(GuestConfigParserTest, Memory_1024k) {

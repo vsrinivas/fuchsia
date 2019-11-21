@@ -44,11 +44,6 @@ struct MemorySpec {
   MemoryPolicy policy;
 };
 
-struct InterruptSpec {
-  uint32_t vector;
-  uint32_t options;
-};
-
 enum class Kernel {
   ZIRCON,
   LINUX,
@@ -64,7 +59,7 @@ class GuestConfig {
   const std::vector<BlockSpec>& block_devices() const { return block_devices_; }
   const std::vector<MemorySpec>& memory() const { return memory_; }
   const std::vector<NetSpec>& net_devices() const { return net_devices_; }
-  const std::vector<InterruptSpec>& interrupts() const { return interrupts_; }
+  const std::vector<uint32_t>& interrupts() const { return interrupts_; }
   uint8_t cpus() const { return cpus_; }
   bool virtio_balloon() const { return virtio_balloon_; }
   bool virtio_console() const { return virtio_console_; }
@@ -83,7 +78,7 @@ class GuestConfig {
   std::vector<BlockSpec> block_devices_;
   std::vector<MemorySpec> memory_;
   std::vector<NetSpec> net_devices_;
-  std::vector<InterruptSpec> interrupts_;
+  std::vector<uint32_t> interrupts_;
   uint8_t cpus_ = zx_system_get_num_cpus();
   bool default_net_ = true;
   bool virtio_balloon_ = true;

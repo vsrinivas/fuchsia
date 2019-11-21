@@ -5,15 +5,16 @@
 #include "src/virtualization/bin/vmm/arch/arm64/gic_distributor.h"
 
 #include <endian.h>
-#include <fbl/unique_fd.h>
 #include <fcntl.h>
 #include <fuchsia/sysinfo/c/fidl.h>
 #include <lib/fdio/directory.h>
 #include <lib/fdio/fd.h>
 #include <lib/fdio/fdio.h>
 #include <lib/zx/channel.h>
-#include <libzbi/zbi.h>
 #include <zircon/boot/driver-config.h>
+
+#include <fbl/unique_fd.h>
+#include <libzbi/zbi.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/vmm/bits.h"
@@ -173,7 +174,7 @@ static zx_status_t get_interrupt_controller_info(
 
 GicDistributor::GicDistributor(Guest* guest) : guest_(guest) {}
 
-zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<InterruptSpec>& interrupts) {
+zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<uint32_t>& interrupts) {
   // Fetch the interrupt controller type.
   fuchsia::sysinfo::DeviceSyncPtr sysinfo = get_sysinfo();
   fuchsia::sysinfo::InterruptControllerInfoPtr info;
@@ -197,19 +198,18 @@ zx_status_t GicDistributor::Init(uint8_t num_cpus, const std::vector<InterruptSp
       FXL_LOG(ERROR) << "Failed to get root resource " << status;
       return status;
     }
-    for (const InterruptSpec& spec : interrupts) {
-      if (spec.vector < kSpiBase || spec.vector >= kNumInterrupts) {
-        FXL_LOG(ERROR) << "Invalid interrupt " << spec.vector;
+    for (const uint32_t& vector : interrupts) {
+      if (vector < kSpiBase || vector >= kNumInterrupts) {
+        FXL_LOG(ERROR) << "Invalid interrupt " << vector;
         return ZX_ERR_OUT_OF_RANGE;
       }
       zx::interrupt interrupt;
-      status = zx::interrupt::create(resource, spec.vector, spec.options, &interrupt);
+      status = zx::interrupt::create(resource, vector, ZX_INTERRUPT_MODE_DEFAULT, &interrupt);
       if (status != ZX_OK) {
-        FXL_LOG(ERROR) << "Failed to create interrupt " << spec.vector << " with options "
-                       << spec.options << " " << status;
+        FXL_LOG(ERROR) << "Failed to create interrupt " << vector << " " << status;
         return status;
       }
-      interrupts_.try_emplace(spec.vector, InterruptEntry{spec.options, std::move(interrupt)});
+      interrupts_.try_emplace(vector, std::move(interrupt));
     }
   }
 
@@ -287,7 +287,7 @@ zx_status_t GicDistributor::BindVcpus(uint32_t vector, uint8_t cpu_mask) {
     if (!(cpu_mask & 1)) {
       continue;
     }
-    zx_status_t status = it->second.interrupt.bind_vcpu(vcpus[i]->object(), 0);
+    zx_status_t status = it->second.bind_vcpu(vcpus[i]->object(), 0);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to bind VCPU " << status;
       return status;

@@ -12,7 +12,6 @@
 #include <mutex>
 #include <vector>
 
-#include "src/virtualization/bin/vmm/guest_config.h"
 #include "src/virtualization/bin/vmm/io.h"
 #include "src/virtualization/bin/vmm/platform_device.h"
 
@@ -42,7 +41,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   GicDistributor(Guest* guest);
 
   zx_status_t Init(uint8_t num_cpus,
-                   const std::vector<InterruptSpec>& interrupts) __TA_NO_THREAD_SAFETY_ANALYSIS;
+                   const std::vector<uint32_t>& interrupts) __TA_NO_THREAD_SAFETY_ANALYSIS;
 
   zx_status_t Interrupt(uint32_t vector);
 
@@ -63,11 +62,7 @@ class GicDistributor : public IoHandler, public PlatformDevice {
   fuchsia::sysinfo::InterruptControllerType type_ =
       fuchsia::sysinfo::InterruptControllerType::GIC_V2;
 
-  struct InterruptEntry {
-    uint32_t options;
-    zx::interrupt interrupt;
-  };
-  std::map<uint32_t, InterruptEntry> interrupts_;
+  std::map<uint32_t, zx::interrupt> interrupts_;
 
   mutable std::mutex mutex_;
   bool affinity_routing_ __TA_GUARDED(mutex_) = false;

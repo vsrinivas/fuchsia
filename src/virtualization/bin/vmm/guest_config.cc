@@ -238,16 +238,11 @@ static std::vector<std::string> split(const std::string& spec, char delim) {
   return tokens;
 }
 
-static zx_status_t parse_interrupt_spec(const std::string& spec, InterruptSpec* out) {
-  std::vector<std::string> tokens = split(spec, ',');
-  if (tokens.size() != 2) {
-    return ZX_ERR_INVALID_ARGS;
+static zx_status_t parse_interrupt_spec(const std::string& spec, uint32_t* out) {
+  if (spec.empty()) {
+    FXL_LOG(ERROR) << "expects a interrupt vector";
   }
-  zx_status_t status = parse_number(tokens[0], &out->vector, fxl::Base::k10);
-  if (status != ZX_OK) {
-    return status;
-  }
-  return parse_number(tokens[1], &out->options, fxl::Base::k10);
+  return parse_number(spec, out, fxl::Base::k10);
 }
 
 static zx_status_t parse_memory(const std::string& value, size_t* out) {
@@ -330,7 +325,7 @@ GuestConfigParser::GuestConfigParser(GuestConfig* cfg)
           {"cpus", set_number(&cfg_->cpus_)},
           {"dtb-overlay", set_string(&cfg_->dtb_overlay_path_)},
           {"default-net", set_flag(&cfg_->default_net_, true)},
-          {"interrupt", add_option<InterruptSpec>(&cfg_->interrupts_, parse_interrupt_spec)},
+          {"interrupt", add_option<uint32_t>(&cfg_->interrupts_, parse_interrupt_spec)},
           {"linux", set_kernel(&cfg_->kernel_path_, &cfg_->kernel_, Kernel::LINUX)},
           {"memory", add_option<MemorySpec>(&cfg_->memory_, parse_memory_spec)},
           {"net", add_option<NetSpec>(&cfg_->net_devices_, parse_net_spec)},
