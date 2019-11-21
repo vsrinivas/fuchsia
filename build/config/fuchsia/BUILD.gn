@@ -213,7 +213,7 @@ config("auto_var_init") {
 }
 
 config("enable_zircon_asserts") {
-  defines = [ "ZX_DEBUGLEVEL=2" ]
+  defines = [ "ZX_ASSERT_LEVEL=2" ]
 }
 
 declare_args() {

@@ -19,11 +19,6 @@
 #define ZX_DEBUG_ASSERT_MSG_COND(args...) DEBUG_ASSERT_MSG_COND(args)
 #define ZX_DEBUG_ASSERT_IMPLEMENTED DEBUG_ASSERT_IMPLEMENTED
 
-#ifdef ZX_DEBUGLEVEL
-#undef ZX_DEBUGLEVEL
-#endif
-#define ZX_DEBUGLEVEL LK_DEBUGLEVEL
-
 #else  // #ifdef _KERNEL
 
 #include <zircon/compiler.h>
@@ -54,9 +49,9 @@ __END_CDECLS
     }                                                                                         \
   } while (0)
 
-// Conditionally implement ZX_DEBUG_ASSERT based on ZX_DEBUGLEVEL.
-#ifdef ZX_DEBUGLEVEL
-#define ZX_DEBUG_ASSERT_IMPLEMENTED (ZX_DEBUGLEVEL > 1)
+// Conditionally implement ZX_DEBUG_ASSERT based on ZX_ASSERT_LEVEL.
+#ifdef ZX_ASSERT_LEVEL
+#define ZX_DEBUG_ASSERT_IMPLEMENTED (ZX_ASSERT_LEVEL > 1)
 #else
 #define ZX_DEBUG_ASSERT_IMPLEMENTED 0
 #endif
