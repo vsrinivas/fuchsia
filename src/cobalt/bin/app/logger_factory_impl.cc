@@ -38,21 +38,6 @@ bool ExtractCobaltRegistryBytes(ProjectProfile profile, std::string* metrics_reg
   return true;
 }
 
-ReleaseStage ToReleaseStageProto(fuchsia::cobalt::ReleaseStage stage) {
-  switch (stage) {
-    case fuchsia::cobalt::ReleaseStage::GA:
-      return ReleaseStage::GA;
-    case fuchsia::cobalt::ReleaseStage::DOGFOOD:
-      return ReleaseStage::DOGFOOD;
-    case fuchsia::cobalt::ReleaseStage::FISHFOOD:
-      return ReleaseStage::FISHFOOD;
-    case fuchsia::cobalt::ReleaseStage::DEBUG:
-      return ReleaseStage::DEBUG;
-    default:
-      FX_LOGS(ERROR) << "Unknown ReleaseStage provided. Defaulting to DEBUG.";
-      return ReleaseStage::DEBUG;
-  }
-}
 }  // namespace
 
 LoggerFactoryImpl::LoggerFactoryImpl(
@@ -98,7 +83,6 @@ void LoggerFactoryImpl::CreateAndBindLogger(
     fuchsia::cobalt::ProjectProfile profile, fidl::InterfaceRequest<LoggerInterface> request,
     Callback callback,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
-  ReleaseStage release_stage = ToReleaseStageProto(profile.release_stage);
   std::string cobalt_registry_bytes;
   if (!ExtractCobaltRegistryBytes(std::move(profile), &cobalt_registry_bytes)) {
     FX_LOGS(ERROR) << "Unable to extract a CobaltRegistry from the provided "
@@ -114,8 +98,7 @@ void LoggerFactoryImpl::CreateAndBindLogger(
     return;
   }
   if (factory->is_single_project()) {
-    BindNewLogger(factory->TakeSingleProjectContext(release_stage), std::move(request),
-                  binding_set);
+    BindNewLogger(factory->TakeSingleProjectContext(), std::move(request), binding_set);
     callback(Status::OK);
     return;
   } else {
@@ -128,11 +111,10 @@ void LoggerFactoryImpl::CreateAndBindLogger(
 
 template <typename LoggerInterface, typename Callback>
 void LoggerFactoryImpl::CreateAndBindLoggerFromProjectName(
-    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
-    fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+    std::string project_name, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
     fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set) {
-  auto project_context = global_project_context_factory_->NewProjectContext(
-      kFuchsiaCustomerName, project_name, ToReleaseStageProto(release_stage));
+  auto project_context =
+      global_project_context_factory_->NewProjectContext(kFuchsiaCustomerName, project_name);
   if (!project_context) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with this release does not "
                       "include a Fuchsia project named "
@@ -159,18 +141,18 @@ void LoggerFactoryImpl::CreateLoggerSimple(
 }
 
 void LoggerFactoryImpl::CreateLoggerFromProjectName(
-    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    std::string project_name, fuchsia::cobalt::ReleaseStage /*release_stage*/,
     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
     CreateLoggerFromProjectNameCallback callback) {
-  CreateAndBindLoggerFromProjectName(std::move(project_name), release_stage, std::move(request),
+  CreateAndBindLoggerFromProjectName(std::move(project_name), std::move(request),
                                      std::move(callback), &logger_bindings_);
 }
 
 void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
-    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage,
+    std::string project_name, fuchsia::cobalt::ReleaseStage /*release_stage*/,
     fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
     CreateLoggerSimpleFromProjectNameCallback callback) {
-  CreateAndBindLoggerFromProjectName(std::move(project_name), release_stage, std::move(request),
+  CreateAndBindLoggerFromProjectName(std::move(project_name), std::move(request),
                                      std::move(callback), &logger_simple_bindings_);
 }
 

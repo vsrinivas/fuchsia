@@ -101,8 +101,7 @@ class CobaltApp {
   // Creates a Logger which will be used for logging Cobalt's internal metrics.
   std::unique_ptr<logger::Logger> NewInternalLogger(
       const std::shared_ptr<logger::ProjectContextFactory> global_project_context_factory,
-      const std::string& customer_name, const std::string& project_name,
-      ReleaseStage release_stage);
+      const std::string& customer_name, const std::string& project_name);
 
   FuchsiaConfigurationData configuration_data_;
   encoder::SystemData system_data_;

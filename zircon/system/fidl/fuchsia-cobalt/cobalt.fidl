@@ -107,7 +107,7 @@ struct ProjectProfile {
     // for a single project.
     fuchsia.mem.Buffer config;
 
-    // The release stage of the client's project.
+    // [Deprecated; This value is ignored]
     ReleaseStage release_stage;
 };
 
@@ -150,7 +150,7 @@ protocol LoggerFactory {
     // `project_name` The name of the client's Cobalt project. (Only Cobalt v1.0
     // projects are supported)
     //
-    // `release_stage` The release stage for the client's project.
+    // `release_stage` Deprecated; This value is ignored.
     //
     // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
     // project with the given name in the version of the metrics registry that
@@ -174,7 +174,7 @@ protocol LoggerFactory {
     // `project_name` The name of the client's Cobalt project. (Only Cobalt v1.0
     // projects are supported)
     //
-    // `release_stage` The release stage for the client's project.
+    // `release_stage` Deprecated; This value is ignored.
     //
     // `status` Returns OK on success or INVALID_ARGUMENTS if there is no
     // project with the given name in the version of the metrics registry that

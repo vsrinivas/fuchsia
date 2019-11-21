@@ -156,7 +156,7 @@ CobaltApp::CobaltApp(std::unique_ptr<sys::ComponentContext> context, async_dispa
 
   // Create internal Logger and pass a pointer to objects which use it.
   internal_logger_ = NewInternalLogger(global_project_context_factory, logger::kCustomerName,
-                                       logger::kProjectName, configuration_data_.GetReleaseStage());
+                                       logger::kProjectName);
 
   observation_store_->ResetInternalMetrics(internal_logger_.get());
   if (clearcut_shipping_manager != nullptr) {
@@ -210,9 +210,9 @@ ClientSecret CobaltApp::getClientSecret() {
 
 std::unique_ptr<logger::Logger> CobaltApp::NewInternalLogger(
     const std::shared_ptr<logger::ProjectContextFactory> global_project_context_factory,
-    const std::string& customer_name, const std::string& project_name, ReleaseStage release_stage) {
+    const std::string& customer_name, const std::string& project_name) {
   auto internal_project_context = global_project_context_factory->NewProjectContext(
-      logger::kCustomerName, logger::kProjectName, release_stage);
+      logger::kCustomerName, logger::kProjectName);
   if (!internal_project_context) {
     FX_LOGS(ERROR) << "The CobaltRegistry bundled with Cobalt does not "
                       "include the expected internal metrics project. "
