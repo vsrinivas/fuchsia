@@ -6,7 +6,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
-#include <lib/gtest/real_loop_fixture.h>
+#include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <zircon/errors.h>
 
@@ -23,24 +23,26 @@
 namespace feedback {
 namespace {
 
-class BugReporterTest : public gtest::RealLoopFixture {
+class BugReporterTest : public gtest::TestLoopFixture {
  public:
   BugReporterTest()
       : service_directory_provider_loop_(&kAsyncLoopConfigNoAttachToCurrentThread),
-        service_directory_provider_(service_directory_provider_loop_.dispatcher()) {
+        service_directory_provider_(service_directory_provider_loop_.dispatcher()) {}
+
+  void SetUp() override {
     // We run the service directory provider in a different loop and thread so that the
     // MakeBugReport can connect to the stub feedback data provider synchronously.
-    FXL_CHECK(service_directory_provider_loop_.StartThread("service directory provider thread") ==
+    ASSERT_EQ(service_directory_provider_loop_.StartThread("service directory provider thread"),
               ZX_OK);
-  }
 
-  void SetUp() override { ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_)); }
+    ASSERT_TRUE(tmp_dir_.NewTempFile(&bugreport_path_));
+  }
 
  protected:
   void SetUpFeedbackDataProvider(fuchsia::feedback::Attachment attachment_bundle) {
-    stub_feedback_data_provider_.reset(new StubFeedbackDataProvider(std::move(attachment_bundle)));
-    FXL_CHECK(service_directory_provider_.AddService(stub_feedback_data_provider_->GetHandler()) ==
-              ZX_OK);
+    feedback_data_provider_ =
+        std::make_unique<StubFeedbackDataProvider>(std::move(attachment_bundle));
+    ASSERT_EQ(service_directory_provider_.AddService(feedback_data_provider_->GetHandler()), ZX_OK);
   }
 
  private:
@@ -51,7 +53,7 @@ class BugReporterTest : public gtest::RealLoopFixture {
   std::string bugreport_path_;
 
  private:
-  std::unique_ptr<StubFeedbackDataProvider> stub_feedback_data_provider_;
+  std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
   files::ScopedTempDir tmp_dir_;
 };
 

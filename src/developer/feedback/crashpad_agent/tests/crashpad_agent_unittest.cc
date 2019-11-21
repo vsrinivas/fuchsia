@@ -8,11 +8,9 @@
 #include <fuchsia/mem/cpp/fidl.h>
 #include <fuchsia/settings/cpp/fidl.h>
 #include <lib/fit/result.h>
-#include <lib/gtest/test_loop_fixture.h>
 #include <lib/inspect/cpp/hierarchy.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/reader.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/timekeeper/test_clock.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -33,6 +31,7 @@
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_crash_server.h"
 #include "src/developer/feedback/crashpad_agent/tests/stub_feedback_data_provider.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/directory.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -107,7 +106,7 @@ PrivacySettings MakePrivacySettings(const std::optional<bool> user_data_sharing_
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class CrashpadAgentTest : public gtest::TestLoopFixture {
+class CrashpadAgentTest : public UnitTestFixture {
   void TearDown() override {
     ASSERT_TRUE(files::DeletePath(kCrashpadDatabasePath, /*recursive=*/true));
   }
@@ -123,9 +122,8 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
     inspector_ = std::make_unique<inspect::Inspector>();
     clock_ = std::make_unique<timekeeper::TestClock>();
     inspect_manager_ = std::make_unique<InspectManager>(&inspector_->GetRoot(), clock_.get());
-    agent_ = CrashpadAgent::TryCreate(dispatcher(), service_directory_provider_.service_directory(),
-                                      std::move(config), std::move(crash_server),
-                                      inspect_manager_.get());
+    agent_ = CrashpadAgent::TryCreate(dispatcher(), services(), std::move(config),
+                                      std::move(crash_server), inspect_manager_.get());
     FXL_CHECK(agent_);
   }
 
@@ -155,8 +153,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   void SetUpFeedbackDataProvider(std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider) {
     feedback_data_provider_ = std::move(feedback_data_provider);
     if (feedback_data_provider_) {
-      FXL_CHECK(service_directory_provider_.AddService(feedback_data_provider_->GetHandler()) ==
-                ZX_OK);
+      InjectServiceProvider(feedback_data_provider_.get());
     }
   }
 
@@ -164,7 +161,7 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   void SetUpPrivacySettings(std::unique_ptr<FakePrivacySettings> privacy_settings) {
     privacy_settings_ = std::move(privacy_settings);
     if (privacy_settings_) {
-      FXL_CHECK(service_directory_provider_.AddService(privacy_settings_->GetHandler()) == ZX_OK);
+      InjectServiceProvider(privacy_settings_.get());
     }
   }
 
@@ -410,7 +407,6 @@ class CrashpadAgentTest : public gtest::TestLoopFixture {
   std::unique_ptr<CrashpadAgent> agent_;
 
  private:
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
   std::unique_ptr<StubFeedbackDataProvider> feedback_data_provider_;
   std::unique_ptr<FakePrivacySettings> privacy_settings_;
   StubCrashServer* crash_server_;

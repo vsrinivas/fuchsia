@@ -37,6 +37,7 @@ executable("bugreport_unittest") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.feedback",
+    "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/bugreport:src",
     "//src/lib/files",

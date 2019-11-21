@@ -5,9 +5,6 @@
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
 
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -16,6 +13,7 @@
 #include <string>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_channel_provider.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -27,23 +25,21 @@ namespace {
 
 using fuchsia::feedback::Annotation;
 
-class ChannelProviderTest : public gtest::TestLoopFixture {
+class ChannelProviderTest : public UnitTestFixture {
  public:
-  ChannelProviderTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  ChannelProviderTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpChannelProviderPtr(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
-    stub_channel_provider_ = std::move(stub_channel_provider);
-    if (stub_channel_provider_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
-                ZX_OK);
+  void SetUpChannelProviderPtr(std::unique_ptr<StubChannelProvider> channel_provider) {
+    channel_provider_ = std::move(channel_provider);
+    if (channel_provider_) {
+      InjectServiceProvider(channel_provider_.get());
     }
   }
 
   std::optional<std::string> RetrieveCurrentChannel(const zx::duration timeout = zx::sec(1)) {
     std::optional<std::string> channel;
-    ChannelProvider provider(dispatcher(), service_directory_provider_.service_directory(),
-                             timeout);
+    ChannelProvider provider(dispatcher(), services(), timeout);
     auto promises = provider.GetAnnotations();
     executor_.schedule_task(
         std::move(promises).then([&channel](fit::result<std::vector<Annotation>>& res) {
@@ -64,17 +60,15 @@ class ChannelProviderTest : public gtest::TestLoopFixture {
   }
 
   async::Executor executor_;
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
  private:
-  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
+  std::unique_ptr<StubChannelProvider> channel_provider_;
 };
 
 TEST_F(ChannelProviderTest, Succeed_SomeChannel) {
-  std::unique_ptr<StubChannelProvider> stub_channel_provider =
-      std::make_unique<StubChannelProvider>();
-  stub_channel_provider->set_channel("my-channel");
-  SetUpChannelProviderPtr(std::move(stub_channel_provider));
+  auto channel_provider = std::make_unique<StubChannelProvider>();
+  channel_provider->set_channel("my-channel");
+  SetUpChannelProviderPtr(std::move(channel_provider));
 
   const auto result = RetrieveCurrentChannel();
 
@@ -119,8 +113,7 @@ TEST_F(ChannelProviderTest, Fail_CallGetCurrentTwice) {
   SetUpChannelProviderPtr(std::make_unique<StubChannelProvider>());
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ChannelProviderPtr channel_provider(dispatcher(),
-                                                service_directory_provider_.service_directory());
+  internal::ChannelProviderPtr channel_provider(dispatcher(), services());
   executor_.schedule_task(channel_provider.GetCurrent(unused_timeout));
   ASSERT_DEATH(channel_provider.GetCurrent(unused_timeout),
                testing::HasSubstr("GetCurrent() is not intended to be called twice"));

@@ -32,3 +32,19 @@ source_set("gpretty_printers") {
     "//zircon/system/fidl/fuchsia-mem",
   ]
 }
+
+source_set("unit_test_fixture") {
+  testonly = true
+
+  sources = [
+    "unit_test_fixture.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/zx",
+  ]
+}

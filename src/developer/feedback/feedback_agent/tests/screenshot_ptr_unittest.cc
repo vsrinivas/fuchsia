@@ -6,9 +6,6 @@
 
 #include <fuchsia/ui/scenic/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -16,6 +13,7 @@
 #include <vector>
 
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -29,42 +27,41 @@ using fuchsia::ui::scenic::ScreenshotData;
 
 constexpr bool kSuccess = true;
 
-class TakeScreenshotTest : public gtest::TestLoopFixture {
+class TakeScreenshotTest : public UnitTestFixture {
  public:
-  TakeScreenshotTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  TakeScreenshotTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
-    stub_scenic_ = std::move(stub_scenic);
-    if (stub_scenic_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler()) == ZX_OK);
+  void SetUpScreenshotProvider(std::unique_ptr<StubScenic> screenshot_provider) {
+    screenshot_provider_ = std::move(screenshot_provider);
+    if (screenshot_provider_) {
+      InjectServiceProvider(screenshot_provider_.get());
     }
   }
 
   fit::result<ScreenshotData> TakeScreenshot(const zx::duration timeout = zx::sec(1)) {
     fit::result<ScreenshotData> result;
     executor_.schedule_task(
-        feedback::TakeScreenshot(dispatcher(), service_directory_provider_.service_directory(),
-                                 timeout)
+        feedback::TakeScreenshot(dispatcher(), services(), timeout)
             .then([&result](fit::result<ScreenshotData>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
   }
 
   async::Executor executor_;
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
  private:
-  std::unique_ptr<StubScenic> stub_scenic_;
+  std::unique_ptr<StubScenic> screenshot_provider_;
 };
 
 TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
   const size_t image_dim_in_px = 100;
-  std::vector<TakeScreenshotResponse> scenic_responses;
-  scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  std::vector<TakeScreenshotResponse> screenshot_provider_responses;
+  screenshot_provider_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px),
+                                             kSuccess);
+  std::unique_ptr<StubScenic> scenic = std::make_unique<StubScenic>();
+  scenic->set_take_screenshot_responses(std::move(screenshot_provider_responses));
+  SetUpScreenshotProvider(std::move(scenic));
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -78,7 +75,7 @@ TEST_F(TakeScreenshotTest, Succeed_CheckerboardScreenshot) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
-  SetUpScenic(nullptr);
+  SetUpScreenshotProvider(nullptr);
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -86,7 +83,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNotAvailable) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
-  SetUpScenic(std::make_unique<StubScenicAlwaysReturnsFalse>());
+  SetUpScreenshotProvider(std::make_unique<StubScenicAlwaysReturnsFalse>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -94,7 +91,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicReturningFalse) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
-  SetUpScenic(std::make_unique<StubScenicClosesConnection>());
+  SetUpScreenshotProvider(std::make_unique<StubScenicClosesConnection>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -102,7 +99,7 @@ TEST_F(TakeScreenshotTest, Fail_ScenicClosesConnection) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
-  SetUpScenic(std::make_unique<StubScenicNeverReturns>());
+  SetUpScreenshotProvider(std::make_unique<StubScenicNeverReturns>());
 
   fit::result<ScreenshotData> result = TakeScreenshot();
 
@@ -110,14 +107,14 @@ TEST_F(TakeScreenshotTest, Fail_ScenicNeverReturns) {
 }
 
 TEST_F(TakeScreenshotTest, Fail_CallTakeScreenshotTwice) {
-  std::vector<TakeScreenshotResponse> scenic_responses;
-  scenic_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  std::vector<TakeScreenshotResponse> screenshot_provider_responses;
+  screenshot_provider_responses.emplace_back(CreateEmptyScreenshot(), kSuccess);
+  auto screenshot_provider = std::make_unique<StubScenic>();
+  screenshot_provider->set_take_screenshot_responses(std::move(screenshot_provider_responses));
+  SetUpScreenshotProvider(std::move(screenshot_provider));
 
   const zx::duration unused_timeout = zx::sec(1);
-  Scenic scenic(dispatcher(), service_directory_provider_.service_directory());
+  Scenic scenic(dispatcher(), services());
   executor_.schedule_task(scenic.TakeScreenshot(unused_timeout));
   ASSERT_DEATH(scenic.TakeScreenshot(unused_timeout),
                testing::HasSubstr("TakeScreenshot() is not intended to be called twice"));

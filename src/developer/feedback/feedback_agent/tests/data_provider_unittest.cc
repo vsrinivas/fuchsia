@@ -9,9 +9,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/result.h>
 #include <lib/fostr/fidl/fuchsia/math/formatting.h>
-#include <lib/gtest/real_loop_fixture.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
@@ -30,6 +27,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_scenic.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/developer/feedback/utils/archive.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
@@ -143,41 +141,40 @@ MATCHER_P(MatchesGetScreenshotResponse, expected, "matches " + std::string(expec
 //
 // This does not test the environment service. It directly instantiates the class, without
 // connecting through FIDL.
-class DataProviderTest : public gtest::TestLoopFixture {
+class DataProviderTest : public UnitTestFixture {
  public:
   void SetUp() override { SetUpDataProvider(kDefaultConfig); }
 
  protected:
   void SetUpDataProvider(const Config& config) {
     data_provider_.reset(new DataProvider(
-        dispatcher(), service_directory_provider_.service_directory(), config,
-        [this] { data_provider_timed_out_ = true; }, kDataProviderIdleTimeout));
+        dispatcher(), services(), config, [this] { data_provider_timed_out_ = true; },
+        kDataProviderIdleTimeout));
   }
 
   void SetUpDataProviderOnlyRequestingChannel(zx::duration timeout) {
     data_provider_.reset(new DataProvider(
-        dispatcher(), service_directory_provider_.service_directory(),
-        Config{{kAnnotationChannel}, {}}, [this] { data_provider_timed_out_ = true; }, timeout));
+        dispatcher(), services(), Config{{kAnnotationChannel}, {}},
+        [this] { data_provider_timed_out_ = true; }, timeout));
   }
 
-  void SetUpScenic(std::unique_ptr<StubScenic> stub_scenic) {
-    stub_scenic_ = std::move(stub_scenic);
-    if (stub_scenic_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_scenic_->GetHandler()) == ZX_OK);
+  void SetUpScenic(std::unique_ptr<StubScenic> scenic) {
+    scenic_ = std::move(scenic);
+    if (scenic_) {
+      InjectServiceProvider(scenic_.get());
     }
   }
 
   void SetUpLogger(const std::vector<fuchsia::logger::LogMessage>& messages) {
-    stub_logger_.reset(new StubLogger());
-    stub_logger_->set_messages(messages);
-    FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
+    logger_.reset(new StubLogger());
+    logger_->set_messages(messages);
+    InjectServiceProvider(logger_.get());
   }
 
-  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> stub_channel_provider) {
-    stub_channel_provider_ = std::move(stub_channel_provider);
-    if (stub_channel_provider_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_channel_provider_->GetHandler()) ==
-                ZX_OK);
+  void SetUpChannelProvider(std::unique_ptr<StubChannelProvider> channel_provider) {
+    channel_provider_ = std::move(channel_provider);
+    if (channel_provider_) {
+      InjectServiceProvider(channel_provider_.get());
     }
   }
 
@@ -207,30 +204,28 @@ class DataProviderTest : public gtest::TestLoopFixture {
     EXPECT_EQ(unpacked_attachments->size(), data.attachments().size());
   }
 
-  uint64_t total_num_scenic_bindings() { return stub_scenic_->total_num_bindings(); }
-  size_t current_num_scenic_bindings() { return stub_scenic_->current_num_bindings(); }
+  uint64_t total_num_scenic_bindings() { return scenic_->total_num_bindings(); }
+  size_t current_num_scenic_bindings() { return scenic_->current_num_bindings(); }
   const std::vector<TakeScreenshotResponse>& get_scenic_responses() const {
-    return stub_scenic_->take_screenshot_responses();
+    return scenic_->take_screenshot_responses();
   }
 
   std::unique_ptr<DataProvider> data_provider_;
   bool data_provider_timed_out_ = false;
 
  private:
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
-
-  std::unique_ptr<StubChannelProvider> stub_channel_provider_;
-  std::unique_ptr<StubScenic> stub_scenic_;
-  std::unique_ptr<StubLogger> stub_logger_;
+  std::unique_ptr<StubChannelProvider> channel_provider_;
+  std::unique_ptr<StubScenic> scenic_;
+  std::unique_ptr<StubLogger> logger_;
 };
 
 TEST_F(DataProviderTest, GetScreenshot_SucceedOnScenicReturningSuccess) {
   const size_t image_dim_in_px = 100;
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px), kSuccess);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  auto scenic = std::make_unique<StubScenic>();
+  scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  SetUpScenic(std::move(scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -261,9 +256,9 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicNotAvailable) {
 TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  auto scenic = std::make_unique<StubScenic>();
+  scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  SetUpScenic(std::move(scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -275,9 +270,9 @@ TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningFailure) {
 TEST_F(DataProviderTest, GetScreenshot_FailOnScenicReturningNonBGRA8Screenshot) {
   std::vector<TakeScreenshotResponse> scenic_responses;
   scenic_responses.emplace_back(CreateNonBGRA8Screenshot(), kSuccess);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  auto scenic = std::make_unique<StubScenic>();
+  scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  SetUpScenic(std::move(scenic));
 
   GetScreenshotResponse feedback_response = GetScreenshot();
 
@@ -297,9 +292,9 @@ TEST_F(DataProviderTest, GetScreenshot_ParallelRequests) {
   scenic_responses.emplace_back(CreateCheckerboardScreenshot(image_dim_in_px_1), kSuccess);
   scenic_responses.emplace_back(CreateEmptyScreenshot(), kFailure);
   ASSERT_EQ(scenic_responses.size(), num_calls);
-  std::unique_ptr<StubScenic> stub_scenic = std::make_unique<StubScenic>();
-  stub_scenic->set_take_screenshot_responses(std::move(scenic_responses));
-  SetUpScenic(std::move(stub_scenic));
+  auto scenic = std::make_unique<StubScenic>();
+  scenic->set_take_screenshot_responses(std::move(scenic_responses));
+  SetUpScenic(std::move(scenic));
 
   std::vector<GetScreenshotResponse> feedback_responses;
   for (size_t i = 0; i < num_calls; i++) {
@@ -481,9 +476,9 @@ TEST_F(DataProviderTest, GetData_SysLog) {
 }
 
 TEST_F(DataProviderTest, GetData_Channel) {
-  auto stub_channel_provider = std::make_unique<StubChannelProvider>();
-  stub_channel_provider->set_channel("my-channel");
-  SetUpChannelProvider(std::move(stub_channel_provider));
+  auto channel_provider = std::make_unique<StubChannelProvider>();
+  channel_provider->set_channel("my-channel");
+  SetUpChannelProvider(std::move(channel_provider));
 
   fit::result<Data, zx_status_t> result = GetData();
 

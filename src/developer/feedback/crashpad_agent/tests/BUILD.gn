@@ -175,15 +175,14 @@ executable("crashpad_agent_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//garnet/public/lib/timekeeper:testing",
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/fidl/fuchsia.settings",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/inspect/testing/cpp",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
@@ -268,10 +267,9 @@ executable("privacy_settings_ptr_unittest") {
 
   deps = [
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.settings",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",

@@ -8,9 +8,6 @@
 #include <fuchsia/hwinfo/cpp/fidl.h>
 #include <fuchsia/intl/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
@@ -20,6 +17,7 @@
 
 #include "src/developer/feedback/feedback_agent/constants.h"
 #include "src/developer/feedback/feedback_agent/tests/stub_product.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/split_string.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -39,23 +37,22 @@ using fxl::WhiteSpaceHandling::kTrimWhitespace;
 using sys::testing::ServiceDirectoryProvider;
 
 class ProductInfoProviderTest
-    : public gtest::TestLoopFixture,
+    : public UnitTestFixture,
       public testing::WithParamInterface<std::map<std::string, std::string>> {
  public:
-  ProductInfoProviderTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  ProductInfoProviderTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpProduct(std::unique_ptr<StubProduct> stub_product) {
-    stub_product_ = std::move(stub_product);
-    if (stub_product_) {
-      ASSERT_EQ(service_directory_provider_.AddService(stub_product_->GetHandler()), ZX_OK);
+  void SetUpProductProvider(std::unique_ptr<StubProduct> product_provider) {
+    product_provider_ = std::move(product_provider);
+    if (product_provider_) {
+      InjectServiceProvider(product_provider_.get());
     }
   }
 
   std::map<std::string, std::string> GetProductInfo(const std::set<std::string>& annotations_to_get,
                                                     const zx::duration timeout = zx::sec(1)) {
-    ProductInfoProvider provider(annotations_to_get, dispatcher(),
-                                 service_directory_provider_.service_directory(), timeout);
+    ProductInfoProvider provider(annotations_to_get, dispatcher(), services(), timeout);
 
     auto promise = provider.GetAnnotations();
 
@@ -81,10 +78,9 @@ class ProductInfoProviderTest
   }
 
   async::Executor executor_;
-  ServiceDirectoryProvider service_directory_provider_;
 
  private:
-  std::unique_ptr<StubProduct> stub_product_;
+  std::unique_ptr<StubProduct> product_provider_;
 };
 
 ProductInfo CreateProductInfo(const std::map<std::string, std::string>& annotations) {
@@ -131,9 +127,9 @@ const std::map<std::string, std::string> ProductInfoValues = {
 };
 
 TEST_F(ProductInfoProviderTest, Check_OnlyGetRequestedAnnotations) {
-  std::unique_ptr<StubProduct> stub_product =
+  std::unique_ptr<StubProduct> product_provider =
       std::make_unique<StubProduct>(CreateProductInfo(ProductInfoValues));
-  SetUpProduct(std::move(stub_product));
+  SetUpProductProvider(std::move(product_provider));
 
   const std::set<std::string> keys = {
       kAnnotationHardwareProductSKU,
@@ -154,9 +150,9 @@ TEST_F(ProductInfoProviderTest, Check_BadKeyNotInAnnotations) {
       "bad_annotation",
   };
 
-  std::unique_ptr<StubProduct> stub_product =
+  std::unique_ptr<StubProduct> product_provider =
       std::make_unique<StubProduct>(CreateProductInfo(ProductInfoValues));
-  SetUpProduct(std::move(stub_product));
+  SetUpProductProvider(std::move(product_provider));
 
   auto product_info = GetProductInfo(keys);
   EXPECT_EQ(product_info.size(), 2u);
@@ -175,9 +171,9 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
        ProductInfoValues.at(kAnnotationHardwareProductLocaleList)},
   };
 
-  std::unique_ptr<StubProduct> stub_product =
+  std::unique_ptr<StubProduct> product_provider =
       std::make_unique<StubProduct>(CreateProductInfo(annotations));
-  SetUpProduct(std::move(stub_product));
+  SetUpProductProvider(std::move(product_provider));
 
   std::set<std::string> keys;
   for (const auto& [key, _] : ProductInfoValues) {
@@ -192,11 +188,10 @@ TEST_F(ProductInfoProviderTest, Succeed_ProductInfoReturnsFewerAnnotations) {
 }
 
 TEST_F(ProductInfoProviderTest, Fail_CallGetProductInfoTwice) {
-  SetUpProduct(std::make_unique<StubProduct>(CreateProductInfo({})));
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo({})));
 
   const zx::duration unused_timeout = zx::sec(1);
-  internal::ProductInfoPtr product_info_ptr(dispatcher(),
-                                            service_directory_provider_.service_directory());
+  internal::ProductInfoPtr product_info_ptr(dispatcher(), services());
   executor_.schedule_task(product_info_ptr.GetProductInfo(unused_timeout));
   ASSERT_DEATH(product_info_ptr.GetProductInfo(unused_timeout),
                testing::HasSubstr("GetProductInfo() is not intended to be called twice"));
@@ -244,7 +239,7 @@ INSTANTIATE_TEST_SUITE_P(WithVariousProductInfoResponses, ProductInfoProviderTes
 
 TEST_P(ProductInfoProviderTest, Succeed_OnAnnotations) {
   std::map<std::string, std::string> annotations = GetParam();
-  SetUpProduct(std::make_unique<StubProduct>(CreateProductInfo(annotations)));
+  SetUpProductProvider(std::make_unique<StubProduct>(CreateProductInfo(annotations)));
 
   std::set<std::string> keys;
   for (const auto& [key, _] : annotations) {

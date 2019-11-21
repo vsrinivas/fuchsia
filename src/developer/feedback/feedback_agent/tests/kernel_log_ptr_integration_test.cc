@@ -8,7 +8,6 @@
 #include <lib/async/cpp/executor.h>
 #include <lib/fdio/directory.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/single_threaded_executor.h>
 #include <lib/gtest/test_loop_fixture.h>
 #include <lib/sys/cpp/testing/test_with_environment.h>
 #include <lib/zx/time.h>

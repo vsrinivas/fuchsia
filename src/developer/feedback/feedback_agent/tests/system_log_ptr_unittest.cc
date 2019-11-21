@@ -6,9 +6,6 @@
 
 #include <fuchsia/mem/cpp/fidl.h>
 #include <lib/async/cpp/executor.h>
-#include <lib/fit/single_threaded_executor.h>
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/syslog/logger.h>
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
@@ -20,6 +17,7 @@
 #include "src/developer/feedback/feedback_agent/tests/stub_logger.h"
 #include "src/developer/feedback/testing/gmatchers.h"
 #include "src/developer/feedback/testing/gpretty_printers.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/test/test_settings.h"
@@ -30,23 +28,22 @@
 namespace feedback {
 namespace {
 
-class CollectSystemLogTest : public gtest::TestLoopFixture {
+class CollectSystemLogTest : public UnitTestFixture {
  public:
-  CollectSystemLogTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  CollectSystemLogTest() : executor_(dispatcher()) {}
 
  protected:
-  void SetUpLogger(std::unique_ptr<StubLogger> stub_logger) {
-    stub_logger_ = std::move(stub_logger);
-    if (stub_logger_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_logger_->GetHandler()) == ZX_OK);
+  void SetUpLogger(std::unique_ptr<StubLogger> logger) {
+    logger_ = std::move(logger);
+    if (logger_) {
+      InjectServiceProvider(logger_.get());
     }
   }
 
   fit::result<fuchsia::mem::Buffer> CollectSystemLog(const zx::duration timeout = zx::sec(1)) {
     fit::result<fuchsia::mem::Buffer> result;
     executor_.schedule_task(
-        feedback::CollectSystemLog(dispatcher(), service_directory_provider_.service_directory(),
-                                   timeout)
+        feedback::CollectSystemLog(dispatcher(), services(), timeout)
             .then([&result](fit::result<fuchsia::mem::Buffer>& res) { result = std::move(res); }));
     RunLoopFor(timeout);
     return result;
@@ -54,14 +51,13 @@ class CollectSystemLogTest : public gtest::TestLoopFixture {
 
  private:
   async::Executor executor_;
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 
-  std::unique_ptr<StubLogger> stub_logger_;
+  std::unique_ptr<StubLogger> logger_;
 };
 
 TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
-  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
-  stub_logger->set_messages({
+  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "line 1"),
       BuildLogMessage(FX_LOG_WARNING, "line 2", zx::msec(1)),
       BuildLogMessage(FX_LOG_ERROR, "line 3", zx::msec(2)),
@@ -73,7 +69,7 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
       BuildLogMessage(FX_LOG_INFO, "line 9", zx::msec(8),
                       /*tags=*/{"foo", "bar"}),
   });
-  SetUpLogger(std::move(stub_logger));
+  SetUpLogger(std::move(logger));
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
 
@@ -93,13 +89,13 @@ TEST_F(CollectSystemLogTest, Succeed_BasicCase) {
 }
 
 TEST_F(CollectSystemLogTest, Succeed_LoggerUnbindsFromLogListenerAfterOneMessage) {
-  std::unique_ptr<StubLogger> stub_logger =
+  std::unique_ptr<StubLogger> logger =
       std::make_unique<StubLoggerUnbindsFromLogListenerAfterOneMessage>();
-  stub_logger->set_messages({
+  logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
-  SetUpLogger(std::move(stub_logger));
+  SetUpLogger(std::move(logger));
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog();
 
@@ -117,13 +113,13 @@ TEST_F(CollectSystemLogTest, Succeed_LogCollectionTimesOut) {
   const zx::duration logger_delay = zx::sec(10);
   const zx::duration log_collection_timeout = zx::sec(1);
 
-  std::unique_ptr<StubLogger> stub_logger =
+  std::unique_ptr<StubLogger> logger =
       std::make_unique<StubLoggerDelaysAfterOneMessage>(dispatcher(), logger_delay);
-  stub_logger->set_messages({
+  logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "this line should appear in the partial logs"),
       BuildLogMessage(FX_LOG_INFO, "this line should be missing from the partial logs"),
   });
-  SetUpLogger(std::move(stub_logger));
+  SetUpLogger(std::move(logger));
 
   fit::result<fuchsia::mem::Buffer> result = CollectSystemLog(log_collection_timeout);
 
@@ -187,28 +183,27 @@ TEST_F(CollectSystemLogTest, Fail_LogCollectionTimesOut) {
   ASSERT_TRUE(result.is_error());
 }
 
-class LogListenerTest : public gtest::TestLoopFixture {
+class LogListenerTest : public UnitTestFixture {
  public:
-  LogListenerTest() : executor_(dispatcher()), service_directory_provider_(dispatcher()) {}
+  LogListenerTest() : executor_(dispatcher()) {}
 
  protected:
   async::Executor executor_;
-  ::sys::testing::ServiceDirectoryProvider service_directory_provider_;
 };
 
 // DX-1602
 TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
-  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
-  stub_logger->set_messages({
+  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "msg"),
   });
-  ASSERT_EQ(service_directory_provider_.AddService(stub_logger->GetHandler()), ZX_OK);
+  InjectServiceProvider(logger.get());
 
   // Since we are using a test loop with a fake clock, the actual duration doesn't matter so we can
   // set it arbitrary long.
   const zx::duration timeout = zx::sec(1);
   fit::result<void> result;
-  LogListener log_listener(dispatcher(), service_directory_provider_.service_directory());
+  LogListener log_listener(dispatcher(), services());
   executor_.schedule_task(log_listener.CollectLogs(timeout).then(
       [&result](const fit::result<void>& res) { result = std::move(res); }));
   RunLoopFor(timeout);
@@ -218,18 +213,18 @@ TEST_F(LogListenerTest, Succeed_LoggerClosesConnectionAfterSuccessfulFlow) {
 
   // Then, we check that if the logger closes the connection (and triggers the error handler on the
   // LogListener side), we don't crash (cf. DX-1602).
-  stub_logger->CloseAllConnections();
+  logger->CloseAllConnections();
 }
 
 TEST_F(LogListenerTest, Fail_CallCollectLogsTwice) {
-  std::unique_ptr<StubLogger> stub_logger = std::make_unique<StubLogger>();
-  stub_logger->set_messages({
+  std::unique_ptr<StubLogger> logger = std::make_unique<StubLogger>();
+  logger->set_messages({
       BuildLogMessage(FX_LOG_INFO, "msg"),
   });
-  ASSERT_EQ(service_directory_provider_.AddService(stub_logger->GetHandler()), ZX_OK);
+  InjectServiceProvider(logger.get());
 
   const zx::duration unused_timeout = zx::sec(1);
-  LogListener log_listener(dispatcher(), service_directory_provider_.service_directory());
+  LogListener log_listener(dispatcher(), services());
   executor_.schedule_task(log_listener.CollectLogs(unused_timeout));
   ASSERT_DEATH(log_listener.CollectLogs(unused_timeout),
                testing::HasSubstr("CollectLogs() is not intended to be called twice"));

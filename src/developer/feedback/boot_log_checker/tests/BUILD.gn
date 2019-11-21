@@ -35,12 +35,11 @@ executable("reboot_log_handler_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
     "//sdk/fidl/fuchsia.feedback",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/boot_log_checker:metrics_registry",
     "//src/developer/feedback/boot_log_checker:src",
     "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/lib/files",
     "//src/lib/fxl",
