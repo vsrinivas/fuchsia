@@ -115,9 +115,13 @@ void Session::Present(zx::time presentation_time, PresentCallback callback) {
 void Session::Present2(zx_duration_t requested_presentation_time,
                        zx_duration_t requested_prediction_span,
                        Present2Callback immediate_callback) {
-  session_->Present2(requested_presentation_time, std::move(acquire_fences_),
-                     std::move(release_fences_), requested_prediction_span,
-                     std::move(immediate_callback));
+  fuchsia::ui::scenic::Present2Args args;
+  args.set_requested_presentation_time(requested_presentation_time);
+  args.set_release_fences(std::move(release_fences_));
+  args.set_acquire_fences(std::move(acquire_fences_));
+  args.set_requested_prediction_span(requested_prediction_span);
+
+  session_->Present2(std::move(args), std::move(immediate_callback));
 }
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,

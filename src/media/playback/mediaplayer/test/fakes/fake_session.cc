@@ -147,14 +147,11 @@ void FakeSession::Present(uint64_t presentation_time, std::vector<zx::event> acq
   });
 }
 
-void FakeSession::Present2(zx_time_t requested_presentation_time,
-                           std::vector<zx::event> acquire_fences,
-                           std::vector<zx::event> release_fences,
-                           zx_duration_t requested_prediction_span, Present2Callback callback) {
+void FakeSession::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
   // The video renderer doesn't use these fences, so we don't support them in
   // the fake.
-  FX_CHECK(acquire_fences.empty()) << "Present2: acquire_fences not supported.";
-  FX_CHECK(release_fences.empty()) << "Present2: release_fences not supported.";
+  FX_CHECK(args.acquire_fences().empty()) << "Present2: acquire_fences not supported.";
+  FX_CHECK(args.release_fences().empty()) << "Present2: release_fences not supported.";
 
   // Here we create an empty prediction: one where we "predict" up until the 0 timestamp, meaning
   // we are providing no information.

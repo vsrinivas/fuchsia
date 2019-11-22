@@ -49,9 +49,7 @@ class Session final : public fuchsia::ui::scenic::Session {
                std::vector<zx::event> release_fences, PresentCallback callback) override;
 
   // |fuchsia::ui::scenic::Session|
-  void Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
-                std::vector<zx::event> release_fences, zx_duration_t requested_prediction_span,
-                Present2Callback callback) override;
+  void Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) override;
 
   // |fuchsia::ui::scenic::Session|
   void RequestPresentationTimes(zx_duration_t requested_prediction_span,

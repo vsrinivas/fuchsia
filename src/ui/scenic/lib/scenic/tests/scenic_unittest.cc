@@ -117,6 +117,26 @@ TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 0U);
 }
 
+// TODO(SCN-421)): This test requires a GfxSystem because GfxSystem is currently the source of
+// TempSessionDelegates. Once this bug has been fixed, this test should revert back to a ScenicTest.
+TEST_F(ScenicGfxTest, InvalidPresent2Call_ShouldDestroySession) {
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+  auto session = CreateSession();
+  EXPECT_EQ(scenic()->num_sessions(), 1U);
+
+  session->Present2(/*requested_presentation_time=*/10, /*requested_prediction_span=*/0,
+                    /*immediate_callback=*/[](auto) {});
+
+  // Trigger error by making a Present2 call with an earlier presentation time
+  // than the previous call to Present2.
+  session->Present2(/*requested_presentation_time=*/0, /*requested_prediction_span=*/0,
+                    /*immediate_callback=*/[](auto) {});
+
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(scenic()->num_sessions(), 0U);
+}
+
 TEST_F(ScenicTest, ScenicApiRaceBeforeSystemRegistration) {
   DisplayInfoDelegate display_info_delegate;
   TakeScreenshotDelegate screenshot_delegate;

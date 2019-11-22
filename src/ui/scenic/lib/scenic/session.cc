@@ -78,11 +78,18 @@ void Session::Present(uint64_t presentation_time, std::vector<zx::event> acquire
                                     std::move(release_fences), std::move(callback));
 }
 
-void Session::Present2(zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
-                       std::vector<zx::event> release_fences,
-                       zx_duration_t requested_prediction_span, Present2Callback callback) {
+void Session::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {
   if (!valid_)
     return;
+
+  // Kill the Session if they have not set any of the Present2Args fields.
+  if (!args.has_requested_presentation_time() || !args.has_release_fences() ||
+      !args.has_acquire_fences() || !args.has_requested_prediction_span()) {
+    FXL_LOG(ERROR) << "One or more fields not set in Present2Args table";
+    valid_ = false;
+    GetTempSessionDelegate()->KillSession();
+    return;
+  }
 
   // Kill the Session if they have no more presents left.
   if (--num_presents_allowed_ < 0) {
@@ -93,14 +100,15 @@ void Session::Present2(zx_time_t requested_presentation_time, std::vector<zx::ev
   }
 
   // After decrementing |num_presents_allowed_|, fire the immediate callback.
-  auto future_presentation_infos =
-      GetTempSessionDelegate()->GetFuturePresentationInfos(zx::duration(requested_prediction_span));
+  auto future_presentation_infos = GetTempSessionDelegate()->GetFuturePresentationInfos(
+      zx::duration(args.requested_prediction_span()));
   if (callback)
     callback({std::move(future_presentation_infos), num_presents_allowed_});
 
   // Schedule the update.
-  GetTempSessionDelegate()->Present2(requested_presentation_time, std::move(acquire_fences),
-                                     std::move(release_fences));
+  GetTempSessionDelegate()->Present2(args.requested_presentation_time(),
+                                     std::move(*args.mutable_acquire_fences()),
+                                     std::move(*args.mutable_release_fences()));
 }
 
 void Session::RequestPresentationTimes(zx_duration_t requested_prediction_span,

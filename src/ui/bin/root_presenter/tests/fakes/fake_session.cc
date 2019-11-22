@@ -29,9 +29,6 @@ void FakeSession::Present(uint64_t presentation_time, PresentCallback callback) 
 void FakeSession::RequestPresentationTimes(zx_duration_t request_prediction_span,
                                            RequestPresentationTimesCallback callback) {}
 
-void FakeSession::Present2(zx_time_t requested_presentation_time,
-                           std::vector<zx::event> acquire_fences,
-                           std::vector<zx::event> release_fences,
-                           zx_duration_t requested_prediction_span, Present2Callback callback) {}
+void FakeSession::Present2(fuchsia::ui::scenic::Present2Args args, Present2Callback callback) {}
 }  // namespace testing
 }  // namespace root_presenter

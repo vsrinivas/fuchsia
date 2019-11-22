@@ -13,6 +13,18 @@ namespace scenic_impl {
 namespace gfx {
 namespace test {
 
+static fuchsia::ui::scenic::Present2Args CreatePresent2Args(
+    zx_time_t requested_presentation_time, std::vector<zx::event> acquire_fences,
+    std::vector<zx::event> release_fences, zx_duration_t requested_prediction_span) {
+  fuchsia::ui::scenic::Present2Args args;
+  args.set_requested_presentation_time(requested_presentation_time);
+  args.set_acquire_fences(std::move(acquire_fences));
+  args.set_release_fences(std::move(release_fences));
+  args.set_requested_prediction_span(requested_prediction_span);
+
+  return args;
+}
+
 TEST_F(GfxSystemTest, CreateAndDestroySession) {
   EXPECT_EQ(0U, scenic()->num_sessions());
 
@@ -56,15 +68,31 @@ TEST_F(GfxSystemTest, SchedulePresent2UpdateInOrder) {
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
   // Present on the session with presentation_time = 1.
-  session->Present2(1, CreateEventArray(1), CreateEventArray(1), 0, [](auto) {});
+  session->Present2(CreatePresent2Args(1, CreateEventArray(1), CreateEventArray(1), 0),
+                    [](auto) {});
   // Briefly flush the message loop. Expect that the session is not destroyed.
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
   // Present with the same presentation time.
-  session->Present2(1, CreateEventArray(1), CreateEventArray(1), 0, [](auto) {});
+  session->Present2(CreatePresent2Args(1, CreateEventArray(1), CreateEventArray(1), 0),
+                    [](auto) {});
   // Briefly flush the message loop. Expect that the session is not destroyed.
   RunLoopUntilIdle();
   EXPECT_EQ(1U, scenic()->num_sessions());
+}
+
+TEST_F(GfxSystemTest, SchedulePresent2UpdateWithMissingFields) {
+  // Create a session.
+  fuchsia::ui::scenic::SessionPtr session;
+  EXPECT_EQ(0U, scenic()->num_sessions());
+  scenic()->CreateSession(session.NewRequest(), nullptr);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1U, scenic()->num_sessions());
+  // Present on the session with presentation_time = 1.
+  session->Present2({}, [](auto) {});
+  // Briefly flush the message loop. Expect that the session is destroyed.
+  RunLoopUntilIdle();
+  EXPECT_EQ(0U, scenic()->num_sessions());
 }
 
 bool IsFenceSignalled(const zx::event& fence) {
@@ -133,12 +161,14 @@ TEST_F(GfxSystemTest, ReleaseFences_WithPresent2) {
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present with release fences.
-  session->Present2(0u, std::vector<zx::event>(), std::move(release_fences), 0u, [](auto) {});
+  session->Present2(CreatePresent2Args(0u, std::vector<zx::event>(), std::move(release_fences), 0u),
+                    [](auto) {});
   RunLoopFor(zx::sec(1));
   EXPECT_FALSE(IsFenceSignalled(release_fence1));
   EXPECT_FALSE(IsFenceSignalled(release_fence2));
   // Call Present again with no release fences.
-  session->Present2(0u, std::vector<zx::event>(), std::vector<zx::event>(), 0u, [](auto) {});
+  session->Present2(CreatePresent2Args(0u, std::vector<zx::event>(), std::vector<zx::event>(), 0u),
+                    [](auto) {});
   RunLoopFor(zx::sec(1));
   EXPECT_TRUE(IsFenceSignalled(release_fence1));
   EXPECT_TRUE(IsFenceSignalled(release_fence2));
@@ -215,11 +245,14 @@ TEST_F(GfxSystemTest, AcquireAndReleaseFences_WithPresent2) {
   std::vector<zx::event> release_fences;
   release_fences.push_back(CopyEvent(release_fence));
   // Call Present with both the acquire and release fences.
-  session->Present2(0u, std::move(acquire_fences), std::move(release_fences), 0u, [](auto) {});
+  session->Present2(
+      CreatePresent2Args(0u, std::move(acquire_fences), std::move(release_fences), 0u),
+      [](auto) {});
   RunLoopFor(zx::sec(1));
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Call Present again with no fences.
-  session->Present2(0u, std::vector<zx::event>(), std::vector<zx::event>(), 0u, [](auto) {});
+  session->Present2(CreatePresent2Args(0u, std::vector<zx::event>(), std::vector<zx::event>(), 0u),
+                    [](auto) {});
   RunLoopFor(zx::sec(1));
   EXPECT_FALSE(IsFenceSignalled(release_fence));
   // Now signal the acquire fence.
@@ -256,13 +289,13 @@ TEST_F(GfxSystemTest, TooManyPresent2sInFlight_ShouldKillSession) {
 
   // Max out our budget of Present2s.
   for (int i = 0; i < 5; i++) {
-    session->Present2(0, {}, {}, 0, [](auto) {});
+    session->Present2(CreatePresent2Args(0, {}, {}, 0), [](auto) {});
   }
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_EQ(1U, scenic()->num_sessions());
 
   // Execute one more Present2, which should kill the session.
-  session->Present2(0, {}, {}, 0, [](auto) {});
+  session->Present2(CreatePresent2Args(0, {}, {}, 0), [](auto) {});
   EXPECT_TRUE(RunLoopUntilIdle());
   EXPECT_EQ(0U, scenic()->num_sessions());
 }
@@ -280,7 +313,7 @@ TEST_F(GfxSystemTest, RequestPresentationTimesResponse_ShouldMatchPresent2Callba
   fuchsia::scenic::scheduling::FuturePresentationTimes rpt_response = {};
 
   session->Present2(
-      0, {}, {}, 0,
+      CreatePresent2Args(0, {}, {}, 0),
       [&present2_response](fuchsia::scenic::scheduling::FuturePresentationTimes future_times) {
         present2_response = std::move(future_times);
       });

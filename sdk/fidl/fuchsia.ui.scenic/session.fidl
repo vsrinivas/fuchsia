@@ -8,6 +8,46 @@ using zx;
 using fuchsia.images;
 using fuchsia.scenic.scheduling;
 
+/// Arguments passed into Present2(). Note that every argument is mandatory.
+table Present2Args {
+    /// |requested_presentation_time| specifies the time on or after which the
+    /// client would like the enqueued operations to take visible effect
+    /// (light up pixels on the screen), expressed in nanoseconds in the
+    /// `CLOCK_MONOTONIC` timebase.
+    ///
+    /// Using a |requested_presentation_time| in the present or past (such as 0)
+    /// schedules enqueued operations to take visible effect as soon as
+    /// possible, during the next frame to be prepared. Requested presentation
+    /// times must be monotonically increasing.
+    ///
+    /// Using a |requested_presentation_time| in the future schedules the enqueued
+    /// operations to take visible effect as closely as possible to or after
+    /// the stated time, but no earlier.
+    ///
+    /// Each rendered frame has a target presentation time. This is when Scenic
+    /// aims to have the frame presented to the user. Before rendering a frame,
+    /// the scene manager applies all enqueued operations associated with all
+    /// prior calls to Present2 whose |requested_presentation_time| is on or
+    /// before the frame's target presentation time.
+    1: zx.time requested_presentation_time;
+
+    /// Scenic will wait until all of a session's |acquire_fences| are ready
+    /// before it will execute the presented commands.
+    2: vector<handle<event>> acquire_fences;
+
+    /// |release_fences| is the list of events that will be signalled by Scenic when
+    /// the following Present2 call's |acquire_fences| has been signalled, and
+    /// the updated session state has been fully committed: future frames will be
+    /// rendered using this state, and all frames generated using previous session
+    /// states have been fully-rendered and presented to the display.
+    3: vector<handle<event>> release_fences;
+
+    /// |requested_prediction_span| is the amount of time into the future Scenic
+    /// will provide predictions for. A span of 0 is guaranteed to provide at
+    /// least one future time.
+    4: zx.duration requested_prediction_span;
+};
+
 /// Client use Sessions to interact with a Scenic instance by enqueuing commands
 /// that create or modify resources.
 protocol Session {
@@ -145,41 +185,9 @@ protocol Session {
     /// Switching between both is an error that will result in the Session being
     /// closed.
     ///
-    /// SCHEDULING PRESENTATIONS
-    ///
-    /// |requested_presentation_time| specifies the time on or after which the
-    /// client would like the enqueued operations to take visible effect
-    /// (light up pixels on the screen), expressed in nanoseconds in the
-    /// `CLOCK_MONOTONIC` timebase.
-    ///
-    /// Using a |requested_presentation_time| in the present or past (such as 0)
-    /// schedules enqueued operations to take visible effect as soon as
-    /// possible, during the next frame to be prepared. Requested presentation
-    /// times must be monotonically increasing.
-    ///
-    /// Using a |requested_presentation_time| in the future schedules the enqueued
-    /// operations to take visible effect as closely as possible to or after
-    /// the stated time, but no earlier.
-    ///
-    /// Each rendered frame has a target presentation time. This is when Scenic
-    /// aims to have the frame presented to the user. Before rendering a frame,
-    /// the scene manager applies all enqueued operations associated with all
-    /// prior calls to Present2 whose |requested_presentation_time| is on or
-    /// before the frame's target presentation time.
-    ///
-    /// SYNCHRONIZATION
-    ///
-    /// Scenic will wait until all of a session's |acquire_fences| are ready
-    /// before it will execute the presented commands.
-    ///
-    /// |release_fences| is the list of events that will be signalled by Scenic when
-    /// the following Present2 call's |acquire_fences| has been signalled, and
-    /// the updated session state has been fully committed: future frames will be
-    /// rendered using this state, and all frames generated using previous session
-    /// states have been fully-rendered and presented to the display.
-    Present2(zx.time requested_presentation_time,
-             vector<handle<event>> acquire_fences, vector<handle<event>> release_fences,
-             zx.duration requested_prediction_span)
+    /// See |Present2Args| documentation above for more detailed information on
+    /// what arguments are passed in and their role.
+    Present2(Present2Args args)
         -> (fuchsia.scenic.scheduling.FuturePresentationTimes request_presentation_times_info);
 
     /// This event is fired whenever a set of one or more Present2s are
