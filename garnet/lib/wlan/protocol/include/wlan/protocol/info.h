@@ -9,6 +9,8 @@
 
 #include <zircon/compiler.h>
 
+// LINT.IfChange
+
 __BEGIN_CDECLS
 
 // HT Operation. IEEE Std 802.11-2016,
@@ -40,5 +42,7 @@ typedef struct wlan_vht_op {
 } __PACKED wlan_vht_op_t;
 
 __END_CDECLS
+
+// LINT.ThenChange(//zircon/system/banjo/wlan.protocol.info/info.banjo)
 
 #endif  // GARNET_LIB_WLAN_PROTOCOL_INCLUDE_WLAN_PROTOCOL_INFO_H_

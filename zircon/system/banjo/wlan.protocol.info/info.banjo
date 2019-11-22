@@ -4,5 +4,21 @@
 
 library wlan.protocol.info;
 
-struct WlanHtOp {};
-struct WlanVhtOp {};
+// LINT.IfChange
+
+[Packed]
+struct WlanHtOp {
+    uint8 primary_chan;
+    array<uint8>:5 info;
+    array<uint8>:16 supported_mcs_set;
+};
+
+[Packed]
+struct WlanVhtOp {
+    uint8 vht_cbw;
+    uint8 center_freq_seg0;
+    uint8 center_freq_seg1;
+    uint16 basic_mcs;
+};
+
+// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/info.h)
