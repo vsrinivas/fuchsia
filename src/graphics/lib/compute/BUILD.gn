@@ -99,6 +99,7 @@ graphics_compute_unittests_package("graphics_compute_unittests") {
 # on a working Vulkan environment.
 graphics_compute_unittests_package("graphics_compute_vk_unittests") {
   deps = [
+    "spinel:spinel_ext_unittests",  # TODO(dtiselice): Move this to graphics_compute_unittests.
     "spinel:vk_unittests",
     "tests:common_vk_unittests",
   ]

@@ -64,6 +64,13 @@ static_library("spinel") {
   ]
 }
 
+group("spinel_ext_unittests") {
+  testonly = true
+  public_deps = [
+    "ext/svg2spinel:svg2spinel_unittests",
+  ]
+}
+
 # This group provides a target that tests can link against.
 # It provides the Vulkan-based Spinel API, and the vk_find_targets
 # loader library that simply links all target files into the library
