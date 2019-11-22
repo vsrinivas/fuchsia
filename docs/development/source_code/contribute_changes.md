@@ -1,4 +1,4 @@
-# Contributing changes
+# Contribute changes
 
 Fuchsia manages commits through Gerrit at
 [https://fuchsia-review.googlesource.com](https://fuchsia-review.googlesource.com).
@@ -14,16 +14,16 @@ Before you submit your first contribution to the Fuchsia project, you need to
 
 To sign the Google CLA, do the following:
 
-*   Go to the Google Developers' [Contributor License Agreements](https://cla.developers.google.com/) page.
-*   Sign the agreement on behalf of **Only Yourself** or **Your Employer**.
+1.  Go to the Google Developers' [Contributor License Agreements](https://cla.developers.google.com/) page.
+1.  Sign the agreement on behalf of **Only Yourself** or **Your Employer**.
 
 ### Generate a cookie {#generate-a-cookie}
 
 To generate the cookie, do the following:
 
-*   Log into [Gerrit](https://fuchsia-review.googlesource.com).
-*   At the top of [https://fuchsia.googlesource.com](https://fuchsia.googlesource.com), click **Generate Password**.
-*   Copy the generated code and run it in a terminal of your workstation.
+1.  Log into [Gerrit](https://fuchsia-review.googlesource.com).
+1.  At the top of [https://fuchsia.googlesource.com](https://fuchsia.googlesource.com), click **Generate Password**.
+1.  Copy the generated code and run it in a terminal of your workstation.
 
 ## Create a Change in Gerrit {#create-a-change-in-gerrit}
 
