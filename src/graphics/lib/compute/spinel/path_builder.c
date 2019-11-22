@@ -94,6 +94,9 @@ spn_path_builder_move_to_2(spn_path_builder_t path_builder, float x0, float y0, 
 spn_result_t
 spn_path_builder_move_to(spn_path_builder_t path_builder, float x0, float y0)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   spn_path_builder_move_to_1(path_builder, x0, y0);
 
   return SPN_SUCCESS;
@@ -125,6 +128,9 @@ spn_path_builder_move_to(spn_path_builder_t path_builder, float x0, float y0)
 spn_result_t
 spn_path_builder_line_to(spn_path_builder_t path_builder, float x1, float y1)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   SPN_PB_CN_ACQUIRE(path_builder, line);
 
   SPN_PB_CN_COORDS_APPEND(path_builder, line, 0, path_builder->curr[0].x);
@@ -138,8 +144,15 @@ spn_path_builder_line_to(spn_path_builder_t path_builder, float x1, float y1)
 }
 
 spn_result_t
-spn_path_builder_quad_to(spn_path_builder_t path_builder, float x1, float y1, float x2, float y2)
+spn_path_builder_quad_to(spn_path_builder_t path_builder,  //
+                         float              x1,
+                         float              y1,
+                         float              x2,
+                         float              y2)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   SPN_PB_CN_ACQUIRE(path_builder, quad);
 
   SPN_PB_CN_COORDS_APPEND(path_builder, quad, 0, path_builder->curr[0].x);
@@ -155,7 +168,9 @@ spn_path_builder_quad_to(spn_path_builder_t path_builder, float x1, float y1, fl
 }
 
 spn_result_t
-spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder, float x2, float y2)
+spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder,  //
+                                float              x2,
+                                float              y2)
 {
   float const x1 = path_builder->curr[0].x * 2.0f - path_builder->curr[1].x;
   float const y1 = path_builder->curr[0].y * 2.0f - path_builder->curr[1].y;
@@ -164,9 +179,17 @@ spn_path_builder_quad_smooth_to(spn_path_builder_t path_builder, float x2, float
 }
 
 spn_result_t
-spn_path_builder_cubic_to(
-  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float x3, float y3)
+spn_path_builder_cubic_to(spn_path_builder_t path_builder,  //
+                          float              x1,
+                          float              y1,
+                          float              x2,
+                          float              y2,
+                          float              x3,
+                          float              y3)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   SPN_PB_CN_ACQUIRE(path_builder, cubic);
 
   SPN_PB_CN_COORDS_APPEND(path_builder, cubic, 0, path_builder->curr[0].x);
@@ -184,8 +207,11 @@ spn_path_builder_cubic_to(
 }
 
 spn_result_t
-spn_path_builder_cubic_smooth_to(
-  spn_path_builder_t path_builder, float x2, float y2, float x3, float y3)
+spn_path_builder_cubic_smooth_to(spn_path_builder_t path_builder,  //
+                                 float              x2,
+                                 float              y2,
+                                 float              x3,
+                                 float              y3)
 {
   float const x1 = path_builder->curr[0].x * 2.0f - path_builder->curr[1].x;
   float const y1 = path_builder->curr[0].y * 2.0f - path_builder->curr[1].y;
@@ -198,9 +224,16 @@ spn_path_builder_cubic_smooth_to(
 //
 
 spn_result_t
-spn_path_builder_rat_quad_to(
-  spn_path_builder_t path_builder, float x1, float y1, float x2, float y2, float w0)
+spn_path_builder_rat_quad_to(spn_path_builder_t path_builder,  //
+                             float              x1,
+                             float              y1,
+                             float              x2,
+                             float              y2,
+                             float              w0)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   SPN_PB_CN_ACQUIRE(path_builder, rat_quad);
 
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_quad, 0, path_builder->curr[0].x);
@@ -227,6 +260,9 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
                               float              w0,
                               float              w1)
 {
+  if (!SPN_ASSERT_STATE_TEST(SPN_PATH_BUILDER_STATE_BUILDING, path_builder))
+    return SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN;
+
   SPN_PB_CN_ACQUIRE(path_builder, rat_cubic);
 
   SPN_PB_CN_COORDS_APPEND(path_builder, rat_cubic, 0, path_builder->curr[0].x);
@@ -250,7 +286,11 @@ spn_path_builder_rat_cubic_to(spn_path_builder_t path_builder,
 //
 
 spn_result_t
-spn_path_builder_ellipse(spn_path_builder_t path_builder, float cx, float cy, float rx, float ry)
+spn_path_builder_ellipse(spn_path_builder_t path_builder,  //
+                         float              cx,
+                         float              cy,
+                         float              rx,
+                         float              ry)
 {
   //
   // FIXME -- we can implement this with rationals later...

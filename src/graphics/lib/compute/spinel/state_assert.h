@@ -25,16 +25,19 @@
 
 #define SPN_ASSERT_STATE_DECLARE(type)          type state
 #define SPN_ASSERT_STATE_MEMBER(sp)             (sp)->state
-#define SPN_ASSERT_STATE_INIT(sp,to)            SPN_ASSERT_STATE_MEMBER(sp) = (to)
-#define SPN_ASSERT_STATE_TRANSITION(from,to,sp) assert(SPN_ASSERT_STATE_MEMBER(sp) == (from)); SPN_ASSERT_STATE_INIT(sp,to)
-#define SPN_ASSERT_STATE_ASSERT(at,sp)          assert(SPN_ASSERT_STATE_MEMBER(sp) == (at))
+#define SPN_ASSERT_STATE_INIT(to,sp)            SPN_ASSERT_STATE_MEMBER(sp) = (to)
+#define SPN_ASSERT_STATE_TEST(at,sp)            (SPN_ASSERT_STATE_MEMBER(sp) == (at))
+#define SPN_ASSERT_STATE_ASSERT(at,sp)          assert(SPN_ASSERT_STATE_TEST(at,sp))
+#define SPN_ASSERT_STATE_TRANSITION(from,to,sp) SPN_ASSERT_STATE_ASSERT(from,sp); SPN_ASSERT_STATE_INIT(to,sp)
 
 #else
 
 #define SPN_ASSERT_STATE_DECLARE(st)
-#define SPN_ASSERT_STATE_INIT(sp,to)
-#define SPN_ASSERT_STATE_TRANSITION(from,to,sp)
+#define SPN_ASSERT_STATE_MEMBER(sp)
+#define SPN_ASSERT_STATE_INIT(to,sp)
+#define SPN_ASSERT_STATE_TEST(at,sp)
 #define SPN_ASSERT_STATE_ASSERT(at,sp)
+#define SPN_ASSERT_STATE_TRANSITION(from,to,sp)
 
 #endif
 

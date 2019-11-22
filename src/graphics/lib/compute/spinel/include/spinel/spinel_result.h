@@ -33,8 +33,11 @@ extern "C" {
   SPN_RESULT(SPN_TIMEOUT)                                                                          \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_NOT_IMPLEMENTED)                                                            \
+                                                                                                   \
   SPN_RESULT(SPN_ERROR_CONTEXT_LOST)                                                               \
+                                                                                                   \
   SPN_RESULT(SPN_ERROR_PATH_BUILDER_LOST)                                                          \
+  SPN_RESULT(SPN_ERROR_PATH_BUILDER_PATH_NOT_BEGUN)                                                \
                                                                                                    \
   SPN_RESULT(SPN_ERROR_RASTER_BUILDER_LOST)                                                        \
   SPN_RESULT(SPN_ERROR_RASTER_BUILDER_SEALED)                                                      \

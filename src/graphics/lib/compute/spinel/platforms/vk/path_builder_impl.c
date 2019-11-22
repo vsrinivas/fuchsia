@@ -1179,7 +1179,7 @@ spn_path_builder_impl_create(struct spn_device * const        device,
   //
   pb->refcount = 1;
 
-  SPN_ASSERT_STATE_INIT(pb, SPN_PATH_BUILDER_STATE_READY);
+  SPN_ASSERT_STATE_INIT(SPN_PATH_BUILDER_STATE_READY, pb);
 
   return SPN_SUCCESS;
 }

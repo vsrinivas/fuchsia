@@ -347,7 +347,7 @@ spn_styling_impl_create(struct spn_device * const   device,
   //
   // the styling impl starts out unsealed
   //
-  SPN_ASSERT_STATE_INIT(impl, SPN_SI_STATE_UNSEALED);
+  SPN_ASSERT_STATE_INIT(SPN_SI_STATE_UNSEALED, impl);
 
   return SPN_SUCCESS;
 }

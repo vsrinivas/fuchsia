@@ -1670,7 +1670,7 @@ spn_raster_builder_impl_create(struct spn_device * const    device,
   //
   rb->refcount = 1;
 
-  SPN_ASSERT_STATE_INIT(rb, SPN_RASTER_BUILDER_STATE_READY);
+  SPN_ASSERT_STATE_INIT(SPN_RASTER_BUILDER_STATE_READY, rb);
 
   //
   // init ring/next/next

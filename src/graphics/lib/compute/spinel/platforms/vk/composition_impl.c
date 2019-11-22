@@ -1433,7 +1433,7 @@ spn_composition_impl_create(struct spn_device * const       device,
   impl->lock_count = 0;
 
   // the composition impl starts out unsealed
-  SPN_ASSERT_STATE_INIT(impl, SPN_CI_STATE_UNSEALED);
+  SPN_ASSERT_STATE_INIT(SPN_CI_STATE_UNSEALED, impl);
 
   //
   // initialize composition
