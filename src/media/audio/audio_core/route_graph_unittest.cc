@@ -12,6 +12,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_settings.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 using testing::IsEmpty;
 using testing::UnorderedElementsAreArray;
@@ -21,17 +22,20 @@ namespace {
 
 class FakeAudioObject : public AudioObject {
  public:
-  static fbl::RefPtr<FakeAudioObject> FakeRenderer() {
-    return fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioRenderer));
+  static fbl::RefPtr<FakeAudioObject> FakeRenderer(bool valid_format = true) {
+    return fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioRenderer, valid_format));
   }
 
   static fbl::RefPtr<FakeAudioObject> FakeCapturer() {
-    return fbl::AdoptRef(new FakeAudioObject(AudioObject::Type::AudioCapturer));
+    return fbl::AdoptRef(
+        new FakeAudioObject(AudioObject::Type::AudioCapturer, /*valid_format=*/true));
   }
 
-  FakeAudioObject(AudioObject::Type object_type)
-      : AudioObject(object_type),
-        format_(Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8})) {}
+  FakeAudioObject(AudioObject::Type object_type, bool valid_format) : AudioObject(object_type) {
+    if (valid_format) {
+      format_ = Format::Create({.sample_format = fuchsia::media::AudioSampleFormat::UNSIGNED_8});
+    }
+  }
 
   const fbl::RefPtr<Format>& format() const override { return format_; }
 
@@ -49,7 +53,7 @@ class FakeAudioObject : public AudioObject {
   }
 
  private:
-  fbl::RefPtr<Format> format_;
+  fbl::RefPtr<Format> format_ = nullptr;
 };
 
 // TODO(39532): Remove; use a real output class with fake hardware.
@@ -76,6 +80,7 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
   RouteGraphTest()
       : under_test_(routing_config_),
         throttle_output_(ThrottleOutput::Create(&threading_model(), &device_registry_)) {
+    Logging::Init(-media::audio::SPEW, {"route_graph_test"});
     under_test_.SetThrottleOutput(&threading_model(), throttle_output_);
   }
 
@@ -416,6 +421,58 @@ TEST_F(RouteGraphTest, InputRouteCategoriesDoNotAffectOutputs) {
   EXPECT_THAT(renderer->DestLinks(),
               UnorderedElementsAreArray(std::vector<AudioObject*>{output.get()}));
   EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({first_input.get()}));
+}
+
+TEST_F(RouteGraphTest, DoesNotRouteUnroutableRenderer) {
+  auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  under_test_.AddOutput(output.get());
+
+  auto renderer = FakeAudioObject::FakeRenderer();
+  under_test_.AddRenderer(renderer);
+  EXPECT_THAT(renderer->DestLinks(), IsEmpty());
+
+  under_test_.SetRendererRoutingProfile(
+      renderer.get(),
+      {.routable = false, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
+  EXPECT_THAT(renderer->DestLinks(), IsEmpty());
+}
+
+TEST_F(RouteGraphTest, DoesNotRouteUnroutableCapturer) {
+  auto input = AudioInput::Create(zx::channel(), &threading_model(), &device_registry_);
+  under_test_.AddInput(input.get());
+
+  auto capturer = FakeAudioObject::FakeCapturer();
+  under_test_.AddCapturer(capturer);
+  EXPECT_THAT(capturer->SourceLinks(), IsEmpty());
+
+  under_test_.SetCapturerRoutingProfile(
+      capturer.get(),
+      {.routable = false, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
+  EXPECT_THAT(capturer->SourceLinks(), IsEmpty());
+}
+
+TEST_F(RouteGraphTest, DoesNotRouteUnroutableLoopbackCapturer) {
+  auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+  under_test_.AddOutput(output.get());
+
+  auto loopback_capturer = FakeAudioObject::FakeCapturer();
+  under_test_.AddLoopbackCapturer(loopback_capturer);
+  EXPECT_THAT(loopback_capturer->SourceLinks(), IsEmpty());
+
+  under_test_.SetLoopbackCapturerRoutingProfile(
+      loopback_capturer.get(),
+      {.routable = false, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
+  EXPECT_THAT(loopback_capturer->SourceLinks(), IsEmpty());
+}
+
+TEST_F(RouteGraphTest, AcceptsUnroutableRendererWithInvalidFormat) {
+  auto renderer = FakeAudioObject::FakeRenderer(/*valid_format=*/false);
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(
+      renderer.get(),
+      {.routable = false, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
+
+  // Passes by not crashing.
 }
 
 }  // namespace

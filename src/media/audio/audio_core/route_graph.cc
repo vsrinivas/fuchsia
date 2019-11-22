@@ -101,7 +101,7 @@ void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
   FX_DCHECK(renderer->is_audio_renderer());
-  FX_DCHECK(renderer->format_valid())
+  FX_CHECK(renderer->format_valid() || !profile.routable)
       << "AudioRenderer without PCM format was added to route graph";
   AUD_VLOG(TRACE) << "Setting renderer route profile: " << renderer;
 
