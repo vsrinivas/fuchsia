@@ -1,8 +1,12 @@
 {
+  "services": {
+    "fuchsia.router.config.RouterAdmin": "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx",
+    "fuchsia.router.config.RouterState": "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx",
+    "fuchsia.router.config.RouterSystem": "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx"
+  },
   "startup_services": [
     "fuchsia.router.config.RouterAdmin",
     "fuchsia.router.config.RouterSystem",
     "fuchsia.router.config.RouterState"
   ]
 }
-
