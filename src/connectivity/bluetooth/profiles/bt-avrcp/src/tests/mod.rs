@@ -22,7 +22,8 @@ use {
 
 use crate::{
     packets::{
-        player_application_settings::PlayerApplicationSettingAttributeId, PlaybackStatus, *,
+        player_application_settings::PlayerApplicationSettingAttributeId,
+        GetCapabilitiesCapabilityId, PlaybackStatus, *,
     },
     peer::PeerManager,
     profile::{
@@ -503,7 +504,7 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
             }
             res = events_fut => {
                 expected_commands -= 1;
-                assert_eq!(res?, Ok(vec![TargetEvent::TrackPosChanged, TargetEvent::BattStatusChanged]));
+                assert_eq!(res?, Ok(vec![NotificationEvent::TrackPosChanged, NotificationEvent::BattStatusChanged]));
             }
             res = get_media_attributes_fut => {
                 expected_commands -= 1;

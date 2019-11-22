@@ -12,6 +12,7 @@ fidl("fuchsia.bluetooth.avrcp") {
 
   sources = [
     "controller.fidl",
+    "target.fidl",
     "types.fidl",
   ]
 }

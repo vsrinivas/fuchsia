@@ -19,70 +19,10 @@ protocol PeerManager {
     /// a peer at at time. If a second handler is registered it will be dropped and an error will
     /// be returned.
     SetAbsoluteVolumeHandler(string peer_id, AbsoluteVolumeHandler handler) -> () error zx.status;
-};
 
-/// Change notifications that a controller client can register.
-bits Notifications : uint32 {
-    // AVRCP native notifications
-
-    /// AVRCP `EVENT_PLAYBACK_STATUS_CHANGED` Notification
-    PLAYBACK_STATUS = 0x1;
-
-    /// AVRCP `EVENT_TRACK_CHANGED` Notification
-    TRACK = 0x2;
-
-    /// AVRCP `EVENT_TRACK_POS_CHANGED` Notification
-    TRACK_POS = 0x4;
-
-    /// AVRCP `EVENT_BATT_STATUS_CHANGED` Notification
-    BATT_STATUS = 0x8;
-
-    /// AVRCP `EVENT_SYSTEM_STATUS_CHANGED` Notification
-    SYSTEM_STATUS = 0x10;
-
-    /// AVRCP `EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED` Notification
-    PLAYER_APPLICATION_SETTINGS = 0x20;
-
-    /// AVRCP `EVENT_ADDRESSED_PLAYER_CHANGED` Notification
-    ADDRESSED_PLAYER = 0x40;
-
-    /// AVRCP `EVENT_VOLUME_CHANGED` Notification
-    VOLUME = 0x80;
-
-    // Internal notifications
-
-    /// Internal connection change event.
-    CONNECTION = 0x10000;
-};
-
-/// Event data from incoming target notifications.
-table Notification {
-    /// `EVENT_PLAYBACK_STATUS_CHANGED` event data
-    1: PlaybackStatus status;
-
-    /// `EVENT_TRACK_CHANGED` event data
-    2: uint64 track_id;
-
-    /// `EVENT_TRACK_POS_CHANGED` event data
-    3: uint32 pos;
-
-    /// `EVENT_BATT_STATUS_CHANGED` event data
-    4: BatteryStatus battery_status;
-
-    /// `EVENT_SYSTEM_STATUS_CHANGED` event data
-    5: SystemStatus system_status;
-
-    /// `EVENT_PLAYER_APPLICATION_SETTINGS_CHANGED` event data
-    6: PlayerApplicationSettings application_settings;
-
-    /// `EVENT_ADDRESSED_PLAYER_CHANGED` event data
-    7: uint16 player_id;
-
-    /// `EVENT_VOLUME_CHANGED` event data
-    8: uint8 volume;
-
-    /// `CONNECTION_CHANGE` event data
-    9: bool device_connected;
+    /// Sets an implementation of target handler that will vend delegates for each incoming
+    /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
+    RegisterTargetHandler(TargetHandler handler) -> () error zx.status;
 };
 
 /// Handler for absolute volume requests from a remote peer. See AVRCP v 1.6.2 section 6.13.2.

@@ -1,0 +1,58 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.avrcp;
+
+/// Client wrapper for the local target.
+/// A client is a high level construct and does not represent a connection with a device.
+protocol TargetHandler {
+    /// Returns the event notification ids that are supported by the TG.
+    GetEventsSupported()
+        -> (vector<NotificationEvent>:MAX_NOTIFICATIONS notification_ids) error TargetAvcError;
+
+    /// Returns the currently playing media attributes.
+    /// May send either the GetElementAttributes or GetItemAttributes command depending on what
+    /// is supported.
+    GetMediaAttributes() -> (MediaAttributes attributes) error TargetAvcError;
+
+    /// Returns the status of the currently playing media.
+    GetPlayStatus() -> (PlayStatus play_status) error TargetAvcError;
+
+    /// Send an AV\C passthrough key command.
+    /// If `key_pressed`, then the AV\C passthrough command shall be interpreted as a key
+    /// press down event. Otherwise, the command shall be interpreted as a key release event.
+    SendCommand(AvcPanelCommand command, bool pressed) -> () error TargetPassthroughError;
+
+    /// Request the target device to provide all the target supported player application
+    /// setting attributes.
+    ListPlayerApplicationSettingAttributes() ->
+        (vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attributes) error TargetAvcError;
+
+    /// Returns currently set player application setting values for the `attribute_ids`.
+    /// If no `attribute_ids` are provided, this method will query the TG for all valid
+    /// attribute ID's, and return the currently set player application setting values.
+    GetPlayerApplicationSettings(vector<PlayerApplicationSettingAttributeId>:MAX_ATTRIBUTES attribute_ids)
+        -> (PlayerApplicationSettings current_settings) error TargetAvcError;
+
+    /// Sets the player application settings specified by `requested_settings`. Only
+    /// settings specified in the input `requested_settings` will be overwritten.
+    /// Returns the actual settings that were set.
+    /// Settings provided in the `requested_settings` that are unsupported or unknown
+    /// will not be set; and `SetPlayerApplicationSettings` will not return an error.
+    /// Instead, the returned `set_settings` will include only the settings that were
+    /// successfully set on the remote target.
+    SetPlayerApplicationSettings(PlayerApplicationSettings requested_settings)
+        -> (PlayerApplicationSettings set_settings) error TargetAvcError;
+
+    /// Returns the current value for the notification specified by `event_id`.
+    GetNotification(NotificationEvent event_id) -> (Notification current_value) error TargetAvcError;
+
+    /// Returns the changed value of the notification specified by 'event_id'.
+    /// A changed value refers to any value that is different than the input parameter
+    /// `current` Notification value.
+    /// `WatchNotification` will not respond until the Notification value associated
+    /// with `event_id` has changed from the `current` Notification.
+    WatchNotification(NotificationEvent event_id, Notification current, uint32 pos_change_interval)
+        -> (Notification new_value) error TargetAvcError;
+};

@@ -19,42 +19,6 @@ protocol PeerManagerExt {
     /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
     /// switches.
     GetControllerForTarget(string peer_id, request<ControllerExt> client) -> () error zx.status;
-
-    /// Sets an implementation of target handler that will vend delegates for each incoming
-    /// remote TG -> local CT connections to handle the commands being sent by the remote TG.
-    /// If no target handler is set, a default handler will be used internally that will
-    /// dispatch to the MediaSession service. This should only be used for PTS qualification testing
-    /// and debugging purposes only.
-    RegisterIncomingTargetHandler(TargetHandler handler);
-};
-
-/// An implementation of this interface is registered with the TestPeerManager service to handle
-/// incoming connections.
-protocol TargetHandler {
-    /// Called when an incoming target is connected. `delegate` should be fulfilled with an
-    /// interface that will be used to handle commands from the connected Controller.
-    /// TODO (BT-305): change peer_id to fuchsia.bluetooth.PeerId type after BrEdr profile service
-    /// switches.
-    OnControllerConnected(string peer_id, request<TargetDelegate> delegate);
-};
-
-/// Defined by the AV/C Digital Interface Command Set General Specification and AV/C Panel Subunit
-/// Specification (http://1394ta.org/specifications/)
-enum ResponseCode {
-    NOT_IMPLEMENTED = 0x08;
-    ACCEPTED = 0x09;
-    REJECTED = 0x0A;
-    IN_TRANSITION = 0x0B; // unused in AVRCP specification
-    IMPLEMENTED_STABLE = 0x0C;
-    CHANGED = 0x0D;
-    INTERIM = 0x0F;
-};
-
-/// Returned by an implementer of the TargetHandler interface.
-/// Handles incoming connection commands by a remote CT device.
-protocol TargetDelegate {
-    /// Called after Panel key down and up events.
-    OnCommand(fuchsia.bluetooth.avrcp.AvcPanelCommand command) -> (ResponseCode code);
 };
 
 /// Provides additional methods not in `Controller` that are strictly for testing and debug.
@@ -65,7 +29,7 @@ protocol ControllerExt {
     /// Queries the target and returns what events are supported for notification.
     /// Sends GetCapabilties(0x03 (`EVENTS_SUPPORTED`)) command for all events supported by
     /// the negoitated version of AVRCP.
-    GetEventsSupported() -> (vector<fuchsia.bluetooth.avrcp.TargetEvent> events_supported) error fuchsia.bluetooth.avrcp.ControllerError;
+    GetEventsSupported() -> (vector<fuchsia.bluetooth.avrcp.NotificationEvent> events_supported) error fuchsia.bluetooth.avrcp.ControllerError;
 
     /// Explicitly attempt to connect to the remote peer.
     Connect();

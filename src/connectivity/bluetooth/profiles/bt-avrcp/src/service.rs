@@ -98,17 +98,12 @@ impl AvrcpClientController {
             }
             ControllerRequest::GetMediaAttributes { responder } => {
                 responder.send(
-                    &mut self
-                        .controller
-                        .get_media_attributes()
-                        .await
-                        .map_err(ControllerError::from),
+                    &mut self.controller.get_media_attributes().await.map_err(ControllerError::from),
                 )?;
             }
             ControllerRequest::GetPlayStatus { responder } => {
-                responder.send(
-                    &mut self.controller.get_play_status().await.map_err(ControllerError::from),
-                )?;
+                responder
+                    .send(&mut self.controller.get_play_status().await.map_err(ControllerError::from))?;
             }
             ControllerRequest::InformBatteryStatus { battery_status: _, responder } => {
                 responder.send(&mut Err(ControllerError::CommandNotImplemented))?;
@@ -247,15 +242,15 @@ impl TestAvrcpClientController {
                     Ok(events) => {
                         let mut r_events = vec![];
                         for e in events {
-                            if let Some(target_event) = TargetEvent::from_primitive(u8::from(&e)) {
+                            if let Some(target_event) =
+                                NotificationEvent::from_primitive(u8::from(&e))
+                            {
                                 r_events.push(target_event);
                             }
                         }
                         responder.send(&mut Ok(r_events))?;
                     }
-                    Err(peer_error) => {
-                        responder.send(&mut Err(ControllerError::from(peer_error)))?
-                    }
+                    Err(peer_error) => responder.send(&mut Err(ControllerError::from(peer_error)))?,
                 }
             }
             ControllerExtRequest::Connect { control_handle: _ } => {
@@ -405,8 +400,6 @@ where
                     }
                 }
             }
-            // TODO(1279): handler support
-            PeerManagerExtRequest::RegisterIncomingTargetHandler { .. } => {}
         }
     }
     Ok(())
