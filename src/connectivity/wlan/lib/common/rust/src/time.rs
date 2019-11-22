@@ -14,7 +14,7 @@ use {
 /// and can easily overflow. However, there is usually no need to ever work with TUs > 0xFFFF.
 #[repr(C)]
 #[derive(AsBytes, FromBytes, Copy, Clone, Debug, Default, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct TimeUnit(u16);
+pub struct TimeUnit(pub u16);
 
 impl From<TimeUnit> for zx::Duration {
     fn from(tu: TimeUnit) -> zx::Duration {
@@ -31,12 +31,6 @@ impl From<TimeUnit> for i64 {
 impl From<TimeUnit> for u16 {
     fn from(tu: TimeUnit) -> u16 {
         tu.0
-    }
-}
-
-impl From<u16> for TimeUnit {
-    fn from(tus: u16) -> TimeUnit {
-        TimeUnit(tus)
     }
 }
 

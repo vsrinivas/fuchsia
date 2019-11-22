@@ -7,6 +7,8 @@ mod channel_scheduler;
 #[allow(unused)]
 mod convert_beacon;
 mod frame_writer;
+#[allow(unused)]
+mod scanner;
 mod state;
 
 use {
@@ -17,6 +19,7 @@ use {
         timer::*,
         write_eth_frame,
     },
+    banjo_ddk_protocol_wlan_info::WlanChannel,
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme,
     frame_writer::*,
@@ -36,14 +39,17 @@ use {
     zerocopy::ByteSlice,
 };
 
+pub use scanner::ScanError;
+
 /// Maximum size of EAPOL frames forwarded to SME.
 /// TODO(34845): Evaluate whether EAPOL size restriction is needed.
 const MAX_EAPOL_FRAME_LEN: usize = 255;
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum TimedEvent {
     Authenticating,
     ChannelScheduler,
+    ScannerProbeDelay(WlanChannel),
 }
 
 /// ClientConfig affects time duration used for different timeouts.

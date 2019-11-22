@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    crate::client::ScanError,
     failure::{self, Fail},
     fuchsia_zircon as zx,
     wlan_common::{
@@ -21,6 +22,8 @@ pub enum Error {
     ParsingFrame(#[cause] FrameParseError),
     #[fail(display = "error writing frame: {}", _0)]
     WritingFrame(#[cause] FrameWriteError),
+    #[fail(display = "scan error: {}", _0)]
+    ScanError(#[cause] ScanError),
     #[fail(display = "{}", _0)]
     Internal(#[cause] failure::Error),
     #[fail(display = "{}", _0)]
@@ -37,6 +40,7 @@ impl From<Error> for zx::Status {
             Error::Internal(_) => zx::Status::INTERNAL,
             Error::ParsingFrame(_) => zx::Status::IO_INVALID,
             Error::WritingFrame(_) => zx::Status::IO_REFUSED,
+            Error::ScanError(e) => e.into(),
             Error::Fidl(e) => match e {
                 fidl::Error::ClientRead(status)
                 | fidl::Error::ClientWrite(status)
@@ -83,6 +87,12 @@ impl From<FrameParseError> for Error {
 impl From<FrameWriteError> for Error {
     fn from(e: FrameWriteError) -> Self {
         Error::WritingFrame(e)
+    }
+}
+
+impl From<ScanError> for Error {
+    fn from(e: ScanError) -> Self {
+        Error::ScanError(e)
     }
 }
 

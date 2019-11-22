@@ -30,7 +30,7 @@ use {
     14      delayed_block_ack,
     15      immediate_block_ack,
 )]
-#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy)]
+#[derive(AsBytes, FromBytes, PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(C)]
 pub struct CapabilityInfo(pub u16);
 

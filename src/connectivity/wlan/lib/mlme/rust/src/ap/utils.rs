@@ -304,7 +304,7 @@ mod tests {
     fn beacon_template() {
         let template = make_beacon_template(
             Bssid([2; 6]),
-            10.into(),
+            TimeUnit(10),
             mac::CapabilityInfo(33),
             &[1, 2, 3, 4, 5],
             &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
@@ -343,7 +343,7 @@ mod tests {
     fn beacon_template_no_extended_rates() {
         let template = make_beacon_template(
             Bssid([2; 6]),
-            10.into(),
+            TimeUnit(10),
             mac::CapabilityInfo(33),
             &[1, 2, 3, 4, 5],
             &[1, 2, 3, 4, 5, 6][..],

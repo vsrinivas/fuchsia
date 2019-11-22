@@ -88,7 +88,7 @@ mod tests {
             MgmtBody::parse(MgmtSubtype::BEACON, &bytes[..]),
             Some(MgmtBody::Beacon { bcn_hdr, elements }) => {
                 assert_eq!(0x0101010101010101, { bcn_hdr.timestamp });
-                assert_eq!(TimeUnit::from(0x0202), { bcn_hdr.beacon_interval });
+                assert_eq!(TimeUnit(0x0202), { bcn_hdr.beacon_interval });
                 assert_eq!(0x0303, { bcn_hdr.capabilities.0 });
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
             },

@@ -749,7 +749,7 @@ impl Ap {
         self.bss.replace(InfraBss::try_new(
             &mut self.ctx,
             req.ssid.clone(),
-            req.beacon_period.into(),
+            TimeUnit(req.beacon_period),
             req.rates,
             req.channel,
             req.rsne,
@@ -1199,11 +1199,7 @@ mod tests {
 
         assert_eq!(
             fake_device.wlan_channel,
-            WlanChannel {
-                primary: 1,
-                cbw: WlanChannelBandwidth::_20,
-                secondary80: 0,
-            }
+            WlanChannel { primary: 1, cbw: WlanChannelBandwidth::_20, secondary80: 0 }
         );
 
         let beacon_tmpl = vec![

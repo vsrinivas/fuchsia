@@ -9,14 +9,18 @@ use {
     fuchsia_zircon as zx,
     std::convert::TryInto,
     wlan_common::{
-        buffer_reader::BufferReader, channel::derive_channel, ie, mac::CapabilityInfo, TimeUnit,
+        buffer_reader::BufferReader,
+        channel::derive_channel,
+        ie,
+        mac::{Bssid, CapabilityInfo},
+        TimeUnit,
     },
     zerocopy::AsBytes,
 };
 
 /// Given information from beacon or probe response, convert to BssDescription.
 pub fn construct_bss_description(
-    bssid: [u8; 6],
+    bssid: Bssid,
     timestamp: u64,
     beacon_interval: TimeUnit,
     capability_info: CapabilityInfo,
@@ -106,7 +110,7 @@ pub fn construct_bss_description(
     let chan = derive_channel(rx_info.chan.primary, dsss_chan, parsed_ht_op, parsed_vht_op);
 
     Ok(fidl_mlme::BssDescription {
-        bssid,
+        bssid: bssid.0,
         ssid,
         bss_type,
         beacon_period: beacon_interval.into(),
@@ -144,23 +148,23 @@ fn get_bss_type(capability_info: CapabilityInfo) -> fidl_mlme::BssTypes {
 /// Placeholder struct, to be replaced with banjo version
 #[derive(Clone, Debug, PartialEq)]
 pub struct RxInfo {
-    rx_flags: u32,
-    valid_fields: u32,
-    phy: u16,
-    data_rate: u32,
-    chan: WlanChannel,
-    mcs: u8,
+    pub rx_flags: u32,
+    pub valid_fields: u32,
+    pub phy: u16,
+    pub data_rate: u32,
+    pub chan: WlanChannel,
+    pub mcs: u8,
 
-    rssi_dbm: i8,
-    rcpi_dbmh: i16,
-    rsni_dbh: i16,
+    pub rssi_dbm: i8,
+    pub rcpi_dbmh: i16,
+    pub rsni_dbh: i16,
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
 
-    const BSSID: [u8; 6] = [0x33; 6];
+    const BSSID: Bssid = Bssid([0x33; 6]);
     const TIMESTAMP: u64 = 364983910445;
     const BEACON_INTERVAL: u16 = 100;
     // Capability information: ESS, privacy, spectrum mgmt, radio msmt
@@ -252,7 +256,7 @@ mod tests {
         let bss_desc = construct_bss_description(
             BSSID,
             TIMESTAMP,
-            BEACON_INTERVAL.into(),
+            TimeUnit(BEACON_INTERVAL),
             CAPABILITY_INFO,
             &ies[..],
             RX_INFO,
@@ -262,7 +266,7 @@ mod tests {
         assert_eq!(
             bss_desc,
             fidl_mlme::BssDescription {
-                bssid: BSSID,
+                bssid: BSSID.0,
                 ssid: b"foo-ssid".to_vec(),
                 bss_type: fidl_mlme::BssTypes::Infrastructure,
                 beacon_period: BEACON_INTERVAL,

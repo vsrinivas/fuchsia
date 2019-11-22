@@ -221,6 +221,45 @@ where
     .map_err(|error| error.into())
 }
 
+pub fn write_probe_req_frame<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    seq_mgr: &mut SequenceManager,
+    ssid: &[u8],
+    rates: &[u8],
+    ht_cap: Option<HtCapabilities>,
+    vht_cap: Option<VhtCapabilities>,
+) -> Result<(), Error> {
+    if ht_cap.is_none() && vht_cap.is_some() {
+        return Err(Error::Internal(format_err!("vht_cap without ht_cap is invalid")));
+    }
+
+    let bcast_addr = Bssid(mac::BCAST_ADDR);
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::PROBE_REQ);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&bcast_addr.0) as u16);
+
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_to_ap(frame_ctrl, bcast_addr, client_addr, seq_ctrl),
+        None,
+    )?;
+
+    write_ssid(buf, ssid)?;
+    let rates_writer = RatesWriter::try_new(&rates[..])?;
+    rates_writer.write_supported_rates(buf);
+    rates_writer.write_ext_supported_rates(buf);
+
+    if let Some(ht_cap) = ht_cap {
+        write_ht_capabilities(buf, &ht_cap)?;
+        if let Some(vht_cap) = vht_cap {
+            write_vht_capabilities(buf, &vht_cap)?;
+        }
+    }
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use {
@@ -527,5 +566,66 @@ mod tests {
             ],
             &buffer[..]
         );
+    }
+    #[test]
+    fn probe_req_frame_ok() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_probe_req_frame(
+            &mut buf,
+            [2; 6],
+            &mut seq_mgr,
+            &"ssid".as_bytes(),
+            &[8, 7, 6, 5, 4, 3, 2, 1, 0],
+            Some(wlan_common::ie::fake_ht_capabilities()),
+            Some(wlan_common::ie::fake_vht_capabilities()),
+        )
+        .expect("writing probe request frame");
+
+        #[rustfmt::skip]
+        assert_eq!(
+            &buf[..],
+            &[
+                // Mgmt Header
+                0b01000000, 0, // frame control
+                0, 0, // duration
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr3
+                0x10, 0, // sequence control
+                // IEs
+                0, 4, // SSID id and length
+                115, 115, 105, 100, // SSID
+                1, 8, // supp_rates id and length
+                8, 7, 6, 5, 4, 3, 2, 1, // supp_rates
+                50, 1, // ext_supp rates id and length
+                0, // ext_supp_rates
+                45, 26, // ht_cap id and length
+                254, 1, 0, 255, 0, 0, 0, 1, // ht_cap
+                0, 0, 0, 0, 0, 0, 0, 1, // ht_cap
+                0, 0, 0, 0, 0, 0, 0, 0, // ht_cap
+                0, 0, // ht_cap (26 bytes total)
+                191, 12, // vht_cap id and length
+                177, 2, 0, 177, 3, 2, 99, 67, // vht_cap
+                3, 2, 99, 3 // vht_cap (12 bytes total)
+            ][..]
+        );
+    }
+
+    #[test]
+    fn probe_req_frame_error() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+
+        assert!(write_probe_req_frame(
+            &mut buf,
+            [2; 6],
+            &mut seq_mgr,
+            &"ssid".as_bytes(),
+            &[0],
+            None, // HT Capabilities
+            Some(wlan_common::ie::fake_vht_capabilities()),
+        )
+        .is_err());
     }
 }

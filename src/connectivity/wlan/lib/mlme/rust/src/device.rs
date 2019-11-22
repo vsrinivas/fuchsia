@@ -250,7 +250,7 @@ impl FakeDevice {
             (*(device as *mut Self)).bcn_cfg = Some((
                 std::slice::from_raw_parts(beacon_tmpl_data, beacon_tmpl_len).to_vec(),
                 tim_ele_offset,
-                beacon_interval.into(),
+                TimeUnit(beacon_interval),
             ));
         }
         zx::sys::ZX_OK
@@ -457,7 +457,7 @@ mod tests {
     fn enable_disable_beaconing() {
         let mut fake_device = FakeDevice::new();
         let dev = fake_device.as_device();
-        dev.enable_beaconing(&[1, 2, 3, 4][..], 1, 2.into()).expect("error enabling beaconing");
+        dev.enable_beaconing(&[1, 2, 3, 4][..], 1, TimeUnit(2)).expect("error enabling beaconing");
         assert!(fake_device.bcn_cfg.is_some());
         dev.disable_beaconing().expect("error disabling beaconing");
         assert!(fake_device.bcn_cfg.is_none());

@@ -15,6 +15,9 @@ use {
     std::marker::PhantomData,
 };
 
+#[cfg(test)]
+pub use tests::{LEvent, MockListener};
+
 pub type RequestId = u64;
 
 /// ChannelScheduler let the client schedule to go to some channel at a particular time or
@@ -272,6 +275,7 @@ mod tests {
     use {
         super::*,
         crate::{device::FakeDevice, timer::FakeScheduler},
+        std::{cell::RefCell, rc::Rc},
         wlan_common::assert_variant,
     };
 
@@ -492,7 +496,7 @@ mod tests {
             Self {
                 fake_device: FakeDevice::new(),
                 fake_scheduler: FakeScheduler::new(),
-                listener: MockListener { events: vec![] },
+                listener: MockListener { events: Rc::new(RefCell::new(vec![])) },
             }
         }
 
@@ -503,18 +507,18 @@ mod tests {
     }
 
     #[derive(Default)]
-    struct MockListener {
-        events: Vec<LEvent>,
+    pub struct MockListener {
+        pub events: Rc<RefCell<Vec<LEvent>>>,
     }
 
     impl MockListener {
         fn drain_events(&mut self) -> Vec<LEvent> {
-            self.events.drain(..).collect()
+            self.events.borrow_mut().drain(..).collect()
         }
     }
 
     #[derive(Debug, PartialEq)]
-    enum LEvent {
+    pub enum LEvent {
         PreSwitch { from: WlanChannel, to: WlanChannel, req_id: RequestId },
         PostSwitch { from: WlanChannel, to: WlanChannel, req_id: RequestId },
         ReqComplete(RequestId),
@@ -527,7 +531,7 @@ mod tests {
             to: WlanChannel,
             request_id: RequestId,
         ) {
-            self.events.push(LEvent::PreSwitch { from, to, req_id: request_id });
+            self.events.borrow_mut().push(LEvent::PreSwitch { from, to, req_id: request_id });
         }
 
         fn on_post_switch_channel(
@@ -536,11 +540,11 @@ mod tests {
             to: WlanChannel,
             request_id: RequestId,
         ) {
-            self.events.push(LEvent::PostSwitch { from, to, req_id: request_id });
+            self.events.borrow_mut().push(LEvent::PostSwitch { from, to, req_id: request_id });
         }
 
         fn on_req_complete(&mut self, req_id: RequestId) {
-            self.events.push(LEvent::ReqComplete(req_id));
+            self.events.borrow_mut().push(LEvent::ReqComplete(req_id));
         }
     }
 }
