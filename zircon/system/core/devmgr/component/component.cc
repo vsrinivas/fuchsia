@@ -755,7 +755,9 @@ zx_status_t Component::DdkRxrpc(zx_handle_t raw_channel) {
   }
 
   uint8_t req_buf[kProxyMaxTransferSize];
-  uint8_t resp_buf[kProxyMaxTransferSize];
+
+  // Ensure all response messages are fully initialized.
+  uint8_t resp_buf[kProxyMaxTransferSize] = {};
   auto* req_header = reinterpret_cast<ProxyRequest*>(&req_buf);
   auto* resp_header = reinterpret_cast<ProxyResponse*>(&resp_buf);
   uint32_t actual;
