@@ -102,7 +102,8 @@ std::unique_ptr<CodecBuffer> CodecBuffer::Allocate(
 }
 
 bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,
-                                        uint32_t vmo_usable_size, bool need_write) {
+                                        uint32_t vmo_usable_size, bool need_write,
+                                        bool is_physically_contiguous) {
   zx_vm_option_t options = ZX_VM_PERM_READ;
   if (need_write) {
     options |= ZX_VM_PERM_WRITE;
@@ -116,15 +117,17 @@ bool CodecBuffer::CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start,
   }
   base_ = reinterpret_cast<uint8_t*>(tmp);
   vmo_ = std::move(vmo);
+  is_physically_contiguous_ = is_physically_contiguous;
   return true;
 }
 
 std::unique_ptr<CodecBuffer> CodecBuffer::CreateFromVmo(uint32_t buffer_index, zx::vmo vmo,
                                                         uint32_t vmo_usable_start,
-                                                        uint32_t vmo_usable_size, bool need_write) {
+                                                        uint32_t vmo_usable_size, bool need_write,
+                                                        bool is_physically_contiguous) {
   std::unique_ptr<CodecBuffer> result(new CodecBuffer(buffer_index, vmo_usable_size));
-  if (!result->CreateFromVmoInternal(std::move(vmo), vmo_usable_start, vmo_usable_size,
-                                     need_write)) {
+  if (!result->CreateFromVmoInternal(std::move(vmo), vmo_usable_start, vmo_usable_size, need_write,
+                                     is_physically_contiguous)) {
     return nullptr;
   }
   return result;

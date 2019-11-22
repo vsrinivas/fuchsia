@@ -155,7 +155,8 @@ void CodecClient::Start() {
     std::unique_ptr<CodecBuffer> local_buffer = CodecBuffer::CreateFromVmo(
         i, std::move(buffer_collection_info.buffers[i].vmo),
         buffer_collection_info.buffers[i].vmo_usable_start,
-        buffer_collection_info.settings.buffer_settings.size_bytes, true);
+        buffer_collection_info.settings.buffer_settings.size_bytes, true,
+        buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     if (!local_buffer) {
       FX_LOGS(FATAL) << "CodecBuffer::CreateFromVmo() failed";
     }
@@ -602,7 +603,8 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
         std::unique_ptr<CodecBuffer> buffer = CodecBuffer::CreateFromVmo(
             i, std::move(buffer_collection_info.buffers[i].vmo),
             buffer_collection_info.buffers[i].vmo_usable_start,
-            buffer_collection_info.settings.buffer_settings.size_bytes, true);
+            buffer_collection_info.settings.buffer_settings.size_bytes, true,
+            buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
         if (!buffer) {
           FX_LOGS(FATAL) << "CodecBuffer::Allocate() failed (output)";
         }

@@ -206,8 +206,10 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
   result.has_buffer_memory_constraints = true;
   result.buffer_memory_constraints.min_size_bytes = per_packet_buffer_bytes_min;
   result.buffer_memory_constraints.max_size_bytes = per_packet_buffer_bytes_max;
-  // amlogic requires physically contiguous on both input and output
-  result.buffer_memory_constraints.physically_contiguous_required = true;
+  // Non-secure input buffers are never read directly by the hardware, so they don't need to be
+  // physically contiguous.
+  result.buffer_memory_constraints.physically_contiguous_required =
+      (port == kOutputPort) || IsPortSecurePermitted(port);
   result.buffer_memory_constraints.secure_required = IsPortSecureRequired(port);
   result.buffer_memory_constraints.cpu_domain_supported = !IsPortSecureRequired(port);
   result.buffer_memory_constraints.ram_domain_supported =
@@ -323,12 +325,15 @@ CodecAdapterVp9::CoreCodecGetBufferCollectionConstraints(
 
 void CodecAdapterVp9::CoreCodecSetBufferCollectionInfo(
     CodecPort port, const fuchsia::sysmem::BufferCollectionInfo_2& buffer_collection_info) {
-  ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   if (port == kOutputPort) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.has_image_format_constraints);
     ZX_DEBUG_ASSERT(buffer_collection_info.settings.image_format_constraints.pixel_format.type ==
                     fuchsia::sysmem::PixelFormatType::NV12);
     output_buffer_collection_info_ = fidl::Clone(buffer_collection_info);
+  }
+  if (IsPortSecurePermitted(port)) {
+    ZX_DEBUG_ASSERT(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
   }
   buffer_settings_[port].emplace(buffer_collection_info.settings);
 }

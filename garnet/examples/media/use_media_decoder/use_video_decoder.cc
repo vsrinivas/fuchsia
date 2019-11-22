@@ -259,6 +259,9 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     // VP9 decoder doesn't yet support splitting access units into multiple
     // packets.
     ZX_ASSERT(byte_count <= buffer.size_bytes());
+
+    // Check that we don't waste contiguous space on non-secure VP9 input buffers.
+    ZX_ASSERT(!buffer.is_physically_contiguous());
     packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
     packet->set_start_offset(0);
     packet->set_valid_length_bytes(byte_count);

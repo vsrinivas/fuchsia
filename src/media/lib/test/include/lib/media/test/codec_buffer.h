@@ -27,7 +27,8 @@ class CodecBuffer {
 
   static std::unique_ptr<CodecBuffer> CreateFromVmo(uint32_t buffer_index, zx::vmo vmo,
                                                     uint32_t vmo_usable_start,
-                                                    uint32_t vmo_usable_size, bool need_write);
+                                                    uint32_t vmo_usable_size, bool need_write,
+                                                    bool is_physically_contiguous);
 
   // Each successful call to this method dups the VMO handle, with basic rights
   // + read + optional write depending on is_for_write.
@@ -42,12 +43,15 @@ class CodecBuffer {
   const ::zx::vmo& vmo() const { return vmo_; }
   uint64_t vmo_offset() const { return 0; }
 
+  // For testing.
+  bool is_physically_contiguous() const { return is_physically_contiguous_; }
+
  private:
   explicit CodecBuffer(uint32_t buffer_index, size_t size_bytes);
   void SetPhysicallyContiguousRequired(const ::zx::handle& very_temp_kludge_bti_handle);
   bool AllocateInternal();
   bool CreateFromVmoInternal(zx::vmo vmo, uint32_t vmo_usable_start, uint32_t vmo_usable_size,
-                             bool need_write);
+                             bool need_write, bool is_physically_contiguous);
 
   uint32_t buffer_index_ = 0;
   size_t size_bytes_ = 0;
@@ -59,6 +63,7 @@ class CodecBuffer {
 
   zx::vmo vmo_;
   uint8_t* base_ = nullptr;
+  bool is_physically_contiguous_ = false;
 };
 
 #endif  // SRC_MEDIA_LIB_TEST_INCLUDE_LIB_MEDIA_TEST_CODEC_BUFFER_H_
