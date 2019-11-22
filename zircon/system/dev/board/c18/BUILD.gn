@@ -5,6 +5,7 @@
 zx_driver("c18") {
   sources = [
     "c18-gpio.cc",
+    "c18-msdc0.cc",
     "c18-soc.cc",
     "c18.cc",
   ]

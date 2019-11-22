@@ -19,8 +19,8 @@ class MsdcCfg : public hwreg::RegisterBase<MsdcCfg, uint32_t> {
   static auto Get() { return hwreg::RegisterAddr<MsdcCfg>(0x00); }
 
   DEF_FIELD(21, 20, card_ck_mode);
-  DEF_BIT(18, hs400_ck_mode);
-  DEF_FIELD(15, 8, card_ck_div);
+  DEF_BIT(22, hs400_ck_mode);
+  DEF_FIELD(19, 8, card_ck_div);
   DEF_BIT(7, card_ck_stable);
   DEF_BIT(4, ck_drive);
   DEF_BIT(3, pio_mode);

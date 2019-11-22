@@ -13,6 +13,12 @@
 
 namespace board_c18 {
 
+// BTI IDs for our devices
+enum {
+  BTI_MSDC0,
+};
+
+
 class C18;
 using C18Type = ddk::Device<C18>;
 
@@ -30,6 +36,7 @@ class C18 : public C18Type {
 
   static zx_status_t SocInit();
   zx_status_t GpioInit();
+  zx_status_t Msdc0Init();
 
   int Thread();
 

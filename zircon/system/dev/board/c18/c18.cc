@@ -62,6 +62,12 @@ int C18::Thread() {
     return -1;
   }
 
+  status = Msdc0Init();
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "%s:%d Msdc0Init() failed.\n", __PRETTY_FUNCTION__, __LINE__);
+    return -1;
+  }
+
   status = pbus_.DeviceAdd(&rtc_dev);
   if (status != ZX_OK) {
     zxlogf(ERROR, "%s: DeviceAdd failed for RTC - error %d\n", __func__, status);

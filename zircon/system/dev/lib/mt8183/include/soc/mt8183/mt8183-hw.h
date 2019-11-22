@@ -12,10 +12,14 @@
 #define MT8183_EINT_BASE 0x1000b000
 #define MT8183_EINT_SIZE 0x1000
 
+#define MT8183_MSDC0_BASE 0x11230000
+#define MT8183_MSDC0_SIZE 0x1000
+
 // MCU config interrupt polarity registers start
 #define MT8183_MCUCFG_INT_POL_CTL0 0xa80
 
 // GIC interrupt numbers
+#define MT8183_IRQ_MSDC0 109
 #define MT8183_IRQ_EINT 209
 
 // GPIOs

@@ -304,7 +304,7 @@ zx_status_t MtkSdmmc::SdmmcSetBusFreq(uint32_t bus_freq) {
   uint32_t ck_div = (((config_.src_clk_freq / requested) + 3) / 4);
   if (requested >= config_.src_clk_freq / 2) {
     ck_div = 0;
-  } else if (ck_div > 0xff) {
+  } else if (ck_div > 0xfff) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 

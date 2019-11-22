@@ -449,6 +449,20 @@ TEST_F(DeviceEnumerationTest, NocturneTest) {
 TEST_F(DeviceEnumerationTest, C18Test) {
   static const char* kDevicePaths[] = {
       "sys/platform/0d:00:1/mt8167-gpio",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot1/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/boot2/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-000/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-001/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-002/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-003/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-004/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-005/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-006/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-007/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-008/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-009/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-010/block",
+      "emmc/mtk-sdmmc/sdmmc/sdmmc-mmc/user/block/part-011/block",
   };
 
   ASSERT_NO_FATAL_FAILURES(TestRunner(kDevicePaths, fbl::count_of(kDevicePaths)));
