@@ -10,6 +10,24 @@ group("test") {
   deps = [
     ":deprecated_timezone_unit_tests",
     ":timezone_tests",
+    ":timezone_unittests",
+  ]
+}
+
+executable("timezone_unittests") {
+  testonly = true
+
+  output_name = "timezone_unittests"
+
+  sources = [
+    "timezone_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/timezone:lib",
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:gtest_main",
   ]
 }
 
@@ -33,6 +51,7 @@ executable("deprecated_timezone_unit_tests") {
 test_package("timezone_tests") {
   deps = [
     ":deprecated_timezone_unit_tests",
+    ":timezone_unittests",
   ]
 
   resources = [
@@ -43,6 +62,10 @@ test_package("timezone_tests") {
   ]
 
   tests = [
+    {
+      name = "timezone_unittests"
+      environments = basic_envs
+    },
     {
       name = "deprecated_timezone_unit_tests"
       environments = basic_envs

@@ -26,25 +26,22 @@ async fn test_intl() {
     const INITIAL_TIME_ZONE: &'static str = "PDT";
 
     let service_gen = |service_name: &str, channel: zx::Channel| {
-        if service_name != fidl_fuchsia_deprecatedtimezone::TimezoneMarker::NAME {
+        if service_name != fidl_fuchsia_timezone::TimezoneMarker::NAME {
             return Err(format_err!("unsupported!"));
         }
 
         let mut timezone_stream =
-            ServerEnd::<fidl_fuchsia_deprecatedtimezone::TimezoneMarker>::new(channel)
-                .into_stream()?;
+            ServerEnd::<fidl_fuchsia_timezone::TimezoneMarker>::new(channel).into_stream()?;
 
         fasync::spawn(async move {
             let mut stored_timezone = INITIAL_TIME_ZONE.to_string();
             while let Some(req) = timezone_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
                 match req {
-                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::GetTimezoneId {
-                        responder,
-                    } => {
+                    fidl_fuchsia_timezone::TimezoneRequest::GetTimezoneId { responder } => {
                         responder.send(&stored_timezone).unwrap();
                     }
-                    fidl_fuchsia_deprecatedtimezone::TimezoneRequest::SetTimezone {
+                    fidl_fuchsia_timezone::TimezoneRequest::SetTimezone {
                         timezone_id,
                         responder,
                     } => {

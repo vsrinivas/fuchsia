@@ -13,7 +13,6 @@
         ],
         "services": [
             "fuchsia.accessibility.SettingsManager",
-            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.device.manager.Administrator",
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
@@ -23,6 +22,7 @@
             "fuchsia.netstack.Netstack",
             "fuchsia.stash.Store",
             "fuchsia.sys.Environment",
+            "fuchsia.timezone.Timezone",
             "fuchsia.ui.brightness.Control",
             "fuchsia.ui.policy.DeviceListenerRegistry"
         ]

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/deprecatedtimezone/cpp/fidl.h>
+#include <fuchsia/timezone/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <lib/sys/cpp/component_context.h>
@@ -81,7 +81,7 @@ class TzUtil {
     std::cout << std::endl;
   }
   std::unique_ptr<sys::ComponentContext> context_;
-  fuchsia::deprecatedtimezone::TimezoneSyncPtr timezone_;
+  fuchsia::timezone::TimezoneSyncPtr timezone_;
 };
 
 int main(int argc, char** argv) {
