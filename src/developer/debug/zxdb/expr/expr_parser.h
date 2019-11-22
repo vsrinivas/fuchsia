@@ -88,6 +88,9 @@ class ExprParser {
   // a valid type modifier at all (which will mark the type parsing complete).
   fxl::RefPtr<Type> ParseType(fxl::RefPtr<Type> optional_base);
 
+  // Parse a Rust Array type name, which is of the form [Type] or [Type; 24]
+  fxl::RefPtr<Type> ParseRustArrayType();
+
   // Parses template parameter lists. The "stop_before" parameter indicates how the list is expected
   // to end (i.e. ">"). Sets the error on failure.
   std::vector<std::string> ParseTemplateList(ExprTokenType stop_before);

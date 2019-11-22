@@ -58,6 +58,7 @@ constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     {ExprTokenType::kSpaceship,       kLangAll,  "<=>"},
     {ExprTokenType::kDot,             kLangAll,  "."},
     {ExprTokenType::kComma,           kLangAll,  ","},
+    {ExprTokenType::kSemicolon,       kLangAll,  ";"},
     {ExprTokenType::kStar,            kLangAll,  "*"},
     {ExprTokenType::kAmpersand,       kLangAll,  "&"},
     {ExprTokenType::kDoubleAnd,       kLangAll,  "&&"},

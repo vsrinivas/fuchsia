@@ -771,6 +771,24 @@ TEST_F(ExprParserTest, RustCast) {
       " IDENTIFIER(\"a\")\n",
       GetParseString("a as (Type)", ExprLanguage::kRust, &TestLookupName));
 
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type[23])\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as [Type; 23]", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type[])\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as [Type]", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type[23]*)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as &[Type; 23]", ExprLanguage::kRust, &TestLookupName));
+
   // Looks like a cast but it's not a type.
   auto result = Parse("a as NotType", ExprLanguage::kRust, &TestLookupName);
   EXPECT_FALSE(result);
@@ -781,6 +799,30 @@ TEST_F(ExprParserTest, RustCast) {
   result = Parse("a as Type", ExprLanguage::kC, &TestLookupName);
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, BadRustArrays) {
+  auto result = Parse("a as [NotType]", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
+            parser().err().msg());
+
+  result = Parse("a as [NotType; 23]", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
+            parser().err().msg());
+
+  result = Parse("a as [Type; 23", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ']' before end of input.", parser().err().msg());
+
+  result = Parse("a as [Type;", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected element count before end of input.", parser().err().msg());
+
+  result = Parse("a as [Type", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ']' before end of input.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, BadRustTuples) {

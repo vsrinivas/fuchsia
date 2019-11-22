@@ -8,7 +8,9 @@
 
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
+#include "src/developer/debug/zxdb/expr/number_parser.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+#include "src/developer/debug/zxdb/symbols/array_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
@@ -105,6 +107,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceThreeWayComparison},  // kSpaceship
     {nullptr,                      &ExprParser::DotOrArrowInfix, kPrecedenceCallAccess},          // kDot
     {nullptr,                      nullptr,                      -1},                             // kComma
+    {nullptr,                      nullptr,                      -1},                             // kSemicolon
     {&ExprParser::StarPrefix,      &ExprParser::BinaryOpInfix,   kPrecedenceMultiplication},      // kStar
     {&ExprParser::AmpersandPrefix, &ExprParser::BinaryOpInfix,   kPrecedenceBitwiseAnd},          // kAmpersand
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceLogicalAnd},          // kDoubleAnd
@@ -562,8 +565,11 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
 
         return MakeRustTuple(name, members);
       } else {
-        SetError(cur_token(), "Rust Array Types not supported yet.");
-        return nullptr;
+        type = ParseRustArrayType();
+
+        if (!type) {
+          return nullptr;
+        }
       }
     } else {
       ParseNameResult parse_result = ParseName(false);
@@ -619,6 +625,71 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   }
 
   return type;
+}
+
+fxl::RefPtr<Type> ExprParser::ParseRustArrayType() {
+  FXL_DCHECK(!at_end() && cur_token().type() == ExprTokenType::kLeftSquare);
+  Consume();
+
+  auto element = ParseType(nullptr);
+  if (!element) {
+    return nullptr;
+  }
+
+  std::optional<size_t> count = std::nullopt;
+
+  if (!at_end() && cur_token().type() == ExprTokenType::kSemicolon) {
+    Consume();
+
+    if (at_end()) {
+      SetError(ExprToken(), "Expected element count before end of input.");
+      return nullptr;
+    }
+
+    if (cur_token().type() != ExprTokenType::kInteger) {
+      SetError(cur_token(), "Expected element count.");
+      return nullptr;
+    }
+
+    auto got = StringToNumber(cur_token().value());
+
+    if (got.has_error()) {
+      // Should this even be possible?
+      SetError(cur_token(), "Could not parse integer: " + got.err().msg());
+      return nullptr;
+    }
+
+    int64_t value;
+
+    auto promote_err = got.value().PromoteTo64(&value);
+    if (promote_err.has_error()) {
+      SetError(cur_token(), "Invalid array size: " + promote_err.msg());
+      return nullptr;
+    }
+
+    if (value < 0) {
+      SetError(cur_token(), "Negative array size.");
+      return nullptr;
+    }
+
+    Consume();
+
+    count = static_cast<size_t>(value);
+  }
+
+  if (at_end()) {
+    SetError(ExprToken(), "Expected ']' before end of input.");
+    return nullptr;
+  }
+
+  if (cur_token().type() != ExprTokenType::kRightSquare) {
+    SetError(cur_token(), "Expected ']'.");
+    return nullptr;
+  }
+
+  Consume();
+
+  return fxl::MakeRefCounted<ArrayType>(std::move(element), std::move(count));
 }
 
 // A list is any sequence of comma-separated types. We don't parse the types (this is hard) but

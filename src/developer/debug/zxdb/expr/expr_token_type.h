@@ -23,6 +23,7 @@ enum class ExprTokenType : size_t {
   kSpaceship,     // <=>
   kDot,           // .
   kComma,         // ,
+  kSemicolon,     // ;
   kStar,          // *
   kAmpersand,     // &
   kDoubleAnd,     // && (logical "and" or rvalue reference)
