@@ -41,6 +41,9 @@ struct CameraStreamConstraints {
   void set_bytes_per_row_divisor(uint32_t bytes_per_row_divisor) {
     bytes_per_row_divisor_ = bytes_per_row_divisor;
   }
+  void set_buffer_count_for_camping(uint32_t buffer_count_for_camping) {
+    buffer_count_for_camping_ = buffer_count_for_camping;
+  }
 
   void set_frames_per_second(uint32_t frames_per_second) { frames_per_second_ = frames_per_second; }
 

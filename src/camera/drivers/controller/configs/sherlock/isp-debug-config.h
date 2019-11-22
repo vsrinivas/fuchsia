@@ -63,6 +63,7 @@ static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
   stream.set_bytes_per_row_divisor(kIspStreamBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kIspStreamFrameRate);
+  stream.set_buffer_count_for_camping(kIspStreamMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
 

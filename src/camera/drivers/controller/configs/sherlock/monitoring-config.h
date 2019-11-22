@@ -99,6 +99,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
   stream.set_bytes_per_row_divisor(kISPPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlFRFrameRate);
+  stream.set_buffer_count_for_camping(kOutputStreamMlFRMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
 
@@ -129,6 +130,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlDSFrameRate);
+  stream.set_buffer_count_for_camping(kOutputStreamMlDSMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
 
@@ -194,6 +196,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMonitoringFrameRate);
+  stream.set_buffer_count_for_camping(kOutputStreamMonitoringMinBufferForCamping);
   return stream.ConvertToStreamConfig();
 };
 
