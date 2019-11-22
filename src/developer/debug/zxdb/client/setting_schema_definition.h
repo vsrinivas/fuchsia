@@ -31,6 +31,7 @@ struct ClientSettings {
     static const char* kPauseOnLaunch;
     static const char* kPauseOnAttach;
     static const char* kQuitAgentOnExit;
+    static const char* kShowFilePaths;
     static const char* kShowStdout;
     static const char* kSymbolServers;
     static const char* kSymbolCache;

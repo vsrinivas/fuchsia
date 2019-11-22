@@ -9,6 +9,7 @@
 #include "src/developer/debug/zxdb/client/remote_api_test.h"
 #include "src/developer/debug/zxdb/console/mock_console.h"
 #include "src/developer/debug/zxdb/symbols/loaded_module_symbols.h"
+#include "src/developer/debug/zxdb/symbols/mock_source_file_provider.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols.h"
 
 namespace zxdb {
@@ -76,9 +77,8 @@ TEST_F(VerbsSymbolTest, SymInfo_Demangle) {
   console.ProcessInputLine("sym-info LogMessage6streamEv");
   event = console.GetOutputEvent();
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
-  ASSERT_EQ(
-      "No symbol \"LogMessage6streamEv\" found in the current context.\n",
-      event.output.AsString());
+  ASSERT_EQ("No symbol \"LogMessage6streamEv\" found in the current context.\n",
+            event.output.AsString());
 }
 
 }  // namespace zxdb

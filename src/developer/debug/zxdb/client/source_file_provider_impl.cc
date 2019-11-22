@@ -29,7 +29,7 @@ ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
   if (IsPathAbsolute(file_name)) {
     // Absolute path, expect it to be readable or fail.
     if (files::ReadFileToString(file_name, &contents))
-      return FileData(std::move(contents), GetFileModificationTime(file_name));
+      return FileData(std::move(contents), file_name, GetFileModificationTime(file_name));
     return Err("Source file not found: " + file_name);
   }
 
@@ -37,7 +37,7 @@ ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
   for (const auto& cur : build_dir_prefs_) {
     std::string cur_path = CatPathComponents(cur, file_name);
     if (files::ReadFileToString(cur_path, &contents))
-      return FileData(std::move(contents), GetFileModificationTime(cur_path));
+      return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
   }
 
   // Try to find relative to the build directory given in the symbols.
@@ -53,7 +53,7 @@ ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
       for (const auto& cur : build_dir_prefs_) {
         std::string cur_path = CatPathComponents(cur, CatPathComponents(file_build_dir, file_name));
         if (files::ReadFileToString(cur_path, &contents))
-          return FileData(std::move(contents), GetFileModificationTime(cur_path));
+          return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
       }
     }
 
@@ -61,12 +61,12 @@ ErrOr<SourceFileProvider::FileData> SourceFileProviderImpl::GetFileData(
     // search relative to the current working directory.
     std::string cur_path = CatPathComponents(file_build_dir, file_name);
     if (files::ReadFileToString(cur_path, &contents))
-      return FileData(std::move(contents), GetFileModificationTime(cur_path));
+      return FileData(std::move(contents), cur_path, GetFileModificationTime(cur_path));
   }
 
   // Fall back on reading relative to the working directory.
   if (files::ReadFileToString(file_name, &contents))
-    return FileData(std::move(contents), GetFileModificationTime(file_name));
+    return FileData(std::move(contents), file_name, GetFileModificationTime(file_name));
 
   return Err("Source file not found: " + file_name);
 }

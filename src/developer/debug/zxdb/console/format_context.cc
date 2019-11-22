@@ -120,11 +120,13 @@ OutputBuffer DescribeAsmCallDest(Process* process, uint64_t call_dest) {
   }
 
   FormatLocationOptions opts;
+  if (process)
+    opts = FormatLocationOptions(process->GetTarget());
   opts.always_show_addresses = false;
   opts.show_params = false;
   opts.show_file_line = false;
 
-  result.Append(FormatLocation(nullptr, resolved[0], opts));
+  result.Append(FormatLocation(resolved[0], opts));
   return result;
 }
 
@@ -223,10 +225,10 @@ Err FormatSourceFileContext(const FileLine& file_line, const SourceFileProvider&
     }
   }
 
-  return FormatSourceContext(file_line.file(), data_or.value().contents, opts, out);
+  return FormatSourceContext(data_or.value().full_path, data_or.value().contents, opts, out);
 }
 
-Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
+Err FormatSourceContext(const std::string& file_name_for_display, const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out) {
   FXL_DCHECK(opts.active_line == 0 || !opts.require_active_line ||
              (opts.active_line >= opts.first_line && opts.active_line <= opts.last_line));
@@ -242,12 +244,19 @@ Err FormatSourceContext(const std::string& file_name_for_errors, const std::stri
     // it's the one the user cares about.
     int err_line = opts.highlight_line ? opts.highlight_line : first_line;
     return Err(fxl::StringPrintf("There is no line %d in the file %s", err_line,
-                                 file_name_for_errors.c_str()));
+                                 file_name_for_display.c_str()));
   }
   if (opts.active_line != 0 && opts.require_active_line &&
       first_line + static_cast<int>(context.size()) < opts.active_line) {
     return Err(fxl::StringPrintf("There is no line %d in the file %s", opts.active_line,
-                                 file_name_for_errors.c_str()));
+                                 file_name_for_display.c_str()));
+  }
+
+  // Optional file name.
+  if (opts.show_file_name) {
+    out->Append("📄 ");
+    out->Append(Syntax::kComment, file_name_for_display);
+    out->Append("\n");
   }
 
   // String to put at the beginning of each line.

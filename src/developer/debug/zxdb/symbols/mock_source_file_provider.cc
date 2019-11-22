@@ -6,9 +6,8 @@
 
 namespace zxdb {
 
-void MockSourceFileProvider::SetFileData(const std::string& file_name, std::time_t mtime,
-                                         std::string contents) {
-  contents_[file_name] = FileData(std::move(contents), mtime);
+void MockSourceFileProvider::SetFileData(const std::string& file_name, FileData data) {
+  contents_[file_name] = std::move(data);
 }
 
 ErrOr<SourceFileProvider::FileData> MockSourceFileProvider::GetFileData(

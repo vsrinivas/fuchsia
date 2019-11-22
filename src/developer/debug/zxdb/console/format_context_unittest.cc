@@ -160,14 +160,14 @@ TEST(FormatContext, FormatAsmContext) {
   // Source code.
   MockSourceFileProvider file_provider;
   const char kFileName[] = "file.cc";
-  file_provider.SetFileData(kFileName, 0,
-                            "// Copyright\n"                  // Line 1.
-                            "\n"                              // Line 2.
-                            "int main() {\n"                  // Line 3.
-                            "  printf(\"Hello, world.\");\n"  // Line 4.
-                            "  return 0;\n"                   // Line 5.
-                            "}\n"                             // Line 6.
-  );
+  file_provider.SetFileData(
+      kFileName, SourceFileProvider::FileData("// Copyright\n"                  // Line 1.
+                                              "\n"                              // Line 2.
+                                              "int main() {\n"                  // Line 3.
+                                              "  printf(\"Hello, world.\");\n"  // Line 4.
+                                              "  return 0;\n"                   // Line 5.
+                                              "}\n",                            // Line 6.
+                                              kFileName, 0));
 
   // Process setup for mocking the symbol requests.
   ProcessSymbolsTestSetup symbols;
@@ -203,11 +203,44 @@ TEST(FormatContext, FormatAsmContext) {
       out.AsString());
 }
 
+TEST(FormatContext, FormatSourceFileContext_FileName) {
+  const char kFileName[] = "file.cc";
+  const char kFilePath[] = "/home/me/fuchsia/file.cc";
+
+  MockSourceFileProvider file_provider;
+  file_provider.SetFileData(kFileName, SourceFileProvider::FileData("Line 1\n"
+                                                                    "Line 2\n"
+                                                                    "Line 3\n"
+                                                                    "Line 4\n"
+                                                                    "Line 5\n",
+                                                                    kFilePath, 0));
+
+  FormatSourceOpts opts;
+  opts.show_file_name = true;
+  opts.first_line = 2;
+  opts.last_line = 4;
+  opts.active_line = 3;
+  opts.highlight_line = 3;
+  opts.highlight_column = 0;
+
+  OutputBuffer out;
+  Err err = FormatSourceFileContext(FileLine(kFileName, 3), file_provider, opts, &out);
+  ASSERT_TRUE(err.ok()) << err.msg();
+
+  EXPECT_EQ(
+      "📄 /home/me/fuchsia/file.cc\n"
+      "   2 Line 2\n"
+      " ▶ 3 Line 3\n"
+      "   4 Line 4\n",
+      out.AsString());
+}
+
 TEST(FormatContext, FormatSourceFileContext_Stale) {
   constexpr std::size_t kFileTime = 10000000;
   const char kFileName[] = "file.cc";
   MockSourceFileProvider file_provider;
-  file_provider.SetFileData(kFileName, kFileTime, kSimpleProgram);
+  file_provider.SetFileData(kFileName,
+                            SourceFileProvider::FileData(kSimpleProgram, kFileName, kFileTime));
 
   auto mod_sym = fxl::MakeRefCounted<MockModuleSymbols>("file.so");
   // Report build good (module is newer than source file.

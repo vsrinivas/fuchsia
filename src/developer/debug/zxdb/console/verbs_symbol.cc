@@ -58,7 +58,8 @@ namespace {
 
 constexpr int kListAllSwitch = 1;
 constexpr int kListContextSwitch = 2;
-constexpr int kDumpIndexSwitch = 3;
+constexpr int kListFilePaths = 3;
+constexpr int kDumpIndexSwitch = 4;
 
 void DumpVariableLocation(const SymbolContext& symbol_context, const VariableLocation& loc,
                           OutputBuffer* out) {
@@ -227,13 +228,25 @@ const char kListHelp[] =
   instruction pointer. This can be overridden by supplying an explicit frame,
   or by specifying a symbol or address to list.
 
+  Files are found by taking each path in the "build-dirs" (see "get build-dirs")
+  setting and appending the string specified in the symbol file. The first file
+  that is found will be used.
+
 Switches
 
-  --all | -a
+  -a
+  --all
       List all lines in the file.
 
-  --context <num_lines> | -c <num_lines>
+  -c <num_lines>
+  --context <num_lines>
       Supply <num_lines> lines of context on each side of the line.
+
+  -f
+  --with-filename
+      Force the display of file paths at the beginning of the listing. This is
+      is equivalent to setting the global option "show-file-paths" for this one
+      listing.
 
 Location arguments
 
@@ -379,6 +392,9 @@ Err DoList(ConsoleContext* context, const Command& cmd) {
   }
 
   FormatSourceOpts opts;
+  opts.show_file_name =
+      cmd.HasSwitch(kListFilePaths) ||
+      cmd.target()->session()->system().settings().GetBool(ClientSettings::System::kShowFilePaths);
   opts.highlight_line = file_line.line();
 
   // Find context amount.
@@ -740,13 +756,12 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
         auto locations = weak_process->GetSymbols()->ResolveInputLocation(InputLocation(address));
         FXL_DCHECK(locations.size() == 1u);
 
-        FormatLocationOptions opts;
+        FormatLocationOptions opts(weak_process->GetTarget());
         opts.always_show_addresses = true;
         opts.show_params = true;
         opts.show_file_line = true;
 
-        console->Output(
-            FormatLocation(weak_process->GetTarget()->GetSymbols(), locations[0], opts));
+        console->Output(FormatLocation(locations[0], opts));
       });
 }
 
@@ -973,6 +988,7 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
                   CommandGroup::kQuery, SourceAffinity::kSource);
   list.switches.emplace_back(kListAllSwitch, false, "all", 'a');
   list.switches.emplace_back(kListContextSwitch, true, "context", 'c');
+  list.switches.emplace_back(kListFilePaths, false, "with-filename", 'f');
 
   (*verbs)[Verb::kList] = std::move(list);
   (*verbs)[Verb::kSymInfo] =

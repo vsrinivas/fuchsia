@@ -255,7 +255,7 @@ Err ResolveUniqueInputLocation(const ProcessSymbols* process_symbols,
     } else {
       FormatLocationOptions opts;
       opts.always_show_addresses = true;
-      err_str += FormatLocation(nullptr, locations[i], opts).AsString();
+      err_str += FormatLocation(locations[i], opts).AsString();
     }
     err_str += "\n";
   }

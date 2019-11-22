@@ -12,11 +12,11 @@ This is the very detailed setup guide. Please see:
 
 The debugger runs remotely only (you can't do self-hosted debug).
 
-### Bugs (Googlers only)
+### Bugs
 
   * [Open zxdb bugs](https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=5040)
 
-  * [Report a new zxdb bug](https://fuchsia.atlassian.net/secure/CreateIssueDetails!init.jspa?pid=11718&issuetype=10006&priority=3&components=11886)
+  * [Report a new zxdb bug](https://bugs.fuchsia.dev/p/fuchsia/issues/entry?components=DeveloperExperience%3Ezxdb)
 
 ## Binary location (for SDK users)
 
@@ -160,19 +160,30 @@ debugger will be from the same build as the operating system itself (more
 precisely, it needs to match the debug\_agent). But the protocol does not
 change very often so there is some flexibility.
 
-When you run out-of-tree, you will need to tell zxdb where your symbols are
-on the local development box (Linux or Mac). Having symbols in the binary
-you pushed to the target device doesn't help. Use the `-s` command-line flag
-to tell zxdb about new symbol locations:
+When you run out-of-tree, you will need to tell zxdb where your symbols and
+source code are on the local development box (Linux or Mac). Zxdb can not use
+symbols in the binary that you pushedf to the Fuchsia target device.
+
+See [Diagnosing symbol problems](#diagnosing-symbol-problems).
+
+#### Set the symbol location
+
+To specify new symbol locations for zxdb, use the `-s` command-line flag:
 
 ```sh
 zxdb -s path/to/my_binary -s some/other_location
 ```
 
-It's best if you build make a ".build-id" directory. You then pass the parent
+Or add it to the `symbol_paths` list option in the interactive UI:
+
+```
+[zxdb] set symbol-paths += /my/new/symbol/path
+```
+
+It's best if your build makes a ".build-id" directory. You then pass the parent
 directory as a symbol dir. For example, the Fuchsia build itself makes a
-".build-id" directory inside the build directory. You would run (assuming your
-build directory is "x64") with:
+".build-id" directory inside the build directory. For example, if your build
+directory is `out/x64`:
 
 ```sh
 out/x64/host_x64/zxdb -s out/x64
@@ -195,7 +206,43 @@ The `-s` flag accepts three possible things:
 
    * Any other file name will be treated as an ELF file with symbols.
 
-### Diagnosing symbol problems.
+#### Set the source code location {#set-source-code-location}
+
+The Fuchsia build generates symbols relative to the build directory so relative
+paths look like `../../src/my_component/file.cc`).
+
+If your files are not being found with the default build directories, you will
+need to provide a build directory to locate the files. This build directory does
+not need have been used to build, it just needs to produce correct absolute paths
+when concatenated with the relative paths from the symbol file.
+
+You can add additional build directories on the command line:
+
+```sh
+zxdb -b /home/me/fuchsia/out/x64
+```
+
+Or interactively from within the debugger:
+
+```
+[zxdb] set build-dirs += /home/me/fuchsia/out/x64
+```
+
+If debugger is finding the wrong file, you can replace the entire build
+directory list by omitting the `+=`:
+
+```
+[zxdb] set build-dirs /home/me/fuchsia/out/x64
+```
+
+If your build produces DWARF symbols with absolute file paths the files must be
+in that location on the local system. Absolute file paths in the symbols are not
+affected by the build search path. Clang users should use the
+`-fdebug-prefix-map` which will also help with build hermeticity.
+
+### Diagnosing symbol problems
+
+#### Can't find symbols
 
 The `sym-stat` command will tell you status for symbols. With no running
 process, it will give stats on the different symbol locations you have
@@ -207,7 +254,7 @@ expectations:
 Symbol index status
 
   Indexed  Source path
-      950  /home/me/build/out/x64/ids.txt
+ (folder)  /home/me/.build-id
  (folder)  /home/me/build/out/x64
         0  my_dir/my_file
 ```
@@ -250,6 +297,51 @@ symbols in it. Normally this means the binary was not built with symbols
 enabled or the symbols were stripped. Check your build, you should be passing
 the path to the unstripped binary and the original compile line should have a
 `-g` in it to get symbols.
+
+#### Mismatched source lines
+
+Sometimes the source file listings may not match the code. The most common
+reason is that the build is out-of-date and no longer matches the source. The
+debugger will check that the symbol file modification time is newer than the
+source file, but it will only print the warning the first time the file is
+displayed. Check for this warning if you suspect a problem.
+
+Some people have multiple checkouts. If it's finding a file in the wrong one,
+override the `build-dirs` option as described above in [Set the source code
+location](#set-source-code-location).
+
+To display the file name of the file it found from `list`, use the `-f` option:
+
+```
+[zxdb] list -f
+/home/me/fuchsia/out/x64/../../src/foo/bar.cc
+ ... <source code> ...
+```
+
+You can also set the `show-file-paths` option. This will increase file path
+information:
+
+  * It will show the full resolved path in source listings as in `list -f`.
+  * It will show the full path instead of just the file name in other
+    places such as backtraces.
+
+```
+[zxdb] set show-file-paths true
+```
+
+You may notice a mismatch when setting a breakpoint on a specific line where
+the displayed breakpoint location doesn't match the line number you typed. In
+most cases, this is because this symbols did not identifty any code on the
+specified line so the debugger used the next line. It can happen even in
+unoptimized builds, and is most common for variable declarations.
+
+```
+[zxdb] b file.cc:23
+Breakpoint 1 (Software) @ file.cc:138
+   138   int my_value = 0;
+ ◉ 139   DoSomething(&my_value);
+   140   if (my_value > 0) {
+```
 
 ## Debugging the debugger and running the tests
 

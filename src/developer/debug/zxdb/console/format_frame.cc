@@ -98,12 +98,7 @@ OutputBuffer FormatFrame(const Frame* frame, const FormatLocationOptions& opts, 
   if (id >= 0)
     out.Append(fxl::StringPrintf("Frame %d ", id));
 
-  // Allow the thread to be null for unit testing purposes. This only disables
-  // the file name shortener.
-  const TargetSymbols* syms =
-      !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
-
-  out.Append(FormatLocation(syms, frame->GetLocation(), opts));
+  out.Append(FormatLocation(frame->GetLocation(), opts));
   return out;
 }
 
@@ -118,14 +113,8 @@ fxl::RefPtr<AsyncOutputBuffer> FormatFrameLong(const Frame* frame,
   // Only print the location if it has symbols, otherwise the hex
   // address will be shown twice.
   const Location& location = frame->GetLocation();
-  if (location.has_symbols()) {
-    // Allow the thread to be null for unit testing purposes. This only
-    // disables the file name shortener.
-    const TargetSymbols* syms =
-        !frame->GetThread() ? nullptr : frame->GetThread()->GetProcess()->GetTarget()->GetSymbols();
-
-    out->Append(FormatLocation(syms, location, loc_opts));
-  }
+  if (location.has_symbols())
+    out->Append(FormatLocation(location, loc_opts));
 
   if (frame->IsInline())
     out->Append(Syntax::kComment, " (inline)");

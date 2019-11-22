@@ -38,6 +38,11 @@ Err OutputSourceContext(Process* process, std::unique_ptr<SourceFileProvider> fi
                         const Location& location, SourceAffinity source_affinity);
 
 struct FormatSourceOpts {
+  // Show the full file path before printing source code. Useful for debugging symbol issues.
+  //
+  // This could be enhanced to be an enum to show a short name or the name from the symbol file.
+  bool show_file_name = false;
+
   // Range of lines to print, inclusive. This can be outside of the range of file lines, the result
   // will just be clamped to the end of the file.
   int first_line = 0;
@@ -93,10 +98,12 @@ Err FormatSourceFileContext(const FileLine& file_line, const SourceFileProvider&
 
 // Formats the given source to the output.
 //
+// The file_name_for_display is used for display purposes but is not interpreted in any way. This
+// will be printed if the show_file_name flag is set in the options.
+//
 // If the active line is nonzero but is not in the file, an error will be returned and no output
-// will be generated. The file_name_for_errors will be used to generate this string, it will not be
-// used for any other purpose.
-Err FormatSourceContext(const std::string& file_name_for_errors, const std::string& file_contents,
+// will be generated. The file_name_for_display will be used to generate this string.
+Err FormatSourceContext(const std::string& file_name_for_display, const std::string& file_contents,
                         const FormatSourceOpts& opts, OutputBuffer* out);
 
 struct FormatAsmOpts {

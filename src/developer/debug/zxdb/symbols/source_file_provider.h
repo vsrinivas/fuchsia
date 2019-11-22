@@ -19,9 +19,16 @@ class SourceFileProvider {
  public:
   struct FileData {
     FileData() = default;
-    FileData(std::string c, std::time_t mtime) : contents(std::move(c)), modification_time(mtime) {}
+    FileData(std::string c, std::string path, std::time_t mtime)
+        : contents(std::move(c)), full_path(std::move(path)), modification_time(mtime) {}
 
     std::string contents;
+
+    // Resolved file path. This will be concatenated with the search path. If the search path
+    // is system-absolute, this path will be, but if the search path is relative to the current
+    // working directory, so will this be.
+    std::string full_path;
+
     std::time_t modification_time = 0;
   };
 

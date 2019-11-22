@@ -9,7 +9,7 @@
 
 namespace zxdb {
 
-// Schema definition -----------------------------------------------------------
+// Schema definition -------------------------------------------------------------------------------
 
 const char* ClientSettings::System::kDebugMode = "debug-mode";
 static const char* kDebugModeDescription =
@@ -42,6 +42,12 @@ static const char* kPauseOnAttachDescription =
     R"(  Whether the process should be paused when zxdb attached to it.
   This will also affect when zxdb attached a process through a filter.)";
 
+const char* ClientSettings::System::kShowFilePaths = "show-file-paths";
+static const char* kShowFilePathsDescription =
+    R"(  Displays full path information when file names are displayed. Otherwise
+  file names will be shortened to the shortest unique name in the current
+  process.)";
+
 const char* ClientSettings::System::kShowStdout = "show-stdout";
 static const char* kShowStdoutDescription =
     R"(  Whether newly debugged process (either launched or attached) should
@@ -72,6 +78,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   schema->AddBool(ClientSettings::System::kPauseOnLaunch, kPauseOnLaunchDescription, false);
   schema->AddBool(ClientSettings::System::kPauseOnAttach, kPauseOnAttachDescription, false);
   schema->AddBool(ClientSettings::System::kQuitAgentOnExit, kQuitAgentOnExitDescription, true);
+  schema->AddBool(ClientSettings::System::kShowFilePaths, kShowFilePathsDescription, false);
   schema->AddBool(ClientSettings::System::kShowStdout, kShowStdoutDescription, true);
   schema->AddList(ClientSettings::System::kSymbolServers, kSymbolServersDescription, {});
   schema->AddString(ClientSettings::System::kSymbolCache, kSymbolCacheDescription, "");
@@ -91,7 +98,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
 }  // namespace
 
-// System Implementation -------------------------------------------------------
+// System Implementation ---------------------------------------------------------------------------
 
 System::System(Session* session)
     : ClientObject(session), settings_(GetSchema(), nullptr), weak_factory_(this) {}

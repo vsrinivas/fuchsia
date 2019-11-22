@@ -105,7 +105,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
     return true;
   }
 
-  FormatLocationOptions loc_opts;
+  FormatLocationOptions loc_opts(cmd.target());
   loc_opts.show_params = cmd.HasSwitch(kForceTypes);
 
   if (cmd.GetNounIndex(Noun::kFrame) == Command::kNoIndex) {
@@ -573,16 +573,17 @@ void ListBreakpoints(ConsoleContext* context, bool include_locations) {
     row.push_back(FormatInputLocations(settings.locations));
 
     if (include_locations) {
-      FormatLocationOptions opts;
-      opts.always_show_addresses = true;  // So the disambiguation is always unique.
-
       for (const auto& loc : matched_locs) {
         std::vector<OutputBuffer>& loc_row = rows.emplace_back();
 
         loc_row.resize(2);  // Empty columns.
         Process* process = loc->GetProcess();
+
+        FormatLocationOptions opts(process->GetTarget());
+        opts.always_show_addresses = true;  // So the disambiguation is always unique.
+
         OutputBuffer out(GetBullet() + " ");
-        out.Append(FormatLocation(process->GetTarget()->GetSymbols(), loc->GetLocation(), opts));
+        out.Append(FormatLocation(loc->GetLocation(), opts));
 
         loc_row.push_back(out);
       }

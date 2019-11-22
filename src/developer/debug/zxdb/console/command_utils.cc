@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/client/job_context.h"
 #include "src/developer/debug/zxdb/client/process.h"
 #include "src/developer/debug/zxdb/client/session.h"
+#include "src/developer/debug/zxdb/client/setting_schema_definition.h"
 #include "src/developer/debug/zxdb/client/source_file_provider_impl.h"
 #include "src/developer/debug/zxdb/client/target.h"
 #include "src/developer/debug/zxdb/client/thread.h"
@@ -351,8 +352,15 @@ OutputBuffer FormatInputLocations(const std::vector<InputLocation>& locations) {
   return result;
 }
 
-OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const Location& loc,
-                            const FormatLocationOptions& opts) {
+FormatLocationOptions::FormatLocationOptions(const Target* target) : FormatLocationOptions() {
+  if (target) {
+    show_file_path =
+        target->session()->system().settings().GetBool(ClientSettings::System::kShowFilePaths);
+    target_symbols = target->GetSymbols();
+  }
+}
+
+OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& opts) {
   if (!loc.is_valid())
     return OutputBuffer("<invalid address>");
   if (!loc.has_symbols())
@@ -388,8 +396,12 @@ OutputBuffer FormatLocation(const TargetSymbols* optional_target_symbols, const 
     }
   }
 
-  if (show_file_line)
-    result.Append(DescribeFileLine(optional_target_symbols, loc.file_line()));
+  if (show_file_line) {
+    // Showing the file path means not passing the target symbols because the target symbols is
+    // used to shorten the paths.
+    result.Append(
+        DescribeFileLine(opts.show_file_path ? nullptr : opts.target_symbols, loc.file_line()));
+  }
   return result;
 }
 

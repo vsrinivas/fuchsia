@@ -349,14 +349,15 @@ void ConsoleContext::OutputThreadContext(
     console->Output(out);
   } else {
     const Location& location = stack[0]->GetLocation();
-    out.Append(FormatLocation(thread->GetProcess()->GetTarget()->GetSymbols(), location,
-                              FormatLocationOptions()));
+    out.Append(FormatLocation(location, FormatLocationOptions(thread->GetProcess()->GetTarget())));
+
     if (location.has_symbols()) {
       out.Append("\n");
     } else {
       out.Append(" (no symbol info)\n");
     }
     console->Output(out);
+
     Err err = OutputSourceContext(
         thread->GetProcess(),
         std::make_unique<SourceFileProviderImpl>(thread->GetProcess()->GetTarget()->settings()),

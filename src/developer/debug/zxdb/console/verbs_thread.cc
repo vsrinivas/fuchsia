@@ -195,7 +195,7 @@ Err DoBacktrace(ConsoleContext* context, const Command& cmd) {
     cmd.thread()->GetStack().ClearFrames();
 
   // TODO(brettw) this should share formatting options and parsing with the printing commands.
-  FormatLocationOptions opts;
+  FormatLocationOptions opts(cmd.target());
   opts.show_params = cmd.HasSwitch(kForceAllTypes);
   Console::get()->Output(FormatFrameList(cmd.thread(), opts, true));
   return Err();
@@ -309,8 +309,8 @@ Err DoDown(ConsoleContext* context, const Command& cmd) {
   id -= 1;
 
   context->SetActiveFrameIdForThread(cmd.thread(), id);
-  Console::get()->Output(FormatFrameLong(cmd.thread()->GetStack()[id], FormatLocationOptions(),
-                                         ConsoleFormatOptions()));
+  Console::get()->Output(FormatFrameLong(
+      cmd.thread()->GetStack()[id], FormatLocationOptions(cmd.target()), ConsoleFormatOptions()));
   return Err();
 }
 
@@ -358,7 +358,8 @@ Err DoUp(ConsoleContext* context, const Command& cmd) {
       Console::get()->Output(got);
     } else {
       context->SetActiveFrameIdForThread(cmd.thread(), id);
-      Console::get()->Output(FormatFrameLong(cmd.thread()->GetStack()[id], FormatLocationOptions(),
+      Console::get()->Output(FormatFrameLong(cmd.thread()->GetStack()[id],
+                                             FormatLocationOptions(cmd.target()),
                                              ConsoleFormatOptions()));
     }
   };
