@@ -37,11 +37,6 @@ struct spn_target_image const SPN_TARGET_IMAGE_NAME =
       .host = {
         .perm = {
           .alignment        = 16,      // 16 byte alignment
-        },
-        .temp = {
-          .subbufs          = 128,     // 128 subbufs
-          .size             = 8 << 20, // 8 MBytes
-          .alignment        = 16       // 16 byte alignment
         }
       }
     },

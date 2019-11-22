@@ -108,16 +108,10 @@ spn_device_create(struct spn_vk_environment * const               environment,
   struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
 
   //
-  // host perm and temp
+  // perm host
   //
   spn_allocator_host_perm_create(&device->allocator.host.perm,
                                  config->allocator.host.perm.alignment);
-
-  spn_allocator_host_temp_create(&device->allocator.host.temp,
-                                 &device->allocator.host.perm,
-                                 config->allocator.host.temp.subbufs,
-                                 config->allocator.host.temp.size,
-                                 config->allocator.host.temp.alignment);
 
   //
   // perm device-local
@@ -234,7 +228,6 @@ spn_device_dispose(struct spn_device * const device)
   spn_allocator_device_perm_dispose(&device->allocator.device.perm.copyback, &device->environment);
   spn_allocator_device_perm_dispose(&device->allocator.device.perm.local, &device->environment);
 
-  spn_allocator_host_temp_dispose(&device->allocator.host.temp);
   spn_allocator_host_perm_dispose(&device->allocator.host.perm);
 
   hotsort_vk_release(device->environment.d, device->environment.ac, device->hs);

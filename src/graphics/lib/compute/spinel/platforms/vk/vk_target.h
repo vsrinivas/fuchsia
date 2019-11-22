@@ -51,11 +51,6 @@ struct spn_vk_target_config
       struct {
         uint32_t alignment;
       } perm;
-      struct {
-        uint32_t subbufs;
-        uint32_t size;
-        uint32_t alignment;
-      } temp;
     } host;
     struct {
       struct {

@@ -31,7 +31,6 @@ struct spn_device
     struct
     {
       struct spn_allocator_host_perm perm;
-      struct spn_allocator_host_temp temp;  // FIXME(allanmac): we may be able to remove this
     } host;
 
     struct

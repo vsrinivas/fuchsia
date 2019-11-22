@@ -68,11 +68,6 @@ static struct spn_vk_target const target =
       .host = {
         .perm = {
           .alignment        = 16,      // 16 byte alignment
-        },
-        .temp = {
-          .subbufs          = 128,     // 128 subbufs
-          .size             = 8 << 20, // 8 MBytes
-          .alignment        = 16       // 16 byte alignment
         }
       },
       .device = {
