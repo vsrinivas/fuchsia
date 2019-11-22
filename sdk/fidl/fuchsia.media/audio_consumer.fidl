@@ -4,6 +4,9 @@
 
 library fuchsia.media;
 
+using zx;
+using fuchsia.media.audio;
+
 [Discoverable]
 protocol AudioConsumer {
     /// Creates a stream sink for the consumer with the indicated properties. `session_id` is the
@@ -27,13 +30,46 @@ protocol AudioConsumer {
     /// Indicates that the last packet prior to the end of the stream has been rendered.
     -> OnEndOfStream();
 
-    /// Starts rendering as indicated by `flags`. Rendering starts as soon as possible after this
-    /// method is called. The actual start time will be reflected in the updated status.
-    Start(AudioConsumerStartFlags flags);
+    /// Starts rendering as indicated by `flags`.
+    ///
+    /// `media_time` indicates the packet timestamp that corresponds to `reference_time`.
+    /// Typically, this is the timestamp of the first packet that will be
+    /// rendered. If packets will be supplied with no timestamps, this value
+    /// should be `NO_TIMESTAMP`.  Passing a `media_time` value of
+    /// `NO_TIMESTAMP` chooses the default media time, established as follows:
+    ///     1. When starting for the first time, the default media time is the
+    ///        timestamp on the first packet sent to the stream sink.
+    ///     2. When resuming after stop, the default media time is the media
+    ///        time at which the stream stopped.
+    ///
+    /// `reference_time` is the monotonic system time at which rendering should
+    /// be started. For supply-driven sources, this must be the time at which
+    /// the first packet was (or will be) sent plus a lead time, which must be
+    /// in the range indicated in the `AudioConsumerStatus`. For demand-driven
+    /// sources, the client must ensure that the lead time requirement is met at
+    /// the start time.  Passing the default value of 0 for `reference_time`
+    /// causes the consumer to choose a start time based on the availability of
+    /// packets, the lead time requirements, and whether `LOW_LATENCY` has been
+    /// specified.
+    ///
+    /// The actual start time will be reflected in the updated status.
+    Start(
+        AudioConsumerStartFlags flags,
+        zx.time reference_time,
+        int64 media_time);
 
     /// Stops rendering as soon as possible after this method is called. The actual stop time will
     /// be reflected in the updated status.
     Stop();
+
+    /// Requests to change the playback rate of the renderer. 1.0 means normal
+    /// playback. Negative rates are not supported. The new rate will be
+    /// reflected in the updated status.
+    SetRate(float32 rate);
+
+    /// Binds to this `AudioConsumer` volume control for control and notifications.
+    BindVolumeControl(
+        request<fuchsia.media.audio.VolumeControl> volume_control_request);
 
     /// Gets the current status of the consumer using the long get pattern. The consumer responds
     /// to this method when the status changes - initially with respect to the initial status value
@@ -53,19 +89,31 @@ bits AudioConsumerStartFlags {
     SUPPLY_DRIVEN = 0x02;
 };
 
-/// Represents the status of the consumer. Initial status has null `error` and
-/// `presentation_timeline` values.
-struct AudioConsumerStatus {
-    /// If not null, indicates an error condition currently in effect.
-    AudioConsumerError? error;
+/// Represents the status of the consumer. In the initial status, `error` and
+/// `presentation_timeline` are absent. The lead time fields are always present.
+table AudioConsumerStatus {
+    /// If present, indicates an error condition currently in effect. Absent if no error.
+    1: AudioConsumerError error;
 
-    /// If not null, indicates the current relationship between the presentation timeline
-    /// and local monotonic clock, both in nanosecond units.
+    /// If present, indicates the current relationship between the presentation timeline
+    /// and local monotonic clock, both in nanosecond units. Absent initially.
     ///
     /// 'Presentation timeline' refers to the `pts` (presentation timestamp) values on the packets.
     /// This timeline function can be used to determine the local monotonic clock time that a
     /// packet will be presented based on that packet's `pts` value.
-    TimelineFunction? presentation_timeline;
+    2: TimelineFunction presentation_timeline;
+
+    /// Indicates the minimum lead time in nanoseconds supported by this
+    /// `AudioConsumer`.  Or in other words, how small of a gap between the
+    /// `media_time` provided to `AudioConsumer.Start` and the pts on the first
+    /// packet can be. Values outside this range will be clipped.
+    3: uint64 min_lead_time;
+
+    /// Indicates the maximum lead time in nanoseconds supported by this
+    /// `AudioConsumer`.  Or in other words, how large of a gap between the
+    /// `media_time` provided to `AudioConsumer.Start` and the pts on the first
+    /// packet can be. Values outside this range will be clipped.
+    4: uint64 max_lead_time;
 };
 
 struct Void {
