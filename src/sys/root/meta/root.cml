@@ -15,20 +15,26 @@
     },
   ],
   "offer": [
-    // These services and directories routed from "realm" at the root are provided by bootsvc
-    // through component_manager's namespace.
     {
       "directory": "/boot",
       "from": "realm",
       "to": [ "#devcoordinator" ],
     },
     {
-      "legacy_service": "/svc/fuchsia.boot.RootJob",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.RootJobForInspect",
+      "legacy_service": [
+        // These services and directories routed from "realm" at the root are provided by bootsvc
+        // through component_manager's namespace.
+        "/svc/fuchsia.boot.RootJob",
+        "/svc/fuchsia.boot.RootJobForInspect",
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.FactoryItems",
+        "/svc/fuchsia.boot.Items",
+        "/svc/fuchsia.boot.ReadOnlyLog",
+        "/svc/fuchsia.boot.WriteOnlyLog",
+        "/svc/fuchsia.kernel.Stats",
+        // ...except for this one, which is provided by component_manager itself as a builtin service.
+        "/svc/fuchsia.process.Launcher",
+      ],
       "from": "realm",
       "to": [ "#devcoordinator" ],
     },
@@ -36,37 +42,6 @@
       "legacy_service": "/svc/fuchsia.boot.RootResource",
       "from": "realm",
       "to": [ "#devcoordinator", "#console" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.Arguments",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.FactoryItems",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.Items",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.ReadOnlyLog",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.boot.WriteOnlyLog",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
-    },
-    // ...except for this one, which is provided by component_manager itself as a builtin service.
-    {
-      "legacy_service": "/svc/fuchsia.process.Launcher",
-      "from": "realm",
-      "to": [ "#devcoordinator" ],
     },
     // Offer the kernel serial console to the devcoordinator
     {
@@ -79,11 +54,6 @@
     {
       "legacy_service": "/svc/fuchsia.hardware.pty.Device",
       "from": "#ptysvc",
-      "to": [ "#devcoordinator" ],
-    },
-    {
-      "legacy_service": "/svc/fuchsia.kernel.Stats",
-      "from": "realm",
       "to": [ "#devcoordinator" ],
     },
   ]

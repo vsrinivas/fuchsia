@@ -10,12 +10,10 @@
     // Route Echo service to child.
     "offer": [
         {
-            "legacy_service": "/svc/fuchsia.logger.LogSink",
-            "from": "realm",
-            "to": [ "#trigger" ]
-        },
-        {
-            "legacy_service": "/svc/fidl.examples.routing.echo.Echo",
+            "legacy_service": [
+                "/svc/fuchsia.logger.LogSink",
+                "/svc/fidl.examples.routing.echo.Echo",
+            ],
             "from": "realm",
             "to": [ "#trigger" ]
         },
