@@ -684,16 +684,19 @@ TEST_F(SdhciTest, DmaRequest64Bit) {
   const Sdhci::AdmaDescriptor96* const descriptors =
       reinterpret_cast<Sdhci::AdmaDescriptor96*>(dut_->iobuf_virt());
 
+  uint64_t address;
+  memcpy(&address, &descriptors[0].address, sizeof(address));
   EXPECT_EQ(descriptors[0].attr, 0b100'001);
-  EXPECT_EQ(descriptors[0].address, PAGE_SIZE);
+  EXPECT_EQ(address, PAGE_SIZE);
   EXPECT_EQ(descriptors[0].length, PAGE_SIZE);
 
   EXPECT_EQ(descriptors[1].attr, 0b100'001);
   EXPECT_EQ(descriptors[1].address, PAGE_SIZE);
   EXPECT_EQ(descriptors[1].length, PAGE_SIZE);
 
+  memcpy(&address, &descriptors[2].address, sizeof(address));
   EXPECT_EQ(descriptors[2].attr, 0b100'001);
-  EXPECT_EQ(descriptors[2].address, PAGE_SIZE);
+  EXPECT_EQ(address, PAGE_SIZE);
   EXPECT_EQ(descriptors[2].length, PAGE_SIZE);
 
   EXPECT_EQ(descriptors[3].attr, 0b100'011);
