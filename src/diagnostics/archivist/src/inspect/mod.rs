@@ -4,27 +4,40 @@
 use {
     crate::collection::*,
     failure::{self, err_msg, format_err, Error},
+    fidl::endpoints::DiscoverableService,
     fidl_fuchsia_diagnostics_inspect::{
         DisplaySettings, FormatSettings, ReaderError, ReaderRequest, ReaderRequestStream,
         ReaderSelector, Selector, TextSettings,
     },
+    fidl_fuchsia_inspect::TreeMarker,
+    fidl_fuchsia_inspect_deprecated::InspectMarker,
     fidl_fuchsia_io::{DirectoryProxy, NodeInfo, CLONE_FLAG_SAME_RIGHTS},
     fidl_fuchsia_mem, files_async, fuchsia_async as fasync,
-    fuchsia_inspect::reader::{snapshot::Snapshot, NodeHierarchy, PartialNodeHierarchy},
+    fuchsia_inspect::reader::{
+        snapshot::{Snapshot, SnapshotTree},
+        NodeHierarchy, PartialNodeHierarchy,
+    },
     fuchsia_inspect::trie,
     fuchsia_zircon::{self as zx, HandleBased},
     futures::future::{join_all, BoxFuture},
     futures::{future, FutureExt, TryFutureExt, TryStreamExt},
+    inspect_fidl_load as deprecated_inspect,
     inspect_formatter::{self, HierarchyData, HierarchyFormatter, JsonFormatter},
     io_util,
     regex::{Regex, RegexSet},
     selectors,
-    std::convert::TryFrom,
+    std::convert::{TryFrom, TryInto},
     std::path::{Path, PathBuf},
     std::sync::{Arc, Mutex, RwLock},
 };
 
 type InspectDataTrie = trie::Trie<char, (PathBuf, DirectoryProxy, RegexSet, Vec<Regex>)>;
+
+enum ReadSnapshot {
+    Single(Snapshot),
+    Tree(SnapshotTree),
+    Finished(NodeHierarchy),
+}
 
 /// InspectDataCollector holds the information needed to retrieve the Inspect
 /// VMOs associated with a particular component
@@ -64,7 +77,21 @@ impl InspectDataCollector {
         // TODO(36762): Use a streaming and bounded readdir API when available to avoid
         // being hung.
         for entry in files_async::readdir_recursive(inspect_proxy).await?.into_iter() {
-            // We are only currently interested in inspect files.
+            // We are only currently interested in inspect VMO files (root.inspect) and
+            // inspect services.
+            if let Some(proxy) = self.maybe_load_service::<TreeMarker>(inspect_proxy, &entry)? {
+                let maybe_vmo = proxy.get_content().await?.buffer.map(|b| b.vmo);
+                self.maybe_add(
+                    Path::new(&entry.name).file_name().unwrap().to_string_lossy().to_string(),
+                    Data::Tree(proxy, maybe_vmo),
+                );
+            }
+            if let Some(proxy) = self.maybe_load_service::<InspectMarker>(inspect_proxy, &entry)? {
+                self.maybe_add(
+                    Path::new(&entry.name).file_name().unwrap().to_string_lossy().to_string(),
+                    Data::DeprecatedFidl(proxy),
+                );
+            }
             if !entry.name.ends_with(".inspect") || entry.kind != files_async::DirentKind::File {
                 continue;
             }
@@ -128,6 +155,22 @@ impl InspectDataCollector {
             }
             _ => {}
         };
+    }
+
+    fn maybe_load_service<S: DiscoverableService>(
+        &self,
+        dir_proxy: &DirectoryProxy,
+        entry: &files_async::DirEntry,
+    ) -> Result<Option<S::Proxy>, Error> {
+        if entry.name.ends_with(S::SERVICE_NAME) {
+            if entry.kind != files_async::DirentKind::Service {
+                return Ok(None);
+            }
+            let (proxy, server) = fidl::endpoints::create_proxy::<S>()?;
+            fdio::service_connect_at(dir_proxy.as_ref(), &entry.name, server.into_channel())?;
+            return Ok(Some(proxy));
+        }
+        Ok(None)
     }
 }
 
@@ -326,12 +369,15 @@ impl ReaderServer {
     /// Parses an inspect Snapshot into a node hierarchy, and iterates over the
     /// hierarchy creating a copy with selector filters applied.
     fn filter_inspect_snapshot(
-        inspect_snapshot: Snapshot,
+        inspect_snapshot: ReadSnapshot,
         path_selectors: &RegexSet,
         property_selectors: &Vec<Regex>,
     ) -> Result<NodeHierarchy, Error> {
-        // TODO: read lazy nodes as well.
-        let root_node: NodeHierarchy = PartialNodeHierarchy::try_from(inspect_snapshot)?.into();
+        let root_node: NodeHierarchy = match inspect_snapshot {
+            ReadSnapshot::Single(snapshot) => PartialNodeHierarchy::try_from(snapshot)?.into(),
+            ReadSnapshot::Tree(snapshot_tree) => snapshot_tree.try_into()?,
+            ReadSnapshot::Finished(hierarchy) => hierarchy,
+        };
         let mut new_root = NodeHierarchy::new_root();
         for (node_path, property) in root_node.property_iter() {
             let mut formatted_node_path =
@@ -390,24 +436,49 @@ impl ReaderServer {
                         .await
                     {
                         Ok(_) => {
-                            match Box::new(collector).take_data().and_then(|data_map| {
-                                Some(data_map.into_iter().fold(Vec::new(), |mut acc, (_, data)| {
+                            let mut snapshots = None;
+                            if let Some(data_map) = Box::new(collector).take_data() {
+                                let mut acc = vec![];
+                                for (_, data) in data_map {
                                     match data {
+                                        Data::Tree(tree, _) => {
+                                            match SnapshotTree::try_from(&tree).await {
+                                                Ok(snapshot_tree) => {
+                                                    acc.push(ReadSnapshot::Tree(snapshot_tree))
+                                                }
+                                                _ => {}
+                                            }
+                                        }
+                                        Data::DeprecatedFidl(inspect_proxy) => {
+                                            match deprecated_inspect::load_hierarchy(inspect_proxy)
+                                                .await
+                                            {
+                                                Ok(hierarchy) => {
+                                                    acc.push(ReadSnapshot::Finished(hierarchy))
+                                                }
+                                                _ => {}
+                                            }
+                                        }
                                         Data::Vmo(vmo) => match Snapshot::try_from(&vmo) {
-                                            Ok(snapshot) => acc.push(snapshot),
+                                            Ok(snapshot) => {
+                                                acc.push(ReadSnapshot::Single(snapshot))
+                                            }
                                             _ => {}
                                         },
                                         Data::File(contents) => {
                                             match Snapshot::try_from(contents) {
-                                                Ok(snapshot) => acc.push(snapshot),
+                                                Ok(snapshot) => {
+                                                    acc.push(ReadSnapshot::Single(snapshot))
+                                                }
                                                 _ => {}
                                             }
                                         }
                                         Data::Empty => {}
                                     }
-                                    acc
-                                }))
-                            }) {
+                                }
+                                snapshots = Some(acc);
+                            }
+                            match snapshots {
                                 Some(snapshots) => {
                                     return Ok((
                                         inspect_data_packet.component_out_dir_path,
@@ -558,9 +629,13 @@ impl ReaderServer {
 mod tests {
     use super::*;
     use {
-        crate::collection::DataCollector, fdio, fuchsia_async as fasync,
-        fuchsia_component::server::ServiceFs, fuchsia_inspect::Inspector, fuchsia_zircon as zx,
-        fuchsia_zircon::Peered, futures::StreamExt,
+        crate::collection::DataCollector,
+        fdio, fuchsia_async as fasync,
+        fuchsia_component::server::ServiceFs,
+        fuchsia_inspect::{assert_inspect_tree, Inspector},
+        fuchsia_zircon as zx,
+        fuchsia_zircon::Peered,
+        futures::StreamExt,
     };
 
     #[fasync::run_singlethreaded(test)]
@@ -630,25 +705,100 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn reader_server_formatting() {
+    async fn inspect_data_collector_tree() {
         let path = PathBuf::from("/test-bindings2");
+
+        // Make a ServiceFs serving an inspect tree.
+        let mut fs = ServiceFs::new();
+        let inspector = Inspector::new();
+        inspector.root().record_int("a", 1);
+        inspector.root().record_lazy_child("lazy", || {
+            async move {
+                let inspector = Inspector::new();
+                inspector.root().record_double("b", 3.14);
+                Ok(inspector)
+            }
+            .boxed()
+        });
+        inspector.serve(&mut fs).expect("failed to serve inspector");
+
+        // Create a connection to the ServiceFs.
+        let (h0, h1) = zx::Channel::create().unwrap();
+        fs.serve_connection(h1).unwrap();
+
+        let ns = fdio::Namespace::installed().unwrap();
+        ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
+
+        fasync::spawn(fs.collect());
+
+        let (done0, done1) = zx::Channel::create().unwrap();
+
+        let thread_path = path.join("out");
+        // Run the actual test in a separate thread so that it does not block on FS operations.
+        // Use signalling on a zx::Channel to indicate that the test is done.
+        std::thread::spawn(move || {
+            let path = thread_path;
+            let done = done1;
+            let mut executor = fasync::Executor::new().unwrap();
+
+            executor.run_singlethreaded(async {
+                let collector = InspectDataCollector::new();
+
+                //// Trigger collection on a clone of the inspect collector so
+                //// we can use collector to take the collected data.
+                Box::new(collector.clone()).collect(path).await.unwrap();
+                let collector: Box<InspectDataCollector> = Box::new(collector);
+
+                let extra_data = collector.take_data().expect("collector missing data");
+                assert_eq!(1, extra_data.len());
+
+                let extra = extra_data.get(TreeMarker::SERVICE_NAME);
+                assert!(extra.is_some());
+
+                match extra.unwrap() {
+                    Data::Tree(tree, vmo) => {
+                        // Assert we can read the tree proxy and get the data we expected.
+                        let hierarchy = NodeHierarchy::try_from_tree(tree)
+                            .await
+                            .expect("failed to read hierarchy from tree");
+                        assert_inspect_tree!(hierarchy, root: {
+                            a: 1i64,
+                            lazy: {
+                                b: 3.14,
+                            }
+                        });
+                        let partial_hierarchy: NodeHierarchy =
+                            PartialNodeHierarchy::try_from(vmo.as_ref().unwrap())
+                                .expect("failed to read hierarchy from vmo")
+                                .into();
+                        // Assert the vmo also points to that data (in this case since there's no
+                        // lazy nodes).
+                        assert_inspect_tree!(partial_hierarchy, root: {
+                            a: 1i64,
+                        });
+                    }
+                    v => {
+                        panic!("Expected Tree, got {:?}", v);
+                    }
+                }
+
+                done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
+            });
+        });
+
+        fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
+        ns.unbind(path.join("out").to_str().unwrap()).unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn reader_server_formatting() {
+        let path = PathBuf::from("/test-bindings3");
 
         // Make a ServiceFs containing two files.
         // One is an inspect file, and one is not.
         let mut fs = ServiceFs::new();
         let vmo = zx::Vmo::create(4096).unwrap();
-        let inspector = Inspector::new();
-        let root = inspector.root();
-
-        let child_1 = root.create_child("child_1");
-        let _tmp1 = child_1.create_int("some-int", 2);
-
-        let child_1_1 = child_1.create_child("child_1_1");
-        let _tmp2 = child_1_1.create_int("some-int", 3);
-        let _tmp3 = child_1_1.create_int("not-wanted-int", 4);
-
-        let child_2 = root.create_child("child_2");
-        let _tmp2 = child_2.create_int("some-int", 2);
+        let inspector = inspector_for_reader_test();
 
         let data = inspector.copy_vmo_data().unwrap();
         vmo.write(&data, 0).unwrap();
@@ -674,60 +824,121 @@ mod tests {
             let mut executor = fasync::Executor::new().unwrap();
 
             executor.run_singlethreaded(async {
-                let child_1_1_selector =
-                    selectors::parse_selector(r#"**:root/child_1/**:some-int"#).unwrap();
-                let child_2_selector = selectors::parse_selector(r#"**:root/child_2:*"#).unwrap();
-                let mut inspect_repo = InspectDataRepository::new(vec![
-                    Arc::new(child_1_1_selector),
-                    Arc::new(child_2_selector),
-                ]);
-
-                let out_dir_proxy =
-                    InspectDataCollector::find_directory_proxy(&path).await.unwrap();
-
-                // The absolute moniker here is made up since the selector is a glob
-                // selector, so any path would match.
-                let absolute_moniker = vec!["a".to_string(), "b".to_string()];
-
-                inspect_repo
-                    .add("test.inspect".to_string(), absolute_moniker, path, out_dir_proxy)
-                    .unwrap();
-
-                let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)));
-
-                let format_settings = FormatSettings {
-                    format: Some(DisplaySettings::Text(TextSettings { indent: 4 })),
-                };
-
-                let inspect_data_dump = reader_server.format(format_settings).await.unwrap();
-                let mut buf = vec![0; inspect_data_dump.size as usize];
-                inspect_data_dump.vmo.read(&mut buf, 0).expect("reading vmo");
-
-                let expected_result = "[
-    {
-        \"contents\": {
-            \"root\": {
-                \"child_1\": {
-                    \"child_1_1\": {
-                        \"some-int\": 3
-                    }
-                },
-                \"child_2\": {
-                    \"some-int\": 2
-                }
-            }
-        },
-        \"path\": \"/test-bindings2/out\"
-    }
-]";
-
-                assert_eq!(std::str::from_utf8(&buf).unwrap(), expected_result);
-
+                verify_reader("test.inspect", path, "test-bindings3").await;
                 done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
             });
         });
 
         fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
         ns.unbind(path.join("out").to_str().unwrap()).unwrap();
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn read_server_formatting_tree() {
+        let path = PathBuf::from("/test-bindings4");
+
+        // Make a ServiceFs containing two files.
+        // One is an inspect file, and one is not.
+        let mut fs = ServiceFs::new();
+        let inspector = inspector_for_reader_test();
+        inspector.serve(&mut fs).expect("failed to serve inspector");
+
+        // Create a connection to the ServiceFs.
+        let (h0, h1) = zx::Channel::create().unwrap();
+        fs.serve_connection(h1).unwrap();
+
+        let ns = fdio::Namespace::installed().unwrap();
+        ns.bind(path.join("out").to_str().unwrap(), h0).unwrap();
+
+        fasync::spawn(fs.collect());
+
+        let (done0, done1) = zx::Channel::create().unwrap();
+
+        let thread_path = path.join("out");
+        // Run the actual test in a separate thread so that it does not block on FS operations.
+        // Use signalling on a zx::Channel to indicate that the test is done.
+        std::thread::spawn(move || {
+            let path = thread_path;
+            let done = done1;
+            let mut executor = fasync::Executor::new().unwrap();
+
+            executor.run_singlethreaded(async {
+                verify_reader(TreeMarker::SERVICE_NAME, path, "test-bindings4").await;
+                done.signal_peer(zx::Signals::NONE, zx::Signals::USER_0).expect("signalling peer");
+            });
+        });
+
+        fasync::OnSignals::new(&done0, zx::Signals::USER_0).await.unwrap();
+        ns.unbind(path.join("out").to_str().unwrap()).unwrap();
+    }
+
+    fn inspector_for_reader_test() -> Inspector {
+        let inspector = Inspector::new();
+        let root = inspector.root();
+
+        let child_1 = root.create_child("child_1");
+        child_1.record_int("some-int", 2);
+
+        let child_1_1 = child_1.create_child("child_1_1");
+        child_1_1.record_int("some-int", 3);
+        child_1_1.record_int("not-wanted-int", 4);
+        root.record(child_1_1);
+        root.record(child_1);
+
+        let child_2 = root.create_child("child_2");
+        child_2.record_int("some-int", 2);
+        root.record(child_2);
+
+        inspector
+    }
+
+    async fn verify_reader(filename: impl Into<String>, path: PathBuf, bindings_dir: &str) {
+        let child_1_1_selector =
+            selectors::parse_selector(r#"**:root/child_1/**:some-int"#).unwrap();
+        let child_2_selector = selectors::parse_selector(r#"**:root/child_2:*"#).unwrap();
+        let mut inspect_repo = InspectDataRepository::new(vec![
+            Arc::new(child_1_1_selector),
+            Arc::new(child_2_selector),
+        ]);
+
+        let out_dir_proxy = InspectDataCollector::find_directory_proxy(&path).await.unwrap();
+
+        // The absolute moniker here is made up since the selector is a glob
+        // selector, so any path would match.
+        let absolute_moniker = vec!["a".to_string(), "b".to_string()];
+
+        inspect_repo.add(filename.into(), absolute_moniker, path, out_dir_proxy).unwrap();
+
+        let reader_server = ReaderServer::new(Arc::new(RwLock::new(inspect_repo)));
+
+        let format_settings =
+            FormatSettings { format: Some(DisplaySettings::Text(TextSettings { indent: 4 })) };
+
+        let inspect_data_dump = reader_server.format(format_settings).await.unwrap();
+        let mut buf = vec![0; inspect_data_dump.size as usize];
+        inspect_data_dump.vmo.read(&mut buf, 0).expect("reading vmo");
+
+        let expected_result = format!(
+            "[
+    {{
+        \"contents\": {{
+            \"root\": {{
+                \"child_1\": {{
+                    \"child_1_1\": {{
+                        \"some-int\": 3
+                    }}
+                }},
+                \"child_2\": {{
+                    \"some-int\": 2
+                }}
+            }}
+        }},
+        \"path\": \"/{}/out\"
+    }}
+]",
+            bindings_dir
+        );
+
+        assert_eq!(std::str::from_utf8(&buf).unwrap(), expected_result);
     }
 }

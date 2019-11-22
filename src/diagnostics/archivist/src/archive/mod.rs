@@ -661,8 +661,10 @@ async fn archive_event(
     if let Some(data_map) = event_data.component_data_map {
         for (path, object) in data_map {
             match object {
-                collection::Data::Empty => {}
-                collection::Data::Vmo(vmo) => {
+                collection::Data::Empty
+                | collection::Data::DeprecatedFidl(_)
+                | collection::Data::Tree(_, None) => {}
+                collection::Data::Vmo(vmo) | collection::Data::Tree(_, Some(vmo)) => {
                     let mut contents = vec![0u8; vmo.get_size()? as usize];
                     vmo.read(&mut contents[..], 0)?;
 

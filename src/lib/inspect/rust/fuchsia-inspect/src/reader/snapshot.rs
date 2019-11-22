@@ -15,6 +15,8 @@ use {
     },
 };
 
+pub use crate::reader::tree_reader::SnapshotTree;
+
 /// Enables to scan all the blocks in a given buffer.
 pub struct Snapshot {
     /// The buffer read from an Inspect VMO.

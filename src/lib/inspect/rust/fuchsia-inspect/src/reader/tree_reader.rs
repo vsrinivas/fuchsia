@@ -8,6 +8,7 @@ use {
         LinkNodeDisposition,
     },
     failure,
+    fidl_fuchsia_inspect::TreeProxy,
     futures::{
         future::{self, BoxFuture},
         prelude::*,
@@ -18,9 +19,17 @@ use {
     },
 };
 
-struct SnapshotTree {
+/// Contains the snapshot of the hierarchy and snapshots of all the lazy nodes in the hierarchy.
+pub struct SnapshotTree {
     snapshot: Snapshot,
     children: SnapshotTreeMap,
+}
+
+impl SnapshotTree {
+    /// Loads a snapshot tree from the given inspect tree.
+    pub async fn try_from(tree: &TreeProxy) -> Result<Self, failure::Error> {
+        load_snapshot_tree(tree).await
+    }
 }
 
 type SnapshotTreeMap = BTreeMap<String, Result<SnapshotTree, failure::Error>>;

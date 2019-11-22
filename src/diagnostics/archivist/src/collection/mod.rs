@@ -14,6 +14,8 @@
 use {
     crate::inspect,
     failure::{self, format_err, Error},
+    fidl_fuchsia_inspect::TreeProxy,
+    fidl_fuchsia_inspect_deprecated::InspectProxy,
     fidl_fuchsia_io::DirectoryProxy,
     fuchsia_async as fasync,
     fuchsia_watch::{self, NodeType, PathEvent},
@@ -124,6 +126,15 @@ pub enum Data {
     /// Because we can't synchronously retrieve file contents like we can for VMOs, this holds
     /// the full file contents. Future changes should make streaming ingestion feasible.
     File(Vec<u8>),
+
+    /// A connection to a Tree service and a handle to the root hierarchy VMO. This VMO is what a
+    /// root.inspect file would contain and the result of calling Tree#GetContent. We hold to it
+    /// so that we can use it when the component is removed, at which point calling the Tree
+    /// service is not an option.
+    Tree(TreeProxy, Option<zx::Vmo>),
+
+    /// A connection to the deprecated Inspect service.
+    DeprecatedFidl(InspectProxy),
 }
 
 /// An event that occurred to a component.
