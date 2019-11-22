@@ -64,12 +64,6 @@ func decodeTypes(jsonPath string) (types.Root, error) {
 		return types.Root{}, fmt.Errorf("error parsing JSON as FIDL data: %v", err)
 	}
 
-	for _, l := range fidl.Libraries {
-		for k, v := range l.Decls {
-			fidl.Decls[types.EnsureLibrary(l.Name, k)] = v
-		}
-	}
-
 	return fidl, nil
 }
 

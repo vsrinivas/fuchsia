@@ -372,10 +372,7 @@ func onTable(value gidlir.Object, decl *gidlmixer.TableDecl) string {
 		fieldValueStr := visit(field.Value, fieldDecl)
 		tableFields = append(tableFields, fmt.Sprintf("%s: Some(%s)", fieldName, fieldValueStr))
 	}
-	for _, member := range decl.Members {
-		if member.Reserved {
-			continue
-		}
+	for _, member := range decl.SortedMembersNoReserved() {
 		key := string(member.Name)
 		if _, ok := providedKeys[key]; !ok {
 			fieldName := fidlcommon.ToSnakeCase(key)

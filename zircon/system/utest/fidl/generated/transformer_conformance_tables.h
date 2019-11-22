@@ -92,6 +92,8 @@ extern const fidl_type_t conformance_Sandwich1WithOptUnionTable;
 extern const fidl_type_t conformance_OutOfLineSandwich1WithOptUnionTable;
 extern const fidl_type_t conformance_ReverseOrdinalUnionTable;
 extern const fidl_type_t conformance_ReverseOrdinalUnionStructTable;
+extern const fidl_type_t conformance_ReverseOrdinalTableTable;
+extern const fidl_type_t conformance_StructOfReverseOrdinalTableTable;
 extern const fidl_type_t conformance_Regression3Table;
 extern const fidl_type_t conformance_Regression1Table;
 extern const fidl_type_t conformance_Regression2Table;
@@ -1130,6 +1132,22 @@ const fidl_type_t conformance_ReverseOrdinalUnionStructTable = fidl_type_t(::fid
     Fields37conformance_ReverseOrdinalUnionStruct, 1u, 16u, "conformance/ReverseOrdinalUnionStruct",
     conformance_ReverseOrdinalUnionStructAltTypePointerTable()));
 
+static const ::fidl::FidlTableField Fields31conformance_ReverseOrdinalTable[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 1u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 2u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 4u)};
+const fidl_type_t conformance_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(
+    Fields31conformance_ReverseOrdinalTable, 3u, "conformance/ReverseOrdinalTable"));
+
+static const ::fidl::FidlStructField Fields39conformance_StructOfReverseOrdinalTable[] = {
+    ::fidl::FidlStructField(&conformance_ReverseOrdinalTableTable, 0u, 0u)};
+constexpr static inline const ::fidl::FidlCodedStruct*
+conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
+const fidl_type_t conformance_StructOfReverseOrdinalTableTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields39conformance_StructOfReverseOrdinalTable, 1u, 16u,
+                            "conformance/StructOfReverseOrdinalTable",
+                            conformance_StructOfReverseOrdinalTableAltTypePointerTable()));
+
 static const ::fidl::FidlStructField Fields23conformance_Regression3[] = {
     ::fidl::FidlStructField(&Pointer23conformance_Regression2Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Regression3AltTypePointerTable()
@@ -1597,6 +1615,8 @@ extern const fidl_type_t v1_conformance_Sandwich1WithOptUnionTable;
 extern const fidl_type_t v1_conformance_OutOfLineSandwich1WithOptUnionTable;
 extern const fidl_type_t v1_conformance_ReverseOrdinalUnionTable;
 extern const fidl_type_t v1_conformance_ReverseOrdinalUnionStructTable;
+extern const fidl_type_t v1_conformance_ReverseOrdinalTableTable;
+extern const fidl_type_t v1_conformance_StructOfReverseOrdinalTableTable;
 extern const fidl_type_t v1_conformance_Regression3Table;
 extern const fidl_type_t v1_conformance_Regression1Table;
 extern const fidl_type_t v1_conformance_Regression2Table;
@@ -2658,6 +2678,22 @@ const fidl_type_t v1_conformance_ReverseOrdinalUnionStructTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields40v1_conformance_ReverseOrdinalUnionStruct, 1u, 24u,
                             "conformance/ReverseOrdinalUnionStruct",
                             v1_conformance_ReverseOrdinalUnionStructAltTypePointerTable()));
+
+static const ::fidl::FidlTableField Fields34v1_conformance_ReverseOrdinalTable[] = {
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 1u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 2u),
+    ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 4u)};
+const fidl_type_t v1_conformance_ReverseOrdinalTableTable = fidl_type_t(::fidl::FidlCodedTable(
+    Fields34v1_conformance_ReverseOrdinalTable, 3u, "conformance/ReverseOrdinalTable"));
+
+static const ::fidl::FidlStructField Fields42v1_conformance_StructOfReverseOrdinalTable[] = {
+    ::fidl::FidlStructField(&v1_conformance_ReverseOrdinalTableTable, 0u, 0u)};
+constexpr static inline const ::fidl::FidlCodedStruct*
+v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
+const fidl_type_t v1_conformance_StructOfReverseOrdinalTableTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields42v1_conformance_StructOfReverseOrdinalTable, 1u, 16u,
+                            "conformance/StructOfReverseOrdinalTable",
+                            v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_Regression3[] = {
     ::fidl::FidlStructField(&v1_Pointer26v1_conformance_Regression2Table, 0u, 0u)};
@@ -4433,6 +4469,20 @@ v1_conformance_StringWrapperAltTypePointerTable() __attribute__((unused));
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StringWrapperAltTypePointerTable() {
   return &conformance_StringWrapperTable.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct*
+conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct*
+conformance_StructOfReverseOrdinalTableAltTypePointerTable() {
+  return &v1_conformance_StructOfReverseOrdinalTableTable.coded_struct;
+}
+
+constexpr static inline const ::fidl::FidlCodedStruct*
+v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable() __attribute__((unused));
+constexpr static inline const ::fidl::FidlCodedStruct*
+v1_conformance_StructOfReverseOrdinalTableAltTypePointerTable() {
+  return &conformance_StructOfReverseOrdinalTableTable.coded_struct;
 }
 
 constexpr static inline const ::fidl::FidlCodedStruct*

@@ -67,12 +67,6 @@ func (f Flags) FidlTypes() types.Root {
 		log.Fatalf("Error parsing JSON as FIDL data: %v", err)
 	}
 
-	for _, l := range fidl.Libraries {
-		for k, v := range l.Decls {
-			fidl.Decls[types.EnsureLibrary(l.Name, k)] = v
-		}
-	}
-
 	return fidl
 }
 

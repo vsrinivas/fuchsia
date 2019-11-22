@@ -610,7 +610,7 @@ func Compile(fidlData types.Root) Root {
 	root := Root{}
 	libraryName := types.ParseLibraryName(fidlData.Name)
 	c := compiler{
-		decls:   fidlData.Decls,
+		decls:   fidlData.DeclsWithDependencies(),
 		structs: make(StructMap),
 		unions:  make(UnionMap),
 		enums:   make(EnumMap),

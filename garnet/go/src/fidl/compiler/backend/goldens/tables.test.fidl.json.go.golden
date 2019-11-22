@@ -181,36 +181,36 @@ func (u *NewerSimpleTable) ClearZ() {
 
 type ReverseOrdinalTable struct {
 	_ struct{} `fidl:"t,16,8" fidl_size_v1:"16" fidl_alignment_v1:"8" fidl_size_v1_no_ee:"16" fidl_alignment_v1_no_ee:"8"`
-	X int64 `fidl:"3"`
-	XPresent bool
-	Y int64 `fidl:"2"`
-	YPresent bool
 	Z int64 `fidl:"1"`
 	ZPresent bool
+	Y int64 `fidl:"2"`
+	YPresent bool
+	X int64 `fidl:"3"`
+	XPresent bool
 }
 
-func (u *ReverseOrdinalTable) SetX(x int64) {
-	u.X = x
-	u.XPresent = true
+func (u *ReverseOrdinalTable) SetZ(z int64) {
+	u.Z = z
+	u.ZPresent = true
 }
 
-func (u *ReverseOrdinalTable) GetX() int64 {
-	return u.X
+func (u *ReverseOrdinalTable) GetZ() int64 {
+	return u.Z
 }
 
-func (u *ReverseOrdinalTable) GetXWithDefault(_default int64) int64 {
-	if !u.HasX() {
+func (u *ReverseOrdinalTable) GetZWithDefault(_default int64) int64 {
+	if !u.HasZ() {
 		return _default
 	}
-	return u.X
+	return u.Z
 }
 
-func (u *ReverseOrdinalTable) HasX() bool {
-	return u.XPresent
+func (u *ReverseOrdinalTable) HasZ() bool {
+	return u.ZPresent
 }
 
-func (u *ReverseOrdinalTable) ClearX() {
-	u.XPresent = false
+func (u *ReverseOrdinalTable) ClearZ() {
+	u.ZPresent = false
 }
 
 func (u *ReverseOrdinalTable) SetY(y int64) {
@@ -237,26 +237,26 @@ func (u *ReverseOrdinalTable) ClearY() {
 	u.YPresent = false
 }
 
-func (u *ReverseOrdinalTable) SetZ(z int64) {
-	u.Z = z
-	u.ZPresent = true
+func (u *ReverseOrdinalTable) SetX(x int64) {
+	u.X = x
+	u.XPresent = true
 }
 
-func (u *ReverseOrdinalTable) GetZ() int64 {
-	return u.Z
+func (u *ReverseOrdinalTable) GetX() int64 {
+	return u.X
 }
 
-func (u *ReverseOrdinalTable) GetZWithDefault(_default int64) int64 {
-	if !u.HasZ() {
+func (u *ReverseOrdinalTable) GetXWithDefault(_default int64) int64 {
+	if !u.HasX() {
 		return _default
 	}
-	return u.Z
+	return u.X
 }
 
-func (u *ReverseOrdinalTable) HasZ() bool {
-	return u.ZPresent
+func (u *ReverseOrdinalTable) HasX() bool {
+	return u.XPresent
 }
 
-func (u *ReverseOrdinalTable) ClearZ() {
-	u.ZPresent = false
+func (u *ReverseOrdinalTable) ClearX() {
+	u.XPresent = false
 }

@@ -847,10 +847,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 
 func (c *compiler) compileTable(val types.Table) Table {
 	var members []TableMember
-	for _, member := range val.Members {
-		if member.Reserved {
-			continue
-		}
+	for _, member := range val.SortedMembersNoReserved() {
 		var (
 			ty, tag     = c.compileType(member.Type)
 			name        = c.compileIdentifier(member.Name, true, "")
@@ -1002,7 +999,7 @@ func Compile(fidlData types.Root) Root {
 
 	// Instantiate a compiler context.
 	c := compiler{
-		decls:           fidlData.Decls,
+		decls:           fidlData.DeclsWithDependencies(),
 		library:         libraryName,
 		libraryDeps:     godeps,
 		usedLibraryDeps: make(map[string]string),

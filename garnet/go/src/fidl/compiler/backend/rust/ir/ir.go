@@ -920,27 +920,9 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	return r
 }
 
-// byTableOrdinal is a wrapper type for sorting a TableMember slice.
-type byTableOrdinal []TableMember
-
-func (s byTableOrdinal) Len() int {
-	return len(s)
-}
-
-func (s byTableOrdinal) Less(i, j int) bool {
-	return s[i].Ordinal < s[j].Ordinal
-}
-
-func (s byTableOrdinal) Swap(i, j int) {
-	s[i], s[j] = s[j], s[i]
-}
-
 func (c *compiler) compileTable(table types.Table) Table {
 	var members []TableMember
-	for _, member := range table.Members {
-		if member.Reserved {
-			continue
-		}
+	for _, member := range table.SortedMembersNoReserved() {
 		members = append(members, TableMember{
 			Attributes: member.Attributes,
 			OGType:     member.Type,
@@ -949,8 +931,6 @@ func (c *compiler) compileTable(table types.Table) Table {
 			Ordinal:    member.Ordinal,
 		})
 	}
-	// The fidl_table! macro relies on members being sorted by ordinal.
-	sort.Sort(byTableOrdinal(members))
 	return Table{
 		Attributes: table.Attributes,
 		ECI:        table.Name,
@@ -1350,7 +1330,7 @@ func (dc *derivesCompiler) fillDerivesForType(ogType types.Type) derives {
 func Compile(r types.Root) Root {
 	root := Root{}
 	thisLibParsed := types.ParseLibraryName(r.Name)
-	c := compiler{r.Decls, thisLibParsed, map[string]bool{}}
+	c := compiler{r.DeclsWithDependencies(), thisLibParsed, map[string]bool{}}
 
 	for _, v := range r.Bits {
 		root.Bits = append(root.Bits, c.compileBits(v))

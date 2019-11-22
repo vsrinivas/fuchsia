@@ -558,7 +558,7 @@ func formatDestructor(eci types.EncodedCompoundIdentifier) string {
 type compiler struct {
 	namespace          string
 	symbolPrefix       string
-	decls              *types.DeclMap
+	decls              types.DeclMap
 	library            types.LibraryIdentifier
 	handleTypes        map[types.HandleSubtype]bool
 	namespaceFormatter func(types.LibraryIdentifier, string) string
@@ -712,7 +712,7 @@ func (c *compiler) compileType(val types.Type) Type {
 	case types.IdentifierType:
 		t := c.compileCompoundIdentifier(val.Identifier, "", "", false)
 		ft := c.compileCompoundIdentifier(val.Identifier, "", "", true)
-		declType, ok := (*c.decls)[val.Identifier]
+		declType, ok := c.decls[val.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Identifier)
 		}
@@ -1117,18 +1117,6 @@ func (c *compiler) compileTableMember(val types.TableMember, appendNamespace str
 	}
 }
 
-type byOrdinal []TableMember
-
-func (m byOrdinal) Len() int {
-	return len(m)
-}
-func (m byOrdinal) Swap(i, j int) {
-	m[i], m[j] = m[j], m[i]
-}
-func (m byOrdinal) Less(i, j int) bool {
-	return m[i].Ordinal < m[j].Ordinal
-}
-
 func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 	name := c.compileCompoundIdentifier(val.Name, "", appendNamespace, false)
 	tableType := c.compileTableType(val.Name)
@@ -1148,18 +1136,13 @@ func (c *compiler) compileTable(val types.Table, appendNamespace string) Table {
 		MaxOutOfLineV1NoEE: val.TypeShapeV1NoEE.MaxOutOfLine,
 	}
 
-	for _, v := range val.Members {
-		if v.Reserved {
-			continue
-		}
+	for _, v := range val.SortedMembersNoReserved() {
 		m := c.compileTableMember(v, appendNamespace)
 		if m.Ordinal > r.BiggestOrdinal {
 			r.BiggestOrdinal = m.Ordinal
 		}
 		r.Members = append(r.Members, m)
 	}
-
-	sort.Sort(byOrdinal(r.Members))
 
 	return r
 }
@@ -1209,7 +1192,7 @@ func (c *compiler) compileUnion(val types.Union) *Union {
 		if val.Members[0].Type.Kind != types.IdentifierType {
 			log.Fatal("Value member of result union must be an identifier", val.Name)
 		}
-		valueStructDeclType, ok := (*c.decls)[val.Members[0].Type.Identifier]
+		valueStructDeclType, ok := c.decls[val.Members[0].Type.Identifier]
 		if !ok {
 			log.Fatal("Unknown identifier: ", val.Members[0].Type.Identifier)
 		}
@@ -1282,7 +1265,7 @@ func compile(r types.Root, namespaceFormatter func(types.LibraryIdentifier, stri
 	c := compiler{
 		namespaceFormatter(library, ""),
 		formatLibraryPrefix(raw_library),
-		&r.Decls,
+		r.DeclsWithDependencies(),
 		types.ParseLibraryName(r.Name),
 		make(map[types.HandleSubtype]bool),
 		namespaceFormatter,

@@ -49,6 +49,8 @@ func (f Flags) FidlTypes() types.Root {
 		log.Fatalf("Error parsing JSON as FIDL data: %v", err)
 	}
 
+	// TODO(mkember): Once topaz CL has merged (so that fidlgen_dart uses the
+	// DeclsWithDependencies function), remove this.
 	for _, l := range fidl.Libraries {
 		for k, v := range l.Decls {
 			fidl.Decls[types.EnsureLibrary(l.Name, k)] = v

@@ -7,6 +7,7 @@ package types
 import (
 	"encoding/json"
 	"fmt"
+	"sort"
 	"strings"
 )
 
@@ -439,6 +440,34 @@ type TableMember struct {
 	MaxOutOfLine      int        `json:"max_out_of_line"`
 }
 
+// byTableOrdinal is a wrapper type for sorting a []TableMember.
+type byTableOrdinal []TableMember
+
+func (s byTableOrdinal) Len() int {
+	return len(s)
+}
+
+func (s byTableOrdinal) Less(i, j int) bool {
+	return s[i].Ordinal < s[j].Ordinal
+}
+
+func (s byTableOrdinal) Swap(i, j int) {
+	s[i], s[j] = s[j], s[i]
+}
+
+// SortedMembersNoReserved returns the table's members sorted by ordinal,
+// excluding reserved members.
+func (t *Table) SortedMembersNoReserved() []TableMember {
+	var members []TableMember
+	for _, member := range t.Members {
+		if !member.Reserved {
+			members = append(members, member)
+		}
+	}
+	sort.Sort(byTableOrdinal(members))
+	return members
+}
+
 // Struct represents a declaration of a FIDL struct.
 type Struct struct {
 	Attributes
@@ -682,4 +711,19 @@ type Root struct {
 	DeclOrder  []EncodedCompoundIdentifier `json:"declaration_order,omitempty"`
 	Decls      DeclMap                     `json:"declarations,omitempty"`
 	Libraries  []Library                   `json:"library_dependencies,omitempty"`
+}
+
+// DeclsWithDependencies returns a single DeclMap containining the FIDL
+// library's declarations and those of its depedencies.
+func (r *Root) DeclsWithDependencies() DeclMap {
+	decls := DeclMap{}
+	for k, v := range r.Decls {
+		decls[k] = v
+	}
+	for _, l := range r.Libraries {
+		for k, v := range l.Decls {
+			decls[EnsureLibrary(l.Name, k)] = v
+		}
+	}
+	return decls
 }

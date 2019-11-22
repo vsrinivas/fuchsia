@@ -30,3 +30,14 @@ table TableWithStringAndVector {
 struct StructOfTableWithStringAndVector {
     TableWithStringAndVector table;
 };
+
+table ReverseOrdinalTable {
+    4: int64 x;
+    3: reserved;
+    2: int64 y;
+    1: int64 z;
+};
+
+struct StructOfReverseOrdinalTable {
+    ReverseOrdinalTable table;
+};
