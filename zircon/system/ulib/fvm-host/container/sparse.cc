@@ -6,6 +6,7 @@
 #include <zircon/errors.h>
 
 #include <memory>
+#include <sstream>
 #include <utility>
 
 #include <fvm-host/container.h>
@@ -22,14 +23,18 @@ static LZ4F_preferences_t lz4_prefs = {
     .compressionLevel = 0,
 };
 
-zx_status_t CompressionContext::Setup(size_t max_len) {
-  if (!cctx_) {
-    LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&cctx_, LZ4F_VERSION);
-    if (LZ4F_isError(errc)) {
-      fprintf(stderr, "Could not create compression context: %s\n", LZ4F_getErrorName(errc));
-      return ZX_ERR_INTERNAL;
-    }
+fit::result<CompressionContext, std::string> CompressionContext::Create() {
+  CompressionContext context;
+  LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&context.cctx_, LZ4F_VERSION);
+  if (LZ4F_isError(errc)) {
+    std::ostringstream stream;
+    stream << "Could not create compression context: " << LZ4F_getErrorName(errc) << "\n";
+    return fit::error(stream.str());
   }
+  return fit::ok(std::move(context));
+}
+
+zx_status_t CompressionContext::Setup(size_t max_len) {
   Reset(kLz4HeaderSize + LZ4F_compressBound(max_len, &lz4_prefs));
 
   size_t r = LZ4F_compressBegin(cctx_, GetBuffer(), GetRemaining(), &lz4_prefs);
@@ -125,6 +130,14 @@ zx_status_t SparseContainer::InitNew() {
   dirty_ = true;
   valid_ = true;
   extent_size_ = 0;
+
+  auto result = CompressionContext::Create();
+  if (!result.is_ok()) {
+    fprintf(stderr, "%s", result.take_error_result().error.c_str());
+    return ZX_ERR_INTERNAL;
+  }
+  compression_ = std::move(result.take_ok_result().value);
+
   xprintf("Initialized new sparse data container.\n");
   return ZX_OK;
 }
@@ -162,7 +175,6 @@ zx_status_t SparseContainer::InitExisting() {
   extent_size_ = disk_size_ - image_.header_length;
 
   uintptr_t partition_ptr = reinterpret_cast<uintptr_t>(reader_->Partitions());
-
   for (unsigned i = 0; i < image_.partition_count; i++) {
     SparsePartitionInfo partition;
     memcpy(&partition.descriptor, reinterpret_cast<void*>(partition_ptr),
@@ -177,7 +189,12 @@ zx_status_t SparseContainer::InitExisting() {
       partition_ptr += sizeof(fvm::extent_descriptor_t);
     }
   }
-
+  auto result = CompressionContext::Create();
+  if (!result.is_ok()) {
+    fprintf(stderr, "%s", result.take_error_result().error.c_str());
+    return ZX_ERR_INTERNAL;
+  }
+  compression_ = std::move(result.take_ok_result().value);
   valid_ = true;
   xprintf("Successfully read from existing sparse data container.\n");
   return ZX_OK;

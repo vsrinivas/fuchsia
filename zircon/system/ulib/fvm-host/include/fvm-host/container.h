@@ -9,6 +9,7 @@
 #include <string.h>
 
 #include <memory>
+#include <variant>
 
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
@@ -18,6 +19,7 @@
 #include <fvm/sparse-reader.h>
 #include <lz4/lz4frame.h>
 
+#include "fbl/macros.h"
 #include "file-wrapper.h"
 #include "format.h"
 #include "fvm-info.h"
@@ -138,7 +140,21 @@ class FvmContainer final : public Container {
 
 class CompressionContext {
  public:
-  CompressionContext() {}
+  static fit::result<CompressionContext, std::string> Create();
+  explicit CompressionContext() = default;
+  DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(CompressionContext);
+  CompressionContext(CompressionContext&& other) noexcept
+      : cctx_(std::exchange(other.cctx_, nullptr)),
+        data_(std::move(other.data_)),
+        size_(other.size_),
+        offset_(other.offset_) {}
+  CompressionContext& operator=(CompressionContext&& other) noexcept {
+    cctx_ = std::exchange(other.cctx_, nullptr);
+    data_ = std::move(other.data_);
+    size_ = other.size_;
+    offset_ = other.offset_;
+    return *this;
+  }
   ~CompressionContext() {
     // Perform a final freeing of the compression context to make sure memory is deallocated.
     LZ4F_errorCode_t errc = LZ4F_freeCompressionContext(cctx_);
@@ -146,6 +162,7 @@ class CompressionContext {
       fprintf(stderr, "Could not free compression context: %s\n", LZ4F_getErrorName(errc));
     }
   }
+
   zx_status_t Setup(size_t max_len);
   zx_status_t Compress(const void* data, size_t length);
   zx_status_t Finish();
@@ -169,7 +186,7 @@ class CompressionContext {
     offset_ = 0;
   }
 
-  LZ4F_compressionContext_t cctx_;
+  LZ4F_compressionContext_t cctx_ = nullptr;
   std::unique_ptr<uint8_t[]> data_;
   size_t size_ = 0;
   size_t offset_ = 0;

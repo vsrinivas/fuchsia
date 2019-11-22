@@ -695,8 +695,9 @@ bool TestDiskSizeCalculation() {
 // Test to ensure that compression will fail if the buffer is too small.
 bool TestCompressorBufferTooSmall() {
   BEGIN_TEST;
-
-  CompressionContext compression;
+  auto result = CompressionContext::Create();
+  ASSERT_TRUE(result.is_ok());
+  CompressionContext compression = std::move(result.take_ok_result().value);
   ASSERT_EQ(compression.Setup(1), ZX_OK);
 
   unsigned int seed = 0;
