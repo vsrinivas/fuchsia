@@ -243,7 +243,7 @@ void DevfsConnection::GetDevicePowerCaps(GetDevicePowerCapsCompleter::Sync compl
     response.dpstates[i] = states[i];
   }
   completer.Reply(::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::WithResponse(
-      std::move(response)));
+      &response));
 };
 
 void DevfsConnection::SetPerformanceState(uint32_t requested_state,
@@ -278,10 +278,10 @@ void DevfsConnection::UpdatePowerStateMapping(
   if (status != ZX_OK) {
     return completer.Reply(
         ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithErr(
-            std::move(status)));
+            &status));
   }
   completer.Reply(::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::WithResponse(
-      std::move(response)));
+      &response));
 }
 
 void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync completer) {
@@ -294,7 +294,7 @@ void DevfsConnection::GetPowerStateMapping(GetPowerStateMappingCompleter::Sync c
     response.mapping[i] = mapping[i];
   }
   completer.Reply(::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::WithResponse(
-      std::move(response)));
+      &response));
 };
 
 void DevfsConnection::Suspend(::llcpp::fuchsia::device::DevicePowerState requested_state,
@@ -310,13 +310,13 @@ void DevfsConnection::Resume(::llcpp::fuchsia::device::DevicePowerState requeste
   zx_status_t status = devhost_device_resume_new(this->dev, requested_state, &out_state);
   if (status != ZX_OK) {
     return completer.Reply(
-        ::llcpp::fuchsia::device::Controller_Resume_Result::WithErr(std::move(status)));
+        ::llcpp::fuchsia::device::Controller_Resume_Result::WithErr(&status));
   }
 
   ::llcpp::fuchsia::device::Controller_Resume_Response response;
   response.out_state = out_state;
   completer.Reply(
-      ::llcpp::fuchsia::device::Controller_Resume_Result::WithResponse(std::move(response)));
+      ::llcpp::fuchsia::device::Controller_Resume_Result::WithResponse(&response));
 }
 
 void DevfsConnection::HandleRpc(fbl::RefPtr<DevfsConnection>&& conn,

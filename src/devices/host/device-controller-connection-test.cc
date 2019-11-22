@@ -180,9 +180,10 @@ TEST(DeviceControllerConnectionTestCase, UnbindHook) {
       // Set dev->flags so that we can check that the unbind hook is called in
       // the test.
       dev->flags = DEV_FLAG_DEAD;
-      llcpp::fuchsia::device::manager::DeviceController_Unbind_Result resp;
-      resp.set_response(llcpp::fuchsia::device::manager::DeviceController_Unbind_Response{});
-      completer.Reply(std::move(resp));
+      llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
+      llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response;
+      result.set_response(&response);
+      completer.Reply(std::move(result));
     }
   };
 

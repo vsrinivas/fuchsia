@@ -153,7 +153,8 @@ void DeviceControllerConnection::Unbind(UnbindCompleter::Sync completer) {
   ZX_ASSERT(this->dev()->unbind_cb == nullptr);
   this->dev()->unbind_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_Unbind_Result result;
-    result.set_response(llcpp::fuchsia::device::manager::DeviceController_Unbind_Response{});
+    llcpp::fuchsia::device::manager::DeviceController_Unbind_Response response;
+    result.set_response(&response);
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
@@ -164,8 +165,8 @@ void DeviceControllerConnection::CompleteRemoval(CompleteRemovalCompleter::Sync 
   ZX_ASSERT(this->dev()->removal_cb == nullptr);
   this->dev()->removal_cb = [completer = completer.ToAsync()](zx_status_t status) mutable {
     llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result result;
-    result.set_response(
-        llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response{});
+    llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response response;
+    result.set_response(&response);
     completer.Reply(std::move(result));
   };
   ApiAutoLock lock;
