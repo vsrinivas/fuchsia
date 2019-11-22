@@ -46,6 +46,9 @@ test_package("exception_broker_tests") {
     {
       name = "exception_broker_config_test"
     },
+    {
+      name = "limbo_client_unittest"
+    },
   ]
 
   # These are binaries needed by some tests. Mainly used to trigger exceptions.
@@ -60,6 +63,8 @@ test_package("exception_broker_tests") {
     ":exception_broker_config_test",
     ":exception_broker_integration_test",
     ":exception_broker_unittest",
+
+    "//src/developer/exception_broker/limbo_client:tests",
   ]
 
   resources = [

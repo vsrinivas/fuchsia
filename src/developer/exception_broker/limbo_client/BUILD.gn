@@ -2,7 +2,22 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test/test_package.gni")
+
 import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "limbo_client.cc",
+    "limbo_client.h",
+  ]
+
+  deps = [
+    "//sdk/lib/sys/cpp",
+    "//src/lib/fxl",
+    "//zircon/system/fidl/fuchsia-exception",
+  ]
+}
 
 executable("exe") {
   output_name = "limbo_client"
@@ -12,11 +27,11 @@ executable("exe") {
   ]
 
   deps = [
+    ":lib",
     "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/zx",
-    "//zircon/system/fidl/fuchsia-exception",
   ]
 }
 
@@ -37,5 +52,35 @@ package("limbo_client") {
       path = "meta/limbo_client.cmx"
       dest = "limbo.cmx"
     },
+  ]
+}
+
+# Tests --------------------------------------------------------------------------------------------
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":limbo_client_unittest",
+  ]
+}
+
+executable("limbo_client_unittest") {
+  testonly = true
+
+  sources = [
+    "limbo_client_unittest.cc",
+    "unittest_main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//sdk/lib/sys/cpp/testing:unit",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-loop-default",
+    "//zircon/system/fidl/fuchsia-exception",
   ]
 }

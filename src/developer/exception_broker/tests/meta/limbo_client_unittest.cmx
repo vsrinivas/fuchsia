@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/limbo_client_unittest"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.exception.ProcessLimbo"
+        ]
+    }
+}
