@@ -26,8 +26,36 @@ fbl::RefPtr<ResumeTask> ResumeTask::Create(fbl::RefPtr<Device> device, uint32_t 
 
 bool ResumeTask::AddParentResumeTask() {
   if (device_->parent() == nullptr) {
-    // TODO(fxb/38111) Composite devices also fail in this case.
-    // We need an iterator for a composite device to get all its components.
+    // For a composite device, each component is a parent.
+    // Until all the components resume, composite device cannot
+    // be resumed.
+    if (device_->composite()) {
+      bool parent_dependency_added = false;
+      for (auto& component : device_->composite()->bound_components()) {
+        auto dev = component.bound_device();
+        if (dev != nullptr) {
+          switch (dev->state()) {
+            case Device::State::kDead:
+              // One of the parents is dead, we cant resume the device.
+              // Complete this task.
+              Complete(ZX_ERR_NOT_CONNECTED);
+              return false;
+            case Device::State::kActive:
+              continue;
+            case Device::State::kUnbinding:
+            case Device::State::kSuspending:
+            case Device::State::kResuming:
+            case Device::State::kResumed:
+            case Device::State::kSuspended:
+              parent_dependency_added = true;
+              AddDependency(dev->RequestResumeTask(target_system_state_));
+          }
+        }
+      }
+      if (parent_dependency_added) {
+        return true;
+      }
+    }
     return false;
   }
 

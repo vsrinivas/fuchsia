@@ -686,6 +686,78 @@ TEST_F(CompositeTestCase, SuspendOrder) {
   coordinator_loop()->RunUntilIdle();
 }
 
+TEST_F(CompositeTestCase, ResumeOrder) {
+  size_t device_indexes[2];
+  uint32_t protocol_id[] = {
+      ZX_PROTOCOL_GPIO,
+      ZX_PROTOCOL_I2C,
+  };
+  static_assert(fbl::count_of(protocol_id) == fbl::count_of(device_indexes));
+
+  const char* kCompositeDevName = "composite-dev";
+  ASSERT_NO_FATAL_FAILURES(BindCompositeDefineComposite(platform_bus(), protocol_id,
+                                                        fbl::count_of(protocol_id),
+                                                        nullptr /* props */, 0, kCompositeDevName));
+  // Add the devices to construct the composite out of.
+  for (size_t i = 0; i < fbl::count_of(device_indexes); ++i) {
+    char name[32];
+    snprintf(name, sizeof(name), "device-%zu", i);
+    ASSERT_NO_FATAL_FAILURES(
+        AddDevice(platform_bus(), name, protocol_id[i], "", &device_indexes[i]));
+  }
+
+  size_t component_device_indexes[fbl::count_of(device_indexes)];
+  zx::channel composite_remote_coordinator;
+  zx::channel composite_remote_controller;
+  ASSERT_NO_FATAL_FAILURES(CheckCompositeCreation(
+      kCompositeDevName, device_indexes, fbl::count_of(device_indexes), component_device_indexes,
+      &composite_remote_coordinator, &composite_remote_controller));
+  fbl::RefPtr<devmgr::Device> comp_device =
+      GetCompositeDeviceFromComponent(kCompositeDevName, device_indexes[1]);
+  ASSERT_NOT_NULL(comp_device);
+
+  // Put all the devices in suspended state
+  coordinator_.sys_device()->set_state(devmgr::Device::State::kSuspended);
+  coordinator_.sys_device()->proxy()->set_state(devmgr::Device::State::kSuspended);
+  platform_bus()->set_state(devmgr::Device::State::kSuspended);
+  for (auto idx : device_indexes) {
+    device(idx)->device->set_state(devmgr::Device::State::kSuspended);
+  }
+  for (auto idx : component_device_indexes) {
+    device(idx)->device->set_state(devmgr::Device::State::kSuspended);
+  }
+  comp_device->set_state(devmgr::Device::State::kSuspended);
+
+  llcpp::fuchsia::device::manager::SystemPowerState state =
+      llcpp::fuchsia::device::manager::SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON;
+  ASSERT_NO_FATAL_FAILURES(DoResume(state));
+
+  // First, the sys proxy driver, which is the parent of all of the devices
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(
+      sys_proxy_controller_remote_, SystemPowerState::SYSTEM_POWER_STATE_FULLY_ON, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  // Then platform devices
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(platform_bus_controller_remote(), state, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+
+  // Next the devices
+  for (auto idx : device_indexes) {
+    ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(idx)->controller_remote, state, ZX_OK));
+  }
+  coordinator_loop()->RunUntilIdle();
+
+  // Then the components
+  for (auto idx : component_device_indexes) {
+    ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(device(idx)->controller_remote, state, ZX_OK));
+  }
+  coordinator_loop()->RunUntilIdle();
+
+  // Then finally the composite device itself
+  ASSERT_NO_FATAL_FAILURES(CheckResumeReceived(composite_remote_controller, state, ZX_OK));
+  coordinator_loop()->RunUntilIdle();
+}
+
 // Make sure we receive devfs notifications when composite devices appear
 TEST_F(CompositeTestCase, DevfsNotifications) {
   zx::channel watcher;
