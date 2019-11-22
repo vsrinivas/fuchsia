@@ -24,6 +24,9 @@ test_package("feedback_utils_tests") {
       name = "inspect_node_manager_unittest"
     },
     {
+      name = "promise_unittest"
+    },
+    {
       name = "time_unittest"
     },
   ]
@@ -40,6 +43,7 @@ test_package("feedback_utils_tests") {
     ":archive_unittest",
     ":cobalt_unittest",
     ":inspect_node_manager_unittest",
+    ":promise_unittest",
     ":time_unittest",
   ]
 }
@@ -100,6 +104,25 @@ executable("inspect_node_manager_unittest") {
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
+  ]
+}
+
+executable("promise_unittest") {
+  testonly = true
+
+  sources = [
+    "promise_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//src/developer/feedback/utils:promise",
+    "//src/lib/fxl",
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-cpp",
   ]
 }
 

@@ -31,6 +31,7 @@ source_set("attachment_providers") {
 
   deps = [
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:promise",
     "//src/lib/fsl",
     "//src/lib/inspect_deprecated/query",
     "//src/lib/inspect_deprecated/query:json_formatter",

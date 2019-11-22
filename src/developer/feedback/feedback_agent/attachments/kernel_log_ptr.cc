@@ -6,6 +6,7 @@
 
 #include <zircon/syscalls/log.h>
 
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -18,11 +19,10 @@ fit::promise<fuchsia::mem::Buffer> CollectKernelLog(async_dispatcher_t* dispatch
                                                     zx::duration timeout) {
   std::unique_ptr<BootLog> boot_log = std::make_unique<BootLog>(dispatcher, services);
 
-  // We move |boot_log| in a subsequent chained promise to guarantee its lifetime.
-  return boot_log->GetLog(timeout).then(
-      [boot_log = std::move(boot_log)](fit::result<fuchsia::mem::Buffer>& result) {
-        return std::move(result);
-      });
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto logs = boot_log->GetLog(timeout);
+  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(logs), /*args=*/std::move(boot_log));
 }
 
 BootLog::BootLog(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)

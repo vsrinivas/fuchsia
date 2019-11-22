@@ -8,6 +8,7 @@
 #include <zircon/errors.h>
 #include <zircon/status.h>
 
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -23,11 +24,11 @@ fit::promise<ScreenshotData> TakeScreenshot(async_dispatcher_t* dispatcher,
                                             zx::duration timeout) {
   std::unique_ptr<Scenic> scenic = std::make_unique<Scenic>(dispatcher, services);
 
-  // We move |scenic| in a subsequent chained promise to guarantee its lifetime.
-  return scenic->TakeScreenshot(timeout).then(
-      [scenic = std::move(scenic)](fit::result<ScreenshotData>& result) {
-        return std::move(result);
-      });
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto screenshot = scenic->TakeScreenshot(timeout);
+  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(screenshot),
+                                         /*args=*/std::move(scenic));
 }
 
 Scenic::Scenic(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services)

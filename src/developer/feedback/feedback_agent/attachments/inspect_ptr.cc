@@ -12,6 +12,7 @@
 #include <string>
 #include <vector>
 
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
@@ -30,11 +31,11 @@ fit::promise<fuchsia::mem::Buffer> CollectInspectData(async_dispatcher_t* timeou
   std::unique_ptr<Inspect> inspect =
       std::make_unique<Inspect>(timeout_dispatcher, collection_executor);
 
-  // We move |inspect| in a subsequent chained promise to guarantee its lifetime.
-  return inspect->Collect(timeout).then(
-      [inspect = std::move(inspect)](fit::result<fuchsia::mem::Buffer>& result) {
-        return std::move(result);
-      });
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto inspect_data = inspect->Collect(timeout);
+  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(inspect_data),
+                                         /*args=*/std::move(inspect));
 }
 
 Inspect::Inspect(async_dispatcher_t* timeout_dispatcher, async::Executor* collection_executor)

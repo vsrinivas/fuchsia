@@ -58,6 +58,7 @@ source_set("channel_provider") {
     "//sdk/fidl/fuchsia.feedback",
     "//sdk/lib/sys/cpp",
     "//src/developer/feedback/feedback_agent:constants",
+    "//src/developer/feedback/utils:promise",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fit",

@@ -146,6 +146,7 @@ source_set("data_provider_src") {
     "//src/developer/feedback/feedback_agent/annotations:annotation_providers",
     "//src/developer/feedback/feedback_agent/attachments:attachment_providers",
     "//src/developer/feedback/utils:archive",
+    "//src/developer/feedback/utils:promise",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/syslog/cpp",

@@ -9,6 +9,7 @@
 #include <zircon/errors.h>
 
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -29,13 +30,14 @@ std::set<std::string> ChannelProvider::GetSupportedAnnotations() {
 }
 
 fit::promise<std::vector<Annotation>> ChannelProvider::GetAnnotations() {
-  std::vector<fit::promise<Annotation>> annotations;
-
   auto channel_ptr = std::make_unique<ChannelProviderPtr>(dispatcher_, services_);
 
-  // Move |channel_ptr| in to the callback to ensure its lifetime.
-  return channel_ptr->GetCurrent(timeout_)
-      .and_then([channel_ptr = std::move(channel_ptr)](const std::string& channel) {
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto channel = channel_ptr->GetCurrent(timeout_);
+  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(channel),
+                                         /*args=*/std::move(channel_ptr))
+      .and_then([](const std::string& channel) {
         std::vector<Annotation> annotations;
 
         Annotation annotation;
