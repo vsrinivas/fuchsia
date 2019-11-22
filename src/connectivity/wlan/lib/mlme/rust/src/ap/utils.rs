@@ -101,59 +101,61 @@ pub fn write_disassoc_frame<B: Appendable>(
     Ok(())
 }
 
-pub struct BeaconTemplate {
-    pub buf: Vec<u8>,
+/// BeaconParams contains parameters that may be used to offload beaconing to the hardware.
+pub struct BeaconOffloadParams {
+    /// Offset from the start of the input buffer to the TIM element.
     pub tim_ele_offset: usize,
 }
 
-pub fn make_beacon_template(
+pub fn write_beacon_frame<B: Appendable>(
+    buf: &mut B,
     bssid: Bssid,
+    timestamp: u64,
     beacon_interval: TimeUnit,
     capabilities: mac::CapabilityInfo,
     ssid: &[u8],
     rates: &[u8],
     channel: u8,
     rsne: &[u8],
-) -> Result<BeaconTemplate, Error> {
-    let mut buf = vec![];
-
+) -> Result<BeaconOffloadParams, Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
         .with_mgmt_subtype(mac::MgmtSubtype::BEACON);
     mgmt_writer::write_mgmt_hdr(
-        &mut buf,
+        buf,
+        // The sequence control is 0 because the firmware will set it.
         mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, mac::BCAST_ADDR, bssid, mac::SequenceControl(0)),
         None,
     )?;
-    buf.append_value(&mac::BeaconHdr { timestamp: 0, beacon_interval, capabilities })?;
+    buf.append_value(&mac::BeaconHdr { timestamp, beacon_interval, capabilities })?;
     let rates_writer = RatesWriter::try_new(rates)?;
 
     // Order of beacon frame body IEs is according to IEEE Std 802.11-2016, Table 9-27, numbered
     // below.
 
     // 4. Service Set Identifier (SSID)
-    write_ssid(&mut buf, ssid)?;
+    write_ssid(buf, ssid)?;
 
     // 5. Supported Rates and BSS Membership Selectors
-    rates_writer.write_supported_rates(&mut buf);
+    rates_writer.write_supported_rates(buf);
 
     // 6. DSSS Parameter Set
-    write_dsss_param_set(&mut buf, &DsssParamSet { current_chan: channel })?;
+    write_dsss_param_set(buf, &DsssParamSet { current_chan: channel })?;
 
     // 9. Traffic indication map (TIM)
     // Write a placeholder TIM element, which the firmware will fill in. We only support hardware
     // with hardware offload beaconing for now (e.g. ath10k).
-    let tim_ele_offset = buf.len();
+    let tim_ele_offset = buf.bytes_written();
     buf.append_value(&ie::Header { id: Id::TIM, body_len: 0 })?;
 
     // 17. Extended Supported Rates and BSS Membership Selectors
-    rates_writer.write_ext_supported_rates(&mut buf);
+    rates_writer.write_ext_supported_rates(buf);
 
     // 18. RSN
     // |rsne| already contains the IE prefix.
     buf.append_bytes(rsne)?;
 
-    Ok(BeaconTemplate { buf, tim_ele_offset })
+    Ok(BeaconOffloadParams { tim_ele_offset })
 }
 
 pub fn write_data_frame<B: Appendable>(
@@ -301,9 +303,12 @@ mod tests {
     }
 
     #[test]
-    fn beacon_template() {
-        let template = make_beacon_template(
+    fn beacon_frame() {
+        let mut buf = vec![];
+        let params = write_beacon_frame(
+            &mut buf,
             Bssid([2; 6]),
+            0,
             TimeUnit(10),
             mac::CapabilityInfo(33),
             &[1, 2, 3, 4, 5],
@@ -334,15 +339,18 @@ mod tests {
                 50, 2, 9, 10, // Extended rates
                 48, 2, 77, 88, // RSNE
             ][..],
-            &template.buf[..]
+            &buf[..]
         );
-        assert_eq!(template.tim_ele_offset, 56);
+        assert_eq!(params.tim_ele_offset, 56);
     }
 
     #[test]
-    fn beacon_template_no_extended_rates() {
-        let template = make_beacon_template(
+    fn beacon_frame_no_extended_rates() {
+        let mut buf = vec![];
+        let params = write_beacon_frame(
+            &mut buf,
             Bssid([2; 6]),
+            0,
             TimeUnit(10),
             mac::CapabilityInfo(33),
             &[1, 2, 3, 4, 5],
@@ -371,9 +379,9 @@ mod tests {
                 5, 0, // TIM
                 48, 2, 77, 88, // RSNE
             ][..],
-            &template.buf[..]
+            &buf[..]
         );
-        assert_eq!(template.tim_ele_offset, 54);
+        assert_eq!(params.tim_ele_offset, 54);
     }
 
     #[test]
