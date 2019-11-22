@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::config::default_settings::DefaultSetting;
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::switchboard::base::{
@@ -16,9 +17,13 @@ use parking_lot::RwLock;
 use std::sync::Arc;
 
 impl DeviceStorageCompatible for SetupInfo {
-    const DEFAULT_VALUE: Self =
-        SetupInfo { configuration_interfaces: ConfigurationInterfaceFlags::DEFAULT };
     const KEY: &'static str = "setup_info";
+
+    fn default_setting() -> DefaultSetting<Self> {
+        DefaultSetting::new(SetupInfo {
+            configuration_interfaces: ConfigurationInterfaceFlags::DEFAULT,
+        })
+    }
 }
 
 pub struct SetupController {

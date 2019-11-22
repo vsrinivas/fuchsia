@@ -11,6 +11,7 @@ use futures::stream::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
 
+use crate::config::default_settings::DefaultSetting;
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::switchboard::base::{
@@ -20,8 +21,11 @@ use crate::switchboard::base::{
 type PrivacyStorage = Arc<Mutex<DeviceStorage<PrivacyInfo>>>;
 
 impl DeviceStorageCompatible for PrivacyInfo {
-    const DEFAULT_VALUE: Self = PrivacyInfo { user_data_sharing_consent: None };
     const KEY: &'static str = "privacy_info";
+
+    fn default_setting() -> DefaultSetting<Self> {
+        DefaultSetting::new(PrivacyInfo { user_data_sharing_consent: None })
+    }
 }
 
 pub struct PrivacyController {

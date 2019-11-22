@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 use {
     crate::audio::StreamVolumeControl,
+    crate::config::default_settings::DefaultSetting,
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
@@ -62,8 +63,11 @@ fn get_streams_array_from_map(
 }
 
 impl DeviceStorageCompatible for AudioInfo {
-    const DEFAULT_VALUE: Self = DEFAULT_AUDIO_INFO;
     const KEY: &'static str = "audio_info";
+
+    fn default_setting() -> DefaultSetting<Self> {
+        DefaultSetting::new(DEFAULT_AUDIO_INFO)
+    }
 }
 
 /// Controller that handles commands for SettingType::Audio.

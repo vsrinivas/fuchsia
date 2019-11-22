@@ -12,6 +12,7 @@ use futures::StreamExt;
 use futures::TryFutureExt;
 use parking_lot::RwLock;
 
+use crate::config::default_settings::DefaultSetting;
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::registry::service_context::ServiceContext;
@@ -22,8 +23,11 @@ use crate::switchboard::base::{
 type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 
 impl DeviceStorageCompatible for IntlInfo {
-    const DEFAULT_VALUE: Self = IntlInfo { time_zone_id: None };
     const KEY: &'static str = "intl_info";
+
+    fn default_setting() -> DefaultSetting<Self> {
+        DefaultSetting::new(IntlInfo { time_zone_id: None })
+    }
 }
 
 pub struct IntlController {

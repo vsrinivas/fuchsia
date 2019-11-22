@@ -11,13 +11,16 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::sync::Arc;
 
+use crate::config::default_settings::DefaultSetting;
+
 const SETTINGS_PREFIX: &str = "settings";
 
 /// Stores device level settings in persistent storage.
 /// User level settings should not use this.
-pub struct DeviceStorage<T> {
+pub struct DeviceStorage<T: DeviceStorageCompatible> {
     caching_enabled: bool,
     current_data: Option<T>,
+    default_setting: DefaultSetting<T>,
     stash_proxy: StoreAccessorProxy,
 }
 
@@ -31,7 +34,7 @@ pub struct DeviceStorage<T> {
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
 pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + PartialEq {
-    const DEFAULT_VALUE: Self;
+    fn default_setting() -> DefaultSetting<Self>;
     const KEY: &'static str;
 }
 
@@ -40,6 +43,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         return DeviceStorage {
             caching_enabled: true,
             current_data: current_data,
+            default_setting: T::default_setting(),
             stash_proxy: stash_proxy,
         };
     }
@@ -77,7 +81,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                         Err(e) => {
                             fx_log_err!("Failed to serialize value from stash, returning default");
                             fx_log_err!("{}", e);
-                            T::DEFAULT_VALUE
+                            self.default_setting.get_default_value()
                         }
                     };
                     self.current_data = Some(data);
@@ -85,7 +89,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                     panic!("Unexpected type for key found in stash");
                 }
             } else {
-                self.current_data = Some(T::DEFAULT_VALUE);
+                self.current_data = Some(self.default_setting.get_default_value());
             }
         }
         if let Some(curent_value) = &self.current_data {
@@ -274,8 +278,11 @@ mod tests {
     }
 
     impl DeviceStorageCompatible for TestStruct {
-        const DEFAULT_VALUE: Self = TestStruct { value: VALUE0 };
         const KEY: &'static str = "testkey";
+
+        fn default_setting() -> DefaultSetting<Self> {
+            DefaultSetting::new(TestStruct { value: VALUE0 })
+        }
     }
 
     #[fuchsia_async::run_singlethreaded(test)]
@@ -341,7 +348,7 @@ mod tests {
         fasync::spawn(async move {
             while let Some(req) = stash_stream.try_next().await.unwrap() {
                 #[allow(unreachable_patterns)]
-                    match req {
+                match req {
                     StoreAccessorRequest::GetValue { key: _, responder } => {
                         let mut response = Value::Stringval("invalid value".to_string());
                         responder.send(Some(&mut response).map(OutOfLineUnion)).unwrap();
