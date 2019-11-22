@@ -134,7 +134,6 @@ impl Peer {
     }
 
     /// Returns a future that will complete when the peer disconnects.
-    #[allow(dead_code)] // TODO(41346) - unused temporarily
     pub fn closed(&self) -> ClosedPeer {
         ClosedPeer { inner: Arc::downgrade(&self.inner) }
     }
