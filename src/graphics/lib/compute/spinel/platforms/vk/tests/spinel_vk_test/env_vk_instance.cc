@@ -8,6 +8,7 @@
 
 #include "common/macros.h"
 #include "common/vk/debug.h"
+#include "common/vk/find_validation_layer.h"
 
 //
 //
@@ -54,7 +55,7 @@ env_vk_instance::SetUp()
   // programmatically enable tracing
   //
   char const * const instance_enabled_layers[] = {
-    "VK_LAYER_KHRONOS_validation",
+    vk_find_validation_layer(),
   };
 
   char const * const instance_enabled_extensions[] = {
