@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! This module contains the core algorithm for `WorkScheduler`, a component manager subsytem for
-//! dispatching batches of work.
+//! This module contains the public interface for component manager-hosted `WorkScheduler` FIDL protocols. The business
+//! logic and state for a `WorkScheduler` instance is guarded by a `Mutex`, and resides in
+//! `WorkSchedulerDelegate`.
 //!
-//! The subsystem's interface consists of three FIDL prototocols::
+//! The subsystem's interface consists of the following three FIDL prototocols:
 //!
 //! * `fuchsia.sys2.WorkScheduler`: A framework service for scheduling and canceling work.
 //! * `fuchsia.sys2.Worker`: A service that `WorkScheduler` clients expose to the framework to be
@@ -15,23 +16,13 @@
 
 use {
     crate::{
-        capability::*,
-        model::{error::ModelError, hooks::*, Realm},
-        work_scheduler::{dispatcher::Dispatcher, work_item::WorkItem},
+        model::{OutgoingBinder, Realm},
+        work_scheduler::{delegate::WorkSchedulerDelegate, dispatcher::RealDispatcher},
     },
-    cm_rust::{CapabilityPath, ExposeDecl, ExposeTarget},
-    failure::{format_err, Error},
-    fidl::endpoints::ServerEnd,
+    cm_rust::CapabilityPath,
     fidl_fuchsia_sys2 as fsys,
-    fuchsia_async::{self as fasync, Time, Timer},
-    fuchsia_zircon as zx,
-    futures::{
-        future::{AbortHandle, Abortable, BoxFuture},
-        lock::Mutex,
-        TryStreamExt,
-    },
+    futures::lock::Mutex,
     lazy_static::lazy_static,
-    log::warn,
     std::{
         convert::TryInto,
         sync::{Arc, Weak},
@@ -48,643 +39,99 @@ lazy_static! {
         "/svc/fuchsia.sys2.WorkSchedulerControl".try_into().unwrap();
 }
 
-/// A self-managed timer instantiated by `WorkScheduler` to implement the "wakeup" part of its
-/// wakeup, batch, and dispatch cycles.
-struct WorkSchedulerTimer {
-    /// Next absolute monotonic time when a timeout should be triggered to wakeup, batch, and
-    /// dispatch work.
-    next_timeout_monotonic: i64,
-    /// The handle used to abort the next wakeup, batch, and dispatch cycle if it needs to be
-    /// replaced by a different timer to be woken up at a different time.
-    abort_handle: AbortHandle,
-}
-
-impl WorkSchedulerTimer {
-    /// Construct a new timer that will fire at monotonic time `next_timeout_monotonic`. When the
-    /// the timer fires, if it was not aborted, it will invoke `work_scheduler.dispatch_work()`.
-    fn new(next_timeout_monotonic: i64, work_scheduler: WorkScheduler) -> Self {
-        let (abort_handle, abort_registration) = AbortHandle::new_pair();
-
-        let future = Abortable::new(
-            Timer::new(Time::from_nanos(next_timeout_monotonic)),
-            abort_registration,
-        );
-        fasync::spawn(async move {
-            // Dispatch work only when abortable was not aborted.
-            if future.await.is_ok() {
-                work_scheduler.dispatch_work().await;
-            }
-        });
-
-        WorkSchedulerTimer { next_timeout_monotonic, abort_handle }
-    }
-}
-
-/// Automatically cancel a timer that is dropped by `WorkScheduler`. This allows `WorkScheduler` to
-/// use patterns like:
-///
-///   WorkScheduler.timer = Some(WorkSchedulerTimer::new(deadline, self.clone()))
-///
-/// and expect any timer previously stored in `WorkScheduler.timer` to be aborted as a part of the
-/// operation.
-impl Drop for WorkSchedulerTimer {
-    fn drop(&mut self) {
-        self.abort_handle.abort();
-    }
-}
-
-/// State maintained by a `WorkScheduler`, kept consistent via a single `Mutex`.
-struct WorkSchedulerState {
-    /// Scheduled work items that have not been dispatched.
-    work_items: Vec<WorkItem>,
-    /// Period between wakeup, batch, dispatch cycles. Set to `None` when dispatching work is
-    /// disabled.
-    batch_period: Option<i64>,
-    /// Current timer for next wakeup, batch, dispatch cycle, if any.
-    timer: Option<WorkSchedulerTimer>,
-}
-
-impl WorkSchedulerState {
-    pub fn new() -> Self {
-        WorkSchedulerState { work_items: Vec::new(), batch_period: None, timer: None }
-    }
-
-    fn set_timer(&mut self, next_monotonic_deadline: i64, work_scheduler: WorkScheduler) {
-        self.timer = Some(WorkSchedulerTimer::new(next_monotonic_deadline, work_scheduler));
-    }
-}
-
-/// Provides a common facility for scheduling canceling work. Each component instance manages its
-/// work items in isolation from each other, but the `WorkScheduler` maintains a collection of all
-/// items to make global scheduling decisions.
-#[derive(Clone)]
+/// Owns the `Mutex`-synchronized `WorkSchedulerDelegate`, which contains business logic and state
+/// for the `WorkScheduler` instance.
 pub struct WorkScheduler {
-    inner: Arc<WorkSchedulerInner>,
+    /// Delegate that implements business logic and holds state behind `Mutex`.
+    delegate: Mutex<WorkSchedulerDelegate>,
+    /// A reference to the `Model` used to bind to component instances during dispatch.
+    outgoing_binder: Weak<dyn OutgoingBinder>,
 }
 
 impl WorkScheduler {
-    pub fn new() -> Self {
-        Self { inner: Arc::new(WorkSchedulerInner::new()) }
+    // `Workscheduler` is always instantiated in an `Arc` that will determine its lifetime.
+    pub async fn new(outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
+        let work_scheduler = Self::new_raw(outgoing_binder);
+        {
+            let mut delegate = work_scheduler.delegate.lock().await;
+            delegate.init(Arc::downgrade(&work_scheduler));
+        }
+        work_scheduler
     }
 
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
-        vec![HooksRegistration {
-            events: vec![EventType::RouteBuiltinCapability, EventType::RouteFrameworkCapability],
-            callback: Arc::downgrade(&self.inner) as Weak<dyn Hook>,
-        }]
+    fn new_raw(outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
+        Arc::new(Self { delegate: WorkSchedulerDelegate::new(), outgoing_binder })
     }
 
-    pub async fn schedule_work(
-        &self,
+    /// `schedule_work()` interface method is forwarded to delegate. `Arc<dyn Dispatcher>` is
+    /// constructed late to keep it out of the public interface to `WorkScheduler`.
+    pub async fn schedule_work<'a>(
+        &'a self,
         realm: Arc<Realm>,
-        work_id: &str,
-        work_request: &fsys::WorkRequest,
+        work_id: &'a str,
+        work_request: &'a fsys::WorkRequest,
     ) -> Result<(), fsys::Error> {
-        let mut state = self.inner.state.lock().await;
-        self.schedule_work_request(&mut *state, realm, work_id, work_request)
-    }
-
-    fn schedule_work_request(
-        &self,
-        state: &mut WorkSchedulerState,
-        dispatcher: Arc<dyn Dispatcher>,
-        work_id: &str,
-        work_request: &fsys::WorkRequest,
-    ) -> Result<(), fsys::Error> {
-        let work_items = &mut state.work_items;
-        let work_item = WorkItem::try_new(dispatcher, work_id, work_request)?;
-
-        if work_items.contains(&work_item) {
-            return Err(fsys::Error::InstanceAlreadyExists);
-        }
-
-        work_items.push(work_item);
-        work_items.sort_by(WorkItem::deadline_order);
-
-        self.update_timeout(&mut *state);
-
-        Ok(())
-    }
-
-    pub async fn cancel_work(&self, realm: Arc<Realm>, work_id: &str) -> Result<(), fsys::Error> {
-        let mut state = self.inner.state.lock().await;
-        self.cancel_work_item(&mut *state, realm, work_id)
-    }
-
-    fn cancel_work_item(
-        &self,
-        state: &mut WorkSchedulerState,
-        dispatcher: Arc<dyn Dispatcher>,
-        work_id: &str,
-    ) -> Result<(), fsys::Error> {
-        let work_items = &mut state.work_items;
-        let work_item = WorkItem::new_by_identity(dispatcher, work_id);
-
-        // TODO(markdittmer): Use `work_items.remove_item(work_item)` if/when it becomes stable.
-        let mut found = false;
-        work_items.retain(|item| {
-            let matches = &work_item == item;
-            found = found || matches;
-            !matches
-        });
-
-        if !found {
-            return Err(fsys::Error::InstanceNotFound);
-        }
-
-        self.update_timeout(&mut *state);
-
-        Ok(())
-    }
-
-    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
-        let state = self.inner.state.lock().await;
-        match state.batch_period {
-            Some(batch_period) => Ok(batch_period),
-            // TODO(markdittmer): GetBatchPeriod Ok case should probably return Option<i64> to
-            // more directly reflect "dispatching work disabled".
-            None => Ok(std::i64::MAX),
-        }
-    }
-
-    pub async fn set_batch_period(&self, batch_period: i64) -> Result<(), fsys::Error> {
-        if batch_period <= 0 {
-            return Err(fsys::Error::InvalidArguments);
-        }
-
-        let mut state = self.inner.state.lock().await;
-        if batch_period != std::i64::MAX {
-            state.batch_period = Some(batch_period);
-        } else {
-            // TODO(markdittmer): SetBatchPeriod should probably accept Option<i64> to more directly
-            // reflect "dispatching work disabled".
-            state.batch_period = None;
-        }
-
-        self.update_timeout(&mut *state);
-
-        Ok(())
-    }
-
-    /// Dispatch expired `work_items`. In the one-shot case expired items are dispatched and dropped
-    /// from `work_items`. In the periodic case expired items are retained and given a new deadline.
-    /// New deadlines must meet all of the following criteria:
-    ///
-    ///   now < new_deadline
-    ///   and
-    ///   now + period <= new_deadline
-    ///   and
-    ///   new_deadline = first_deadline + n * period
-    ///
-    /// Example:
-    ///
-    /// F = First expected dispatch time for work item
-    /// C = Current expected dispatch time for work item
-    /// N = Now
-    /// * = New expected dispatch time for work item
-    /// | = Period marker for work item (that isn't otherwise labeled)
-    ///
-    /// Period markers only:      ...------|----|----|----|----|----|----|----|----|...
-    /// Fully annotated timeline: ...------F----|----C----|----|----|-N--*----|----|...
-    ///
-    /// Example of edge case:
-    ///
-    /// Now lands exactly on a period marker.
-    ///
-    /// Period markers only:      ...------|----|----|----|----|----|----|----|----|...
-    /// Fully annotated timeline: ...------F----|----C----|----|----N----*----|----|...
-    ///
-    /// Example of edge case:
-    ///
-    /// Period markers only:      ...------||||||||||||||||||||...
-    /// Fully annotated timeline: ...------F||C||||||||N*||||||...
-    ///
-    /// Example of edge case:
-    ///
-    /// N=C. Denote M = N=C.
-    ///
-    /// Period markers only:      ...------|----|----|----|----|----|...
-    /// Fully annotated timeline: ...------F----|----M----*----|----|...
-    ///
-    /// Note that updating `WorkItem` deadlines is _independent_ of updating `WorkScheduler` batch
-    /// period. When either `work_items` (and their deadlines) change or `batch_period` changes, the
-    /// next wakeup timeout is re-evaluated, but this involves updating _only_ the wakeup timeout,
-    /// not any `WorkItem` deadlines.
-    async fn dispatch_work(&self) {
-        let mut state = self.inner.state.lock().await;
-        let now = Time::now().into_nanos();
-        let work_items = &mut state.work_items;
-        let mut to_dispatch = Vec::new();
-
-        work_items.retain(|item| {
-            // Retain future work items.
-            if item.next_deadline_monotonic > now {
-                return true;
-            }
-
-            to_dispatch.push(item.clone());
-
-            // Only dispatched/past items to retain: periodic items that will recur.
-            item.period.is_some()
-        });
-
-        // Dispatch work items that are due.
-        fasync::spawn(async move {
-            for item in to_dispatch.into_iter() {
-                let dispatcher = item.dispatcher.clone();
-                let _ = dispatcher.dispatch(item).await;
-            }
-        });
-
-        // Update deadlines on dispatched periodic items.
-        for mut item in work_items.iter_mut() {
-            // Stop processing items once we reach future items.
-            if item.next_deadline_monotonic > now {
-                break;
-            }
-
-            // All retained dispatched/past items have a period (hence, safe to unwrap()).
-            let period = item.period.unwrap();
-            item.next_deadline_monotonic += if now < item.next_deadline_monotonic + period {
-                // Normal case: next deadline after adding one period is in the future.
-                period
-            } else {
-                // Skip deadlines in the past by advancing `next_deadline_monotonic` to the first
-                // multiple of `period` after now
-                period * (((now - item.next_deadline_monotonic) / period) + 1)
-            };
-        }
-
-        work_items.sort_by(WorkItem::deadline_order);
-
-        self.update_timeout(&mut *state);
-    }
-
-    /// Update the timeout for the next wakeup, batch, and dispatch cycle, if necessary. The timeout
-    /// should be disabled if either there are no `work_items` or there is no `batch_period`.
-    /// Otherwise, a suitable timeout may already be set. A suitable timeout is one that satisfies:
-    ///
-    ///   timeout > work_deadline
-    ///   and
-    ///   timeout - batch_period < work_deadline
-    ///     where
-    ///       work_deadline is the earliest expected dispatch time of all `work_items`
-    ///
-    /// That is, a suitable timeout will trigger after there is something to schedule, but before a
-    /// full `batch_period` has elapsed since the next schedulable `WorkItem` hit its deadline.
-    ///
-    /// If the current timeout is not suitable, then the timeout is updated to the unique suitable
-    /// timeout rounded to the nearest `batch_deadline` (in absolute monotonic time):
-    ///
-    ///   timeout > work_deadline
-    ///   and
-    ///   timeout - batch_period < work_deadline
-    ///   and
-    ///   (timeout % batch_period) == 0
-    ///     where
-    ///       work_deadline is the earliest expected dispatch time of all `work_items`
-    ///
-    /// This scheme avoids updating the timeout whenever possible, while maintaining that all
-    /// scheduled `WorkItem` objects will be dispatched no later than
-    /// `WorkItem.next_deadline_monotonic + WorkScheduler.batch_period`.
-    fn update_timeout(&self, state: &mut WorkSchedulerState) {
-        if state.work_items.is_empty() || state.batch_period.is_none() {
-            // No work to schedule. Abort any existing timer to wakeup and dispatch work.
-            state.timer = None;
-            return;
-        }
-        let work_deadline = state.work_items[0].next_deadline_monotonic;
-        let batch_period = state.batch_period.unwrap();
-
-        if let Some(timer) = &state.timer {
-            let timeout = timer.next_timeout_monotonic;
-            if timeout > work_deadline && timeout - batch_period < work_deadline {
-                // There is an active timeout that will fire after the next deadline but before a
-                // full batch period has elapsed after the deadline. Timer needs no update.
-                return;
-            }
-        }
-
-        // Define a deadline, an absolute monotonic time, as the soonest time after `work_deadline`
-        // that is aligned with `batch_period`.
-        let new_deadline = work_deadline - (work_deadline % batch_period) + batch_period;
-        state.set_timer(new_deadline, self.clone());
-    }
-}
-
-struct WorkSchedulerInner {
-    state: Mutex<WorkSchedulerState>,
-}
-
-impl WorkSchedulerInner {
-    pub fn new() -> Self {
-        Self { state: Mutex::new(WorkSchedulerState::new()) }
-    }
-
-    async fn on_route_builtin_capability_async<'a>(
-        self: Arc<Self>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
-        match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::LegacyService(capability_path))
-                if *capability_path == *WORK_SCHEDULER_CONTROL_CAPABILITY_PATH =>
-            {
-                Ok(Some(Box::new(WorkSchedulerControlCapabilityProvider::new(WorkScheduler {
-                    inner: self.clone(),
-                })) as Box<dyn ComponentManagerCapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
-        }
-    }
-
-    async fn on_route_framework_capability_async<'a>(
-        self: Arc<Self>,
-        realm: Arc<Realm>,
-        capability: &'a ComponentManagerCapability,
-        capability_provider: Option<Box<dyn ComponentManagerCapabilityProvider>>,
-    ) -> Result<Option<Box<dyn ComponentManagerCapabilityProvider>>, ModelError> {
-        match (&capability_provider, capability) {
-            (None, ComponentManagerCapability::LegacyService(capability_path))
-                if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
-            {
-                Self::check_for_worker(&*realm).await?;
-                Ok(Some(Box::new(WorkSchedulerCapabilityProvider::new(
-                    realm.clone(),
-                    WorkScheduler { inner: self.clone() },
-                )) as Box<dyn ComponentManagerCapabilityProvider>))
-            }
-            _ => Ok(capability_provider),
-        }
-    }
-
-    async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
-        let realm_state = realm.lock_state().await;
-        let realm_state = realm_state.as_ref().expect("check_for_worker: not resolved");
-        let decl = realm_state.decl();
-        decl.exposes
-            .iter()
-            .find(|&expose| match expose {
-                ExposeDecl::LegacyService(ls) => ls.target_path == *WORKER_CAPABILITY_PATH,
-                _ => false,
-            })
-            .map_or_else(
-                || {
-                    Err(ModelError::capability_discovery_error(format_err!(
-                        "component uses WorkScheduler without exposing Worker: {}",
-                        realm.abs_moniker
-                    )))
-                },
-                |expose| match expose {
-                    ExposeDecl::LegacyService(ls) => match ls.target {
-                        ExposeTarget::Framework => Ok(()),
-                        _ => Err(ModelError::capability_discovery_error(format_err!(
-                            "component exposes Worker, but not as legacy service to framework: {}",
-                            realm.abs_moniker
-                        ))),
-                    },
-                    _ => Err(ModelError::capability_discovery_error(format_err!(
-                        "component exposes Worker, but not as legacy service to framework: {}",
-                        realm.abs_moniker
-                    ))),
-                },
-            )
-    }
-}
-
-impl Hook for WorkSchedulerInner {
-    fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
-        Box::pin(async move {
-            match event {
-                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_builtin_capability_async(capability, capability_provider.take())
-                        .await?;
-                }
-                Event::RouteFrameworkCapability { realm, capability, capability_provider } => {
-                    let mut capability_provider = capability_provider.lock().await;
-                    *capability_provider = self
-                        .on_route_framework_capability_async(
-                            realm.clone(),
-                            capability,
-                            capability_provider.take(),
-                        )
-                        .await?;
-                }
-                _ => {}
-            };
-            Ok(())
-        })
-    }
-}
-
-/// `ComponentManagerCapabilityProvider` to invoke `WorkSchedulerControl` FIDL API bound to a
-/// particular `WorkScheduler` object.
-struct WorkSchedulerControlCapabilityProvider {
-    work_scheduler: WorkScheduler,
-}
-
-impl WorkSchedulerControlCapabilityProvider {
-    pub fn new(work_scheduler: WorkScheduler) -> Self {
-        WorkSchedulerControlCapabilityProvider { work_scheduler }
-    }
-
-    /// Service `open` invocation via an event loop that dispatches FIDL operations to
-    /// `work_scheduler`.
-    async fn open_async(
-        work_scheduler: WorkScheduler,
-        mut stream: fsys::WorkSchedulerControlRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
-            match request {
-                fsys::WorkSchedulerControlRequest::GetBatchPeriod { responder, .. } => {
-                    let mut result = work_scheduler.get_batch_period().await;
-                    responder.send(&mut result)?;
-                }
-                fsys::WorkSchedulerControlRequest::SetBatchPeriod {
-                    responder,
-                    batch_period,
-                    ..
-                } => {
-                    let mut result = work_scheduler.set_batch_period(batch_period).await;
-                    responder.send(&mut result)?;
-                }
-            }
-        }
-
-        Ok(())
-    }
-}
-
-impl ComponentManagerCapabilityProvider for WorkSchedulerControlCapabilityProvider {
-    /// Spawn an event loop to service `WorkScheduler` FIDL operations.
-    fn open(
-        &self,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: String,
-        server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        let server_end = ServerEnd::<fsys::WorkSchedulerControlMarker>::new(server_end);
-        let stream: fsys::WorkSchedulerControlRequestStream = server_end.into_stream().unwrap();
-        let work_scheduler = self.work_scheduler.clone();
-        fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, stream).await;
-            if let Err(e) = result {
-                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
-            }
-        });
-
-        Box::pin(async { Ok(()) })
-    }
-}
-
-/// `Capability` to invoke `WorkScheduler` FIDL API bound to a particular `WorkScheduler` object and
-/// component instance's `AbsoluteMoniker`. All FIDL operations bound to the same object and moniker
-/// observe the same collection of `WorkItem` objects.
-struct WorkSchedulerCapabilityProvider {
-    realm: Arc<Realm>,
-    work_scheduler: WorkScheduler,
-}
-
-impl WorkSchedulerCapabilityProvider {
-    pub fn new(realm: Arc<Realm>, work_scheduler: WorkScheduler) -> Self {
-        WorkSchedulerCapabilityProvider { realm, work_scheduler }
-    }
-
-    /// Service `open` invocation via an event loop that dispatches FIDL operations to
-    /// `work_scheduler`.
-    async fn open_async(
-        work_scheduler: WorkScheduler,
-        realm: Arc<Realm>,
-        mut stream: fsys::WorkSchedulerRequestStream,
-    ) -> Result<(), Error> {
-        while let Some(request) = stream.try_next().await? {
-            match request {
-                fsys::WorkSchedulerRequest::ScheduleWork {
-                    responder,
-                    work_id,
-                    work_request,
-                    ..
-                } => {
-                    let mut result =
-                        work_scheduler.schedule_work(realm.clone(), &work_id, &work_request).await;
-                    responder.send(&mut result)?;
-                }
-                fsys::WorkSchedulerRequest::CancelWork { responder, work_id, .. } => {
-                    let mut result = work_scheduler.cancel_work(realm.clone(), &work_id).await;
-                    responder.send(&mut result)?;
-                }
-            }
-        }
-        Ok(())
-    }
-}
-
-impl ComponentManagerCapabilityProvider for WorkSchedulerCapabilityProvider {
-    /// Spawn an event loop to service `WorkScheduler` FIDL operations.
-    fn open(
-        &self,
-        _flags: u32,
-        _open_mode: u32,
-        _relative_path: String,
-        server_end: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
-        let server_end = ServerEnd::<fsys::WorkSchedulerMarker>::new(server_end);
-        let stream: fsys::WorkSchedulerRequestStream = server_end.into_stream().unwrap();
-        let work_scheduler = self.work_scheduler.clone();
-        let realm = self.realm.clone();
-        fasync::spawn(async move {
-            let result = Self::open_async(work_scheduler, realm, stream).await;
-            if let Err(e) = result {
-                // TODO(markdittmer): Set an epitaph to indicate this was an unexpected error.
-                warn!("WorkSchedulerCapabilityProvider.open failed: {}", e);
-            }
-        });
-
-        Box::pin(async { Ok(()) })
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use {
-        super::*,
-        crate::{
-            model::{AbsoluteMoniker, ChildMoniker, ResolverRegistry},
-            work_scheduler::dispatcher as dspr,
-        },
-        fidl::endpoints::{ClientEnd, ServiceMarker},
-        fidl_fuchsia_sys2::WorkSchedulerControlMarker,
-        fuchsia_async::{Executor, Time, WaitState},
-        futures::{future::BoxFuture, Future},
-    };
-
-    /// Time is measured in nanoseconds. This provides a constant symbol for one second.
-    const SECOND: i64 = 1000000000;
-
-    // Use arbitrary start monolithic time. This will surface bugs that, for example, are not
-    // apparent when "time starts at 0".
-    const FAKE_MONOTONIC_TIME: i64 = 374789234875;
-
-    impl Dispatcher for AbsoluteMoniker {
-        fn abs_moniker(&self) -> &AbsoluteMoniker {
-            &self
-        }
-        fn dispatch(&self, _work_item: WorkItem) -> BoxFuture<Result<(), dspr::Error>> {
-            Box::pin(async move { Err(dspr::Error::ComponentNotRunning) })
-        }
-    }
-
-    async fn schedule_work_request(
-        work_scheduler: &WorkScheduler,
-        abs_moniker: &AbsoluteMoniker,
-        work_id: &str,
-        work_request: &fsys::WorkRequest,
-    ) -> Result<(), fsys::Error> {
-        let mut state = work_scheduler.inner.state.lock().await;
-        work_scheduler.schedule_work_request(
-            &mut *state,
-            Arc::new(abs_moniker.clone()),
+        let mut delegate = self.delegate.lock().await;
+        delegate.schedule_work(
+            RealDispatcher::new(realm, self.outgoing_binder.clone()),
             work_id,
             work_request,
         )
     }
 
-    async fn cancel_work_item(
-        work_scheduler: &WorkScheduler,
-        abs_moniker: &AbsoluteMoniker,
-        work_id: &str,
+    /// `cancel_work()` interface method is forwarded to delegate. `Arc<dyn Dispatcher>` is
+    /// constructed late to keep it out of the public interface to `WorkScheduler`.
+    pub async fn cancel_work<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        work_id: &'a str,
     ) -> Result<(), fsys::Error> {
-        let mut state = work_scheduler.inner.state.lock().await;
-        work_scheduler.cancel_work_item(&mut *state, Arc::new(abs_moniker.clone()), work_id)
+        let mut delegate = self.delegate.lock().await;
+        delegate.cancel_work(RealDispatcher::new(realm, self.outgoing_binder.clone()), work_id)
     }
 
-    async fn get_work_status(
-        work_scheduler: &WorkScheduler,
-        abs_moniker: &AbsoluteMoniker,
-        work_id: &str,
-    ) -> Result<(i64, Option<i64>), fsys::Error> {
-        let state = work_scheduler.inner.state.lock().await;
-        let work_items = &state.work_items;
-        match work_items.iter().find(|work_item| {
-            work_item.dispatcher.abs_moniker() == abs_moniker && work_item.id == work_id
-        }) {
-            Some(work_item) => Ok((work_item.next_deadline_monotonic, work_item.period)),
-            None => Err(fsys::Error::InstanceNotFound),
-        }
+    /// `get_batch_period()` interface method is forwarded to delegate.
+    pub async fn get_batch_period(&self) -> Result<i64, fsys::Error> {
+        let delegate = self.delegate.lock().await;
+        delegate.get_batch_period()
     }
 
-    async fn get_all_by_deadline(work_scheduler: &WorkScheduler) -> Vec<WorkItem> {
-        let state = work_scheduler.inner.state.lock().await;
-        state.work_items.clone()
+    /// `set_batch_period()` interface method is forwarded to delegate.
+    pub async fn set_batch_period(&self, batch_period: i64) -> Result<(), fsys::Error> {
+        let mut delegate = self.delegate.lock().await;
+        delegate.set_batch_period(batch_period)
     }
 
-    fn child(parent: &AbsoluteMoniker, name: &str) -> AbsoluteMoniker {
-        parent.child(ChildMoniker::new(name.to_string(), None, 0))
+    /// `dispatch_work()` helper method is forwarded to delegate, `weak_self` in injected to allow
+    /// internal timer to asynchronously call back into `dispatch_work()`.
+    pub(super) async fn dispatch_work(&self) {
+        let mut delegate = self.delegate.lock().await;
+        delegate.dispatch_work()
     }
+}
+
+#[cfg(test)]
+use crate::work_scheduler::work_item::WorkItem;
+
+// Provide test-only access to schedulable `WorkItem` instances.
+#[cfg(test)]
+impl WorkScheduler {
+    pub(super) async fn work_items(&self) -> Vec<WorkItem> {
+        let delegate = self.delegate.lock().await;
+        delegate.work_items().clone()
+    }
+}
+
+#[cfg(test)]
+mod path_tests {
+    use {
+        super::{
+            WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
+            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+        },
+        fidl::endpoints::ServiceMarker,
+        fidl_fuchsia_sys2 as fsys,
+    };
 
     #[test]
     fn work_scheduler_capability_paths() {
@@ -701,199 +148,32 @@ mod tests {
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH.to_string()
         );
     }
+}
 
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn work_scheduler_basic() {
-        let work_scheduler = WorkScheduler::new();
-        let root = AbsoluteMoniker::root();
-        let a = child(&root, "a");
-        let b = child(&a, "b");
-        let c = child(&b, "c");
+#[cfg(test)]
+mod time_tests {
+    use {
+        super::WorkScheduler,
+        crate::{
+            model::{AbsoluteMoniker, testing::mocks::FakeOutgoingBinder, OutgoingBinder},
+            work_scheduler::work_item::WorkItem,
+        },
+        fidl_fuchsia_sys2 as fsys,
+        fuchsia_async::{Executor, Time, WaitState},
+        futures::{executor::block_on, Future},
+        std::sync::Arc,
+    };
 
-        let now_once = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
-            period: None,
-        };
-        let each_second = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
-            period: Some(SECOND),
-        };
-        let in_an_hour = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
-            period: None,
-        };
-
-        // Schedule different 2 out of 3 requests on each component instance.
-
-        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &a, "NOW_ONCE", &now_once).await);
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &a, "EACH_SECOND", &each_second).await
-        );
-
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &b, "EACH_SECOND", &each_second).await
-        );
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &b, "IN_AN_HOUR", &in_an_hour).await
-        );
-
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &c, "IN_AN_HOUR", &in_an_hour).await
-        );
-        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &c, "NOW_ONCE", &now_once).await);
-
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME, None)),
-            get_work_status(&work_scheduler, &a, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
-            get_work_status(&work_scheduler, &a, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &a, "IN_AN_HOUR").await
-        );
-
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &b, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
-            get_work_status(&work_scheduler, &b, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
-            get_work_status(&work_scheduler, &b, "IN_AN_HOUR").await
-        );
-
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME, None)),
-            get_work_status(&work_scheduler, &c, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &c, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
-            get_work_status(&work_scheduler, &c, "IN_AN_HOUR").await
-        );
-
-        // Cancel a's NOW_ONCE. Confirm it only affects a's scheduled work.
-
-        assert_eq!(Ok(()), cancel_work_item(&work_scheduler, &a, "NOW_ONCE").await);
-
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &a, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
-            get_work_status(&work_scheduler, &a, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &a, "IN_AN_HOUR").await
-        );
-
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &b, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + SECOND, Some(SECOND))),
-            get_work_status(&work_scheduler, &b, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
-            get_work_status(&work_scheduler, &b, "IN_AN_HOUR").await
-        );
-
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME, None)),
-            get_work_status(&work_scheduler, &c, "NOW_ONCE").await
-        );
-        assert_eq!(
-            Err(fsys::Error::InstanceNotFound),
-            get_work_status(&work_scheduler, &c, "EACH_SECOND").await
-        );
-        assert_eq!(
-            Ok((FAKE_MONOTONIC_TIME + (SECOND * 60 * 60), None)),
-            get_work_status(&work_scheduler, &c, "IN_AN_HOUR").await
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn work_scheduler_deadline_order() {
-        let work_scheduler = WorkScheduler::new();
-        let root = AbsoluteMoniker::root();
-        let a = child(&root, "a");
-        let b = child(&a, "b");
-        let c = child(&b, "c");
-
-        let now_once = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME)),
-            period: None,
-        };
-        let each_second = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + SECOND)),
-            period: Some(SECOND),
-        };
-        let in_an_hour = fsys::WorkRequest {
-            start: Some(fsys::Start::MonotonicTime(FAKE_MONOTONIC_TIME + (SECOND * 60 * 60))),
-            period: None,
-        };
-
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &a, "EACH_SECOND", &each_second).await
-        );
-        assert_eq!(Ok(()), schedule_work_request(&work_scheduler, &c, "NOW_ONCE", &now_once).await);
-        assert_eq!(
-            Ok(()),
-            schedule_work_request(&work_scheduler, &b, "IN_AN_HOUR", &in_an_hour).await
-        );
-
-        // Order should match deadlines, not order of scheduling or component topology.
-        assert_eq!(
-            vec![
-                WorkItem::new(Arc::new(c), "NOW_ONCE", FAKE_MONOTONIC_TIME, None),
-                WorkItem::new(
-                    Arc::new(a),
-                    "EACH_SECOND",
-                    FAKE_MONOTONIC_TIME + SECOND,
-                    Some(SECOND),
-                ),
-                WorkItem::new(
-                    Arc::new(b),
-                    "IN_AN_HOUR",
-                    FAKE_MONOTONIC_TIME + (SECOND * 60 * 60),
-                    None,
-                ),
-            ],
-            get_all_by_deadline(&work_scheduler).await
-        );
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn work_scheduler_batch_period() {
-        let work_scheduler = WorkScheduler::new();
-        assert_eq!(Ok(std::i64::MAX), work_scheduler.get_batch_period().await);
-        assert_eq!(Ok(()), work_scheduler.set_batch_period(SECOND).await);
-        assert_eq!(Ok(SECOND), work_scheduler.get_batch_period().await)
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn work_scheduler_batch_period_error() {
-        let work_scheduler = WorkScheduler::new();
-        assert_eq!(Err(fsys::Error::InvalidArguments), work_scheduler.set_batch_period(0).await);
-        assert_eq!(Err(fsys::Error::InvalidArguments), work_scheduler.set_batch_period(-1).await)
+    impl WorkScheduler {
+        async fn schedule_work_item<'a>(
+            &'a self,
+            abs_moniker: &AbsoluteMoniker,
+            work_id: &'a str,
+            work_request: &'a fsys::WorkRequest,
+        ) -> Result<(), fsys::Error> {
+            let mut delegate = self.delegate.lock().await;
+            delegate.schedule_work(Arc::new(abs_moniker.clone()), work_id, work_request)
+        }
     }
 
     struct TestWorkUnit {
@@ -923,13 +203,26 @@ mod tests {
 
     struct TimeTest {
         executor: Executor,
+        work_scheduler: Arc<WorkScheduler>,
+        // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
+        _outgoing_binder: Arc<dyn OutgoingBinder>,
     }
 
     impl TimeTest {
         fn new() -> Self {
             let executor = Executor::new_with_fake_time().unwrap();
             executor.set_fake_time(Time::from_nanos(0));
-            TimeTest { executor }
+            let _outgoing_binder = FakeOutgoingBinder::new();
+            let work_scheduler = WorkScheduler::new_raw(Arc::downgrade(&_outgoing_binder));
+            block_on(async {
+                let mut delegate = work_scheduler.delegate.lock().await;
+                delegate.init(Arc::downgrade(&work_scheduler));
+            });
+            TimeTest { executor, work_scheduler, _outgoing_binder }
+        }
+
+        fn work_scheduler(&self) -> Arc<WorkScheduler> {
+            self.work_scheduler.clone()
         }
 
         fn set_time(&mut self, time: i64) {
@@ -964,7 +257,7 @@ mod tests {
 
         fn assert_work_items(
             &mut self,
-            work_scheduler: &WorkScheduler,
+            work_scheduler: &Arc<WorkScheduler>,
             test_work_units: Vec<TestWorkUnit>,
         ) {
             self.run_and_sync(&mut Box::pin(async {
@@ -973,7 +266,7 @@ mod tests {
                     .iter()
                     .map(|test_work_unit| test_work_unit.work_item.clone())
                     .collect();
-                assert_eq!(work_items, get_all_by_deadline(&work_scheduler).await);
+                assert_eq!(work_items, work_scheduler.work_items().await);
 
                 // Check invariants on relationships between `now` and `WorkItem` state.
                 let now = Time::now().into_nanos();
@@ -1014,9 +307,9 @@ mod tests {
             }));
         }
 
-        fn assert_no_work(&mut self, work_scheduler: &WorkScheduler) {
+        fn assert_no_work(&mut self, work_scheduler: &Arc<WorkScheduler>) {
             self.run_and_sync(&mut Box::pin(async {
-                assert_eq!(vec![] as Vec<WorkItem>, get_all_by_deadline(&work_scheduler).await);
+                assert_eq!(vec![] as Vec<WorkItem>, work_scheduler.work_items().await);
             }));
         }
     }
@@ -1024,8 +317,8 @@ mod tests {
     #[test]
     fn work_scheduler_time_get_batch_period_queues_nothing() {
         let mut t = TimeTest::new();
+        let work_scheduler = t.work_scheduler();
         t.run_and_sync(&mut Box::pin(async {
-            let work_scheduler = WorkScheduler::new();
             assert_eq!(Ok(std::i64::MAX), work_scheduler.get_batch_period().await);
         }));
         t.assert_no_timers();
@@ -1034,8 +327,8 @@ mod tests {
     #[test]
     fn work_scheduler_time_set_batch_period_no_work_queues_nothing() {
         let mut t = TimeTest::new();
+        let work_scheduler = t.work_scheduler();
         t.run_and_sync(&mut Box::pin(async {
-            let work_scheduler = WorkScheduler::new();
             assert_eq!(Ok(()), work_scheduler.set_batch_period(1).await);
         }));
         t.assert_no_timers();
@@ -1044,14 +337,14 @@ mod tests {
     #[test]
     fn work_scheduler_time_schedule_inf_batch_period_queues_nothing() {
         let mut t = TimeTest::new();
+        let work_scheduler = t.work_scheduler();
         t.run_and_sync(&mut Box::pin(async {
-            let work_scheduler = WorkScheduler::new();
             let root = AbsoluteMoniker::root();
             let now_once =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
             assert_eq!(
                 Ok(()),
-                schedule_work_request(&work_scheduler, &root, "NOW_ONCE", &now_once).await
+                work_scheduler.schedule_work_item(&root, "NOW_ONCE", &now_once).await
             );
         }));
         t.assert_no_timers();
@@ -1060,7 +353,7 @@ mod tests {
     #[test]
     fn work_scheduler_time_schedule_finite_batch_period_queues_and_dispatches() {
         let mut t = TimeTest::new();
-        let work_scheduler = WorkScheduler::new();
+        let work_scheduler = t.work_scheduler();
         let root = AbsoluteMoniker::root();
 
         // Set batch period and queue a unit of work.
@@ -1070,7 +363,7 @@ mod tests {
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None };
             assert_eq!(
                 Ok(()),
-                schedule_work_request(&work_scheduler, &root, "NOW_ONCE", &now_once).await
+                work_scheduler.schedule_work_item(&root, "NOW_ONCE", &now_once).await
             );
         }));
 
@@ -1089,7 +382,7 @@ mod tests {
     #[test]
     fn work_scheduler_time_periodic_stays_queued() {
         let mut t = TimeTest::new();
-        let work_scheduler = WorkScheduler::new();
+        let work_scheduler = t.work_scheduler();
         let root = AbsoluteMoniker::root();
 
         // Set batch period and queue a unit of work.
@@ -1099,7 +392,7 @@ mod tests {
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: Some(1) };
             assert_eq!(
                 Ok(()),
-                schedule_work_request(&work_scheduler, &root, "EVERY_MOMENT", &every_moment).await
+                work_scheduler.schedule_work_item(&root, "EVERY_MOMENT", &every_moment).await
             );
         }));
 
@@ -1122,7 +415,7 @@ mod tests {
     #[test]
     fn work_scheduler_time_timeout_updates_when_earlier_work_item_added() {
         let mut t = TimeTest::new();
-        let work_scheduler = WorkScheduler::new();
+        let work_scheduler = t.work_scheduler();
         let root = AbsoluteMoniker::root();
 
         // Set batch period and queue a unit of work.
@@ -1130,10 +423,7 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_nine =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_NINE", &at_nine).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
 
         // Confirm timer and work item.
@@ -1144,10 +434,7 @@ mod tests {
         t.run_and_sync(&mut Box::pin(async {
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
         }));
 
         // Confirm timer moved _back_, and work units are as expected.
@@ -1169,10 +456,7 @@ mod tests {
         t.run_and_sync(&mut Box::pin(async {
             let at_ten =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(10)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_TEN", &at_ten).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_TEN", &at_ten).await);
         }));
 
         // Confirm unchanged, and work units are as expected.
@@ -1193,7 +477,7 @@ mod tests {
     #[test]
     fn work_scheduler_time_late_timer_fire() {
         let mut t = TimeTest::new();
-        let work_scheduler = WorkScheduler::new();
+        let work_scheduler = t.work_scheduler();
         let root = AbsoluteMoniker::root();
 
         // Set period and schedule two work items, one of which _should_ be dispatched in a second
@@ -1202,16 +486,10 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
             let at_nine =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_NINE", &at_nine).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_NINE", &at_nine).await);
         }));
 
         // Confirm timer and work items.
@@ -1236,7 +514,7 @@ mod tests {
     #[test]
     fn work_scheduler_time_late_timer_fire_periodic_work_item() {
         let mut t = TimeTest::new();
-        let work_scheduler = WorkScheduler::new();
+        let work_scheduler = t.work_scheduler();
         let root = AbsoluteMoniker::root();
 
         // Set period and schedule two work items, one of which _should_ be dispatched in a second
@@ -1245,21 +523,14 @@ mod tests {
             assert_eq!(Ok(()), work_scheduler.set_batch_period(5).await);
             let at_four =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(4)), period: None };
-            assert_eq!(
-                Ok(()),
-                schedule_work_request(&work_scheduler, &root, "AT_FOUR", &at_four).await
-            );
+            assert_eq!(Ok(()), work_scheduler.schedule_work_item(&root, "AT_FOUR", &at_four).await);
             let at_nine_periodic =
                 fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(9)), period: Some(5) };
             assert_eq!(
                 Ok(()),
-                schedule_work_request(
-                    &work_scheduler,
-                    &root,
-                    "AT_NINE_PERIODIC_FIVE",
-                    &at_nine_periodic
-                )
-                .await
+                work_scheduler
+                    .schedule_work_item(&root, "AT_NINE_PERIODIC_FIVE", &at_nine_periodic)
+                    .await
             );
         }));
 
@@ -1299,12 +570,32 @@ mod tests {
             vec![TestWorkUnit::new(9, &root, "AT_NINE_PERIODIC_FIVE", 119, Some(5))],
         );
     }
+}
+
+#[cfg(test)]
+mod connect_tests {
+    use {
+        super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH},
+        crate::{
+            capability::ComponentManagerCapability,
+            model::{Event, testing::mocks::FakeOutgoingBinder, Hooks, Realm, ResolverRegistry},
+        },
+        failure::Error,
+        fidl::endpoints::ClientEnd,
+        fidl_fuchsia_sys2::WorkSchedulerControlMarker,
+        fuchsia_async as fasync, fuchsia_zircon as zx,
+        futures::lock::Mutex,
+        std::sync::Arc,
+    };
 
     #[fasync::run_singlethreaded(test)]
     async fn connect_to_work_scheduler_control_service() -> Result<(), Error> {
-        let work_scheduler = WorkScheduler::new();
+        // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
+        let outgoing_binder = FakeOutgoingBinder::new();
+
+        let work_scheduler = WorkScheduler::new(Arc::downgrade(&outgoing_binder)).await;
         let hooks = Hooks::new(None);
-        hooks.install(work_scheduler.hooks()).await;
+        hooks.install(WorkScheduler::hooks(&work_scheduler)).await;
 
         let capability_provider = Arc::new(Mutex::new(None));
         let capability = ComponentManagerCapability::LegacyService(

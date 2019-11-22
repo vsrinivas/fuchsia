@@ -5,11 +5,11 @@
 use {
     crate::work_scheduler::dispatcher::Dispatcher,
     fidl_fuchsia_sys2 as fsys,
-    std::{cmp::Ordering, sync::Arc},
+    std::{cmp::Ordering, fmt, sync::Arc},
 };
 
 /// `WorkItem` is a single item in the ordered-by-deadline collection maintained by `WorkScheduler`.
-#[derive(Clone, Debug, Eq)]
+#[derive(Clone, Eq)]
 pub(super) struct WorkItem {
     /// A reference-counted pointer to the `WorkItem`'s `Dispatcher`. This is retained by the
     /// `WorkItem` so that `Dispatcher` implementations can perform cleanup work when they are no
@@ -22,6 +22,16 @@ pub(super) struct WorkItem {
     pub(super) next_deadline_monotonic: i64,
     /// Period between repeating this unit of work (if any), measure in nanoseconds.
     pub(super) period: Option<i64>,
+}
+
+impl fmt::Debug for WorkItem {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        fmt.debug_struct("WorkItem")
+            .field("id", &self.id)
+            .field("next_deadline_monotonic", &self.next_deadline_monotonic)
+            .field("period", &self.period)
+            .finish()
+    }
 }
 
 /// WorkItem default equality: identical `dispatcher` and `id`.

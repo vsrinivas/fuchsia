@@ -4,7 +4,7 @@
 
 use {
     crate::model::*,
-    cm_rust::{ComponentDecl, ExposeDecl, UseDecl},
+    cm_rust::{CapabilityPath, ComponentDecl, ExposeDecl, UseDecl},
     directory_broker::RoutingFn,
     failure::format_err,
     fidl::endpoints::ServerEnd,
@@ -15,6 +15,7 @@ use {
         directory::{self, entry::DirectoryEntry},
         file::simple::read_only,
     },
+    fuchsia_zircon as zx,
     futures::future::BoxFuture,
     futures::lock::Mutex,
     futures::prelude::*,
@@ -206,5 +207,27 @@ impl Runner for MockRunner {
         server_chan: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
         Box::pin(self.start_async(start_info, server_chan))
+    }
+}
+
+/// A fake `OutgoingBinder` implementation that always returns `Ok(())` in a `BoxFuture`.
+pub struct FakeOutgoingBinder;
+
+impl FakeOutgoingBinder {
+    pub fn new() -> Arc<dyn OutgoingBinder> {
+        Arc::new(Self {})
+    }
+}
+
+impl OutgoingBinder for FakeOutgoingBinder {
+    fn bind_open_outgoing<'a>(
+        &'a self,
+        _realm: Arc<Realm>,
+        _flags: u32,
+        _open_mode: u32,
+        _path: &'a CapabilityPath,
+        _server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async move { Ok(()) })
     }
 }

@@ -5,20 +5,21 @@
 use {
     component_manager_lib::{
         model::{
-            self, hooks::*, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model,
+            self, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, EventType, Hook,
+            HooksRegistration, Model,
         },
         startup,
     },
     failure::{self, Error},
     fidl::endpoints::ServiceMarker,
-    fidl_fuchsia_test_workscheduler as fws,
+    fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_workscheduler as fws,
     std::sync::{Arc, Weak},
-    work_scheduler_test_hook::*,
+    work_scheduler_test_hook::{DispatchedEvent, WorkSchedulerTestHook, REPORT_SERVICE},
 };
 
 struct TestRunner {
-    _model: Arc<Model>,
-    _builtin_environment: BuiltinEnvironment,
+    model: Arc<Model>,
+    builtin_environment: BuiltinEnvironment,
     work_scheduler_test_hook: Arc<WorkSchedulerTestHook>,
 }
 
@@ -37,7 +38,7 @@ async fn create_model(root_component_url: &str) -> Result<(Arc<Model>, BuiltinEn
     Ok((model, builtin_environment))
 }
 
-async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTestHook> {
+async fn install_work_scheduler_test_hook(model: &Arc<Model>) -> Arc<WorkSchedulerTestHook> {
     let work_scheduler_test_hook = Arc::new(WorkSchedulerTestHook::new());
     model
         .root_realm
@@ -52,15 +53,16 @@ async fn install_work_scheduler_test_hook(model: &Model) -> Arc<WorkSchedulerTes
 
 impl TestRunner {
     async fn new(root_component_url: &str) -> Result<Self, Error> {
-        let (model, _builtin_environment) = create_model(root_component_url).await?;
+        let (model, builtin_environment) = create_model(root_component_url).await?;
         let work_scheduler_test_hook = install_work_scheduler_test_hook(&model).await;
+        Ok(Self { model, builtin_environment, work_scheduler_test_hook })
+    }
 
-        let root_moniker = model::AbsoluteMoniker::root();
-        let res = model.bind(&root_moniker).await;
+    async fn bind(&self) -> Result<(), Error> {
+        let res = self.model.bind(&model::AbsoluteMoniker::root()).await;
         let expected_res: Result<(), model::ModelError> = Ok(());
         assert_eq!(format!("{:?}", expected_res), format!("{:?}", res));
-
-        Ok(Self { _model: model, _builtin_environment, work_scheduler_test_hook })
+        Ok(())
     }
 }
 
@@ -77,6 +79,35 @@ async fn basic_work_scheduler_test() -> Result<(), Error> {
     let root_component_url =
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/work_scheduler_client.cm";
     let test_runner = TestRunner::new(root_component_url).await?;
+    test_runner.bind().await?;
+
+    let dispatched_event = test_runner
+        .work_scheduler_test_hook
+        .wait_for_dispatched(std::time::Duration::from_secs(10))
+        .await?;
+    assert_eq!(DispatchedEvent::new(AbsoluteMoniker::root(), "TEST".to_string()), dispatched_event);
+
+    Ok(())
+}
+
+#[fuchsia_async::run_singlethreaded(test)]
+async fn unbound_work_scheduler_test() -> Result<(), Error> {
+    let root_component_url =
+        "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/worker_client.cm";
+    let test_runner = TestRunner::new(root_component_url).await?;
+    let model = test_runner.model;
+    let work_scheduler =
+        test_runner.builtin_environment.builtin_capabilities.work_scheduler.clone();
+
+    work_scheduler
+        .schedule_work(
+            model.root_realm.clone(),
+            "TEST",
+            &fsys::WorkRequest { start: Some(fsys::Start::MonotonicTime(0)), period: None },
+        )
+        .await
+        .expect("failed to schedule work");
+    work_scheduler.set_batch_period(1).await.expect("failed to set batch period");
 
     let dispatched_event = test_runner
         .work_scheduler_test_hook

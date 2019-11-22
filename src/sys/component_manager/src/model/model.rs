@@ -4,13 +4,18 @@
 
 use {
     crate::{
-        framework::*,
-        model::testing::breakpoints::*,
-        model::{runner::Runner, *},
+        framework::RealmCapabilityHost,
+        model::{
+            testing::breakpoints::BreakpointSystem, AbsoluteMoniker, Event, EventType, ExposedDir,
+            Hub, IncomingNamespace, ModelError, Realm, RealmState, Resolver, ResolverRegistry,
+            RoutingFacade, Runner, Runtime,
+        },
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::BuiltinRootCapabilities,
     },
-    cm_rust::{data, CapabilityPath},
+    cm_rust::{
+        data, CapabilityPath, ComponentDecl, ExposeDecl, ExposeLegacyServiceDecl, ExposeTarget,
+    },
     failure::format_err,
     fidl::endpoints::{create_endpoints, create_proxy, Proxy, ServerEnd},
     fidl_fuchsia_io::{
@@ -20,9 +25,11 @@ use {
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync,
     fuchsia_component::server::*,
     fuchsia_zircon as zx,
-    futures::future::join_all,
-    futures::lock::Mutex,
-    futures::stream::StreamExt,
+    futures::{
+        future::{join_all, BoxFuture},
+        lock::Mutex,
+        stream::StreamExt,
+    },
     std::sync::Arc,
 };
 
@@ -216,6 +223,18 @@ impl Model {
         server_chan: zx::Channel,
     ) -> Result<(), ModelError> {
         self.bind(&realm.abs_moniker).await?;
+        self.open_outgoing(realm, flags, open_mode, path, server_chan).await?;
+        Ok(())
+    }
+
+    async fn open_outgoing(
+        &self,
+        realm: Arc<Realm>,
+        flags: u32,
+        open_mode: u32,
+        path: &CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> Result<(), ModelError> {
         let server_end = ServerEnd::new(server_chan);
         let execution = realm.lock_execution().await;
         if execution.runtime.is_none() {
@@ -284,6 +303,64 @@ impl Model {
                 ))
             })?;
         Ok(())
+    }
+
+    /// Given a realm and target path, lazily bind to the instance in the realm, open the
+    /// exposed-to-framework capability with the given target path.
+    pub async fn bind_instance_open_exposed_to_framework(
+        &self,
+        realm: Arc<Realm>,
+        flags: u32,
+        open_mode: u32,
+        target_path: &CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> Result<(), ModelError> {
+        let eager_children = self.bind_single_instance(realm.clone()).await?;
+        let expose = {
+            let realm = realm.clone();
+            let state = realm.lock_state().await;
+            if state.is_none() {
+                return Err(ModelError::capability_discovery_error(format_err!(
+                    "component hosting capability has uninitialized state: {}",
+                    realm.abs_moniker
+                )));
+            }
+            Self::get_service_exposed_to_framework(state.as_ref().unwrap().decl(), target_path)?
+        };
+        self.open_outgoing(realm, flags, open_mode, &expose.source_path, server_chan).await?;
+        self.bind_eager_children_recursive(eager_children).await?;
+        Ok(())
+    }
+
+    /// Locate an exposed-to-framework service by its `target_path`.
+    pub fn get_service_exposed_to_framework(
+        component_decl: &ComponentDecl,
+        target_path: &CapabilityPath,
+    ) -> Result<ExposeLegacyServiceDecl, ModelError> {
+        component_decl
+            .exposes
+            .iter()
+            .find(|&expose| match expose {
+                ExposeDecl::LegacyService(ls) => {
+                    ls.target == ExposeTarget::Framework && ls.target_path == *target_path
+                }
+                _ => false,
+            })
+            .map_or_else(
+                || {
+                    Err(ModelError::capability_discovery_error(format_err!(
+                        "exposed to framework capability not found: {}",
+                        target_path.to_string()
+                    )))
+                },
+                |expose| match expose {
+                    ExposeDecl::LegacyService(ls) => Ok(ls.clone()),
+                    _ => Err(ModelError::capability_discovery_error(format_err!(
+                        "exposed to framework capability not found: {}",
+                        target_path.to_string()
+                    ))),
+                },
+            )
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved
@@ -475,5 +552,34 @@ impl Model {
         runner.start(start_info, server_endpoint).await?;
 
         Ok(runtime)
+    }
+}
+
+/// A trait to enable support for different `bind_open_outgoing()` implementations. This is used,
+/// for example, for testing code that depends on `bind_open_outgoing()`, but no other `Model`
+/// functionality.
+pub trait OutgoingBinder: Send + Sync {
+    fn bind_open_outgoing<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        flags: u32,
+        open_mode: u32,
+        path: &'a CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>>;
+}
+
+impl OutgoingBinder for Model {
+    fn bind_open_outgoing<'a>(
+        &'a self,
+        realm: Arc<Realm>,
+        flags: u32,
+        open_mode: u32,
+        path: &'a CapabilityPath,
+        server_chan: zx::Channel,
+    ) -> BoxFuture<Result<(), ModelError>> {
+        Box::pin(async move {
+            self.bind_open_outgoing(realm, flags, open_mode, path, server_chan).await
+        })
     }
 }

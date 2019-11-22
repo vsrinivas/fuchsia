@@ -7,6 +7,22 @@ import("//build/rust/rustc_library.gni")
 import("//build/rust/rustc_test.gni")
 import("//build/test/test_package.gni")
 
+rustc_binary("worker_client_bin") {
+  name = "worker_client"
+  edition = "2018"
+  source_root = "worker_client.rs"
+  deps = [
+    "//garnet/lib/rust/files_async",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager/tests/fidl:fuchsia.test.workscheduler-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+  ]
+}
+
 rustc_binary("work_scheduler_client_bin") {
   name = "work_scheduler_client"
   edition = "2018"
@@ -84,9 +100,14 @@ test_package("work_scheduler_integration_test") {
   deps = [
     ":work_scheduler_client_bin",
     ":work_scheduler_integration_test_bin",
+    ":worker_client_bin",
   ]
 
   meta = [
+    {
+      path = rebase_path("meta/worker_client.cml")
+      dest = "worker_client.cm"
+    },
     {
       path = rebase_path("meta/work_scheduler_client.cml")
       dest = "work_scheduler_client.cm"
@@ -94,6 +115,9 @@ test_package("work_scheduler_integration_test") {
   ]
 
   binaries = [
+    {
+      name = "worker_client"
+    },
     {
       name = "work_scheduler_client"
     },

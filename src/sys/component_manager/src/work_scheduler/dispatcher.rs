@@ -4,36 +4,46 @@
 
 use {
     crate::{
-        model::{AbsoluteMoniker, Realm},
+        model::{AbsoluteMoniker, ModelError, OutgoingBinder, Realm},
         work_scheduler::{work_item::WorkItem, work_scheduler::WORKER_CAPABILITY_PATH},
     },
     failure::Fail,
-    fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
     fuchsia_async::Channel,
     fuchsia_zircon as zx,
     futures::future::BoxFuture,
-    std::io,
+    std::{
+        io,
+        sync::{Arc, Weak},
+    },
 };
 
 #[derive(Debug, Fail)]
 pub enum Error {
-    #[fail(display = "syscall failed with status {:?}", 0)]
-    Internal(zx::Status),
-    #[fail(display = "component is not running")]
-    ComponentNotRunning,
-    #[fail(display = "fidl error: {:?}", 0)]
-    FIDL(fidl::Error),
-    #[fail(display = "io errror: {:?}", 0)]
-    IO(io::Error),
     #[fail(display = "fuchsia.sys2 fidl protocol error: {:?}", 0)]
     API(fsys::Error),
+
+    /// Used in tests to indicate dispatchers that cannot connect to real component instances.
+    #[cfg(test)]
+    #[fail(display = "component is not running")]
+    ComponentNotRunning,
+
+    #[fail(display = "fidl error: {:?}", 0)]
+    FIDL(fidl::Error),
+    #[fail(display = "syscall failed with status {:?}", 0)]
+    Internal(zx::Status),
+    #[fail(display = "io errror: {:?}", 0)]
+    IO(io::Error),
+    #[fail(display = "component model error: {:?}", 0)]
+    Model(ModelError),
+    #[fail(display = "model has been dropped")]
+    ModelNotFound,
 }
 
-/// A facade for `Realm` data needed by different parts of `work_scheduler`. This is abstracted into
-/// a trait to facilitate unit testing when a `Realm` is not needed.
-pub(super) trait Dispatcher: std::fmt::Debug + Send + Sync {
+/// A facade for dispatcher data needed by different parts of `WorkSchedulerDelegate`. This is
+/// abstracted into a trait to facilitate unit testing when a real data is not needed.
+pub(super) trait Dispatcher: Send + Sync {
     /// Realms are identified by their `AbsoluteMoniker`.
     fn abs_moniker(&self) -> &AbsoluteMoniker;
 
@@ -48,34 +58,51 @@ impl PartialEq for dyn Dispatcher {
 }
 impl Eq for dyn Dispatcher {}
 
-impl Dispatcher for Realm {
-    fn abs_moniker(&self) -> &AbsoluteMoniker {
-        &self.abs_moniker
-    }
+// TODO(markdittmer): `Realm` can be replaced by an `AbsoluteMoniker` when `Model` (and
+// `OutgoingBinder`) interface methods accept `AbsoluteMoniker` instead of `Realm`.
+pub(super) struct RealDispatcher {
+    /// `Realm` where component instance receiving dispatch resides.
+    realm: Arc<Realm>,
+    /// Implementation for binding to component and connecting to a service in its outgoing
+    /// directory, in this case, the component instance's `fuchsia.sys2.Worker` server.
+    outgoing_binder: Weak<dyn OutgoingBinder>,
+}
 
-    fn dispatch(&self, work_item: WorkItem) -> BoxFuture<Result<(), Error>> {
-        Box::pin(async move { dispatch(self, work_item).await })
+impl RealDispatcher {
+    pub(super) fn new(realm: Arc<Realm>, outgoing_binder: Weak<dyn OutgoingBinder>) -> Arc<Self> {
+        Arc::new(Self { realm, outgoing_binder })
     }
 }
 
-async fn dispatch(realm: &Realm, work_item: WorkItem) -> Result<(), Error> {
-    let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
-    {
-        let execution_state = realm.lock_execution().await;
-        let runtime = execution_state.runtime.as_ref().ok_or(Error::ComponentNotRunning)?;
-        let outgoing_dir = runtime.outgoing_dir.as_ref().ok_or(Error::ComponentNotRunning)?;
-
-        outgoing_dir
-            .open(
-                OPEN_RIGHT_READABLE,
-                MODE_TYPE_SERVICE,
-                // DirectoryProxy.open() expects no leading "/":
-                // "svc/[worker-service-name]", not "/svc/[worker-service-name]".
-                &WORKER_CAPABILITY_PATH.to_string()[1..],
-                ServerEnd::new(server_end),
-            )
-            .map_err(|err| Error::FIDL(err))?;
+impl Dispatcher for RealDispatcher {
+    fn abs_moniker(&self) -> &AbsoluteMoniker {
+        &self.realm.abs_moniker
     }
+
+    fn dispatch(&self, work_item: WorkItem) -> BoxFuture<Result<(), Error>> {
+        Box::pin(async move { dispatch(&self.realm, &self.outgoing_binder, work_item).await })
+    }
+}
+
+async fn dispatch(
+    realm: &Arc<Realm>,
+    outgoing_binder: &Weak<dyn OutgoingBinder>,
+    work_item: WorkItem,
+) -> Result<(), Error> {
+    let (client_end, server_end) = zx::Channel::create().map_err(|err| Error::Internal(err))?;
+
+    outgoing_binder
+        .upgrade()
+        .ok_or_else(|| Error::ModelNotFound)?
+        .bind_open_outgoing(
+            realm.clone(),
+            OPEN_RIGHT_READABLE,
+            MODE_TYPE_SERVICE,
+            &*WORKER_CAPABILITY_PATH,
+            server_end,
+        )
+        .await
+        .map_err(|err| Error::Model(err))?;
 
     let client_end = Channel::from_channel(client_end).map_err(|err| Error::IO(err))?;
     let worker = fsys::WorkerProxy::new(client_end);

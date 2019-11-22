@@ -1,8 +1,11 @@
 use {
     crate::{
         model::testing::{routing_test_helpers::*, test_helpers::*},
-        model::*,
-        work_scheduler::work_scheduler::*,
+        model::{testing::mocks::FakeOutgoingBinder, AbsoluteMoniker, OutgoingBinder},
+        work_scheduler::{
+            WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
+            WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
+        },
     },
     cm_rust::{
         self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeLegacyServiceDecl,
@@ -12,8 +15,35 @@ use {
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
     futures::lock::Mutex,
-    std::{collections::HashMap, convert::TryFrom, path::Path, sync::Arc},
+    std::{collections::HashMap, convert::TryFrom, ops::Deref, path::Path, sync::Arc},
 };
+
+struct BindingWorkScheduler {
+    work_scheduler: Arc<WorkScheduler>,
+    // Retain `Arc` to keep `OutgoingBinder` alive throughout test.
+    _outgoing_binder: Arc<dyn OutgoingBinder>,
+}
+
+impl BindingWorkScheduler {
+    async fn new() -> Self {
+        let _outgoing_binder = FakeOutgoingBinder::new();
+        let work_scheduler = WorkScheduler::new(Arc::downgrade(&_outgoing_binder)).await;
+        Self { work_scheduler, _outgoing_binder }
+    }
+}
+
+// `BindingWorkScheduler` API is `Arc<WorkScheduler>` API.
+impl Deref for BindingWorkScheduler {
+    type Target = Arc<WorkScheduler>;
+
+    fn deref(&self) -> &Self::Target {
+        &self.work_scheduler
+    }
+}
+
+async fn new_work_scheduler() -> BindingWorkScheduler {
+    BindingWorkScheduler::new().await
+}
 
 async fn call_work_scheduler_svc_from_namespace(
     resolved_url: String,
@@ -145,8 +175,9 @@ async fn use_work_scheduler_with_expose_to_framework() {
             },
         ),
     ];
-    let work_scheduler = Arc::new(WorkScheduler::new());
-    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
+    let work_scheduler = new_work_scheduler().await;
+    let test =
+        RoutingTest::new_with_hooks("a", components, WorkScheduler::hooks(&work_scheduler)).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), true).await;
 }
 
@@ -182,8 +213,9 @@ async fn use_work_scheduler_without_expose() {
             },
         ),
     ];
-    let work_scheduler = Arc::new(WorkScheduler::new());
-    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
+    let work_scheduler = new_work_scheduler().await;
+    let test =
+        RoutingTest::new_with_hooks("a", components, WorkScheduler::hooks(&work_scheduler)).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -225,8 +257,9 @@ async fn use_work_scheduler_with_expose_to_realm() {
             },
         ),
     ];
-    let work_scheduler = Arc::new(WorkScheduler::new());
-    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
+    let work_scheduler = new_work_scheduler().await;
+    let test =
+        RoutingTest::new_with_hooks("a", components, WorkScheduler::hooks(&work_scheduler)).await;
     check_use_work_scheduler(&test, vec!["b:0"].into(), false).await;
 }
 
@@ -268,9 +301,10 @@ async fn use_work_scheduler_control_routed() {
             },
         ),
     ];
-    let work_scheduler = Arc::new(WorkScheduler::new());
+    let work_scheduler = new_work_scheduler().await;
 
-    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
+    let test =
+        RoutingTest::new_with_hooks("a", components, WorkScheduler::hooks(&work_scheduler)).await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), true).await;
 }
@@ -313,8 +347,9 @@ async fn use_work_scheduler_control_fail() {
             },
         ),
     ];
-    let work_scheduler = Arc::new(WorkScheduler::new());
-    let test = RoutingTest::new_with_hooks("a", components, work_scheduler.hooks()).await;
+    let work_scheduler = new_work_scheduler().await;
+    let test =
+        RoutingTest::new_with_hooks("a", components, WorkScheduler::hooks(&work_scheduler)).await;
 
     check_use_work_scheduler_control(&test, vec!["b:0"].into(), offer_use_path.clone(), false)
         .await;

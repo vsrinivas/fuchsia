@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::model::testing::breakpoints::BreakpointSystem;
 use {
     crate::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
@@ -11,20 +10,21 @@ use {
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver,
         model::{
-            error::ModelError, hooks::*, hub::Hub, BuiltinEnvironment, ComponentManagerConfig,
-            Model, ModelParams, ResolverRegistry,
+            error::ModelError, hub::Hub, testing::breakpoints::BreakpointSystem,
+            BuiltinEnvironment, ComponentManagerConfig, HooksRegistration, Model, ModelParams,
+            OutgoingBinder, ResolverRegistry,
         },
-        process_launcher::*,
-        system_controller::*,
+        process_launcher::ProcessLauncher,
+        system_controller::SystemController,
         vmex::VmexService,
-        work_scheduler::work_scheduler::*,
+        work_scheduler::WorkScheduler,
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
     fidl_fuchsia_sys::{LoaderMarker, LoaderProxy},
     fuchsia_component::client,
     futures::lock::Mutex,
-    log::*,
+    log::info,
     std::{
         path::PathBuf,
         sync::{Arc, Weak},
@@ -169,12 +169,13 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
 /// Serves services built into component_manager and provides methods for connecting to those
 /// services.
 pub struct BuiltinRootCapabilities {
-    work_scheduler: Arc<WorkScheduler>,
+    pub work_scheduler: Arc<WorkScheduler>,
     process_launcher: Option<Arc<ProcessLauncher>>,
     vmex_service: Option<Arc<VmexService>>,
     system_controller: Arc<SystemController>,
 }
 
+// TODO(fsamuel): Merge BuiltinRootCapabilities and BuiltinEnvironment.
 impl BuiltinRootCapabilities {
     /// Creates a new BuiltinRootCapabilities. The available built-in capabilities depends on the
     /// configuration provided in Arguments:
@@ -183,7 +184,7 @@ impl BuiltinRootCapabilities {
     ///   is available.
     /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
     ///   available.
-    pub fn new(args: &Arguments) -> Self {
+    pub async fn new(args: &Arguments, model: &Arc<Model>) -> Self {
         let mut process_launcher = None;
         if args.use_builtin_process_launcher {
             process_launcher = Some(Arc::new(ProcessLauncher::new()));
@@ -193,7 +194,8 @@ impl BuiltinRootCapabilities {
             vmex_service = Some(Arc::new(VmexService::new()));
         }
         Self {
-            work_scheduler: Arc::new(WorkScheduler::new()),
+            work_scheduler: WorkScheduler::new(Arc::downgrade(model) as Weak<dyn OutgoingBinder>)
+                .await,
             process_launcher,
             vmex_service,
             system_controller: Arc::new(SystemController::new()),
@@ -202,7 +204,7 @@ impl BuiltinRootCapabilities {
 
     pub fn hooks(&self) -> Vec<HooksRegistration> {
         let mut all_hooks: Vec<HooksRegistration> = vec![];
-        all_hooks.append(&mut self.work_scheduler.hooks());
+        all_hooks.append(&mut WorkScheduler::hooks(&self.work_scheduler));
         if let Some(process_launcher) = &self.process_launcher {
             all_hooks.append(&mut process_launcher.hooks());
         }
@@ -248,7 +250,7 @@ pub async fn builtin_environment_setup(
     model: &Arc<Model>,
     config: ComponentManagerConfig,
 ) -> Result<BuiltinEnvironment, ModelError> {
-    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(&args));
+    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(args, model).await);
     let realm_capability_host = RealmCapabilityHost::new(model.clone(), config);
     model.root_realm.hooks.install(realm_capability_host.hooks()).await;
     model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
