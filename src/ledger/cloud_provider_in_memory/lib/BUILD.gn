@@ -4,13 +4,12 @@
 
 import("//build/package.gni")
 
-visibility = [
-  "//src/ledger/*",
-  "//src/ledger/*",
-]
+visibility = [ "//src/ledger/*" ]
 
 source_set("lib") {
   sources = [
+    "diff_tree.cc",
+    "diff_tree.h",
     "fake_cloud_provider.cc",
     "fake_cloud_provider.h",
     "fake_device_set.cc",
@@ -35,5 +34,18 @@ source_set("lib") {
     "//third_party/murmurhash",
   ]
 
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "diff_tree_unittest.cc",
+  ]
+  deps = [
+    ":lib",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
   configs += [ "//src/ledger:ledger_config" ]
 }

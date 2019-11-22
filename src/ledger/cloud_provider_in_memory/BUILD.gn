@@ -2,10 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/test.gni")
+
 group("cloud_provider_in_memory") {
   testonly = true
   deps = [
     "bin",
     "lib",
   ]
+}
+
+test("cloud_provider_in_memory_unittests") {
+  testonly = true
+
+  deps = [
+    "lib:unittests",
+    "//src/lib/fxl/test:gtest_main",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
 }
