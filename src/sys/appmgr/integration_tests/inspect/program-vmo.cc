@@ -29,7 +29,7 @@ class Table {
   }
 
   std::shared_ptr<Item> NewItem(int64_t value) {
-    auto ret = std::make_shared<Item>(node_.CreateChild(inspect::UniqueName("item-")));
+    auto ret = std::make_shared<Item>(node_.CreateChild(node_.UniqueName("item-")));
     items_.emplace_back(ret);
     ret->Add(value);
     return ret;

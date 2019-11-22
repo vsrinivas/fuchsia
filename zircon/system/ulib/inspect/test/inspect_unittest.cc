@@ -150,23 +150,26 @@ TEST(Inspect, CreateWithDirtyVmo) {
 }
 
 TEST(Inspect, UniqueName) {
-  EXPECT_EQ("root0x0", inspect::UniqueName("root"));
-  EXPECT_EQ("root0x1", inspect::UniqueName("root"));
-  EXPECT_EQ("root0x2", inspect::UniqueName("root"));
-  EXPECT_EQ("test0x3", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x4", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x5", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x6", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x7", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x8", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x9", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xa", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xb", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xc", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xd", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xe", inspect::UniqueName("test"));
-  EXPECT_EQ("test0xf", inspect::UniqueName("test"));
-  EXPECT_EQ("test0x10", inspect::UniqueName("test"));
+  inspect::Inspector inspector1, inspector2;
+  EXPECT_EQ("root0x0", inspector1.GetRoot().UniqueName("root"));
+  EXPECT_EQ("root0x1", inspector1.GetRoot().UniqueName("root"));
+  EXPECT_EQ("root0x2", inspector1.GetRoot().UniqueName("root"));
+  EXPECT_EQ("test0x3", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x4", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x5", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x6", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x7", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x8", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x9", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xa", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xb", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xc", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xd", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xe", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0xf", inspector1.GetRoot().UniqueName("test"));
+  EXPECT_EQ("test0x10", inspector1.GetRoot().UniqueName("test"));
+
+  EXPECT_EQ("root0x0", inspector2.GetRoot().UniqueName("root"));
 }
 
 }  // namespace

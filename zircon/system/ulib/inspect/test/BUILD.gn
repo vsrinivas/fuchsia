@@ -6,7 +6,6 @@ group("test") {
   testonly = true
   deps = [
     ":inspect",
-    ":inspect-common",
   ]
 }
 
@@ -27,19 +26,6 @@ zx_test("inspect") {
     "$zx/system/ulib/fzl",
     "$zx/system/ulib/inspect",
     "$zx/system/ulib/pretty",
-    "$zx/system/ulib/zxtest",
-  ]
-}
-
-zx_test("inspect-common") {
-  test_group = "sys"
-  sources = [
-    "common_unittest.cc",
-  ]
-
-  deps = [
-    "$zx/system/ulib/fdio",
-    "$zx/system/ulib/inspect:inspect-common",
     "$zx/system/ulib/zxtest",
   ]
 }

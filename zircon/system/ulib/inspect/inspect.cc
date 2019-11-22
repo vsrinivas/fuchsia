@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <lib/fit/result.h>
-#include <lib/inspect/common.h>
 #include <lib/inspect/cpp/inspect.h>
 #include <lib/inspect/cpp/vmo/heap.h>
 
@@ -84,12 +83,5 @@ std::vector<uint8_t> Inspector::CopyBytes() const {
 }
 
 Node& Inspector::GetRoot() const { return *root_; }
-
-std::string UniqueName(const std::string& prefix) {
-  std::ostringstream out;
-  uint64_t value = inspect_counter_increment(kUniqueNameCounterId);
-  out << prefix << "0x" << std::hex << value;
-  return out.str();
-}
 
 }  // namespace inspect

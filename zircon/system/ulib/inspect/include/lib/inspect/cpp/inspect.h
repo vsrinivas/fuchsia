@@ -70,9 +70,6 @@ class Inspector final {
   std::shared_ptr<internal::State> state_;
 };
 
-// Generate a unique name with the given prefix.
-std::string UniqueName(const std::string& prefix);
-
 }  // namespace inspect
 
 #endif  // LIB_INSPECT_CPP_INSPECT_H_

@@ -38,18 +38,6 @@ zx_library("inspect") {
   deps = [
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fit",
-    "$zx/system/ulib/inspect:inspect-common",
     "$zx/system/ulib/zx",
-  ]
-}
-
-zx_library("inspect-common") {
-  sdk = "shared"
-  sdk_publishable = true
-  shared = true
-  sdk_headers = [ "lib/inspect/common.h" ]
-
-  sources = [
-    "common.cc",
   ]
 }

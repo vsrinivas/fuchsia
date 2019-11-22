@@ -437,6 +437,8 @@ ExponentialDoubleHistogram Node::CreateExponentialDoubleHistogram(const std::str
   return ExponentialDoubleHistogram();
 }
 
+std::string Node::UniqueName(const std::string& prefix) { return state_->UniqueName(prefix); }
+
 Link::~Link() {
   if (state_) {
     state_->FreeLink(this);

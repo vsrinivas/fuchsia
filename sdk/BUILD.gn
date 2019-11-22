@@ -192,7 +192,6 @@ sdk_molecule("core_lib") {
     "//zircon/public/lib/async-testing:async-testing_sdk",
     "//zircon/public/lib/fdio:fdio_sdk",
     "//zircon/public/lib/inspect:inspect_sdk",
-    "//zircon/public/lib/inspect-common:inspect-common_sdk",
     "//zircon/public/lib/memfs:memfs_sdk",
     "//zircon/public/lib/sync:sync_sdk",
     "//zircon/public/lib/syslog:syslog_sdk",

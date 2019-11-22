@@ -6,6 +6,7 @@
 #include <lib/inspect/cpp/vmo/state.h>
 
 #include <functional>
+#include <sstream>
 
 namespace inspect {
 namespace internal {
@@ -828,6 +829,13 @@ zx_status_t State::CreateName(const std::string& name, BlockIndex* out) {
   memset(block->payload.data, 0, PayloadCapacity(GetOrder(block)));
   memcpy(block->payload.data, name.data(), name.size());
   return ZX_OK;
+}
+
+std::string State::UniqueName(const std::string& prefix) {
+  std::ostringstream out;
+  uint64_t value = next_unique_id_.fetch_add(1, std::memory_order_relaxed);
+  out << prefix << "0x" << std::hex << value;
+  return out.str();
 }
 
 }  // namespace internal

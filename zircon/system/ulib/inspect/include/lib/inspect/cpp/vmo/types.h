@@ -415,6 +415,11 @@ class Node final {
   // Return true if this node is stored in a buffer. False otherwise.
   explicit operator bool() { return state_ != nullptr; }
 
+  // Create a unique name for children of this node.
+  //
+  // The returned strings are guaranteed to be at least unique within the context of this Node.
+  std::string UniqueName(const std::string& prefix);
+
  private:
   friend class ::inspect::internal::State;
   Node(std::shared_ptr<internal::State> state, internal::BlockIndex name,

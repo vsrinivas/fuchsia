@@ -141,8 +141,14 @@ class State final {
   void FreeLink(Link* link);
   void FreeNode(Node* node);
 
+  // Create a unique name for children in this State.
+  //
+  // Returned strings are guaranteed to be unique and will start with the given prefix.
+  std::string UniqueName(const std::string& prefix);
+
  private:
-  State(std::unique_ptr<Heap> heap, BlockIndex header) : heap_(std::move(heap)), header_(header) {}
+  State(std::unique_ptr<Heap> heap, BlockIndex header)
+      : heap_(std::move(heap)), header_(header), next_unique_id_(0) {}
 
   void DecrementParentRefcount(BlockIndex value_index) __TA_REQUIRES(mutex_);
 
@@ -210,6 +216,9 @@ class State final {
   // The index for the header block containing the generation count
   // to increment
   BlockIndex header_ __TA_GUARDED(mutex_);
+
+  // The next unique ID to give out from UniqueName.
+  std::atomic_uint_fast64_t next_unique_id_;
 };
 
 }  // namespace internal

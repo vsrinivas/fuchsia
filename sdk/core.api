@@ -96,7 +96,6 @@ sdk://pkg/fidl_cpp_sync
 sdk://pkg/fit
 sdk://pkg/images_cpp
 sdk://pkg/inspect
-sdk://pkg/inspect-common
 sdk://pkg/media_cpp
 sdk://pkg/media_cpp_no_converters
 sdk://pkg/memfs
