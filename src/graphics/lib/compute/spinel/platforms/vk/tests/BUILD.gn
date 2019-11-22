@@ -5,8 +5,6 @@
 group("tests") {
   testonly = true
   public_deps = [
-    "spinel_vk_context",
-    "spinel_vk_path_builder",
     "spinel_vk_svg",
   ]
 }
