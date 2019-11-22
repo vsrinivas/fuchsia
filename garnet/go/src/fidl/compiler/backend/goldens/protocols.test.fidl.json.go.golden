@@ -346,11 +346,6 @@ type WithAndWithoutRequestResponseStub struct {
 	Impl WithAndWithoutRequestResponse
 }
 
-func (s_ *WithAndWithoutRequestResponseStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	var ctx_ _bindings.MarshalerContext
-	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
-}
-
 func (s_ *WithAndWithoutRequestResponseStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case WithAndWithoutRequestResponseNoRequestNoResponseOrdinal:
@@ -514,11 +509,6 @@ func NewWithErrorSyntaxInterfaceRequest() (WithErrorSyntaxInterfaceRequest, *Wit
 
 type WithErrorSyntaxStub struct {
 	Impl WithErrorSyntax
-}
-
-func (s_ *WithErrorSyntaxStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	var ctx_ _bindings.MarshalerContext
-	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
 }
 
 func (s_ *WithErrorSyntaxStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
@@ -700,11 +690,6 @@ func NewChannelProtocolInterfaceRequest() (ChannelProtocolInterfaceRequest, *Cha
 
 type ChannelProtocolStub struct {
 	Impl ChannelProtocol
-}
-
-func (s_ *ChannelProtocolStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	var ctx_ _bindings.MarshalerContext
-	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
 }
 
 func (s_ *ChannelProtocolStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {

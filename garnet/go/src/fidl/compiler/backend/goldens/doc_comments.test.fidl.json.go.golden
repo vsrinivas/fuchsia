@@ -159,11 +159,6 @@ type InterfaceStub struct {
 	Impl Interface
 }
 
-func (s_ *InterfaceStub) DispatchImpl(ordinal_ uint64, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
-	var ctx_ _bindings.MarshalerContext
-	return s_.DispatchImplWithCtx(ordinal_, ctx_, data_, handles_)
-}
-
 func (s_ *InterfaceStub) DispatchImplWithCtx(ordinal_ uint64, ctx_ _bindings.MarshalerContext, data_ []byte, handles_ []_zx.Handle) (_bindings.Message, bool, error) {
 	switch ordinal_ {
 	case InterfaceMethodOrdinal:
