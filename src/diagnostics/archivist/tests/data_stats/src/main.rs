@@ -16,15 +16,15 @@ use {
 };
 
 const ARCHIVIST_URL: &str =
-    "fuchsia-pkg://fuchsia.com/archivist_data_stats_test#meta/archivist_with_test_config.cmx";
+    "fuchsia-pkg://fuchsia.com/archivist_data_stats_test#meta/observer_with_data_stats.cmx";
 const ALL_SELECTORS: &[u8] = include_bytes!("../config/all_selectors.txt");
-const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/archivist_config.json");
+const ARCHIVIST_CONFIG: &[u8] = include_bytes!("../config/observer_config.json");
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
     let config_path = Path::new("/tmp/config/data");
     let selectors_path = config_path.join("pipelines/all/all_selectors.txt");
-    let archivist_config_path = config_path.join("archivist_config.json");
+    let archivist_config_path = config_path.join("observer_config.json");
     let archive_path = "/tmp/archive";
     let test_data_path = "/tmp/test_data";
 

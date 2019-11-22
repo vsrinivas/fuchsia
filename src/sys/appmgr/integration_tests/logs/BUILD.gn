@@ -1,0 +1,68 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("logs") {
+  testonly = true
+  deps = [
+    ":appmgr_log_integration_tests",
+  ]
+}
+
+test_package("appmgr_log_integration_tests") {
+  deps = [
+    ":log_emitter",
+    ":log_tests",
+  ]
+
+  tests = [
+    {
+      name = "appmgr_log_integration_tests"
+      environments = basic_envs
+    },
+  ]
+
+  binaries = [
+    {
+      name = "log_emitter_for_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = "meta/log_emitter_for_test.cmx"
+      dest = "log_emitter_for_test.cmx"
+    },
+  ]
+}
+
+rustc_binary("log_tests") {
+  name = "appmgr_log_integration_tests"
+  source_root = "./log_integration_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//src/diagnostics/lib/validating-log-listener",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+rustc_binary("log_emitter") {
+  name = "log_emitter_for_test"
+  source_root = "./log_emitter_for_test.rs"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/rust/fuchsia-syslog",
+    "//third_party/rust_crates:log",
+  ]
+}

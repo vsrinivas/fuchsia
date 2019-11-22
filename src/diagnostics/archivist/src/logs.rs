@@ -326,65 +326,15 @@ fn run_listeners(listeners: &mut Vec<ListenerWrapper>, log_message: &mut LogMess
     listeners.retain(|l| l.send_log(log_message) == ListenerStatus::Fine);
 }
 
-const USAGE: &'static str = "\
-USAGE: logger [options]
-
-available options:
-    --disable-klog: disables proxying kernel logger
-    --help: shows this help page
-";
-
-pub struct Opt {
-    pub disable_klog: bool,
-}
-
-impl Default for Opt {
-    fn default() -> Self {
-        Self { disable_klog: false }
-    }
-}
-
-impl Opt {
-    /// Parses options structure from command line.
-    // NOTE: we're manually parsing the command line to avoid the binary bloat
-    // caused by command line parsing argument libraries.
-    // See TC-378 for background.
-    pub fn from_args() -> Self {
-        let mut opt = Self::default();
-        let args = std::env::args().skip(1);
-        for arg in args {
-            match arg.as_ref() {
-                "--disable-klog" => {
-                    opt.disable_klog = true;
-                }
-                "--help" => {
-                    eprint!("{}", USAGE);
-                    std::process::exit(0);
-                }
-                other => {
-                    eprintln!("Unrecognized option {}", other);
-                    eprint!("{}", USAGE);
-                    std::process::exit(1);
-                }
-            }
-        }
-        opt
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use {
         super::*,
         crate::logs::logger::fx_log_packet_t,
-        fidl::encoding::OutOfLine,
-        fidl_fuchsia_logger::{
-            LogFilterOptions, LogListenerMarker, LogListenerRequest, LogListenerRequestStream,
-            LogMarker, LogProxy, LogSinkMarker, LogSinkProxy,
-        },
+        fidl_fuchsia_logger::{LogFilterOptions, LogMarker, LogProxy, LogSinkMarker, LogSinkProxy},
         fuchsia_zircon as zx,
-        futures::channel::oneshot::{channel as make_oneshot, Sender},
         std::collections::HashSet,
+        validating_log_listener::{validate_log_dump, validate_log_stream},
     };
 
     mod memory_bounded_buffer {
@@ -445,7 +395,7 @@ mod tests {
             msg: String::from("BBBBB"),
             tags: vec![String::from("AAAAA")],
         };
-        let options = &mut LogFilterOptions {
+        let options = LogFilterOptions {
             filter_by_pid: true,
             pid: 1,
             filter_by_tid: false,
@@ -456,12 +406,7 @@ mod tests {
         };
 
         TestHarness::new()
-            .filter_test(
-                "test_filter_by_pid",
-                vec![lm].into_iter().collect(),
-                vec![p, p2],
-                Some(options),
-            )
+            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
             .await;
     }
 
@@ -480,7 +425,7 @@ mod tests {
             msg: String::from("BBBBB"),
             tags: vec![String::from("AAAAA")],
         };
-        let options = &mut LogFilterOptions {
+        let options = LogFilterOptions {
             filter_by_pid: false,
             pid: 1,
             filter_by_tid: true,
@@ -491,12 +436,7 @@ mod tests {
         };
 
         TestHarness::new()
-            .filter_test(
-                "test_filter_by_tid",
-                vec![lm].into_iter().collect(),
-                vec![p, p2],
-                Some(options),
-            )
+            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
             .await;
     }
 
@@ -516,7 +456,7 @@ mod tests {
             msg: String::from("BBBBB"),
             tags: vec![String::from("AAAAA")],
         };
-        let options = &mut LogFilterOptions {
+        let options = LogFilterOptions {
             filter_by_pid: false,
             pid: 1,
             filter_by_tid: false,
@@ -527,12 +467,7 @@ mod tests {
         };
 
         TestHarness::new()
-            .filter_test(
-                "test_filter_by_min_severity",
-                vec![lm].into_iter().collect(),
-                vec![p, p2],
-                Some(options),
-            )
+            .filter_test(vec![lm].into_iter().collect(), vec![p, p2], Some(options))
             .await;
     }
 
@@ -554,7 +489,7 @@ mod tests {
             msg: String::from("BBBBB"),
             tags: vec![String::from("AAAAA")],
         };
-        let options = &mut LogFilterOptions {
+        let options = LogFilterOptions {
             filter_by_pid: true,
             pid: 0,
             filter_by_tid: false,
@@ -565,12 +500,7 @@ mod tests {
         };
 
         TestHarness::new()
-            .filter_test(
-                "test_filter_by_combination",
-                vec![lm].into_iter().collect(),
-                vec![p, p2, p3],
-                Some(options),
-            )
+            .filter_test(vec![lm].into_iter().collect(), vec![p, p2, p3], Some(options))
             .await;
     }
 
@@ -606,7 +536,7 @@ mod tests {
             msg: String::from("CCCCC"),
             tags: vec![String::from("AAAAA"), String::from("BBBBB")],
         };
-        let options = &mut LogFilterOptions {
+        let options = LogFilterOptions {
             filter_by_pid: false,
             pid: 1,
             filter_by_tid: false,
@@ -617,12 +547,7 @@ mod tests {
         };
 
         TestHarness::new()
-            .filter_test(
-                "test_filter_by_tags",
-                vec![lm1, lm2].into_iter().collect(),
-                vec![p, p2],
-                Some(options),
-            )
+            .filter_test(vec![lm1, lm2].into_iter().collect(), vec![p, p2], Some(options))
             .await;
     }
 
@@ -657,24 +582,15 @@ mod tests {
 
         async fn filter_test(
             self,
-            name: &str,
             expected: HashSet<LogMessage>,
             packets: Vec<fx_log_packet_t>,
-            filter_options: Option<&mut LogFilterOptions>,
+            filter_options: Option<LogFilterOptions>,
         ) {
-            let (send_done, done) = make_oneshot();
-
-            ValidatingListener::new(name, expected, Some(send_done), None).start(
-                self.log_proxy,
-                filter_options,
-                false,
-            );
-
             for mut p in packets {
                 self.sin.write(to_u8_slice(&mut p)).unwrap();
             }
 
-            done.await.expect("test should signal successful completion");
+            validate_log_stream(expected, self.log_proxy, filter_options).await;
         }
 
         async fn manager_test(self, test_dump_logs: bool) {
@@ -698,102 +614,13 @@ mod tests {
             let mut lm3 = copy_log_message(&lm2);
             lm3.pid = 2;
 
-            let (send_done, done_signal) = make_oneshot();
-            let (send_closed, closed_signal) = make_oneshot();
-            ValidatingListener::new(
-                "log_manager_test",
-                vec![lm1, lm2, lm3],
-                Some(send_done),
-                Some(send_closed),
-            )
-            .start(self.log_proxy, None, test_dump_logs);
-
             p.metadata.pid = 2;
             self.sin.write(to_u8_slice(&mut p)).unwrap();
 
             if test_dump_logs {
-                closed_signal.await.expect("done message should have been sent");
+                validate_log_dump(vec![lm1, lm2, lm3], self.log_proxy, None).await;
             } else {
-                done_signal.await.expect("done message should have been sent");
-            }
-        }
-    }
-
-    /// Listens to all log messages sent during test, and verifies that they match what's expected.
-    struct ValidatingListener {
-        expected: HashSet<LogMessage>,
-        done: Option<Sender<()>>,
-        closed: Option<Sender<()>>,
-        test_name: String,
-    }
-
-    impl ValidatingListener {
-        fn new(
-            name: &str,
-            expected: impl IntoIterator<Item = LogMessage>,
-            done: Option<Sender<()>>,
-            closed: Option<Sender<()>>,
-        ) -> Self {
-            Self {
-                test_name: name.to_string(),
-                done,
-                closed,
-                expected: expected.into_iter().collect(),
-            }
-        }
-
-        fn start(
-            self,
-            proxy: LogProxy,
-            filter_options: Option<&mut LogFilterOptions>,
-            dump_logs: bool,
-        ) {
-            let (client_end, stream) =
-                fidl::endpoints::create_request_stream::<LogListenerMarker>().unwrap();
-            self.handle_stream(stream);
-
-            let filter_options = filter_options.map(OutOfLine);
-
-            if dump_logs {
-                proxy.dump_logs(client_end, filter_options).expect("failed to register listener");
-            } else {
-                proxy.listen(client_end, filter_options).expect("failed to register listener");
-            }
-        }
-
-        fn handle_stream(mut self, stream: LogListenerRequestStream) {
-            fasync::spawn(
-                stream
-                    .map_ok(move |req| self.handle_request(req))
-                    .try_collect::<()>()
-                    .unwrap_or_else(|e| panic!("test fail {:?}", e)),
-            )
-        }
-
-        fn handle_request(&mut self, req: LogListenerRequest) {
-            match req {
-                LogListenerRequest::Log { log, .. } => {
-                    self.log(log);
-                }
-                LogListenerRequest::LogMany { log, .. } => {
-                    for msg in log {
-                        self.log(msg);
-                    }
-                }
-                LogListenerRequest::Done { .. } => {
-                    if let Some(closed) = self.closed.take() {
-                        closed.send(()).expect("sending closed signal");
-                    }
-                }
-            }
-        }
-
-        fn log(&mut self, msg: LogMessage) {
-            assert!(self.expected.remove(&msg), "removing received message from list of expected");
-            if self.expected.is_empty() {
-                if let Some(done) = self.done.take() {
-                    done.send(()).expect("sending closed signal");
-                }
+                validate_log_stream(vec![lm1, lm2, lm3], self.log_proxy, None).await;
             }
         }
     }

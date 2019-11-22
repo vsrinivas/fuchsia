@@ -8,6 +8,7 @@
 
 use {
     archivist_lib::{archive, configs, data_stats, diagnostics, inspect, logs},
+    argh::FromArgs,
     failure::Error,
     fidl_fuchsia_diagnostics_inspect::Selector,
     fidl_fuchsia_io::DirectoryProxy,
@@ -16,37 +17,54 @@ use {
     fuchsia_zircon as zx,
     futures::{future, FutureExt, StreamExt},
     io_util, selectors,
-    std::sync::{Arc, RwLock},
+    std::{
+        path::PathBuf,
+        sync::{Arc, RwLock},
+    },
 };
 
 static INSPECT_ALL_SELECTORS: &str = "/config/data/pipelines/all/";
-static ARCHIVE_CONFIG_FILE: &str = "/config/data/archivist_config.json";
 
-static DEFAULT_NUM_THREADS: usize = 4;
+/// Monitor, collect, and store diagnostics from components.
+#[derive(Debug, Default, FromArgs)]
+pub struct Args {
+    /// disables proxying kernel logger
+    #[argh(switch)]
+    disable_klog: bool,
+
+    /// path to a JSON configuration file
+    #[argh(option)]
+    config_path: PathBuf,
+}
 
 fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new()?;
 
     diagnostics::init();
 
-    // Ensure that an archive exists.
-    std::fs::create_dir_all(archive::ARCHIVE_PATH).expect("failed to initialize archive");
-
-    let opt = logs::Opt::from_args();
+    let opt: Args = argh::from_env();
     let log_manager = logs::LogManager::new();
     if !opt.disable_klog {
         log_manager.spawn_klogger()?;
     }
 
+    let archivist_configuration: configs::Config = match configs::parse_config(&opt.config_path) {
+        Ok(config) => config,
+        Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
+    };
+
     let mut fs = ServiceFs::new();
     diagnostics::serve(&mut fs)?;
-    fs.add_remote(
-        "archive",
-        io_util::open_directory_in_namespace(
-            archive::ARCHIVE_PATH,
-            io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
-        )?,
-    );
+
+    if let Some(archive_path) = &archivist_configuration.archive_path {
+        fs.add_remote(
+            "archive",
+            io_util::open_directory_in_namespace(
+                &archive_path.to_string_lossy(),
+                io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
+            )?,
+        );
+    }
 
     let all_selectors: Vec<Arc<Selector>> = match selectors::parse_selectors(INSPECT_ALL_SELECTORS)
     {
@@ -59,19 +77,11 @@ fn main() -> Result<(), Error> {
     let all_inspect_repository =
         Arc::new(RwLock::new(inspect::InspectDataRepository::new(all_selectors)));
 
-    let archivist_configuration: configs::Config = match configs::parse_config(ARCHIVE_CONFIG_FILE)
-    {
-        Ok(config) => config,
-        Err(parsing_error) => panic!("Parsing configuration failed: {}", parsing_error),
-    };
-
-    let archivist_threads: usize =
-        archivist_configuration.num_threads.unwrap_or(DEFAULT_NUM_THREADS);
-
     if let Some(to_summarize) = &archivist_configuration.summarized_dirs {
         data_stats::add_stats_nodes(&mut fs, to_summarize)?;
     }
 
+    let num_threads = archivist_configuration.num_threads;
     let archivist_state =
         archive::ArchivistState::new(archivist_configuration, all_inspect_repository.clone())?;
 
@@ -100,6 +110,6 @@ fn main() -> Result<(), Error> {
     let running_archivist = archive::run_archivist(archivist_state, out_dir);
     let running_service_fs = fs.collect::<()>().map(Ok);
     let both = future::try_join(running_service_fs, running_archivist);
-    executor.run(both, archivist_threads)?;
+    executor.run(both, num_threads)?;
     Ok(())
 }

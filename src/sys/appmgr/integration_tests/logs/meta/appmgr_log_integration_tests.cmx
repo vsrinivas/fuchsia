@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/appmgr_log_integration_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

@@ -14,6 +14,9 @@ use {
 
 #[derive(Deserialize, Debug, PartialEq, Eq)]
 pub struct Config {
+    /// Path to which archived data will be written. No storage will be performed if left empty.
+    pub archive_path: Option<PathBuf>,
+
     /// The maximum size the archive can be.
     pub max_archive_size_bytes: u64,
 
@@ -21,7 +24,7 @@ pub struct Config {
     pub max_event_group_size_bytes: u64,
 
     /// Number of threads the archivist has available to use.
-    pub num_threads: Option<usize>,
+    pub num_threads: usize,
 
     /// Paths to summarize in our own diagnostics output.
     pub summarized_dirs: Option<BTreeMap<String, String>>,
@@ -73,7 +76,7 @@ mod tests {
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
         assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
-        assert_eq!(parsed_config.num_threads, Some(4));
+        assert_eq!(parsed_config.num_threads, 4);
         assert_eq!(parsed_config.summarized_dirs, Some(expected_dirs));
     }
 
@@ -89,13 +92,14 @@ mod tests {
                   // Test comment for json5 portability.
                   "max_archive_size_bytes": 10485760,
                   "max_event_group_size_bytes": 262144,
+                  "num_threads": 1,
                 }"#;
 
         write_test_config_to_file(&test_config_file_name, test_config);
         let parsed_config = parse_config(&test_config_file_name).unwrap();
         assert_eq!(parsed_config.max_archive_size_bytes, 10485760);
         assert_eq!(parsed_config.max_event_group_size_bytes, 262144);
-        assert_eq!(parsed_config.num_threads, None);
+        assert_eq!(parsed_config.num_threads, 1);
     }
 
     #[test]

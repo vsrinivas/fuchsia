@@ -8,5 +8,6 @@ group("tests") {
     "inspect-fidl-load:tests",
     "inspect-formatter:tests",
     "selectors:tests",
+    "validating-log-listener:tests",
   ]
 }

@@ -28,6 +28,7 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.diagnostics.stream:fuchsia.diagnostics.stream-rustc",
     "//src/diagnostics/lib/inspect-formatter",
     "//src/diagnostics/lib/selectors",
+    "//src/diagnostics/lib/validating-log-listener",
     "//src/diagnostics/streams:lib",
     "//src/lib/inspect/rust/fuchsia-inspect",
     "//src/lib/inspect/rust/fuchsia-inspect-contrib",
@@ -66,6 +67,7 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.diagnostics.inspect:fuchsia.diagnostics.inspect-rustc",
     "//src/diagnostics/lib/selectors",
+    "//src/lib/argh",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
@@ -90,6 +92,10 @@ package("archivist") {
       path = rebase_path("meta/archivist.cmx")
       dest = "archivist.cmx"
     },
+    {
+      path = rebase_path("meta/observer.cmx")
+      dest = "observer.cmx"
+    },
   ]
 }
 
@@ -101,6 +107,17 @@ config_data("archivist_config") {
 
   sources = [
     "configs/archivist_config.json",
+  ]
+}
+
+config_data("observer_config") {
+  for_pkg = "archivist"
+  outputs = [
+    "observer_config.json",
+  ]
+
+  sources = [
+    "configs/observer_config.json",
   ]
 }
 
@@ -120,6 +137,7 @@ group("with_default_config") {
     ":archivist",
     ":archivist_config",
     ":archivist_startup",
+    ":observer_config",
     "//src/diagnostics/config/pipelines/all:all_selectors",
   ]
 }

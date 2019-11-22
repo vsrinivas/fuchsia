@@ -27,8 +27,6 @@ use {
     std::sync::{Arc, Mutex, RwLock},
 };
 
-pub static ARCHIVE_PATH: &str = "/data/archive";
-
 // Keep only the 50 most recent events.
 static INSPECT_LOG_WINDOW_SIZE: usize = 50;
 
@@ -320,6 +318,8 @@ pub struct ArchiveWriter {
 
     /// A writer for the currently opened event file group.
     open_log: EventFileGroupWriter,
+
+    group_stats: EventFileGroupStatsMap,
 }
 
 impl ArchiveWriter {
@@ -331,10 +331,16 @@ impl ArchiveWriter {
         if !path.exists() {
             fs::create_dir_all(&path)?;
         }
-        Ok(ArchiveWriter {
-            archive: Archive::open(&path)?,
-            open_log: EventFileGroupWriter::new(path)?,
-        })
+
+        let archive = Archive::open(&path)?;
+        let open_log = EventFileGroupWriter::new(path)?;
+
+        let mut group_stats = archive.get_event_group_stats()?;
+
+        group_stats.remove(&open_log.get_log_file_path().to_string_lossy().to_string());
+        diagnostics::set_group_stats(&group_stats);
+
+        Ok(ArchiveWriter { archive, open_log, group_stats })
     }
 
     /// Get the readable Archive from this writer.
@@ -343,7 +349,7 @@ impl ArchiveWriter {
     }
 
     /// Get the currently opened log writer for this Archive.
-    pub fn get_log<'a>(&'a mut self) -> &'a mut EventFileGroupWriter {
+    pub fn get_log(&mut self) -> &mut EventFileGroupWriter {
         &mut self.open_log
     }
 
@@ -354,6 +360,24 @@ impl ArchiveWriter {
         let mut temp_log = EventFileGroupWriter::new(self.archive.get_path())?;
         std::mem::swap(&mut self.open_log, &mut temp_log);
         temp_log.close()
+    }
+
+    fn add_group_stat(&mut self, log_file_path: &Path, stat: EventFileGroupStats) {
+        self.group_stats.insert(log_file_path.to_string_lossy().to_string(), stat);
+        diagnostics::set_group_stats(&self.group_stats);
+    }
+
+    fn remove_group_stat(&mut self, log_file_path: &Path) {
+        self.group_stats.remove(&log_file_path.to_string_lossy().to_string());
+        diagnostics::set_group_stats(&self.group_stats);
+    }
+
+    fn archived_size(&self) -> u64 {
+        let mut ret = 0;
+        for (_, v) in &self.group_stats {
+            ret += v.size;
+        }
+        ret
     }
 }
 
@@ -555,8 +579,8 @@ impl<'a> EventBuilder<'a> {
 /// that are populated by the archivist server and exposed in the
 /// service sessions.
 pub struct ArchivistState {
-    writer: ArchiveWriter,
-    group_stats: EventFileGroupStatsMap,
+    /// Writer for the archive. If a path was not configured it will be `None`.
+    writer: Option<ArchiveWriter>,
     log_node: BoundedListNode,
     configuration: configs::Config,
     inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
@@ -567,12 +591,11 @@ impl ArchivistState {
         configuration: configs::Config,
         inspect_repository: Arc<RwLock<inspect::InspectDataRepository>>,
     ) -> Result<Self, Error> {
-        let mut writer = ArchiveWriter::open(ARCHIVE_PATH)?;
-        let mut group_stats = writer.get_archive().get_event_group_stats()?;
-
-        let log = writer.get_log();
-        group_stats.remove(&log.get_log_file_path().to_string_lossy().to_string());
-        diagnostics::set_group_stats(&group_stats);
+        let writer = if let Some(archive_path) = &configuration.archive_path {
+            Some(ArchiveWriter::open(archive_path)?)
+        } else {
+            None
+        };
 
         let mut log_node = BoundedListNode::new(
             diagnostics::root().create_child("events"),
@@ -581,25 +604,7 @@ impl ArchivistState {
 
         inspect_log!(log_node, event: "Archivist started");
 
-        Ok(ArchivistState { writer, group_stats, log_node, configuration, inspect_repository })
-    }
-
-    fn add_group_stat(&mut self, log_file_path: &Path, stat: EventFileGroupStats) {
-        self.group_stats.insert(log_file_path.to_string_lossy().to_string(), stat);
-        diagnostics::set_group_stats(&self.group_stats);
-    }
-
-    fn remove_group_stat(&mut self, log_file_path: &Path) {
-        self.group_stats.remove(&log_file_path.to_string_lossy().to_string());
-        diagnostics::set_group_stats(&self.group_stats);
-    }
-
-    fn archived_size(&self) -> u64 {
-        let mut ret = 0;
-        for (_, v) in &self.group_stats {
-            ret += v.size;
-        }
-        ret
+        Ok(ArchivistState { writer, log_node, configuration, inspect_repository })
     }
 }
 
@@ -640,12 +645,18 @@ async fn archive_event(
     event_data: ComponentEventData,
 ) -> Result<(), Error> {
     let mut state = state.lock().unwrap();
+    let ArchivistState { writer, log_node, configuration, .. } = &mut *state;
+    let writer = if let Some(w) = writer.as_mut() {
+        w
+    } else {
+        return Ok(());
+    };
 
-    let mut log = state.writer.get_log().new_event(
-        event_name,
-        event_data.component_name,
-        event_data.component_id,
-    );
+    let max_archive_size_bytes = configuration.max_archive_size_bytes;
+    let max_event_group_size_bytes = configuration.max_event_group_size_bytes;
+
+    let mut log =
+        writer.get_log().new_event(event_name, event_data.component_name, event_data.component_id);
 
     if let Some(data_map) = event_data.component_data_map {
         for (path, object) in data_map {
@@ -677,39 +688,39 @@ async fn archive_event(
         }
     }
 
-    let current_group_stats = state.writer.get_log().get_stats();
+    let current_group_stats = writer.get_log().get_stats();
 
-    if current_group_stats.size >= state.configuration.max_event_group_size_bytes {
-        let (path, stats) = state.writer.rotate_log()?;
-        inspect_log!(state.log_node, event:"Rotated log",
+    if current_group_stats.size >= max_event_group_size_bytes {
+        let (path, stats) = writer.rotate_log()?;
+        inspect_log!(log_node, event:"Rotated log",
                      new_path: path.to_string_lossy().to_string());
-        state.add_group_stat(&path, stats);
+        writer.add_group_stat(&path, stats);
     }
 
-    let mut current_archive_size = current_group_stats.size + state.archived_size();
-    if current_archive_size > state.configuration.max_archive_size_bytes {
-        let dates = state.writer.get_archive().get_dates().unwrap_or_else(|e| {
+    let archived_size = writer.archived_size();
+    let mut current_archive_size = current_group_stats.size + archived_size;
+    if current_archive_size > max_archive_size_bytes {
+        let dates = writer.get_archive().get_dates().unwrap_or_else(|e| {
             eprintln!("Garbage collection failure");
-            inspect_log!(state.log_node, event: "Failed to get dates for garbage collection",
+            inspect_log!(log_node, event: "Failed to get dates for garbage collection",
                          reason: format!("{:?}", e));
             vec![]
         });
 
         for date in dates {
-            let groups =
-                state.writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
-                    eprintln!("Garbage collection failure");
-                    inspect_log!(state.log_node, event: "Failed to get event file",
+            let groups = writer.get_archive().get_event_file_groups(&date).unwrap_or_else(|e| {
+                eprintln!("Garbage collection failure");
+                inspect_log!(log_node, event: "Failed to get event file",
                              date: &date,
                              reason: format!("{:?}", e));
-                    vec![]
-                });
+                vec![]
+            });
 
             for group in groups {
                 let path = group.log_file_path();
                 match group.delete() {
                     Err(e) => {
-                        inspect_log!(state.log_node, event: "Failed to remove group",
+                        inspect_log!(log_node, event: "Failed to remove group",
                                  path: &path,
                                  reason: format!(
                                      "{:?}", e));
@@ -717,15 +728,15 @@ async fn archive_event(
                     }
                     Ok(stat) => {
                         current_archive_size -= stat.size;
-                        state.remove_group_stat(&PathBuf::from(&path));
-                        inspect_log!(state.log_node, event: "Garbage collected group",
+                        writer.remove_group_stat(&PathBuf::from(&path));
+                        inspect_log!(log_node, event: "Garbage collected group",
                                      path: &path,
                                      removed_files: stat.file_count as u64,
                                      removed_bytes: stat.size as u64);
                     }
                 };
 
-                if current_archive_size < state.configuration.max_archive_size_bytes {
+                if current_archive_size < max_archive_size_bytes {
                     return Ok(());
                 }
             }

@@ -1,0 +1,10 @@
+{
+    "program": {
+        "args": [
+            "--disable-klog",
+            "--config-path",
+            "/config/data/observer_config.json"
+        ],
+        "binary": "bin/archivist"
+    }
+}

@@ -17,6 +17,7 @@ group("integration_tests") {
     "components",
     "fidl",
     "inspect",
+    "logs",
     "mock_runner",
     "outdir",
     "sandbox",
