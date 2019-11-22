@@ -4,9 +4,10 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.fonts.Provider",
-            "fuchsia.modular.Clipboard",
             "fuchsia.logger.LogSink",
+            "fuchsia.modular.Clipboard",
             "fuchsia.sys.Environment",
             "fuchsia.timezone.Timezone",
             "fuchsia.ui.input.ImeService",

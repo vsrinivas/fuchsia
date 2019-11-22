@@ -6,6 +6,7 @@
         "features": [ "build-info" ],
         "services": [
             "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
             "fuchsia.modular.Clipboard",
