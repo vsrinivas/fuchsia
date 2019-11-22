@@ -24,6 +24,7 @@ static_library("libmagma_static") {
     "$magma_build_root/src/magma_util/platform:connection_client",
     "$magma_build_root/src/magma_util/platform:device_client",
     "$magma_build_root/src/magma_util/platform:handle",
+    "$magma_build_root/src/magma_util/platform:logger_impl",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "$magma_build_root/src/magma_util/platform:sysmem_connection",

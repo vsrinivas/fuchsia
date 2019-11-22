@@ -1,6 +1,6 @@
 {
   "magma-interface": {
-    "next-free-ordinal": 51,
+    "next-free-ordinal": 52,
     "exports": [
       {
         "ordinal": 4,
@@ -883,6 +883,19 @@
             "name": "connection_out",
             "type": "magma_connection_t*",
             "description": "Returned connection."
+          }
+        ]
+      },
+      {
+        "ordinal": 51,
+        "name": "magma_initialize_logging",
+        "type": "magma_status_t",
+        "description": "Initializes logging; used for debug and some exceptional error reporting.",
+        "arguments": [
+          {
+            "name": "channel",
+            "type": "magma_handle_t",
+            "description": "An open connection to the syslog service."
           }
         ]
       }

@@ -26,6 +26,7 @@ executable("unit_tests") {
     ":magma_platform_tests",
     ":magma_system_tests",
     ":magma_util_tests",
+    "$magma_build_root/tests/helper:logger_init_helper",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",
   ]
@@ -88,6 +89,7 @@ source_set("magma_platform_tests") {
     "test_platform_event.cc",
     "test_platform_futex.cc",
     "test_platform_handle.cc",
+    "test_platform_logger.cc",
     "test_platform_mmio.cc",
     "test_platform_port.cc",
     "test_platform_random.cc",
@@ -102,6 +104,7 @@ source_set("magma_platform_tests") {
     "$magma_build_root/src/magma_util/platform:event",
     "$magma_build_root/src/magma_util/platform:futex",
     "$magma_build_root/src/magma_util/platform:handle",
+    "$magma_build_root/src/magma_util/platform:logger",
     "$magma_build_root/src/magma_util/platform:port",
     "$magma_build_root/src/magma_util/platform:random",
     "$magma_build_root/src/magma_util/platform:semaphore",

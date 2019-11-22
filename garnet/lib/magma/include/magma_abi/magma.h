@@ -469,6 +469,13 @@ magma_status_t magma_create_connection2(
     magma_device_t device,
     magma_connection_t* connection_out);
 
+///
+/// \brief Initializes logging; used for debug and some exceptional error reporting.
+/// \param channel An open connection to the syslog service.
+///
+magma_status_t magma_initialize_logging(
+    magma_handle_t channel);
+
 #if defined(__cplusplus)
 }
 #endif

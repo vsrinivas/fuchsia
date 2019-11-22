@@ -224,6 +224,37 @@ source_set("handle") {
   ]
 }
 
+source_set("logger") {
+  public_deps = [
+    "..:logger_header",
+  ]
+
+  sources = [
+    "zircon_platform_logger_syslog.cc",
+  ]
+
+  deps = [
+    ":handle",
+    "$zircon_build_root/public/lib/syslog-static",
+    "$zircon_build_root/public/lib/zx",
+    "$zircon_build_root/system/fidl/fuchsia-logger:llcpp",
+  ]
+}
+
+source_set("logger_for_system_drivers") {
+  public_deps = [
+    "..:logger_header",
+  ]
+
+  sources = [
+    "zircon_platform_logger_ddk.cc",
+  ]
+
+  deps = [
+    "$zircon_build_root/public/lib/ddk",
+  ]
+}
+
 source_set("object") {
   configs += [ "..:platform_include_config" ]
 

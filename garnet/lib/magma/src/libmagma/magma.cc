@@ -13,6 +13,7 @@
 #include "platform_connection_client.h"
 #include "platform_device_client.h"
 #include "platform_handle.h"
+#include "platform_logger.h"
 #include "platform_port.h"
 #include "platform_semaphore.h"
 #include "platform_sysmem_connection.h"
@@ -607,5 +608,19 @@ magma_status_t magma_initialize_tracing(magma_handle_t channel) {
     // Close channel.
     magma::PlatformHandle::Create(channel);
   }
+  return MAGMA_STATUS_OK;
+}
+
+magma_status_t magma_initialize_logging(magma_handle_t channel) {
+  if (!channel)
+    return MAGMA_STATUS_INVALID_ARGS;
+
+  auto handle = magma::PlatformHandle::Create(channel);
+  if (magma::PlatformLogger::IsInitialized())
+    return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "Shouldn't initialize logging twice");
+
+  if (!magma::PlatformLogger::Initialize(std::move(handle)))
+    return MAGMA_STATUS_INTERNAL_ERROR;
+
   return MAGMA_STATUS_OK;
 }

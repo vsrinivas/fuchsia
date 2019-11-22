@@ -50,3 +50,15 @@ source_set("test_device_helper") {
     "test_device_helper.h",
   ]
 }
+
+source_set("logger_init_helper") {
+  testonly = true
+  sources = [
+    "logger_init_helper.cc",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util/platform:logger_impl",
+    "$zircon_build_root/public/lib/fdio",
+    "$zircon_build_root/public/lib/zx",
+  ]
+}

@@ -12,6 +12,7 @@
 #define MAGMA_DLOG_ENABLE 0
 #endif
 
+// TODO(13095) - use MAGMA_LOG here
 #define DLOG(...)                           \
   do {                                      \
     if (MAGMA_DLOG_ENABLE) {                \
