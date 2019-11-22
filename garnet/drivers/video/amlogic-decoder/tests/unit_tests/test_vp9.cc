@@ -71,6 +71,7 @@ class FakeOwner : public VideoDecoder::Owner {
     have_set_protected_ = true;
     return ZX_OK;
   }
+  void TryToReschedule() override { EXPECT_TRUE(false); }
 
   bool have_set_protected() const { return have_set_protected_; }
 

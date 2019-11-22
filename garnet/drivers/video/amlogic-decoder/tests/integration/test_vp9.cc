@@ -79,45 +79,23 @@ std::vector<FrameData> ConvertIvfToAmlVFrames(const uint8_t* data, uint32_t leng
   return output_vector;
 }
 
-class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
+class TestFrameProvider final : public Vp9Decoder::FrameDataProvider {
  public:
-  TestFrameProvider(AmlogicVideo* video, bool multi_instance)
-      : video_(video), multi_instance_(multi_instance) {}
-
   // Always claim that 50 more bytes are available. Due to the 16kB of padding
   // at the end this is always true.
   void ReadMoreInputData(Vp9Decoder* decoder) override { decoder->UpdateDecodeSize(50); }
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override { ReadMoreInputData(decoder); }
-
-  // Called while the decoder lock is held.
-  void FrameWasOutput() override {
-    video_->AssertVideoDecoderLockHeld();
-    DLOG("Resetting hardware\n");
-    video_->SwapOutCurrentInstance();
-    bool swapped_in_other = false;
-    if (multi_instance_) {
-      DecoderInstance* other_instance = video_->swapped_out_instances_.front().get();
-      // Only try to execute from the other instance if it hasn't decoded all
-      // its data yet.
-      if (other_instance->decoder()->CanBeSwappedIn() &&
-          (!other_instance->input_context() || (other_instance->input_context()->processed_video <
-                                                other_instance->stream_buffer()->data_size()))) {
-        video_->current_instance_ = std::move(video_->swapped_out_instances_.front());
-        video_->swapped_out_instances_.pop_front();
-        swapped_in_other = true;
-      }
-    }
-    if (!swapped_in_other) {
-      // Swap back in the previous instance.
-      video_->current_instance_ = std::move(video_->swapped_out_instances_.back());
-      video_->swapped_out_instances_.pop_back();
-    }
-    video_->SwapInCurrentInstance();
+  bool HasMoreInputData() override {
+    // If the input context hasn't been created yet then no data has been
+    // decoded, so more must exist.
+    return (!instance_->input_context() || (instance_->input_context()->processed_video <
+                                            instance_->stream_buffer()->data_size()));
   }
 
+  void set_instance(DecoderInstance* instance) { instance_ = instance; }
+
  private:
-  AmlogicVideo* video_;
-  bool multi_instance_;
+  DecoderInstance* instance_ = nullptr;
 };
 
 // Repeatedly try to process video, either it's all processed or until a flag is set.
@@ -333,10 +311,11 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitializeStreamBuffer(/*use_parser=*/false, 1024 * PAGE_SIZE,
                                                    /*is_secure=*/false));
 
-    TestFrameProvider frame_provider(video.get(), false);
+    TestFrameProvider frame_provider;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       static_cast<Vp9Decoder*>(video->video_decoder_)->SetFrameDataProvider(&frame_provider);
+      frame_provider.set_instance(video->current_instance());
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
     }
 
@@ -407,19 +386,21 @@ class TestVP9 {
     EXPECT_EQ(ZX_OK, video->InitRegisters(TestSupport::parent_device()));
     EXPECT_EQ(ZX_OK, video->InitDecoder());
 
-    TestFrameProvider frame_provider(video.get(), true);
+    std::vector<std::unique_ptr<TestFrameProvider>> frame_providers;
 
     for (uint32_t i = 0; i < 2; i++) {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       auto decoder = std::make_unique<Vp9Decoder>(video.get(), Vp9Decoder::InputType::kMultiStream,
                                                   false, false);
-      decoder->SetFrameDataProvider(&frame_provider);
+      frame_providers.push_back(std::make_unique<TestFrameProvider>());
+      decoder->SetFrameDataProvider(frame_providers.back().get());
       EXPECT_EQ(ZX_OK, decoder->InitializeBuffers());
       video->swapped_out_instances_.push_back(
           std::make_unique<DecoderInstance>(std::move(decoder), video->hevc_core_.get()));
       StreamBuffer* buffer = video->swapped_out_instances_.back()->stream_buffer();
       EXPECT_EQ(ZX_OK, video->AllocateStreamBuffer(buffer, PAGE_SIZE * 1024, /*use_parser=*/false,
                                                    /*is_secure=*/false));
+      frame_providers.back()->set_instance(video->swapped_out_instances_.back().get());
     }
 
     {

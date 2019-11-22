@@ -879,11 +879,6 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::FrameWasOutput() {
-  video_->AssertVideoDecoderLockHeld();
-  video_->TryToReschedule();
-}
-
 void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data) {
   video_->AssertVideoDecoderLockHeld();
   if (use_parser_) {

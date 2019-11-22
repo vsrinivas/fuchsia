@@ -31,7 +31,6 @@ class Vp9Decoder : public VideoDecoder {
     // Called with the decoder locked.
     virtual void ReadMoreInputData(Vp9Decoder* decoder) = 0;
     virtual void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) = 0;
-    virtual void FrameWasOutput() = 0;
     // Default behavior is for the benefit of test code; production
     // implementation overrides all the methods.
     virtual bool HasMoreInputData() { return true; }

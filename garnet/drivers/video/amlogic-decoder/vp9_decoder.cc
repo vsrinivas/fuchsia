@@ -674,7 +674,7 @@ void Vp9Decoder::HandleInterrupt() {
   if (dec_status == kVp9CommandDecodingDataDone) {
     state_ = DecoderState::kFrameJustProduced;
     frame_done_count_++;
-    frame_data_provider_->FrameWasOutput();
+    owner_->TryToReschedule();
     if (state_ != DecoderState::kSwappedOut) {
       // TODO: Avoid running the decoder if there's no input data or output
       // buffers available. Once it starts running we don't let it swap out, so

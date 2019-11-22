@@ -114,6 +114,10 @@ class VideoDecoder {
     // unprotected memory.
     virtual __WARN_UNUSED_RESULT zx_status_t SetProtected(ProtectableHardwareUnit unit,
                                                           bool protect) = 0;
+    // Signal that the scheduler should try scheduling a new decoder, either because the current
+    // decoder finished a frame or because a new decoder is now runnable.  Must be called with the
+    // decoder lock held.
+    virtual void TryToReschedule() = 0;
   };
 
   explicit VideoDecoder(Owner* owner, bool is_secure) : owner_(owner), is_secure_(is_secure) {

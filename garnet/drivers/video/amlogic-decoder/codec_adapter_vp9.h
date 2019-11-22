@@ -62,7 +62,6 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
 
   void ReadMoreInputData(Vp9Decoder* decoder) override;
   void ReadMoreInputDataFromReschedule(Vp9Decoder* decoder) override;
-  void FrameWasOutput() override;
   bool HasMoreInputData() override;
 
  private:

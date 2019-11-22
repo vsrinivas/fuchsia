@@ -71,6 +71,9 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   }
   __WARN_UNUSED_RESULT zx_status_t SetProtected(ProtectableHardwareUnit unit,
                                                 bool protect) override;
+  // This tries to schedule the next runnable decoder. It may leave the current
+  // decoder scheduled if no other decoder is runnable.
+  void TryToReschedule() override __TA_REQUIRES(video_decoder_lock_);
 
   // DecoderCore::Owner implementation.
   __WARN_UNUSED_RESULT
@@ -141,10 +144,6 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // it's guaranteed that the video decoder lock is already held. This can't
   // actually be implemented on top of std::mutex.
   void AssertVideoDecoderLockHeld() __TA_ASSERT(video_decoder_lock_) {}
-
-  // This tries to schedule the next runnable decoder. It may leave the current
-  // decoder scheduled if no other decoder is runnable.
-  void TryToReschedule() __TA_REQUIRES(video_decoder_lock_);
 
   __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
                                                         bool use_parser, bool is_secure);
