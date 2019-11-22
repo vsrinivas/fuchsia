@@ -29,13 +29,8 @@ pub enum EventType {
     /// The instance still exists in the parent's realm but will soon be removed.
     PreDestroyInstance,
 
-    /// The root realm has been created.
-    /// At this point, the manifest for the root component has been resolved and a RealmState
-    /// has been created for the root realm.
-    /// If this component has an execution, an instance will be started shortly after this event.
-    /// This event occurs exactly once in the lifetime of component manager and is used
-    /// for debugging purposes.
-    RootRealmCreated,
+    /// The root component instance's declaration was resolved successfully for the first time.
+    RootComponentResolved,
 
     /// A builtin capability is being requested by a component and requires routing.
     /// The event propagation system is used to supply the capability being requested.
@@ -85,7 +80,7 @@ pub enum Event {
     PreDestroyInstance {
         realm: Arc<Realm>,
     },
-    RootRealmCreated {
+    RootComponentResolved {
         realm: Arc<Realm>,
     },
     RouteBuiltinCapability {
@@ -126,7 +121,7 @@ impl Event {
             Event::AddDynamicChild { realm } => realm.clone(),
             Event::PostDestroyInstance { realm } => realm.clone(),
             Event::PreDestroyInstance { realm } => realm.clone(),
-            Event::RootRealmCreated { realm, .. } => realm.clone(),
+            Event::RootComponentResolved { realm } => realm.clone(),
             Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
             Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
             Event::StartInstance { realm, .. } => realm.clone(),
@@ -138,9 +133,9 @@ impl Event {
     pub fn type_(&self) -> EventType {
         match self {
             Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
+            Event::RootComponentResolved { .. } => EventType::RootComponentResolved,
             Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
             Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
-            Event::RootRealmCreated { .. } => EventType::RootRealmCreated,
             Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
             Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
             Event::StartInstance { .. } => EventType::StartInstance,

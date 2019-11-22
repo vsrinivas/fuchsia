@@ -72,14 +72,20 @@ impl Realm {
 
     /// Resolves and populates the component declaration of this realm's Instance, if not already
     /// populated.
-    pub async fn resolve_decl(&self) -> Result<(), ModelError> {
+    pub async fn resolve_decl(realm: &Arc<Self>) -> Result<(), ModelError> {
         // Call `resolve()` outside of lock.
-        let is_resolved = { self.lock_state().await.is_some() };
+        let is_resolved = { realm.lock_state().await.is_some() };
         if !is_resolved {
-            let component = self.resolver_registry.resolve(&self.component_url).await?;
-            let mut state = self.lock_state().await;
-            if state.is_none() {
-                *state = Some(RealmState::new(self, component.decl).await?);
+            let component = realm.resolver_registry.resolve(&realm.component_url).await?;
+            {
+                let mut state = realm.lock_state().await;
+                if state.is_none() {
+                    *state = Some(RealmState::new(realm, component.decl).await?);
+                }
+            }
+            if realm.abs_moniker.is_root() {
+                let event = Event::RootComponentResolved { realm: realm.clone() };
+                realm.hooks.dispatch(&event).await?;
             }
         }
         Ok(())
@@ -210,7 +216,7 @@ impl Realm {
     /// Adds the dynamic child defined by `child_decl` to the given `collection_name`. Once
     /// added, the component instance exists but is not bound.
     pub async fn add_dynamic_child(
-        &self,
+        realm: &Arc<Self>,
         collection_name: String,
         child_decl: &ChildDecl,
     ) -> Result<(), ModelError> {
@@ -220,9 +226,9 @@ impl Realm {
                 return Err(ModelError::unsupported("Eager startup"));
             }
         }
-        self.resolve_decl().await?;
+        Realm::resolve_decl(realm).await?;
         let child_realm = {
-            let mut state = self.lock_state().await;
+            let mut state = realm.lock_state().await;
             let state = state.as_mut().expect("add_dynamic_child: not resolved");
             let collection_decl = state
                 .decl()
@@ -235,21 +241,21 @@ impl Realm {
                 }
             }
             if let Some(child_realm) =
-                state.add_child_realm(self, child_decl, Some(collection_name.clone())).await
+                state.add_child_realm(realm, child_decl, Some(collection_name.clone())).await
             {
                 child_realm
             } else {
                 let partial_moniker =
                     PartialMoniker::new(child_decl.name.clone(), Some(collection_name));
                 return Err(ModelError::instance_already_exists(
-                    self.abs_moniker.clone(),
+                    realm.abs_moniker.clone(),
                     partial_moniker,
                 ));
             }
         };
         // Call hooks outside of lock
         let event = Event::AddDynamicChild { realm: child_realm.clone() };
-        self.hooks.dispatch(&event).await?;
+        realm.hooks.dispatch(&event).await?;
         Ok(())
     }
 
@@ -259,7 +265,7 @@ impl Realm {
         realm: Arc<Realm>,
         partial_moniker: &PartialMoniker,
     ) -> Result<(), ModelError> {
-        realm.resolve_decl().await?;
+        Realm::resolve_decl(&realm).await?;
         let mut state = realm.lock_state().await;
         let state = state.as_mut().expect("remove_dynamic_child: not resolved");
         if let Some(tup) = state.live_child_realms.get(&partial_moniker).map(|t| t.clone()) {

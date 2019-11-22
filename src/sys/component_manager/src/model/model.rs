@@ -97,9 +97,10 @@ impl BuiltinEnvironment {
             // This ensures that all events will reach this breakpoint system.
             model.root_realm.hooks.install(breakpoint_system.hooks()).await;
 
-            // Register for RootRealmCreated event to halt the ComponentManager
+            // Register for RootComponentResolved event to halt the ComponentManager when the
+            // root realm is first resolved.
             let root_realm_created_receiver =
-                breakpoint_system.register(vec![EventType::RootRealmCreated]).await;
+                breakpoint_system.register(vec![EventType::RootComponentResolved]).await;
 
             // Setup a capability provider for external use. This provider is not used
             // by components within component manager, hence there is no associated hook for it.
@@ -294,7 +295,7 @@ impl Model {
         let mut cur_realm = self.root_realm.clone();
         for moniker in look_up_abs_moniker.path().iter() {
             cur_realm = {
-                cur_realm.resolve_decl().await?;
+                Realm::resolve_decl(&cur_realm).await?;
                 let cur_state = cur_realm.lock_state().await;
                 let cur_state = cur_state.as_ref().expect("look_up_realm: not resolved");
                 if let Some(r) = cur_state.all_child_realms().get(moniker) {
@@ -304,7 +305,7 @@ impl Model {
                 }
             };
         }
-        cur_realm.resolve_decl().await?;
+        Realm::resolve_decl(&cur_realm).await?;
         Ok(cur_realm)
     }
 

@@ -184,7 +184,7 @@ impl BreakpointSystem {
                 EventType::AddDynamicChild,
                 EventType::PostDestroyInstance,
                 EventType::PreDestroyInstance,
-                EventType::RootRealmCreated,
+                EventType::RootComponentResolved,
                 EventType::RouteFrameworkCapability,
                 EventType::StartInstance,
                 EventType::StopInstance,

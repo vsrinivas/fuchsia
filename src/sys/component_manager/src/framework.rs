@@ -146,15 +146,17 @@ impl RealmCapabilityHostInner {
         cm_fidl_validator::validate_child(&child_decl)
             .map_err(|_| fsys::Error::InvalidArguments)?;
         let child_decl = child_decl.fidl_into_native();
-        realm.add_dynamic_child(collection.name, &child_decl).await.map_err(|e| match e {
-            ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
-            ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
-            ModelError::Unsupported { .. } => fsys::Error::Unsupported,
-            e => {
-                error!("add_dynamic_child() failed: {}", e);
-                fsys::Error::Internal
-            }
-        })?;
+        Realm::add_dynamic_child(&realm, collection.name, &child_decl).await.map_err(
+            |e| match e {
+                ModelError::InstanceAlreadyExists { .. } => fsys::Error::InstanceAlreadyExists,
+                ModelError::CollectionNotFound { .. } => fsys::Error::CollectionNotFound,
+                ModelError::Unsupported { .. } => fsys::Error::Unsupported,
+                e => {
+                    error!("add_dynamic_child() failed: {}", e);
+                    fsys::Error::Internal
+                }
+            },
+        )?;
         Ok(())
     }
 
@@ -165,7 +167,7 @@ impl RealmCapabilityHostInner {
         exposed_dir: ServerEnd<DirectoryMarker>,
     ) -> Result<(), fsys::Error> {
         let partial_moniker = PartialMoniker::new(child.name, child.collection);
-        realm.resolve_decl().await.map_err(|e| match e {
+        Realm::resolve_decl(&realm).await.map_err(|e| match e {
             ModelError::ResolverError { err } => {
                 debug!("failed to resolve: {:?}", err);
                 fsys::Error::InstanceCannotResolve
@@ -226,7 +228,7 @@ impl RealmCapabilityHostInner {
         collection: fsys::CollectionRef,
         iter: ServerEnd<fsys::ChildIteratorMarker>,
     ) -> Result<(), fsys::Error> {
-        realm.resolve_decl().await.map_err(|e| {
+        Realm::resolve_decl(&realm).await.map_err(|e| {
             error!("resolve_decl() failed: {}", e);
             fsys::Error::Internal
         })?;
