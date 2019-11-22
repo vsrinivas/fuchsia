@@ -137,6 +137,10 @@ bool NdmData::FindHeader(const NandBroker& nand) {
       ParseNdmData(nand.data(), &bad_blocks, &replacements);
 
       const NdmHeader& header = *reinterpret_cast<const NdmHeader*>(nand.data());
+      if (header.last_location != 1 || header.current_location != 1) {
+        // TODO(40208): Add support for ver 2.0.
+        break;
+      }
       if (header.sequence_num >= last) {
         last = header.sequence_num;
         header_page_ = page;
