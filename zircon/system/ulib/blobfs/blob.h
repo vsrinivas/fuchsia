@@ -218,11 +218,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
 
   // Initializes a compressed blob by reading it from disk and decompressing it.
   // Does not verify the blob.
-  zx_status_t InitCompressed(CompressionAlgorithm algorithm);
+  zx_status_t InitCompressed(CompressionAlgorithm algorithm, vmoid_t vmoid);
 
   // Initializes a decompressed blob by reading it from disk.
   // Does not verify the blob.
-  zx_status_t InitUncompressed();
+  zx_status_t InitUncompressed(vmoid_t vmoid);
 
   // Verifies the integrity of the in-memory Blob.
   // InitVmos() must have already been called for this blob.
@@ -244,7 +244,6 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // 1) The Merkle Tree
   // 2) The Blob itself, aligned to the nearest kBlobfsBlockSize
   fzl::OwnedVmoMapper mapping_;
-  vmoid_t vmoid_ = {};
 
   // Watches any clones of "vmo_" provided to clients.
   // Observes the ZX_VMO_ZERO_CHILDREN signal.
