@@ -279,12 +279,14 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Clie
 	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
 
-	// FIXME(40206) sl4f expects to be able to read metadata to determine
-	// if a path exists, but garbage can't be opened.
-	//err = (*rpcClient).FileDelete("/pkgfs/ctl/garbage")
-
 	// Since we're invoking system_updater.cmx directly, we need to do the GC ourselves
-	err = device.DeleteRemotePath("/pkgfs/ctl/garbage")
+	// FIXME(40913): every downgrade builder should at least build
+	// sl4f as a universe package, which would ensure rpcClient is non-nil here.
+	if *rpcClient == nil {
+		err = device.DeleteRemotePath("/pkgfs/ctl/garbage")
+	} else {
+		err = (*rpcClient).FileDelete("/pkgfs/ctl/garbage")
+	}
 	if err != nil {
 		t.Fatalf("error running GC: %v", err)
 	}
