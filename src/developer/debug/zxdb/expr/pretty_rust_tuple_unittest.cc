@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/expr/format_options.h"
 #include "src/developer/debug/zxdb/expr/format_test_support.h"
 #include "src/developer/debug/zxdb/expr/mock_eval_context.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -24,8 +25,7 @@ class PrettyRustTupleTest : public TestWithLoop {
 
   // Evaluates the given member, promotes the result to 64-bit and expects that it's equal to the
   // given value.
-  void ExpectMemberValue(const ExprValue& input, const std::string& member_name,
-                         int64_t expected) {
+  void ExpectMemberValue(const ExprValue& input, const std::string& member_name, int64_t expected) {
     PrettyRustTuple pretty;
 
     auto getter = pretty.GetMember(member_name);
@@ -73,7 +73,7 @@ TEST_F(PrettyRustTupleTest, Tuple) {
   };
 
   auto int32_type = MakeInt32Type();
-  auto type = MakeTestRustTuple(kMyStructName, {int32_type});
+  auto type = MakeRustTuple(kMyStructName, {int32_type});
 
   ExprValue value(type, std::vector<uint8_t>(std::begin(kMem), std::end(kMem)));
   FormatNode node("value", value);
@@ -104,7 +104,7 @@ TEST_F(PrettyRustTupleTest, TupleStruct) {
   };
 
   auto int32_type = MakeInt32Type();
-  auto type = MakeTestRustTuple(kMyStructName, {int32_type});
+  auto type = MakeRustTuple(kMyStructName, {int32_type});
 
   ExprValue value(type, std::vector<uint8_t>(std::begin(kMem), std::end(kMem)));
   FormatNode node("value", value);
@@ -135,7 +135,7 @@ TEST_F(PrettyRustTupleTest, Status) {
   };
 
   auto int32_type = MakeInt32Type();
-  auto type = MakeTestRustTuple(kRustStatusName, {int32_type});
+  auto type = MakeRustTuple(kRustStatusName, {int32_type});
 
   ExprValue value(type, std::vector<uint8_t>(std::begin(kMem), std::end(kMem)));
   FormatNode node("value", value);

@@ -17,6 +17,7 @@
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/namespace.h"
 #include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 
 namespace zxdb {
@@ -604,8 +605,8 @@ TEST_F(FormatValueConsoleTest, RustCollectionName) {
 TEST_F(FormatValueConsoleTest, RustTuple) {
   auto int32_type = MakeInt32Type();  // Won't be named like Rust's ints but doesn't matter.
   SymbolTestParentSetter int32_type_parent(int32_type, MakeRustUnit());
-  auto tuple_type = MakeTestRustTuple("(int32_t, int32_t)", {int32_type, int32_type});
-  auto tuple_struct_type = MakeTestRustTuple("MyTupleStruct", {int32_type, int32_type});
+  auto tuple_type = MakeRustTuple("(int32_t, int32_t)", {int32_type, int32_type});
+  auto tuple_struct_type = MakeRustTuple("MyTupleStruct", {int32_type, int32_type});
 
   // Data encoding 2 32-bit ints: 1 & 2.
   std::vector<uint8_t> data{1, 0, 0, 0, 2, 0, 0, 0};

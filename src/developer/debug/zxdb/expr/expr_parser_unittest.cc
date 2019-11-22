@@ -745,6 +745,32 @@ TEST_F(ExprParserTest, RustCast) {
       "  b\n",
       GetParseString("a[0]->b as Type", ExprLanguage::kRust, &TestLookupName));
 
+  // We can't actually cast to tuple, so these wouldn't evaluate, but we want to test the type
+  // parsing anyway.
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE((Type, Type, Type))\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as (Type, Type, Type)", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(())\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as ()", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE((Type,))\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as (Type,)", ExprLanguage::kRust, &TestLookupName));
+
+  EXPECT_EQ(
+      "CAST(Rust)\n"
+      " TYPE(Type)\n"
+      " IDENTIFIER(\"a\")\n",
+      GetParseString("a as (Type)", ExprLanguage::kRust, &TestLookupName));
+
   // Looks like a cast but it's not a type.
   auto result = Parse("a as NotType", ExprLanguage::kRust, &TestLookupName);
   EXPECT_FALSE(result);
@@ -755,6 +781,33 @@ TEST_F(ExprParserTest, RustCast) {
   result = Parse("a as Type", ExprLanguage::kC, &TestLookupName);
   EXPECT_FALSE(result);
   EXPECT_EQ("Unexpected identifier, did you forget an operator?", parser().err().msg());
+}
+
+TEST_F(ExprParserTest, BadRustTuples) {
+  auto result = Parse("a as (Type, NotType)", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected a type name but could not find a type named 'NotType'.",
+            parser().err().msg());
+
+  // Missing comma
+  result = Parse("a as (Type Type)", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("This looks like a declaration which is not supported.", parser().err().msg());
+
+  // Missing end
+  result = Parse("a as (Type, Type", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
+
+  // Missing end with comma
+  result = Parse("a as (Type,", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
+
+  // Missing end, no groupings.
+  result = Parse("a as (Type", ExprLanguage::kRust, &TestLookupName);
+  EXPECT_FALSE(result);
+  EXPECT_EQ("Expected ')' or ',' before end of input.", parser().err().msg());
 }
 
 TEST_F(ExprParserTest, CppCast) {

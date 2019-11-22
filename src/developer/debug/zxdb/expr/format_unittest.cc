@@ -19,6 +19,7 @@
 #include "src/developer/debug/zxdb/symbols/inherited_from.h"
 #include "src/developer/debug/zxdb/symbols/member_ptr.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 #include "src/developer/debug/zxdb/symbols/variant_part.h"
@@ -570,8 +571,7 @@ TEST_F(FormatTest, RustEnum) {
 }
 
 TEST_F(FormatTest, RustTuple) {
-  auto tuple_two_type =
-      MakeTestRustTuple("(int32_t, uint64_t)", {MakeInt32Type(), MakeUint64Type()});
+  auto tuple_two_type = MakeRustTuple("(int32_t, uint64_t)", {MakeInt32Type(), MakeUint64Type()});
   ExprValue tuple_two(tuple_two_type, {123, 0, 0, 0,               // int32_t member 0
                                        78, 0, 0, 0, 0, 0, 0, 0});  // uint64_t member 1
   FormatOptions opts;
@@ -582,7 +582,7 @@ TEST_F(FormatTest, RustTuple) {
       GetDebugTreeForValue(eval_context(), tuple_two, opts));
 
   // 1-element tuple struct.
-  auto tuple_struct_one_type = MakeTestRustTuple("Some", {MakeInt32Type()});
+  auto tuple_struct_one_type = MakeRustTuple("Some", {MakeInt32Type()});
   ExprValue tuple_struct_one(tuple_struct_one_type, {123, 0, 0, 0});  // int32_t member 0
   EXPECT_EQ(
       " = Some, \n"

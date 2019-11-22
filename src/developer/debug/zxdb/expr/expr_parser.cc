@@ -9,7 +9,9 @@
 #include "src/developer/debug/zxdb/expr/expr_tokenizer.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
 #include "src/developer/debug/zxdb/expr/template_type_extractor.h"
+#include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
@@ -453,7 +455,11 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
   //
   //   qualifier := "&" | "*" | "mut"
   //
-  //   type-id = qualifier* type-name
+  //   type-id = qualifier* (type-name | array-type | tuple-type)
+  //
+  //   array-type = "[" type ";" integer "]"
+  //
+  //   tuple-type = "(" type ("," type)* ")"
   //
   // This is simpler than the C++ case. Rust has some restrictions on how qualifiers appear, and
   // again we are more permissive, mostly because Rust's mutability constraints aren't important
@@ -498,16 +504,79 @@ fxl::RefPtr<Type> ExprParser::ParseType(fxl::RefPtr<Type> optional_base) {
       return nullptr;
     }
     const ExprToken& first_name_token = cur_token();  // For error blame below.
-    ParseNameResult parse_result = ParseName(false);
-    if (has_error())
-      return nullptr;
-    if (!parse_result.type) {
-      SetError(first_name_token,
-               fxl::StringPrintf("Expected a type name but could not find a type named '%s'.",
-                                 parse_result.ident.GetFullName().c_str()));
-      return nullptr;
+
+    if (language_ == ExprLanguage::kRust &&
+        (first_name_token.type() == ExprTokenType::kLeftSquare ||
+         first_name_token.type() == ExprTokenType::kLeftParen)) {
+      if (first_name_token.type() == ExprTokenType::kLeftParen) {
+        Consume();
+
+        std::vector<fxl::RefPtr<Type>> members;
+
+        bool expect_type = true;
+        while (!at_end() && cur_token().type() != ExprTokenType::kRightParen && expect_type) {
+          auto next = ParseType(nullptr);
+          if (!next) {
+            return nullptr;
+          }
+
+          members.push_back(std::move(next));
+
+          expect_type = !at_end() && cur_token().type() == ExprTokenType::kComma;
+          if (expect_type) {
+            Consume();
+          }
+        }
+
+        if (at_end()) {
+          SetError(ExprToken(), "Expected ')' or ',' before end of input.");
+          return nullptr;
+        } else if (cur_token().type() != ExprTokenType::kRightParen) {
+          SetError(cur_token(), "Expected ')' or ','.");
+          return nullptr;
+        } else {
+          Consume();
+        }
+
+        if (members.size() == 1 && !expect_type) {
+          // This was just a type in parentheses. Rust appears to handle this in this way so we will
+          // too.
+          return std::move(members[0]);
+        }
+
+        std::string name = "(";
+
+        for (const auto& type : members) {
+          if (name.size() > 1) {
+            name += ", ";
+          }
+
+          name += type->GetAssignedName();
+        }
+
+        if (members.size() == 1) {
+          name += ",";
+        }
+
+        name += ")";
+
+        return MakeRustTuple(name, members);
+      } else {
+        SetError(cur_token(), "Rust Array Types not supported yet.");
+        return nullptr;
+      }
+    } else {
+      ParseNameResult parse_result = ParseName(false);
+      if (has_error())
+        return nullptr;
+      if (!parse_result.type) {
+        SetError(first_name_token,
+                 fxl::StringPrintf("Expected a type name but could not find a type named '%s'.",
+                                   parse_result.ident.GetFullName().c_str()));
+        return nullptr;
+      }
+      type = std::move(parse_result.type);
     }
-    type = std::move(parse_result.type);
 
     for (size_t i = 0; i < pointer_levels; i++) {
       type = fxl::MakeRefCounted<ModifiedType>(DwarfTag::kPointerType, std::move(type));

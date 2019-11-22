@@ -229,24 +229,4 @@ fxl::RefPtr<Collection> MakeTestRustEnum() {
   return rust_enum;
 }
 
-fxl::RefPtr<Collection> MakeTestRustTuple(const std::string& name,
-                                          const std::vector<fxl::RefPtr<Type>>& members) {
-  auto coll = fxl::MakeRefCounted<Collection>(DwarfTag::kStructureType, name);
-  coll->set_parent(UncachedLazySymbol::MakeUnsafe(MakeRustUnit()));
-
-  uint32_t offset = 0;
-  std::vector<LazySymbol> data_members;
-  for (size_t i = 0; i < members.size(); i++) {
-    auto& type = members[i];
-    auto data = fxl::MakeRefCounted<DataMember>(fxl::StringPrintf("__%zu", i), type, offset);
-
-    data_members.emplace_back(std::move(data));
-    offset += type->byte_size();
-  }
-
-  coll->set_byte_size(offset);
-  coll->set_data_members(std::move(data_members));
-  return coll;
-}
-
 }  // namespace zxdb

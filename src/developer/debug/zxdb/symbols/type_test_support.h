@@ -11,6 +11,7 @@
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
 #include "src/developer/debug/zxdb/symbols/variant.h"
 
@@ -102,11 +103,6 @@ fxl::RefPtr<Collection> MakeRustEnum(const std::string& name, fxl::RefPtr<DataMe
 // interpretation of DWARF. The default discriminant matches any discriminant value that's not
 // otherwise explicitly encoded.
 fxl::RefPtr<Collection> MakeTestRustEnum();
-
-// To make a regular tuple give it a name according to the types you use in parens, e.g. "(u32,
-// Point)", to make a tuple struct, give it a word name like "Foo".
-fxl::RefPtr<Collection> MakeTestRustTuple(const std::string& name,
-                                          const std::vector<fxl::RefPtr<Type>>& members);
 
 }  // namespace zxdb
 

@@ -17,6 +17,11 @@ namespace zxdb {
 // Symbol::GetFullName() for that.
 Identifier GetSymbolScopePrefix(const Symbol* symbol);
 
+// To make a regular tuple give it a name according to the types you use in parens, e.g. "(u32,
+// Point)", to make a tuple struct, give it a word name like "Foo".
+fxl::RefPtr<Collection> MakeRustTuple(const std::string& name,
+                                      const std::vector<fxl::RefPtr<Type>>& members);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_UTILS_H_
