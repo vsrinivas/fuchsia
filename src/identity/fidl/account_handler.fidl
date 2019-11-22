@@ -78,28 +78,22 @@ using HashSalt = array<byte>:HASH_SALT_SIZE;
 protocol AccountHandlerControl {
     /// Creates a completely new Fuchsia account.
     ///
-    /// `context` An `AccountHandlerContext` that can supply account and
-    ///           authentication services and contextual state.
     /// `id` The new account's local identifier.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
     CreateAccount(
-        AccountHandlerContext context,
         fuchsia.identity.account.LocalAccountId id)
         -> () error fuchsia.identity.account.Error;
 
     /// Loads information about a Fuchsia account that was previously provisioned
     /// on the current device.
     ///
-    /// `context` An `AccountHandlerContext` that can supply account and
-    ///           authentication services and contextual state.
     /// `id` The account's local identifier.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
     LoadAccount(
-        AccountHandlerContext context,
         fuchsia.identity.account.LocalAccountId id)
         -> () error fuchsia.identity.account.Error;
 
@@ -156,14 +150,11 @@ protocol AccountHandlerControl {
     /// Moves the AccountHandler from the `Transferred` state to the
     /// `Initialized` state.
     ///
-    /// `context` An `AccountHandlerContext` that can supply account and
-    ///           authentication services and contextual state.
     /// `id` The account's local identifier.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Transferred`
     /// state.
     FinalizeAccountTransfer(
-        AccountHandlerContext context,
         fuchsia.identity.account.LocalAccountId id)
         -> () error fuchsia.identity.account.Error;
 
@@ -255,10 +246,9 @@ protocol AccountHandlerControl {
 /// An interface that supplies the account and authentication services that
 /// an AccountHandler needs to perform its role in the system.
 ///
-/// In the v2 Component architecture this service will be supplied into the
-/// namespace of AccountHandler by the component that launches it (i.e. the
-/// AccountManager).  Until then an AccountHandlerContext is supplied explicitly
-/// in the initialization calls on the AccountHandlerControl interface.
+/// This service is supplied into the namespace of AccountHandler by the
+/// component that launches it (i.e. the AccountManager).
+[Discoverable]
 protocol AccountHandlerContext {
     /// Connects an interface to a particular AuthProvider, launching it if
     /// necessary.

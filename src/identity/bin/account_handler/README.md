@@ -36,7 +36,8 @@ Persona channels may only be obtained from an Account channel.
 `AccountHandler` implements the
 fuchsia.identity.internal.AccountHandlerControl FIDL protocol. The crate's
 main function creates a single instance of `AccountHandler` and uses it to
-handle all incoming requests.
+handle all incoming requests. An `AccountHandlerContext` is supplied in
+Account Handler's namespace as it is launched.
 
 The AccountHandlerControl protocol allows for delayed initialization of the
 Account Handler; the first call received on the protocol must be one of the
@@ -65,10 +66,6 @@ metadata.
 
 The Account Handler is not yet fully complete. In particular the change listener
 protocols and local authentication state are not finished.
-
-Currently the AccountHandlerContext is passed explicitly from Account Manager to
-Account Handler in the initialization call. In the future this context will
-instead be supplied in Account Handler's namespace as it is launched.
 
 Currently Account Handler (and the associated FIDL protocol) only handles a
 single persona for each account. Eventually we will support the creation and

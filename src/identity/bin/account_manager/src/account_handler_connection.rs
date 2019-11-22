@@ -5,18 +5,13 @@
 use crate::account_handler_context::AccountHandlerContext;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
 use failure::{format_err, ResultExt};
-use fidl::endpoints::{ClientEnd, RequestStream};
 use fidl_fuchsia_identity_account::{Error, Lifetime};
-use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextMarker, AccountHandlerContextRequestStream, AccountHandlerControlMarker,
-    AccountHandlerControlProxy,
-};
+use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async as fasync;
 use fuchsia_component::client::App;
 use fuchsia_component::fuchsia_single_component_package_url;
 use fuchsia_component::server::ServiceFs;
-use fuchsia_zircon as zx;
 use futures::prelude::*;
 use log::{error, info, warn};
 use std::fmt;
@@ -63,7 +58,11 @@ impl AccountHandlerConnection {
     /// Note: This method is not public. Callers should use one of the factory methods that also
     /// sends an initialization call to the AccountHandler after connection, such as `load_account`
     /// or `create_account`
-    fn new(account_id: LocalAccountId, lifetime: Lifetime) -> Result<Self, AccountManagerError> {
+    fn new(
+        account_id: LocalAccountId,
+        lifetime: Lifetime,
+        context: Arc<AccountHandlerContext>,
+    ) -> Result<Self, AccountManagerError> {
         let account_handler_url = if lifetime == Lifetime::Ephemeral {
             info!("Launching new ephemeral AccountHandler instance");
             ACCOUNT_HANDLER_EPHEMERAL_URL
@@ -78,6 +77,15 @@ impl AccountHandlerConnection {
         // the environment name.
         let env_label = account_id.to_canonical_string();
         let mut fs_for_account_handler = ServiceFs::new();
+        fs_for_account_handler.add_fidl_service(move |stream| {
+            let context_clone = context.clone();
+            fasync::spawn(async move {
+                context_clone
+                    .handle_requests_from_stream(stream)
+                    .await
+                    .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
+            });
+        });
         let (env_controller, app) = fs_for_account_handler
             .launch_component_in_nested_environment(
                 account_handler_url.to_string(),
@@ -100,39 +108,16 @@ impl AccountHandlerConnection {
         &self.lifetime
     }
 
-    /// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
-    /// this channel using the supplied `AccountHandlerContext`, and returns the `ClientEnd`.
-    fn spawn_context_channel(
-        context: Arc<AccountHandlerContext>,
-    ) -> Result<ClientEnd<AccountHandlerContextMarker>, AccountManagerError> {
-        let (server_chan, client_chan) = zx::Channel::create()
-            .context("Failed to create channel")
-            .account_manager_error(Error::Resource)?;
-        let server_async_chan = fasync::Channel::from_channel(server_chan)
-            .context("Failed to create async channel")
-            .account_manager_error(Error::Resource)?;
-        let request_stream = AccountHandlerContextRequestStream::from_channel(server_async_chan);
-        let context_clone = Arc::clone(&context);
-        fasync::spawn(async move {
-            context_clone
-                .handle_requests_from_stream(request_stream)
-                .await
-                .unwrap_or_else(|err| error!("Error handling AccountHandlerContext: {:?}", err))
-        });
-        Ok(ClientEnd::new(client_chan))
-    }
-
     /// Launches a new AccountHandler component instance, establishes a connection to its control
     /// channel, and requests that it loads an existing account.
     pub async fn load_account(
         account_id: &LocalAccountId,
         context: Arc<AccountHandlerContext>,
     ) -> Result<Self, AccountManagerError> {
-        let connection = Self::new(account_id.clone(), Lifetime::Persistent)?;
-        let context_client_end = Self::spawn_context_channel(context)?;
+        let connection = Self::new(account_id.clone(), Lifetime::Persistent, Arc::clone(&context))?;
         match connection
             .proxy
-            .load_account(context_client_end, account_id.clone().into())
+            .load_account(account_id.clone().into())
             .await
             .account_manager_error(Error::Resource)?
         {
@@ -149,12 +134,11 @@ impl AccountHandlerConnection {
         lifetime: Lifetime,
     ) -> Result<(Self, LocalAccountId), AccountManagerError> {
         let account_id = LocalAccountId::new(rand::random::<u64>());
-        let connection = Self::new(account_id.clone(), lifetime)?;
-        let context_client_end = Self::spawn_context_channel(context)?;
+        let connection = Self::new(account_id.clone(), lifetime, Arc::clone(&context))?;
 
         match connection
             .proxy()
-            .create_account(context_client_end, account_id.clone().into())
+            .create_account(account_id.clone().into())
             .await
             .account_manager_error(Error::Resource)?
         {

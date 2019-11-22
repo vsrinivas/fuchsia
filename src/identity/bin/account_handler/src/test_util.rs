@@ -7,11 +7,12 @@
 
 use crate::common::AccountLifetime;
 use account_common::{LocalAccountId, LocalPersonaId};
-use fidl::endpoints::{create_endpoints, ClientEnd};
+use fidl::endpoints::{create_endpoints, create_proxy_and_stream};
 use fidl_fuchsia_auth::AppConfig;
 use fidl_fuchsia_identity_account::Error;
 use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextMarker, AccountHandlerContextRequest, AccountHandlerContextRequestStream,
+    AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerContextRequest,
+    AccountHandlerContextRequestStream,
 };
 use fuchsia_async as fasync;
 use futures::prelude::*;
@@ -102,20 +103,20 @@ impl FakeAccountHandlerContext {
 }
 
 /// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
-/// this channel using the supplied `FakeAccountHandlerContext`, and returns the `ClientEnd`.
+/// this channel using the supplied `FakeAccountHandlerContext`, and returns the
+/// `AccountHandlerContextProxy`.
 pub fn spawn_context_channel(
     context: Arc<FakeAccountHandlerContext>,
-) -> ClientEnd<AccountHandlerContextMarker> {
-    let (client_end, server_end) = create_endpoints().unwrap();
-    let request_stream = server_end.into_stream().unwrap();
+) -> AccountHandlerContextProxy {
+    let (proxy, stream) = create_proxy_and_stream::<AccountHandlerContextMarker>().unwrap();
     let context_clone = Arc::clone(&context);
     fasync::spawn(async move {
         context_clone
-            .handle_requests_from_stream(request_stream)
+            .handle_requests_from_stream(stream)
             .await
             .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
     });
-    client_end
+    proxy
 }
 
 #[cfg(test)]
@@ -125,8 +126,7 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn test_context_fake() {
         let fake_context = Arc::new(FakeAccountHandlerContext::new());
-        let client_end = spawn_context_channel(fake_context.clone());
-        let proxy = client_end.into_proxy().unwrap();
+        let proxy = spawn_context_channel(fake_context.clone());
         let (_, ap_server_end) = create_endpoints().expect("failed creating channel pair");
         assert_eq!(
             proxy.get_auth_provider("dummy_auth_provider", ap_server_end).await.unwrap(),

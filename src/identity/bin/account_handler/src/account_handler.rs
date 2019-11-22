@@ -5,14 +5,14 @@
 use crate::account::{Account, AccountContext};
 use crate::common::AccountLifetime;
 use crate::inspect;
-use account_common::{AccountManagerError, LocalAccountId, ResultExt};
-use failure::{format_err, ResultExt as _};
+use account_common::{AccountManagerError, LocalAccountId};
+use failure::format_err;
 use fidl::endpoints::{ClientEnd, ServerEnd};
 use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
 use fidl_fuchsia_identity_account::{AccountMarker, Error as ApiError};
 use fidl_fuchsia_identity_internal::{
-    AccountHandlerContextMarker, AccountHandlerContextProxy, AccountHandlerControlRequest,
-    AccountHandlerControlRequestStream, HASH_SALT_SIZE, HASH_SIZE,
+    AccountHandlerContextProxy, AccountHandlerControlRequest, AccountHandlerControlRequestStream,
+    HASH_SALT_SIZE, HASH_SIZE,
 };
 use fuchsia_inspect::{Inspector, Node, Property};
 use futures::prelude::*;
@@ -46,11 +46,14 @@ type GlobalIdHashSalt = [u8; HASH_SALT_SIZE as usize];
 /// The core state of the AccountHandler, i.e. the Account (once it is known) and references to
 /// the execution context and a TokenManager.
 pub struct AccountHandler {
-    // An optional `Account` that we are handling.
-    //
-    // This will be Uninitialized until a particular Account is established over the control
-    // channel. Then it will be initialized. When the AccountHandler is terminated, or its Account
-    // is removed, it reaches its final state, Finished.
+    /// An AccountHandlerContextProxy for this account.
+    context: AccountHandlerContextProxy,
+
+    /// An optional `Account` that we are handling.
+    ///
+    /// This will be Uninitialized until a particular Account is established over the control
+    /// channel. Then it will be initialized. When the AccountHandler is terminated, or its Account
+    /// is removed, it reaches its final state, Finished.
     account: RwLock<Lifecycle>,
 
     /// Lifetime for this account (ephemeral or persistent with a path).
@@ -63,9 +66,13 @@ pub struct AccountHandler {
 
 impl AccountHandler {
     /// Constructs a new AccountHandler.
-    pub fn new(lifetime: AccountLifetime, inspector: &Inspector) -> AccountHandler {
+    pub fn new(
+        context: AccountHandlerContextProxy,
+        lifetime: AccountLifetime,
+        inspector: &Inspector,
+    ) -> AccountHandler {
         let inspect = inspect::AccountHandler::new(inspector.root(), "uninitialized");
-        Self { account: RwLock::new(Lifecycle::Uninitialized), lifetime, inspect }
+        Self { context, account: RwLock::new(Lifecycle::Uninitialized), lifetime, inspect }
     }
 
     /// Asynchronously handles the supplied stream of `AccountHandlerControlRequest` messages.
@@ -86,12 +93,12 @@ impl AccountHandler {
         req: AccountHandlerControlRequest,
     ) -> Result<(), fidl::Error> {
         match req {
-            AccountHandlerControlRequest::CreateAccount { context, id, responder } => {
-                let mut response = self.create_account(id.into(), context).await;
+            AccountHandlerControlRequest::CreateAccount { id, responder } => {
+                let mut response = self.create_account(id.into()).await;
                 responder.send(&mut response)?;
             }
-            AccountHandlerControlRequest::LoadAccount { context, id, responder } => {
-                let mut response = self.load_account(id.into(), context).await;
+            AccountHandlerControlRequest::LoadAccount { id, responder } => {
+                let mut response = self.load_account(id.into()).await;
                 responder.send(&mut response)?;
             }
             AccountHandlerControlRequest::PrepareForAccountTransfer { responder } => {
@@ -144,22 +151,20 @@ impl AccountHandler {
         &'a self,
         construct_account_fn: F,
         id: LocalAccountId,
-        context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Result<(), AccountManagerError>
     where
         F: FnOnce(LocalAccountId, AccountLifetime, AccountHandlerContextProxy, &'a Node) -> Fut,
         Fut: Future<Output = Result<Account, AccountManagerError>>,
     {
-        let context_proxy = context
-            .into_proxy()
-            .context("Invalid AccountHandlerContext given")
-            .account_manager_error(ApiError::InvalidRequest)?;
-
         // The function evaluation is front loaded because await is not allowed while holding the
         // lock.
-        let account_result =
-            construct_account_fn(id, self.lifetime.clone(), context_proxy, self.inspect.get_node())
-                .await;
+        let account_result = construct_account_fn(
+            id,
+            self.lifetime.clone(),
+            self.context.clone(),
+            self.inspect.get_node(),
+        )
+        .await;
         let mut account_lock = self.account.write();
         match *account_lock {
             Lifecycle::Uninitialized => {
@@ -174,12 +179,8 @@ impl AccountHandler {
 
     /// Creates a new Fuchsia account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to `Initialized` state.
-    async fn create_account(
-        &self,
-        id: LocalAccountId,
-        context: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<(), ApiError> {
-        self.init_account(Account::create, id, context).await.map_err(|err| {
+    async fn create_account(&self, id: LocalAccountId) -> Result<(), ApiError> {
+        self.init_account(Account::create, id).await.map_err(|err| {
             warn!("Failed creating Fuchsia account: {:?}", err);
             err.into()
         })
@@ -187,12 +188,8 @@ impl AccountHandler {
 
     /// Loads an existing Fuchsia account and attaches it to this handler.  Moves
     /// the handler from the `Uninitialized` to `Initialized` state.
-    async fn load_account(
-        &self,
-        id: LocalAccountId,
-        context: ClientEnd<AccountHandlerContextMarker>,
-    ) -> Result<(), ApiError> {
-        self.init_account(Account::load, id, context).await.map_err(|err| {
+    async fn load_account(&self, id: LocalAccountId) -> Result<(), ApiError> {
+        self.init_account(Account::load, id).await.map_err(|err| {
             warn!("Failed loading Fuchsia account: {:?}", err);
             err.into()
         })
@@ -395,9 +392,10 @@ mod tests {
 
     fn create_account_handler(
         lifetime: AccountLifetime,
+        context: AccountHandlerContextProxy,
         inspector: Arc<Inspector>,
     ) -> (AccountHandlerControlProxy, impl Future<Output = ()>) {
-        let test_object = AccountHandler::new(lifetime, &inspector);
+        let test_object = AccountHandler::new(context, lifetime, &inspector);
         let (proxy, request_stream) = create_proxy_and_stream::<AccountHandlerControlMarker>()
             .expect("Failed to create proxy and stream");
 
@@ -420,16 +418,16 @@ mod tests {
         inspector: Arc<Inspector>,
         test_fn: TestFn,
     ) where
-        TestFn: FnOnce(AccountHandlerControlProxy, ClientEnd<AccountHandlerContextMarker>) -> Fut,
+        TestFn: FnOnce(AccountHandlerControlProxy) -> Fut,
         Fut: Future<Output = TestResult>,
     {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
-        let (proxy, server_fut) = create_account_handler(lifetime, inspector);
         let fake_context = Arc::new(FakeAccountHandlerContext::new());
-        let ahc_client_end = spawn_context_channel(fake_context);
+        let ahc_proxy = spawn_context_channel(fake_context);
+        let (proxy, server_fut) = create_account_handler(lifetime, ahc_proxy, inspector);
 
         let (test_res, _server_result) =
-            executor.run_singlethreaded(join(test_fn(proxy, ahc_client_end), server_fut));
+            executor.run_singlethreaded(join(test_fn(proxy), server_fut));
 
         assert!(test_res.is_ok());
     }
@@ -440,7 +438,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, _| {
+            |proxy| {
                 async move {
                     let (_, account_server_end) = create_endpoints().unwrap();
                     let (acp_client_end, _) = create_endpoints().unwrap();
@@ -460,16 +458,11 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
-
-                    let fake_context_2 = Arc::new(FakeAccountHandlerContext::new());
-                    let ahc_client_end_2 = spawn_context_channel(fake_context_2.clone());
+                    proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
                     assert_eq!(
-                        proxy
-                            .create_account(ahc_client_end_2, TEST_ACCOUNT_ID.clone().into())
-                            .await?,
+                        proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await?,
                         Err(ApiError::Internal)
                     );
                     Ok(())
@@ -485,11 +478,9 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::clone(&inspector),
-            |account_handler_proxy, ahc_client_end| {
+            |account_handler_proxy| {
                 async move {
-                    account_handler_proxy
-                        .create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into())
-                        .await??;
+                    account_handler_proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
 
                     assert_inspect_tree!(inspector, root: {
                         account_handler: contains {
@@ -530,9 +521,9 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+                    proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
                     Ok(())
                 }
             },
@@ -540,9 +531,9 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
-                    proxy.load_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+                    proxy.load_account(TEST_ACCOUNT_ID.clone().into()).await??;
                     Ok(())
                 }
             },
@@ -555,9 +546,9 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+                    proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
 
                     // Different given different salts
                     let mut salt_1 = [0u8; 32];
@@ -577,247 +568,193 @@ mod tests {
     fn test_account_transfer_states() {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |proxy, _ahc_client_end| {
-                async move {
-                    // TODO(satsukiu): add more meaningful tests once there's some functionality
-                    // to test
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "uninitialized",
-                        }
-                    });
-                    proxy.prepare_for_account_transfer().await??;
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "pendingTransfer",
-                        }
-                    });
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "transferred",
-                        }
-                    });
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(location.to_persistent_lifetime(), Arc::clone(&inspector), |proxy| {
+            async move {
+                // TODO(satsukiu): add more meaningful tests once there's some functionality
+                // to test
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "uninitialized",
+                    }
+                });
+                proxy.prepare_for_account_transfer().await??;
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "pendingTransfer",
+                    }
+                });
+                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "transferred",
+                    }
+                });
+                Ok(())
+            }
+        });
     }
 
     #[test]
     fn test_prepare_for_account_transfer_invalid_states() {
         // Handler in `PendingTransfer` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, _ahc_client_end| {
-                async move {
-                    proxy.prepare_for_account_transfer().await??;
-                    assert_eq!(
-                        proxy.prepare_for_account_transfer().await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.prepare_for_account_transfer().await??;
+                assert_eq!(
+                    proxy.prepare_for_account_transfer().await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
 
         // Handler in `Transferred` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, _ahc_client_end| {
-                async move {
-                    proxy.prepare_for_account_transfer().await??;
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
-                    assert_eq!(
-                        proxy.prepare_for_account_transfer().await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.prepare_for_account_transfer().await??;
+                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                assert_eq!(
+                    proxy.prepare_for_account_transfer().await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
 
         // Handler in `Initialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
-                async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
-                    assert_eq!(
-                        proxy.prepare_for_account_transfer().await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
+                assert_eq!(
+                    proxy.prepare_for_account_transfer().await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
     }
 
     #[test]
     fn test_perform_account_transfer_invalid_states() {
         // Handler in `Uninitialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, _ahc_client_end| {
-                async move {
-                    assert_eq!(
-                        proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                assert_eq!(
+                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
 
         // Handler in `Transferred` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, _ahc_client_end| {
-                async move {
-                    proxy.prepare_for_account_transfer().await??;
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
-                    assert_eq!(
-                        proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.prepare_for_account_transfer().await??;
+                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                assert_eq!(
+                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
 
         // Handler in `Initialized` state
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
-                async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
-                    assert_eq!(
-                        proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
-                        Err(ApiError::FailedPrecondition)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
+                assert_eq!(
+                    proxy.perform_account_transfer(&mut vec![].into_iter()).await?,
+                    Err(ApiError::FailedPrecondition)
+                );
+                Ok(())
+            }
+        });
     }
 
     #[test]
     fn test_finalize_account_transfer_unimplemented() {
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
-                async move {
-                    proxy.prepare_for_account_transfer().await??;
-                    proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
-                    assert_eq!(
-                        proxy
-                            .finalize_account_transfer(
-                                ahc_client_end,
-                                TEST_ACCOUNT_ID.clone().into()
-                            )
-                            .await?,
-                        Err(ApiError::UnsupportedOperation)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                proxy.prepare_for_account_transfer().await??;
+                proxy.perform_account_transfer(&mut vec![].into_iter()).await??;
+                assert_eq!(
+                    proxy.finalize_account_transfer(TEST_ACCOUNT_ID.clone().into()).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
+            }
+        });
     }
 
     #[test]
     fn test_load_ephemeral_account_fails() {
-        request_stream_test(
-            AccountLifetime::Ephemeral,
-            Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
-                async move {
-                    let expected_id = TEST_ACCOUNT_ID.clone();
-                    assert_eq!(
-                        proxy.load_account(ahc_client_end, expected_id.into()).await?,
-                        Err(ApiError::Internal)
-                    );
-                    Ok(())
-                }
-            },
-        );
+        request_stream_test(AccountLifetime::Ephemeral, Arc::new(Inspector::new()), |proxy| {
+            async move {
+                let expected_id = TEST_ACCOUNT_ID.clone();
+                assert_eq!(proxy.load_account(expected_id.into()).await?, Err(ApiError::Internal));
+                Ok(())
+            }
+        });
     }
 
     #[test]
     fn test_remove_account() {
         let location = TempLocation::new();
         let inspector = Arc::new(Inspector::new());
-        request_stream_test(
-            location.to_persistent_lifetime(),
-            Arc::clone(&inspector),
-            |proxy, ahc_client_end| {
-                async move {
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "uninitialized",
-                        }
-                    });
+        request_stream_test(location.to_persistent_lifetime(), Arc::clone(&inspector), |proxy| {
+            async move {
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "uninitialized",
+                    }
+                });
 
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "initialized",
-                            account: {
-                                local_account_id: TEST_ACCOUNT_ID_UINT,
-                                open_client_channels: 0u64,
-                            },
-                            default_persona: {
-                                local_persona_id: AnyProperty,
-                                open_client_channels: 0u64,
-                            },
-                        }
-                    });
+                proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "initialized",
+                        account: {
+                            local_account_id: TEST_ACCOUNT_ID_UINT,
+                            open_client_channels: 0u64,
+                        },
+                        default_persona: {
+                            local_persona_id: AnyProperty,
+                            open_client_channels: 0u64,
+                        },
+                    }
+                });
 
-                    // Keep an open channel to an account.
-                    let (account_client_end, account_server_end) = create_endpoints().unwrap();
-                    let (acp_client_end, _) = create_endpoints().unwrap();
-                    proxy.get_account(acp_client_end, account_server_end).await??;
-                    let account_proxy = account_client_end.into_proxy().unwrap();
+                // Keep an open channel to an account.
+                let (account_client_end, account_server_end) = create_endpoints().unwrap();
+                let (acp_client_end, _) = create_endpoints().unwrap();
+                proxy.get_account(acp_client_end, account_server_end).await??;
+                let account_proxy = account_client_end.into_proxy().unwrap();
 
-                    // Simple check that non-force account removal returns error due to not implemented.
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_OFF).await?,
-                        Err(ApiError::Internal)
-                    );
+                // Simple check that non-force account removal returns error due to not implemented.
+                assert_eq!(proxy.remove_account(FORCE_REMOVE_OFF).await?, Err(ApiError::Internal));
 
-                    // Make sure remove_account() can make progress with an open channel.
-                    proxy.remove_account(FORCE_REMOVE_ON).await??;
+                // Make sure remove_account() can make progress with an open channel.
+                proxy.remove_account(FORCE_REMOVE_ON).await??;
 
-                    assert_inspect_tree!(inspector, root: {
-                        account_handler: {
-                            lifecycle: "finished",
-                        }
-                    });
+                assert_inspect_tree!(inspector, root: {
+                    account_handler: {
+                        lifecycle: "finished",
+                    }
+                });
 
-                    // Make sure that the channel is in fact closed.
-                    assert!(account_proxy
-                        .get_auth_state(&mut DEFAULT_SCENARIO.clone())
-                        .await
-                        .is_err());
+                // Make sure that the channel is in fact closed.
+                assert!(account_proxy.get_auth_state(&mut DEFAULT_SCENARIO.clone()).await.is_err());
 
-                    // We cannot remove twice.
-                    assert_eq!(
-                        proxy.remove_account(FORCE_REMOVE_ON).await?,
-                        Err(ApiError::InvalidRequest)
-                    );
-                    Ok(())
-                }
-            },
-        );
+                // We cannot remove twice.
+                assert_eq!(
+                    proxy.remove_account(FORCE_REMOVE_ON).await?,
+                    Err(ApiError::InvalidRequest)
+                );
+                Ok(())
+            }
+        });
     }
 
     #[test]
@@ -826,7 +763,7 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, _| {
+            |proxy| {
                 async move {
                     assert_eq!(
                         proxy.remove_account(FORCE_REMOVE_ON).await?,
@@ -844,9 +781,9 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
-                    proxy.create_account(ahc_client_end, TEST_ACCOUNT_ID.clone().into()).await??;
+                    proxy.create_account(TEST_ACCOUNT_ID.clone().into()).await??;
 
                     // Keep an open channel to an account.
                     let (account_client_end, account_server_end) = create_endpoints().unwrap();
@@ -878,10 +815,10 @@ mod tests {
         request_stream_test(
             location.to_persistent_lifetime(),
             Arc::new(Inspector::new()),
-            |proxy, ahc_client_end| {
+            |proxy| {
                 async move {
                     assert_eq!(
-                        proxy.load_account(ahc_client_end, WRONG_ACCOUNT_ID).await?,
+                        proxy.load_account(WRONG_ACCOUNT_ID).await?,
                         Err(ApiError::NotFound)
                     );
                     Ok(())

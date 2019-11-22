@@ -3,9 +3,12 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "features": [ "isolated-persistent-storage" ],
+        "features": [
+            "isolated-persistent-storage"
+        ],
         "services": [
-            "fuchsia.logger.LogSink"
+            "fuchsia.logger.LogSink",
+            "fuchsia.identity.internal.AccountHandlerContext"
         ]
     }
 }

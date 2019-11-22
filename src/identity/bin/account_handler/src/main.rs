@@ -22,7 +22,9 @@ mod test_util;
 use crate::account_handler::AccountHandler;
 use crate::common::AccountLifetime;
 use failure::{Error, ResultExt};
+use fidl_fuchsia_identity_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
+use fuchsia_component::client::connect_to_service;
 use fuchsia_component::server::ServiceFs;
 use fuchsia_inspect::Inspector;
 use futures::StreamExt;
@@ -55,7 +57,10 @@ fn main() -> Result<(), Error> {
     let mut fs = ServiceFs::new();
     inspector.serve(&mut fs)?;
 
-    let account_handler = Arc::new(AccountHandler::new(lifetime, &inspector));
+    // TODO(dnordstrom): Find a testable way to inject global capabilities.
+    let context = connect_to_service::<AccountHandlerContextMarker>()
+        .expect("Error connecting to the AccountHandlerContext service");
+    let account_handler = Arc::new(AccountHandler::new(context, lifetime, &inspector));
     fs.dir("svc").add_fidl_service(move |stream| {
         let account_handler_clone = Arc::clone(&account_handler);
         fasync::spawn(async move {
