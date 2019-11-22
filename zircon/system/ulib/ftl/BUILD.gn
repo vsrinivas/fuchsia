@@ -46,3 +46,23 @@ config("config") {
   defines = [ "NDM_DEBUG" ]
   include_dirs = [ "." ]
 }
+
+zx_test("ftl_test") {
+  output_name = "ftl-lib-test"
+  sources = [
+    "test/ndm_test.cc",
+  ]
+  deps = [
+    ":ftl",
+    "$zx/system/ulib/zxtest",
+  ]
+  configs += [ ":config" ]
+}
+
+group("test") {
+  testonly = true
+  deps = [
+    ":ftl_test",
+  ]
+}
+

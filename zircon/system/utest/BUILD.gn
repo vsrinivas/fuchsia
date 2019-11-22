@@ -155,6 +155,7 @@ if (current_cpu != "") {
       "$zx/system/ulib/framebuffer:framebuffer-test",
       "$zx/system/ulib/fs:test",
       "$zx/system/ulib/fs-pty/test",
+      "$zx/system/ulib/ftl:test",
       "$zx/system/ulib/fvm/test",
       "$zx/system/ulib/fzl/test",
       "$zx/system/ulib/gfx/test",

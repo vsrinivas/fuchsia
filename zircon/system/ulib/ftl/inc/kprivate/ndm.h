@@ -51,6 +51,20 @@ typedef struct {
   ui8 type;                      // partition type - same as vstat()
 } NDMPartition;
 
+// Optional user data attached to a partition.
+typedef struct {
+  ui32 data_size;  // Number of bytes on |data|.
+  ui8 data[];
+} NDMPartitionUserData;
+
+// Partition information version 2.
+// TODO(40208): Merge with NDMPartition once the transition is made and the code
+// stops writing version 1 data.
+typedef struct {
+  NDMPartition basic_data;
+  NDMPartitionUserData user_data;
+} NDMPartitionInfo;
+
 // Driver count statistics for TargetNDM devices
 typedef struct {
   ui32 write_page;      // number of write_data_and_spare() calls
@@ -116,7 +130,8 @@ ui32 ndmPastPrevPair(CNDM ndm, ui32 pn);
 // Partitions API
 ui32 ndmGetNumPartitions(CNDM ndm);
 int ndmSetNumPartitions(NDM ndm, ui32 num_partitions);
-int ndmReadPartition(CNDM ndm, NDMPartition* part, ui32 part_num);
+const NDMPartitionInfo* ndmGetPartitionInfo(CNDM ndm);
+int ndmWritePartitionInfo(NDM ndm, const NDMPartitionInfo* partition);
 const NDMPartition* ndmGetPartition(CNDM ndm, ui32 part_num);
 int ndmWritePartition(NDM ndm, const NDMPartition* part, ui32 part_num, const char* name);
 void ndmDeletePartitionTable(NDM ndm);

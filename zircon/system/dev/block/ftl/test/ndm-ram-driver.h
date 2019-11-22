@@ -14,8 +14,9 @@ struct TestOptions {
   int ecc_error_interval;  // Controls simulation of ECC errors.
   int bad_block_interval;  // Controls simulation of bad blocks.
   bool use_half_size;      // Makes only half of the space visible.
+  bool save_config_data;   // Save options on the partition info.
 };
-constexpr TestOptions kDefaultTestOptions = {900, 50, false};
+constexpr TestOptions kDefaultTestOptions = {900, 50, false, false};
 
 // Ram-backed driver for testing purposes.
 class NdmRamDriver final : public ftl::NdmBaseDriver {
@@ -27,6 +28,8 @@ class NdmRamDriver final : public ftl::NdmBaseDriver {
 
   // Extends the visible volume to the whole size of the storage.
   bool DoubleSize();
+
+  void save_config_data(bool value) { test_options_.save_config_data = value; }
 
   void set_max_bad_blocks(uint32_t value) { options_.max_bad_blocks = value; }
   uint32_t num_bad_blocks() const { return num_bad_blocks_; }

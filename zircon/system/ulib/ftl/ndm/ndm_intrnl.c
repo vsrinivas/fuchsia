@@ -39,18 +39,23 @@ static void show_rbbl(Pair* list, ui32 cnt) {
 }
 #endif
 
-// get_ctrl_size: Count number of pages needed to write current
-//              control information
+// get_ctrl_size: Counts the number of pages needed to write current
+//              control information.
 //
-//       Input: ndm = pointer to NDM control block
+//       Input: ndm = pointer to NDM control block.
 //
-//     Returns: control info size in pages on success, 0 on failure
+//     Returns: control info size in pages on success, 0 on failure.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
 //
 static int get_ctrl_size(CNDM ndm) {
-  ui32 i, curr_loc = CTRL_DATA_START, num_pages = 0;
+  ui32 i, curr_loc, num_pages = 0;
+
+  const ui32 control_data_start = ndmGetHeaderControlDataStart(ndm);
 
   // Figure out how many control pages are needed. Each control page
-  // has a header (HDR_SIZE bytes). Control information has the
+  // has a header (CTRL_DATA_START bytes). Control information has the
   // following preamble:
   //   - device number of blocks + block size (8 bytes = 2 ui32s)
   //   - control block pointers (2)           (8 bytes = 2 ui32s)
@@ -63,6 +68,7 @@ static int get_ctrl_size(CNDM ndm) {
   //       - transferred block                (4 bytes = 1 ui32)
   //       - bad page in transferred block    (4 bytes = 1 ui32)
   //       - partial/full scan flag           (1 byte)
+  curr_loc = control_data_start;
   curr_loc += 8 * sizeof(ui32);
   if (ndm->xfr_tblk != (ui32)-1)
     curr_loc += 2 * sizeof(ui32) + 1;
@@ -79,7 +85,7 @@ static int get_ctrl_size(CNDM ndm) {
     // Add current entry.
     if (curr_loc + sizeof(ui32) > ndm->page_size) {
       ++num_pages;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
     curr_loc += sizeof(ui32);
 
@@ -99,7 +105,7 @@ static int get_ctrl_size(CNDM ndm) {
     // Add current entry.
     if (curr_loc + 2 * sizeof(ui32) > ndm->page_size) {
       ++num_pages;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
     curr_loc += 2 * sizeof(ui32);
 
@@ -107,7 +113,7 @@ static int get_ctrl_size(CNDM ndm) {
     if (i == ndm->num_rbb) {
       if (curr_loc + 2 * sizeof(ui32) > ndm->page_size) {
         ++num_pages;
-        curr_loc = CTRL_DATA_START;
+        curr_loc = control_data_start;
       }
       curr_loc += 2 * sizeof(ui32);
       break;
@@ -118,44 +124,169 @@ static int get_ctrl_size(CNDM ndm) {
   for (i = 0; i < ndm->num_partitions; ++i) {
     if (curr_loc + sizeof(NDMPartition) > ndm->page_size) {
       ++num_pages;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
     curr_loc += sizeof(NDMPartition);
   }
 
   // If last control page will be partially written, account for it.
-  if (curr_loc > CTRL_DATA_START)
+  if (curr_loc > control_data_start)
     ++num_pages;
 
   // Output number of control pages and return success.
   return num_pages;
 }
 
-// wr_ctrl_page: Write a page of control information to flash
+// write_crc: Writes a new crc to an NDM control block.
 //
-//      Inputs: ndm = pointer to NDM control block
-//              cpc = current control page count
-//   In/Output: *curr_pnp = page number where next page is written
-//      Output: *badblkp = bad block number (if page write fails)
+//      Inputs: ndm = pointer to NDM control block.
 //
-//     Returns: 0 if successful, -1 if block failed while writing, -2
-//              if fatal error
+//     Preconditions: Header version 1.1.
 //
-static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
-  ui32 cpn = *curr_pnp, crc = CRC32_START, i;
-  int rc;
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
+//
+static void write_crc(CNDM ndm) {
+  ui32 crc = CRC32_START, i;
 
-  // Fill current page count in header.
-  WR16_LE(cpc, &ndm->main_buf[HDR_CURR_LOC]);
+  ui32 crc_location = HDR_CRC_LOC;
+  const ui32 data_start = ndmGetHeaderControlDataStart(ndm);
+  if (ndm->version_2) {
+    crc_location += HDR_V2_SHIFT;
+  }
 
-  // Perform CRC over page contents and write it on the page.
+  // First perform CRC on all but the 4 CRC bytes.
   for (i = 0; i < ndm->page_size; ++i) {
-    if (i == HDR_CRC_LOC)
-      i = CTRL_DATA_START;
+    if (i == crc_location) {
+      i = data_start;
+    }
     crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
   }
+
   crc = ~crc;
-  WR32_LE(crc, &ndm->main_buf[HDR_CRC_LOC]);  // lint !e850
+  WR32_LE(crc, &ndm->main_buf[crc_location]);  // lint !e850
+}
+
+// ndmReadControlCrc: Calculates the crc of an NDM control block.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: page crc.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//
+ui32 ndmReadControlCrc(CNDM ndm) {
+  ui32 crc, i;
+  ui32 crc_location = HDR_CRC_LOC;
+  ui32 data_start = CTRL_DATA_START;
+
+  // Shift header data for version 2.
+  if (RD16_LE(&ndm->main_buf[0]) != 1) {
+    crc_location += HDR_V2_SHIFT;
+    data_start += HDR_V2_SHIFT;
+  }
+
+  // Perform CRC on page. The 4 CRC bytes are in the page header.
+  // First perform CRC on all but the 4 CRC bytes.
+  for (crc = CRC32_START, i = 0; i < ndm->page_size; ++i) {
+    if (i == crc_location) {
+      i = data_start;
+    }
+    crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
+  }
+
+  // Now run the CRC bytes through the CRC encoding.
+  for (i = crc_location; i < data_start; ++i) {  // lint !e850
+    crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
+  }
+
+  return crc;
+}
+
+// ndmGetHeaderCurrentLocation: Returns the location of |current_location|.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: Offset within the control header.
+//
+ui32 ndmGetHeaderCurrentLocation(CNDM ndm) {
+  ui32 current_location = HDR_CURR_LOC;
+  if (ndm->version_2) {
+    current_location += HDR_V2_SHIFT;
+  }
+  return current_location;
+}
+
+// ndmGetHeaderLastLocation: Returns the location of |last_location|.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: Offset within the control header.
+//
+ui32 ndmGetHeaderLastLocation(CNDM ndm) {
+  ui32 last_location = HDR_LAST_LOC;
+  if (ndm->version_2) {
+    last_location += HDR_V2_SHIFT;
+  }
+  return last_location;
+}
+
+// ndmGetHeaderSequenceLocation: Returns the location of |sequence_location|.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: Offset within the control header.
+//
+ui32 ndmGetHeaderSequenceLocation(CNDM ndm) {
+  ui32 sequence_location = HDR_SEQ_LOC;
+  if (ndm->version_2) {
+    sequence_location += HDR_V2_SHIFT;
+  }
+  return sequence_location;
+}
+
+// ndmGetHeaderControlDataStart: Returns the location of |control_data_start|.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: Offset within the control header.
+//
+ui32 ndmGetHeaderControlDataStart(CNDM ndm) {
+  ui32 control_data_start = CTRL_DATA_START;
+  if (ndm->version_2) {
+    control_data_start += HDR_V2_SHIFT;
+  }
+  return control_data_start;
+}
+
+// wr_ctrl_page: Writes a page of control information to flash.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//              cpc = current control page count.
+//   In/Output: *curr_pnp = page number where next page is written.
+//      Output: *badblkp = bad block number (if page write fails).
+//
+//     Returns: 0 if successful, -1 if block failed while writing,
+//              -2 if fatal error.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
+//
+static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
+  ui32 cpn = *curr_pnp;
+  int rc;
+
+  const ui32 current_location = ndmGetHeaderCurrentLocation(ndm);
+  if (ndm->version_2) {
+    // Write version information.
+    WR16_LE(2, &ndm->main_buf[0]);
+    WR16_LE(0, &ndm->main_buf[sizeof(ui16)]);
+  }
+
+  // Fill current page count in header.
+  WR16_LE(cpc, &ndm->main_buf[current_location]);
+
+  write_crc(ndm);
 
   // Write page to flash. Check for error indication.
   rc = ndm->write_page(cpn, ndm->main_buf, ndm->spare_buf, NDM_ECC_VAL, ndm->dev);
@@ -230,13 +361,16 @@ static int wr_ctrl_page(NDM ndm, ui32 cpc, ui32* curr_pnp, ui32* badblkp) {
   return 0;
 }
 
-// wr_ctrl_info: Write NDM control information
+// wr_ctrl_info: Writes NDM control information.
 //
-//      Inputs: ndm = pointer to NDM control block
-//              frst_page = first page to write to
-//      Output: *badblkp = number of bad control block (if any)
+//      Inputs: ndm = pointer to NDM control block.
+//              frst_page = first page to write to.
+//      Output: *badblkp = number of bad control block (if any).
 //
-//     Returns: 0 if successful, -1 if block failed, -2 if fatal error
+//     Returns: 0 if successful, -1 if block failed, -2 if fatal error.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
 //
 static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
   ui32 i, curr_loc, write_count = 1, cpn = frst_page;
@@ -261,12 +395,16 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
 
   // Set the constant part of the control page header: last location
   // and sequence number. The current location varies with page number.
-  WR16_LE(ndm->ctrl_pages, &ndm->main_buf[HDR_LAST_LOC]);
+  const ui32 last_location = ndmGetHeaderLastLocation(ndm);
+  const ui32 sequence_location = ndmGetHeaderSequenceLocation(ndm);
+  const ui32 control_data_start = ndmGetHeaderControlDataStart(ndm);
+
+  WR16_LE(ndm->ctrl_pages, &ndm->main_buf[last_location]);
   ++ndm->ctrl_seq;
-  WR32_LE(ndm->ctrl_seq, &ndm->main_buf[HDR_SEQ_LOC]);
+  WR32_LE(ndm->ctrl_seq, &ndm->main_buf[sequence_location]);
 
   // Set the first control page data, starting with the device size.
-  curr_loc = CTRL_DATA_START;
+  curr_loc = control_data_start;
   WR32_LE(ndm->num_dev_blks, &ndm->main_buf[curr_loc]);
   curr_loc += sizeof(ui32);
   WR32_LE(ndm->block_size, &ndm->main_buf[curr_loc]);
@@ -300,7 +438,7 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
   curr_loc += sizeof(ui32);
 
   // If bad block transfer, add remaining bad block transfer info.
-  if (ndm->xfr_tblk != (ui32)-1) {
+  if (ndm->xfr_tblk != (ui32)-1 || ndm->version_2) {
     // Add physical block number of the bad block being transferred.
     WR32_LE(ndm->xfr_fblk, &ndm->main_buf[curr_loc]);
     curr_loc += sizeof(ui32);
@@ -309,8 +447,10 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
     WR32_LE(ndm->xfr_bad_po, &ndm->main_buf[curr_loc]);
     curr_loc += sizeof(ui32);
 
-    // Add (legacy) partial scan flag.
-    ndm->main_buf[curr_loc++] = PARTIAL_SCAN;
+    if (!ndm->version_2) {
+      // Add (legacy) partial scan flag.
+      ndm->main_buf[curr_loc++] = PARTIAL_SCAN;
+    }
 
 #if NDM_DEBUG
     printf("  -> xfr_tblk       = %u\n", ndm->xfr_tblk);
@@ -318,9 +458,11 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
     printf("  -> xfr_bad_po     = %u\n", ndm->xfr_bad_po);
 #endif
   }
+
 #if NDM_DEBUG
-  else
+  if (ndm->xfr_tblk == (ui32)-1) {
     puts("  -> xfr_tblk      = -1");
+  }
 #endif
 
   // Write the number of partitions.
@@ -337,7 +479,7 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
       status = wr_ctrl_page(ndm, write_count++, &cpn, badblkp);
       if (status)
         return status;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
 
     // Add next bad block.
@@ -360,7 +502,7 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
       status = wr_ctrl_page(ndm, write_count++, &cpn, badblkp);
       if (status)
         return status;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
 
     // If end of running bad blocks map reached, mark end.
@@ -391,12 +533,19 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
     ui32 j;
 #endif
 
+    size_t partition_size = sizeof(NDMPartition);
+    if (ndm->version_2) {
+      PfAssert(ndm->num_partitions == 1);
+      NDMPartitionInfo* info = (NDMPartitionInfo*)(ndm->partitions);
+      partition_size += sizeof(ui32) + info->user_data.data_size;
+    }
+
     // If next write would go past end of control page, write page.
-    if (curr_loc + sizeof(NDMPartition) > ndm->page_size) {
+    if (curr_loc + partition_size > ndm->page_size) {
       status = wr_ctrl_page(ndm, write_count++, &cpn, badblkp);
       if (status)
         return status;
-      curr_loc = CTRL_DATA_START;
+      curr_loc = control_data_start;
     }
 
     // Write partition first block.
@@ -421,6 +570,15 @@ static int wr_ctrl_info(NDM ndm, ui32 frst_page, ui32* badblkp) {
 
     // Write the partition type.
     ndm->main_buf[curr_loc++] = ndm->partitions[i].type;
+
+    if (ndm->version_2) {
+      PfAssert(ndm->num_partitions == 1);
+      NDMPartitionInfo* info = (NDMPartitionInfo*)(ndm->partitions);
+      WR32_LE(info->user_data.data_size, &ndm->main_buf[curr_loc]);
+      curr_loc += sizeof(ui32);
+      memcpy(&ndm->main_buf[curr_loc], info->user_data.data, info->user_data.data_size);
+      curr_loc += info->user_data.data_size;
+    }
 
 #if NDM_DEBUG
     printf("  -> partition[%2u]:\n", i);
@@ -1533,6 +1691,66 @@ int ndmSetNumPartitions(NDM ndm, ui32 num_partitions) {
   ndm->num_partitions = num_partitions;
 
   // Return success.
+  return 0;
+}
+
+// ndmGetPartitionInfo: Reads partition information.
+//
+//      Inputs: ndm = pointer to NDM control block.
+//
+//     Returns: Pointer to the partition data, if available.
+//
+//     Preconditions: Writing of header version 2 is enabled.
+//
+const NDMPartitionInfo* ndmGetPartitionInfo(CNDM ndm) {
+  if (!ndm->version_2) {
+    return NULL;
+  }
+
+  return (NDMPartitionInfo*)ndm->partitions;
+}
+
+// ndmWritePartitionInfo: Writes a partition entry into partitions table.
+//
+//      Inputs: ndm = pointer to NDM control block
+//              partition = buffer to get partition information from
+//
+//     Returns: 0 on success, -1 on error
+//
+//     Preconditions: Writing of header version 2 is enabled.
+//
+int ndmWritePartitionInfo(NDM ndm, const NDMPartitionInfo* partition) {
+  PfAssert(partition->user_data.data_size % sizeof(ui32) == 0);
+
+  if (ndm->num_partitions > 1) {
+    return FsError2(NDM_CFG_ERR, EINVAL);
+  }
+
+  // Check partition boundaries.
+  if (partition->basic_data.first_block >= ndm->num_vblks ||
+      partition->basic_data.first_block + partition->basic_data.num_blocks > ndm->num_vblks) {
+    return FsError2(NDM_CFG_ERR, EINVAL);
+  }
+
+  size_t partition_size = sizeof(NDMPartition) + sizeof(ui32) + partition->user_data.data_size;
+
+  // Allocate space for the new partition info.
+  NDMPartitionInfo* new_partition = FsCalloc(1, partition_size);
+  if (!new_partition) {
+    return FsError2(NDM_ENOMEM, ENOMEM);
+  }
+
+  if (ndm->partitions) {
+    FsFree(ndm->partitions);
+  }
+
+  // Set the new partition information in the NDM.
+  ndm->partitions = &new_partition->basic_data;
+  ndm->num_partitions = 1;
+  ndm->version_2 = TRUE;
+
+  // Copy the partition info.
+  memcpy(new_partition, partition, partition_size);
   return 0;
 }
 

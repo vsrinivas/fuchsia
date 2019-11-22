@@ -328,7 +328,7 @@ TEST_F(FtlTest, MultiplePass) {
   }
 }
 
-class FtlExtendTest : public FtlTest {
+class FtlTestWithDriverAccess : public FtlTest {
  public:
   void SetUp() override {}
 
@@ -337,7 +337,7 @@ class FtlExtendTest : public FtlTest {
   void SetUpBaseTest();
 };
 
-void FtlExtendTest::SetUpBaseTest() {
+void FtlTestWithDriverAccess::SetUpBaseTest() {
   srand(zxtest::Runner::GetInstance()->random_seed());
   volume_ = ftl_.volume();
   ASSERT_OK(volume_->Unmount());
@@ -345,6 +345,8 @@ void FtlExtendTest::SetUpBaseTest() {
   write_counters_.reset(new uint8_t[ftl_.num_pages()], ftl_.num_pages());
   memset(write_counters_.data(), 0, write_counters_.size());
 }
+
+using FtlExtendTest = FtlTestWithDriverAccess;
 
 TEST_F(FtlExtendTest, ExtendVolume) {
   TestOptions driver_options = kDefaultTestOptions;
@@ -517,6 +519,68 @@ TEST(FtlTest, WearCountDistribution) {
   }
   // In aggregate, the tail must be better than flat.
   EXPECT_GT(15, close_to_fall_of);
+}
+
+using FtlUpgradeTest = FtlTestWithDriverAccess;
+
+// Verifies that the NDM header at page |page_num| matches the desired version.
+// |buffer| is a scratch buffer to read the page.
+void CheckNdmHeaderVersion(NdmRamDriver* driver, uint32_t page_num, uint16_t major,
+                           uint16_t minor, void* buffer) {
+  struct Header {
+    uint16_t major_version;
+    uint16_t minor_version;
+  };
+  auto header = reinterpret_cast<Header*>(buffer);
+  ASSERT_EQ(0, driver->NandRead(page_num, 1, buffer, nullptr));
+  EXPECT_EQ(major, header->major_version);
+  EXPECT_EQ(minor, header->minor_version);
+}
+
+// Verifies that the NDM control header can be upgraded to version 2. This test
+// relies on internal data of the NDM and the actual behavior of the code (like
+// where each header is saved), which is not ideal, but it's required to make
+// sure things work as expected.
+TEST_F(FtlUpgradeTest, UpgradesToVersion2) {
+  auto driver_to_pass = std::make_unique<NdmRamDriver>(kDefaultOptions);
+
+  // Retain a pointer. The driver's lifetime is tied to ftl_.
+  NdmRamDriver* driver = driver_to_pass.get();
+  ASSERT_EQ(driver->Init(), nullptr);
+  ASSERT_TRUE(ftl_.InitWithDriver(std::move(driver_to_pass)));
+  SetUpBaseTest();
+
+  // Do a pass using the old format (default).
+  const int kWriteSize = 5;
+  ASSERT_NO_FAILURES(SingleLoop(kWriteSize));
+
+  // The test went through 15 bad blocks so there should be 30 control blocks.
+  const uint32_t kControlPage0 = 299 * 64;  // First page of last block.
+  const uint32_t kControlPage1 = 298 * 64;  // First page of previous block.
+  void* buffer = page_buffer_.data();
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 1, 1, buffer));
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0 + 30, 1, 1, buffer));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage0 + 31, 1, buffer, nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1, 1, buffer, nullptr));
+
+  // Now use the new partition format.
+  driver->save_config_data(true);
+  ASSERT_TRUE(ftl_.ReAttach());
+
+  // Verify the contents of the volume.
+  ASSERT_NO_FATAL_FAILURES(CheckVolume(kWriteSize, ftl_.num_pages()));
+
+  // Verify that the volume is usable and that reading the new format from disk works.
+  ASSERT_OK(volume_->Unmount());
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage1, 2, 0, page_buffer_.data()));
+  ASSERT_NO_FAILURES(SingleLoop(kWriteSize));
+
+  // Only one new control block must be present.
+  buffer = page_buffer_.data();
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0, 1, 1, buffer));
+  ASSERT_NO_FAILURES(CheckNdmHeaderVersion(driver, kControlPage0 + 30, 1, 1, buffer));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage0 + 31, 1, buffer, nullptr));
+  ASSERT_EQ(ftl::kNdmUncorrectableEcc, driver->NandRead(kControlPage1 + 1, 1, buffer, nullptr));
 }
 
 }  // namespace

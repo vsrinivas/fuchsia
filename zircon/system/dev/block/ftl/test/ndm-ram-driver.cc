@@ -66,7 +66,7 @@ const char* NdmRamDriver::Init() {
 }
 
 const char* NdmRamDriver::Attach(const ftl::Volume* ftl_volume) {
-  return CreateNdmVolume(ftl_volume, options_);
+  return CreateNdmVolume(ftl_volume, options_, test_options_.save_config_data);
 }
 
 bool NdmRamDriver::Detach() { return RemoveNdmVolume(); }

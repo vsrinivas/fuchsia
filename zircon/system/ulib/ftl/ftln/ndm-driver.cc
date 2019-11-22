@@ -6,6 +6,8 @@
 
 #include <zircon/assert.h>
 
+#include <memory>
+
 #include "ftl_private.h"
 #include "inc/kprivate/fsprivate.h"
 #include "inc/kprivate/ndm.h"
@@ -16,6 +18,41 @@ namespace ftl {
 namespace {
 
 bool g_init_performed = false;
+
+// Extra configuration data saved to the partition info.
+struct UserData {
+  uint16_t major_version = 1;
+  uint16_t minor_version = 0;
+  uint32_t ftl_flags;  // Flags used to create the FtlNdmVol structure.
+  uint32_t extra_free;  // Overallocation for the FTL.
+  uint32_t reserved_1[5];
+  VolumeOptions options;
+  uint32_t reserved_2[10];
+};
+static_assert(sizeof(UserData) == 96);
+
+// This structure exposes the two views into the partition data.
+// See inc/kprivate/ndm.h for the definition of NDMPartitionInfo.
+union PartitionInfo {
+  NDMPartitionInfo ndm;
+  struct {
+    // This is the equivalent structure, with an explicit |data| field of the
+    // "correct" type, instead of just a placeholder. In this case, |data_size|
+    // tracks |data|.
+    NDMPartition basic_data;
+    uint32_t data_size = sizeof(UserData);
+    UserData data;
+  } exploded;
+};
+static_assert(sizeof(NDMPartition) + sizeof(uint32_t) == sizeof(NDMPartitionInfo));
+static_assert(sizeof(NDMPartitionInfo) + sizeof(UserData) == sizeof(PartitionInfo));
+
+// Fills |data| with the desired configuration info.
+void CopyConfigData(const VolumeOptions& options, const FtlNdmVol& ftl, UserData* data) {
+  data->ftl_flags = ftl.flags;
+  data->extra_free = ftl.extra_free;
+  data->options = options;
+}
 
 // Implementation of the driver interface:
 
@@ -140,7 +177,8 @@ bool NdmBaseDriver::BadBbtReservation() const {
   }
 }
 
-const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options) {
+const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
+                                           bool save_volume_data) {
   if (!ndm_) {
     IsNdmDataPresent(options);
   }
@@ -153,12 +191,8 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
     return "ndmSetNumPartitions failed";
   }
 
-  NDMPartition partition = {};
-  partition.num_blocks = ndmGetNumVBlocks(ndm_) - partition.first_block;
-  if (ndmWritePartition(ndm_, &partition, 0, "ftl") != 0) {
-    return "ndmWritePartition failed";
-  }
-
+  PartitionInfo partition = {};
+  partition.exploded = {};  // Initialize the "real" structure.
   FtlNdmVol ftl = {};
   XfsVol xfs = {};
 
@@ -166,6 +200,27 @@ const char* NdmBaseDriver::CreateNdmVolume(const Volume* ftl_volume, const Volum
   ftl.cached_map_pages = options.num_blocks * (options.block_size / options.page_size);
   ftl.extra_free = 6;  // Over-provision 6% of the device.
   xfs.ftl_volume = const_cast<Volume*>(ftl_volume);
+
+  partition.exploded.basic_data.num_blocks = ndmGetNumVBlocks(ndm_);
+  strncpy(partition.exploded.basic_data.name, "ftl", sizeof(partition.exploded.basic_data.name));
+  CopyConfigData(options, ftl, &partition.exploded.data);
+
+  if (save_volume_data) {
+    const NDMPartitionInfo* info = ndmGetPartitionInfo(ndm_);
+    if (ndmWritePartitionInfo(ndm_, &partition.ndm) != 0) {
+      return "ndmWritePartitionInfo failed";
+    }
+    if (!info && !(options.flags & kReadOnlyInit)) {
+      // There was no volume information saved, save it now.
+      if (ndmSavePartitionTable(ndm_) != 0) {
+        return "ndmSavePartitionTable failed";
+      }
+    }
+  } else {
+    if (ndmWritePartition(ndm_, &partition.ndm.basic_data, 0, "ftl") != 0) {
+      return "ndmWritePartition failed";
+    }
+  }
 
   if (ndmAddVolFTL(ndm_, 0, &ftl, &xfs) == NULL) {
     return "ndmAddVolFTL failed";
@@ -204,6 +259,24 @@ bool NdmBaseDriver::IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, cons
     }
   }
   return true;
+}
+
+const VolumeOptions* NdmBaseDriver::GetSavedOptions() const {
+  const NDMPartitionInfo* partition = ndmGetPartitionInfo(ndm_);
+  if (!partition) {
+    return nullptr;
+  }
+
+  auto info = reinterpret_cast<const PartitionInfo*>(partition);
+  if (info->exploded.data_size != sizeof(UserData)) {
+    return nullptr;
+  }
+
+  if (info->exploded.data.major_version != 1) {
+    return nullptr;
+  }
+
+  return &info->exploded.data.options;
 }
 
 __EXPORT

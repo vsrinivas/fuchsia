@@ -106,8 +106,10 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // before calling CreateNdmVolume().
   bool BadBbtReservation() const;
 
-  // Creates the underlying NDM volume, with the provided parameters.
-  const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options);
+  // Creates the underlying NDM volume, with the provided parameters. Setting
+  // |save_volume_data| to true enables writing of NDM control data version 2.
+  const char* CreateNdmVolume(const Volume* ftl_volume, const VolumeOptions& options,
+                              bool save_volume_data = false);
 
   // Deletes the underlying NDM volume.
   bool RemoveNdmVolume();
@@ -120,6 +122,14 @@ class __EXPORT NdmBaseDriver : public NdmDriver {
   // looking for a typical empty (erased) page. Returns true if all bits are 1.
   bool IsEmptyPageImpl(const uint8_t* data, uint32_t data_len, const uint8_t* spare,
                        uint32_t spare_len) const;
+
+  // Returns the settings used for the volume. The NDM volume has to be created
+  // with |save_volume_data| set to true.
+  const VolumeOptions* GetSavedOptions() const;
+
+ protected:
+  // This is exposed for unit tests only.
+  ndm* GetNdmForTest() const { return ndm_; }
 
  private:
   ndm* ndm_ = nullptr;

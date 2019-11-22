@@ -74,17 +74,7 @@ static int get_page_status(CNDM ndm, ui32 pn) {
   else if (status == -1)
     return NDM_REG_BLOCK;
 
-  // Perform CRC on page. The 4 CRC bytes are in the page header.
-  // First perform CRC on all but the 4 CRC bytes.
-  for (crc = CRC32_START, i = 0; (ui32)i < ndm->page_size; ++i) {
-    if (i == HDR_CRC_LOC)
-      i = CTRL_DATA_START;
-    crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
-  }
-
-  // Now run the CRC bytes through the CRC encoding.
-  for (i = HDR_CRC_LOC; i < CTRL_DATA_START; ++i)  // lint !e850
-    crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
+  crc = ndmReadControlCrc(ndm);
 
   // If the CRC does not match, page is not control page.
   if (crc != CRC32_FINAL)
@@ -291,7 +281,30 @@ static int ndm_format(NDM ndm) {
 
   // Write initial control information and return status.
   ndm->xfr_tblk = (ui32)-1;
+  // TODO(40208): Set version_2 here to use the new format.
   return ndmWrCtrl(ndm);
+}
+
+// read_header_values: Reads info from a control block header.
+//
+//       Input: ndm = pointer to NDM control block
+//
+static void read_header_values(CNDM ndm, ui16* current_page, ui16* last_page, ui32* sequence) {
+  ui32 current_location = HDR_CURR_LOC;
+  ui32 last_location = HDR_LAST_LOC;
+  ui32 sequence_location = HDR_SEQ_LOC;
+
+  // Shift header data for version 2.
+  if (RD16_LE(&ndm->main_buf[0]) != 1) {
+    current_location += HDR_V2_SHIFT;
+    last_location += HDR_V2_SHIFT;
+    sequence_location += HDR_V2_SHIFT;
+  }
+
+  // If matching first control page found, return success.
+  *current_page = RD16_LE(&ndm->main_buf[current_location]);
+  *last_page = RD16_LE(&ndm->main_buf[last_location]);
+  *sequence = RD32_LE(&ndm->main_buf[sequence_location]);
 }
 
 // find_last_ctrl_info: Find last valid control information
@@ -317,12 +330,11 @@ static int find_last_ctrl_info(NDM ndm) {
 
     // Check if it is a control page.
     if (page_status == NDM_CTRL_BLOCK) {
+      read_header_values(ndm, &curr_p, &ctrl_pages, &high_seq);
+
       // Check if it is the last page of a control information write.
-      curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
-      ctrl_pages = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
       if (curr_p == ctrl_pages) {
         // Read its (the highest) sequence number and use this page.
-        high_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
         last_ctrl_p = p;
       }
     }
@@ -362,14 +374,11 @@ static int find_last_ctrl_info(NDM ndm) {
         if (page_status != NDM_CTRL_BLOCK)
           continue;
 
+        read_header_values(ndm, &curr_p, &last_p, &curr_seq);
+
         // If this is not the last page of a control info, skip it.
-        curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
-        last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
         if (curr_p != last_p)
           continue;
-
-        // Read current sequence number.
-        curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
 
         // If first 'last page' found or most recent, remember it.
         if (high_seq == (ui32)-1 || curr_seq > high_seq) {
@@ -418,10 +427,8 @@ static int find_last_ctrl_info(NDM ndm) {
     if (page_status != NDM_CTRL_BLOCK)
       continue;
 
-    // If matching first control page found, return success.
-    curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
-    curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
-    last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+    read_header_values(ndm, &curr_p, &last_p, &curr_seq);
+
     if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
 #if NDM_DEBUG
       printf("find_ctrl: first = %u (block = %u)\n", p, p / ndm->pgs_per_blk);
@@ -452,10 +459,8 @@ static int find_last_ctrl_info(NDM ndm) {
       if (page_status != NDM_CTRL_BLOCK)
         continue;
 
-      // If first control page found, return success.
-      curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
-      curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
-      last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+      read_header_values(ndm, &curr_p, &last_p, &curr_seq);
+
       if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
 #if NDM_DEBUG
         printf("find_ctrl: first = %u (block = %u)\n", p, p / ndm->pgs_per_blk);
@@ -470,17 +475,24 @@ static int find_last_ctrl_info(NDM ndm) {
   return FsError2(NDM_NO_META_DATA, ENXIO);
 }
 
-// is_next_ctrl_page: Determine if page is next in control sequence
+// is_next_ctrl_page: Determines if page is next in control sequence.
 //
-//      Inputs: ndm = pointer to NDM control block
-//              pn = page to analyze
-//              curr_num = current number in control sequence
+//      Inputs: ndm = pointer to NDM control block.
+//              pn = page to analyze,
+//              curr_num = current number in control sequence.
 //
-//     Returns: NDM_CTRL_BLOCK iff page next one, NDM_REG_BLOCK if
-//              not, -1 on error
+//     Returns: NDM_CTRL_BLOCK iff page next one, NDM_REG_BLOCK if not,
+//             -1 on error.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
 //
 static int is_next_ctrl_page(CNDM ndm, ui32 pn, ui16 curr_num) {
   int page_status;
+
+  const ui32 current_location = ndmGetHeaderCurrentLocation(ndm);
+  const ui32 last_location = ndmGetHeaderLastLocation(ndm);
+  const ui32 sequence_location = ndmGetHeaderSequenceLocation(ndm);
 
   // Get the page status.
   page_status = get_page_status(ndm, pn);
@@ -492,29 +504,35 @@ static int is_next_ctrl_page(CNDM ndm, ui32 pn, ui16 curr_num) {
     return FsError2(NDM_EIO, EIO);
 
   // Determine if this is the next control page in sequence.
-  if (RD16_LE(&ndm->main_buf[HDR_CURR_LOC]) == curr_num + 1 &&
-      RD16_LE(&ndm->main_buf[HDR_LAST_LOC]) == ndm->ctrl_pages &&
-      RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]) == ndm->ctrl_seq)
+  if (RD16_LE(&ndm->main_buf[current_location]) == curr_num + 1 &&
+      RD16_LE(&ndm->main_buf[last_location]) == ndm->ctrl_pages &&
+      RD32_LE(&ndm->main_buf[sequence_location]) == ndm->ctrl_seq) {
     return NDM_CTRL_BLOCK;
+  }
 
   // Else this is a regular block.
   return NDM_REG_BLOCK;
 }
 
-// get_next_ctrl_page: Retrieve next page in control info
+// get_next_ctrl_page: Retrieves next page in control info.
 //
-//      Inputs: ndm = pointer to NDM control block
-//              curr_p = current control page
+//      Inputs: ndm = pointer to NDM control block.
+//              curr_p = current control page.
 //
-//     Returns: Next control page, -1 on error
+//     Returns: Next control page, -1 on error.
+//
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
 //
 static ui32 get_next_ctrl_page(CNDM ndm, ui32 curr_p) {
   ui16 curr_num;
   ui32 p, p_end;
   int page_status;
 
+  const ui32 current_location = ndmGetHeaderCurrentLocation(ndm);
+
   // Retrieve current number in control info sequence.
-  curr_num = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+  curr_num = RD16_LE(&ndm->main_buf[current_location]);
 
   // If there's no next control page according to header, return -1.
   if (curr_num >= ndm->ctrl_pages)
@@ -560,6 +578,9 @@ static ui32 get_next_ctrl_page(CNDM ndm, ui32 curr_p) {
 //
 //     Returns: 0 on success, -1 on failure
 //
+//     Preconditions: Header version 1.x or 2.x.
+//                    ndm->version_2 initialized.
+//
 static int check_next_read(CNDM ndm, ui32* curr_loc, ui32* pn, ui32* ctrl_pages, ui32 size) {
   // If next read goes past end of current control page, read next.
   if (*curr_loc + size > ndm->page_size) {
@@ -569,12 +590,13 @@ static int check_next_read(CNDM ndm, ui32* curr_loc, ui32* pn, ui32* ctrl_pages,
       return -1;
 
     // Reset current control location to beginning of the next page.
-    *curr_loc = CTRL_DATA_START;
+    *curr_loc = ndmGetHeaderControlDataStart(ndm);
     *ctrl_pages += 1;
 
     // Read the next page. Return -1 if error (ECC or fatal).
     if (ndm->read_page(*pn, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
       return FsError2(NDM_EIO, EIO);
+
 #if NDM_DEBUG
     printf("read_ctrl: READ page #%u\n", *pn);
 #endif
@@ -593,6 +615,13 @@ static int check_next_read(CNDM ndm, ui32* curr_loc, ui32* pn, ui32* ctrl_pages,
 static int read_ctrl_info(NDM ndm) {
   ui32 bn, vbn, i, curr_loc = CTRL_DATA_START, ctrl_pages = 1;
   ui32 p = ndm->frst_ctrl_page;
+  ui16 major_version = RD16_LE(&ndm->main_buf[0]);
+
+  // Shift header data for version 2.
+  if (major_version != 1) {
+    ndm->version_2 = TRUE;
+    curr_loc += HDR_V2_SHIFT;
+  }
 
   // Read the first control page. Return -1 if error (ECC or fatal).
   if (ndm->read_page(p, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
@@ -636,9 +665,13 @@ static int read_ctrl_info(NDM ndm) {
   ndm->xfr_tblk = RD32_LE(&ndm->main_buf[curr_loc]);
   curr_loc += sizeof(ui32);
 
+  // Up to this point, versions 1 and 2 of the header match. Transfer info is not
+  // optional for version 2 anymore.
+
   // If a bad block was being transferred, retrieve all other relevant
-  // information about it so that the transfer can be redone.
-  if (ndm->xfr_tblk != (ui32)-1) {
+  // information about it so that the transfer can be redone. These fields are
+  // not optional anymore after version 1.
+  if (ndm->xfr_tblk != (ui32)-1 || major_version != 1) {
     // Retrieve the physical bad block being transferred.
     ndm->xfr_fblk = RD32_LE(&ndm->main_buf[curr_loc]);
     curr_loc += sizeof(ui32);
@@ -647,8 +680,10 @@ static int read_ctrl_info(NDM ndm) {
     ndm->xfr_bad_po = RD32_LE(&ndm->main_buf[curr_loc]);
     curr_loc += sizeof(ui32);
 
-    // Skip obsolete full/partial transfer flag.
-    ++curr_loc;
+    if (major_version == 1) {
+      // Skip obsolete full/partial transfer flag.
+      ++curr_loc;
+    }
 
 #if NDM_DEBUG
     printf("  -> xfr_tblk       = %u\n", ndm->xfr_tblk);
@@ -658,8 +693,9 @@ static int read_ctrl_info(NDM ndm) {
   }
 
 #if NDM_DEBUG
-  else
+  if (ndm->xfr_tblk == (ui32)-1) {
     puts("  -> xfr_tblk       = -1");
+  }
 #endif
 
   // Retrieve the number of partitions.
@@ -735,12 +771,20 @@ static int read_ctrl_info(NDM ndm) {
 
   // Retrieve the NDM partitions if any.
   if (ndm->num_partitions) {
-    // If not already done, allocate memory for partitions table.
-    if (ndm->partitions == NULL) {
-      ndm->partitions = FsCalloc(ndm->num_partitions, sizeof(NDMPartition));
-      if (ndm->partitions == NULL)
-        return -1;
+    size_t user_data_size = 0;
+    size_t partition_size = sizeof(NDMPartition);
+    PfAssert(ndm->partitions == NULL);
+    if (ndm->version_2) {
+      // Read the size of the first partition, and assume that's the size of
+      // every partition. We can adjust this when we start using more than one
+      // partition.
+      PfAssert(ndm->num_partitions == 1);
+      user_data_size = RD32_LE(&ndm->main_buf[curr_loc + sizeof(NDMPartition)]);
+      partition_size += user_data_size + sizeof(ui32);
     }
+    ndm->partitions = FsCalloc(ndm->num_partitions, partition_size);
+    if (ndm->partitions == NULL)
+      return -1;
 
 #if NDM_DEBUG
     puts("read_ctrl: partitions[]");
@@ -753,7 +797,7 @@ static int read_ctrl_info(NDM ndm) {
 #endif
 
       // If next read spans control pages, adjust. Return -1 if error.
-      if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, sizeof(NDMPartition)))
+      if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, partition_size))
         return -1;
 
       // Retrieve the next partition. Read partition first block.
@@ -778,6 +822,18 @@ static int read_ctrl_info(NDM ndm) {
 
       // Read the partition type.
       ndm->partitions[i].type = ndm->main_buf[curr_loc++];
+
+      if (ndm->version_2) {
+        // Attach the user data at the end of this partition data.
+        PfAssert(RD32_LE(&ndm->main_buf[curr_loc]) <= user_data_size);
+        curr_loc += sizeof(ui32);
+        NDMPartitionInfo* info = (NDMPartitionInfo*)(ndm->partitions);
+        info->user_data.data_size = user_data_size;
+        if (user_data_size) {
+          memcpy(info->user_data.data, &ndm->main_buf[curr_loc], user_data_size);
+        }
+        curr_loc += user_data_size;
+      }
 
 #if NDM_DEBUG
       printf(" partition[%2u]:\n", i);

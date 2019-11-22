@@ -35,17 +35,41 @@
 
 //
 // Location in control header of all header fields. A header consists of:
-//   - 2 bytes of current page number in this control sequence
-//   - 2 bytes of last page number in this control sequence
-//   - 4 bytes of sequence number
-//   - 4 bytes of CRC
+//   - 2 bytes of current page number in this control sequence.
+//   - 2 bytes of last page number in this control sequence.
+//   - 4 bytes of sequence number.
+//   - 4 bytes of CRC.
+//
+// A "header format 2" adds version information to the beginning of the header,
+// which means that all other fields are shifted down by 4 bytes:
+//   - 2 bytes for major version number.
+//   - 2 bytes for minor version number.
+//
+// Note that an old header (where the version fields are not present), has the
+// current and last sequence numbers where the version information of a version 2
+// header would be (in the first four bytes of the page). If the geometry of the
+// device means that a control block will never span multiple nand pages, those
+// two numbers will always be 1, which means that "version 2 code" will see the
+// version information as 1.1, hence being able to detect the old format.
+//
+// That knowledge about current control blocks, in practice, never requiring
+// more than a page, is what allows this code to deal with the two versions of
+// the format. Looking forward, the FTL will not write the old format on any
+// device so even if in the future control blocks require multiple pages, this
+// code is safe.
+//
+// Every use of these values must be in the context of code that decides whether
+// or not to apply a HDR_V2_SHIFT.
 //
 #define HDR_CURR_LOC 0
 #define HDR_LAST_LOC 2
 #define HDR_SEQ_LOC 4
 #define HDR_CRC_LOC 8
-#define HDR_SIZE 12
 #define CTRL_DATA_START 12
+
+// This is the shift to apply to other header fields when dealing with version 2
+// of the header format.
+#define HDR_V2_SHIFT 4
 
 // Control scan flag value
 #define PARTIAL_SCAN 2
@@ -107,9 +131,10 @@ struct ndm {
   ui32 last_rd_pbn;      // last physical block number read from
   ui32 flags;            // option flags
 
-  // Partition Information
+  // Partition Information:
+  ui32 version_2;        // "Boolean" variable: FALSE for control header version 1.
   ui32 num_partitions;
-  NDMPartition* partitions;
+  NDMPartition* partitions;  // Points to an NDMPartitionInfo when version_2 is TRUE.
 
   // Driver Functions
   int (*write_page)(ui32 pn, const ui8* data, ui8* spare, int action, void* dev);
@@ -154,9 +179,14 @@ int ndmInitBadBlock(CNDM ndm, ui32 b);
 int ndmWrCtrl(NDM ndm);
 void ndmCkMeta(NDM ndm);
 int ndmMarkBadBlock(NDM ndm, ui32 arg, ui32 action);
+ui32 ndmReadControlCrc(CNDM ndm);
+ui32 ndmGetHeaderCurrentLocation(CNDM ndm);
+ui32 ndmGetHeaderLastLocation(CNDM ndm);
+ui32 ndmGetHeaderSequenceLocation(CNDM ndm);
+ui32 ndmGetHeaderControlDataStart(CNDM ndm);
 
 #if NDM_DEBUG
 int printf(const char*, ...);
 #endif
 
-__BEGIN_CDECLS
+__END_CDECLS
