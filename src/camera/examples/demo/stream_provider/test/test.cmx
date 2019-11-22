@@ -1,10 +1,10 @@
 {
     "facets": {
         "fuchsia.test": {
-            "system-services": [
-                "fuchsia.camera2.Manager",
-                "fuchsia.sysmem.Allocator"
-            ]
+            "injected-services": {
+                "fuchsia.camera2.Manager": "fuchsia-pkg://fuchsia.com/camera_manager2#meta/camera_manager2.cmx",
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx"
+            }
         }
     },
     "program": {
