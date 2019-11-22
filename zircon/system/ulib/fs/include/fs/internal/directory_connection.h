@@ -25,13 +25,11 @@ class DirectoryConnection final : public Connection,
  public:
   // Refer to documentation for |Connection::Connection|.
   DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
-                      VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), protocol, options) {}
+                      VnodeConnectionOptions options);
 
   ~DirectoryConnection() final = default;
 
  private:
-  void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) final;
 
   //
   // |fuchsia.io/Node| operations.

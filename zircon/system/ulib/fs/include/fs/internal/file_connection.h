@@ -24,13 +24,11 @@ class FileConnection final : public Connection, public llcpp::fuchsia::io::File:
  public:
   // Refer to documentation for |Connection::Connection|.
   FileConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
-                 VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), protocol, options) {}
+                 VnodeConnectionOptions options);
 
   ~FileConnection() final = default;
 
  private:
-  void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) final;
 
   //
   // |fuchsia.io/Node| operations.

@@ -110,12 +110,13 @@ Binding::~Binding() {
 }
 
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode, VnodeProtocol protocol,
-                       VnodeConnectionOptions options)
+                       VnodeConnectionOptions options, FidlProtocol fidl_protocol)
     : vnode_is_open_(!options.flags.node_reference),
       vfs_(vfs),
       vnode_(std::move(vnode)),
       protocol_(protocol),
-      options_(VnodeConnectionOptions::FilterForNewConnection(options)) {
+      options_(VnodeConnectionOptions::FilterForNewConnection(options)),
+      fidl_protocol_(fidl_protocol) {
   ZX_DEBUG_ASSERT(vfs);
   ZX_DEBUG_ASSERT(vnode_);
 }
@@ -236,7 +237,11 @@ bool Connection::OnMessage() {
   auto header = reinterpret_cast<fidl_message_header_t*>(msg.bytes);
   FidlTransaction txn(header->txid, binding);
 
-  HandleMessage(&msg, &txn);
+  bool handled = fidl_protocol_.TryDispatch(&msg, &txn);
+  if (!handled) {
+    vnode_->HandleFsSpecificMessage(&msg, &txn);
+  }
+
   switch (txn.ToResult()) {
     case FidlTransaction::Result::kRepliedSynchronously:
       // If we get here, the message was successfully handled, synchronously.

@@ -34,13 +34,9 @@ namespace fs {
 
 namespace internal {
 
-void NodeConnection::HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) {
-  bool handled = fio::Node::TryDispatch(this, msg, txn);
-  if (handled) {
-    return;
-  }
-  vnode()->HandleFsSpecificMessage(msg, txn);
-}
+NodeConnection::NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+                               VnodeConnectionOptions options)
+    : Connection(vfs, std::move(vnode), protocol, options, FidlProtocol::Create<fio::Node>(this)) {}
 
 void NodeConnection::Clone(uint32_t clone_flags, zx::channel object,
                            CloneCompleter::Sync completer) {

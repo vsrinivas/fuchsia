@@ -67,13 +67,10 @@ void OpenAt(Vfs* vfs, const fbl::RefPtr<Vnode>& parent, zx::channel channel, fbl
 
 namespace internal {
 
-void DirectoryConnection::HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) {
-  bool handled = fio::DirectoryAdmin::TryDispatch(this, msg, txn);
-  if (handled) {
-    return;
-  }
-  vnode()->HandleFsSpecificMessage(msg, txn);
-}
+DirectoryConnection::DirectoryConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode,
+                                         VnodeProtocol protocol, VnodeConnectionOptions options)
+    : Connection(vfs, std::move(vnode), protocol, options,
+                 FidlProtocol::Create<fio::DirectoryAdmin>(this)) {}
 
 void DirectoryConnection::Clone(uint32_t clone_flags, zx::channel object,
                                 CloneCompleter::Sync completer) {

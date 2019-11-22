@@ -24,13 +24,11 @@ class NodeConnection final : public Connection, public llcpp::fuchsia::io::Node:
  public:
   // Refer to documentation for |Connection::Connection|.
   NodeConnection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
-                 VnodeConnectionOptions options)
-      : Connection(vfs, std::move(vnode), protocol, options) {}
+                 VnodeConnectionOptions options);
 
   ~NodeConnection() final = default;
 
  private:
-  void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) final;
 
   //
   // |fuchsia.io/Node| operations.

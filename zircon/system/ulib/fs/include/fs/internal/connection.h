@@ -61,20 +61,6 @@ zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptio
 // This class is thread-safe.
 class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>> {
  public:
-  // Create a connection bound to a particular vnode.
-  //
-  // The VFS will be notified when remote side closes the connection.
-  //
-  // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
-  // |vnode| is the vnode which will handle I/O requests.
-  // |protocol| is the (potentially negotiated) vnode protocol that will be used to
-  //            interact with the vnode over this connection.
-  // |options| are client-specified options for this connection, converted from the
-  //           flags and rights passed during the |fuchsia.io/Directory.Open| or
-  //           |fuchsia.io/Node.Clone| FIDL call.
-  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
-             VnodeConnectionOptions options);
-
   // Closes the connection.
   //
   // The connection must not be destroyed if its wait handler is running
@@ -107,8 +93,67 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   bool OnMessage();
 
  protected:
-  // Callback to dispatch incoming FIDL messages to subclasses.
-  virtual void HandleMessage(fidl_msg_t* msg, FidlTransaction* txn) = 0;
+  // Subclasses of |Connection| should implement a particular |fuchsia.io| protocol.
+  // This is a utility for creating corresponding message dispatch functions which
+  // decodes a FIDL message and invokes a handler on |protocol_impl|. In essence, it
+  // partially-applies the |impl| argument in the LLCPP |TryDispatch| function.
+  class FidlProtocol {
+   public:
+    // Factory function to create a |FidlProtocol|.
+    // |Protocol| should be an LLCPP generated class e.g. |llcpp::fuchsia::io::File|.
+    // |protocol_impl| should be the |this| pointer when used from a subclass.
+    template <typename Protocol>
+    static FidlProtocol Create(typename Protocol::Interface* protocol_impl) {
+      return FidlProtocol(static_cast<void*>(protocol_impl), [](void* impl, fidl_msg_t* msg,
+                                                                fidl::Transaction* txn) {
+        return Protocol::TryDispatch(static_cast<typename Protocol::Interface*>(impl), msg, txn);
+      });
+    }
+
+    // Dispatches |message| on |Protocol|.
+    // The function consumes the message and returns true if the method was
+    // recognized by the protocol. Otherwise, it leaves the message intact
+    // and returns false.
+    bool TryDispatch(fidl_msg_t* message, fidl::Transaction* transaction) {
+      return dispatch_fn_(protocol_impl_, message, transaction);
+    }
+
+    FidlProtocol(const FidlProtocol&) = default;
+    FidlProtocol(FidlProtocol&&) = default;
+    FidlProtocol& operator=(const FidlProtocol&) = delete;
+    FidlProtocol& operator=(FidlProtocol&&) = delete;
+    ~FidlProtocol() = default;
+
+   private:
+    using TypeErasedDispatchFn = bool (*)(void* impl, fidl_msg_t*, fidl::Transaction*);
+
+    FidlProtocol() = delete;
+    FidlProtocol(void* protocol_impl, TypeErasedDispatchFn dispatch_fn)
+        : protocol_impl_(protocol_impl), dispatch_fn_(dispatch_fn) {}
+
+    // Pointer to the FIDL protocol implementation.
+    // Note that this is not necessarily the address of the |Connection| instance
+    // due to multiple inheritance.
+    void* const protocol_impl_;
+
+    // The FIDL method dispatch function corresponding to the specific FIDL
+    // protocol implemented by a subclass of |Connection|.
+    TypeErasedDispatchFn const dispatch_fn_;
+  };
+
+  // Create a connection bound to a particular vnode.
+  //
+  // The VFS will be notified when remote side closes the connection.
+  //
+  // |vfs| is the VFS which is responsible for dispatching operations to the vnode.
+  // |vnode| is the vnode which will handle I/O requests.
+  // |protocol| is the (potentially negotiated) vnode protocol that will be used to
+  //            interact with the vnode over this connection.
+  // |options| are client-specified options for this connection, converted from the
+  //           flags and rights passed during the |fuchsia.io/Directory.Open| or
+  //           |fuchsia.io/Node.Clone| FIDL call.
+  Connection(fs::Vfs* vfs, fbl::RefPtr<fs::Vnode> vnode, VnodeProtocol protocol,
+             VnodeConnectionOptions options, FidlProtocol fidl_protocol);
 
   VnodeProtocol protocol() const { return protocol_; }
 
@@ -203,6 +248,9 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   // operations (see: link, rename). Defaults to ZX_HANDLE_INVALID.
   // Validated on the server-side using cookies.
   zx::event token_ = {};
+
+  // See documentation on |FidlProtocol|.
+  FidlProtocol fidl_protocol_;
 };
 
 // |Binding| contains state related to FIDL message dispatching.
