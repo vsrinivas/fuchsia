@@ -87,6 +87,16 @@ zx_status_t Blob::Verify() const {
 zx_status_t Blob::InitVmos() {
   TRACE_DURATION("blobfs", "Blobfs::InitVmos");
 
+  // fxb/36257 Temporary check that there is no parallel initialization happening.
+  {
+    uint32_t prev_count = init_count_.fetch_add(1);
+    ZX_DEBUG_ASSERT(prev_count == 0);
+  }
+  auto dec_count = fbl::MakeAutoCall([this]() {
+    uint32_t prev_count = init_count_.fetch_sub(1);
+    ZX_DEBUG_ASSERT(prev_count == 1);
+  });
+
   if (mapping_.vmo()) {
     return ZX_OK;
   }
@@ -308,6 +318,16 @@ void Blob::BlobCloseHandles() {
 zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
   TRACE_DURATION("blobfs", "Blobfs::SpaceAllocate", "size_data", size_data);
   fs::Ticker ticker(blobfs_->Metrics().Collecting());
+
+  // fxb/36257 Temporary check that there is no parallel initialization happening.
+  {
+    uint32_t prev_count = init_count_.fetch_add(1);
+    ZX_DEBUG_ASSERT(prev_count == 0);
+  }
+  auto dec_count = fbl::MakeAutoCall([this]() {
+    uint32_t prev_count = init_count_.fetch_sub(1);
+    ZX_DEBUG_ASSERT(prev_count == 1);
+  });
 
   if (GetState() != kBlobStateEmpty) {
     return ZX_ERR_BAD_STATE;
@@ -540,6 +560,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     uint64_t clone_size = 0;
     status = mapping_.vmo().get_size(&clone_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
+    ZX_DEBUG_ASSERT(init_count_ == 0);
     status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
     ZX_DEBUG_ASSERT(status == ZX_OK);
 
@@ -568,6 +589,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       status = mapping_.vmo().get_size(&clone_size);
       ZX_DEBUG_ASSERT(status == ZX_OK);
       clone_vmo.reset();
+      ZX_DEBUG_ASSERT(init_count_ == 0);
       status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
       ZX_DEBUG_ASSERT(status == ZX_OK);
 
@@ -713,10 +735,19 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
 
   const size_t merkle_bytes = MerkleTreeBlocks(inode_) * kBlobfsBlockSize;
   zx::vmo clone;
-  if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
-                                            inode_.blob_size, &clone)) != ZX_OK) {
-    FS_TRACE_ERROR("blobfs: Failed to create child VMO: %d\n", status);
-    return status;
+  // fxb/36257 When we create the child we expect to not be racing with any initialization.
+  {
+    uint32_t prev_count = init_count_.fetch_add(1);
+    ZX_DEBUG_ASSERT(prev_count == 0);
+    auto dec_count = fbl::MakeAutoCall([this]() {
+      uint32_t prev_count = init_count_.fetch_sub(1);
+      ZX_DEBUG_ASSERT(prev_count == 1);
+    });
+    if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
+                                              inode_.blob_size, &clone)) != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to create child VMO: %d\n", status);
+      return status;
+    }
   }
 
   // Only add exec right to VMO if explictly requested.  (Saves a syscall if

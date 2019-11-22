@@ -260,6 +260,11 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   uint32_t fd_count_ = {};
   uint32_t map_index_ = {};
 
+  // BUG: fxb/36257 Temporary counter to check for unexpected parallelism between initialization
+  // and other paths. This counter should only ever be 0 or 1, and when 1 it effectively means that
+  // the mapping_ VMO could be pinned.
+  std::atomic<uint32_t> init_count_ = 0;
+
   // TODO(smklein): We are only using a few of these fields, such as:
   // - blob_size
   // - block_count
