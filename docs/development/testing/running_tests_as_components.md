@@ -135,6 +135,91 @@ information, please  see the [documentation on `test_package`][test_package].
 
 ## Running tests
 
+Warning: This is an experimental test command.
+
+To test the package, use the `fx test` command with the name of the package:
+
+```bash
+$ fx test ${TEST_PACKAGE_NAME}
+```
+
+If the package you specified is a test component, the command makes your Fuchsia
+device load and run said component. However, if the package you specified is a
+host test, the command directly invokes that test binary.
+
+### Customize `fx test` invocations
+
+In most cases, you should run the entire subset of test that verify the code
+that you are editing. You can run `fx test` with arguments to run specific tests
+or test suites, and flags to filter down to just host or device tests. To
+customize `fx test`:
+
+```bash
+fx test [FLAGS] [TEST [TEST [...]]]
+```
+
+### Three Ways to Specify a Test
+
+`fx test` supports multiple ways to reference a specific test.
+
+1. Full or partial paths:
+
+    Provide a partial path to match against all test binaries in children
+    directories.
+
+    ```
+    $ fx test //host_x64/gen/sdk
+    ```
+
+    Provide a full path to match against that exact binary.
+
+    ```
+    $ fx test //host_x64/pm_cmd_pm_genkey_test
+    ```
+
+    Note: `//` stands for the root of a Fuchsia tree checkout.
+
+2. Full or partial [Fuchsia Package URLs][fuchsia_package_url]:
+
+    Provide a partial URL to match against all test components whose Package
+    URLs start with the supplied value.
+
+    ```
+    $ fx test fuchsia-pkg://fuchsia.com/slider_mod_tests
+    ```
+
+    Provide a full URL to match against that exact test component.
+
+    ```
+    $ fx test fuchsia-pkg://fuchsia.com/slider_mod_tests#meta/slider_mod_tests.cmx
+    ```
+
+3. Test name:
+
+    Supplying the common name for either host tests (likely a binary) or device
+    test (a Fuchsia component) is supported. This name value is found in the
+    build directory’s `tests.json` manifest file, under the `"name"` key or as
+    the first URI segment in a Package URL.
+
+    ```
+    $ fx test slider_mod_tests
+    ```
+
+### Running multiple tests
+
+If you want to run multiple sets of Fuchsia tests, configure your Fuchsia build
+to include several of the primary testing bundles, build Fuchsia, and then run
+all tests in the build:
+
+```bash
+fx set core.x64 --with //bundles:tools,//bundles:tests,//garnet/packages/tests:all
+fx build
+fx test
+```
+
+
+## Running tests (Legacy)
+
 Tests can be exercised with the `fx run-test` command by providing the name of
 the package containing the tests.
 
@@ -168,3 +253,4 @@ provided to `run_test_component`
 [package_metadata]: /docs/concepts/storage/package_metadata.md
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: test_component.md
+[fuchsia_package_url]: /docs/concepts/storage/package_url.md
