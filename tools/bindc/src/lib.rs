@@ -8,5 +8,5 @@ mod c_generation;
 pub mod compiler;
 mod dependency_graph;
 mod errors;
-mod instruction;
+pub mod instruction;
 mod parser_common;

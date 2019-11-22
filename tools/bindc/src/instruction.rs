@@ -65,6 +65,11 @@ impl Instruction {
         Ok(())
     }
 
+    pub fn encode_pair(self) -> (u32, u32) {
+        let RawInstruction([word0, word1]) = self.to_raw();
+        (word0, word1)
+    }
+
     fn to_raw(self) -> RawInstruction<[u32; 2]> {
         let (c, o, a, b, v) = match self {
             Instruction::Abort(condition) => {
