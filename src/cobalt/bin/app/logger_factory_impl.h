@@ -66,6 +66,17 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
       std::string project_name, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
       fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
 
+  // Extracts the Cobalt 1.0 project with the given |project_id| from the
+  // global CobaltRegistry, if there is such a project in the registry, and
+  // uses this, and |release_stage|, to construct a  LoggerImpl. Binds this to
+  // |request| and stores the binding in |binding_set|. |callback| will be
+  // invoked with OK upon success or an error status otherwise.
+  // |LoggerInterface| should be Logger or LoggerSimple.
+  template <typename LoggerInterface, typename Callback>
+  void CreateAndBindLoggerFromProjectId(
+      uint32_t project_id, fidl::InterfaceRequest<LoggerInterface> request, Callback callback,
+      fidl::BindingSet<LoggerInterface, std::unique_ptr<LoggerInterface>>* binding_set);
+
   void CreateLogger(fuchsia::cobalt::ProjectProfile profile,
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback);
@@ -85,12 +96,11 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
 
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                                 CreateLoggerFromProjectIdCallback callback) {}
+                                 CreateLoggerFromProjectIdCallback callback);
 
   void CreateLoggerSimpleFromProjectId(
-      uint32_t project_id,
-      fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
-      CreateLoggerSimpleFromProjectIdCallback callback) {}
+      uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
+      CreateLoggerSimpleFromProjectIdCallback callback);
 
   encoder::ClientSecret client_secret_;
   fidl::BindingSet<fuchsia::cobalt::Logger, std::unique_ptr<fuchsia::cobalt::Logger>>

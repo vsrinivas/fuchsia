@@ -176,17 +176,15 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds, uint32_t min_int
 
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
 
-  std::string project_name =
-      (test_for_prober_ ? cobalt_prober_registry::kProjectName : cobalt_registry::kProjectName);
-  FX_LOGS(INFO) << "Test app is logging for the " << project_name << " project";
-  logger_factory->CreateLoggerFromProjectName(project_name, fuchsia::cobalt::ReleaseStage::DEBUG,
-                                              logger_.logger_.NewRequest(), &status);
+  uint32_t project_id =
+      (test_for_prober_ ? cobalt_prober_registry::kProjectId : cobalt_registry::kProjectId);
+  FX_LOGS(INFO) << "Test app is logging for the " << project_id << " project";
+  logger_factory->CreateLoggerFromProjectId(project_id, logger_.logger_.NewRequest(), &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLogger() => " << StatusToString(status);
 
-  logger_factory->CreateLoggerSimpleFromProjectName(project_name,
-                                                    fuchsia::cobalt::ReleaseStage::DEBUG,
-                                                    logger_.logger_simple_.NewRequest(), &status);
+  logger_factory->CreateLoggerSimpleFromProjectId(project_id, logger_.logger_simple_.NewRequest(),
+                                                  &status);
   FXL_CHECK(status == fuchsia::cobalt::Status::OK)
       << "CreateLoggerSimple() => " << StatusToString(status);
 
