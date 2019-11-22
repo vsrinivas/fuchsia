@@ -304,7 +304,7 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
     FidlBacklight::Device_SetStateNormalized_Response response;
     result.set_response(&response);
   } else {
-    result.set_err(status);
+    result.set_err(&status);
   }
   completer.Reply(std::move(result));
 }

@@ -156,7 +156,8 @@ void Lp8556Device::SetStateAbsolute(FidlBacklight::State state,
                                     SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
   if (!max_absolute_brightness_nits_.has_value()) {
-    result.set_err(ZX_ERR_NOT_SUPPORTED);
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
