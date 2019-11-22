@@ -66,4 +66,7 @@ enum DriverFeature {
     /// Temporary feature flag for incrementally transitioning drivers to use
     /// SME channel on iface creation.
     TEMP_DIRECT_SME_CHANNEL = 3141592;
+    /// Temporary feature flag for driver to indicate this iface a SoftMAC device.
+    /// TODO(41640): Remove this flag once FullMAC drivers no longer use SME.
+    TEMP_SOFTMAC = 2718281828;
 };

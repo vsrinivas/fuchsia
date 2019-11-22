@@ -4,6 +4,7 @@
 
 use {
     failure::{bail, format_err, Error},
+    fidl_fuchsia_wlan_common::DriverFeature,
     fidl_fuchsia_wlan_device as fidl_wlan_dev,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, DeviceInfo},
     fuchsia_cobalt::CobaltSender,
@@ -160,6 +161,11 @@ pub async fn query_and_serve_iface(
         msg: format!("new iface #{} with role '{:?}'", id, device_info.role)
     });
     let mlme_query = MlmeQueryProxy::new(mlme_proxy);
+    let is_softmac = device_info.driver_features.contains(&DriverFeature::TempSoftmac);
+    // For testing only: All synthetic devices are softmac devices.
+    if device_info.driver_features.contains(&DriverFeature::Synth) && !is_softmac {
+        bail!("Synthetic devices must be SoftMAC");
+    }
     ifaces.insert(
         id,
         IfaceDevice { phy_ownership, sme_server: sme, stats_sched, mlme_query, device_info },
@@ -226,7 +232,6 @@ mod tests {
     use {
         super::*,
         fidl::endpoints::create_proxy,
-        fidl_fuchsia_wlan_common::DriverFeature,
         fidl_fuchsia_wlan_mlme::MlmeMarker,
         fuchsia_async as fasync,
         fuchsia_cobalt::{self, CobaltSender},
