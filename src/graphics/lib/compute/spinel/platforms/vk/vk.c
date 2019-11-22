@@ -30,7 +30,7 @@
 // Associates a readable name with a pipeline
 //
 
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
 #define SPN_VK_PIPELINE_NAMES_DEFINE
 #endif
 
@@ -740,7 +740,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
       //
       // DEBUG
       //
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
       fprintf(stderr, "%-38s ", SPN_VK_PIPELINE_NAMES[ii]);
       fprintf(stderr, "(codeSize = %6zu) ... ", smci.codeSize);
 #endif
@@ -780,7 +780,7 @@ spn_vk_create(struct spn_vk_environment * const  environment,
       //
       // DEBUG
       //
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(SPN_VK_PIPELINE_CODE_SIZE)
       fprintf(stderr, "OK\n");
 #endif
     }

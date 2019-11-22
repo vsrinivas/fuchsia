@@ -297,7 +297,7 @@ hotsort_vk_create(VkDevice                               device,
       //
       // DEBUG
       //
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(HOTSORT_VK_PIPELINE_CODE_SIZE)
       fprintf(stderr, "%-38s ", "HOTSORT SHADER");
       fprintf(stderr, "(codeSize = %6zu) ... ", smci.codeSize);
 #endif
@@ -335,7 +335,7 @@ hotsort_vk_create(VkDevice                               device,
       //
       // DEBUG
       //
-#ifndef NDEBUG
+#if !defined(NDEBUG) && defined(HOTSORT_VK_PIPELINE_CODE_SIZE)
       fprintf(stderr, "OK\n");
 #endif
     }
