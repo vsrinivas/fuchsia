@@ -9,6 +9,5 @@ group("bin") {
     "basemgr_launcher",
     "sessionctl",
     "sessionmgr",
-    "voila",
   ]
 }

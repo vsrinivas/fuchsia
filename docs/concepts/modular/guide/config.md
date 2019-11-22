@@ -104,7 +104,7 @@ modular_config() target in the product's base packages.
     - `LET_LEDGER_DECIDE`: Use a cloud provider configured by ledger.
     - `FROM_ENVIRONMENT`: Use a cloud provider available in the incoming
       namespace, rather than initializing and instance within sessionmgr.
-      This can be used by Voila to inject a custom cloud provider.
+      This can be used to inject a custom cloud provider.
     - `NONE`: Do not use a cloud provider.
   - **default**: `LET_LEDGER_DECIDE`
 - `enable_cobalt`: **boolean** _(optional)_

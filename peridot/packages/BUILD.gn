@@ -28,7 +28,6 @@ group("all") {
     "//src/modular/bin/modular_test_harness",
     "//src/modular/bin/sessionctl",
     "//src/modular/bin/sessionmgr",
-    "//src/modular/bin/voila",
     "//src/modular/bundles:integration_testing",
     "//src/stories/bin/discovermgr",
   ]

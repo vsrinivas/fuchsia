@@ -48,7 +48,4 @@ cache_package_labels += [ "//src/tests/end_to_end/bundles:end_to_end_deps" ]
 
 # E2E Product Tests. They don't produce fuchsia packages, but host executables,
 # and must just be included somewhere in the build configuration of the product.
-universe_package_labels += [
-  "//src/experiences/tests/e2e:test",
-  "//src/tests/end_to_end/voila_hello_world:test",
-]
+universe_package_labels += [ "//src/experiences/tests/e2e:test" ]

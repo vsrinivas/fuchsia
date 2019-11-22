@@ -160,7 +160,6 @@
   ],
   "Products": [
     "ledger",
-    "voila",
     "system_dashboard",
     "device_settings",
     "spinning_cube",

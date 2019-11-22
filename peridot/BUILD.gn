@@ -47,7 +47,6 @@ group("tests") {
     "//src/modular/bin/sessionmgr/storage:storage_unittests",
     "//src/modular/bin/sessionmgr/story/model:story_model_unittests",
     "//src/modular/bin/sessionmgr/story_runner:story_runner_unittests",
-    "//src/modular/bin/voila:voila_tests",
     "//src/modular/bundles:integration_testing",
     "//src/modular/tests/modular_config:test_config",
     "//src/stories/bin/discovermgr:discovermgr_tests",

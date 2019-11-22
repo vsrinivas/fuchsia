@@ -149,8 +149,8 @@ enum CloudProvider {
     LET_LEDGER_DECIDE = 1;
 
     /// Use a cloud provider available in the incoming namespace, rather than
-    /// initializing and instance within sessionmgr. This can be used by Voila to
-    /// inject a custom cloud provider.
+    /// initializing and instance within sessionmgr. This can be used to inject
+    /// a custom cloud provider.
     FROM_ENVIRONMENT = 2;
 
     NONE = 3;
