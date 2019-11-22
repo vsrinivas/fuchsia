@@ -3,17 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    super::*,
-    fidl_fuchsia_pkg_ext::RepositoryConfigBuilder,
-    fuchsia_async as fasync,
-    fuchsia_inspect::{assert_inspect_tree, reader::PartialNodeHierarchy},
-    std::convert::TryFrom,
+    super::*, fidl_fuchsia_pkg_ext::RepositoryConfigBuilder, fuchsia_async as fasync,
+    fuchsia_inspect::assert_inspect_tree,
 };
 
 #[fasync::run_singlethreaded(test)]
 async fn test_initial_inspect_state() {
     let env = TestEnv::new();
-    // Wait for inspect VMO to be created
+    // Wait for inspect to be created
     env.proxies
         .rewrite_engine
         .test_apply("fuchsia-pkg://test")
@@ -21,12 +18,11 @@ async fn test_initial_inspect_state() {
         .expect("fidl call succeeds")
         .expect("test apply result is ok");
 
-    // Obtain VMO and convert into node heirarchy
-    let vmo = env.pkg_resolver_inspect_vmo();
-    let partial = PartialNodeHierarchy::try_from(&vmo).unwrap();
+    // Obtain inspect hierarchy
+    let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
     assert_inspect_tree!(
-       partial,
+        hierarchy,
         root: {
             rewrite_manager: {
                 dynamic_rules: {},
@@ -65,12 +61,11 @@ async fn test_adding_repo_updates_inspect_state() {
     )
     .expect("repo successfully added");
 
-    // Obtain VMO and convert into node heirarchy
-    let vmo = env.pkg_resolver_inspect_vmo();
-    let partial = PartialNodeHierarchy::try_from(&vmo).unwrap();
+    // Obtain inspect service and convert into a node hierarchy.
+    let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
     assert_inspect_tree!(
-      partial,
+        hierarchy,
         root: {
             rewrite_manager: {
                 dynamic_rules: {},

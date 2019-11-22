@@ -1,0 +1,6 @@
+# Absolute paths gives the full path to each object from the root directory.
+iquery --absolute_paths --sort diagnostics#table:0x0
+/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0:
+  binary_data = Binary:
+00000000	20 00 11 12 05                                  	 ....
+  object_name = Example Table

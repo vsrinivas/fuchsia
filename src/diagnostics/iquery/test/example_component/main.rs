@@ -4,11 +4,11 @@
 
 use {
     crate::{deprecated_fidl_server::*, table::*},
-    failure::Error,
+    failure::{format_err, Error},
     fuchsia_async as fasync,
     fuchsia_component::server::ServiceFs,
     fuchsia_inspect::*,
-    futures::StreamExt,
+    futures::{FutureExt, StreamExt},
     std::ops::AddAssign,
     structopt::StructOpt,
 };
@@ -64,21 +64,21 @@ async fn main() -> Result<(), Error> {
     let example_table =
         Table::new(opts.rows, opts.columns, &table_node_name, root.create_child(&table_node_name));
 
-    let _int_array = root.create_int_array(unique_name("array"), 3);
-    _int_array.set(0, 1);
-    _int_array.add(1, 10);
-    _int_array.subtract(2, 3);
+    let int_array = root.create_int_array(unique_name("array"), 3);
+    int_array.set(0, 1);
+    int_array.add(1, 10);
+    int_array.subtract(2, 3);
 
-    let _uint_array = root.create_uint_array(unique_name("array"), 3);
-    _uint_array.set(0, 1);
-    _uint_array.add(1, 10);
-    _uint_array.set(2, 3);
-    _uint_array.subtract(2, 1);
+    let uint_array = root.create_uint_array(unique_name("array"), 3);
+    uint_array.set(0, 1);
+    uint_array.add(1, 10);
+    uint_array.set(2, 3);
+    uint_array.subtract(2, 1);
 
-    let _double_array = root.create_double_array(unique_name("array"), 3);
-    _double_array.set(0, 0.25);
-    _double_array.add(1, 1.25);
-    _double_array.subtract(2, 0.75);
+    let double_array = root.create_double_array(unique_name("array"), 3);
+    double_array.set(0, 0.25);
+    double_array.add(1, 1.25);
+    double_array.subtract(2, 0.75);
 
     let _int_linear_hist = populated(
         root.create_int_linear_histogram(
@@ -139,6 +139,23 @@ async fn main() -> Result<(), Error> {
         PopulateParams { floor: -1.0, step: 0.1, count: 40 },
     );
 
+    root.record_lazy_child("lazy-node", || {
+        async move {
+            let inspector = Inspector::new();
+            inspector.root().record_uint("uint", 3);
+            Ok(inspector)
+        }
+        .boxed()
+    });
+    root.record_lazy_values("lazy-values", || {
+        async move {
+            let inspector = Inspector::new();
+            inspector.root().record_double("lazy-double", 3.14);
+            Ok(inspector)
+        }
+        .boxed()
+    });
+
     let mut fs = ServiceFs::new();
     // NOTE: this FIDL service is deprecated and the following *should not* be done.
     // Rust doesn't have a way of writing to the deprecated FIDL service, therefore
@@ -147,6 +164,21 @@ async fn main() -> Result<(), Error> {
     fs.dir("objects").add_fidl_service(move |stream| {
         spawn_inspect_server(stream, example_table.get_node_object());
     });
+
+    // TODO(fxb/41952): remove when all clients writing VMO files today have been migrated to write
+    // to Tree.
+    inspector
+        .duplicate_vmo()
+        .ok_or(format_err!("Failed to duplicate VMO"))
+        .and_then(|vmo| {
+            let size = vmo.get_size()?;
+            fs.dir("objects").add_vmo_file_at("root.inspect", vmo, 0 /* vmo offset */, size);
+            Ok(())
+        })
+        .unwrap_or_else(|e| {
+            eprintln!("Failed to expose vmo. Error: {:?}", e);
+        });
+
     inspector.serve(&mut fs)?;
     fs.take_and_serve_directory_handle()?;
 

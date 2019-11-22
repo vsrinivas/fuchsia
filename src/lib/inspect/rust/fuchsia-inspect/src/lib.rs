@@ -163,22 +163,6 @@ impl Inspector {
         &self,
         service_fs: &mut ServiceFs<ServiceObjTy>,
     ) -> Result<(), Error> {
-        self.duplicate_vmo()
-            .ok_or(format_err!("Failed to duplicate VMO"))
-            .and_then(|vmo| {
-                let size = vmo.get_size()?;
-                service_fs.dir("objects").add_vmo_file_at(
-                    "root.inspect",
-                    vmo,
-                    0, /* vmo offset */
-                    size,
-                );
-                Ok(())
-            })
-            .unwrap_or_else(|e| {
-                fx_log_err!("Failed to expose vmo. Error: {:?}", e);
-            });
-
         let (proxy, server) = fidl::endpoints::create_proxy::<DirectoryMarker>()?;
         let inspector_clone = self.clone();
         let dir = pseudo_directory! {

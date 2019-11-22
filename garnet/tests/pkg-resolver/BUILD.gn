@@ -43,6 +43,7 @@ rustc_test("driver") {
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
     "//third_party/rust_crates:void",
+    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",

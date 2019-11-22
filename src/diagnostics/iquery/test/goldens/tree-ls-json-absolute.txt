@@ -1,0 +1,8 @@
+iquery --ls --format=json --absolute_paths --sort diagnostics#table:0x0
+[
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x1",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x11",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x5",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x9",
+    "/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0xd"
+]

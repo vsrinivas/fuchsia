@@ -68,7 +68,7 @@ pub struct Table {
     _object_name: StringProperty,
     _binary_data: BytesProperty,
 
-    // TODO: remove when the FIDL service is deprecated
+    // TODO(fxb/41953): remove when the FIDL service is deprecated
     data: TableData,
 }
 
@@ -110,7 +110,7 @@ struct Cell {
     _value: IntProperty,
     _double_value: DoubleProperty,
 
-    // TODO: remove when the FIDL service is deprecated.
+    // TODO(fxb/41953): remove when the FIDL service is deprecated.
     data: CellData,
 }
 
@@ -133,7 +133,7 @@ struct Row {
     node: Node,
     cells: Vec<Cell>,
 
-    // TODO: remove when the FIDL service is deprecated.
+    // TODO(fxb/41953): remove when the FIDL service is deprecated.
     data: RowData,
 }
 

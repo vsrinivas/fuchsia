@@ -28,6 +28,7 @@ rustc_binary("bin") {
     "//third_party/rust_crates:serde",
     "//third_party/rust_crates:serde_json",
     "//third_party/rust_crates:tempfile",
+    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]

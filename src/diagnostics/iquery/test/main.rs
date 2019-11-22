@@ -17,6 +17,7 @@ use {
     glob::glob,
     regex::Regex,
     std::{
+        cmp,
         ffi::{CStr, CString},
         fs,
         io::{BufRead, BufReader},
@@ -91,17 +92,21 @@ impl GoldenTest {
         }
     }
 
-    fn validate(&self, hub_path: &str) -> Result<(), Error> {
+    fn validate(self, hub_path: &str) -> Result<(), Error> {
         let output_file = NamedTempFile::new().expect("failed to create tempfile");
         self.run_iquery(output_file.as_file(), hub_path)?;
         let reader = BufReader::new(output_file);
         let re = Regex::new("/\\d+/").unwrap();
-        for (golden_line, output_line) in self.golden.lines.iter().zip(reader.lines()) {
+        let reader_lines = reader.lines().map(|r| r.unwrap()).collect::<Vec<String>>();
+        let max = cmp::max(self.golden.lines.len(), reader_lines.len());
+        let mut output_iter = reader_lines.into_iter();
+        let mut golden_iter = self.golden.lines.into_iter();
+        for _ in 0..max {
+            let golden_line = golden_iter.next().unwrap_or("".to_string());
+            let output_line = output_iter.next().unwrap_or("".to_string());
             // Replace paths containing ids with /*/ to remove process or realm ids.
-            let output = re.replace_all(output_line.as_ref().unwrap(), "/*/");
-            // TODO: remove when renaming
-            let output = output.replace("iquery", "iquery");
-            assert_diff!(golden_line, &output, "", 0);
+            let output = re.replace_all(&output_line, "/*/");
+            assert_diff!(&golden_line, &output, "", 0);
         }
         Ok(())
     }
@@ -202,4 +207,17 @@ tests![
     vmo_ls_json_full,
     vmo_ls_json,
     vmo_ls,
+    tree_cat_recursive_absolute,
+    tree_cat_recursive_full,
+    tree_cat_recursive_json_absolute,
+    tree_cat_recursive_json_full,
+    tree_cat_recursive_json,
+    tree_cat_recursive,
+    tree_cat_single_absolute,
+    tree_cat_single_full,
+    tree_cat_single,
+    tree_ls_json_absolute,
+    tree_ls_json_full,
+    tree_ls_json,
+    tree_ls,
 ];

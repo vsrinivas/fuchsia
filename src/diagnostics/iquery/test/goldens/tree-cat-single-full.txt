@@ -1,0 +1,6 @@
+# Full paths lists the relative path to the object listed.
+iquery --full_paths --sort diagnostics#table:0x0
+diagnostics#table:0x0:
+  binary_data = Binary:
+00000000	20 00 11 12 05                                  	 ....
+  object_name = Example Table

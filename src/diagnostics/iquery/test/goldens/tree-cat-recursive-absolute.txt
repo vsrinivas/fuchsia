@@ -1,0 +1,83 @@
+iquery --recursive --absolute_paths --sort diagnostics
+/hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics:
+  array:0x15 = [1, 10, -3]
+  array:0x16 = [1, 10, 2]
+  array:0x17 = [0.25, 1.25, -0.75]
+  histogram:0x18 = [[<min>,-10)=10, [-10,-5)=5, [-5,0)=5, [0,5)=5, [5,<max>)=15]
+  histogram:0x19 = [[0,5)=5, [5,10)=5, [10,15)=5, [15,20)=5, [20,<max>)=20]
+  histogram:0x1a = [[-inf,0)=11, [0,0.5)=5, [0.5,1)=5, [1,1.5)=4, [1.5,inf)=15]
+  histogram:0x1b = [[<min>,-10)=10, [-10,-5)=5, [-5,0)=5, [0,10)=10, [10,<max>)=10]
+  histogram:0x1c = [[0,0)=0, [0,1)=1, [1,2)=1, [2,4)=2, [4,<max>)=36]
+  histogram:0x1d = [[-inf,0)=11, [0,1.25)=12, [1.25,3.75)=17, [3.75,11.25)=0, [11.25,inf)=0]
+  lazy-double = 3.140000
+  /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#lazy-node:
+    uint = 3
+  /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0:
+    binary_data = Binary:
+00000000	20 00 11 12 05                                  	 ....
+    object_name = Example Table
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x1:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x1/cell:0x2:
+        double_value = 6.666667
+        name = (0,0)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x1/cell:0x3:
+        double_value = 13.333333
+        name = (0,1)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x1/cell:0x4:
+        double_value = 20.000000
+        name = (0,2)
+        value = 0
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x11:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x11/cell:0x12:
+        double_value = 86.666667
+        name = (4,0)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x11/cell:0x13:
+        double_value = 93.333333
+        name = (4,1)
+        value = 4
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x11/cell:0x14:
+        double_value = 100.000000
+        name = (4,2)
+        value = 8
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x5:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x5/cell:0x6:
+        double_value = 26.666667
+        name = (1,0)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x5/cell:0x7:
+        double_value = 33.333333
+        name = (1,1)
+        value = 1
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x5/cell:0x8:
+        double_value = 40.000000
+        name = (1,2)
+        value = 2
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x9:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x9/cell:0xa:
+        double_value = 46.666667
+        name = (2,0)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x9/cell:0xb:
+        double_value = 53.333333
+        name = (2,1)
+        value = 2
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0x9/cell:0xc:
+        double_value = 60.000000
+        name = (2,2)
+        value = 4
+    /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0xd:
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0xd/cell:0x10:
+        double_value = 80.000000
+        name = (3,2)
+        value = 6
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0xd/cell:0xe:
+        double_value = 66.666667
+        name = (3,0)
+        value = 0
+      /hub/r/test/*/c/iquery_example_component.cmx/*/out/diagnostics#table:0x0/row:0xd/cell:0xf:
+        double_value = 73.333333
+        name = (3,1)
+        value = 3

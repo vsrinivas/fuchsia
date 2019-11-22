@@ -9,7 +9,7 @@
 use {
     super::*,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
-    fuchsia_inspect::{assert_inspect_tree, reader::PartialNodeHierarchy},
+    fuchsia_inspect::assert_inspect_tree,
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{
         serve::{handler, AtomicToggle, UriPathHandler},
@@ -25,7 +25,6 @@ use {
     parking_lot::Mutex,
     std::{
         collections::HashSet,
-        convert::TryFrom,
         fs::File,
         io::{self, Read},
         path::{Path, PathBuf},
@@ -324,11 +323,11 @@ async fn download_blob_experiment_retries() {
     let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
 
-    let vmo = env.pkg_resolver_inspect_vmo();
+    let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
     let repo_blob_url = format!("{}/blobs", served_repository.local_url());
     let repo_blob_url = &repo_blob_url;
     assert_inspect_tree!(
-        PartialNodeHierarchy::try_from(&vmo).unwrap(),
+        hierarchy,
         root: contains {
             repository_manager: contains {
                 stats: {
@@ -396,12 +395,12 @@ async fn download_blob_experiment_handles_429_responses() {
     pkg2.verify_contents(&pkg2_dir.unwrap()).await.unwrap();
 
     // And the inspect data for the package resolver should indicate that it handled 429 responses.
-    let vmo = env.pkg_resolver_inspect_vmo();
+    let hierarchy = env.pkg_resolver_inspect_hierarchy().await;
 
     let repo_blob_url = format!("{}/blobs", served_repository.local_url());
     let repo_blob_url = &repo_blob_url;
     assert_inspect_tree!(
-        PartialNodeHierarchy::try_from(&vmo).unwrap(),
+        hierarchy,
         root: contains {
             repository_manager: contains {
                 stats: {

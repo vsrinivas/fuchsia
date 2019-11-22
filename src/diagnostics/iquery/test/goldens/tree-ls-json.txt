@@ -1,0 +1,8 @@
+iquery --ls --format=json --sort diagnostics#table:0x0
+[
+    "row:0x1",
+    "row:0x11",
+    "row:0x5",
+    "row:0x9",
+    "row:0xd"
+]

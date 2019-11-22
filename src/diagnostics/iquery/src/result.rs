@@ -5,6 +5,7 @@
 use {
     crate::location::{InspectLocation, InspectType},
     failure::{format_err, Error},
+    fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_io::NodeInfo,
     fuchsia_inspect::reader::{NodeHierarchy, PartialNodeHierarchy},
     inspect_fidl_load as inspect_fidl, io_util,
@@ -31,6 +32,7 @@ impl IqueryResult {
     pub async fn load(&mut self) -> Result<(), Error> {
         match self.location.inspect_type {
             InspectType::Vmo => self.load_from_vmo().await,
+            InspectType::Tree => self.load_from_tree().await,
             InspectType::DeprecatedFidl => self.load_from_fidl().await,
         }
     }
@@ -46,6 +48,14 @@ impl IqueryResult {
         }
     }
 
+    async fn load_from_tree(&mut self) -> Result<(), Error> {
+        let path = self.location.absolute_path()?;
+        let (tree, server) = fidl::endpoints::create_proxy::<TreeMarker>()?;
+        fdio::service_connect(&path, server.into_channel())?;
+        self.hierarchy = Some(NodeHierarchy::try_from_tree(&tree).await?);
+        Ok(())
+    }
+
     async fn load_from_vmo(&mut self) -> Result<(), Error> {
         let proxy = io_util::open_file_in_namespace(
             &self.location.absolute_path()?,
@@ -54,7 +64,6 @@ impl IqueryResult {
 
         // Obtain the vmo backing any VmoFiles.
         let node_info = proxy.describe().await?;
-        // TODO: read lazy nodes as well.
         match node_info {
             NodeInfo::Vmofile(vmofile) => {
                 self.hierarchy = Some(PartialNodeHierarchy::try_from(&vmofile.vmo)?.into());

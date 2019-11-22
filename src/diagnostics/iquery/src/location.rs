@@ -4,7 +4,8 @@
 
 use {
     failure::{bail, Error},
-    fidl,
+    fidl::endpoints::DiscoverableService,
+    fidl_fuchsia_inspect::TreeMarker,
     fidl_fuchsia_inspect_deprecated::InspectMarker,
     std::{
         collections::VecDeque, convert::TryFrom, fs, iter::FromIterator, path::PathBuf,
@@ -28,6 +29,7 @@ pub fn all_locations(root: &str) -> Box<dyn Iterator<Item = InspectLocation>> {
 pub enum InspectType {
     Vmo,
     DeprecatedFidl,
+    Tree,
 }
 
 /// InspectLocation of an inspect file.
@@ -65,8 +67,7 @@ impl InspectLocation {
     }
 
     pub fn absolute_path_to_string(&self) -> Result<String, Error> {
-        let service_name = <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        Ok(self.absolute_path()?.replace(&format!("/{}", service_name), ""))
+        Ok(strip_service_suffix(self.absolute_path()?))
     }
 
     pub fn query_path(&self) -> Vec<String> {
@@ -94,24 +95,33 @@ impl FromStr for InspectLocation {
             inspect_parts.extend(parts[1].split("/"));
         }
 
-        let mut path = PathBuf::from(parts[0]);
-        let mut location = InspectLocation::try_from(path.clone()).or_else(|_| {
-            // Some valid locations won't include the `fuchsia.inspect.Inspect` in
-            // the name and will be just the directory. Append the name and attempt
-            // to load that file.
-            let service_name = <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-            path.push(service_name);
-            InspectLocation::try_from(path)
-        })?;
+        // Some valid locations won't include the service name in the name and will be just the
+        // directory. Append the name and attempt to load that file.
+        let mut location = InspectLocation::try_from(PathBuf::from(parts[0]))
+            .or_else(|_| {
+                let mut path = PathBuf::from(parts[0]);
+                path.push(InspectMarker::SERVICE_NAME);
+                InspectLocation::try_from(path)
+            })
+            .or_else(|_| {
+                let mut path = PathBuf::from(parts[0]);
+                path.push(TreeMarker::SERVICE_NAME);
+                InspectLocation::try_from(path)
+            })?;
         location.parts = inspect_parts.into_iter().map(|p| p.to_string()).collect();
         Ok(location)
     }
 }
 
+fn strip_service_suffix(string: String) -> String {
+    string
+        .replace(&format!("/{}", InspectMarker::SERVICE_NAME), "")
+        .replace(&format!("/{}", TreeMarker::SERVICE_NAME), "")
+}
+
 impl ToString for InspectLocation {
     fn to_string(&self) -> String {
-        let service_name = <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME;
-        self.path.to_string_lossy().to_string().replace(&format!("/{}", service_name), "")
+        strip_service_suffix(self.path.to_string_lossy().to_string())
     }
 }
 
@@ -122,12 +132,14 @@ impl TryFrom<PathBuf> for InspectLocation {
         match path.file_name() {
             None => bail!("Failed to get filename"),
             Some(filename) => {
-                if filename == <InspectMarker as fidl::endpoints::ServiceMarker>::DEBUG_NAME {
+                if filename == InspectMarker::SERVICE_NAME && path.exists() {
                     Ok(InspectLocation {
                         inspect_type: InspectType::DeprecatedFidl,
                         path,
                         parts: vec![],
                     })
+                } else if filename == TreeMarker::SERVICE_NAME && path.exists() {
+                    Ok(InspectLocation { inspect_type: InspectType::Tree, path, parts: vec![] })
                 } else if filename.to_string_lossy().ends_with(".inspect") {
                     Ok(InspectLocation { inspect_type: InspectType::Vmo, path, parts: vec![] })
                 } else {

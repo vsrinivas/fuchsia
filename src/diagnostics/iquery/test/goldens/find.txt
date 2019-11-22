@@ -2,3 +2,4 @@
 iquery --find .
 ./objects/root.inspect
 ./objects
+./diagnostics
