@@ -114,8 +114,11 @@ fn main() -> Result<(), Error> {
 
     let futures = FuturesUnordered::new();
 
-    let (blob_fetch_queue, blob_fetcher) =
-        crate::cache::make_blob_fetch_queue(cache.clone(), MAX_CONCURRENT_BLOB_FETCHES);
+    let (blob_fetch_queue, blob_fetcher) = crate::cache::make_blob_fetch_queue(
+        cache.clone(),
+        MAX_CONCURRENT_BLOB_FETCHES,
+        repo_manager.read().stats(),
+    );
     futures.push(blob_fetch_queue.boxed());
 
     let resolver_cb = {

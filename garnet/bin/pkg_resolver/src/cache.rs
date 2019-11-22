@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 use {
-    crate::queue,
+    crate::{queue, repository_manager::Stats},
     failure::Fail,
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_amber::OpenedRepositoryProxy,
@@ -22,9 +22,20 @@ use {
         stream::FuturesUnordered,
     },
     hyper::{body::Payload, Body, Request, StatusCode},
-    std::{convert::TryInto, hash::Hash, num::TryFromIntError, sync::Arc, time::Duration},
+    parking_lot::Mutex,
+    std::{
+        convert::TryInto,
+        hash::Hash,
+        num::TryFromIntError,
+        sync::{
+            atomic::{AtomicBool, Ordering},
+            Arc,
+        },
+    },
     url::Url,
 };
+
+mod retry;
 
 pub type BlobFetcher = queue::WorkSender<BlobId, FetchBlobContext, Result<(), Arc<FetchError>>>;
 
@@ -530,6 +541,7 @@ impl queue::TryMerge for FetchBlobContext {
 pub fn make_blob_fetch_queue(
     cache: PackageCache,
     max_concurrency: usize,
+    stats: Arc<Mutex<Stats>>,
 ) -> (impl Future<Output = ()>, BlobFetcher) {
     let http_client = Arc::new(fuchsia_hyper::new_https_client());
 
@@ -537,6 +549,7 @@ pub fn make_blob_fetch_queue(
         queue::work_queue(max_concurrency, move |merkle, context: FetchBlobContext| {
             let http_client = Arc::clone(&http_client);
             let cache = cache.clone();
+            let stats = Arc::clone(&stats);
 
             async move {
                 fetch_blob(
@@ -546,6 +559,7 @@ pub fn make_blob_fetch_queue(
                     context.blob_kind,
                     context.expected_len,
                     &cache,
+                    stats,
                 )
                 .map_err(Arc::new)
                 .await
@@ -562,45 +576,47 @@ async fn fetch_blob(
     blob_kind: BlobKind,
     expected_len: Option<u64>,
     cache: &PackageCache,
+    stats: Arc<Mutex<Stats>>,
 ) -> Result<(), FetchError> {
     if mirrors.is_empty() {
         return Err(FetchError::NoMirrors);
     }
 
     // TODO try the other mirrors depending on the errors encountered trying this one.
-    let blob_url = make_blob_url(mirrors[0].blob_mirror_url(), &merkle)?;
+    let blob_mirror_url = mirrors[0].blob_mirror_url();
+    let mirror_stats = stats.lock().for_mirror(blob_mirror_url.to_owned());
+    let blob_url = make_blob_url(blob_mirror_url, &merkle)?;
 
-    const MAX_FETCH_RETRIES: usize = 1;
+    let flaked = Arc::new(AtomicBool::new(false));
 
-    struct RetryNetworkErrors {
-        remaining: usize,
-    }
+    fuchsia_backoff::retry_or_first_error(retry::blob_fetch(), || {
+        let flaked = Arc::clone(&flaked);
+        let mirror_stats = &mirror_stats;
 
-    impl fuchsia_backoff::Backoff<FetchError> for RetryNetworkErrors {
-        fn next_backoff(&mut self, err: &FetchError) -> Option<Duration> {
-            if !err.should_retry() || self.remaining == 0 {
-                return None;
+        async {
+            if let Some(blob) =
+                cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
+            {
+                download_blob(client, &blob_url, blob_kind, expected_len, blob).await?;
             }
 
-            self.remaining -= 1;
-            Some(Duration::from_secs(0))
+            Ok(())
         }
-    }
-
-    fuchsia_backoff::retry_or_first_error(
-        RetryNetworkErrors { remaining: MAX_FETCH_RETRIES },
-        || {
-            async {
-                if let Some(blob) =
-                    cache.create_blob(merkle, blob_kind).await.map_err(FetchError::CreateBlob)?
-                {
-                    download_blob(client, &blob_url, blob_kind, expected_len, blob).await?;
-                }
-
-                Ok(())
+        .inspect(move |res| match res.as_ref().map_err(FetchError::kind) {
+            Err(FetchErrorKind::NetworkRateLimit) => {
+                mirror_stats.network_rate_limits().increment();
             }
-        },
-    )
+            Err(FetchErrorKind::Network) => {
+                flaked.store(true, Ordering::SeqCst);
+            }
+            Err(FetchErrorKind::Other) => {}
+            Ok(()) => {
+                if flaked.load(Ordering::SeqCst) {
+                    mirror_stats.network_blips().increment();
+                }
+            }
+        })
+    })
     .await
 }
 
@@ -760,15 +776,6 @@ pub enum FetchError {
     Io(#[cause] Status),
 }
 
-impl FetchError {
-    fn should_retry(&self) -> bool {
-        match self {
-            FetchError::Hyper(_) | FetchError::Http(_) | FetchError::BadHttpStatus(_) => true,
-            _ => false,
-        }
-    }
-}
-
 impl From<url::ParseError> for FetchError {
     fn from(x: url::ParseError) -> Self {
         FetchError::BadMirrorUrl(x)
@@ -785,6 +792,27 @@ impl From<hyper::http::Error> for FetchError {
     fn from(x: hyper::http::Error) -> Self {
         FetchError::Http(x)
     }
+}
+
+impl FetchError {
+    fn kind(&self) -> FetchErrorKind {
+        match self {
+            FetchError::BadHttpStatus(StatusCode::TOO_MANY_REQUESTS) => {
+                FetchErrorKind::NetworkRateLimit
+            }
+            FetchError::Hyper(_) | FetchError::Http(_) | FetchError::BadHttpStatus(_) => {
+                FetchErrorKind::Network
+            }
+            _ => FetchErrorKind::Other,
+        }
+    }
+}
+
+#[derive(Debug, PartialEq, Eq)]
+pub enum FetchErrorKind {
+    NetworkRateLimit,
+    Network,
+    Other,
 }
 
 #[cfg(test)]

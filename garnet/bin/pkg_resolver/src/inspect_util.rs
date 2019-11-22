@@ -4,7 +4,7 @@
 
 use {
     fidl_fuchsia_pkg_ext::{MirrorConfigInspectState, RepositoryConfig},
-    fuchsia_inspect::{self as inspect, Property},
+    fuchsia_inspect::{self as inspect, NumericProperty, Property},
     fuchsia_inspect_contrib::inspectable::{Inspectable, Watch},
     fuchsia_url::pkg_url::RepoUrl,
     std::sync::Arc,
@@ -75,6 +75,21 @@ impl Watch<RepoUrl> for InspectableRepoUrlWatcher {
 
     fn watch(&mut self, _repo_url: &RepoUrl) {
         self.url_property.set("");
+    }
+}
+
+#[derive(Debug)]
+pub struct Counter {
+    prop: inspect::UintProperty,
+}
+
+impl Counter {
+    pub fn new(parent: &inspect::Node, name: &str) -> Self {
+        Self { prop: parent.create_uint(name, 0) }
+    }
+
+    pub fn increment(&self) {
+        self.prop.add(1);
     }
 }
 

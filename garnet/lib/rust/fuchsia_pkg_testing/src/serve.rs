@@ -225,14 +225,19 @@ pub mod handler {
             Self(StatusCode::OK)
         }
 
-        /// Creates handler that always responds with 404 NOT_FOUND
+        /// Creates handler that always responds with 404 Not Found
         pub fn not_found() -> Self {
             Self(StatusCode::NOT_FOUND)
         }
 
-        /// Creates handler that always responds with 500 INTERNAL_SERVER_ERROR
+        /// Creates handler that always responds with 500 Internal Server Error
         pub fn server_error() -> Self {
             Self(StatusCode::INTERNAL_SERVER_ERROR)
+        }
+
+        /// Creates handler that always responds with 429 Too Many Requests
+        pub fn too_many_requests() -> Self {
+            Self(StatusCode::TOO_MANY_REQUESTS)
         }
     }
 
@@ -256,6 +261,32 @@ pub mod handler {
         /// Creates handler that overrides requests when should_override is set.
         pub fn new(should_override: &AtomicToggle, handler: H) -> Self {
             Self { enabled: Arc::clone(&should_override.0), handler }
+        }
+    }
+
+    /// Handler that overrides the given request path for the given number of requests.
+    pub struct ForRequestCount<H: UriPathHandler> {
+        remaining: Mutex<u32>,
+        handler: H,
+    }
+
+    impl<H: UriPathHandler> UriPathHandler for ForRequestCount<H> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+            let mut remaining = self.remaining.lock();
+            if *remaining > 0 {
+                *remaining -= 1;
+                drop(remaining);
+                self.handler.handle(uri_path, response)
+            } else {
+                ready(response).boxed()
+            }
+        }
+    }
+
+    impl<H: UriPathHandler> ForRequestCount<H> {
+        /// Creates handler that overrides the given request path for the given number of requests.
+        pub fn new(count: u32, handler: H) -> Self {
+            Self { remaining: Mutex::new(count), handler }
         }
     }
 

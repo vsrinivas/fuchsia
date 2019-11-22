@@ -7,7 +7,7 @@ use {
         amber_connector::AmberConnect,
         cache::{BlobFetcher, PackageCache},
         experiment::{Experiment, Experiments},
-        inspect_util::{InspectableRepoUrl, InspectableRepositoryConfig},
+        inspect_util::{self, InspectableRepoUrl, InspectableRepositoryConfig},
     },
     failure::Fail,
     fidl_fuchsia_amber::{
@@ -20,7 +20,7 @@ use {
     fuchsia_url::pkg_url::{PkgUrl, RepoUrl},
     fuchsia_zircon::Status,
     futures::prelude::*,
-    parking_lot::RwLock,
+    parking_lot::{Mutex, RwLock},
     std::{
         collections::{btree_set, hash_map::Entry, BTreeSet, HashMap},
         fmt, fs, io,
@@ -48,7 +48,56 @@ struct RepositoryManagerInspectState {
     dynamic_configs_node: inspect::Node,
     static_configs_node: inspect::Node,
     dynamic_configs_path_property: inspect::StringProperty,
+    stats: Arc<Mutex<Stats>>,
     conns_node: inspect::Node,
+}
+
+#[derive(Debug)]
+pub struct Stats {
+    node: inspect::Node,
+    mirrors_node: inspect::Node,
+    mirrors: HashMap<String, Arc<MirrorStats>>,
+}
+
+impl Stats {
+    fn new(node: inspect::Node) -> Self {
+        Self { mirrors_node: node.create_child("mirrors"), mirrors: HashMap::new(), node }
+    }
+    pub fn for_mirror(&mut self, mirror: String) -> Arc<MirrorStats> {
+        match self.mirrors.entry(mirror) {
+            Entry::Occupied(entry) => Arc::clone(entry.get()),
+            Entry::Vacant(entry) => {
+                let stats = Arc::new(MirrorStats::new(self.mirrors_node.create_child(entry.key())));
+                entry.insert(Arc::clone(&stats));
+                stats
+            }
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct MirrorStats {
+    node: inspect::Node,
+    /// web requests that failed with a network error and then succeeded when retried
+    network_blips: inspect_util::Counter,
+    /// web requests that received a response asking us to try again later
+    network_rate_limits: inspect_util::Counter,
+}
+
+impl MirrorStats {
+    fn new(node: inspect::Node) -> Self {
+        Self {
+            network_blips: inspect_util::Counter::new(&node, "network_blips"),
+            network_rate_limits: inspect_util::Counter::new(&node, "network_rate_limits"),
+            node: node,
+        }
+    }
+    pub fn network_blips(&self) -> &inspect_util::Counter {
+        &self.network_blips
+    }
+    pub fn network_rate_limits(&self) -> &inspect_util::Counter {
+        &self.network_rate_limits
+    }
 }
 
 impl<A: AmberConnect> RepositoryManager<A> {
@@ -59,6 +108,11 @@ impl<A: AmberConnect> RepositoryManager<A> {
             .get(repo_url)
             .or_else(|| self.static_configs.get(repo_url))
             .map(|a| Deref::deref(a))
+    }
+
+    /// Returns a handle to this repo manager's inspect statistics.
+    pub fn stats(&self) -> Arc<Mutex<Stats>> {
+        Arc::clone(&self.inspect.stats)
     }
 
     /// Returns a reference to the [RepositoryConfig] static config that matches the `channel`.
@@ -499,6 +553,7 @@ impl<A: AmberConnect + std::fmt::Debug> RepositoryManagerBuilder<A, inspect::Nod
             dynamic_configs_node: self.inspect_node.create_child("dynamic_configs"),
             static_configs_node: self.inspect_node.create_child("static_configs"),
             conns_node: self.inspect_node.create_child("conns"),
+            stats: Arc::new(Mutex::new(Stats::new(self.inspect_node.create_child("stats")))),
             node: self.inspect_node,
         };
 
@@ -1412,6 +1467,9 @@ mod tests {
                     }
                   },
                   conns: {},
+                  stats: {
+                      mirrors: {},
+                  },
                 }
             }
         );
@@ -1437,6 +1495,9 @@ mod tests {
                   dynamic_configs: {},
                   static_configs: {},
                   conns: {},
+                  stats: {
+                      mirrors: {},
+                  },
                 }
             }
         );
@@ -1461,7 +1522,10 @@ mod tests {
                   dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
                   dynamic_configs: {},
                   static_configs: {},
-                  conns: {}
+                  conns: {},
+                  stats: {
+                      mirrors: {},
+                  },
                 }
             }
         );
@@ -1500,7 +1564,10 @@ mod tests {
                     }
                   },
                   static_configs: {},
-                  conns: {}
+                  conns: {},
+                  stats: {
+                      mirrors: {},
+                  },
                 }
             }
         );
@@ -1514,7 +1581,10 @@ mod tests {
                   dynamic_configs_path: format!("{:?}", Some(dynamic_configs_path.clone())),
                   dynamic_configs: {},
                   static_configs: {},
-                  conns: {}
+                  conns: {},
+                  stats: {
+                      mirrors: {},
+                  },
                 }
             }
         );

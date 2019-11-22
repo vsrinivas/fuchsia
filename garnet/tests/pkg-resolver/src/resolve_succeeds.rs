@@ -9,6 +9,7 @@
 use {
     super::*,
     fidl_fuchsia_pkg_ext::MirrorConfigBuilder,
+    fuchsia_inspect::{assert_inspect_tree, reader::PartialNodeHierarchy},
     fuchsia_merkle::{Hash, MerkleTree},
     fuchsia_pkg_testing::{
         serve::{handler, AtomicToggle, UriPathHandler},
@@ -17,12 +18,14 @@ use {
     futures::{
         channel::{mpsc, oneshot},
         future::{ready, BoxFuture},
+        join,
     },
     hyper::{Body, Response},
     matches::assert_matches,
     parking_lot::Mutex,
     std::{
         collections::HashSet,
+        convert::TryFrom,
         fs::File,
         io::{self, Read},
         path::{Path, PathBuf},
@@ -320,6 +323,98 @@ async fn download_blob_experiment_retries() {
 
     let package_dir = env.resolve_package("fuchsia-pkg://test/try-hard").await.unwrap();
     pkg.verify_contents(&package_dir).await.unwrap();
+
+    let vmo = env.pkg_resolver_inspect_vmo();
+    let repo_blob_url = format!("{}/blobs", served_repository.local_url());
+    let repo_blob_url = &repo_blob_url;
+    assert_inspect_tree!(
+        PartialNodeHierarchy::try_from(&vmo).unwrap(),
+        root: contains {
+            repository_manager: contains {
+                stats: {
+                    mirrors: {
+                        var repo_blob_url: {
+                            network_blips: 2u64,
+                            network_rate_limits: 0u64,
+                        },
+                    },
+                },
+            },
+        }
+    );
+
+    env.stop().await;
+}
+
+#[fasync::run_singlethreaded(test)]
+async fn download_blob_experiment_handles_429_responses() {
+    let env = TestEnv::new();
+    env.set_experiment_state(Experiment::DownloadBlob, true).await;
+
+    let pkg1 = PackageBuilder::new("rate-limit-far")
+        .add_resource_at("data/foo", "foo".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let pkg2 = PackageBuilder::new("rate-limit-content")
+        .add_resource_at("data/bar", "bar".as_bytes())
+        .build()
+        .await
+        .unwrap();
+    let repo = Arc::new(
+        RepositoryBuilder::from_template_dir(EMPTY_REPO_PATH)
+            .add_package(&pkg1)
+            .add_package(&pkg2)
+            .build()
+            .await
+            .unwrap(),
+    );
+    let served_repository = repo
+        .build_server()
+        .uri_path_override_handler(handler::ForPath::new(
+            format!("/blobs/{}", pkg1.meta_far_merkle_root()),
+            handler::ForRequestCount::new(2, handler::StaticResponseCode::too_many_requests()),
+        ))
+        .uri_path_override_handler(handler::ForPath::new(
+            format!("/blobs/{}", pkg2.meta_contents().unwrap().contents()["data/bar"]),
+            handler::ForRequestCount::new(2, handler::StaticResponseCode::too_many_requests()),
+        ))
+        .start()
+        .unwrap();
+    env.register_repo(&served_repository).await;
+
+    // Simultaneously resolve both packages to minimize the time spent waiting for timeouts in
+    // these tests.
+    let proxy1 = env.connect_to_resolver();
+    let proxy2 = env.connect_to_resolver();
+    let pkg1_fut = resolve_package(&proxy1, "fuchsia-pkg://test/rate-limit-far");
+    let pkg2_fut = resolve_package(&proxy2, "fuchsia-pkg://test/rate-limit-content");
+
+    // The packages should resolve successfully.
+    let (pkg1_dir, pkg2_dir) = join!(pkg1_fut, pkg2_fut);
+    pkg1.verify_contents(&pkg1_dir.unwrap()).await.unwrap();
+    pkg2.verify_contents(&pkg2_dir.unwrap()).await.unwrap();
+
+    // And the inspect data for the package resolver should indicate that it handled 429 responses.
+    let vmo = env.pkg_resolver_inspect_vmo();
+
+    let repo_blob_url = format!("{}/blobs", served_repository.local_url());
+    let repo_blob_url = &repo_blob_url;
+    assert_inspect_tree!(
+        PartialNodeHierarchy::try_from(&vmo).unwrap(),
+        root: contains {
+            repository_manager: contains {
+                stats: {
+                    mirrors: {
+                        var repo_blob_url: {
+                            network_blips: 0u64,
+                            network_rate_limits: 4u64,
+                        },
+                    },
+                },
+            },
+        }
+    );
 
     env.stop().await;
 }
