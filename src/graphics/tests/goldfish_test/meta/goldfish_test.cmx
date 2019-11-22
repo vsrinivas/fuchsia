@@ -17,7 +17,9 @@
             "sys/platform/acpi/goldfish"
         ],
         "services": [
-            "fuchsia.sysmem.Allocator"
+            "fuchsia.logger.LogSink",
+            "fuchsia.sysmem.Allocator",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

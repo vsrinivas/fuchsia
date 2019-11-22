@@ -11,6 +11,7 @@
             "vulkan"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.tracing.provider.Registry",
             "fuchsia.vulkan.loader.Loader"
         ]

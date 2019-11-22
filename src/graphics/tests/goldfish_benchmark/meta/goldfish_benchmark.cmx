@@ -6,6 +6,9 @@
         "dev": [
             "class/goldfish-pipe"
         ],
-        "services": []
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
     }
 }

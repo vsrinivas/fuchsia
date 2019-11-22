@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.sysmem.Allocator",
             "fuchsia.tracing.provider.Registry"
         ]
