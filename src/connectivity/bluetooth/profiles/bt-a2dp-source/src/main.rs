@@ -16,17 +16,21 @@ use {
         detachable_map::{DetachableMap, DetachableWeak},
         types::PeerId,
     },
+    fuchsia_component::server::ServiceFs,
     fuchsia_syslog::{self, fx_log_info, fx_log_warn},
     fuchsia_zircon as zx,
     futures::{self, AsyncWriteExt, StreamExt, TryStreamExt},
-    std::{convert::TryInto, string::String},
+    parking_lot::Mutex,
+    std::{convert::TryInto, string::String, sync::Arc},
 };
 
+mod avdtp_controller;
 mod encoding;
 mod pcm_audio;
 mod peer;
 mod sources;
 
+use crate::avdtp_controller::AvdtpControllerPool;
 use crate::encoding::{EncodedStreamSbc, RtpPacketBuilderSbc};
 use crate::pcm_audio::PcmAudio;
 use crate::peer::Peer;
@@ -119,6 +123,10 @@ struct Peers {
 impl Peers {
     fn new(source_type: AudioSourceType, profile: ProfileProxy) -> Self {
         Peers { peers: DetachableMap::new(), source_type, profile }
+    }
+
+    pub(crate) fn get(&self, id: &PeerId) -> Option<Arc<peer::Peer>> {
+        self.peers.get(id).and_then(|p| p.upgrade())
     }
 
     async fn discovered(&mut self, id: PeerId) -> Result<(), Error> {
@@ -248,6 +256,16 @@ async fn main() -> Result<(), Error> {
 
     fuchsia_syslog::init_with_tags(&["a2dp-source"]).expect("Can't init logger");
 
+    let controller_pool = Arc::new(Mutex::new(AvdtpControllerPool::new()));
+
+    let mut fs = ServiceFs::new();
+    let pool_clone = controller_pool.clone();
+    fs.dir("svc").add_fidl_service(move |s| pool_clone.lock().connect_client(s));
+    if let Err(e) = fs.take_and_serve_directory_handle() {
+        fx_log_warn!("Unable to serve Inspect service directory: {}", e);
+    }
+    fasync::spawn(fs.collect::<()>());
+
     let profile_svc = fuchsia_component::client::connect_to_service::<ProfileMarker>()
         .context("Failed to connect to Bluetooth profile service")?;
 
@@ -274,7 +292,12 @@ async fn main() -> Result<(), Error> {
     while let Some(evt) = evt_stream.next().await {
         let res = match evt? {
             ProfileEvent::OnConnected { device_id, channel, .. } => {
-                peers.connected(device_id.parse()?, channel)
+                let peer_id = device_id.parse().expect("peer ids from profile should parse");
+                let connected_res = peers.connected(device_id.parse()?, channel);
+                if let Some(peer) = peers.get(&peer_id) {
+                    controller_pool.lock().add_peer(peer_id, peer.avdtp_peer());
+                }
+                connected_res
             }
             ProfileEvent::OnServiceFound { peer_id, profile, attributes } => {
                 fx_log_info!(

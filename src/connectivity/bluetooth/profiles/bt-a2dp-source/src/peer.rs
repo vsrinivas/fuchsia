@@ -79,6 +79,12 @@ impl Peer {
         lock.receive_channel(channel)
     }
 
+    /// Return a handle to the AVDTP peer, to use as initiator of commands.
+    pub fn avdtp_peer(&self) -> Arc<avdtp::Peer> {
+        let lock = self.inner.lock();
+        lock.peer.clone()
+    }
+
     /// Perform Discovery and then Capability detection to discover the capabilities of the
     /// connected peer's stream endpoints
     /// Returns a map of remote stream endpoint ids associated with the MediaCoded serviice capability of
