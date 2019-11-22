@@ -81,10 +81,6 @@ int Astro::Thread() {
     return -1;
   }
 
-  if ((status = ClkInit()) != ZX_OK) {
-    zxlogf(ERROR, "ClkInit failed: %d\n", status);
-  }
-
   if ((status = ButtonsInit()) != ZX_OK) {
     zxlogf(ERROR, "ButtonsInit failed: %d\n", status);
   }
@@ -135,6 +131,10 @@ int Astro::Thread() {
 
   if ((status = LightInit()) != ZX_OK) {
     zxlogf(ERROR, "LightInit failed: %d\n", status);
+  }
+
+  if ((status = ClkInit()) != ZX_OK) {
+    zxlogf(ERROR, "ClkInit failed: %d\n", status);
   }
 
   if ((status = ThermalInit()) != ZX_OK) {

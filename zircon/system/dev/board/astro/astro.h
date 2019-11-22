@@ -9,7 +9,6 @@
 
 #include <ddk/device.h>
 #include <ddktl/device.h>
-#include <ddktl/protocol/clockimpl.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/iommu.h>
 #include <ddktl/protocol/platform/bus.h>
@@ -127,7 +126,6 @@ class Astro : public AstroType {
   ddk::PBusProtocolClient pbus_;
   ddk::IommuProtocolClient iommu_;
   ddk::GpioImplProtocolClient gpio_impl_;
-  ddk::ClockImplProtocolClient clk_impl_;
 
   thrd_t thread_;
 };

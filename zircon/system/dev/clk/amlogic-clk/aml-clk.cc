@@ -16,8 +16,6 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 
-#include <ddktl/protocol/platform/bus.h>
-
 #include <soc/aml-meson/aml-clk-common.h>
 
 #include "aml-axg-blocks.h"
@@ -118,12 +116,6 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     }
   }
 
-  ddk::PBusProtocolClient pbus(parent);
-  if (!pbus.is_valid()) {
-    zxlogf(ERROR, "aml-clk: failed to get platform bus protocol\n");
-    return ZX_ERR_INTERNAL;
-  }
-
   auto clock_device = std::make_unique<amlogic_clock::AmlClock>(parent, std::move(*hiu_mmio),
                                                                 *std::move(msr_mmio), info.did);
 
@@ -132,8 +124,6 @@ zx_status_t AmlClock::Create(zx_device_t* parent) {
     zxlogf(ERROR, "aml-clk: Could not create clock device: %d\n", status);
     return status;
   }
-
-  clock_device->Register(pbus);
 
   // devmgr is now in charge of the memory for dev.
   __UNUSED auto ptr = clock_device.release();
@@ -353,15 +343,6 @@ void AmlClock::ShutDown() {
   if (msr_mmio_) {
     msr_mmio_->reset();
   }
-}
-
-void AmlClock::Register(const ddk::PBusProtocolClient& pbus) {
-  clock_impl_protocol_t clk_proto = {
-      .ops = &clock_impl_protocol_ops_,
-      .ctx = this,
-  };
-
-  pbus.RegisterProtocol(ZX_PROTOCOL_CLOCK_IMPL, &clk_proto, sizeof(clk_proto));
 }
 
 zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {

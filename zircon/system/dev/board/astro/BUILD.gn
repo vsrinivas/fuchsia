@@ -27,7 +27,6 @@ zx_driver("astro") {
     "astro.cc",
   ]
   deps = [
-    "$zx/system/banjo/ddk.protocol.clockimpl",
     "$zx/system/banjo/ddk.protocol.gpio",
     "$zx/system/banjo/ddk.protocol.gpioimpl",
     "$zx/system/banjo/ddk.protocol.iommu",
