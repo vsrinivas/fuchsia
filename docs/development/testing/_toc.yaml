@@ -27,3 +27,5 @@ toc:
   path: /docs/development/testing/faq.md
 - title: "Zircon testing overview"
   path: /docs/development/testing/testing.md
+- title: "Testing Scenic and Escher"
+  path: /docs/development/testing/scenic_testing.md
