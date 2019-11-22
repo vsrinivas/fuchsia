@@ -11,6 +11,7 @@ source_set("camera-task") {
     "task.cc",
   ]
   deps = [
+    "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",

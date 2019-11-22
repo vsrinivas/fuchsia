@@ -46,11 +46,15 @@ ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
 // Integration test for the driver defined in zircon/system/dev/camera/arm-isp.
 class TaskTest : public zxtest::Test {
  public:
-  void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index) {
+  void ProcessFrameCallback(uint32_t input_buffer_index, uint32_t output_buffer_index,
+                            frame_status_t status) {
     fbl::AutoLock al(&lock_);
     callback_check_.emplace_back(input_buffer_index, output_buffer_index);
     frame_ready_ = true;
     event_.Signal();
+    if (status != FRAME_STATUS_OK) {
+      frame_status_error_ = true;
+    }
   }
 
   void ResChangeCallback() {
@@ -124,7 +128,7 @@ class TaskTest : public zxtest::Test {
       EXPECT_EQ(static_cast<TaskTest*>(ctx)->output_image_format_index_,
                 info->metadata.image_format_index);
       return static_cast<TaskTest*>(ctx)->ProcessFrameCallback(info->metadata.input_buffer_index,
-                                                               info->buffer_id);
+                                                               info->buffer_id, info->frame_status);
     };
     frame_callback_.ctx = this;
 
@@ -215,6 +219,7 @@ class TaskTest : public zxtest::Test {
   std::unique_ptr<GdcDevice> gdc_device_;
   uint32_t output_image_format_index_;
   gdc_config_info config_info_;
+  bool frame_status_error_ = false;
 
  private:
   std::vector<std::pair<uint32_t, uint32_t>> callback_check_;
@@ -409,6 +414,7 @@ TEST_F(TaskTest, SetOutputResTest) {
   // what we set it to above.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
+  EXPECT_FALSE(frame_status_error_);
 
   ASSERT_OK(gdc_device_->StopThread());
 
@@ -432,6 +438,7 @@ TEST_F(TaskTest, ReleaseValidFrameTest) {
   // Check if the callback was called.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
+  EXPECT_FALSE(frame_status_error_);
 
   // Release the output buffer index provided as callback.
   ASSERT_NO_DEATH(([this, task_id]() {
@@ -458,6 +465,7 @@ TEST_F(TaskTest, ReleaseInValidFrameTest) {
   // Check if the callback was called.
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
+  EXPECT_FALSE(frame_status_error_);
 
   // Release the output buffer index provided as callback.
   ASSERT_DEATH(([this, task_id]() {
@@ -488,6 +496,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   WaitAndReset();
   EXPECT_EQ(1, GetCallbackSize());
   EXPECT_EQ(kNumberOfBuffers - 1, GetCallbackBackInputBufferIndex());
+  EXPECT_FALSE(frame_status_error_);
 
   // Trigger the interrupt manually.
   packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
@@ -497,6 +506,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   WaitAndReset();
   EXPECT_EQ(2, GetCallbackSize());
   EXPECT_EQ(kNumberOfBuffers - 2, GetCallbackBackInputBufferIndex());
+  EXPECT_FALSE(frame_status_error_);
 
   // This time adding another frame to process while its
   // waiting for an interrupt.
@@ -511,6 +521,7 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   WaitAndReset();
   EXPECT_EQ(3, GetCallbackSize());
   EXPECT_EQ(kNumberOfBuffers - 3, GetCallbackBackInputBufferIndex());
+  EXPECT_FALSE(frame_status_error_);
 
   // Trigger the interrupt manually.
   packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
@@ -519,6 +530,48 @@ TEST_F(TaskTest, MultipleProcessFrameTest) {
   // Check if the callback was called one more time.
   WaitAndReset();
   EXPECT_EQ(4, GetCallbackSize());
+  EXPECT_FALSE(frame_status_error_);
+
+  ASSERT_OK(gdc_device_->StopThread());
+}
+
+TEST_F(TaskTest, DropFrameTest) {
+  ddk_mock::MockMmioReg fake_reg_array[kNumberOfMmios];
+  ddk_mock::MockMmioRegRegion fake_regs(fake_reg_array, sizeof(uint32_t), kNumberOfMmios);
+
+  auto task_id = SetupForFrameProcessing(fake_regs);
+
+  // We process kNumberOfBuffers frames.
+  for (uint32_t i = 0; i < kNumberOfBuffers; i++) {
+    auto status = gdc_device_->GdcProcessFrame(task_id, i);
+    EXPECT_OK(status);
+  }
+
+  // Ensure that all of them are processed. This ensures that all o/p buffers are used.
+  for (uint32_t t = 1; t <= kNumberOfBuffers; t++) {
+    // Trigger the interrupt manually.
+    zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+    EXPECT_OK(port_.queue(&packet));
+
+    // Check if the callback was called.
+    WaitAndReset();
+    EXPECT_EQ(t, GetCallbackSize());
+    EXPECT_FALSE(frame_status_error_);
+    EXPECT_EQ(t - 1, GetCallbackBackInputBufferIndex());
+  }
+
+  // Adding one more frame to process.
+  auto status = gdc_device_->GdcProcessFrame(task_id, 0);
+  EXPECT_OK(status);
+
+  // Trigger the interrupt manually.
+  zx_port_packet packet = {kPortKeyDebugFakeInterrupt, ZX_PKT_TYPE_USER, ZX_OK, {}};
+  EXPECT_OK(port_.queue(&packet));
+
+  // Check if the callback was called.
+  WaitAndReset();
+  EXPECT_EQ(kNumberOfBuffers + 1, GetCallbackSize());
+  EXPECT_TRUE(frame_status_error_);
 
   ASSERT_OK(gdc_device_->StopThread());
 }

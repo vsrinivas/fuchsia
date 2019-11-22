@@ -231,8 +231,18 @@ void Ge2dDevice::ProcessTask(TaskInfo& info) {
   }
 
   // First lets fetch an unused buffer from the VMO pool.
-  uint32_t output_phy_addr;
-  output_phy_addr = task->GetOutputBufferPhysAddr();
+  auto result = task->GetOutputBufferPhysAddr();
+  if (result.is_error()) {
+    frame_available_info info;
+    info.frame_status = FRAME_STATUS_ERROR_BUFFER_FULL;
+    info.metadata.input_buffer_index = input_buffer_index;
+    info.metadata.timestamp = static_cast<uint64_t>(zx_clock_get_monotonic());
+    info.metadata.image_format_index = task->output_format_index();
+    task->frame_callback()->frame_ready(task->frame_callback()->ctx, &info);
+    return;
+  }
+
+  __UNUSED auto output_phy_addr = result.value();
 
   if (packet.key == kPortKeyDebugFakeInterrupt || packet.key == kPortKeyIrqMsg) {
     // Invoke the callback function and tell about the output buffer index

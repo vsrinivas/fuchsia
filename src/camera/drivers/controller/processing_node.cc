@@ -49,15 +49,18 @@ void ProcessNode::OnFrameAvailable(const frame_available_info_t* info) {
 
   // Free up parent's frame
   parent_node_->OnReleaseFrame(info->metadata.input_buffer_index);
-
-  // Loop through all the child nodes and call their |OnFrameAvailable|
-  for (auto& i : child_nodes_info_) {
-    auto& child_node = i.child_node;
-    // TODO(braval): Regulate frame rate here
-    if (child_node->enabled()) {
-      child_node->OnReadyToProcess(info->buffer_id);
+  if (info->frame_status == FRAME_STATUS_OK) {
+    // Loop through all the child nodes and call their |OnFrameAvailable|
+    for (auto& i : child_nodes_info_) {
+      auto& child_node = i.child_node;
+      // TODO(braval): Regulate frame rate here
+      if (child_node->enabled()) {
+        child_node->OnReadyToProcess(info->buffer_id);
+      }
     }
+    return;
   }
+  // TODO(braval): Handle all frame_status errors.
 }
 
 void ProcessNode::OnReleaseFrame(uint32_t buffer_index) {
