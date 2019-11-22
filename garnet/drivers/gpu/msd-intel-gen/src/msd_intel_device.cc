@@ -176,7 +176,7 @@ bool MsdIntelDevice::BaseInit(void* device_handle) {
     ForceWake::reset(register_io_.get(), registers::ForceWake::GEN9_RENDER);
     ForceWake::request(register_io_.get(), registers::ForceWake::GEN9_RENDER);
   } else {
-    magma::log(magma::LOG_WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
+    MAGMA_LOG(WARNING, "Unrecognized graphics PCI device id 0x%x", device_id_);
     return false;
   }
 
@@ -237,7 +237,7 @@ bool MsdIntelDevice::RenderEngineInit(bool execute_init_batch) {
 }
 
 bool MsdIntelDevice::RenderEngineReset() {
-  magma::log(magma::LOG_WARNING, "resetting render engine");
+  MAGMA_LOG(WARNING, "resetting render engine");
 
   render_engine_cs_->ResetCurrentContext();
 
@@ -376,7 +376,7 @@ int MsdIntelDevice::DeviceThreadLoop() {
         }
         break;
       default:
-        magma::log(magma::LOG_WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
+        MAGMA_LOG(WARNING, "device_request_semaphore_ Wait failed: %d", status.get());
         DASSERT(false);
         // TODO(MA-683): should we trigger a restart of the driver?
         std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -450,7 +450,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
       if (fault) {
         std::string s;
         DumpToString(s);
-        magma::log(magma::LOG_WARNING, "GPU fault detected\n%s", s.c_str());
+        MAGMA_LOG(WARNING, "GPU fault detected\n%s", s.c_str());
         RenderEngineReset();
       } else {
         ProcessCompletedCommandBuffers();
@@ -467,7 +467,7 @@ magma::Status MsdIntelDevice::ProcessInterrupts(uint64_t interrupt_time_ns,
 magma::Status MsdIntelDevice::ProcessDumpStatusToLog() {
   std::string dump;
   DumpToString(dump);
-  magma::log(magma::LOG_INFO, "%s", dump.c_str());
+  MAGMA_LOG(INFO, "%s", dump.c_str());
   return MAGMA_STATUS_OK;
 }
 
@@ -477,22 +477,21 @@ void MsdIntelDevice::HangCheckTimeout() {
   uint32_t master_interrupt_control = registers::MasterInterruptControl::read(register_io_.get());
   if (master_interrupt_control &
       registers::MasterInterruptControl::kRenderInterruptsPendingBitMask) {
-    magma::log(magma::LOG_WARNING,
-               "Hang check timeout while pending render interrupt; slow interrupt handler?\n"
-               "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
-               "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu\n%s",
-               progress_->last_submitted_sequence_number(), master_interrupt_control,
-               last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
-               s.c_str());
+    MAGMA_LOG(WARNING,
+              "Hang check timeout while pending render interrupt; slow interrupt handler?\n"
+              "last submitted sequence number 0x%x master_interrupt_control 0x%08x "
+              "last_interrupt_callback_timestamp %lu last_interrupt_timestamp %lu\n%s",
+              progress_->last_submitted_sequence_number(), master_interrupt_control,
+              last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
+              s.c_str());
     return;
   }
-  magma::log(magma::LOG_WARNING,
-             "Suspected GPU hang: last submitted sequence number "
-             "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
-             "last_interrupt_timestamp %lu\n%s",
-             progress_->last_submitted_sequence_number(), master_interrupt_control,
-             last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(),
-             s.c_str());
+  MAGMA_LOG(WARNING,
+            "Suspected GPU hang: last submitted sequence number "
+            "0x%x master_interrupt_control 0x%08x last_interrupt_callback_timestamp %lu "
+            "last_interrupt_timestamp %lu\n%s",
+            progress_->last_submitted_sequence_number(), master_interrupt_control,
+            last_interrupt_callback_timestamp_.load(), last_interrupt_timestamp_.load(), s.c_str());
   suspected_gpu_hang_count_ += 1;
   RenderEngineReset();
 }

@@ -12,6 +12,7 @@
 #include "magma_util/macros.h"
 #include "msd_intel_buffer.h"
 #include "msd_intel_connection.h"
+#include "platform_logger.h"
 #include "platform_trace.h"
 #include "registers.h"
 #include "render_init_batch.h"
@@ -389,7 +390,7 @@ void EngineCommandStreamer::SubmitExeclists(MsdIntelContext* context) {
       if (std::chrono::duration<double, std::micro>(std::chrono::high_resolution_clock::now() -
                                                     start)
               .count() > kTimeoutUs) {
-        magma::log(magma::LOG_WARNING, "Timeout waiting for execlist port");
+        MAGMA_LOG(WARNING, "Timeout waiting for execlist port");
         break;
       }
     }
@@ -568,7 +569,7 @@ void RenderEngineCommandStreamer::ScheduleContext() {
     // sufficient room in the ringbuffer before selecting a context.
     // For now, drop the command buffer and try another context.
     if (!MoveBatchToInflight(std::move(mapped_batch))) {
-      magma::log(magma::LOG_WARNING, "ExecBatch failed");
+      MAGMA_LOG(WARNING, "ExecBatch failed");
       break;
     }
 

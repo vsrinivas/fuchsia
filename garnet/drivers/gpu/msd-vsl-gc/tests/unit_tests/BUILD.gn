@@ -15,6 +15,7 @@ executable("nonhardware_tests") {
 
   deps = [
     "//garnet/drivers/gpu/msd-vsl-gc/src",
+    "//garnet/lib/magma/tests/helper:logger_init_helper",
     "//garnet/lib/magma/tests/mock:bus_mapper",
     "//garnet/lib/magma/tests/mock:mmio",
     "//src/lib/fxl/test:gtest_main",

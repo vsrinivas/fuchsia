@@ -6,6 +6,10 @@
         "features": [
             "vulkan",
             "isolated-temp"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
         ]
     }
 }

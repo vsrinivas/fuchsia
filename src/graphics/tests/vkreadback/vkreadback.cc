@@ -454,8 +454,8 @@ bool VkReadbackTest::Readback() {
   for (uint32_t i = 0; i < kWidth * kHeight; i++) {
     if (data[i] != expected_value) {
       if (mismatches++ < 10)
-        magma::log(magma::LOG_WARNING, "Value Mismatch at index %d - expected 0x%04x, got 0x%08x",
-                   i, expected_value, data[i]);
+        printf("Value Mismatch at index %d - expected 0x%04x, got 0x%08x\n", i, expected_value,
+               data[i]);
     }
   }
   if (mismatches) {

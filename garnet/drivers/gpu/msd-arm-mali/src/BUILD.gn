@@ -82,6 +82,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
     "//garnet/lib/magma/src/magma_util/platform:device",
     "//garnet/lib/magma/src/magma_util/platform:event",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:port",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
     "//garnet/lib/magma/src/magma_util/platform:trace",

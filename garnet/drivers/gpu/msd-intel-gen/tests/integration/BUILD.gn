@@ -27,6 +27,7 @@ executable("msd_intel_gen_integration_tests") {
     "$magma_build_root/tests/helper:test_device_helper",
     "$zircon_build_root/public/lib/fdio",
     "../../include",
+    "//garnet/lib/magma/tests/helper:logger_init_helper",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gtest",

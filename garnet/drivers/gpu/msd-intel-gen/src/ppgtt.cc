@@ -6,6 +6,7 @@
 
 #include "magma_util/macros.h"
 #include "platform_buffer.h"
+#include "platform_logger.h"
 #include "registers.h"
 
 constexpr bool kLogEnable = false;
@@ -189,8 +190,8 @@ bool PerProcessGtt::InsertLocked(uint64_t addr, magma::PlatformBusMapper::BusMap
   uint64_t page_count = bus_addr_array.size();
 
   if (kLogEnable)
-    magma::log(magma::LOG_INFO, "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64,
-               this, addr, addr + page_count * PAGE_SIZE - 1, page_count * PAGE_SIZE);
+    MAGMA_LOG(INFO, "ppgtt insert (%p) 0x%" PRIx64 "-0x%" PRIx64 " length 0x%" PRIx64, this, addr,
+              addr + page_count * PAGE_SIZE - 1, page_count * PAGE_SIZE);
 
   uint32_t page_table_index = (addr >>= PAGE_SHIFT) & kPageTableMask;
   uint32_t page_directory_index = (addr >>= kPageTableShift) & kPageDirectoryMask;

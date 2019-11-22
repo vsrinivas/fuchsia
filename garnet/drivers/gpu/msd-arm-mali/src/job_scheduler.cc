@@ -7,6 +7,7 @@
 #include "magma_util/dlog.h"
 #include "msd_arm_connection.h"
 #include "msd_defs.h"
+#include "platform_logger.h"
 #include "platform_trace.h"
 
 JobScheduler::JobScheduler(Owner* owner, uint32_t job_slots)
@@ -377,11 +378,11 @@ void JobScheduler::HandleTimedOutAtoms() {
       auto soft_atom = MsdArmSoftAtom::cast(atom);
       DASSERT(soft_atom);
       uint64_t semaphore_koid = soft_atom->platform_semaphore()->id();
-      magma::log(magma::LOG_WARNING, "Timing out hung semaphore on client id %ld, koid %ld",
-                 client_id, semaphore_koid);
+      MAGMA_LOG(WARNING, "Timing out hung semaphore on client id %ld, koid %ld", client_id,
+                semaphore_koid);
       std::vector<msd_client_id_t> clients = GetSignalingClients(semaphore_koid);
       for (auto client_id : clients) {
-        magma::log(magma::LOG_WARNING, "Signaled by atom on client id %ld", client_id);
+        MAGMA_LOG(WARNING, "Signaled by atom on client id %ld", client_id);
         found_signaler_atoms_for_testing_++;
       }
       removed_waiting_atoms = true;

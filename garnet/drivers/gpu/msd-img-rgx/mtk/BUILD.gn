@@ -20,6 +20,8 @@ driver_module("msd_img_rgx_mt8167") {
       ":driver_sources",
     ]
   }
+  deps +=
+      [ "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers" ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
   configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
@@ -35,6 +37,7 @@ template("driver_source_template") {
     public_deps = [
       "../include",
       "//garnet/lib/magma/src/magma_util",
+      "//garnet/lib/magma/src/magma_util/platform:logger",
       "//garnet/lib/magma/src/magma_util/platform:trace",
       "//garnet/lib/magma/src/magma_util/platform:trace_provider",
       "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",

@@ -16,6 +16,7 @@
 #include <ddk/protocol/platform/device.h>
 
 #include "magma_util/macros.h"
+#include "platform_logger.h"
 #include "platform_trace.h"
 #include "platform_trace_provider.h"
 #include "platform_trace_provider_with_fdio.h"
@@ -171,7 +172,7 @@ static zx_protocol_device_t device_proto = {
 };
 
 static zx_status_t driver_bind(void* context, zx_device_t* parent) {
-  magma::log(magma::LOG_INFO, "driver_bind: binding\n");
+  MAGMA_LOG(INFO, "driver_bind: binding\n");
   auto gpu = std::make_unique<gpu_device>();
   if (!gpu)
     return ZX_ERR_NO_MEMORY;

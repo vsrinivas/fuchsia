@@ -612,6 +612,6 @@ TEST(MagmaAbiPerf, ExecuteCommandBufferWithResources) {
   auto duration = std::chrono::duration_cast<std::chrono::nanoseconds>(
       std::chrono::steady_clock::now() - start);
 
-  magma::log(magma::LOG_INFO, "ExecuteCommandBufferWithResources: avg duration %lld ns",
-             duration.count() / kTestIterations);
+  printf("ExecuteCommandBufferWithResources: avg duration %lld ns\n",
+         duration.count() / kTestIterations);
 }

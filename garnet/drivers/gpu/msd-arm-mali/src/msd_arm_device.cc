@@ -17,6 +17,7 @@
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
 #include "platform_barriers.h"
+#include "platform_logger.h"
 #include "platform_port.h"
 #include "platform_trace.h"
 #include "registers.h"
@@ -172,13 +173,13 @@ bool MsdArmDevice::Init(void* device_handle) {
   register_io_ = std::make_unique<magma::RegisterIo>(std::move(mmio));
 
   gpu_features_.ReadFrom(register_io_.get());
-  magma::log(magma::LOG_INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
+  MAGMA_LOG(INFO, "ARM mali ID %x", gpu_features_.gpu_id.reg_value());
 
 #if defined(MSD_ARM_ENABLE_CACHE_COHERENCY)
   if (gpu_features_.coherency_features.ace().get()) {
     cache_coherency_status_ = kArmMaliCacheCoherencyAce;
   } else {
-    magma::log(magma::LOG_INFO, "Cache coherency unsupported");
+    MAGMA_LOG(INFO, "Cache coherency unsupported");
   }
 #endif
 
@@ -236,7 +237,7 @@ void MsdArmDevice::DeregisterConnection() {
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
 void MsdArmDevice::OutputHangMessage() {
-  magma::log(magma::LOG_WARNING, "Possible GPU hang\n");
+  MAGMA_LOG(WARNING, "Possible GPU hang\n");
   ProcessDumpStatusToLog();
 }
 
@@ -325,7 +326,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     auto irq_status = registers::GpuIrqFlags::GetStatus().ReadFrom(register_io_.get());
 
     if (!irq_status.reg_value()) {
-      magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ with no flags set\n");
+      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ with no flags set\n");
     }
 
     auto clear_flags = registers::GpuIrqFlags::GetIrqClear().FromValue(irq_status.reg_value());
@@ -357,7 +358,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
     }
 
     if (irq_status.reg_value()) {
-      magma::log(magma::LOG_WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
+      MAGMA_LOG(WARNING, "Got unexpected GPU IRQ %d\n", irq_status.reg_value());
       uint64_t fault_addr =
           registers::GpuFaultAddress::Get().ReadFrom(register_io_.get()).reg_value();
       {
@@ -367,8 +368,8 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
           if (locked) {
             uint64_t virtual_address;
             if (locked->GetVirtualAddressFromPhysical(fault_addr, &virtual_address))
-              magma::log(magma::LOG_WARNING, "Client %lx has VA %lx mapped to PA %lx\n",
-                         locked->client_id(), virtual_address, fault_addr);
+              MAGMA_LOG(WARNING, "Client %lx has VA %lx mapped to PA %lx\n", locked->client_id(),
+                        virtual_address, fault_addr);
           }
         }
       }
@@ -377,7 +378,7 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
       // GPU fault to be generated, which could overwrite the earlier data.
       std::string dump;
       DumpToString(dump, false);
-      magma::log(magma::LOG_INFO, "GPU fault status: %s", dump.c_str());
+      MAGMA_LOG(INFO, "GPU fault status: %s", dump.c_str());
     }
 
     if (clear_flags.reg_value()) {
@@ -395,9 +396,9 @@ magma::Status MsdArmDevice::ProcessPerfCounterSampleCompleted() {
   uint64_t duration_ms = 0;
   std::vector<uint32_t> perf_result = perf_counters_->ReadCompleted(&duration_ms);
 
-  magma::log(magma::LOG_INFO, "Performance counter read complete, duration %lu ms:\n", duration_ms);
+  MAGMA_LOG(INFO, "Performance counter read complete, duration %lu ms:\n", duration_ms);
   for (uint32_t i = 0; i < perf_result.size(); ++i) {
-    magma::log(magma::LOG_INFO, "Performance counter %d: %u\n", i, perf_result[i]);
+    MAGMA_LOG(INFO, "Performance counter %d: %u\n", i, perf_result[i]);
   }
   return MAGMA_STATUS_OK;
 }
@@ -481,8 +482,8 @@ magma::Status MsdArmDevice::ProcessJobInterrupt() {
 
       // Soft stopping isn't counted as an actual failure.
       if (result != kArmMaliResultSoftStopped && !dumped_on_failure) {
-        magma::log(magma::LOG_WARNING, "Got failed slot bitmask %x with result code %x\n",
-                   irq_status.failed_slots().get(), raw_result);
+        MAGMA_LOG(WARNING, "Got failed slot bitmask %x with result code %x\n",
+                  irq_status.failed_slots().get(), raw_result);
         ProcessDumpStatusToLog();
         dumped_on_failure = true;
       }
@@ -523,7 +524,7 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
     {
       auto mapping = address_manager_->GetMappingForSlot(slot);
       if (!mapping) {
-        magma::log(magma::LOG_WARNING, "Fault on idle slot %d\n", slot);
+        MAGMA_LOG(WARNING, "Fault on idle slot %d\n", slot);
       } else {
         connection = mapping->connection();
       }
@@ -533,16 +534,15 @@ magma::Status MsdArmDevice::ProcessMmuInterrupt() {
           registers::AsRegisters(slot).FaultAddress().ReadFrom(register_io_.get()).reg_value();
       bool kill_context = true;
       if (irq_status.bf_flags().get() & (1 << slot)) {
-        magma::log(magma::LOG_WARNING, "Bus fault at address 0x%lx on slot %d, client id: %ld\n",
-                   address, slot, connection->client_id());
+        MAGMA_LOG(WARNING, "Bus fault at address 0x%lx on slot %d, client id: %ld\n", address, slot,
+                  connection->client_id());
       } else {
         if (connection->PageInMemory(address)) {
           DLOG("Paged in address %lx\n", address);
           kill_context = false;
         } else {
-          magma::log(magma::LOG_WARNING,
-                     "Failed to page in address 0x%lx on slot %d, client id: %ld\n", address, slot,
-                     connection->client_id());
+          MAGMA_LOG(WARNING, "Failed to page in address 0x%lx on slot %d, client id: %ld\n",
+                    address, slot, connection->client_id());
         }
       }
       if (kill_context) {
@@ -828,7 +828,7 @@ void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string) {
 magma::Status MsdArmDevice::ProcessDumpStatusToLog() {
   std::string dump;
   DumpToString(dump, true);
-  magma::log(magma::LOG_INFO, "%s", dump.c_str());
+  MAGMA_LOG(INFO, "%s", dump.c_str());
   return MAGMA_STATUS_OK;
 }
 
@@ -1116,17 +1116,17 @@ bool MsdArmDevice::ResetDevice() {
   register_io_->Write32(registers::GpuCommand::kOffset, registers::GpuCommand::kCmdSoftReset);
 
   if (!reset_semaphore_->Wait(1000)) {
-    magma::log(magma::LOG_WARNING, "Hardware reset timed out");
+    MAGMA_LOG(WARNING, "Hardware reset timed out");
     return false;
   }
 
   if (!InitializeHardware()) {
-    magma::log(magma::LOG_WARNING, "Initialize hardware failed");
+    MAGMA_LOG(WARNING, "Initialize hardware failed");
     return false;
   }
 
   if (!power_manager_->WaitForShaderReady(register_io_.get())) {
-    magma::log(magma::LOG_WARNING, "Waiting for shader ready failed");
+    MAGMA_LOG(WARNING, "Waiting for shader ready failed");
     return false;
   }
 

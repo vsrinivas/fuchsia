@@ -45,6 +45,7 @@ source_set("device") {
     ":handle",
     "$magma_build_root/src/magma_util",
     "..:device_header",
+    "..:logger",
   ]
 
   sources = [

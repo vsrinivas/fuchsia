@@ -5,6 +5,7 @@
 #include "performance_counters.h"
 
 #include "platform_barriers.h"
+#include "platform_logger.h"
 #include "registers.h"
 
 namespace {
@@ -16,11 +17,11 @@ constexpr uint32_t kPerfBufferStartOffset = PAGE_SIZE;
 
 bool PerformanceCounters::Enable() {
   if (counter_state_ != PerformanceCounterState::kDisabled) {
-    magma::log(magma::LOG_WARNING, "Can't enable performance counters from state %d\n",
-               static_cast<int>(counter_state_));
+    MAGMA_LOG(WARNING, "Can't enable performance counters from state %d\n",
+              static_cast<int>(counter_state_));
     return false;
   }
-  magma::log(magma::LOG_INFO, "Enabling performance counters\n");
+  MAGMA_LOG(INFO, "Enabling performance counters\n");
   if (!connection_) {
     auto connection = MsdArmConnection::Create(0xffffffff, owner_->connection_owner());
     if (!connection) {
@@ -94,11 +95,11 @@ bool PerformanceCounters::Enable() {
 
 bool PerformanceCounters::TriggerRead(bool keep_enabled) {
   if (counter_state_ != PerformanceCounterState::kEnabled) {
-    magma::log(magma::LOG_WARNING, "Can't trigger performance counters from state %d\n",
-               static_cast<int>(counter_state_));
+    MAGMA_LOG(WARNING, "Can't trigger performance counters from state %d\n",
+              static_cast<int>(counter_state_));
     return false;
   }
-  magma::log(magma::LOG_INFO, "Triggering performance counter read\n");
+  MAGMA_LOG(INFO, "Triggering performance counter read\n");
   last_perf_base_ =
       registers::PerformanceCounterBase::Get().ReadFrom(owner_->register_io()).reg_value();
   owner_->register_io()->Write32(registers::GpuCommand::kOffset,

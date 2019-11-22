@@ -15,6 +15,7 @@
 #include "magma_util/status.h"
 #include "msd.h"
 #include "msd_intel_buffer.h"
+#include "platform_logger.h"
 #include "ppgtt.h"
 #include "ringbuffer.h"
 #include "types.h"
@@ -42,7 +43,7 @@ class MsdIntelContext {
 
   virtual bool killed() { return false; }
 
-  virtual void Kill() { magma::log(magma::LOG_WARNING, "Attemping to kill the global context"); }
+  virtual void Kill() { MAGMA_LOG(WARNING, "Attemping to kill the global context"); }
 
   // Gets the gpu address of the context buffer if mapped.
   bool GetGpuAddress(EngineCommandStreamerId id, gpu_addr_t* addr_out);

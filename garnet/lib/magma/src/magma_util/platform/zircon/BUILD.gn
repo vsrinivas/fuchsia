@@ -56,6 +56,7 @@ source_set("bus_mapper") {
     "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:trace",
     "$zircon_build_root/public/lib/ddk",
+    "..:logger",
     "..:object",
   ]
 }

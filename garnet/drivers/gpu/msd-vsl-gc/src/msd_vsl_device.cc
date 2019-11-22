@@ -10,6 +10,7 @@
 #include "magma_util/macros.h"
 #include "magma_vendor_queries.h"
 #include "msd.h"
+#include "platform_logger.h"
 #include "platform_mmio.h"
 #include "registers.h"
 
@@ -113,7 +114,7 @@ void MsdVslDevice::Reset() {
   clock_control = registers::ClockControl::Get().ReadFrom(register_io_.get());
 
   if (!IsIdle() || !clock_control.idle_3d().get()) {
-    magma::log(magma::LOG_WARNING, "Gpu reset: failed to idle");
+    MAGMA_LOG(WARNING, "Gpu reset: failed to idle");
   }
 
   DLOG("Reset complete");
@@ -203,10 +204,10 @@ magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identi
   }
   memset(out_identity, 0, sizeof(*out_identity));
   out_identity->chip_model = device_id();
-  out_identity->chip_revision = registers::Revision::Get().ReadFrom(
-      register_io_.get()).chip_revision().get();
-  out_identity->chip_date = registers::ChipDate::Get().ReadFrom(
-      register_io_.get()).chip_date().get();
+  out_identity->chip_revision =
+      registers::Revision::Get().ReadFrom(register_io_.get()).chip_revision().get();
+  out_identity->chip_date =
+      registers::ChipDate::Get().ReadFrom(register_io_.get()).chip_date().get();
 
   out_identity->stream_count = gpu_features_->stream_count();
   out_identity->pixel_pipes = gpu_features_->pixel_pipes();
@@ -216,13 +217,12 @@ magma_status_t MsdVslDevice::ChipIdentity(magma_vsl_gc_chip_identity* out_identi
   out_identity->varyings_count = gpu_features_->varyings_count();
   out_identity->gpu_core_count = 0x1;
 
-  out_identity->product_id = registers::ProductId::Get().ReadFrom(
-      register_io_.get()).product_id().get();
+  out_identity->product_id =
+      registers::ProductId::Get().ReadFrom(register_io_.get()).product_id().get();
   out_identity->chip_flags = 0x4;
-  out_identity->eco_id = registers::EcoId::Get().ReadFrom(
-      register_io_.get()).eco_id().get();
-  out_identity->customer_id = registers::CustomerId::Get().ReadFrom(
-      register_io_.get()).customer_id().get();
+  out_identity->eco_id = registers::EcoId::Get().ReadFrom(register_io_.get()).eco_id().get();
+  out_identity->customer_id =
+      registers::CustomerId::Get().ReadFrom(register_io_.get()).customer_id().get();
   return MAGMA_STATUS_OK;
 }
 

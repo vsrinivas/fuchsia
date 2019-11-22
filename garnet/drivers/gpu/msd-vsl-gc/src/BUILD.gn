@@ -38,6 +38,7 @@ source_set("src") {
     "//garnet/lib/magma/src/magma_util/platform:buffer",
     "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
     "//garnet/lib/magma/src/magma_util/platform:device",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:semaphore",
   ]
   friend = [ "../tests/unit_tests:*" ]

@@ -10,6 +10,7 @@ driver_module("msd_img_rgx_no_hardware") {
 
   deps = [
     ":driver_sources",
+    "//garnet/lib/magma/src/magma_util/platform:logger_for_system_drivers",
   ]
 
   configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
@@ -25,6 +26,7 @@ source_set("driver_sources") {
   public_deps = [
     "../include",
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/sys_driver",
     "//sdk/fidl/fuchsia.gpu.magma:fuchsia.gpu.magma_c",

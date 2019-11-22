@@ -43,6 +43,7 @@ source_set("entry") {
 
   deps = [
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
@@ -85,6 +86,7 @@ source_set("test_entry_pci") {
 
   deps = [
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",
@@ -118,6 +120,7 @@ source_set("test_entry_pdev") {
 
   deps = [
     "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:logger",
     "//garnet/lib/magma/src/magma_util/platform:trace",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider",
     "//garnet/lib/magma/src/magma_util/platform:trace_provider_with_fdio",

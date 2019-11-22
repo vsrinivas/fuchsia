@@ -7,6 +7,7 @@
 #include "address_space.h"
 #include "command_buffer.h"
 #include "msd_intel_connection.h"
+#include "platform_logger.h"
 #include "platform_thread.h"
 #include "platform_trace.h"
 
@@ -196,7 +197,7 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock) {
       if (result) {
         break;
       } else {
-        magma::log(magma::LOG_WARNING, "SubmitPendingCommandBuffer: failed to add to waitset");
+        MAGMA_LOG(WARNING, "SubmitPendingCommandBuffer: failed to add to waitset");
       }
     }
   }

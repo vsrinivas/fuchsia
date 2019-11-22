@@ -11,6 +11,8 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include "platform_logger.h"
+
 using __u64 = uint64_t;
 using __u32 = uint32_t;
 
@@ -148,7 +150,7 @@ bool LinuxPlatformDevice::MagmaGetParam(int device_fd, MagmaGetParamKey key, uin
 void LinuxPlatformDevice::MagmaResetGmu(int device_fd) {
   int ret = ioctl(device_fd, DRM_IOCTL_MAGMA_RESET_GMU, nullptr);
   if (ret != 0) {
-    magma::log(magma::LOG_WARNING, "DRM_IOCTL_MAGMA_RESET_GMU failed: %d", ret);
+    MAGMA_LOG(WARNING, "DRM_IOCTL_MAGMA_RESET_GMU failed: %d", ret);
   }
 }
 

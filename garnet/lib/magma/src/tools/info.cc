@@ -9,8 +9,6 @@
 #include <stdlib.h>
 #include <unistd.h>  // for close
 
-#include "magma_util/macros.h"
-
 const char* kGpuDeviceName = "/dev/class/gpu/000";
 
 int main(int argc, char** argv) {
@@ -39,7 +37,7 @@ int main(int argc, char** argv) {
     printf("magma_DeviceDumpStatus failed: %d", status);
     return -1;
   }
-  magma::log(magma::LOG_INFO, "Dumping system driver status to system log");
+  printf("Dumping system driver status to system log\n");
 
   close(fd);
   return 0;

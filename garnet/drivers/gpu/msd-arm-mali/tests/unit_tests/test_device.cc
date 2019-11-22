@@ -209,7 +209,7 @@ class TestMsdArmDevice {
     std::unique_ptr<MsdArmDevice> device = MsdArmDevice::Create(GetTestDeviceHandle(), true);
     ASSERT_NE(nullptr, device);
     if (!device->IsProtectedModeSupported()) {
-      magma::log(magma::LOG_WARNING, "Protected mode not supported, skipping test");
+      printf("Protected mode not supported, skipping test\n");
       return;
     }
 
@@ -239,7 +239,7 @@ class TestMsdArmDevice {
     // T820 in the VIM2, powering down the L2 seems to cause GPU faults when the shader cores
     // are later powered back up again.
     if (!device->IsProtectedModeSupported()) {
-      magma::log(magma::LOG_WARNING, "Protected mode not supported, skipping test");
+      printf("Protected mode not supported, skipping test\n");
       return;
     }
 

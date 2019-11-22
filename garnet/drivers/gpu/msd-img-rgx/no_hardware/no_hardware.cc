@@ -4,23 +4,25 @@
 
 #include "no_hardware.h"
 
+#include <fuchsia/gpu/magma/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
+
+#include <memory>
+#include <mutex>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
-#include <fuchsia/gpu/magma/c/fidl.h>
 #include <hw/reg.h>
-#include <lib/fidl-utils/bind.h>
-
-#include <memory>
-#include <mutex>
 
 #include "img-sys-device.h"
 #include "magma_util/macros.h"
 #include "no_hardware_testing.h"
 #include "platform_buffer.h"
+#include "platform_logger.h"
 #include "sys_driver/magma_driver.h"
 
 namespace {
@@ -72,12 +74,12 @@ zx_status_t NoHardwareGpu::Bind() {
     std::lock_guard<std::mutex> lock(magma_mutex_);
     magma_driver_ = MagmaDriver::Create();
     if (!magma_driver_) {
-      magma::log(magma::LOG_WARNING, "Failed to create MagmaDriver\n");
+      MAGMA_LOG(WARNING, "Failed to create MagmaDriver\n");
       return ZX_ERR_INTERNAL;
     }
 
     if (!StartMagma()) {
-      magma::log(magma::LOG_WARNING, "Failed to start Magma system device\n");
+      MAGMA_LOG(WARNING, "Failed to start Magma system device\n");
       return ZX_ERR_INTERNAL;
     }
   }

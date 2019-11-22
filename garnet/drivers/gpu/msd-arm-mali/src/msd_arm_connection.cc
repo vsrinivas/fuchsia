@@ -18,6 +18,7 @@
 #include "msd_arm_device.h"
 #include "msd_arm_semaphore.h"
 #include "platform_barriers.h"
+#include "platform_logger.h"
 #include "platform_semaphore.h"
 #include "platform_trace.h"
 
@@ -54,8 +55,7 @@ bool MsdArmConnection::ExecuteAtom(
   uint8_t atom_number = atom->atom_number;
   if (outstanding_atoms_[atom_number] &&
       outstanding_atoms_[atom_number]->result_code() == kArmMaliResultRunning) {
-    magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Submitted atom number already in use",
-               client_id_);
+    MAGMA_LOG(WARNING, "Client %" PRIu64 ": Submitted atom number already in use", client_id_);
     return false;
   }
   uint32_t flags = atom->flags;
@@ -66,12 +66,11 @@ bool MsdArmConnection::ExecuteAtom(
   if (flags & kAtomFlagSoftware) {
     if (flags != kAtomFlagSemaphoreSet && flags != kAtomFlagSemaphoreReset &&
         flags != kAtomFlagSemaphoreWait && flags != kAtomFlagSemaphoreWaitAndReset) {
-      magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x\n",
-                 client_id_, flags);
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid soft atom flags 0x%x\n", client_id_, flags);
       return false;
     }
     if (semaphores->empty()) {
-      magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": No remaining semaphores", client_id_);
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": No remaining semaphores", client_id_);
       return false;
     }
 
@@ -81,17 +80,16 @@ bool MsdArmConnection::ExecuteAtom(
   } else {
     uint32_t slot = flags & kAtomFlagRequireFragmentShader ? 0 : 1;
     if (slot == 0 && (flags & (kAtomFlagRequireComputeShader | kAtomFlagRequireTiler))) {
-      magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid atom flags 0x%x\n", client_id_,
-                 flags);
+      MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid atom flags 0x%x\n", client_id_, flags);
       return false;
     }
 #if defined(ENABLE_PROTECTED_DEBUG_SWAP_MODE)
     flags ^= kAtomFlagProtected;
 #endif
     if ((flags & kAtomFlagProtected) && !owner_->IsProtectedModeSupported()) {
-      magma::log(magma::LOG_WARNING,
-                 "Client %" PRIu64 ": Attempting to use protected mode when not supported\n",
-                 client_id_);
+      MAGMA_LOG(WARNING,
+                "Client %" PRIu64 ": Attempting to use protected mode when not supported\n",
+                client_id_);
       return false;
     }
 
@@ -112,15 +110,14 @@ bool MsdArmConnection::ExecuteAtom(
       uint8_t dependency = atom->dependencies[i].atom_number;
       if (dependency) {
         if (!outstanding_atoms_[dependency]) {
-          magma::log(magma::LOG_WARNING,
-                     "Client %" PRIu64 ": Dependency on atom that hasn't been submitted yet",
-                     client_id_);
+          MAGMA_LOG(WARNING,
+                    "Client %" PRIu64 ": Dependency on atom that hasn't been submitted yet",
+                    client_id_);
           return false;
         }
         auto type = static_cast<ArmMaliDependencyType>(atom->dependencies[i].type);
         if (type != kArmMaliDependencyOrder && type != kArmMaliDependencyData) {
-          magma::log(magma::LOG_WARNING, "Client %" PRIu64 ": Invalid dependency type: %d",
-                     client_id_, type);
+          MAGMA_LOG(WARNING, "Client %" PRIu64 ": Invalid dependency type: %d", client_id_, type);
           return false;
         }
         dependencies.push_back(MsdArmAtom::Dependency{type, outstanding_atoms_[dependency]});

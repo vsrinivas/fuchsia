@@ -11,6 +11,7 @@ driver_module("msd_intel") {
 
   deps = [
     ":msd_intel_entry",
+    "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
 
@@ -26,6 +27,7 @@ driver_module("msd_intel_test") {
 
   deps = [
     ":msd_intel_test_entry",
+    "$magma_build_root/src/magma_util/platform:logger_for_system_drivers",
     "src",
   ]
 

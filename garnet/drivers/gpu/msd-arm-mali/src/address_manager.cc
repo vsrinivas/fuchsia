@@ -9,6 +9,7 @@
 #include "address_space.h"
 #include "msd_arm_connection.h"
 #include "platform_barriers.h"
+#include "platform_logger.h"
 
 // Normal memory, outer non-cacheable, inner cacheable with
 // implementation-defined allocation. The definition of this is similar to
@@ -186,7 +187,7 @@ std::shared_ptr<AddressSlotMapping> AddressManager::AllocateMappingForAddressSpa
     // possible, though.
     if (address_slot_free_.wait_for(lock, std::chrono::seconds(acquire_slot_timeout_seconds_)) ==
         std::cv_status::timeout) {
-      magma::log(magma::LOG_WARNING, "Timeout waiting for address slot");
+      MAGMA_LOG(WARNING, "Timeout waiting for address slot");
       return DRETP(nullptr, "Timeout waiting for address slot");
     }
   }
@@ -261,8 +262,8 @@ void AddressManager::HardwareSlot::WaitForMmuIdle(magma::RegisterIo* io) {
 
   uint32_t status = status_reg.ReadFrom(io).reg_value();
   if (status)
-    magma::log(magma::LOG_WARNING, "Wait for MMU %d to idle timed out with status 0x%x\n",
-               registers.address_space(), status);
+    MAGMA_LOG(WARNING, "Wait for MMU %d to idle timed out with status 0x%x\n",
+              registers.address_space(), status);
 }
 
 void AddressManager::HardwareSlot::FlushMmuRange(magma::RegisterIo* io, uint64_t start,

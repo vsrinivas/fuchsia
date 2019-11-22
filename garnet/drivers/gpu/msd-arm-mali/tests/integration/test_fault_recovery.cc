@@ -212,7 +212,7 @@ TEST(FaultRecovery, TestProtected) {
   std::unique_ptr<TestConnection> test;
   test.reset(new TestConnection());
   if (!test->SupportsProtectedMode()) {
-    magma::log(magma::LOG_INFO, "Protected mode not supported, skipping\n");
+    printf("Protected mode not supported, skipping\n");
     return;
   }
   test->SubmitCommandBuffer(TestConnection::NORMAL, 1, 0, false);
