@@ -15,6 +15,7 @@
 #include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/code_block.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
+#include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/symbols/function.h"
@@ -24,6 +25,7 @@
 #include "src/developer/debug/zxdb/symbols/mock_symbol_data_provider.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/process_symbols_test_setup.h"
+#include "src/developer/debug/zxdb/symbols/symbol_test_parent_setter.h"
 #include "src/developer/debug/zxdb/symbols/type_test_support.h"
 #include "src/developer/debug/zxdb/symbols/variable_test_support.h"
 
@@ -310,8 +312,15 @@ TEST_F(EvalContextImplTest, ConstantVariable) {
 
 // Tests that externs are resolved by GetVariableValue(). This requires using the index.
 TEST_F(EvalContextImplTest, ExternVariable) {
+  // Need to have a module for the variable to be relative to and to have an index.
+  ProcessSymbolsTestSetup setup;
+  MockModuleSymbols* module_symbols = setup.InjectMockModule();
+  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
+
   // Offset from beginning of the module of the data.
   constexpr uint8_t kRelativeValAddress = 0x99;
+  constexpr uint64_t kAbsoluteValAddress =
+      ProcessSymbolsTestSetup::kDefaultLoadAddress + kRelativeValAddress;
   const char kValName[] = "val";
 
   // The non-extern declaration for the variable (0, 0 means always valid). The little-endian
@@ -319,19 +328,18 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   auto real_variable = MakeUint64VariableForTest(
       kValName, 0, 0, {llvm::dwarf::DW_OP_addr, kRelativeValAddress, 0, 0, 0, 0, 0, 0, 0});
 
+  // The variable needs to have a unit that references the module to provide the symbol context
+  // in which to evaluate the location expression. This will convert the kRelativeValAddress to
+  // kAbsoluteValAddress.
+  auto unit =
+      fxl::MakeRefCounted<CompileUnit>(module_symbols->GetWeakPtr(), DwarfLang::kC, "file.cc");
+  SymbolTestParentSetter var_parent(real_variable, unit);
+
   // A reference to the same variable, marked "external" with no location.
   auto extern_variable = fxl::MakeRefCounted<Variable>(DwarfTag::kVariable);
   extern_variable->set_assigned_name(kValName);
   extern_variable->set_is_external(true);
   extern_variable->set_type(MakeUint64Type());
-
-  constexpr uint64_t kLoadAddress = 0x1000000;
-  constexpr uint64_t kAbsoluteValAddress = kLoadAddress + kRelativeValAddress;
-
-  // Need to have a module for the variable to be relative to and to have an index.
-  ProcessSymbolsTestSetup setup;
-  MockModuleSymbols* module_symbols = setup.InjectMockModule();
-  SymbolContext symbol_context(ProcessSymbolsTestSetup::kDefaultLoadAddress);
 
   // Index the non-extern variable.
   TestIndexedSymbol indexed_def(module_symbols, &module_symbols->index().root(), kValName,
@@ -349,7 +357,7 @@ TEST_F(EvalContextImplTest, ExternVariable) {
   GetVariableValue(context, extern_variable, &result);
   loop().RunUntilNoTasks();
   ASSERT_TRUE(result.called);
-  ASSERT_TRUE(result.value.ok());
+  ASSERT_TRUE(result.value.ok()) << result.value.err().msg();
   EXPECT_EQ(ExprValue(kValValue), result.value.value());
 }
 

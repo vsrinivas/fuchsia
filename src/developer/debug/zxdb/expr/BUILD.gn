@@ -6,6 +6,8 @@ import("//build/fuzzing/fuzzer.gni")
 
 static_library("expr") {
   sources = [
+    "async_dwarf_expr_eval.cc",
+    "async_dwarf_expr_eval.h",
     "bitfield.cc",
     "bitfield.h",
     "builtin_types.cc",
@@ -107,6 +109,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "async_dwarf_expr_eval_unittest.cc",
     "bitfield_unittest.cc",
     "builtin_types_unittest.cc",
     "cast_unittest.cc",
@@ -161,6 +164,6 @@ fuzzer("expr_parser_fuzzer") {
 }
 
 fuzzers_package("expr_fuzzers") {
-    fuzzers = [ ":expr_parser_fuzzer" ]
-    host_only=true
+  fuzzers = [ ":expr_parser_fuzzer" ]
+  host_only = true
 }

@@ -9,6 +9,7 @@
 
 #include <vector>
 
+#include "lib/fit/function.h"
 #include "src/developer/debug/zxdb/common/err_or.h"
 #include "src/developer/debug/zxdb/expr/expr_value_source.h"
 #include "src/developer/debug/zxdb/symbols/type.h"
@@ -153,8 +154,13 @@ float ExprValue::GetAs<float>() const;
 template <>
 double ExprValue::GetAs<double>() const;
 
+// ExprValues are often returned or passed in an "ErrOr" structure to also track error state.
 using ErrOrValue = ErrOr<ExprValue>;
+
 using ErrOrValueVector = ErrOr<std::vector<ExprValue>>;
+
+// Callback for something that computes an error or an ExprValue.
+using ValueCallback = fit::callback<void(ErrOrValue)>;
 
 }  // namespace zxdb
 

@@ -75,8 +75,6 @@ class EvalContextImpl : public EvalContext {
   }
 
  private:
-  struct ResolutionState;
-
   // Converts an extern value to a real Variable by looking the name up in the index.
   Err ResolveExternValue(const fxl::RefPtr<Value>& input_value,
                          fxl::RefPtr<Variable>* resolved) const;
@@ -84,9 +82,6 @@ class EvalContextImpl : public EvalContext {
   // Computes the value of the given variable and issues the callback (possibly asynchronously,
   // possibly not).
   void DoResolve(FoundName found, ValueCallback cb) const;
-
-  // Callback for when the dwarf_eval_ has completed evaluation.
-  void OnDwarfEvalComplete(const Err& err, fxl::RefPtr<ResolutionState> state) const;
 
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);

@@ -7,6 +7,7 @@
 #include "src/developer/debug/shared/message_loop.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/common/err.h"
+#include "src/developer/debug/zxdb/expr/async_dwarf_expr_eval.h"
 #include "src/developer/debug/zxdb/expr/builtin_types.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/find_name.h"
@@ -87,25 +88,6 @@ ErrOrValue RegisterDataToValue(RegisterID id, VectorRegisterFormat vector_fmt,
 }
 
 }  // namespace
-
-// The data associated with one in-progress variable resolution. This must be heap allocated for
-// each resolution operation since multiple operations can be pending.
-struct EvalContextImpl::ResolutionState : public fxl::RefCountedThreadSafe<ResolutionState> {
-  DwarfExprEval dwarf_eval;
-  ValueCallback callback;
-
-  // Not necessarily a concrete type, this is the type of the result the user will see.
-  fxl::RefPtr<Type> type;
-
-  // This private stuff prevents refcounted mistakes.
- private:
-  FRIEND_REF_COUNTED_THREAD_SAFE(ResolutionState);
-  FRIEND_MAKE_REF_COUNTED(ResolutionState);
-
-  explicit ResolutionState(ValueCallback cb, fxl::RefPtr<Type> t)
-      : callback(std::move(cb)), type(std::move(t)) {}
-  ~ResolutionState() = default;
-};
 
 EvalContextImpl::EvalContextImpl(fxl::WeakPtr<const ProcessSymbols> process_symbols,
                                  const SymbolContext& symbol_context,
@@ -235,20 +217,11 @@ void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallba
     return cb(Err(ErrType::kOptimizedOut, err_str));
   }
 
-  // Schedule the expression to be evaluated.
-  auto state = fxl::MakeRefCounted<ResolutionState>(std::move(cb), std::move(type));
-  state->dwarf_eval.Eval(data_provider_, symbol_context_, loc_entry->expression,
-                         [state = std::move(state), weak_this = weak_factory_.GetWeakPtr()](
-                             DwarfExprEval*, const Err& err) {
-                           if (weak_this)
-                             weak_this->OnDwarfEvalComplete(err, std::move(state));
+  SymbolContext symbol_context = var->GetSymbolContext(process_symbols_.get());
 
-                           // Prevent the DwarfExprEval from getting reentrantly deleted from
-                           // within its own callback by posting a reference back to the message
-                           // loop.
-                           debug_ipc::MessageLoop::Current()->PostTask(
-                               FROM_HERE, [state = std::move(state)]() {});
-                         });
+  // Schedule the expression to be evaluated.
+  auto evaluator = fxl::MakeRefCounted<AsyncDwarfExprEval>(std::move(cb), std::move(type));
+  evaluator->Eval(RefPtrTo(this), symbol_context, loc_entry->expression);
 }
 
 fxl::RefPtr<Type> EvalContextImpl::ResolveForwardDefinition(const Type* type) const {
@@ -386,62 +359,6 @@ void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
                              }
                            });
   });
-}
-
-void EvalContextImpl::OnDwarfEvalComplete(const Err& err,
-                                          fxl::RefPtr<ResolutionState> state) const {
-  if (err.has_error())  // Error decoding.
-    return state->callback(err);
-
-  // The DWARF expression can produce different forms we need to handle/
-  if (state->dwarf_eval.GetResultType() == DwarfExprEval::ResultType::kValue) {
-    // Get the concrete type since we need the byte size. But don't use this
-    // to actually construct the variable since it will strip "const" and
-    // stuff that the user will expect to see.
-    fxl::RefPtr<Type> concrete_type = GetConcreteType(state->type.get());
-
-    // The DWARF expression produced the exact value (it's not in memory).
-    uint32_t type_size = concrete_type->byte_size();
-    if (type_size > sizeof(DwarfExprEval::StackEntry)) {
-      state->callback(
-          Err(fxl::StringPrintf("Result size insufficient for type of size %u. "
-                                "Please file a bug with a repro case.",
-                                type_size)));
-      return;
-    }
-
-    // When the result was read directly from a register or is known to be constant, preserve that
-    // so the user can potentially write to it (or give a good error message about writing to it).
-    ExprValueSource source(ExprValueSource::Type::kTemporary);
-    if (state->dwarf_eval.current_register_id() != debug_ipc::RegisterID::kUnknown)
-      source = ExprValueSource(state->dwarf_eval.current_register_id());
-    else if (state->dwarf_eval.result_is_constant())
-      source = ExprValueSource(ExprValueSource::Type::kConstant);
-
-    uint64_t result_int = state->dwarf_eval.GetResult();
-
-    std::vector<uint8_t> data;
-    data.resize(type_size);
-    memcpy(&data[0], &result_int, type_size);
-    state->callback(ExprValue(state->type, std::move(data), source));
-  } else if (state->dwarf_eval.GetResultType() == DwarfExprEval::ResultType::kData) {
-    // The DWARF result is a block of data.
-    //
-    // Here we assume the data size is correct. If it doesn't match the type, that should be
-    // caught later when it's interpreted.
-    //
-    // TODO(bug 39630) we have no source locations for this case.
-    state->callback(ExprValue(state->type, state->dwarf_eval.result_data(),
-                              ExprValueSource(ExprValueSource::Type::kComposite)));
-  } else {
-    // The DWARF result is a pointer to the value.
-    uint64_t result_int = state->dwarf_eval.GetResult();
-    ResolvePointer(RefPtrTo(this), result_int, state->type,
-                   [state, weak_this = weak_factory_.GetWeakPtr()](ErrOrValue value) {
-                     if (weak_this)
-                       state->callback(std::move(value));
-                   });
-  }
 }
 
 FoundName EvalContextImpl::DoTargetSymbolsNameLookup(const ParsedIdentifier& ident) {
