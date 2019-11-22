@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cml::{self, CapabilityClause};
+use crate::cml::{self, CapabilityClause, OneOrMany};
 use crate::validate;
 use cm_json::{self, cm, Error};
 use serde::ser::Serialize;
@@ -94,21 +94,21 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     Ok(out)
 }
 
+/// `use` rules consume a single capability from one source (realm|framework).
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        let target_id = target_capability_id(use_, use_);
         let out = if let Some(p) = use_.service() {
             let source = extract_use_source(use_)?;
-            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = one_target_capability_id(use_, use_)?;
             Ok(cm::Use::Service(cm::UseService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
             }))
-        } else if let Some(p) = use_.legacy_service() {
+        } else if let Some(OneOrMany::One(p)) = use_.legacy_service() {
             let source = extract_use_source(use_)?;
-            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = one_target_capability_id(use_, use_)?;
             Ok(cm::Use::LegacyService(cm::UseLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
@@ -116,7 +116,7 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
             }))
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
-            let target_id = target_id.ok_or(Error::internal(format!("no capability")))?;
+            let target_id = one_target_capability_id(use_, use_)?;
             let rights = extract_use_rights(use_)?;
             Ok(cm::Use::Directory(cm::UseDirectory {
                 source,
@@ -125,9 +125,16 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 rights,
             }))
         } else if let Some(p) = use_.storage() {
+            let target_path = match all_target_capability_ids(use_, use_) {
+                Some(OneOrMany::One(target_path)) => Ok(cm::Path::new(target_path).ok()),
+                Some(OneOrMany::Many(_)) => {
+                    Err(Error::internal(format!("expecting one capability, but multiple provided")))
+                }
+                None => Ok(None),
+            }?;
             Ok(cm::Use::Storage(cm::UseStorage {
                 type_: str_to_storage_type(p.as_str())?,
-                target_path: target_id.map(cm::Path::new).transpose()?,
+                target_path,
             }))
         } else if let Some(p) = use_.runner() {
             Ok(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
@@ -139,22 +146,23 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     Ok(out_uses)
 }
 
+/// `expose` rules route a single capability from one source (self|framework) to one target (realm|framework).
+/// TODO(vardhan, 41896): Teach `expose` rules to route multiple capabilities using a single clause.
 fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Error> {
     let mut out_exposes = vec![];
     for expose in expose_in.iter() {
         let source = extract_expose_source(expose)?;
-        let target_id = target_capability_id(expose, expose)
-            .ok_or(Error::internal(format!("no capability")))?;
         let target = extract_expose_target(expose)?;
-        let out = if let Some(p) = expose.service() {
-            Ok(cm::Expose::Service(cm::ExposeService {
+        let target_id = one_target_capability_id(expose, expose)?;
+        if let Some(p) = expose.service() {
+            out_exposes.push(cm::Expose::Service(cm::ExposeService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 target,
             }))
-        } else if let Some(p) = expose.legacy_service() {
-            Ok(cm::Expose::LegacyService(cm::ExposeLegacyService {
+        } else if let Some(OneOrMany::One(p)) = expose.legacy_service() {
+            out_exposes.push(cm::Expose::LegacyService(cm::ExposeLegacyService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
@@ -162,7 +170,7 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
             }))
         } else if let Some(p) = expose.directory() {
             let rights = extract_expose_rights(expose)?;
-            Ok(cm::Expose::Directory(cm::ExposeDirectory {
+            out_exposes.push(cm::Expose::Directory(cm::ExposeDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
@@ -170,20 +178,21 @@ fn translate_expose(expose_in: &Vec<cml::Expose>) -> Result<Vec<cm::Expose>, Err
                 rights,
             }))
         } else if let Some(p) = expose.runner() {
-            Ok(cm::Expose::Runner(cm::ExposeRunner {
+            out_exposes.push(cm::Expose::Runner(cm::ExposeRunner {
                 source,
                 source_name: cm::Name::new(p.clone())?,
                 target,
                 target_name: cm::Name::new(target_id)?,
             }))
         } else {
-            Err(Error::internal(format!("no capability")))
-        }?;
-        out_exposes.push(out);
+            return Err(Error::internal(format!("expose: must specify a known capability")));
+        }
     }
     Ok(out_exposes)
 }
 
+/// `offer` rules route multiple capabilities from one source to multiple targets.
+/// TODO(vardhan): Teach `offer` to route multiple `services`.
 fn translate_offer(
     offer_in: &Vec<cml::Offer>,
     all_children: &HashSet<&cml::Name>,
@@ -193,7 +202,7 @@ fn translate_offer(
     for offer in offer_in.iter() {
         if let Some(p) = offer.service() {
             let source = extract_offer_source(offer)?;
-            let targets = extract_targets(offer, all_children, all_collections)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Service(cm::OfferService {
                     source_path: cm::Path::new(p.clone())?,
@@ -202,9 +211,9 @@ fn translate_offer(
                     target_path: cm::Path::new(target_id)?,
                 }));
             }
-        } else if let Some(p) = offer.legacy_service() {
+        } else if let Some(OneOrMany::One(p)) = offer.legacy_service() {
             let source = extract_offer_source(offer)?;
-            let targets = extract_targets(offer, all_children, all_collections)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
                     source_path: cm::Path::new(p.clone())?,
@@ -213,9 +222,34 @@ fn translate_offer(
                     target_path: cm::Path::new(target_id)?,
                 }));
             }
+        } else if let Some(OneOrMany::Many(p)) = offer.legacy_service() {
+            let source = extract_offer_source(offer)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            for (target, target_id) in targets {
+                let target_path = cm::Path::new(target_id)?;
+                // When multiple source paths are provided, there is no way to alias each one, so
+                // source_path == target_path.
+                // When one source path is provided, source_path may be aliased to a different
+                // target_path, so we p[0] to derive the source_path.
+                if p.len() == 1 {
+                    out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
+                        source_path: cm::Path::new(p[0].clone())?,
+                        source: source.clone(),
+                        target,
+                        target_path,
+                    }));
+                } else {
+                    out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
+                        source_path: target_path.clone(),
+                        source: source.clone(),
+                        target,
+                        target_path,
+                    }));
+                }
+            }
         } else if let Some(p) = offer.directory() {
             let source = extract_offer_source(offer)?;
-            let targets = extract_targets(offer, all_children, all_collections)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Directory(cm::OfferDirectory {
                     source_path: cm::Path::new(p.clone())?,
@@ -238,7 +272,7 @@ fn translate_offer(
             }
         } else if let Some(p) = offer.runner() {
             let source = extract_offer_source(offer)?;
-            let targets = extract_targets(offer, all_children, all_collections)?;
+            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
             for (target, target_id) in targets {
                 out_offers.push(cm::Offer::Runner(cm::OfferRunner {
                     source: source.clone(),
@@ -415,50 +449,69 @@ fn extract_storage_targets(
         .collect()
 }
 
-fn extract_targets(
+// Return a list of (child, capability target_id) expressed in the `offer`.
+fn extract_all_targets_for_each_child(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
     all_collections: &HashSet<&cml::Name>,
 ) -> Result<Vec<(cm::Ref, String)>, Error> {
     let mut out_targets = vec![];
 
-    let target_id =
-        target_capability_id(in_obj, in_obj).ok_or(Error::internal("no capability".to_string()))?;
+    let target_ids = all_target_capability_ids(in_obj, in_obj)
+        .ok_or(Error::internal("no capability".to_string()))?
+        .to_vec();
 
     // Validate the "to" references.
     for to in in_obj.to.iter() {
-        let target = translate_child_or_collection_ref(to, all_children, all_collections)?;
-        out_targets.push((target, target_id.clone()))
+        for target_id in target_ids.clone() {
+            let target = translate_child_or_collection_ref(to, all_children, all_collections)?;
+            out_targets.push((target, target_id))
+        }
     }
     Ok(out_targets)
 }
 
-/// Return the target path or name of the given capability.
-fn target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Option<String>
+/// Return the target paths (or names) specified in the given capability.
+fn all_target_capability_ids<T, U>(in_obj: &T, to_obj: &U) -> Option<OneOrMany<String>>
 where
     T: cml::CapabilityClause,
     U: cml::AsClause,
 {
     if let Some(as_) = to_obj.r#as() {
-        Some(as_.clone())
+        Some(OneOrMany::One(as_.clone()))
     } else {
         if let Some(p) = in_obj.service() {
-            Some(p.clone())
+            Some(OneOrMany::One(p.clone()))
         } else if let Some(p) = in_obj.legacy_service() {
             Some(p.clone())
         } else if let Some(p) = in_obj.directory() {
-            Some(p.clone())
+            Some(OneOrMany::One(p.clone()))
         } else if let Some(p) = in_obj.runner() {
-            Some(p.clone())
+            Some(OneOrMany::One(p.clone()))
         } else if let Some(type_) = in_obj.storage() {
             match type_.as_str() {
-                "data" => Some("/data".to_string()),
-                "cache" => Some("/cache".to_string()),
+                "data" => Some(OneOrMany::One("/data".to_string())),
+                "cache" => Some(OneOrMany::One("/cache".to_string())),
                 _ => None,
             }
         } else {
             None
         }
+    }
+}
+
+// Return the single path (or name) specified in the given capability.
+fn one_target_capability_id<T, U>(in_obj: &T, to_obj: &U) -> Result<String, Error>
+where
+    T: cml::CapabilityClause,
+    U: cml::AsClause,
+{
+    match all_target_capability_ids(in_obj, to_obj) {
+        Some(OneOrMany::One(target_id)) => Ok(target_id),
+        Some(OneOrMany::Many(_)) => {
+            Err(Error::internal("expecting one capability, but multiple provided"))
+        }
+        _ => Err(Error::internal("expecting one capability, but none provided")),
     }
 }
 
@@ -782,6 +835,14 @@ mod tests {
                         "as": "/svc/fuchsia.logger.LegacySysLog"
                     },
                     {
+                        "legacy_service": [
+                            "/svc/fuchsia.setui.SetUiService",
+                            "/svc/fuchsia.wlan.service.Wlan"
+                        ],
+                        "from": "realm",
+                        "to": [ "#modular" ]
+                    },
+                    {
                         "directory": "/data/assets",
                         "from": "realm",
                         "to": [ "#netstack" ]
@@ -906,6 +967,34 @@ mod tests {
                     }
                 },
                 "target_path": "/svc/fuchsia.logger.LegacySysLog"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/svc/fuchsia.setui.SetUiService",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.setui.SetUiService"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/svc/fuchsia.wlan.service.Wlan",
+                "target": {
+                    "collection": {
+                        "name": "modular"
+                    }
+                },
+                "target_path": "/svc/fuchsia.wlan.service.Wlan"
             }
         },
         {

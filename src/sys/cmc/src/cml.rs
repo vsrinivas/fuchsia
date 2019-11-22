@@ -234,10 +234,26 @@ impl Document {
     }
 }
 
+#[derive(Deserialize, Debug, Clone)]
+#[serde(untagged)]
+pub enum OneOrMany<T> {
+    One(T),
+    Many(Vec<T>),
+}
+
+impl<T: Clone> OneOrMany<T> {
+    pub fn to_vec(self: OneOrMany<T>) -> Vec<T> {
+        match self {
+            OneOrMany::One(x) => return vec![x],
+            OneOrMany::Many(xs) => return xs.to_vec(),
+        }
+    }
+}
+
 #[derive(Deserialize, Debug)]
 pub struct Use {
     pub service: Option<String>,
-    pub legacy_service: Option<String>,
+    pub legacy_service: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
@@ -249,7 +265,7 @@ pub struct Use {
 #[derive(Deserialize, Debug)]
 pub struct Expose {
     pub service: Option<String>,
-    pub legacy_service: Option<String>,
+    pub legacy_service: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub runner: Option<String>,
     pub from: Ref,
@@ -261,7 +277,7 @@ pub struct Expose {
 #[derive(Deserialize, Debug)]
 pub struct Offer {
     pub service: Option<String>,
-    pub legacy_service: Option<String>,
+    pub legacy_service: Option<OneOrMany<String>>,
     pub directory: Option<String>,
     pub storage: Option<String>,
     pub runner: Option<String>,
@@ -304,7 +320,7 @@ pub trait FromClause {
 
 pub trait CapabilityClause {
     fn service(&self) -> &Option<String>;
-    fn legacy_service(&self) -> &Option<String>;
+    fn legacy_service(&self) -> &Option<OneOrMany<String>>;
     fn directory(&self) -> &Option<String>;
     fn storage(&self) -> &Option<String>;
     fn runner(&self) -> &Option<String>;
@@ -318,7 +334,9 @@ impl CapabilityClause for Use {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    fn legacy_service(&self) -> &Option<String> {
+    // TODO(340156): Only OneOrMany::One legacy_service is supported for now. Teach `use` rules to
+    // accept OneOrMany::Many legacy_services.
+    fn legacy_service(&self) -> &Option<OneOrMany<String>> {
         &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {
@@ -348,7 +366,9 @@ impl CapabilityClause for Expose {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    fn legacy_service(&self) -> &Option<String> {
+    // TODO(340156): Only OneOrMany::One legacy_service is supported for now. Teach `expose` rules to accept
+    // `Many` legacy_services.
+    fn legacy_service(&self) -> &Option<OneOrMany<String>> {
         &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {
@@ -378,7 +398,7 @@ impl CapabilityClause for Offer {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    fn legacy_service(&self) -> &Option<String> {
+    fn legacy_service(&self) -> &Option<OneOrMany<String>> {
         &self.legacy_service
     }
     fn directory(&self) -> &Option<String> {

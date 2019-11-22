@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::cml;
+use crate::cml::{self, OneOrMany};
 use cm_json::{self, Error, JsonSchema, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
 use std::collections::{HashMap, HashSet};
@@ -173,26 +173,42 @@ impl<'a> CapabilityId<'a> {
         }
     }
 
-    /// Given a CaapabilityClause (such as an Offer or Expose), return
-    /// the identifier of the target.
+    /// Given a CapabilityClause (such as an Offer or Expose), return the set of target identifiers.
     ///
-    /// The target identifier is specified by the "as" keyword. If not
-    /// present, we default to using the same name as the source.
-    pub fn from_clause<'b, T>(clause: &'b T) -> Result<CapabilityId<'b>, Error>
+    /// When only one capability identifier is specified, the target identifier name is derived
+    /// using the "as" clause. If an "as" clause is not specified, the target identifier is the same
+    /// name as the source.
+    ///
+    /// When multiple capability identifiers are specified, the target names are the same as the
+    /// source names.
+    pub fn from_clause<'b, T>(clause: &'b T) -> Result<Vec<CapabilityId<'b>>, Error>
     where
         T: cml::CapabilityClause + cml::AsClause,
     {
         // For directory/service/runner types, return the source name,
         // using the "as" clause to rename if neccessary.
         let alias = clause.r#as();
-        if let Some(p) = clause.service().as_ref() {
-            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
-        } else if let Some(p) = clause.legacy_service().as_ref() {
-            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+        if let Some(svc) = clause.service().as_ref() {
+            return Ok(vec![CapabilityId::Path(alias.unwrap_or(svc))]);
+        } else if let Some(OneOrMany::One(legacy_svc)) = clause.legacy_service().as_ref() {
+            return Ok(vec![CapabilityId::Path(alias.unwrap_or(legacy_svc))]);
+        } else if let Some(OneOrMany::Many(legacy_svcs)) = clause.legacy_service().as_ref() {
+            return match (alias, legacy_svcs.len()) {
+                (Some(valid_alias), 1) => Ok(vec![CapabilityId::Path(valid_alias)]),
+
+                (Some(_), _) => Err(Error::validate(
+                    "\"as\" field can only be specified when one `legacy_service` is supplied.",
+                )),
+
+                (None, _) => Ok(legacy_svcs
+                    .iter()
+                    .map(|svc: &std::string::String| CapabilityId::Path(svc))
+                    .collect()),
+            };
         } else if let Some(p) = clause.directory().as_ref() {
-            return Ok(CapabilityId::Path(alias.unwrap_or(p)));
+            return Ok(vec![CapabilityId::Path(alias.unwrap_or(p))]);
         } else if let Some(p) = clause.runner().as_ref() {
-            return Ok(CapabilityId::Runner(alias.unwrap_or(p)));
+            return Ok(vec![CapabilityId::Runner(alias.unwrap_or(p))]);
         }
 
         // Storage does not support "as" aliases. Return an error if it is
@@ -203,7 +219,7 @@ impl<'a> CapabilityId<'a> {
                     "\"as\" field cannot be used for storage offer targets",
                 ));
             }
-            return Ok(CapabilityId::StorageType(p));
+            return Ok(vec![CapabilityId::StorageType(p)]);
         }
 
         // Unknown capability type.
@@ -325,14 +341,16 @@ impl<'a> ValidationContext<'a> {
         }
 
         // Ensure we haven't already exposed an entity of the same name.
-        let capability_id = CapabilityId::from_clause(expose)?;
-        if !used_ids.insert(capability_id) {
-            return Err(Error::validate(format!(
-                "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
-                capability_id.as_str(),
-                capability_id.type_str(),
-                expose.to.as_ref().unwrap_or(&cml::Ref::Realm)
-            )));
+        let capability_ids = CapabilityId::from_clause(expose)?;
+        for capability_id in capability_ids {
+            if !used_ids.insert(capability_id) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"expose\" target {} for \"{}\"",
+                    capability_id.as_str(),
+                    capability_id.type_str(),
+                    expose.to.as_ref().unwrap_or(&cml::Ref::Realm)
+                )));
+            }
         }
 
         Ok(())
@@ -384,17 +402,18 @@ impl<'a> ValidationContext<'a> {
                 )));
             }
 
-            // Ensure something hasn't already been offered under the same
-            // name to this target.
-            let target_cap_id = CapabilityId::from_clause(offer)?;
+            // Ensure that a target is not offered more than once.
+            let target_cap_ids = CapabilityId::from_clause(offer)?;
             let ids_for_entity = used_ids.entry(to_target).or_insert(HashSet::new());
-            if !ids_for_entity.insert(target_cap_id) {
-                return Err(Error::validate(format!(
-                    "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
-                    target_cap_id.as_str(),
-                    target_cap_id.type_str(),
-                    to
-                )));
+            for target_cap_id in target_cap_ids {
+                if !ids_for_entity.insert(target_cap_id) {
+                    return Err(Error::validate(format!(
+                        "\"{}\" is a duplicate \"offer\" target {} for \"{}\"",
+                        target_cap_id.as_str(),
+                        target_cap_id.type_str(),
+                        to
+                    )));
+                }
             }
 
             // Ensure we are not offering a capability back to its source.
@@ -1764,6 +1783,14 @@ mod tests {
                         "to": [ "#echo_server" ]
                     },
                     {
+                        "legacy_service": [
+                            "/svc/fuchsia.settings.Accessibility",
+                            "/svc/fuchsia.ui.scenic.Scenic"
+                        ],
+                        "from": "realm",
+                        "to": [ "#echo_server" ]
+                    },
+                    {
                         "directory": "/data/assets",
                         "from": "self",
                         "to": [ "#echo_server" ],
@@ -1957,6 +1984,19 @@ mod tests {
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /offer/0/to/0")),
         },
+        test_cml_offer_empty_legacy_services => {
+            input = json!({
+                "offer": [
+                    {
+                        "legacy_service": [],
+                        "from": "self",
+                        "to": [ "#echo_server" ],
+                        "as": "/thing"
+                    },
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /offer/0/legacy_service")),
+        },
         test_cml_offer_target_equals_from => {
             input = json!({
                 "offer": [ {
@@ -2069,6 +2109,27 @@ mod tests {
                 } ]
             }),
             result = Err(Error::validate("\"elf\" is a duplicate \"offer\" target runner for \"#echo_server\"")),
+        },
+
+        // if "as" is specified, only 1 "legacy_service" array item is allowed.
+        test_cml_offer_bad_as => {
+            input = json!({
+                "offer": [
+                    {
+                        "legacy_service": ["/svc/A", "/svc/B"],
+                        "from": "self",
+                        "to": [ "#echo_server" ],
+                        "as": "/thing"
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "echo_server",
+                        "url": "fuchsia-pkg://fuchsia.com/echo/stable#meta/echo_server.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"as\" field can only be specified when one `legacy_service` is supplied.")),
         },
 
         // children
@@ -2905,28 +2966,35 @@ mod tests {
                 service: Some("/a".to_string()),
                 ..empty_offer()
             })?,
-            CapabilityId::Path("/a")
+            vec![CapabilityId::Path("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
-                legacy_service: Some("/a".to_string()),
+                legacy_service: Some(OneOrMany::One("/a".to_string())),
                 ..empty_offer()
             })?,
-            CapabilityId::Path("/a")
+            vec![CapabilityId::Path("/a")]
+        );
+        assert_eq!(
+            CapabilityId::from_clause(&cml::Offer {
+                legacy_service: Some(OneOrMany::Many(vec!["/a".to_string(), "/b".to_string()])),
+                ..empty_offer()
+            })?,
+            vec![CapabilityId::Path("/a"), CapabilityId::Path("/b")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
                 directory: Some("/a".to_string()),
                 ..empty_offer()
             })?,
-            CapabilityId::Path("/a")
+            vec![CapabilityId::Path("/a")]
         );
         assert_eq!(
             CapabilityId::from_clause(&cml::Offer {
                 storage: Some("a".to_string()),
                 ..empty_offer()
             })?,
-            CapabilityId::StorageType("a")
+            vec![CapabilityId::StorageType("a")]
         );
 
         // "as" aliasing.
@@ -2936,7 +3004,7 @@ mod tests {
                 r#as: Some("/b".to_string()),
                 ..empty_offer()
             })?,
-            CapabilityId::Path("/b")
+            vec![CapabilityId::Path("/b")]
         );
 
         // Error case.

@@ -13,6 +13,14 @@
       "minLength": 1,
       "maxLength": 1024
     },
+    "path-clause-multiple": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/path-clause"
+      },
+      "uniqueItems": true,
+      "minItems": 1
+    },
     "url-clause": {
       "type": "string",
       "pattern": "^[0-9a-z+\\-\\.]+://.+$",
@@ -42,29 +50,29 @@
       ]
     },
     "rights-clause": {
-        "type": "array",
-        "minItems": 1,
-        "uniqueItems": true,
-        "items": {
-            "type": "string",
-            "enum": [
-                "r*",
-                "w*",
-                "x*",
-                "rw*",
-                "rx*",
-                "connect",
-                "read_bytes",
-                "write_bytes",
-                "execute",
-                "get_attributes",
-                "update_attributes",
-                "enumerate",
-                "traverse",
-                "modify_directory",
-                "admin"
-            ]
-        }
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "type": "string",
+        "enum": [
+          "r*",
+          "w*",
+          "x*",
+          "rw*",
+          "rx*",
+          "connect",
+          "read_bytes",
+          "write_bytes",
+          "execute",
+          "get_attributes",
+          "update_attributes",
+          "enumerate",
+          "traverse",
+          "modify_directory",
+          "admin"
+        ]
+      }
     }
   },
   "properties": {
@@ -121,26 +129,40 @@
         "type": "object",
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [
+              "service"
+            ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [
+              "legacy_service"
+            ]
           },
           {
-            "required": [ "directory" ]
+            "required": [
+              "directory"
+            ]
           },
           {
-            "required": [ "storage" ]
+            "required": [
+              "storage"
+            ]
           },
           {
-            "required": [ "runner" ]
+            "required": [
+              "runner"
+            ]
           }
         ],
         "properties": {
           "service": {
             "title": "Used service source path",
             "description": "The path under which a service is offered to this component",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -148,7 +170,11 @@
           "legacy_service": {
             "title": "Used legacy service source path",
             "description": "The path under which a legacy service is offered to this component",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -156,7 +182,11 @@
           "directory": {
             "title": "Used directory source path",
             "description": "The path under which a directory is offered to this component",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
               "/data/assets/widgets"
             ]
@@ -164,7 +194,11 @@
           "storage": {
             "title": "Used storage capability",
             "description": "The type of storage which has been offered to this component",
-            "allOf": [{ "$ref": "#/definitions/storage-type-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/storage-type-clause"
+              }
+            ],
             "examples": [
               "data"
             ]
@@ -172,7 +206,11 @@
           "runner": {
             "title": "Used runner name",
             "description": "The name of a runner offered to this component",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "elf"
             ]
@@ -189,7 +227,11 @@
           "as": {
             "title": "Used capability target path",
             "description": "The path to which the capability will be installed in the component's incoming namespace. Defaults to \"service\"/\"directory\". May not be specified for runners.",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
               "/svc/fuchsia.logger.Log"
             ]
@@ -197,10 +239,19 @@
           "rights": {
             "title": "Used directory capability rights",
             "description": "The set of capability rights which are required by this component for this use statement.",
-            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "allOf": [
+              {
+                "$ref": "#/definitions/rights-clause"
+              }
+            ],
             "examples": [
-                ["r*"],
-                ["r*", "write_bytes"]
+              [
+                "r*"
+              ],
+              [
+                "r*",
+                "write_bytes"
+              ]
             ]
           }
         }
@@ -218,39 +269,59 @@
         ],
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [
+              "service"
+            ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [
+              "legacy_service"
+            ]
           },
           {
-            "required": [ "directory" ]
+            "required": [
+              "directory"
+            ]
           },
           {
-            "required": [ "runner" ]
+            "required": [
+              "runner"
+            ]
           }
         ],
         "properties": {
           "service": {
             "title": "Exposed service source path",
             "description": "The path to the service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the service was exposed by the child (if from \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
           "legacy_service": {
             "title": "Exposed legacy service source path",
             "description": "The path to the legacy service being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the legacy service was exposed by the child (if from \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
           "directory": {
             "title": "Exposed directory source path",
             "description": "The path to the directory being exposed. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed by the child (if from \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
               "/data/assets/widgets"
             ]
@@ -258,7 +329,11 @@
           "runner": {
             "title": "Exposed runner source name",
             "description": "The name of the runner being exposed. This is either a runner provided by the componenet (if from \"self\"), or the name of a runner exposed by a child (if from \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "elf"
             ]
@@ -267,7 +342,11 @@
             "title": "Exposed capability source component",
             "pattern": "^(self|framework|#[0-9a-z_\\-\\.]+)$",
             "description": "The component which has the capability to expose. Either \"self\" or \"#$CHILD\".",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "self",
               "#scenic"
@@ -277,8 +356,12 @@
             "title": "Exposed capability target path or name",
             "description": "The path or name by which the capability will be exposed. Defaults to the source path/name.",
             "oneOf": [
-              { "$ref": "#/definitions/path-clause" },
-              { "$ref": "#/definitions/name-clause" }
+              {
+                "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/name-clause"
+              }
             ],
             "examples": [
               "/svc/fuchsia.logger.Log"
@@ -296,10 +379,19 @@
           "rights": {
             "title": "Exposed directory capability rights",
             "description": "The set of capability rights which exposed by this component to the destination",
-            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "allOf": [
+              {
+                "$ref": "#/definitions/rights-clause"
+              }
+            ],
             "examples": [
-                ["r*"],
-                ["read_bytes", "write_bytes"]
+              [
+                "r*"
+              ],
+              [
+                "read_bytes",
+                "write_bytes"
+              ]
             ]
           }
         }
@@ -318,50 +410,88 @@
         ],
         "oneOf": [
           {
-            "required": [ "service" ]
+            "required": [
+              "service"
+            ]
           },
           {
-            "required": [ "legacy_service" ]
+            "required": [
+              "legacy_service"
+            ]
           },
           {
-            "required": [ "directory" ]
+            "required": [
+              "legacy_services"
+            ]
           },
           {
-            "required": [ "storage" ]
+            "required": [
+              "directory"
+            ]
           },
           {
-            "required": [ "runner" ]
+            "required": [
+              "storage"
+            ]
+          },
+          {
+            "required": [
+              "runner"
+            ]
           }
         ],
         "properties": {
           "service": {
             "title": "Offered service source path",
             "description": "The path to the service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
           "legacy_service": {
             "title": "Offered legacy service source path",
-            "description": "The path to the legacy service being offered. This is either a path in this component's namespace (if from \"self\"), or the path by which the legacy service was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "description": "A path, or a list of paths, to legacy services offered to children. Each path must either come from this component's namespace (if from \"self\"), or must be a path which was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
+            "oneOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/path-clause-multiple"
+              }
+            ],
             "examples": [
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic",
+              [
+                "/svc/fuchsia.ui.scenic.Scenic",
+                "/svc/fuchsia.net.Netstack"
+              ]
             ]
           },
           "directory": {
             "title": "Offered directory source path",
             "description": "The path to the directory being offered. This is either a path in this component's outgoing namespace (if from \"self\"), or the path by which the directory was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/path-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/path-clause"
+              }
+            ],
             "examples": [
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
           "storage": {
             "title": "Offered storage type",
             "description": "The storage type being offered. Must be one of \"data\", \"cache\", or \"meta\".",
-            "allOf": [{ "$ref": "#/definitions/storage-type-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/storage-type-clause"
+              }
+            ],
             "examples": [
               "data"
             ]
@@ -369,7 +499,11 @@
           "runner": {
             "title": "Offered runner name",
             "description": "The runner being offered. This is either a runner declared by this component (if from \"self\"), or a runner which was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "elf"
             ]
@@ -378,7 +512,11 @@
             "title": "Offered capability source component",
             "description": "The component which has the capability to offer. For services, directories, and runners one of \"framework\", \"realm\", \"self\" or \"#$CHILD\"; for storage either \"realm\" or \"#$STORAGE_SECTION_NAME\".",
             "pattern": "^(realm|framework|self|#[0-9a-z_\\-\\.]+)$",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "realm",
               "framework",
@@ -395,7 +533,11 @@
             "items": {
               "type": "string",
               "pattern": "^#[a-zA-Z0-9_-]+$",
-              "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+              "allOf": [
+                {
+                  "$ref": "#/definitions/relative-ref-clause"
+                }
+              ],
               "examples": [
                 "#scenic"
               ]
@@ -405,21 +547,34 @@
             "title": "Offered capability target path or name",
             "description": "The path or name by which the capability will be offered. Must be omitted for storage capabilities.",
             "oneOf": [
-              { "$ref": "#/definitions/path-clause" },
-              { "$ref": "#/definitions/name-clause" }
+              {
+                "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/name-clause"
+              }
             ],
             "examples": [
               "/data/assets/widgets",
-              "/svc/fuchsia.ui.Scenic"
+              "/svc/fuchsia.ui.scenic.Scenic"
             ]
           },
           "rights": {
             "title": "Offered directory capability rights",
             "description": "The set of capability rights which offered by this component to the destination",
-            "allOf": [{ "$ref": "#/definitions/rights-clause"}],
+            "allOf": [
+              {
+                "$ref": "#/definitions/rights-clause"
+              }
+            ],
             "examples": [
-                ["r*"],
-                ["read_bytes", "write_bytes"]
+              [
+                "r*"
+              ],
+              [
+                "read_bytes",
+                "write_bytes"
+              ]
             ]
           }
         }
@@ -442,7 +597,11 @@
             "title": "Offered directory capability source component",
             "description": "The component which has the directory capability to use for storage. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "realm",
               "self",
@@ -452,7 +611,11 @@
           "name": {
             "title": "Storage name",
             "description": "The component's local name for this storage",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "minfs",
               "persistent_storage"
@@ -461,7 +624,11 @@
           "path": {
             "title": "Offered directory capability source path",
             "description": "The path of the directory capability. The path is either a path into the component's outgoing directory (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "/data/storage",
               "/minfs"
@@ -485,7 +652,11 @@
           "name": {
             "title": "Child component name",
             "description": "The parent's local name for the child",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "echo_server",
               "System-logger"
@@ -494,7 +665,11 @@
           "url": {
             "title": "Child component URI",
             "description": "The URI that identifies the child component.",
-            "allOf": [{ "$ref": "#/definitions/url-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/url-clause"
+              }
+            ],
             "examples": [
               "fuchsia-pkg://fuchsia.com/echo_server_cpp#meta/echo_server.cml"
             ]
@@ -502,7 +677,11 @@
           "startup": {
             "title": "Startup mode",
             "description": "Conditions that trigger the component to start (defaults to \"lazy\")",
-            "allOf": [{ "$ref": "#/definitions/startup-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/startup-clause"
+              }
+            ],
             "examples": [
               "eager",
               "lazy"
@@ -526,7 +705,11 @@
           "name": {
             "title": "Collection name",
             "description": "The parent's local name for the collection",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "modular",
               "tests"
@@ -535,7 +718,11 @@
           "durability": {
             "title": "Durability",
             "description": "The durability of components in the collection. Either \"persistent\" (instances in the collection exist until the parent is destroyed) or \"transient\" (instances in the collection exist until the parent is stopped)",
-            "allOf": [{ "$ref": "#/definitions/durability-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/durability-clause"
+              }
+            ],
             "examples": [
               "persistent",
               "transient"
@@ -566,7 +753,11 @@
             "title": "Runner source component",
             "description": "The component providing the underlying runner service. Either \"realm\", \"self\" or \"#$CHILD\".",
             "pattern": "^(realm|self|#[0-9a-z_\\-\\.]+)$",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "realm",
               "self",
@@ -576,7 +767,11 @@
           "name": {
             "title": "Runner name",
             "description": "The name of this runner.",
-            "allOf": [{ "$ref": "#/definitions/name-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/name-clause"
+              }
+            ],
             "examples": [
               "elf"
             ]
@@ -584,7 +779,11 @@
           "path": {
             "title": "The path of the capability",
             "description": "The path of the capability providing the runner service. The path is either a path into the component's outgoing directory (if from \"self\"), or the path by which the capability was exposed or offered from another component (if from \"realm\" or \"#$CHILD\").",
-            "allOf": [{ "$ref": "#/definitions/relative-ref-clause" }],
+            "allOf": [
+              {
+                "$ref": "#/definitions/relative-ref-clause"
+              }
+            ],
             "examples": [
               "/elf"
             ]

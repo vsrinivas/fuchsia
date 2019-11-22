@@ -222,7 +222,7 @@ pub struct UseRunner {
 /// Exposed capability destination. See [`ExposeTargetDecl`].
 ///
 /// [`ExposeTargetDecl`]: ../../fidl_fuchsia_sys2/enum.ExposeTargetDecl.html
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 #[serde(rename_all = "snake_case")]
 pub enum ExposeTarget {
     Realm,
