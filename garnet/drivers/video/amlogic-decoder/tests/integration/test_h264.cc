@@ -153,11 +153,11 @@ class TestH264 {
     std::promise<void> wait_valid;
     // Guarded by decoder lock.
     std::vector<std::shared_ptr<VideoFrame>> frames_to_return;
+    uint32_t frame_count = 0;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-      uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
           [&frames_to_return, &frame_count, &wait_valid](std::shared_ptr<VideoFrame> frame) {
             ++frame_count;
@@ -225,11 +225,11 @@ class TestH264 {
     EXPECT_EQ(ZX_OK, status);
     std::promise<void> first_wait_valid;
     std::set<uint64_t> received_pts_set;
+    uint32_t frame_count = 0;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       EXPECT_EQ(ZX_OK, video->video_decoder_->Initialize());
 
-      uint32_t frame_count = 0;
       video->video_decoder_->SetFrameReadyNotifier(
           [&video, &frame_count, &first_wait_valid,
            &received_pts_set](std::shared_ptr<VideoFrame> frame) {
