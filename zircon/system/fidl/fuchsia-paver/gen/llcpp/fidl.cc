@@ -56,8 +56,8 @@ int32_t& ::llcpp::fuchsia::paver::ReadResult::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -65,8 +65,8 @@ bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
   if (ordinal_ != Ordinal::kEof) {
     Destroy();
     new (&eof_) bool;
+    ordinal_ = Ordinal::kEof;
   }
-  ordinal_ = Ordinal::kEof;
   return eof_;
 }
 
@@ -74,8 +74,8 @@ bool& ::llcpp::fuchsia::paver::ReadResult::mutable_eof() {
   if (ordinal_ != Ordinal::kInfo) {
     Destroy();
     new (&info_) ::llcpp::fuchsia::paver::ReadInfo;
+    ordinal_ = Ordinal::kInfo;
   }
-  ordinal_ = Ordinal::kInfo;
   return info_;
 }
 
@@ -407,8 +407,8 @@ void ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::SizeAndOffsetAssertionHel
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_WipeVolume_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -416,8 +416,8 @@ int32_t& ::llcpp::fuchsia::paver::Paver_WipeVolume_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -466,8 +466,8 @@ void ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -475,8 +475,8 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -525,8 +525,8 @@ void ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -534,8 +534,8 @@ int32_t& ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -584,8 +584,8 @@ void ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::SizeAndOffsetAssertionHelp
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::paver::Paver_ReadAsset_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -593,8 +593,8 @@ int32_t& ::llcpp::fuchsia::paver::Paver_ReadAsset_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

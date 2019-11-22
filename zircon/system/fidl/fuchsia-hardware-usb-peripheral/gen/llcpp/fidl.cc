@@ -236,8 +236,8 @@ void ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Result
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -245,8 +245,8 @@ int32_t& ::llcpp::fuchsia::hardware::usb::peripheral::Device_SetConfiguration_Re
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

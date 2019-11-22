@@ -57,8 +57,8 @@ void ::llcpp::fuchsia::cobalt::Value::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kStringValue) {
     Destroy();
     new (&string_value_) ::fidl::StringView;
+    ordinal_ = Ordinal::kStringValue;
   }
-  ordinal_ = Ordinal::kStringValue;
   return string_value_;
 }
 
@@ -66,8 +66,8 @@ int64_t& ::llcpp::fuchsia::cobalt::Value::mutable_int_value() {
   if (ordinal_ != Ordinal::kIntValue) {
     Destroy();
     new (&int_value_) int64_t;
+    ordinal_ = Ordinal::kIntValue;
   }
-  ordinal_ = Ordinal::kIntValue;
   return int_value_;
 }
 
@@ -75,8 +75,8 @@ double& ::llcpp::fuchsia::cobalt::Value::mutable_double_value() {
   if (ordinal_ != Ordinal::kDoubleValue) {
     Destroy();
     new (&double_value_) double;
+    ordinal_ = Ordinal::kDoubleValue;
   }
-  ordinal_ = Ordinal::kDoubleValue;
   return double_value_;
 }
 
@@ -84,8 +84,8 @@ uint32_t& ::llcpp::fuchsia::cobalt::Value::mutable_index_value() {
   if (ordinal_ != Ordinal::kIndexValue) {
     Destroy();
     new (&index_value_) uint32_t;
+    ordinal_ = Ordinal::kIndexValue;
   }
-  ordinal_ = Ordinal::kIndexValue;
   return index_value_;
 }
 
@@ -4401,8 +4401,8 @@ void ::llcpp::fuchsia::cobalt::EventPayload::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kEvent) {
     Destroy();
     new (&event_) ::llcpp::fuchsia::cobalt::Event;
+    ordinal_ = Ordinal::kEvent;
   }
-  ordinal_ = Ordinal::kEvent;
   return event_;
 }
 
@@ -4410,8 +4410,8 @@ void ::llcpp::fuchsia::cobalt::EventPayload::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kEventCount) {
     Destroy();
     new (&event_count_) ::llcpp::fuchsia::cobalt::CountEvent;
+    ordinal_ = Ordinal::kEventCount;
   }
-  ordinal_ = Ordinal::kEventCount;
   return event_count_;
 }
 
@@ -4419,8 +4419,8 @@ int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_elapsed_micros() {
   if (ordinal_ != Ordinal::kElapsedMicros) {
     Destroy();
     new (&elapsed_micros_) int64_t;
+    ordinal_ = Ordinal::kElapsedMicros;
   }
-  ordinal_ = Ordinal::kElapsedMicros;
   return elapsed_micros_;
 }
 
@@ -4428,8 +4428,8 @@ float& ::llcpp::fuchsia::cobalt::EventPayload::mutable_fps() {
   if (ordinal_ != Ordinal::kFps) {
     Destroy();
     new (&fps_) float;
+    ordinal_ = Ordinal::kFps;
   }
-  ordinal_ = Ordinal::kFps;
   return fps_;
 }
 
@@ -4437,8 +4437,8 @@ int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_memory_bytes_used() {
   if (ordinal_ != Ordinal::kMemoryBytesUsed) {
     Destroy();
     new (&memory_bytes_used_) int64_t;
+    ordinal_ = Ordinal::kMemoryBytesUsed;
   }
-  ordinal_ = Ordinal::kMemoryBytesUsed;
   return memory_bytes_used_;
 }
 
@@ -4446,8 +4446,8 @@ int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_memory_bytes_used() {
   if (ordinal_ != Ordinal::kStringEvent) {
     Destroy();
     new (&string_event_) ::fidl::StringView;
+    ordinal_ = Ordinal::kStringEvent;
   }
-  ordinal_ = Ordinal::kStringEvent;
   return string_event_;
 }
 
@@ -4455,8 +4455,8 @@ int64_t& ::llcpp::fuchsia::cobalt::EventPayload::mutable_memory_bytes_used() {
   if (ordinal_ != Ordinal::kIntHistogram) {
     Destroy();
     new (&int_histogram_) ::fidl::VectorView<::llcpp::fuchsia::cobalt::HistogramBucket>;
+    ordinal_ = Ordinal::kIntHistogram;
   }
-  ordinal_ = Ordinal::kIntHistogram;
   return int_histogram_;
 }
 

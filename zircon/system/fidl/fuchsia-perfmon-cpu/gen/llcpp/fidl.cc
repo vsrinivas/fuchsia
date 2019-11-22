@@ -53,8 +53,8 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::SizeAndOffsetAsser
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -62,8 +62,8 @@ int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_Start_Result::mutable_err() 
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -112,8 +112,8 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::SizeAndOffse
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -121,8 +121,8 @@ int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_StageConfig_Result::mutable_
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -171,8 +171,8 @@ void ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::SizeAndOffset
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -180,8 +180,8 @@ int32_t& ::llcpp::fuchsia::perfmon::cpu::Controller_Initialize_Result::mutable_e
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

@@ -54,8 +54,8 @@ void ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Result::
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -63,8 +63,8 @@ int32_t& ::llcpp::fuchsia::device::devhost::test::TestDevice_AddChildDevice_Resu
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

@@ -175,8 +175,8 @@ void ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::SizeAndOffsetAs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -184,8 +184,8 @@ int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Write_Result::mutable_err
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -234,8 +234,8 @@ void ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::SizeAndOffsetAss
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -243,8 +243,8 @@ int32_t& ::llcpp::fuchsia::hardware::serial::NewDevice_Read_Result::mutable_err(
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

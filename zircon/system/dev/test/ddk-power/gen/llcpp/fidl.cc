@@ -54,8 +54,8 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerStat
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePowerState_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -63,8 +63,8 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePower
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -113,8 +113,8 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspe
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoSuspendConfig_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -122,8 +122,8 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDeviceAutoS
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -172,8 +172,8 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerforman
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerformanceState_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -181,8 +181,8 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_GetCurrentDevicePerfo
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -231,8 +231,8 @@ void ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Re
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArgs_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -240,8 +240,8 @@ int32_t& ::llcpp::fuchsia::device::power::test::TestDevice_AddDeviceWithPowerArg
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

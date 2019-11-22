@@ -213,8 +213,8 @@ void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::SizeAndOffsetAsser
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupHostname_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -222,8 +222,8 @@ void ::llcpp::fuchsia::net::NameLookup_LookupHostname_Result::SizeAndOffsetAsser
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) ::llcpp::fuchsia::net::LookupError;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -275,8 +275,8 @@ void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::SizeAndOffsetAssertionHe
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::net::NameLookup_LookupIp_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -284,8 +284,8 @@ void ::llcpp::fuchsia::net::NameLookup_LookupIp_Result::SizeAndOffsetAssertionHe
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) ::llcpp::fuchsia::net::LookupError;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -337,8 +337,8 @@ void ::llcpp::fuchsia::net::IpAddress::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kIpv4) {
     Destroy();
     new (&ipv4_) ::llcpp::fuchsia::net::Ipv4Address;
+    ordinal_ = Ordinal::kIpv4;
   }
-  ordinal_ = Ordinal::kIpv4;
   return ipv4_;
 }
 
@@ -346,8 +346,8 @@ void ::llcpp::fuchsia::net::IpAddress::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kIpv6) {
     Destroy();
     new (&ipv6_) ::llcpp::fuchsia::net::Ipv6Address;
+    ordinal_ = Ordinal::kIpv6;
   }
-  ordinal_ = Ordinal::kIpv6;
   return ipv6_;
 }
 

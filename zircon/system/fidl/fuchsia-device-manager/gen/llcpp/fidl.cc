@@ -1005,8 +1005,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::SizeAndOff
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1014,8 +1014,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDevice_Result::mutabl
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1064,8 +1064,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result::S
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1073,8 +1073,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Resul
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1123,8 +1123,8 @@ void ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1132,8 +1132,8 @@ int32_t& ::llcpp::fuchsia::device::manager::DeviceController_Unbind_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1182,8 +1182,8 @@ void ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Result:
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1191,8 +1191,8 @@ int32_t& ::llcpp::fuchsia::device::manager::DeviceController_CompleteRemoval_Res
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1241,8 +1241,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Result
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1250,8 +1250,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_RunCompatibilityTests_Re
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1300,8 +1300,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::Size
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1309,8 +1309,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_PublishMetadata_Result::
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1359,8 +1359,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1368,8 +1368,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_MakeVisible_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1418,8 +1418,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::SizeAnd
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1427,8 +1427,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_LoadFirmware_Result::mut
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1477,8 +1477,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Result::S
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1486,8 +1486,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetTopologicalPath_Resul
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1536,8 +1536,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1545,8 +1545,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadata_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1595,8 +1595,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::Size
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1604,8 +1604,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_GetMetadataSize_Result::
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1654,8 +1654,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::SizeA
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1663,8 +1663,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_DirectoryWatch_Result::m
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1713,8 +1713,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::SizeAndOf
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1722,8 +1722,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_BindDevice_Result::mutab
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1772,8 +1772,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1781,8 +1781,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddMetadata_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1831,8 +1831,8 @@ void ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Result::S
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1840,8 +1840,8 @@ int32_t& ::llcpp::fuchsia::device::manager::Coordinator_AddCompositeDevice_Resul
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

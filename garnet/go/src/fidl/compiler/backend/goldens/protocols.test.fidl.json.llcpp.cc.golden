@@ -52,8 +52,8 @@ void ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::SizeAndOffset
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -61,8 +61,8 @@ uint32_t& ::llcpp::test::name::WithErrorSyntax_ResponseAsStruct_Result::mutable_
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) uint32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -111,8 +111,8 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::SizeAndOffset
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -120,8 +120,8 @@ uint32_t& ::llcpp::test::name::WithErrorSyntax_ErrorAsPrimitive_Result::mutable_
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) uint32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1500,8 +1500,8 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAsser
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1509,8 +1509,8 @@ void ::llcpp::test::name::WithErrorSyntax_ErrorAsEnum_Result::SizeAndOffsetAsser
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) ::llcpp::test::name::ErrorEnun;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

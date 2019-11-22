@@ -55,8 +55,8 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Res
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -64,8 +64,8 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -114,8 +114,8 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDiff
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWorkDifferentThread_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -123,8 +123,8 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_ScheduleWork
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -173,8 +173,8 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Res
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -182,8 +182,8 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetDoneEvent
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -232,8 +232,8 @@ void ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Resul
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -241,8 +241,8 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::TestDevice_GetChannel_R
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1003,8 +1003,8 @@ void ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_Schedule
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_ScheduleWork_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1012,8 +1012,8 @@ int32_t& ::llcpp::fuchsia::device::schedule::work::test::OwnedChannelDevice_Sche
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

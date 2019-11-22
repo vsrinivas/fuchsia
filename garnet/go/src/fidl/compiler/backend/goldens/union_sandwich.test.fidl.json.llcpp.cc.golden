@@ -46,8 +46,8 @@ uint32_t& ::llcpp::test::fidl::unionsandwich::UnionSize8Alignment4::mutable_vari
   if (ordinal_ != Ordinal::kVariant) {
     Destroy();
     new (&variant_) uint32_t;
+    ordinal_ = Ordinal::kVariant;
   }
-  ordinal_ = Ordinal::kVariant;
   return variant_;
 }
 
@@ -92,8 +92,8 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize36Alignment4::SizeAndOffsetAss
   if (ordinal_ != Ordinal::kVariant) {
     Destroy();
     new (&variant_) ::fidl::Array<uint8_t, 32>;
+    ordinal_ = Ordinal::kVariant;
   }
-  ordinal_ = Ordinal::kVariant;
   return variant_;
 }
 
@@ -138,8 +138,8 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize12Alignment4::SizeAndOffsetAss
   if (ordinal_ != Ordinal::kVariant) {
     Destroy();
     new (&variant_) ::fidl::Array<uint8_t, 6>;
+    ordinal_ = Ordinal::kVariant;
   }
-  ordinal_ = Ordinal::kVariant;
   return variant_;
 }
 
@@ -184,8 +184,8 @@ void ::llcpp::test::fidl::unionsandwich::UnionSize24Alignment8::SizeAndOffsetAss
   if (ordinal_ != Ordinal::kVariant) {
     Destroy();
     new (&variant_) ::llcpp::test::fidl::unionsandwich::StructSize16Alignment8;
+    ordinal_ = Ordinal::kVariant;
   }
-  ordinal_ = Ordinal::kVariant;
   return variant_;
 }
 

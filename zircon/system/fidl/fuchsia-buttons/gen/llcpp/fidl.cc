@@ -52,8 +52,8 @@ void ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::SizeAndOffsetAsse
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -61,8 +61,8 @@ int32_t& ::llcpp::fuchsia::buttons::Buttons_RegisterNotify_Result::mutable_err()
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

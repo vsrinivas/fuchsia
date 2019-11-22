@@ -29,8 +29,8 @@ constexpr static inline const ::fidl::FidlCodedUnion* test_name_UnionAltTypePoin
 const fidl_type_t test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields15test_name_Union, 3u, 8u, 24u, "test.name/Union", test_name_UnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields29test_name_ReverseOrdinalUnion[] = {
-    ::fidl::FidlUnionField(nullptr, 0u, 2u),
-    ::fidl::FidlUnionField(nullptr, 0u, 1u)
+    ::fidl::FidlUnionField(nullptr, 0u, 1u),
+    ::fidl::FidlUnionField(nullptr, 0u, 2u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* test_name_ReverseOrdinalUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t test_name_ReverseOrdinalUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields29test_name_ReverseOrdinalUnion, 2u, 4u, 8u, "test.name/ReverseOrdinalUnion", test_name_ReverseOrdinalUnionAltTypePointerTable()));
@@ -79,8 +79,8 @@ constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_UnionAltTypeP
 const fidl_type_t v1_test_name_UnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields18v1_test_name_Union, 3u, 8u, 24u, "test.name/Union", v1_test_name_UnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields32v1_test_name_ReverseOrdinalUnion[] = {
-    ::fidl::FidlUnionField(nullptr, 4u, 2u),
-    ::fidl::FidlUnionField(nullptr, 4u, 1u)
+    ::fidl::FidlUnionField(nullptr, 4u, 1u),
+    ::fidl::FidlUnionField(nullptr, 4u, 2u)
 };
 constexpr static inline const ::fidl::FidlCodedUnion* v1_test_name_ReverseOrdinalUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_test_name_ReverseOrdinalUnionTable = fidl_type_t(::fidl::FidlCodedUnion(Fields32v1_test_name_ReverseOrdinalUnion, 2u, 8u, 24u, "test.name/ReverseOrdinalUnion", v1_test_name_ReverseOrdinalUnionAltTypePointerTable()));

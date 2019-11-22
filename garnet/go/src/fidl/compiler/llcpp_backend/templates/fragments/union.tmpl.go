@@ -196,8 +196,8 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::{{ .TagName }}) {
     Destroy();
     new (&{{ .StorageName }}) {{ .Type.LLDecl }};
+    ordinal_ = Ordinal::{{ .TagName }};
   }
-  ordinal_ = Ordinal::{{ .TagName }};
   return {{ .StorageName }};
 }
 {{ "" }}

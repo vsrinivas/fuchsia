@@ -342,8 +342,8 @@ void ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::SizeAn
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -351,8 +351,8 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_StartCapture_Result::mu
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -401,8 +401,8 @@ void ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::Size
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -410,8 +410,8 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_ReleaseCapture_Result::
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -460,8 +460,8 @@ void ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Result::
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -469,8 +469,8 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_IsCaptureSupported_Resu
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -519,8 +519,8 @@ void ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Resul
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -528,8 +528,8 @@ int32_t& ::llcpp::fuchsia::hardware::display::Controller_ImportImageForCapture_R
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

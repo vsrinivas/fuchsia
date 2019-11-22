@@ -1135,8 +1135,8 @@ void ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1144,8 +1144,8 @@ int32_t& ::llcpp::fuchsia::sysmem::SecureMem_SetPhysicalSecureHeaps_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -1194,8 +1194,8 @@ void ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::SizeAndO
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -1203,8 +1203,8 @@ int32_t& ::llcpp::fuchsia::sysmem::SecureMem_GetPhysicalSecureHeaps_Result::muta
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

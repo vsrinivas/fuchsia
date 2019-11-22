@@ -52,8 +52,8 @@ void ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::SizeAndOffsetA
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -61,8 +61,8 @@ int32_t& ::llcpp::fuchsia::device::NameProvider_GetDeviceName_Result::mutable_er
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -293,8 +293,8 @@ void ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::SizeAndOf
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -302,8 +302,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_GetPowerStateMapping_Result::mutab
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -352,8 +352,8 @@ void ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -361,8 +361,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_GetDevicePowerCaps_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -411,8 +411,8 @@ void ::llcpp::fuchsia::device::Controller_Resume_Result::SizeAndOffsetAssertionH
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_Resume_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -420,8 +420,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_Resume_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -471,8 +471,8 @@ void ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::SizeAn
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -480,8 +480,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_UpdatePowerStateMapping_Result::mu
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -530,8 +530,8 @@ void ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::SizeAndOffsetAs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -539,8 +539,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_ScheduleUnbind_Result::mutable_err
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -589,8 +589,8 @@ void ::llcpp::fuchsia::device::Controller_Rebind_Result::SizeAndOffsetAssertionH
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_Rebind_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -598,8 +598,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_Rebind_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -648,8 +648,8 @@ void ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -657,8 +657,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_GetTopologicalPath_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -707,8 +707,8 @@ void ::llcpp::fuchsia::device::Controller_Bind_Result::SizeAndOffsetAssertionHel
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::device::Controller_Bind_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -716,8 +716,8 @@ int32_t& ::llcpp::fuchsia::device::Controller_Bind_Result::mutable_err() {
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

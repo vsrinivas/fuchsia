@@ -224,8 +224,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kService) {
     Destroy();
     new (&service_) ::llcpp::fuchsia::io::Service;
+    ordinal_ = Ordinal::kService;
   }
-  ordinal_ = Ordinal::kService;
   return service_;
 }
 
@@ -233,8 +233,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kFile) {
     Destroy();
     new (&file_) ::llcpp::fuchsia::io::FileObject;
+    ordinal_ = Ordinal::kFile;
   }
-  ordinal_ = Ordinal::kFile;
   return file_;
 }
 
@@ -242,8 +242,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kDirectory) {
     Destroy();
     new (&directory_) ::llcpp::fuchsia::io::DirectoryObject;
+    ordinal_ = Ordinal::kDirectory;
   }
-  ordinal_ = Ordinal::kDirectory;
   return directory_;
 }
 
@@ -251,8 +251,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kPipe) {
     Destroy();
     new (&pipe_) ::llcpp::fuchsia::io::Pipe;
+    ordinal_ = Ordinal::kPipe;
   }
-  ordinal_ = Ordinal::kPipe;
   return pipe_;
 }
 
@@ -260,8 +260,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kVmofile) {
     Destroy();
     new (&vmofile_) ::llcpp::fuchsia::io::Vmofile;
+    ordinal_ = Ordinal::kVmofile;
   }
-  ordinal_ = Ordinal::kVmofile;
   return vmofile_;
 }
 
@@ -269,8 +269,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kDevice) {
     Destroy();
     new (&device_) ::llcpp::fuchsia::io::Device;
+    ordinal_ = Ordinal::kDevice;
   }
-  ordinal_ = Ordinal::kDevice;
   return device_;
 }
 
@@ -278,8 +278,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kTty) {
     Destroy();
     new (&tty_) ::llcpp::fuchsia::io::Tty;
+    ordinal_ = Ordinal::kTty;
   }
-  ordinal_ = Ordinal::kTty;
   return tty_;
 }
 
@@ -287,8 +287,8 @@ void ::llcpp::fuchsia::io::NodeInfo::SizeAndOffsetAssertionHelper() {
   if (ordinal_ != Ordinal::kSocket) {
     Destroy();
     new (&socket_) ::llcpp::fuchsia::io::Socket;
+    ordinal_ = Ordinal::kSocket;
   }
-  ordinal_ = Ordinal::kSocket;
   return socket_;
 }
 

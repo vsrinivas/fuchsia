@@ -52,8 +52,8 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -61,8 +61,8 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RemoveFilters_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -111,8 +111,8 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::SizeAndOff
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -120,8 +120,8 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_ReleaseProcess_Result::mutabl
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -170,8 +170,8 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::SizeAndOffs
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -179,8 +179,8 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_AppendFilters_Result::mutable
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -400,8 +400,8 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnException_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -409,8 +409,8 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_WatchProcessesWaitingOnExcept
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -499,8 +499,8 @@ void ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::SizeAnd
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -508,8 +508,8 @@ int32_t& ::llcpp::fuchsia::exception::ProcessLimbo_RetrieveException_Result::mut
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

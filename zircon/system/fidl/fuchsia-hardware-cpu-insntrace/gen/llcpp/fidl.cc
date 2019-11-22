@@ -54,8 +54,8 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result::Si
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -63,8 +63,8 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Terminate_Result
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -113,8 +113,8 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuffer_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -122,8 +122,8 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_ReleaseThreadBuf
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -172,8 +172,8 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Result::S
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -181,8 +181,8 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_Initialize_Resul
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -231,8 +231,8 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_R
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuffer_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -240,8 +240,8 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AssignThreadBuff
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -290,8 +290,8 @@ void ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Resul
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -299,8 +299,8 @@ int32_t& ::llcpp::fuchsia::hardware::cpu::insntrace::Controller_AllocateBuffer_R
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

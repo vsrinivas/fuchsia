@@ -53,8 +53,8 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result::Si
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -62,8 +62,8 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateNormalized_Result
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -112,8 +112,8 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::Size
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -121,8 +121,8 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetStateAbsolute_Result::
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -171,8 +171,8 @@ void ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result::Si
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -180,8 +180,8 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateNormalized_Result
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -230,8 +230,8 @@ void ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::Size
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -239,8 +239,8 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_SetStateAbsolute_Result::
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 
@@ -289,8 +289,8 @@ void ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Resu
   if (ordinal_ != Ordinal::kResponse) {
     Destroy();
     new (&response_) ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_Response;
+    ordinal_ = Ordinal::kResponse;
   }
-  ordinal_ = Ordinal::kResponse;
   return response_;
 }
 
@@ -298,8 +298,8 @@ int32_t& ::llcpp::fuchsia::hardware::backlight::Device_GetMaxAbsoluteBrightness_
   if (ordinal_ != Ordinal::kErr) {
     Destroy();
     new (&err_) int32_t;
+    ordinal_ = Ordinal::kErr;
   }
-  ordinal_ = Ordinal::kErr;
   return err_;
 }
 

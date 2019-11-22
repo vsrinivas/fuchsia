@@ -75,8 +75,8 @@ int32_t& ::llcpp::fuchsia::device::mock::Action::mutable_return_status() {
   if (ordinal_ != Ordinal::kReturnStatus) {
     Destroy();
     new (&return_status_) int32_t;
+    ordinal_ = Ordinal::kReturnStatus;
   }
-  ordinal_ = Ordinal::kReturnStatus;
   return return_status_;
 }
 
@@ -84,8 +84,8 @@ int32_t& ::llcpp::fuchsia::device::mock::Action::mutable_return_status() {
   if (ordinal_ != Ordinal::kWrite) {
     Destroy();
     new (&write_) ::fidl::VectorView<uint8_t>;
+    ordinal_ = Ordinal::kWrite;
   }
-  ordinal_ = Ordinal::kWrite;
   return write_;
 }
 
@@ -93,8 +93,8 @@ int32_t& ::llcpp::fuchsia::device::mock::Action::mutable_return_status() {
   if (ordinal_ != Ordinal::kCreateThread) {
     Destroy();
     new (&create_thread_) ::zx::channel;
+    ordinal_ = Ordinal::kCreateThread;
   }
-  ordinal_ = Ordinal::kCreateThread;
   return create_thread_;
 }
 
@@ -102,8 +102,8 @@ bool& ::llcpp::fuchsia::device::mock::Action::mutable_async_remove_device() {
   if (ordinal_ != Ordinal::kAsyncRemoveDevice) {
     Destroy();
     new (&async_remove_device_) bool;
+    ordinal_ = Ordinal::kAsyncRemoveDevice;
   }
-  ordinal_ = Ordinal::kAsyncRemoveDevice;
   return async_remove_device_;
 }
 
@@ -111,8 +111,8 @@ bool& ::llcpp::fuchsia::device::mock::Action::mutable_async_remove_device() {
   if (ordinal_ != Ordinal::kUnbindReply) {
     Destroy();
     new (&unbind_reply_) ::llcpp::fuchsia::device::mock::UnbindReplyAction;
+    ordinal_ = Ordinal::kUnbindReply;
   }
-  ordinal_ = Ordinal::kUnbindReply;
   return unbind_reply_;
 }
 
@@ -120,8 +120,8 @@ bool& ::llcpp::fuchsia::device::mock::Action::mutable_async_remove_device() {
   if (ordinal_ != Ordinal::kAddDevice) {
     Destroy();
     new (&add_device_) ::llcpp::fuchsia::device::mock::AddDeviceAction;
+    ordinal_ = Ordinal::kAddDevice;
   }
-  ordinal_ = Ordinal::kAddDevice;
   return add_device_;
 }
 

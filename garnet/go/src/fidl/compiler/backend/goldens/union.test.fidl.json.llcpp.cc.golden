@@ -53,8 +53,8 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
   if (ordinal_ != Ordinal::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
+    ordinal_ = Ordinal::kPrimitive;
   }
-  ordinal_ = Ordinal::kPrimitive;
   return Primitive_;
 }
 
@@ -62,8 +62,8 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
   if (ordinal_ != Ordinal::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
+    ordinal_ = Ordinal::kStringNeedsConstructor;
   }
-  ordinal_ = Ordinal::kStringNeedsConstructor;
   return StringNeedsConstructor_;
 }
 
@@ -71,8 +71,8 @@ int32_t& ::llcpp::test::name::Union::mutable_Primitive() {
   if (ordinal_ != Ordinal::kVectorStringAlsoNeedsConstructor) {
     Destroy();
     new (&VectorStringAlsoNeedsConstructor_) ::fidl::VectorView<::fidl::StringView>;
+    ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
   }
-  ordinal_ = Ordinal::kVectorStringAlsoNeedsConstructor;
   return VectorStringAlsoNeedsConstructor_;
 }
 
@@ -118,8 +118,8 @@ uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_first() {
   if (ordinal_ != Ordinal::kFirst) {
     Destroy();
     new (&first_) uint32_t;
+    ordinal_ = Ordinal::kFirst;
   }
-  ordinal_ = Ordinal::kFirst;
   return first_;
 }
 
@@ -127,8 +127,8 @@ uint32_t& ::llcpp::test::name::ReverseOrdinalUnion::mutable_second() {
   if (ordinal_ != Ordinal::kSecond) {
     Destroy();
     new (&second_) uint32_t;
+    ordinal_ = Ordinal::kSecond;
   }
-  ordinal_ = Ordinal::kSecond;
   return second_;
 }
 
@@ -170,8 +170,8 @@ int32_t& ::llcpp::test::name::FieldCollision::mutable_field_collision_tag() {
   if (ordinal_ != Ordinal::kFieldCollisionTag) {
     Destroy();
     new (&field_collision_tag_) int32_t;
+    ordinal_ = Ordinal::kFieldCollisionTag;
   }
-  ordinal_ = Ordinal::kFieldCollisionTag;
   return field_collision_tag_;
 }
 
@@ -217,8 +217,8 @@ int32_t& ::llcpp::test::name::ExplicitUnion::mutable_Primitive() {
   if (ordinal_ != Ordinal::kPrimitive) {
     Destroy();
     new (&Primitive_) int32_t;
+    ordinal_ = Ordinal::kPrimitive;
   }
-  ordinal_ = Ordinal::kPrimitive;
   return Primitive_;
 }
 
@@ -226,8 +226,8 @@ int32_t& ::llcpp::test::name::ExplicitUnion::mutable_Primitive() {
   if (ordinal_ != Ordinal::kStringNeedsConstructor) {
     Destroy();
     new (&StringNeedsConstructor_) ::fidl::StringView;
+    ordinal_ = Ordinal::kStringNeedsConstructor;
   }
-  ordinal_ = Ordinal::kStringNeedsConstructor;
   return StringNeedsConstructor_;
 }
 
