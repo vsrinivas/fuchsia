@@ -18,6 +18,15 @@ declare_args() {
   # nonempty may conflict with programs that define their own
   # `__asan_default_options` C function.
   asan_default_options = ""
+
+  # Default [UndefinedBehaviorSanitizer](https://llvm.org/docs/UndefinedBehaviorSanitizer.html)
+  # options (before the `UBSAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "ubsan"
+  # variants in `known_variants` (which see), or overridden in
+  # toolchain_args in one of those variants.  Note that setting this
+  # nonempty may conflict with programs that define their own
+  # `__ubsan_default_options` C function.
+  ubsan_default_options = "print_stacktrace=1"
 }
 
 variant("asan") {
@@ -53,6 +62,27 @@ variant("ubsan") {
   common_flags = [ "-fsanitize=undefined" ]
   if (toolchain_variant.name == "asan-ubsan") {
     ldflags = [ "-Wl,-dynamic-linker,asan-ubsan/ld.so.1" ]
+  }
+
+  if (ubsan_default_options != "") {
+    deps = [
+      ":ubsan_default_options",
+    ]
+  }
+}
+
+if (ubsan_default_options != "") {
+  source_set("ubsan_default_options") {
+    visibility = [ ":*" ]
+    sources = [
+      "ubsan_default_options.c",
+    ]
+    defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
+
+    # On Fuchsia, the UBSan runtime is dynamically linked and needs to have
+    # the __ubsan_default_options symbol exported.  On systems where the
+    # UBSan runtime is statically linked, it doesn't matter either way.
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
   }
 }
 

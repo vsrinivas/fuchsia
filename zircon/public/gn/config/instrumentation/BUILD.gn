@@ -13,6 +13,15 @@ declare_args() {
   # with programs that define their own `__asan_default_options` C
   # function.
   asan_default_options = ""
+
+  # Default [UndefinedBehaviorSanitizer](https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html)
+  # options (before the `UBSAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "ubsan"
+  # variants in $variants (which see), or overridden in $toolchain_args in
+  # one of those variants.  Note that setting this nonempty may conflict
+  # with programs that define their own `__ubsan_default_options` C
+  # function.
+  ubsan_default_options = "print_stacktrace=1"
 }
 
 config("asan") {
@@ -32,7 +41,7 @@ source_set("asan_default_options") {
     # On Fuchsia, the ASan runtime is dynamically linked and needs to have
     # the __asan_default_options symbol exported.  On systems where the
     # ASan runtime is statically linked, it doesn't matter either way.
-    # TODO: configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
   }
 }
 
@@ -41,6 +50,20 @@ config("ubsan") {
   asmflags = compiler_flags
   cflags = compiler_flags
   ldflags = compiler_flags
+}
+
+source_set("ubsan_default_options") {
+  if (ubsan_default_options != "") {
+    sources = [
+      "ubsan_default_options.c",
+    ]
+    defines = [ "UBSAN_DEFAULT_OPTIONS=\"${ubsan_default_options}\"" ]
+
+    # On Fuchsia, the Ubsan runtime is dynamically linked and needs to have
+    # the __ubsan_default_options symbol exported.  On systems where the
+    # ASan runtime is statically linked, it doesn't matter either way.
+    configs -= [ "$zx_build/public/gn/config:visibility_hidden" ]
+  }
 }
 
 # NOTE: Every variant that includes any sancov configs must have "sancov"

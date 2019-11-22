@@ -272,6 +272,16 @@ standard_sanitizer_variants = [
     variant = {
       name = "ubsan"
       configs = [ "$zx/public/gn/config/instrumentation:ubsan" ]
+      implicit_deps = [
+        {
+          types = [
+            "executable",
+            "host_tool",
+            "test",
+          ]
+          add = [ "$zx/public/gn/config/instrumentation:ubsan_default_options" ]
+        },
+      ]
       toolchain_vars = {
         # This is the key for toolchain_runtime_deps() to find the right
         # shared library dependencies for the instrumentation.  Note that
