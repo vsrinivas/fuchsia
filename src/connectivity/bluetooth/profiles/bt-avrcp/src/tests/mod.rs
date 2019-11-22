@@ -21,7 +21,9 @@ use {
 };
 
 use crate::{
-    packets::{PlaybackStatus, *},
+    packets::{
+        player_application_settings::PlayerApplicationSettingAttributeId, PlaybackStatus, *,
+    },
     peer::PeerManager,
     profile::{
         AvcrpTargetFeatures, AvrcpProfileEvent, AvrcpProtocolVersion, AvrcpService, ProfileService,
@@ -216,6 +218,13 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
     pin_mut!(get_player_application_settings_fut);
     expected_commands += 1;
 
+    let attribute_ids_empty = vec![];
+    let get_all_player_application_settings_fut = controller_proxy
+        .get_player_application_settings(&mut attribute_ids_empty.into_iter())
+        .fuse();
+    pin_mut!(get_all_player_application_settings_fut);
+    expected_commands += 1;
+
     let mut settings = fidl_avrcp::PlayerApplicationSettings::new_empty();
     settings.scan_mode = Some(fidl_avrcp::ScanMode::GroupScan);
     settings.shuffle_mode = Some(fidl_avrcp::ShuffleMode::Off);
@@ -374,6 +383,65 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                         .expect("Unable to encode response");
                     let _ = avc_command.send_response(AvcResponseType::Accepted, &response[..]);
                 }
+                PduId::ListPlayerApplicationSettingAttributes => {
+                    let _list_attributes_command =
+                        ListPlayerApplicationSettingAttributesCommand::decode(body).expect(
+                            "ListPlayerApplicationSettingAttributes: unable to packet body",
+                        );
+                    let response = ListPlayerApplicationSettingAttributesResponse::new(
+                        1,
+                        vec![PlayerApplicationSettingAttributeId::Equalizer],
+                    )
+                    .encode_packet()
+                    .expect("Unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
+                PduId::GetPlayerApplicationSettingAttributeText => {
+                    let _get_attribute_text_command =
+                        GetPlayerApplicationSettingAttributeTextCommand::decode(body).expect(
+                            "GetPlayerApplicationSettingAttributeText: unable to packet body",
+                        );
+                    let response = GetPlayerApplicationSettingAttributeTextResponse::new(vec![
+                        AttributeInfo::new(
+                            PlayerApplicationSettingAttributeId::Equalizer,
+                            CharsetId::Utf8,
+                            1,
+                            vec![0x62],
+                        ),
+                    ])
+                    .encode_packet()
+                    .expect("Unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
+                PduId::ListPlayerApplicationSettingValues => {
+                    let _list_value_command =
+                        ListPlayerApplicationSettingValuesCommand::decode(body)
+                            .expect("ListPlayerApplicationSettingValues: unable to packet body");
+                    let response =
+                        ListPlayerApplicationSettingValuesResponse::new(2, vec![0x01, 0x02])
+                            .encode_packet()
+                            .expect("Unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
+                PduId::GetPlayerApplicationSettingValueText => {
+                    let _get_value_text_command =
+                        GetPlayerApplicationSettingValueTextCommand::decode(body)
+                            .expect("GetPlayerApplicationSettingValueText: unable to packet body");
+                    let response =
+                        GetPlayerApplicationSettingValueTextResponse::new(vec![ValueInfo::new(
+                            1,
+                            CharsetId::Utf8,
+                            1,
+                            vec![0x63],
+                        )])
+                        .encode_packet()
+                        .expect("Unable to encode response");
+                    let _ = avc_command
+                        .send_response(AvcResponseType::ImplementedStable, &response[..]);
+                }
                 _ => {
                     // not entirely correct but just get it off our back for now.
                     let _ = avc_command.send_response(AvcResponseType::NotImplemented, &[]);
@@ -458,7 +526,13 @@ async fn test_spawn_peer_manager_with_fidl_client_and_mock_profile() -> Result<(
                 assert!(settings.repeat_status_mode.is_none());
                 assert!(settings.shuffle_mode.is_none());
                 let eq = settings.equalizer.unwrap();
-                assert_eq!(fidl_avrcp::Equalizer::Off, eq);
+                assert_eq!(eq, fidl_avrcp::Equalizer::Off);
+            }
+            res = get_all_player_application_settings_fut => {
+                expected_commands -= 1;
+                let settings = res?.expect("unable to parse get player application settings");
+                assert!(settings.equalizer.is_some());
+                assert_eq!(settings.equalizer.unwrap(), fidl_avrcp::Equalizer::Off);
             }
             res = set_player_application_settings_fut => {
                 expected_commands -= 1;

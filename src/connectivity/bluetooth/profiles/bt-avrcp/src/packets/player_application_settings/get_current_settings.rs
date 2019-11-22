@@ -17,7 +17,6 @@ pub struct GetCurrentPlayerApplicationSettingValueCommand {
 }
 
 impl GetCurrentPlayerApplicationSettingValueCommand {
-    #[allow(dead_code)]
     pub fn new(
         attribute_ids: Vec<PlayerApplicationSettingAttributeId>,
     ) -> GetCurrentPlayerApplicationSettingValueCommand {

@@ -7,11 +7,16 @@ use {
     fidl_fuchsia_bluetooth_avrcp as fidl_avrcp, std::convert::TryFrom,
 };
 
+pub mod get_attribute_text;
 pub mod get_current_settings;
+pub mod get_value_text;
 pub mod list_settings;
 pub mod set_current_settings;
 
-pub use self::{get_current_settings::*, list_settings::*, set_current_settings::*};
+pub use self::{
+    get_attribute_text::*, get_current_settings::*, get_value_text::*, list_settings::*,
+    set_current_settings::*,
+};
 use crate::packets::Error;
 
 pub_decodable_enum!(

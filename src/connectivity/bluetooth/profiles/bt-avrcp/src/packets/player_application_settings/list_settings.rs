@@ -13,7 +13,6 @@ use crate::packets::*;
 pub struct ListPlayerApplicationSettingAttributesCommand {}
 
 impl ListPlayerApplicationSettingAttributesCommand {
-    #[allow(dead_code)]
     pub fn new() -> ListPlayerApplicationSettingAttributesCommand {
         Self {}
     }
@@ -62,11 +61,12 @@ impl ListPlayerApplicationSettingAttributesResponse {
     ) -> ListPlayerApplicationSettingAttributesResponse {
         Self { num_player_application_setting_attributes, player_application_setting_attribute_ids }
     }
+
     #[allow(dead_code)]
     pub fn num_player_application_setting_attributes(&self) -> u8 {
         self.num_player_application_setting_attributes
     }
-    #[allow(dead_code)]
+
     pub fn player_application_setting_attribute_ids(
         &self,
     ) -> Vec<PlayerApplicationSettingAttributeId> {
@@ -130,7 +130,6 @@ pub struct ListPlayerApplicationSettingValuesCommand {
 }
 
 impl ListPlayerApplicationSettingValuesCommand {
-    #[allow(dead_code)]
     pub fn new(
         player_application_setting_attribute_id: PlayerApplicationSettingAttributeId,
     ) -> ListPlayerApplicationSettingValuesCommand {
@@ -178,7 +177,6 @@ impl Encodable for ListPlayerApplicationSettingValuesCommand {
 /// See AVRCP Sec 6.5.2
 #[derive(Debug)]
 pub struct ListPlayerApplicationSettingValuesResponse {
-    #[allow(dead_code)]
     num_player_application_setting_values: u8,
     player_application_setting_value_ids: Vec<u8>,
 }
@@ -191,7 +189,7 @@ impl ListPlayerApplicationSettingValuesResponse {
     ) -> ListPlayerApplicationSettingValuesResponse {
         Self { num_player_application_setting_values, player_application_setting_value_ids }
     }
-    #[allow(dead_code)]
+
     pub fn player_application_setting_value_ids(&self) -> Vec<u8> {
         self.player_application_setting_value_ids.clone()
     }

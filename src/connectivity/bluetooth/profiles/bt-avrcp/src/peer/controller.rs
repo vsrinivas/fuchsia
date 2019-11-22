@@ -114,11 +114,9 @@ impl Controller {
         let peer = self.peer.get_control_connection()?;
         let cmd = GetCurrentPlayerApplicationSettingValueCommand::new(attribute_ids);
         fx_vlog!(tag: "avrcp", 1, "get_current_player_application_settings command {:?}", cmd);
-        fx_log_info!("Cmd: {:?}", cmd);
         let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
         let response = GetCurrentPlayerApplicationSettingValueResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
-        fx_log_info!("Received from get_current: {:?}", response);
         Ok(response.try_into()?)
     }
 
@@ -126,27 +124,50 @@ impl Controller {
         &self,
     ) -> Result<PlayerApplicationSettings, Error> {
         let peer = self.peer.get_control_connection()?;
+
+        // Get all the supported attributes.
         let cmd = ListPlayerApplicationSettingAttributesCommand::new();
         fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_attributes command {:?}", cmd);
-        fx_log_info!("Cmd: {:?}", cmd);
         let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
         let response = ListPlayerApplicationSettingAttributesResponse::decode(&buf[..])
             .map_err(|e| Error::PacketError(e))?;
 
-        // For each attribute returned, get the set of possible values.
+        // Get the text information of supported attributes.
+        // TODO(41253): Get attribute text information for only custom attributes.
+        let cmd = GetPlayerApplicationSettingAttributeTextCommand::new(
+            response.player_application_setting_attribute_ids().clone(),
+        );
+        fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_attribute_text command {:?}", cmd);
+        let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
+        let _text_response = GetPlayerApplicationSettingAttributeTextResponse::decode(&buf[..])
+            .map_err(|e| Error::PacketError(e))?;
+
+        // For each attribute returned, get the set of possible values and text.
         for attribute in response.player_application_setting_attribute_ids() {
             let cmd = ListPlayerApplicationSettingValuesCommand::new(attribute);
             fx_vlog!(tag: "avrcp", 1, "list_player_application_setting_values command {:?}", cmd);
-            fx_log_info!("Cmd: {:?}", cmd);
             let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
-            let _ = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
+            let list_response = ListPlayerApplicationSettingValuesResponse::decode(&buf[..])
                 .map_err(|e| Error::PacketError(e))?;
+
+            // TODO(41253): Get value text information for only custom attributes.
+            let cmd = GetPlayerApplicationSettingValueTextCommand::new(
+                attribute,
+                list_response.player_application_setting_value_ids(),
+            );
+            fx_vlog!(tag: "avrcp", 1, "get_player_application_setting_value_text command {:?}", cmd);
+            let buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await?;
+            let value_text_response =
+                GetPlayerApplicationSettingValueTextResponse::decode(&buf[..])
+                    .map_err(|e| Error::PacketError(e))?;
+            fx_vlog!(tag: "avrcp", 1,
+                "Response from get_player_application_setting_value_text: {:?}",
+                value_text_response
+            );
         }
 
         // TODO(41253): Use return value of ListPlayerApplicationSettingValuesResponse::decode()
-        // to get custom settings. For now, only get settings for default settings.
-        // Furthermore, if custom attributes exist, send GetPlayerApplicationSettingAttributeText
-        // and GetPlayerApplicationSettingValueText to get info about custom attribute.
+        // to get current custom settings. For now, get current settings for default settings.
         self.get_current_player_application_settings(
             response.player_application_setting_attribute_ids(),
         )
@@ -179,16 +200,14 @@ impl Controller {
         for setting in settings_vec {
             let cmd = SetPlayerApplicationSettingValueCommand::new(vec![setting]);
             fx_vlog!(tag: "avrcp", 1, "set_player_application_settings command {:?}", cmd);
-            fx_log_info!("Cmd: {:?}", cmd);
             let response_buf = RemotePeer::send_vendor_dependent_command(&peer, &cmd).await;
 
             match response_buf {
                 Ok(buf) => {
-                    let resp = SetPlayerApplicationSettingValueResponse::decode(&buf[..])
+                    let _ = SetPlayerApplicationSettingValueResponse::decode(&buf[..])
                         .map_err(|e| Error::PacketError(e))?;
-                    fx_log_info!("Response from set_player_application_settings: {:?}", resp);
                 }
-                Err(_e) => {
+                Err(_) => {
                     let attribute = setting.0;
                     set_settings.clear_attribute(attribute);
                 }
