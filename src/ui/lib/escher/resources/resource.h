@@ -30,10 +30,6 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
   // referenced by.
   uint64_t sequence_number() const { return sequence_number_; }
 
-  // Convenient wrapper around superclass implementation of owner(), since we
-  // know that our owner (if any) is always a ResourceManager.
-  ResourceManager* owner() const;
-
   // Return our ResourceManager's VulkanContext.
   const VulkanContext& vulkan_context() const;
   vk::Device vk_device() const { return vulkan_context().device; }
@@ -44,6 +40,10 @@ class Resource : public Ownable<Resource, ResourceTypeInfo> {
 
  protected:
   explicit Resource(ResourceManager* owner);
+
+  // Convenient wrapper around superclass implementation of owner(), since we
+  // know that our owner (if any) is always a ResourceManager.
+  ResourceManager* owner() const;
 
   // Keep the resource alive until all CommandBuffers up to the specified
   // sequence number have finished executing.

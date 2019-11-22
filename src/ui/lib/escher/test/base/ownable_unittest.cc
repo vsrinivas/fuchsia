@@ -25,6 +25,8 @@ class OwnableBaseClassForTest : public escher::Ownable<OwnableBaseClassForTest, 
  public:
   static const TypeInfo kTypeInfo;
   const TypeInfo& type_info() const override { return OwnableBaseClassForTest::kTypeInfo; }
+
+  using escher::Ownable<OwnableBaseClassForTest, OwnableTypeInfo>::owner;
 };
 
 class Ownable1 : public OwnableBaseClassForTest {

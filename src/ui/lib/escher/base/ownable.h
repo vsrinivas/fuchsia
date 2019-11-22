@@ -29,13 +29,13 @@ class Ownable : public TypedReffable<TypeInfoT> {
     }
   }
 
-  Owner<OwnableT, TypeInfoT>* owner() const { return owner_; }
-
  protected:
   Ownable() = default;
 
- private:
   friend class Owner<OwnableT, TypeInfoT>;
+  Owner<OwnableT, TypeInfoT>* owner() const { return owner_; }
+
+ private:
   void set_owner(Owner<OwnableT, TypeInfoT>* owner) { owner_ = owner; }
 
   // If |owner| is null, returns true so that the Ownable is immediately
