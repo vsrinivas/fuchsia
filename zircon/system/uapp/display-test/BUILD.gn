@@ -17,6 +17,7 @@ zx_executable("display-test") {
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl",
     "$zx/system/ulib/fzl",
+    "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
   ]

@@ -11,6 +11,7 @@
 #include <lib/fdio/fdio.h>
 #include <lib/fdio/unsafe.h>
 #include <lib/fidl/txn_header.h>
+#include <lib/image-format-llcpp/image-format-llcpp.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmar.h>
@@ -184,10 +185,20 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   auto& buffer_collection_info = info_result->buffer_collection_info;
   uint32_t buffer_size = buffer_collection_info.settings.buffer_settings.size_bytes;
   zx::vmo vmo(std::move(buffer_collection_info.buffers[0].vmo));
-  uint32_t stride_pixels =
-      buffer_collection_info.settings.image_format_constraints.min_bytes_per_row /
-      ZX_PIXEL_FORMAT_BYTES(format);
 
+  uint32_t minimum_row_bytes;
+  if (!use_intel_y_tiling) {
+    bool result = image_format::GetMinimumRowBytes(
+        buffer_collection_info.settings.image_format_constraints, width, &minimum_row_bytes);
+    if (!result) {
+      fprintf(stderr, "Could not calcualte minimum row byte\n");
+      return nullptr;
+    }
+  } else {
+    minimum_row_bytes = buffer_collection_info.settings.image_format_constraints.min_bytes_per_row;
+  }
+
+  uint32_t stride_pixels = minimum_row_bytes / ZX_PIXEL_FORMAT_BYTES(format);
   uintptr_t addr;
   uint32_t perms = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
   if (zx::vmar::root_self()->map(0, vmo, 0, buffer_size, perms, &addr) != ZX_OK) {
