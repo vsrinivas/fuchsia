@@ -532,6 +532,17 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     if ((status = mtc.SetDataLength(inode_.blob_size)) != ZX_OK) {
       return status;
     }
+
+    // BUG: fxb/36257 Clone the VMO so we can give a different vmo handle to the write path. This
+    // ensures the VMO handle for mapping_ is not escaping anywhere. Once fxb/36257 is resolved
+    // this can be removed and mapping_ can be used directly instead of clone_vmo
+    zx::vmo clone_vmo;
+    uint64_t clone_size = 0;
+    status = mapping_.vmo().get_size(&clone_size);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+    status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
+    ZX_DEBUG_ASSERT(status == ZX_OK);
+
     size_t merkle_size = mtc.GetTreeLength();
     if (merkle_size > 0) {
       // Tracking generation time.
@@ -552,10 +563,18 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         return ZX_ERR_IO_DATA_INTEGRITY;
       }
 
+      // BUG: fxb/36257 If we updated the merkle data then re-create our clone to capture the new
+      // data.
+      status = mapping_.vmo().get_size(&clone_size);
+      ZX_DEBUG_ASSERT(status == ZX_OK);
+      clone_vmo.reset();
+      status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, 0, clone_size, &clone_vmo);
+      ZX_DEBUG_ASSERT(status == ZX_OK);
+
       status = StreamBlocks(&block_iter, merkle_blocks,
                             [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
                               storage::UnbufferedOperation op = {
-                                  .vmo = zx::unowned_vmo(mapping_.vmo().get()),
+                                  .vmo = zx::unowned_vmo(clone_vmo.get()),
                                   {
                                       .type = storage::OperationType::kWrite,
                                       .vmo_offset = vmo_offset,
@@ -613,7 +632,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
       uint32_t blocks = static_cast<uint32_t>(blocks64);
       status = StreamBlocks(
           &block_iter, blocks, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
-            storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(mapping_.vmo().get()),
+            storage::UnbufferedOperation op = {.vmo = zx::unowned_vmo(clone_vmo.get()),
                                                {
                                                    .type = storage::OperationType::kWrite,
                                                    .vmo_offset = vmo_offset,
@@ -637,7 +656,12 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
     // Wrap all pending writes with a strong reference to this Blob, so that it stays
     // alive while there are writes in progress acting on it.
     auto task = fs::wrap_reference(write_all_data.and_then(WriteMetadata()), fbl::RefPtr(this));
-    blobfs_->journal()->schedule_task(std::move(task));
+
+    // fxb/36257 Hold the handle until the write completes.
+    auto task2 = task.then([obj = std::move(clone_vmo)](
+                               decltype(task)::result_type& result) mutable { return result; });
+
+    blobfs_->journal()->schedule_task(std::move(task2));
     blobfs_->Metrics().UpdateClientWrite(to_write, merkle_size, ticker.End(), generation_time);
     set_error.cancel();
     return ZX_OK;
