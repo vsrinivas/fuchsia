@@ -95,8 +95,6 @@ zx_library("minfs") {
       "bcache.cc",
       "inspector-inode-table.cc",
       "inspector-inode.cc",
-      "inspector-journal-entries.cc",
-      "inspector-journal.cc",
       "inspector-superblock.cc",
       "inspector.cc",
       "superblock.cc",

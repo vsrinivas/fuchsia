@@ -35,6 +35,7 @@
 #include <fbl/intrusive_single_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
+#include <fs/inspectable.h>
 #include <fs/locking.h>
 #include <fs/ticker.h>
 #include <fs/trace.h>
@@ -154,9 +155,9 @@ class TransactionalFs {
   virtual Bcache* GetMutableBcache() = 0;
 };
 
-class InspectableFilesystem {
+class InspectableMinfs : public fs::Inspectable {
  public:
-  virtual ~InspectableFilesystem() {}
+  virtual ~InspectableMinfs() {}
 
   // Returns an immutable reference to the superblock.
   virtual const Superblock& Info() const = 0;
@@ -166,9 +167,6 @@ class InspectableFilesystem {
 
   // Gets an immutable reference to the block_allocator.
   virtual const Allocator* GetBlockAllocator() const = 0;
-
-  // Reads a block at the |start_block_num| location.
-  virtual zx_status_t ReadBlock(blk_t start_block_num, void* out_data) const = 0;
 
 #ifndef __Fuchsia__
   // Gets an immutable copy of offsets_.
@@ -184,7 +182,7 @@ class Minfs :
 #endif
     public fbl::RefCounted<Minfs>,
     public TransactionalFs,
-    public InspectableFilesystem {
+    public InspectableMinfs {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Minfs);
 

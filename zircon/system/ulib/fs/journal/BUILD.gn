@@ -12,6 +12,8 @@ zx_library("journal") {
       "background_executor.cc",
       "data_streamer.cc",
       "entry_view.cc",
+      "inspector_journal.cc",
+      "inspector_journal_entries.cc",
       "journal.cc",
       "journal_writer.cc",
       "operation_tracker.cc",
@@ -20,6 +22,7 @@ zx_library("journal") {
       "superblock.cc",
     ]
     public_deps = [
+      "$zx/system/ulib/disk-inspector:headers",
       "$zx/system/ulib/fs:headers",
       "$zx/system/ulib/fs/transaction:headers",
       "$zx/system/ulib/fzl:headers",
@@ -28,6 +31,7 @@ zx_library("journal") {
       "$zx/system/ulib/storage/operation:headers",
     ]
     deps = [
+      "$zx/system/ulib/disk-inspector",
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fit",
@@ -55,6 +59,7 @@ zx_test("journal-unit") {
     "test/background_executor_test.cc",
     "test/data_streamer_test.cc",
     "test/entry_view_test.cc",
+    "test/inspector_test.cc",
     "test/journal_test.cc",
     "test/operation_tracker_test.cc",
     "test/replay_test.cc",

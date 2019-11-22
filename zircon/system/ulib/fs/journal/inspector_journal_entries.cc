@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "inspector-journal-entries.h"
+#include "inspector_journal_entries.h"
 
 #include <lib/disk-inspector/common-types.h>
 
 #include <array>
 
-#include "inspector-private.h"
-
-namespace minfs {
+namespace fs {
 namespace {
 
 // Number of struct elements within |JournalPrefix|.
@@ -20,13 +18,14 @@ std::unique_ptr<disk_inspector::DiskObject> ParsePrefix(const fs::JournalPrefix*
                                                         size_t index) {
   switch (index) {
     case 0:
-      return CreateUint64DiskObj("magic", &(prefix->magic));
+      return std::make_unique<disk_inspector::DiskObjectUint64>("magic", &(prefix->magic));
     case 1:
-      return CreateUint64DiskObj("sequence number", &(prefix->sequence_number));
+      return std::make_unique<disk_inspector::DiskObjectUint64>("sequence number",
+                                                                &(prefix->sequence_number));
     case 2:
-      return CreateUint64DiskObj("flags", &(prefix->flags));
+      return std::make_unique<disk_inspector::DiskObjectUint64>("flags", &(prefix->flags));
     case 3:
-      return CreateUint64DiskObj("reserved", &(prefix->reserved));
+      return std::make_unique<disk_inspector::DiskObjectUint64>("reserved", &(prefix->reserved));
   }
   return nullptr;
 }
@@ -34,7 +33,7 @@ std::unique_ptr<disk_inspector::DiskObject> ParsePrefix(const fs::JournalPrefix*
 }  // namespace
 
 JournalBlock::JournalBlock(uint32_t index, fs::JournalInfo info,
-                           std::array<uint8_t, kMinfsBlockSize> block)
+                           std::array<uint8_t, kJournalBlockSize> block)
     : index_(index), journal_info_(std::move(info)), block_(std::move(block)) {
   auto prefix = reinterpret_cast<const fs::JournalPrefix*>(block_.data());
   if (prefix->magic == fs::kJournalEntryMagic) {
@@ -68,6 +67,7 @@ JournalBlock::JournalBlock(uint32_t index, fs::JournalInfo info,
       name_ = fbl::StringPrintf("Journal[%d]: Commit", index_);
       break;
     case fs::JournalObjectType::kRevocation:
+      num_elements_ = kPrefixElements;
       name_ = fbl::StringPrintf("Journal[%d]: Revocation", index_);
       break;
     default:
@@ -95,16 +95,20 @@ std::unique_ptr<disk_inspector::DiskObject> JournalBlock::GetElementAt(uint32_t 
       }
       auto header = reinterpret_cast<const fs::JournalHeaderBlock*>(block_.data());
       if (index == kPrefixElements) {
-        return CreateUint64DiskObj("payload blocks", &(header->payload_blocks));
+        return std::make_unique<disk_inspector::DiskObjectUint64>("payload blocks",
+                                                                  &(header->payload_blocks));
       }
 
       constexpr size_t kPayloadIndex = kPrefixElements + 1;
       if (index - kPayloadIndex < header->payload_blocks) {
-        return CreateUint64DiskObj("target block", &(header->target_blocks[index - kPayloadIndex]));
+        return std::make_unique<disk_inspector::DiskObjectUint64>(
+            "target block", &(header->target_blocks[index - kPayloadIndex]));
       }
       return nullptr;
     }
     case fs::JournalObjectType::kCommit:
+      return ParsePrefix(prefix, index);
+    case fs::JournalObjectType::kRevocation:
       return ParsePrefix(prefix, index);
     default:
       return nullptr;
@@ -118,8 +122,9 @@ void JournalEntries::GetValue(const void** out_buffer, size_t* out_buffer_size) 
 
 std::unique_ptr<disk_inspector::DiskObject> JournalEntries::GetElementAt(uint32_t index) const {
   if (index < length_) {
-    std::array<uint8_t, kMinfsBlockSize> data;
-    zx_status_t status = fs_->ReadBlock(static_cast<blk_t>(start_block_ + index), data.data());
+    std::array<uint8_t, kJournalBlockSize> data;
+    zx_status_t status =
+        inspectable_->ReadBlock(static_cast<blk_t>(start_block_ + index), data.data());
     if (status != ZX_OK) {
       return nullptr;
     }
@@ -129,4 +134,4 @@ std::unique_ptr<disk_inspector::DiskObject> JournalEntries::GetElementAt(uint32_
   return nullptr;
 }
 
-}  // namespace minfs
+}  // namespace fs

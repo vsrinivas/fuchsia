@@ -7,11 +7,11 @@
 
 #include <block-client/cpp/block-device.h>
 #include <fbl/unique_fd.h>
+#include <fs/journal/inspector_journal.h>
 #include <minfs/bcache.h>
 #include <minfs/inspector.h>
 
 #include "inspector-inode-table.h"
-#include "inspector-journal.h"
 #include "inspector-private.h"
 #include "inspector-superblock.h"
 
@@ -92,7 +92,7 @@ std::unique_ptr<disk_inspector::DiskObject> RootObject::GetJournal() const {
   }
   fs::JournalInfo* info = reinterpret_cast<fs::JournalInfo*>(data);
   return std::unique_ptr<disk_inspector::DiskObject>(
-      new JournalObject(*info, start_block, length, fs_.get()));
+      new fs::JournalObject(*info, start_block, length, fs_.get()));
 }
 
 std::unique_ptr<disk_inspector::DiskObject> RootObject::GetBackupSuperBlock() const {

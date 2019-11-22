@@ -2,20 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_JOURNAL_ENTRIES_H_
-#define ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_JOURNAL_ENTRIES_H_
+#ifndef ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
+#define ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_
 
 #include <lib/disk-inspector/common-types.h>
 
+#include <array>
+
 #include <fbl/string_printf.h>
+#include <fs/inspectable.h>
 #include <fs/journal/format.h>
-#include <minfs/format.h>
+#include <fs/journal/inspector_journal.h>
 
-#include "minfs-private.h"
-
-namespace minfs {
-
-constexpr char kJournalEntriesName[] = "journal-entries";
+namespace fs {
 
 class JournalBlock : public disk_inspector::DiskObject {
  public:
@@ -25,7 +24,8 @@ class JournalBlock : public disk_inspector::DiskObject {
   JournalBlock& operator=(const JournalBlock&) = delete;
   JournalBlock& operator=(JournalBlock&&) = delete;
 
-  JournalBlock(uint32_t index, fs::JournalInfo info, std::array<uint8_t, kMinfsBlockSize> block);
+  // The api, like rest of the journal, accepts only kJournalBlockSize as block size.
+  JournalBlock(uint32_t index, fs::JournalInfo info, std::array<uint8_t, kJournalBlockSize> block);
 
   // DiskObject interface:
   const char* GetName() const override { return name_.c_str(); }
@@ -39,7 +39,7 @@ class JournalBlock : public disk_inspector::DiskObject {
  private:
   const uint32_t index_ = 0;
   const fs::JournalInfo journal_info_;
-  const std::array<uint8_t, kMinfsBlockSize> block_;
+  const std::array<uint8_t, kJournalBlockSize> block_;
   fbl::String name_;
   fs::JournalObjectType object_type_;
   uint32_t num_elements_ = 0;
@@ -54,8 +54,11 @@ class JournalEntries : public disk_inspector::DiskObject {
   JournalEntries& operator=(JournalEntries&&) = delete;
 
   JournalEntries(fs::JournalInfo info, uint64_t start_block, uint64_t length,
-                 const InspectableFilesystem* fs)
-      : journal_info_(std::move(info)), start_block_(start_block), length_(length), fs_(fs) {}
+                 const Inspectable* inspectable)
+      : journal_info_(std::move(info)),
+        start_block_(start_block),
+        length_(length),
+        inspectable_(inspectable) {}
 
   // DiskObject interface:
   const char* GetName() const override { return kJournalEntriesName; }
@@ -70,9 +73,9 @@ class JournalEntries : public disk_inspector::DiskObject {
   fs::JournalInfo journal_info_;
   uint64_t start_block_;
   uint64_t length_;
-  const InspectableFilesystem* fs_;
+  const Inspectable* inspectable_;
 };
 
-}  // namespace minfs
+}  // namespace fs
 
-#endif  // ZIRCON_SYSTEM_ULIB_MINFS_INSPECTOR_JOURNAL_ENTRIES_H_
+#endif  // ZIRCON_SYSTEM_ULIB_FS_JOURNAL_INSPECTOR_JOURNAL_ENTRIES_H_

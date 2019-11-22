@@ -9,13 +9,12 @@
 
 #include <block-client/cpp/fake-device.h>
 #include <fbl/string_printf.h>
+#include <fs/journal/inspector_journal.h>
 #include <minfs/inspector.h>
 #include <zxtest/zxtest.h>
 
 #include "inspector-inode-table.h"
 #include "inspector-inode.h"
-#include "inspector-journal-entries.h"
-#include "inspector-journal.h"
 #include "inspector-private.h"
 #include "inspector-superblock.h"
 #include "minfs-private.h"
@@ -54,7 +53,7 @@ const Allocator* MockInodeManager::GetInodeAllocator() const { return nullptr; }
 constexpr Superblock superblock = {};
 
 // Mock Minfs class to be used in inspector tests.
-class MockMinfs : public InspectableFilesystem {
+class MockMinfs : public InspectableMinfs {
  public:
   MockMinfs() = default;
   MockMinfs(const MockMinfs&) = delete;
@@ -156,8 +155,8 @@ TEST(InspectorTest, TestRoot) {
 
   // Journal info.
   std::unique_ptr<disk_inspector::DiskObject> obj2 = root_obj->GetElementAt(2);
-  ASSERT_STR_EQ(kJournalName, obj2->GetName());
-  ASSERT_EQ(kJournalNumElements, obj2->GetNumElements());
+  ASSERT_STR_EQ(fs::kJournalName, obj2->GetName());
+  ASSERT_EQ(fs::kJournalNumElements, obj2->GetNumElements());
 }
 
 TEST(InspectorTest, TestInodeTable) {
@@ -235,8 +234,8 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   // Journal info.
   auto journalObj = root_obj->GetElementAt(2);
-  EXPECT_STR_EQ(kJournalName, journalObj->GetName());
-  ASSERT_EQ(kJournalNumElements, journalObj->GetNumElements());
+  EXPECT_STR_EQ(fs::kJournalName, journalObj->GetName());
+  ASSERT_EQ(fs::kJournalNumElements, journalObj->GetNumElements());
 
   // Check if journal magic is correct.
   auto journalMagic = journalObj->GetElementAt(0);
@@ -244,7 +243,7 @@ TEST(InspectorTest, CorrectJournalLocation) {
 
   // Access journal entries.
   auto entries = journalObj->GetElementAt(5);
-  EXPECT_STR_EQ(kJournalEntriesName, entries->GetName());
+  EXPECT_STR_EQ(fs::kJournalEntriesName, entries->GetName());
   ASSERT_EQ(journal_length - fs::kJournalMetadataBlocks, entries->GetNumElements());
 
   // Parse the header block.
