@@ -71,6 +71,7 @@ async fn main() -> Result<(), Error> {
 
     info!("Starting");
     let cfg = ServiceCfg::from_args();
+    info!("{:?}", cfg);
     let mut fs = ServiceFs::new_local();
     let inspector = Inspector::new_with_size(inspect::VMO_SIZE_BYTES);
     inspector.serve(&mut fs)?;
