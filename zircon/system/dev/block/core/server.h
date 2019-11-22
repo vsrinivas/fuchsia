@@ -87,6 +87,9 @@ class Server {
 
   zx_status_t FindVmoIDLocked(vmoid_t* out) TA_REQ(server_lock_);
 
+  // BUG: fxb/36257 Temporary helper for checking if multiple instances of the same VMO are attached
+  void ValidateUniqueKoid(const zx::vmo& vmo) TA_REQ(server_lock_);
+
   fzl::fifo<block_fifo_response_t, block_fifo_request_t> fifo_;
   block_info_t info_;
   ddk::BlockProtocolClient* bp_;
