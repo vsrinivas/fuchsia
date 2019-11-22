@@ -133,11 +133,30 @@ class AmlPwmDeviceTest : public zxtest::Test {
   std::unique_ptr<ddk_mock::MockMmioRegRegion> mock_mmio4_;
 };
 
+TEST_F(AmlPwmDeviceTest, GetConfigTest) {
+  mode_config mode_cfg{
+      .mode = 100,
+      .regular = {},
+  };
+  pwm_config cfg{
+      .polarity = false,
+      .period_ns = 1250,
+      .duty_cycle = 100.0,
+      .mode_config_buffer = &mode_cfg,
+      .mode_config_size = sizeof(mode_cfg),
+  };
+  EXPECT_NOT_OK(pwm_->PwmImplGetConfig(0, &cfg));
+
+  cfg.mode_config_buffer = nullptr;
+  EXPECT_NOT_OK(pwm_->PwmImplGetConfig(0, &cfg));
+}
+
 TEST_F(AmlPwmDeviceTest, SetConfigTest) {
   EXPECT_NOT_OK(pwm_->PwmImplSetConfig(0, nullptr));  // Fail
 
   mode_config fail{
       .mode = 100,
+      .regular = {},
   };
   pwm_config fail_cfg{
       .polarity = false,
@@ -151,6 +170,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
   for (uint32_t i = 0; i < UNKNOWN; i++) {
     mode_config fail{
         .mode = i,
+        .regular = {},
     };
     pwm_config fail_cfg{
         .polarity = false,
@@ -164,6 +184,7 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
 
   mode_config test{
       .mode = 0,
+      .regular = {},
   };
   pwm_config test_cfg{
       .polarity = false,
@@ -177,12 +198,32 @@ TEST_F(AmlPwmDeviceTest, SetConfigTest) {
 
 TEST_F(AmlPwmDeviceTest, EnableTest) {
   EXPECT_NOT_OK(pwm_->PwmImplEnable(10));  // Fail
-  EXPECT_NOT_OK(pwm_->PwmImplEnable(0));   // Fail
+
+  (*mock_mmio1_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x00008000);
+  EXPECT_OK(pwm_->PwmImplEnable(2));
+  EXPECT_OK(pwm_->PwmImplEnable(2));  // Enable twice
+
+  (*mock_mmio2_)[2 * 4].ExpectRead(0x00008000).ExpectWrite(0x00808000);
+  EXPECT_OK(pwm_->PwmImplEnable(5));  // Enable other PWMs
 }
 
 TEST_F(AmlPwmDeviceTest, DisableTest) {
   EXPECT_NOT_OK(pwm_->PwmImplDisable(10));  // Fail
-  EXPECT_NOT_OK(pwm_->PwmImplDisable(0));   // Fail
+
+  EXPECT_OK(pwm_->PwmImplDisable(0));  // Disable first
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00000000).ExpectWrite(0x00008000);
+  EXPECT_OK(pwm_->PwmImplEnable(0));
+
+  (*mock_mmio0_)[2 * 4].ExpectRead(0x00008000).ExpectWrite(0x00000000);
+  EXPECT_OK(pwm_->PwmImplDisable(0));
+  EXPECT_OK(pwm_->PwmImplDisable(0));  // Disable twice
+
+  (*mock_mmio2_)[2 * 4].ExpectRead(0x00008000).ExpectWrite(0x00808000);
+  EXPECT_OK(pwm_->PwmImplEnable(5));  // Enable other PWMs
+
+  (*mock_mmio2_)[2 * 4].ExpectRead(0x00808000).ExpectWrite(0x00008000);
+  EXPECT_OK(pwm_->PwmImplDisable(5));  // Disable other PWMs
 }
 
 }  // namespace pwm

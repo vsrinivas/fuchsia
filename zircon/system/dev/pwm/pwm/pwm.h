@@ -9,7 +9,6 @@
 #include <ddk/platform-defs.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/pwm.h>
-#include <soc/aml-t931/t931-pwm.h>
 
 namespace pwm {
 
@@ -20,29 +19,25 @@ class PwmDevice : public PwmDeviceType, public ddk::PwmProtocol<PwmDevice, ddk::
  public:
   static zx_status_t Create(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindNew(ddk::UnbindTxn txn) {
-    ShutDown();
-    txn.Reply();
-  }
+  void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
   // Ddk Mixins.
-  void PwmGetConfig(pwm_config_t* out_config);
+  zx_status_t PwmGetConfig(pwm_config_t* out_config);
   zx_status_t PwmSetConfig(const pwm_config_t* config);
   zx_status_t PwmEnable();
   zx_status_t PwmDisable();
 
  protected:
   // For unit testing
-  explicit PwmDevice(pwm_impl_protocol_t* pwm) : PwmDeviceType(nullptr), pwm_(pwm) {}
+  explicit PwmDevice(pwm_impl_protocol_t* pwm) : PwmDeviceType(nullptr), pwm_(pwm), id_({0}) {}
 
  private:
-  explicit PwmDevice(zx_device_t* parent, pwm_impl_protocol_t* pwm)
-      : PwmDeviceType(parent), pwm_(pwm) {}
-
-  void ShutDown();
+  explicit PwmDevice(zx_device_t* parent, pwm_impl_protocol_t* pwm, pwm_id_t id)
+      : PwmDeviceType(parent), pwm_(pwm), id_(id) {}
 
   ddk::PwmImplProtocolClient pwm_;
+  pwm_id_t id_;
 };
 
 }  // namespace pwm

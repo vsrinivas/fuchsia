@@ -44,7 +44,27 @@ void DutyCycleToClockCount(float duty_cycle, uint32_t period_ns, uint16_t* high_
   }
 }
 
+zx_status_t CopyConfig(pwm_config_t* dest, const pwm_config_t* src) {
+  if (!dest->mode_config_buffer || (dest->mode_config_size != src->mode_config_size) ||
+      (dest->mode_config_size != sizeof(mode_config))) {
+    return ZX_ERR_BAD_STATE;
+  }
+  dest->polarity = src->polarity;
+  dest->period_ns = src->period_ns;
+  dest->duty_cycle = src->duty_cycle;
+  memcpy(const_cast<void*>(dest->mode_config_buffer), src->mode_config_buffer,
+         src->mode_config_size);
+  return ZX_OK;
+}
+
 }  // namespace
+
+zx_status_t AmlPwm::PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config) {
+  if (idx > 1) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return CopyConfig(out_config, &configs_[idx]);
+}
 
 zx_status_t AmlPwm::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
   if (idx > 1) {
@@ -57,14 +77,22 @@ zx_status_t AmlPwm::PwmImplEnable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = ZX_OK;
+  if (enabled_[idx] || ((status = EnableClock(idx, true)) == ZX_OK)) {
+    enabled_[idx] = true;
+  }
+  return status;
 }
 
 zx_status_t AmlPwm::PwmImplDisable(uint32_t idx) {
   if (idx > 1) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  zx_status_t status = ZX_OK;
+  if (!enabled_[idx] || ((status = EnableClock(idx, false)) == ZX_OK)) {
+    enabled_[idx] = false;
+  }
+  return status;
 }
 
 zx_status_t AmlPwm::SetMode(uint32_t idx, Mode mode) {
@@ -296,6 +324,13 @@ zx_status_t AmlPwmDevice::Init(zx_device_t* parent) {
   return ZX_OK;
 }
 
+zx_status_t AmlPwmDevice::PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config) {
+  if (idx >= pwms_.size() * 2 || out_config == nullptr) {
+    return ZX_ERR_INVALID_ARGS;
+  }
+  return pwms_[idx / 2]->PwmImplGetConfig(idx % 2, out_config);
+}
+
 zx_status_t AmlPwmDevice::PwmImplSetConfig(uint32_t idx, const pwm_config_t* config) {
   if (idx >= pwms_.size() * 2 || config == nullptr || config->mode_config_buffer == nullptr) {
     return ZX_ERR_INVALID_ARGS;
@@ -307,14 +342,14 @@ zx_status_t AmlPwmDevice::PwmImplEnable(uint32_t idx) {
   if (idx >= pwms_.size() * 2) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return pwms_[idx / 2]->PwmImplEnable(idx % 2);
 }
 
 zx_status_t AmlPwmDevice::PwmImplDisable(uint32_t idx) {
   if (idx >= pwms_.size() * 2) {
     return ZX_ERR_INVALID_ARGS;
   }
-  return ZX_ERR_NOT_SUPPORTED;
+  return pwms_[idx / 2]->PwmImplDisable(idx % 2);
 }
 
 static constexpr zx_driver_ops_t driver_ops = []() {

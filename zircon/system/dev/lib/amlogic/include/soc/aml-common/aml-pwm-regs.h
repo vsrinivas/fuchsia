@@ -38,31 +38,25 @@ enum Mode : uint32_t {
   UNKNOWN = 4,
 };
 
-struct mode_config {
-  uint32_t mode;
-  mode_config& operator=(const mode_config& other) = default;
-  bool operator==(const mode_config& other) const { return (mode == other.mode); }
-};
+struct mode_config_regular {};
 
 struct mode_config_delta_sigma {
-  uint32_t mode;
   uint16_t delta;
-  mode_config_delta_sigma& operator=(const mode_config_delta_sigma& other) = default;
-  bool operator==(const mode_config_delta_sigma& other) const {
-    return (mode == other.mode) && (delta == other.delta);
-  }
 };
 
 struct mode_config_two_timer {
-  uint32_t mode;
   float duty_cycle2;
   uint8_t timer1;
   uint8_t timer2;
-  mode_config_two_timer& operator=(const mode_config_two_timer& other) = default;
-  bool operator==(const mode_config_two_timer& other) const {
-    return (mode == other.mode) && (duty_cycle2 == other.duty_cycle2) && (timer1 == other.timer1) &&
-           (timer2 == other.timer2);
-  }
+};
+
+struct mode_config {
+  uint32_t mode;
+  union {
+    struct mode_config_regular regular;
+    struct mode_config_delta_sigma delta_sigma;
+    struct mode_config_two_timer two_timer;
+  };
 };
 
 }  // namespace aml_pwm

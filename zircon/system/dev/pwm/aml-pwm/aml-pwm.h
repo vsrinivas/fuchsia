@@ -27,8 +27,12 @@ using AmlPwmDeviceType = ddk::Device<AmlPwmDevice, ddk::UnbindableNew>;
 
 class AmlPwm {
  public:
-  explicit AmlPwm(ddk::MmioBuffer mmio) : mmio_(std::move(mmio)) {}
+  explicit AmlPwm(ddk::MmioBuffer mmio) : enabled_{false, false}, mmio_(std::move(mmio)) {
+    configs_[0] = {false, 0, 0.0, nullptr, 0};
+    configs_[1] = {false, 0, 0.0, nullptr, 0};
+  }
 
+  zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);
   zx_status_t PwmImplSetConfig(uint32_t idx, const pwm_config_t* config);
   zx_status_t PwmImplEnable(uint32_t idx);
   zx_status_t PwmImplDisable(uint32_t idx);
@@ -51,6 +55,8 @@ class AmlPwm {
   zx_status_t SetDSSetting(uint32_t idx, uint16_t val);
   zx_status_t SetTimers(uint32_t idx, uint8_t timer1, uint8_t timer2);
 
+  std::array<bool, 2> enabled_;
+  std::array<pwm_config_t, 2> configs_;
   std::array<fbl::Mutex, REG_COUNT> locks_;
   ddk::MmioBuffer mmio_;
 };
@@ -63,6 +69,7 @@ class AmlPwmDevice : public AmlPwmDeviceType,
   void DdkUnbindNew(ddk::UnbindTxn txn) { txn.Reply(); }
   void DdkRelease() { delete this; }
 
+  zx_status_t PwmImplGetConfig(uint32_t idx, pwm_config_t* out_config);
   zx_status_t PwmImplSetConfig(uint32_t idx, const pwm_config_t* config);
   zx_status_t PwmImplEnable(uint32_t idx);
   zx_status_t PwmImplDisable(uint32_t idx);

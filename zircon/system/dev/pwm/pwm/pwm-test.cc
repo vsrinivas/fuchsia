@@ -12,11 +12,13 @@
 
 namespace pwm {
 
+zx_status_t fake_get_config(void* ctx, uint32_t idx, pwm_config_t* out_config) { return ZX_OK; }
 zx_status_t fake_set_config(void* ctx, uint32_t idx, const pwm_config_t* config) { return ZX_OK; }
 zx_status_t fake_enable(void* ctx, uint32_t idx) { return ZX_OK; }
 zx_status_t fake_disable(void* ctx, uint32_t idx) { return ZX_OK; }
 
 pwm_impl_protocol_ops_t fake_ops{
+    .get_config = &fake_get_config,
     .set_config = &fake_set_config,
     .enable = &fake_enable,
     .disable = &fake_disable,
@@ -52,14 +54,26 @@ class PwmDeviceTest : public zxtest::Test {
   std::unique_ptr<FakePwmDevice> pwm_;
 };
 
-TEST_F(PwmDeviceTest, GetConfigTest) { pwm_->PwmGetConfig(nullptr); }
+TEST_F(PwmDeviceTest, GetConfigTest) {
+  pwm_config_t fake_config = {
+      false, 0, 0.0, nullptr, 0,
+  };
+  EXPECT_OK(pwm_->PwmGetConfig(&fake_config));
+  EXPECT_OK(pwm_->PwmGetConfig(&fake_config));  // Second time
+}
 
 TEST_F(PwmDeviceTest, SetConfigTest) {
   EXPECT_EQ(pwm_->PwmSetConfig(nullptr), ZX_ERR_NOT_SUPPORTED);
 }
 
-TEST_F(PwmDeviceTest, EnableTest) { EXPECT_EQ(pwm_->PwmEnable(), ZX_ERR_NOT_SUPPORTED); }
+TEST_F(PwmDeviceTest, EnableTest) {
+  EXPECT_OK(pwm_->PwmEnable());
+  EXPECT_OK(pwm_->PwmEnable());  // Second time
+}
 
-TEST_F(PwmDeviceTest, DisableTest) { EXPECT_EQ(pwm_->PwmDisable(), ZX_ERR_NOT_SUPPORTED); }
+TEST_F(PwmDeviceTest, DisableTest) {
+  EXPECT_OK(pwm_->PwmDisable());
+  EXPECT_OK(pwm_->PwmDisable());  // Second time
+}
 
 }  // namespace pwm

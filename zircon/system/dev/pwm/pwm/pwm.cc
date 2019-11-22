@@ -48,7 +48,7 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
   for (uint32_t i = 0; i < pwm_count; i++) {
     auto pwm_id = pwm_ids[i];
     fbl::AllocChecker ac;
-    std::unique_ptr<PwmDevice> dev(new (&ac) PwmDevice(parent, &pwm_proto /*, pwm_id*/));
+    std::unique_ptr<PwmDevice> dev(new (&ac) PwmDevice(parent, &pwm_proto, pwm_id));
     if (!ac.check()) {
       return ZX_ERR_NO_MEMORY;
     }
@@ -71,15 +71,15 @@ zx_status_t PwmDevice::Create(void* ctx, zx_device_t* parent) {
   return ZX_OK;
 }
 
-void PwmDevice::ShutDown() {}
-
-void PwmDevice::PwmGetConfig(pwm_config_t* out_config) {}
+zx_status_t PwmDevice::PwmGetConfig(pwm_config_t* out_config) {
+  return pwm_.GetConfig(id_.id, out_config);
+}
 
 zx_status_t PwmDevice::PwmSetConfig(const pwm_config_t* config) { return ZX_ERR_NOT_SUPPORTED; }
 
-zx_status_t PwmDevice::PwmEnable() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t PwmDevice::PwmEnable() { return pwm_.Enable(id_.id); }
 
-zx_status_t PwmDevice::PwmDisable() { return ZX_ERR_NOT_SUPPORTED; }
+zx_status_t PwmDevice::PwmDisable() { return pwm_.Disable(id_.id); }
 
 static constexpr zx_driver_ops_t driver_ops = []() {
   zx_driver_ops_t ops = {};
