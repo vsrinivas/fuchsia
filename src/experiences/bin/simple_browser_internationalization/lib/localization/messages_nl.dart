@@ -11,6 +11,8 @@
 
 import 'package:intl/intl.dart';
 import 'package:intl/message_lookup_by_library.dart';
+import 'dart:convert';
+import 'messages_all.dart' show evaluateJsonTemplate;
 
 final messages = new MessageLookup();
 
@@ -19,12 +21,12 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'nl';
 
-  final messages = _notInlinedMessages(_notInlinedMessages);
-  static _notInlinedMessages(_) => <String, Function>{
-        "back": MessageLookupByLibrary.simpleMessage("Trg"),
-        "browser": MessageLookupByLibrary.simpleMessage("Browser"),
-        "forward": MessageLookupByLibrary.simpleMessage("Vor"),
-        "refresh": MessageLookupByLibrary.simpleMessage("Vrvrs"),
-        "search": MessageLookupByLibrary.simpleMessage("Zoek")
-      };
+  String evaluateMessage(translation, List<dynamic> args) {
+    return evaluateJsonTemplate(translation, args);
+  }
+  var _messages;
+  get messages => _messages ??=
+      const JsonDecoder().convert(messageText) as Map<String, dynamic>;
+  static final messageText = r'''
+{}''';
 }

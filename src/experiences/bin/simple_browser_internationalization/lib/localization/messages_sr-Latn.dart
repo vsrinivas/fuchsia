@@ -1,5 +1,5 @@
 // DO NOT EDIT. This is code generated via package:intl/generate_localized.dart
-// This is a library that provides messages for a ar_XB locale. All the
+// This is a library that provides messages for a sr_Latn locale. All the
 // messages from the main program should be duplicated here with the same
 // function name.
 
@@ -19,7 +19,7 @@ final messages = new MessageLookup();
 typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 
 class MessageLookup extends MessageLookupByLibrary {
-  String get localeName => 'ar_XB';
+  String get localeName => 'sr_Latn';
 
   String evaluateMessage(translation, List<dynamic> args) {
     return evaluateJsonTemplate(translation, args);
@@ -28,5 +28,5 @@ class MessageLookup extends MessageLookupByLibrary {
   get messages => _messages ??=
       const JsonDecoder().convert(messageText) as Map<String, dynamic>;
   static final messageText = r'''
-{"appTitle":"‏‮Localized‬‏ ‏‮Mod‬‏","bodyText":["Intl.plural",0,"‏‮There‬‏ ‏‮are‬‏ ‏‮no‬‏ ‏‮messages‬‏.","‏‮There‬‏ ‏‮is‬‏ ‏‮one‬‏ ‏‮message‬‏.",["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."]],"footer":"‏‮Coming‬‏ ‏‮soon‬‏: ‏‮actually‬‏ ‏‮reading‬‏ ‏‮those‬‏ ‏‮messages‬‏!"}''';
+{"back":"Nzd","browser":"Pregledač","forward":"Npr","refresh":"Osvž","search":"Pretražite"}''';
 }

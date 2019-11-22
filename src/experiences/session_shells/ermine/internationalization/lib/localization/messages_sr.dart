@@ -11,6 +11,8 @@
 
 import 'package:intl/intl.dart';
 import 'package:intl/message_lookup_by_library.dart';
+import 'dart:convert';
+import 'messages_all.dart' show evaluateJsonTemplate;
 
 final messages = new MessageLookup();
 
@@ -19,53 +21,12 @@ typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 class MessageLookup extends MessageLookupByLibrary {
   String get localeName => 'sr';
 
-  static m0(numThreads) => "${Intl.plural(numThreads, zero: '${numThreads} НИТИ', one: '${numThreads} НИТ', other: '${numThreads} НИТИ')}";
-
-  static m1(numTasks) => "${Intl.plural(numTasks, zero: '${numTasks} ЗАДАТАКА', one: '${numTasks} ЗАДАТАК', other: '${numTasks} ЗАДАТАКА')}";
-
-  static m2(numTasks) => "${Intl.plural(numTasks, zero: '${numTasks}', one: '${numTasks}', other: '${numTasks}')}";
-
-  final messages = _notInlinedMessages(_notInlinedMessages);
-  static _notInlinedMessages(_) => <String, Function> {
-    "ask" : MessageLookupByLibrary.simpleMessage("УПИТ"),
-    "auto" : MessageLookupByLibrary.simpleMessage("Ауто"),
-    "back" : MessageLookupByLibrary.simpleMessage("НАЗАД"),
-    "batt" : MessageLookupByLibrary.simpleMessage("БАТ"),
-    "battery" : MessageLookupByLibrary.simpleMessage("Батерија"),
-    "brightness" : MessageLookupByLibrary.simpleMessage("ОСВЕТЉАЈ"),
-    "browser" : MessageLookupByLibrary.simpleMessage("Прегледач"),
-    "cancel" : MessageLookupByLibrary.simpleMessage("Откажи"),
-    "cpu" : MessageLookupByLibrary.simpleMessage("ПРОЦ"),
-    "date" : MessageLookupByLibrary.simpleMessage("ДАТУМ"),
-    "done" : MessageLookupByLibrary.simpleMessage("Готово"),
-    "fps" : MessageLookupByLibrary.simpleMessage("СЛ/СЕК"),
-    "max" : MessageLookupByLibrary.simpleMessage("МАКС"),
-    "memory" : MessageLookupByLibrary.simpleMessage("МЕМОРИЈА"),
-    "min" : MessageLookupByLibrary.simpleMessage("МИН"),
-    "mockWirelessNetwork" : MessageLookupByLibrary.simpleMessage("Бежична_мрежа"),
-    "music" : MessageLookupByLibrary.simpleMessage("МУЗИКА"),
-    "name" : MessageLookupByLibrary.simpleMessage("ИМЕ"),
-    "nameThisStory" : MessageLookupByLibrary.simpleMessage("Именуј ову причу"),
-    "network" : MessageLookupByLibrary.simpleMessage("МРЕЖА"),
-    "numThreads" : m0,
-    "overview" : MessageLookupByLibrary.simpleMessage("Преглед"),
-    "pause" : MessageLookupByLibrary.simpleMessage("ПАУЗА"),
-    "powerOff" : MessageLookupByLibrary.simpleMessage("ИСКЉУЧИ"),
-    "recents" : MessageLookupByLibrary.simpleMessage("Историјат"),
-    "restart" : MessageLookupByLibrary.simpleMessage("РЕСТАРТ"),
-    "runningTasks" : m1,
-    "settings" : MessageLookupByLibrary.simpleMessage("ПОДЕШАВАЊА"),
-    "shutdown" : MessageLookupByLibrary.simpleMessage("Искључи"),
-    "signalStrong" : MessageLookupByLibrary.simpleMessage("ЈАК СИГНАЛ"),
-    "skip" : MessageLookupByLibrary.simpleMessage("ПРЕСКОЧИ"),
-    "sleep" : MessageLookupByLibrary.simpleMessage("СПАВАЊЕ"),
-    "sunny" : MessageLookupByLibrary.simpleMessage("СУНЧАНО"),
-    "tasks" : MessageLookupByLibrary.simpleMessage("ЗАДАЦИ"),
-    "topProcesses" : MessageLookupByLibrary.simpleMessage("ВРШНИ ПРОЦЕСИ"),
-    "totalTasks" : m2,
-    "typeToAsk" : MessageLookupByLibrary.simpleMessage("УНЕСИТЕ УПИТ"),
-    "volume" : MessageLookupByLibrary.simpleMessage("ЈАЧИНА"),
-    "weather" : MessageLookupByLibrary.simpleMessage("ВРЕМЕ"),
-    "wireless" : MessageLookupByLibrary.simpleMessage("БЕЖИЧНА")
-  };
+  String evaluateMessage(translation, List<dynamic> args) {
+    return evaluateJsonTemplate(translation, args);
+  }
+  var _messages;
+  get messages => _messages ??=
+      const JsonDecoder().convert(messageText) as Map<String, dynamic>;
+  static final messageText = r'''
+{"ask":"УПИТ","auto":"Ауто","back":"Назад","batt":"Бат","battery":"Батерија","bluetooth":"Блутут","brightness":"Осветљеност","browser":"Прегледач","cancel":"Откажи","chrome":"Chrome","cpu":"ПРОЦ","date":"Датум","dateTime":"Датум и време","done":"Готово","fps":"Сл/с","ide":"ИДЕ","max":"Макс","mem":"МЕМ","memory":"Меморија","min":"Мин","mockWirelessNetwork":"Бежична_мрежа","music":"Музика","name":"Име","nameThisStory":"Именујте ову причу","network":"Мрежа","numThreads":["Intl.plural",0,[0," НИТИ"],[0," НИТ"],null,[0," НИТИ"],null,[0," НИТИ"]],"openPackage":["отвори ",0],"overview":"Преглед","pause":"Паузирај","pid":"ПИД","powerOff":"Искључи","recents":"Недавно","restart":"Рестартуј","runningTasks":["Intl.plural",0,[0," ЗАДАТАКА"],[0," ЗАДАТАК"],null,[0," ЗАДАТАКА"],null,[0," ЗАДАТАКА"]],"settings":"Подешавања","shutdown":"Искључи","signalStrong":"Јак сигнал","skip":"Прескочи","sleep":"Спавање","sunny":"Сунчано","tasks":"Задаци","topProcesses":"Процеси","totalTasks":["Intl.plural",0,0,0,null,0,null,0],"typeToAsk":"УНЕСИТЕ УПИТ","unit":"Јединица","volume":"Звук","weather":"Време","wireless":"Бежична"}''';
 }

@@ -28,5 +28,5 @@ class MessageLookup extends MessageLookupByLibrary {
   get messages => _messages ??=
       const JsonDecoder().convert(messageText) as Map<String, dynamic>;
   static final messageText = r'''
-{"appTitle":"Локализовани мод","bodyText":["Intl.plural",0,"Нема порука.","Једна порука.",null,[0," поруке."],null,[0," порука."]],"footer":"Долази ускоро: заправо читање ових порука!"}''';
+{"appTitle":"Локализовани мод","footer":"Долази ускоро: читање ових порука!"}''';
 }

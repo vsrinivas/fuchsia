@@ -17,8 +17,12 @@ dart_library("internationalization") {
 
   sources = [
     "localization/messages_all.dart",
+    "localization/messages_ar-XB.dart",
+    "localization/messages_en-XA.dart",
+    "localization/messages_en-XC.dart",
     "localization/messages_messages.dart",
     "localization/messages_nl.dart",
+    "localization/messages_sr-Latn.dart",
     "localization/messages_sr.dart",
     "localizations_delegate.dart",
     "strings.dart",

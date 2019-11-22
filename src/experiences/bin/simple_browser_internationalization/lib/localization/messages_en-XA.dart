@@ -1,5 +1,5 @@
 // DO NOT EDIT. This is code generated via package:intl/generate_localized.dart
-// This is a library that provides messages for a messages locale. All the
+// This is a library that provides messages for a en_XA locale. All the
 // messages from the main program should be duplicated here with the same
 // function name.
 
@@ -11,20 +11,22 @@
 
 import 'package:intl/intl.dart';
 import 'package:intl/message_lookup_by_library.dart';
+import 'dart:convert';
+import 'messages_all.dart' show evaluateJsonTemplate;
 
 final messages = new MessageLookup();
 
 typedef String MessageIfAbsent(String messageStr, List<dynamic> args);
 
 class MessageLookup extends MessageLookupByLibrary {
-  String get localeName => 'messages';
+  String get localeName => 'en_XA';
 
-  final messages = _notInlinedMessages(_notInlinedMessages);
-  static _notInlinedMessages(_) => <String, Function>{
-        "back": MessageLookupByLibrary.simpleMessage("Bck"),
-        "browser": MessageLookupByLibrary.simpleMessage("Browser"),
-        "forward": MessageLookupByLibrary.simpleMessage("Fwd"),
-        "refresh": MessageLookupByLibrary.simpleMessage("Rfrsh"),
-        "search": MessageLookupByLibrary.simpleMessage("Search")
-      };
+  String evaluateMessage(translation, List<dynamic> args) {
+    return evaluateJsonTemplate(translation, args);
+  }
+  var _messages;
+  get messages => _messages ??=
+      const JsonDecoder().convert(messageText) as Map<String, dynamic>;
+  static final messageText = r'''
+{"back":"[Бçķ one]","browser":"[Бŕöŵšéŕ one]","forward":"[Fŵð one]","refresh":"[Ŕƒŕšĥ one]","search":"[Šéåŕçĥ one]"}''';
 }

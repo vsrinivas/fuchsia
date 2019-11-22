@@ -15,6 +15,7 @@ dart_library("localized_flutter_localization") {
     "messages_en-XA.dart",
     "messages_en-XC.dart",
     "messages_he.dart",
+    "messages_messages.dart",
     "messages_nl.dart",
     "messages_sr-Latn.dart",
     "messages_sr.dart",

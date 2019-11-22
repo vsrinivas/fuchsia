@@ -28,5 +28,5 @@ class MessageLookup extends MessageLookupByLibrary {
   get messages => _messages ??=
       const JsonDecoder().convert(messageText) as Map<String, dynamic>;
   static final messageText = r'''
-{"appTitle":"‏‮Localized‬‏ ‏‮Mod‬‏","bodyText":["Intl.plural",0,"‏‮There‬‏ ‏‮are‬‏ ‏‮no‬‏ ‏‮messages‬‏.","‏‮There‬‏ ‏‮is‬‏ ‏‮one‬‏ ‏‮message‬‏.",["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."],["‏‮There‬‏ ‏‮are‬‏ ",0," ‏‮messages‬‏."]],"footer":"‏‮Coming‬‏ ‏‮soon‬‏: ‏‮actually‬‏ ‏‮reading‬‏ ‏‮those‬‏ ‏‮messages‬‏!"}''';
+{"back":"‏‮Bck‬‏","browser":"‏‮Browser‬‏","forward":"‏‮Fwd‬‏","refresh":"‏‮Rfrsh‬‏","search":"‏‮Search‬‏"}''';
 }
