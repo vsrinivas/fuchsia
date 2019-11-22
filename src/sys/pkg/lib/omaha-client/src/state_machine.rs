@@ -222,6 +222,10 @@ where
             .policy_engine
             .compute_next_update_time(&apps, &self.context.schedule, &self.context.state)
             .await;
+
+        if let Some(observer) = &mut self.observer {
+            observer.on_schedule_change(&self.context.schedule).await;
+        }
     }
 
     /// Start the StateMachine to do periodic update check in the background. The future this
@@ -347,6 +351,11 @@ where
 
                 self.report_attempts_to_succeed(false).await;
             }
+        }
+
+        if let Some(observer) = &mut self.observer {
+            observer.on_schedule_change(&self.context.schedule).await;
+            observer.on_protocol_state_change(&self.context.state).await;
         }
 
         self.persist_data().await;
@@ -1358,6 +1367,8 @@ mod tests {
     #[derive(Clone, Debug, Default)]
     struct TestObserver {
         actual_states: Option<Rc<RefCell<Vec<State>>>>,
+        schedule: Option<Rc<RefCell<UpdateCheckSchedule>>>,
+        protocol_state: Option<Rc<RefCell<ProtocolState>>>,
     }
 
     impl Observer for TestObserver {
@@ -1373,6 +1384,28 @@ mod tests {
             }
             future::ready(()).boxed_local()
         }
+
+        fn on_schedule_change(
+            &mut self,
+            new_schedule: &UpdateCheckSchedule,
+        ) -> LocalBoxFuture<'_, ()> {
+            if let Some(schedule) = &self.schedule {
+                let mut schedule = schedule.borrow_mut();
+                *schedule = new_schedule.clone();
+            }
+            future::ready(()).boxed_local()
+        }
+
+        fn on_protocol_state_change(
+            &mut self,
+            new_protocol_state: &ProtocolState,
+        ) -> LocalBoxFuture<'_, ()> {
+            if let Some(protocol_state) = &self.protocol_state {
+                let mut protocol_state = protocol_state.borrow_mut();
+                *protocol_state = new_protocol_state.clone();
+            }
+            future::ready(()).boxed_local()
+        }
     }
 
     #[test]
@@ -1382,13 +1415,48 @@ mod tests {
             let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
             let actual_states = Vec::new();
             let actual_states = Rc::new(RefCell::new(actual_states));
-            state_machine.set_observer(TestObserver { actual_states: Some(actual_states.clone()) });
+            state_machine.set_observer(TestObserver {
+                actual_states: Some(actual_states.clone()),
+                ..TestObserver::default()
+            });
             state_machine.start_update_check(CheckOptions::default()).await;
             drop(state_machine);
             let actual_states = actual_states.borrow();
             let expected_states =
                 vec![State::CheckingForUpdates, State::EncounteredError, State::Idle];
             assert_eq!(*actual_states, expected_states);
+        });
+    }
+
+    #[test]
+    fn test_observe_schedule() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let schedule = Rc::new(RefCell::new(UpdateCheckSchedule::default()));
+            state_machine.set_observer(TestObserver {
+                schedule: Some(schedule.clone()),
+                ..TestObserver::default()
+            });
+            state_machine.start_update_check(CheckOptions::default()).await;
+            let schedule = schedule.borrow();
+            assert_eq!(*schedule, state_machine.context.schedule);
+        });
+    }
+
+    #[test]
+    fn test_observe_protocol_state() {
+        block_on(async {
+            let config = config_generator();
+            let mut state_machine = StateMachine::new_stub(&config, make_test_app_set()).await;
+            let protocol_state = Rc::new(RefCell::new(ProtocolState::default()));
+            state_machine.set_observer(TestObserver {
+                protocol_state: Some(protocol_state.clone()),
+                ..TestObserver::default()
+            });
+            state_machine.start_update_check(CheckOptions::default()).await;
+            let protocol_state = protocol_state.borrow();
+            assert_eq!(*protocol_state, state_machine.context.state);
         });
     }
 

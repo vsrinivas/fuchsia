@@ -5,7 +5,7 @@
 use fidl_fuchsia_update::State;
 use fuchsia_inspect::{Node, Property, StringProperty};
 use omaha_client::{
-    common::App,
+    common::{App, ProtocolState, UpdateCheckSchedule},
     configuration::{Config, Updater},
     protocol::request::OS,
 };
@@ -127,6 +127,39 @@ impl StateNode {
     }
 }
 
+pub struct ScheduleNode {
+    _node: Node,
+    schedule: StringProperty,
+}
+
+impl ScheduleNode {
+    pub fn new(schedule_node: Node) -> Self {
+        ScheduleNode { schedule: schedule_node.create_string("schedule", ""), _node: schedule_node }
+    }
+
+    pub fn set(&self, schedule: &UpdateCheckSchedule) {
+        self.schedule.set(&format!("{:?}", schedule));
+    }
+}
+
+pub struct ProtocolStateNode {
+    _node: Node,
+    protocol_state: StringProperty,
+}
+
+impl ProtocolStateNode {
+    pub fn new(protocol_state_node: Node) -> Self {
+        ProtocolStateNode {
+            protocol_state: protocol_state_node.create_string("protocol_state", ""),
+            _node: protocol_state_node,
+        }
+    }
+
+    pub fn set(&self, protocol_state: &ProtocolState) {
+        self.protocol_state.set(&format!("{:?}", protocol_state));
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -134,6 +167,7 @@ mod tests {
     use fidl_fuchsia_update::ManagerState;
     use fuchsia_inspect::{assert_inspect_tree, Inspector};
     use omaha_client::protocol::Cohort;
+    use std::time::SystemTime;
 
     #[test]
     fn test_configuration_node() {
@@ -198,6 +232,44 @@ mod tests {
             root: {
                 state: {
                     state: format!("{:?}", state),
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_schedule_node() {
+        let inspector = Inspector::new();
+        let node = ScheduleNode::new(inspector.root().create_child("schedule"));
+        let schedule = UpdateCheckSchedule {
+            last_update_time: SystemTime::UNIX_EPOCH,
+            next_update_time: SystemTime::UNIX_EPOCH,
+            next_update_window_start: SystemTime::UNIX_EPOCH,
+        };
+        node.set(&schedule);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                schedule: {
+                    schedule: format!("{:?}", schedule),
+                }
+            }
+        );
+    }
+
+    #[test]
+    fn test_protocol_state_node() {
+        let inspector = Inspector::new();
+        let node = ProtocolStateNode::new(inspector.root().create_child("protocol_state"));
+        let protocol_state = ProtocolState::default();
+        node.set(&protocol_state);
+
+        assert_inspect_tree!(
+            inspector,
+            root: {
+                protocol_state: {
+                    protocol_state: format!("{:?}", protocol_state),
                 }
             }
         );

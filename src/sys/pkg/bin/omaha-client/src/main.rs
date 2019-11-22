@@ -74,6 +74,9 @@ fn main() -> Result<(), Error> {
         let apps_node = inspect::AppsNode::new(root.create_child("apps"));
         apps_node.set(&app_set.to_vec().await);
         let state_node = inspect::StateNode::new(root.create_child("state"));
+        let schedule_node = inspect::ScheduleNode::new(root.create_child("schedule"));
+        let protocol_state_node =
+            inspect::ProtocolStateNode::new(root.create_child("protocol_state"));
         let _channel_source_property =
             root.create_string("channel_source", format!("{:?}", channel_source));
 
@@ -89,7 +92,7 @@ fn main() -> Result<(), Error> {
         // `.boxed_local()` was added to workaround stack overflow when we have too many levels of
         // nested async functions. Remove them when the generator optimization lands.
         future::join3(
-            fidl.start(fs).boxed_local(),
+            fidl.start(fs, schedule_node, protocol_state_node).boxed_local(),
             StateMachine::start(state_machine_ref).boxed_local(),
             cobalt_fut,
         )

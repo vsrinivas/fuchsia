@@ -393,7 +393,7 @@ impl Default for UpdateCheckSchedule {
 /// These hold the data maintained request-to-request so that the requirements for
 /// backoffs, throttling, proxy use, etc. can all be properly maintained.  This is
 /// NOT the state machine's internal state.
-#[derive(Clone, Debug, Default)]
+#[derive(Clone, Debug, Default, Eq, PartialEq)]
 pub struct ProtocolState {
     /// If the server has dictated the next poll interval, this holds what that
     /// interval is.
