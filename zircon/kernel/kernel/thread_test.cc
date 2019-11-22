@@ -83,92 +83,6 @@ class WorkerThread {
   thread_t* thread_;
 };
 
-struct YieldData {
-  volatile int* done;
-  volatile int* started;
-};
-
-// This thread will immediately yield, resulting in not fully using a given
-// quantum.
-static int yielding_tester(void* arg) {
-  volatile int* done = reinterpret_cast<YieldData*>(arg)->done;
-  volatile int* started = reinterpret_cast<YieldData*>(arg)->started;
-  atomic_add(started, 1);
-  for (;;) {
-    thread_yield();
-    arch_spinloop_pause();
-    if (atomic_load(done) == 2)
-      break;
-  }
-  return 0;
-}
-
-static int end_yielders_tester(void* arg) {
-  volatile int* done = reinterpret_cast<YieldData*>(arg)->done;
-  volatile int* started = reinterpret_cast<YieldData*>(arg)->started;
-  atomic_add(started, 1);
-  for (;;) {
-    if (atomic_load(done) == 1) {
-      atomic_add(done, 1);
-      break;
-    }
-    arch_spinloop_pause();
-  }
-  return 0;
-}
-
-// In https://crbug.com/959245 and ZX-4410 a bunch of userspace yield-spinlocks
-// caused a test hang, when there was num_cpus of them, and the yield deboost
-// (for not expiring the quantum) ended up keeping them at higher priority than
-// thread doing actual work.
-static bool yield_deboost_test() {
-  BEGIN_TEST;
-
-  volatile int done = 0;
-  volatile int started = 0;
-  YieldData data = {&done, &started};
-
-  const int num_yield_threads = arch_max_num_cpus() * 2;
-  const int num_total_threads = num_yield_threads + 1;
-  fbl::AllocChecker ac;
-  auto threads = ktl::unique_ptr<thread_t*[]>(new (&ac) thread_t*[num_total_threads]);
-  ASSERT_TRUE(ac.check());
-
-  // Start a pile of threads that all spin-yield.
-  for (int i = 0; i < num_yield_threads; ++i) {
-    threads[i] = thread_create("yielder", &yielding_tester, reinterpret_cast<void*>(&data),
-                               DEFAULT_PRIORITY);
-    ASSERT_NONNULL(threads[i], "thread_create");
-    thread_resume(threads[i]);
-  }
-
-  // Start the potentially-starved thread.
-  int starve = num_yield_threads;
-  threads[starve] = thread_create("ender", &end_yielders_tester, reinterpret_cast<void*>(&data),
-                                  DEFAULT_PRIORITY);
-  ASSERT_NONNULL(threads[starve], "thread_create");
-  thread_resume(threads[starve]);
-
-  while (atomic_load(&started) < num_total_threads) {
-    // Wait until all the threads have started.
-  }
-
-  // This thread gets a positive boost when waking from sleep, so it should be
-  // able to set done to 1. If the yield bug isn't happening, the non-yielding
-  // thread will in turn set it to 2, which tells the yielders to exit. When
-  // yield()ing is keeping the yielding threads at a higher priority than the
-  // end_yielders, done will never move to 2, and so the test will hang when
-  // trying to join the yield threads below.
-  thread_sleep_relative(ZX_MSEC(100));
-  atomic_add(&done, 1);
-
-  for (int i = 0; i < num_total_threads; ++i) {
-    thread_join(threads[i], nullptr, ZX_TIME_INFINITE);
-  }
-
-  END_TEST;
-}
-
 bool set_affinity_self_test() {
   BEGIN_TEST;
 
@@ -354,7 +268,6 @@ bool thread_conflicting_soft_and_hard_affinity() {
 }  // namespace
 
 UNITTEST_START_TESTCASE(thread_tests)
-UNITTEST("yield_deboost_test", yield_deboost_test)
 UNITTEST("set_affinity_self_test", set_affinity_self_test)
 UNITTEST("set_affinity_other_test", set_affinity_other_test)
 UNITTEST("thread_last_cpu_new_thread", thread_last_cpu_new_thread)
