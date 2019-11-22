@@ -17,6 +17,8 @@ source_set("spinel_vk_test") {
     "env_vk_instance.h",
     "fxt_spinel_vk.cc",
     "fxt_spinel_vk.h",
+    "fxt_spinel_vk_render.cc",
+    "fxt_spinel_vk_render.h",
   ]
   deps = [
     "${graphics_compute_dir}/common",
@@ -26,6 +28,8 @@ source_set("spinel_vk_test") {
   public_deps = [
     "${graphics_compute_dir}/hotsort/platforms/vk",
     "${graphics_compute_dir}/spinel:spinel_vk_for_tests",
+    "${graphics_compute_dir}/spinel/ext/color",
+    "${graphics_compute_dir}/spinel/ext/transform_stack",
     graphics_compute_vulkan_loader_target,
   ]
 }
@@ -39,9 +43,19 @@ graphics_compute_unittests("spinel_vk_api_unittests") {
   ]
 }
 
+graphics_compute_unittests("spinel_vk_render_unittests") {
+  sources = [
+    "spinel_vk_render_unittests.cc",
+  ]
+  deps = [
+    ":spinel_vk_test",
+  ]
+}
+
 group("vk_unittests") {
   testonly = true
   public_deps = [
     ":spinel_vk_api_unittests",  # basic API tests
+    ":spinel_vk_render_unittests",  # explicit rendering tests
   ]
 }

@@ -5,7 +5,6 @@
 #include "fxt_spinel_vk.h"
 
 #include "env.h"
-#include "spinel/spinel_assert.h"
 #include "spinel/spinel_vk.h"
 
 //
@@ -23,7 +22,7 @@ env * fxt_spinel_vk::shared_env = nullptr;
 void
 fxt_spinel_vk::SetUpTestSuite()
 {
-  ASSERT_EQ(shared_env,nullptr);
+  ASSERT_EQ(shared_env, nullptr);
 
   shared_env = new env();
 

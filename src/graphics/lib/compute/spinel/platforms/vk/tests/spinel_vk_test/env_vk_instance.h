@@ -23,6 +23,13 @@ namespace spinel::vk::test {
 //
 //
 
+#define vk(...) ASSERT_EQ((vk##__VA_ARGS__), VK_SUCCESS)
+#define vk_ok(err) ASSERT_EQ(err, VK_SUCCESS)
+
+//
+//
+//
+
 struct env_vk_instance : public ::testing::Environment
 {
   uint32_t vendorID;

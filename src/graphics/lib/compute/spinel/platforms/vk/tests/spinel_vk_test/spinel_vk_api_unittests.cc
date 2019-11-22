@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "env.h"
 #include "fxt_spinel_vk.h"
 
 //
@@ -39,9 +38,9 @@ TEST_F(spinel_vk, path_builder)
 {
   spn_path_builder_t pb;
 
-  ASSERT_EQ(spn_path_builder_create(context, &pb), SPN_SUCCESS);
+  spn(path_builder_create(context, &pb));
 
-  ASSERT_EQ(spn_path_builder_release(pb), SPN_SUCCESS);
+  spn(path_builder_release(pb));
 }
 
 //
@@ -51,29 +50,29 @@ TEST_F(spinel_vk, path_builder_tiny)
 {
   spn_path_builder_t pb;
 
-  ASSERT_EQ(spn_path_builder_create(context, &pb), SPN_SUCCESS);
+  spn(path_builder_create(context, &pb));
 
-  ASSERT_EQ(spn_path_builder_begin(pb), SPN_SUCCESS);
+  spn(path_builder_begin(pb));
 
   // define a triangle
-  ASSERT_EQ(spn_path_builder_move_to(pb, 0.0f, 0.0f), SPN_SUCCESS);
-  ASSERT_EQ(spn_path_builder_line_to(pb, 8.0f, 8.0f), SPN_SUCCESS);
-  ASSERT_EQ(spn_path_builder_line_to(pb, 0.0f, 8.0f), SPN_SUCCESS);
-  ASSERT_EQ(spn_path_builder_line_to(pb, 0.0f, 0.0f), SPN_SUCCESS);
+  spn(path_builder_move_to(pb, 0.0f, 0.0f));
+  spn(path_builder_line_to(pb, 8.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 8.0f));
+  spn(path_builder_line_to(pb, 0.0f, 0.0f));
 
   spn_path_t path;
 
-  ASSERT_EQ(spn_path_builder_end(pb, &path), SPN_SUCCESS);
+  spn(path_builder_end(pb, &path));
 
   //
   // release the path
   //
-  ASSERT_EQ(spn_path_release(context, &path, 1), SPN_SUCCESS);
+  spn(path_release(context, &path, 1));
 
   //
   // release the path builder
   //
-  ASSERT_EQ(spn_path_builder_release(pb), SPN_SUCCESS);
+  spn(path_builder_release(pb));
 }
 
 //
@@ -83,7 +82,7 @@ TEST_F(spinel_vk, path_builder_not_begun)
 {
   spn_path_builder_t pb;
 
-  ASSERT_EQ(spn_path_builder_create(context, &pb), SPN_SUCCESS);
+  spn(path_builder_create(context, &pb));
 
   // all should return errors
   EXPECT_EQ(spn_path_builder_move_to(pb, 0.0f, 0.0f),  //
@@ -107,7 +106,7 @@ TEST_F(spinel_vk, path_builder_not_begun)
   //
   // release the path builder
   //
-  ASSERT_EQ(spn_path_builder_release(pb), SPN_SUCCESS);
+  spn(path_builder_release(pb));
 }
 
 //
@@ -118,15 +117,15 @@ TEST_F(spinel_vk, path_builder_lost)
 {
   spn_path_builder_t pb;
 
-  ASSERT_EQ(spn_path_builder_create(context, &pb), SPN_SUCCESS);
+  spn(path_builder_create(context, &pb));
 
   //
   // generate one extremely long path to force an error and permanently
   // "lose" the path builder
   //
-  ASSERT_EQ(spn_path_builder_begin(pb), SPN_SUCCESS);
+  spn(path_builder_begin(pb));
 
-  ASSERT_EQ(spn_path_builder_move_to(pb, 0.0f, 0.0f), SPN_SUCCESS);
+  spn(path_builder_move_to(pb, 0.0f, 0.0f));
 
   spn_result_t result;
 
@@ -167,7 +166,7 @@ TEST_F(spinel_vk, path_builder_lost)
   //
   // release the path builder
   //
-  ASSERT_EQ(spn_path_builder_release(pb), SPN_SUCCESS);
+  spn(path_builder_release(pb));
 }
 
 //

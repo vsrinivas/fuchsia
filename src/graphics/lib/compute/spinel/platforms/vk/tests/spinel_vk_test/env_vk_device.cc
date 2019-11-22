@@ -7,10 +7,8 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
-#include "common/vk/assert.h"
 #include "common/vk/cache.h"
 #include "common/vk/debug.h"
-#include "spinel/spinel_assert.h"
 
 //
 // Define a platform-specific prefix

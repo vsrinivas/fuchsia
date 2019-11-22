@@ -7,7 +7,6 @@
 #include <stdlib.h>
 
 #include "common/macros.h"
-#include "common/vk/assert.h"
 #include "common/vk/debug.h"
 
 //

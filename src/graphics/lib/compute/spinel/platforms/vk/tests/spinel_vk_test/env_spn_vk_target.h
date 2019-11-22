@@ -26,6 +26,12 @@ namespace spinel::vk::test {
 //
 //
 
+#define spn(...) ASSERT_EQ((spn_##__VA_ARGS__), SPN_SUCCESS)
+
+//
+//
+//
+
 struct env_spn_vk_target : public ::testing::Environment
 {
   env_vk_instance * const instance;
