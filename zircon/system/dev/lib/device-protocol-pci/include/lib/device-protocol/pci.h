@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PCI_INCLUDE_LIB_DEVICE_PROTOCOL_PCI_H_
+#define ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PCI_INCLUDE_LIB_DEVICE_PROTOCOL_PCI_H_
+
+#include <stdio.h>
+#include <zircon/syscalls.h>
 
 #include <ddk/mmio-buffer.h>
 #include <ddk/protocol/pci.h>
-#include <stdio.h>
-#include <zircon/syscalls.h>
 
 __BEGIN_CDECLS
 
@@ -26,6 +28,7 @@ static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t
   size_t vmo_size;
   st = zx_vmo_get_size(bar.handle, &vmo_size);
   if (st != ZX_OK) {
+    zx_handle_close(bar.handle);
     return st;
   }
 
@@ -33,3 +36,32 @@ static inline zx_status_t pci_map_bar_buffer(const pci_protocol_t* pci, uint32_t
 }
 
 __END_CDECLS
+
+#ifdef __cplusplus
+
+#include <optional>
+
+#include <ddktl/protocol/pci.h>
+
+namespace ddk {
+
+class MmioBuffer;
+
+class Pci : public ddk::PciProtocolClient {
+ public:
+  Pci() {}
+
+  Pci(const pci_protocol_t& proto) : ddk::PciProtocolClient(&proto) {}
+
+  Pci(zx_device_t* parent) : ddk::PciProtocolClient(parent) {}
+
+  ~Pci() = default;
+
+  zx_status_t MapMmio(uint32_t bar_id, uint32_t cache_policy, std::optional<MmioBuffer>* mmio);
+};
+
+}  // namespace ddk
+
+#endif
+
+#endif  // ZIRCON_SYSTEM_DEV_LIB_DEVICE_PROTOCOL_PCI_INCLUDE_LIB_DEVICE_PROTOCOL_PCI_H_
