@@ -62,11 +62,11 @@ protocol OpenIdConnect {
     RevokeIdToken(tokens.OpenIdToken id_token) -> () error Error;
 };
 
-/// The request format used to exchange an OAuth 2.0 Access Token for an
+/// The request format used to exchange an OAuth 2.0 Refresh Token for an
 /// OpenID Connect ID token.
-table OpenIdTokenFromOauthAccessTokenRequest {
-    /// The Access token to exchange. This field is required.
-    1: tokens.OauthAccessToken access_token;
+table OpenIdTokenFromOauthRefreshTokenRequest {
+    /// The refresh token to exchange. This field is required.
+    1: tokens.OauthRefreshToken refresh_token;
     /// The OpenID audience strings that the ID token should be issued to. If
     /// absent or empty, a default set of scopes defined by the implementation
     /// will be used.
@@ -83,8 +83,8 @@ table OpenIdUserInfoFromOauthAccessTokenRequest {
 /// A protocol to perform exchanges between Oauth 2.0 and OpenID Connect tokens.
 [Discoverable]
 protocol OauthOpenIdConnect {
-    /// Exchanges an OAuth access token for an OpenID Connect ID token.
-    GetIdTokenFromAccessToken(OpenIdTokenFromOauthAccessTokenRequest request)
+    /// Exchanges an OAuth refresh token for an OpenID Connect ID token.
+    GetIdTokenFromRefreshToken(OpenIdTokenFromOauthRefreshTokenRequest request)
         -> (tokens.OpenIdToken id_token) error Error;
 
     /// Exchanges an OAuth access token for an OpenID Connect UserInfo.
