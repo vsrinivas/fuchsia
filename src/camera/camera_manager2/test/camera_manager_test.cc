@@ -95,7 +95,11 @@ class CameraManagerTest : public gtest::RealLoopFixture {
 TEST_F(CameraManagerTest, CanConnectToStream) {
   EXPECT_EQ(ZX_OK, camera_manager_->AcknowledgeDeviceEvent());
 
-  fuchsia::camera2::StreamConstraints constraints;
+  fuchsia::camera2::StreamProperties stream_properties{};
+  stream_properties.set_stream_type(fuchsia::camera2::CameraStreamType::MONITORING);
+  fuchsia::camera2::StreamConstraints constraints{};
+  constraints.set_properties(std::move(stream_properties));
+
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> token;
   fuchsia::camera2::StreamPtr stream;
   fuchsia::sysmem::ImageFormat_2 format;

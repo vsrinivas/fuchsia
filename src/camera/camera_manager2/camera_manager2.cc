@@ -14,7 +14,9 @@ int main() {
   FX_LOGS(INFO) << "Camera Manager Starting";
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto context = sys::ComponentContext::Create();
-  camera::CameraManagerApp app(std::move(context));
-  loop.Run();
+  auto app = camera::CameraManagerApp::Create(std::move(context));
+  if (app) {
+    loop.Run();
+  }
   return 0;
 }

@@ -15,6 +15,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <src/camera/camera_manager2/camera_plug_detector.h>
+#include <src/camera/camera_manager2/video_device_client.h>
+#include <src/lib/fsl/io/device_watcher.h>
 
 namespace camera {
 // Keeps track of the cameras and other video input devices that are plugged in,
@@ -27,7 +30,8 @@ class CameraManagerApp : public fuchsia::camera2::Manager {
   // will cancel all video streams, and close all client connections.
   ~CameraManagerApp() override;
 
-  CameraManagerApp(std::unique_ptr<sys::ComponentContext> context);
+  CameraManagerApp(std::unique_ptr<sys::ComponentContext> context) : context_(std::move(context)) {}
+  static std::unique_ptr<CameraManagerApp> Create(std::unique_ptr<sys::ComponentContext> context);
 
   // Connect to a camera stream:
   // |camera_id| Refers to a specific camera_id from a CameraInfo that has been
@@ -57,11 +61,19 @@ class CameraManagerApp : public fuchsia::camera2::Manager {
   void AcknowledgeDeviceEvent() override {}
 
  private:
-  // The connection to the device driver.
-  // TODO(36258): Handle multiple device connections.
-  fuchsia::camera2::hal::ControllerSyncPtr camera_control_;
-  // TODO(36254): Handle multiple stream connections seperately.
-  fuchsia::sysmem::BufferCollectionSyncPtr sysmem_collection_;
+  // Called when a device is enumerated, or when this class starts, and
+  // discovers all the current devices in the system.
+  void OnDeviceFound(fidl::InterfaceHandle<fuchsia::camera2::hal::Controller> controller);
+
+  // Helper function.  Gets the device with id |camera_id| if it exists.
+  VideoDeviceClient* GetActiveDevice(int32_t camera_id);
+
+  std::list<std::unique_ptr<VideoDeviceClient>> devices_;
+
+  CameraPlugDetector plug_detector_;
+
+  // Counter to keep track of device id's we have give out so far.
+  int32_t device_id_counter_ = 0;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator_;
   std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<fuchsia::camera2::Manager> bindings_;
