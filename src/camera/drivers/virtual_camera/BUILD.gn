@@ -56,11 +56,13 @@ source_set("hsv_color_source") {
   sources = [
     "color_source.cc",
     "hsv_generator.cc",
+    "image_format_rgba.cc",
   ]
 
   public = [
     "color_source.h",
     "hsv_generator.h",
+    "image_format_rgba.h",
   ]
 
   deps = [
@@ -68,6 +70,7 @@ source_set("hsv_color_source") {
     "//src/lib/syslog/cpp",
     "//zircon/public/lib/fbl",
     "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format",
     "//zircon/public/lib/zx",
     "//zircon/system/fidl/fuchsia-sysmem",
   ]
