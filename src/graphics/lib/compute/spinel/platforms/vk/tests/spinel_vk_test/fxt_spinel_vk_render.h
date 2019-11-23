@@ -21,18 +21,25 @@
 namespace spinel::vk::test {
 
 //
-//
+// We don't need to get too fancy here.  We're not implementing a true
+// Value interface, rather we're just lumping in all the fields we might
+// need in an explicit render.
 //
 
 struct param_spinel_vk_render
 {
+  char const * name;
+
   struct
   {
     uint32_t width;
     uint32_t height;
   } surface;
 
-  uint32_t checksum;  // eventually a {target:checksum} map?
+  char const * svg   = nullptr;
+  uint32_t     loops = 1;
+
+  uint32_t checksum;
 };
 
 //
@@ -75,6 +82,12 @@ struct fxt_spinel_vk_render : public fxt_spinel_vk,
   //
   void
   checksum();
+
+  //
+  // param name suffix generator
+  //
+  static std::string
+  param_name(testing::TestParamInfo<param_spinel_vk_render> const & info);
 
   //
   // simplest submitter

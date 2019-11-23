@@ -18,7 +18,7 @@ using spinel_vk_render = fxt_spinel_vk_render;
 //
 // explicitly render a 2x2 pixel black square
 //
-TEST_P(spinel_vk_render, black_square_2x2)
+TEST_P(spinel_vk_render, example)
 {
   // the param for this test
   param_spinel_vk_render const param = GetParam();
@@ -27,6 +27,8 @@ TEST_P(spinel_vk_render, black_square_2x2)
   // create a transform stack
   //
   struct transform_stack * const ts = transform_stack_create(16);
+
+  ASSERT_NE(ts, nullptr);
 
   transform_stack_push_scale(ts, 32.0f, 32.0f);
 
@@ -323,17 +325,22 @@ TEST_P(spinel_vk_render, black_square_2x2)
 // value parameterization is leveraged by the SVG fixture
 //
 
-param_spinel_vk_render const params[] = {
-
-  { .surface = { 1024, 1024 }, .checksum = 0xFBF00004 },
-
+param_spinel_vk_render const params_tests[] = {
+  {
+    .name     = "black_square_2x2",
+    .surface  = { 1024, 1024 },  //
+    .checksum = 0xFBF00004,      //
+  },
 };
 
 //
 //
 //
 
-INSTANTIATE_TEST_SUITE_P(spinel_vk_render_1024x1024, spinel_vk_render, ::testing::ValuesIn(params));
+INSTANTIATE_TEST_SUITE_P(spinel_vk_render_examples,  //
+                         spinel_vk_render,           //
+                         ::testing::ValuesIn(params_tests),
+                         fxt_spinel_vk_render::param_name);
 
 }  // namespace spinel::vk::test
 

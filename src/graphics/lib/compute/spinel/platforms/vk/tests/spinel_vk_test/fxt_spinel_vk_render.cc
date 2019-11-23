@@ -27,7 +27,7 @@ fxt_spinel_vk_render::SetUp()
   //
   // get the value param
   //
-  struct param_spinel_vk_render const param = GetParam();
+  param_spinel_vk_render const param = GetParam();
 
   //
   // define device image usage and host image bits
@@ -252,7 +252,7 @@ fxt_spinel_vk_render::checksum()
   // the destination buffer results in a packed / non-strided array of
   // pixels.
   //
-  struct param_spinel_vk_render const param = GetParam();
+  param_spinel_vk_render const param = GetParam();
 
   uint32_t const   pixel_count = param.surface.width * param.surface.height;
   uint32_t const * pixels      = (uint32_t const *)surface.h.map;
@@ -319,6 +319,15 @@ fxt_spinel_vk_render::checksum()
 
       fclose(file);
     }
+}
+
+//
+// param name suffix generator
+//
+std::string
+fxt_spinel_vk_render::param_name(testing::TestParamInfo<param_spinel_vk_render> const & info)
+{
+  return std::string(info.param.name);
 }
 
 //
