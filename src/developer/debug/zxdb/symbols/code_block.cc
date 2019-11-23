@@ -69,35 +69,40 @@ const CodeBlock* CodeBlock::GetMostSpecificChild(const SymbolContext& symbol_con
   return this;
 }
 
-const Function* CodeBlock::GetContainingFunction() const {
-  const CodeBlock* cur_block = this;
+fxl::RefPtr<Function> CodeBlock::GetContainingFunction() const {
+  // Need to hold references when walking up the symbol hierarchy.
+  fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(this);
   while (cur_block) {
     if (const Function* function = cur_block->AsFunction())
-      return function;
-    cur_block = cur_block->parent().Get()->AsCodeBlock();
+      return RefPtrTo(function);
+
+    auto parent_ref = cur_block->parent().Get();
+    cur_block = RefPtrTo(parent_ref->AsCodeBlock());
   }
-  return nullptr;
+  return fxl::RefPtr<Function>();
 }
 
-std::vector<const Function*> CodeBlock::GetInlineChain() const {
-  std::vector<const Function*> result;
+std::vector<fxl::RefPtr<Function>> CodeBlock::GetInlineChain() const {
+  std::vector<fxl::RefPtr<Function>> result;
 
-  const CodeBlock* cur_block = this;
+  // Need to hold references when walking up the symbol hierarchy.
+  fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(this);
   while (cur_block) {
     if (const Function* function = cur_block->AsFunction()) {
-      result.push_back(function);
+      result.push_back(RefPtrTo(function));
 
       if (function->is_inline()) {
-        // Follow the inlined structure via containing_block() rather than
-        // the lexical structure of the inlined function (e.g. its parent
-        // class).
-        cur_block = function->containing_block().Get()->AsCodeBlock();
+        // Follow the inlined structure via containing_block() rather than the lexical structure of
+        // the inlined function (e.g. its parent class).
+        auto containing = function->containing_block().Get();
+        cur_block = RefPtrTo(containing->AsCodeBlock());
       } else {
         // Just added containing non-inline function so we're done.
         break;
       }
     } else {
-      cur_block = cur_block->parent().Get()->AsCodeBlock();
+      auto parent_ref = cur_block->parent().Get();
+      cur_block = RefPtrTo(parent_ref->AsCodeBlock());
     }
   }
   return result;

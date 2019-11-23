@@ -112,14 +112,14 @@ class InlineFrame final : public Frame {
 // returns the same location).
 //
 // The main_location is the location returned by symbol lookup for the current address.
-Location LocationForInlineFrameChain(const std::vector<const Function*>& inline_chain,
+Location LocationForInlineFrameChain(const std::vector<fxl::RefPtr<Function>>& inline_chain,
                                      size_t chain_index, const Location& main_location) {
   // The file/line is the call location of the next (into the future) inlined function. Fall back on
   // the file/line from the main lookup.
   const FileLine* new_line = &main_location.file_line();
   int new_column = main_location.column();
   if (chain_index > 0) {
-    const Function* next_call = inline_chain[chain_index - 1];
+    const Function* next_call = inline_chain[chain_index - 1].get();
     if (next_call->call_line().is_valid()) {
       new_line = &next_call->call_line();
       new_column = 0;  // DWARF doesn't contain inline call column.
@@ -262,7 +262,7 @@ void Stack::AppendFrame(const debug_ipc::StackFrame& record) {
 
   // The Location object will reference the most-specific inline function but
   // we need the whole chain.
-  std::vector<const Function*> inline_chain = cur_func->GetInlineChain();
+  std::vector<fxl::RefPtr<Function>> inline_chain = cur_func->GetInlineChain();
   if (inline_chain.back()->is_inline()) {
     // A non-inline frame was not found. The symbols are corrupt so give up on inline processing and
     // add the physical frame only.

@@ -327,7 +327,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(const llvm::DWARFDie& die
     // subroutine will save the CodeBlock inlined functions are embedded in.
     llvm::DWARFDie direct_parent = die.getParent();
     if (direct_parent)
-      function->set_containing_block(MakeLazy(direct_parent));
+      function->set_containing_block(MakeUncachedLazy(direct_parent));
   }
 
   return function;

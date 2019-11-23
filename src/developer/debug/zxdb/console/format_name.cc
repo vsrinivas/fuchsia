@@ -37,7 +37,8 @@ bool FormatClangLambda(const Function* function, OutputBuffer* out) {
   //   out->Append("λ @ " + DescribeFileLine(optional_target_symbols,
   //                                         function->decl_line()));
   // so users can tell where the lambda function is.
-  const Collection* coll = function->parent().Get()->AsCollection();
+  auto parent_ref = function->parent().Get();  // Hold a ref to keep alive.
+  const Collection* coll = parent_ref->AsCollection();
   if (coll && coll->tag() == DwarfTag::kClassType && coll->GetAssignedName().empty()) {
     // Clang-style.
     out->Append("λ");

@@ -75,7 +75,7 @@ class CodeBlock : public Symbol {
   // Recursively searches the containing blocks until it finds a function. If this code block is a
   // function, returns |this| as a Function. Returns null on error, but this should not happen for
   // well-formed symbols (all code should be inside functions).
-  const Function* GetContainingFunction() const;
+  fxl::RefPtr<Function> GetContainingFunction() const;
 
   // Returns the chain of inline functions to the current code block.
   //
@@ -88,7 +88,7 @@ class CodeBlock : public Symbol {
   // malformed symbols).
   //
   // If the current block is not in an inline function, the returned vector will have one element.
-  std::vector<const Function*> GetInlineChain() const;
+  std::vector<fxl::RefPtr<Function>> GetInlineChain() const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);

@@ -41,15 +41,17 @@ VisitResult DoVisitClassHierarchy(
 
 VisitResult VisitLocalBlocks(const CodeBlock* starting,
                              fit::function<VisitResult(const CodeBlock*)> cb) {
-  const CodeBlock* cur_block = starting;
+  // Need to hold references when walking up the symbol hierarchy.
+  fxl::RefPtr<CodeBlock> cur_block = RefPtrTo(starting);
   while (cur_block) {
-    VisitResult result = cb(cur_block);
+    VisitResult result = cb(cur_block.get());
     if (result != VisitResult::kContinue)
       return result;
 
     if (cur_block->AsFunction() || !cur_block->parent())
       break;  // Don't iterate above functions.
-    cur_block = cur_block->parent().Get()->AsCodeBlock();
+    auto parent_ref = cur_block->parent().Get();
+    cur_block = RefPtrTo(parent_ref->AsCodeBlock());
   }
   return VisitResult::kContinue;
 }

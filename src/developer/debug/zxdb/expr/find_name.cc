@@ -450,7 +450,7 @@ void FindName(const FindNameContext& context, const FindNameOptions& options,
     // namespace and will search only the global one.
     ParsedIdentifier current_scope;
     if (context.block) {
-      if (const Function* function = context.block->GetContainingFunction()) {
+      if (auto function = context.block->GetContainingFunction()) {
         current_scope = ToParsedIdentifier(function->GetIdentifier()).GetScope();
       }
     }
@@ -517,7 +517,7 @@ void FindMemberOnThis(const FindNameContext& context, const FindNameOptions& opt
 
   if (!context.block)
     return;  // No current code.
-  const Function* function = context.block->GetContainingFunction();
+  auto function = context.block->GetContainingFunction();
   if (!function)
     return;
   const Variable* this_var = function->GetObjectPointerVariable();

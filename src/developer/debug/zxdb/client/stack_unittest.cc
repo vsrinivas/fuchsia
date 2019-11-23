@@ -252,8 +252,11 @@ TEST_F(StackTest, InlineExpansion) {
   bottom_func->set_assigned_name("Bottom");
   bottom_func->set_code_ranges(AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
-  bottom_ambig_inline_func->set_containing_block(bottom_inline_func);
-  bottom_inline_func->set_containing_block(bottom_func);
+  // Our containing functions don't have references to the contained functions so we don't have to
+  // worry about a reference cycle here (hence "unsafe").
+  bottom_ambig_inline_func->set_containing_block(
+      UncachedLazySymbol::MakeUnsafe(bottom_inline_func));
+  bottom_inline_func->set_containing_block(UncachedLazySymbol::MakeUnsafe(bottom_func));
 
   // The location returned by the symbol function will have the file/line inside the inline
   // function.
@@ -448,7 +451,7 @@ TEST_F(StackTest, InlineVars) {
   // Make physical fuction.
   auto phys_func = fxl::MakeRefCounted<Function>(DwarfTag::kSubprogram);
   phys_func->set_code_ranges(AddressRanges(AddressRange(kPhysAddr, kPhysAddr + 16)));
-  inline_func->set_containing_block(phys_func);
+  inline_func->set_containing_block(UncachedLazySymbol::MakeUnsafe(phys_func));
 
   // Physical stack frame.
   Location phys_location(kPhysAddr, FileLine("file.cc", 200), 0, symbol_context, phys_func);

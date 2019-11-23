@@ -385,10 +385,10 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
   // lookup the line info below in case its present. This computes both a LazySymbol which we
   // pass to the result, and a possibly-null containing Function* (not an inlined subroutine) to do
   // later computations on.
-  const Function* containing_function = nullptr;
+  fxl::RefPtr<Function> containing_function;  // Keep in scope from GetContainingFunction().
   LazySymbol lazy_function;
   if (optional_func) {
-    containing_function = optional_func;
+    containing_function = RefPtrTo(optional_func);
     lazy_function = LazySymbol(optional_func);
   } else {
     llvm::DWARFDie subroutine = unit->getSubroutineForAddress(relative_address);
@@ -407,7 +407,7 @@ Location ModuleSymbolsImpl::LocationForAddress(const SymbolContext& symbol_conte
     if (containing_function && options.skip_function_prologue) {
       // Use the line table to move the address to after the function prologue.
       size_t prologue_size =
-          GetFunctionPrologueSize(LineTableImpl(context_.get(), unit), containing_function);
+          GetFunctionPrologueSize(LineTableImpl(context_.get(), unit), containing_function.get());
       if (prologue_size > 0) {
         // The function has a prologue. When it does, we know it has code ranges so don't need to
         // validate it's nonempty before using.

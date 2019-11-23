@@ -50,8 +50,10 @@ class Function final : public CodeBlock {
   // For inlined functions, Symbol::parent() will contain the lexical parent of the inlined function
   // (a class or namespace) while the containing block will be the CodeBlock (of any type) that the
   // code is inlined into.
-  const LazySymbol& containing_block() const { return containing_block_; }
-  void set_containing_block(LazySymbol c) { containing_block_ = std::move(c); }
+  //
+  // "Uncached" symbols must be used for all upward-pointing symbol references to prevent cycles.
+  const UncachedLazySymbol& containing_block() const { return containing_block_; }
+  void set_containing_block(UncachedLazySymbol c) { containing_block_ = std::move(c); }
 
   // Unmangled name. Does not include any class or namespace qualifications.  (see
   // Symbol::GetAssignedName)
@@ -138,7 +140,7 @@ class Function final : public CodeBlock {
   // Symbol protected overrides.
   Identifier ComputeIdentifier() const override;
 
-  LazySymbol containing_block_;
+  UncachedLazySymbol containing_block_;
   std::string assigned_name_;
   std::string linkage_name_;
   FileLine decl_line_;
