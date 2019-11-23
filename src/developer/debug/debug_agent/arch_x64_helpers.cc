@@ -30,55 +30,32 @@ namespace {
 
 uint64_t HWDebugResourceEnabled(uint64_t dr7, size_t index) {
   FXL_DCHECK(index < 4);
-  static uint64_t masks[4] = {X86_FLAG_MASK(DR7L0), X86_FLAG_MASK(DR7L1), X86_FLAG_MASK(DR7L2),
-                              X86_FLAG_MASK(DR7L3)};
+
+  // clang-format off
+  static uint64_t masks[4] = { X86_FLAG_MASK(DR7L0),
+                               X86_FLAG_MASK(DR7L1),
+                               X86_FLAG_MASK(DR7L2),
+                               X86_FLAG_MASK(DR7L3)};
+  // clang-format on
 
   return (dr7 & masks[index]) != 0;
 }
 
 // A watchpoint is configured by DR7RW<i> = 0b10 (write) or 0b11 (read/write).
 bool IsWatchpoint(uint64_t dr7, size_t index) {
-  FXL_DCHECK(index < 4);
+  // clang-format off
   switch (index) {
-    case 0:
-      return (X86_FLAG_VALUE(dr7, DR7RW0) & 1) > 0;
-    case 1:
-      return (X86_FLAG_VALUE(dr7, DR7RW1) & 1) > 0;
-    case 2:
-      return (X86_FLAG_VALUE(dr7, DR7RW2) & 1) > 0;
-    case 3:
-      return (X86_FLAG_VALUE(dr7, DR7RW3) & 1) > 0;
+    case 0: return (X86_FLAG_VALUE(dr7, DR7RW0) & 1) > 0;
+    case 1: return (X86_FLAG_VALUE(dr7, DR7RW1) & 1) > 0;
+    case 2: return (X86_FLAG_VALUE(dr7, DR7RW2) & 1) > 0;
+    case 3: return (X86_FLAG_VALUE(dr7, DR7RW3) & 1) > 0;
     default:
       break;
   }
+  // clang-format on
 
   FXL_NOTREACHED();
   return false;
-}
-
-// Mask needed to clear a particular HW debug resource.
-uint64_t HWDebugResourceD7ClearMask(size_t index) {
-  FXL_DCHECK(index < 4);
-  static uint64_t masks[4] = {
-      ~(X86_FLAG_MASK(DR7L0) | X86_FLAG_MASK(DR7RW0) | X86_FLAG_MASK(DR7LEN0)),
-      ~(X86_FLAG_MASK(DR7L1) | X86_FLAG_MASK(DR7RW1) | X86_FLAG_MASK(DR7LEN1)),
-      ~(X86_FLAG_MASK(DR7L2) | X86_FLAG_MASK(DR7RW2) | X86_FLAG_MASK(DR7LEN2)),
-      ~(X86_FLAG_MASK(DR7L3) | X86_FLAG_MASK(DR7RW3) | X86_FLAG_MASK(DR7LEN3)),
-  };
-  return masks[index];
-}
-
-// Mask needed to set a particular HW breakpoint.
-uint64_t HWBreakpointDR7SetMask(size_t index) {
-  FXL_DCHECK(index < 4);
-  // Mask is: L = 1, RW = 00, LEN = 10
-  static uint64_t masks[4] = {
-      X86_FLAG_MASK(DR7L0),
-      X86_FLAG_MASK(DR7L1),
-      X86_FLAG_MASK(DR7L2),
-      X86_FLAG_MASK(DR7L3),
-  };
-  return masks[index];
 }
 
 }  // namespace
@@ -194,7 +171,42 @@ zx_status_t WriteDebugRegisters(const std::vector<Register>& updates,
   return ZX_OK;
 }
 
-// HW Breakpoints --------------------------------------------------------------
+// HW Breakpoints ----------------------------------------------------------------------------------
+
+namespace {
+
+void SetHWBreakpointFlags(uint64_t* dr7, int slot, bool active) {
+  switch (slot) {
+    case 0: {
+      X86_DBG_CONTROL_L0_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW0_SET(dr7, 0);
+      X86_DBG_CONTROL_LEN0_SET(dr7, 0);
+      return;
+    }
+    case 1: {
+      X86_DBG_CONTROL_L1_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW1_SET(dr7, 0);
+      X86_DBG_CONTROL_LEN1_SET(dr7, 0);
+      return;
+    }
+    case 2: {
+      X86_DBG_CONTROL_L2_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW2_SET(dr7, 0);
+      X86_DBG_CONTROL_LEN2_SET(dr7, 0);
+      return;
+    }
+    case 3: {
+      X86_DBG_CONTROL_L3_SET(dr7, active ? 1 : 0);
+      X86_DBG_CONTROL_RW3_SET(dr7, 0);
+      X86_DBG_CONTROL_LEN3_SET(dr7, 0);
+      return;
+    }
+  }
+
+  FXL_NOTREACHED() << "Invalid slot: " << slot;
+}
+
+}  // namespace
 
 zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* debug_regs) {
   // Search for a free slot.
@@ -215,8 +227,7 @@ zx_status_t SetupHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* de
 
   // We found a slot, we bind the address.
   debug_regs->dr[slot] = address;
-  debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
-  debug_regs->dr7 |= HWBreakpointDR7SetMask(slot);
+  SetHWBreakpointFlags(&debug_regs->dr7, slot, true);
   return ZX_OK;
 }
 
@@ -232,7 +243,8 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t* d
 
     // Clear this breakpoint.
     debug_regs->dr[i] = 0;
-    debug_regs->dr7 &= HWDebugResourceD7ClearMask(i);
+    SetHWBreakpointFlags(&debug_regs->dr7, i, false);
+
     return ZX_OK;
   }
 
@@ -401,7 +413,6 @@ zx_status_t RemoveWatchpoint(zx_thread_state_debug_regs_t* debug_regs, uint64_t 
     // Clear this breakpoint.
     debug_regs->dr[slot] = 0;
     SetWatchpointFlags(&debug_regs->dr7, slot, false, 0);
-    debug_regs->dr7 &= HWDebugResourceD7ClearMask(slot);
     return ZX_OK;
   }
 

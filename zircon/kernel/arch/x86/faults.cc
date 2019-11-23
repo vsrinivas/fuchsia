@@ -13,6 +13,7 @@
 #include <lib/ktrace.h>
 #include <platform.h>
 #include <trace.h>
+#include <zircon/hw/debug/x86.h>
 #include <zircon/syscalls/exception.h>
 #include <zircon/types.h>
 
@@ -114,20 +115,32 @@ static bool try_dispatch_user_exception(x86_iframe_t* frame, uint exception_type
 }
 
 static void x86_debug_handler(x86_iframe_t* frame) {
-  // We now need to keep track of the debug registers.
-  thread_t* thread = get_current_thread();
-
   // DR6 is the status register that explains what exception happened (single step, hardware
   // breakpoint, etc.).
+  //
   // We only need to keep track of DR6 because the other state doesn't change and the only way
   // to actually change the debug registers for a thread is through the thread_write_state
   // syscall.
-  x86_read_debug_status(&thread->arch.debug_state);
+
+  thread_t* thread = get_current_thread();
+
+  // We save the current state so that exception handlers can check what kind of exception it was.
+  x86_read_debug_status(&thread->arch.debug_state.dr6);
 
   // NOTE: a HW breakpoint exception can also represent a single step.
   // TODO(ZX-3037): Is it worth separating this into two separate exceptions?
-  if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT))
+  if (try_dispatch_user_exception(frame, ZX_EXCP_HW_BREAKPOINT)) {
+    // If the exception was successfully handled, we mask the debug the single step bit, as the cpu
+    // doesn't automatically do it.
+    //
+    // After this point, any exception handler that reads DR6 won't see the single step bit active.
+    X86_DBG_STATUS_BD_SET(&thread->arch.debug_state.dr6, 0);
+    X86_DBG_STATUS_BS_SET(&thread->arch.debug_state.dr6, 0);
+    X86_DBG_STATUS_BT_SET(&thread->arch.debug_state.dr6, 0);
+    x86_write_debug_status(thread->arch.debug_state.dr6);
+
     return;
+  }
 
   exception_die(frame, "unhandled hw breakpoint, halting\n");
 }

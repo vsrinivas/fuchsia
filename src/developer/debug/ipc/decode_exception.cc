@@ -80,12 +80,8 @@ ExceptionType DecodeException(uint32_t code, X64ExceptionInfo* info) {
   // TODO(DX-1445): This permits only one trigger per exception, when overlaps
   //                could occur. For a first pass this is acceptable.
 
-  if (X86_DBG_STATUS_BS_GET(regs->dr6)) {
-    // This is a single step. We need to clear the BS flag to the further hardware exceptions don't
-    // get flagged as single step.
-    info->ClearDebugFlags(regs.value());
+  if (X86_DBG_STATUS_BS_GET(regs->dr6))
     return ExceptionType::kSingleStep;
-  }
 
   if (X86_DBG_STATUS_B0_GET(regs->dr6)) {
     return DecodeHardwareRegister(regs->dr7, 0);

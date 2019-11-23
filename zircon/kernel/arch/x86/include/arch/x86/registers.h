@@ -353,7 +353,9 @@ void x86_disable_debug_state(void);
 bool x86_validate_debug_state(x86_debug_state_t* debug_state);
 
 /* Only update the status section of |debug_state| (DR6). All other state will not be modified */
-void x86_read_debug_status(x86_debug_state_t* debug_state);
+void x86_read_debug_status(uint64_t* dr6);
+
+void x86_write_debug_status(uint64_t dr6);
 
 /* Read from the CPU registers into |debug_state|. */
 void x86_read_hw_debug_regs(x86_debug_state_t* debug_state);
@@ -364,6 +366,13 @@ void x86_read_hw_debug_regs(x86_debug_state_t* debug_state);
  *            In any other context (eg. setting debug values from a syscall), you *MUST* call
  *            x86_validate_debug_state first. */
 void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state);
+
+#ifndef NDEBUG
+
+void x86_print_dr6(uint64_t dr6);
+void x86_print_dr7(uint64_t dr7);
+
+#endif
 
 __END_CDECLS
 

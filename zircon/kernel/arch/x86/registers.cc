@@ -24,10 +24,12 @@
 #include <string.h>
 #include <trace.h>
 #include <zircon/compiler.h>
+#include <zircon/hw/debug/x86.h>
 
 #include <arch/ops.h>
 #include <arch/x86.h>
 #include <arch/x86/feature.h>
+#include <arch/x86/mmu.h>
 #include <arch/x86/mp.h>
 #include <arch/x86/proc_trace.h>
 #include <fbl/auto_call.h>
@@ -673,9 +675,11 @@ bool x86_validate_debug_state(x86_debug_state_t* debug_state) {
   // Validate the addresses being written.
   for (size_t i = 0; i < 4; i++) {
     uint64_t addr = debug_state->dr[i];
-    if (addr != 0 && !is_user_address(addr)) {
+    if (addr == 0)
+      continue;
+
+    if (!is_user_address(addr) || !x86_is_vaddr_canonical(addr))
       return false;
-    }
   }
 
   // DR6 is not writable from userspace, as it is a debug status registers.
@@ -690,13 +694,20 @@ bool x86_validate_debug_state(x86_debug_state_t* debug_state) {
   return true;
 }
 
-void x86_read_debug_status(x86_debug_state_t* debug_state) {
+void x86_read_debug_status(uint64_t* dr6) {
   // NOTE: There is a difference in bit 16 between Intel64 and AMD64.
   //       In AMD, bit 16 is reserved and always set to 0.
   //       In Intel, it can mean that an debug or breakpoint exception ocurrred during a RTM
   //       block. For now, we mask this bit to make both platforms uniform.
-  asm("mov %%dr6, %0" : "=r"(debug_state->dr6));
-  debug_state->dr6 |= X86_DR6_MASK;
+  uint64_t value = 0;
+  asm("mov %%dr6, %0" : "=r"(value));
+  *dr6 = value | X86_DR6_MASK;
+}
+
+void x86_write_debug_status(uint64_t dr6) {
+  // Upper 32 bits must be 0.
+  uint64_t full_value = dr6 & 0x00000000ffffffff;
+  asm("mov %0, %%dr6" ::"r"(full_value));
 }
 
 void x86_disable_debug_state(void) {
@@ -711,7 +722,7 @@ void x86_read_hw_debug_regs(x86_debug_state_t* debug_state) {
   asm("mov %%dr2, %0" : "=r"(debug_state->dr[2]));
   asm("mov %%dr3, %0" : "=r"(debug_state->dr[3]));
 
-  x86_read_debug_status(debug_state);
+  x86_read_debug_status(&debug_state->dr6);
 
   asm("mov %%dr7, %0" : "=r"(debug_state->dr7));
 }
@@ -725,3 +736,31 @@ void x86_write_hw_debug_regs(const x86_debug_state_t* debug_state) {
   // IMPORTANT: DR7 should be already masked at this point by calling x86_validate_debug_state.
   asm("mov %0, %%dr7" ::"r"(debug_state->dr7));
 }
+
+#ifndef NDEBUG
+
+void x86_print_dr6(uint64_t dr6) {
+  printf("0x%08lx: B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d\n", dr6,
+         (int)X86_DBG_STATUS_B0_GET(dr6), (int)X86_DBG_STATUS_B1_GET(dr6),
+         (int)X86_DBG_STATUS_B2_GET(dr6), (int)X86_DBG_STATUS_B3_GET(dr6),
+         (int)X86_DBG_STATUS_BD_GET(dr6), (int)X86_DBG_STATUS_BS_GET(dr6),
+         (int)X86_DBG_STATUS_BT_GET(dr6));
+}
+
+void x86_print_dr7(uint64_t dr7) {
+  printf(
+      "0x%08lx: L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, GE=%d, GD=%d\n"
+      "%*sR/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, LEN2=%d, R/W3=%d, LEN3=%d\n",
+      dr7, (int)X86_DBG_CONTROL_L0_GET(dr7), (int)X86_DBG_CONTROL_G0_GET(dr7),
+      (int)X86_DBG_CONTROL_L1_GET(dr7), (int)X86_DBG_CONTROL_G1_GET(dr7),
+      (int)X86_DBG_CONTROL_L2_GET(dr7), (int)X86_DBG_CONTROL_G2_GET(dr7),
+      (int)X86_DBG_CONTROL_L3_GET(dr7), (int)X86_DBG_CONTROL_G3_GET(dr7),
+      (int)X86_DBG_CONTROL_LE_GET(dr7), (int)X86_DBG_CONTROL_GE_GET(dr7),
+      (int)X86_DBG_CONTROL_GD_GET(dr7), 12, " ", (int)X86_DBG_CONTROL_RW0_GET(dr7),
+      (int)X86_DBG_CONTROL_LEN0_GET(dr7), (int)X86_DBG_CONTROL_RW1_GET(dr7),
+      (int)X86_DBG_CONTROL_LEN1_GET(dr7), (int)X86_DBG_CONTROL_RW2_GET(dr7),
+      (int)X86_DBG_CONTROL_LEN2_GET(dr7), (int)X86_DBG_CONTROL_RW3_GET(dr7),
+      (int)X86_DBG_CONTROL_LEN3_GET(dr7));
+}
+
+#endif

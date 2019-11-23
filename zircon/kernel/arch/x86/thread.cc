@@ -70,8 +70,8 @@ void arch_thread_initialize(thread_t* t, vaddr_t entry_point) {
   for (size_t i = 0; i < 4; i++) {
     t->arch.debug_state.dr[i] = 0;
   }
-  t->arch.debug_state.dr6 = ~X86_DR6_USER_MASK;
-  t->arch.debug_state.dr7 = ~X86_DR7_USER_MASK;
+  t->arch.debug_state.dr6 = X86_DR6_MASK;
+  t->arch.debug_state.dr7 = X86_DR7_MASK;
 }
 
 void arch_thread_construct_first(thread_t* t) {}

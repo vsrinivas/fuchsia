@@ -361,12 +361,6 @@ zx_status_t arch_set_vector_regs(thread_t* thread, const zx_thread_state_vector_
                                  RegAccess::kSet);
 }
 
-static void print_debug_state(const x86_debug_state_t* debug_state) {
-  printf("DR0=0x%lx, DR1=0x%lx, DR2=0x%lx, DR3=0x%lx, DR6=0x%lx, DR7=0x%lx\n", debug_state->dr[0],
-         debug_state->dr[1], debug_state->dr[2], debug_state->dr[3], debug_state->dr6,
-         debug_state->dr7);
-}
-
 zx_status_t arch_get_debug_regs(thread_t* thread, zx_thread_state_debug_regs* out) {
   Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 

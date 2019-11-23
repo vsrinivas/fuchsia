@@ -524,7 +524,7 @@ void DebuggedProcess::EnqueueStepOver(ProcessBreakpoint* process_breakpoint,
   step_over_queue_.push_back(std::move(ticket));
 
   DEBUG_LOG(Process) << LogPreamble(this) << "[PB: 0x" << std::hex << process_breakpoint->address()
-                     << "] Enqueing thread " << thread->koid()
+                     << "] Enqueing thread " << std::dec << thread->koid()
                      << " for step over. Queue size: " << step_over_queue_.size();
 
   // If the queue already had an element, we wait until that element is done.
