@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/sktool_bin_test"
+    }
+}

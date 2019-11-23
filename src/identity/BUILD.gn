@@ -8,6 +8,7 @@ group("identity") {
     ":tests",
     "bin",
     "lib",
+    "tools",
   ]
 }
 
@@ -19,5 +20,6 @@ group("tests") {
     "lib:tests",
     "tests/account_manager_integration",
     "tests/token_manager_integration",
+    "tools:tests",
   ]
 }

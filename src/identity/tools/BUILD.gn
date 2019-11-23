@@ -1,0 +1,34 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("tools") {
+  testonly = true
+  deps = [
+    ":tests",
+    "sktool",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    ":identity_tools_unittests",
+  ]
+}
+
+test_package("identity_tools_unittests") {
+  deps = [
+    "sktool:bin_test",
+  ]
+
+  tests = [
+    {
+      name = "sktool_bin_test"
+      environments = basic_envs
+    },
+  ]
+}
