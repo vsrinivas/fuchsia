@@ -150,10 +150,14 @@ config("release") {
     "-ffunction-sections",
   ]
   ldflags = cflags
+
   if (current_os == "mac") {
     ldflags += [ "-Wl,-dead_strip" ]
   } else {
-    ldflags += [ "-Wl,--gc-sections" ]
+    ldflags += [
+      "-Wl,-O2",
+      "-Wl,--gc-sections",
+    ]
   }
 }
 

@@ -197,6 +197,7 @@ def main():
             "-Clink-arg=--threads",
             "-Clink-arg=-dynamic-linker=ld.so.1",
             "-Clink-arg=--icf=all",
+            "-Clink-arg=-O2",
         ]
         if args.target.startswith("aarch64"):
             call_args += ["-Clink-arg=--fix-cortex-a53-843419"]
