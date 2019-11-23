@@ -12,8 +12,6 @@
 // Set to 1 to enable debug traces to stdout.
 #define DEBUG_SWAPCHAIN 0
 
-#define UNUSED(x) ((void)x)
-
 #if DEBUG_SWAPCHAIN
 #include <unistd.h>
 #define PRINT(...) (printf(__VA_ARGS__), fflush(stdout))

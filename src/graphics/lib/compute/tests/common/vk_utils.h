@@ -5,6 +5,7 @@
 #ifndef SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_VK_UTILS_H_
 #define SRC_GRAPHICS_LIB_COMPUTE_TESTS_COMMON_VK_UTILS_H_
 
+#include <stdbool.h>
 #include <vulkan/vulkan.h>
 
 #include "utils.h"  // For FUNC_ATTRIBUTE_NORETURN
@@ -110,7 +111,20 @@ vk_result_to_string(VkResult result);
 #define GET_VULKAN_DEVICE_PROC_ADDR(name)                                                          \
   PFN_##name name = (PFN_##name)vkGetDeviceProcAddr(device, #name)
 
-//
+// Print the content of a given VkInstanceCreateInfo to stderr. Useful for debugging.
+extern void
+vk_instance_create_info_print(const VkInstanceCreateInfo * info);
+
+// Print the content of a given VkDeviceCreateInfo to stderr. Useful for debugging.
+extern void
+vk_device_create_info_print(const VkDeviceCreateInfo * info);
+
+// Check that all bits in |image_usage| are supported by |format_features|
+// when that makes sense (i.e. not all image usage bits have a corresponding
+// format feature bit).
+extern bool
+vk_check_image_usage_vs_format_features(VkImageUsageFlags    image_usage,
+                                        VkFormatFeatureFlags format_features);
 
 #ifdef __cplusplus
 }

@@ -179,6 +179,10 @@ typedef struct vk_app_state_config_t
 
   bool require_swapchain;  // True if swapchain support is required.
 
+  bool disable_swapchain_present;  // True to disable swapchain presentation.
+  // This may not work on all platforms, and should only be used for benchmarking!
+  // NOTE: This is experimental, do not rely on this in the future!
+
 } vk_app_state_config_t;
 
 // Simple struct to gather application-specific Vulkan state for our test
@@ -226,6 +230,20 @@ vk_app_state_destroy(vk_app_state_t * app_state);
 // Dump state of a vk_app_state_t to stdout for debugging.
 extern void
 vk_app_state_print(const vk_app_state_t * app_state);
+
+// A small structure to list the indices of queue families initialized/used
+// by a given vk_app_instance_t.
+#define MAX_VK_QUEUE_FAMILIES 2
+
+typedef struct
+{
+  uint32_t count;
+  uint32_t indices[MAX_VK_QUEUE_FAMILIES];
+} vk_queue_families_t;
+
+// Return the number of queue families this instance supports.
+extern vk_queue_families_t
+vk_app_state_get_queue_families(const vk_app_state_t * app_state);
 
 // Create a presentation surface. |window_width| and |window_height| will be
 // ignored if presentation happens on the framebuffer. This requires that

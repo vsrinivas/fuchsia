@@ -47,12 +47,15 @@ graphics_compute_unittests("common_unittests") {
 source_set("common_vk") {
   public = [
     "common/vk_app_state.h",
+    "common/vk_strings.h",
     "common/vk_swapchain.h",
     "common/vk_utils.h",
   ]
   sources = [
     "common/vk_app_state.c",
     "common/vk_app_state.h",
+    "common/vk_strings.c",
+    "common/vk_strings.h",
     "common/vk_swapchain.c",
     "common/vk_swapchain.h",
     "common/vk_utils.c",
@@ -90,6 +93,8 @@ source_set("common_vk") {
 graphics_compute_unittests("common_vk_unittests") {
   sources = [
     "common/vk_app_state_unittest.cc",
+    "common/vk_strings_unittest.cc",
+    "common/vk_utils_unittest.cc",
   ]
   deps = [
     ":common_vk",

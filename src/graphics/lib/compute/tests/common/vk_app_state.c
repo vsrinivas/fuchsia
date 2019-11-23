@@ -13,6 +13,7 @@
 #include <string.h>
 
 #include "utils.h"
+#include "vk_strings.h"
 #include "vk_utils.h"
 
 #if VK_USE_PLATFORM_FUCHSIA
@@ -396,7 +397,7 @@ typedef struct
 } DeviceInfo;
 
 static DeviceInfo
-device_config_create(VkInstance instance, VkPhysicalDevice physical_device)
+device_info_create(VkInstance instance, VkPhysicalDevice physical_device)
 {
   GET_VULKAN_INSTANCE_PROC_ADDR(vkEnumerateDeviceExtensionProperties);
 
@@ -413,7 +414,7 @@ device_config_create(VkInstance instance, VkPhysicalDevice physical_device)
 }
 
 static bool
-device_config_has_extension(const DeviceInfo * info, const char * extension_name)
+device_info_has_extension(const DeviceInfo * info, const char * extension_name)
 {
   for (uint32_t nn = 0; nn < info->extensions_count; ++nn)
     {
@@ -424,7 +425,7 @@ device_config_has_extension(const DeviceInfo * info, const char * extension_name
 }
 
 static void
-device_config_destroy(DeviceInfo * info)
+device_info_destroy(DeviceInfo * info)
 {
   if (info->extensions_count > 0)
     {
@@ -816,7 +817,7 @@ debug_report_callback(VkDebugReportFlagsEXT      flags,
 // For each level, set |flag| appropriately.
 #define CASE_FOR_LEVEL(name)                                                                       \
   case VK_DEBUG_REPORT_##name##_BIT_EXT:                                                           \
-    flag = "VK_DEBUG_REPOR_" #name "_BIT_EXT";                                                     \
+    flag = "VK_DEBUG_REPORT_" #name "_BIT_EXT";                                                    \
     break;
 
       LIST_LEVELS(CASE_FOR_LEVEL)
@@ -967,6 +968,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     }
 
   bool require_swapchain = config->require_swapchain;
+
   if (require_swapchain)
     {
       string_list_append(&enabled_extensions, VK_KHR_SURFACE_EXTENSION_NAME);
@@ -976,7 +978,10 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
       // directly (another layer is provided to display in a window, but this one
       // is far more work to get everything working).
 #if VK_USE_PLATFORM_FUCHSIA
-      string_list_append(&enabled_layers, "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
+      const char * fuchsia_layer = config->disable_swapchain_present
+                                     ? "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb_skip_present"
+                                     : "VK_LAYER_FUCHSIA_imagepipe_swapchain_fb";
+      string_list_append(&enabled_layers, fuchsia_layer);
       string_list_append(&enabled_extensions, VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
 #else
       glfwInit();
@@ -986,7 +991,14 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
         {
           string_list_append(&enabled_extensions, glfw_extensions[n]);
         }
+      if (config->disable_swapchain_present)
+        fprintf(stderr, "WARNING: disable_swapchain_present ignored on this platform!\n");
 #endif
+    }
+  else if (config->disable_swapchain_present)
+    {
+      fprintf(stderr,
+              "WARNING: disable_swapchain_present ignored, since require_swapchain isn't set!\n");
     }
 
   VkInstanceCreateInfo const instance_create_info = {
@@ -1011,6 +1023,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     }
 
   vk(CreateInstance(&instance_create_info, NULL, &app_state->instance));
+
+  if (config->enable_debug_report)
+    vk_instance_create_info_print(&instance_create_info);
 
   instance_info_destroy(&instance_info);
 
@@ -1240,7 +1255,7 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   //
   // create queues
   //
-  uint32_t queue_families[2]  = { graphics_family, compute_family };
+  uint32_t queue_families[2]  = {};
   uint32_t queue_family_count = 0;
 
   if (graphics_family != UINT32_MAX)
@@ -1275,11 +1290,11 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
     static const char amd_shader_info_ext[]       = VK_AMD_SHADER_INFO_EXTENSION_NAME;
 
     VkInstance instance    = app_state->instance;
-    DeviceInfo device_info = device_config_create(instance, app_state->pd);
+    DeviceInfo device_info = device_info_create(instance, app_state->pd);
 
     // VK_EXT_subgroup_size_control
     if (config->enable_subgroup_size_control &&
-        device_config_has_extension(&device_info, subgroup_size_control_ext))
+        device_info_has_extension(&device_info, subgroup_size_control_ext))
       {
         string_list_append(&device_extensions, subgroup_size_control_ext);
         app_state->has_subgroup_size_control = true;
@@ -1287,13 +1302,13 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
 
     // VK_AMD_shader_info
     if (config->enable_amd_statistics &&
-        device_config_has_extension(&device_info, amd_shader_info_ext))
+        device_info_has_extension(&device_info, amd_shader_info_ext))
       {
         string_list_append(&device_extensions, amd_shader_info_ext);
         app_state->has_amd_statistics = true;
       }
 
-    device_config_destroy(&device_info);
+    device_info_destroy(&device_info);
   }
 
   //
@@ -1325,6 +1340,9 @@ vk_app_state_init(vk_app_state_t * app_state, const vk_app_state_config_t * conf
   };
 
   vk(CreateDevice(app_state->pd, &device_info, app_state->ac, &app_state->d));
+
+  if (config->enable_debug_report)
+    vk_device_create_info_print(&device_info);
 
   //
   // create the pipeline cache
@@ -1370,6 +1388,25 @@ vk_app_state_destroy(vk_app_state_t * app_state)
 #endif
 }
 
+vk_queue_families_t
+vk_app_state_get_queue_families(const vk_app_state_t * app_state)
+{
+  vk_queue_families_t result;
+  uint32_t            count = 0;
+  if (app_state->qfi != UINT32_MAX)
+    result.indices[count++] = app_state->qfi;
+
+  if (app_state->compute_qfi != UINT32_MAX)
+  {
+	ASSERT(count == 0 || count == 1);
+	if (count == 0 || app_state->compute_qfi != result.indices[0])
+		result.indices[count++] = app_state->compute_qfi;
+  }
+
+  result.count = count;
+  return result;
+}
+
 bool
 vk_app_state_poll_events(vk_app_state_t * app_state)
 {
@@ -1379,48 +1416,6 @@ vk_app_state_poll_events(vk_app_state_t * app_state)
 #else
   return glfw_poll_events();
 #endif
-}
-
-// Convert physical device type to a string.
-static const char *
-deviceTypeString(VkPhysicalDeviceType device_type)
-{
-  switch (device_type)
-    {
-      case VK_PHYSICAL_DEVICE_TYPE_OTHER:
-        return "OTHER";
-      case VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU:
-        return "INTEGRATED_GPU";
-      case VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU:
-        return "DISCRETE_GPU";
-      case VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU:
-        return "VIRTUAL_GPU";
-      case VK_PHYSICAL_DEVICE_TYPE_CPU:
-        return "CPU";
-      default:
-        return "UNKNOWN_VALUE";
-    }
-}
-
-static void
-size_to_string(size_t size, char * buffer, size_t buffer_size)
-{
-  if (size < 65536)
-    {
-      snprintf(buffer, buffer_size, "%u", (unsigned)size);
-    }
-  else if (size < 1024 * 1024)
-    {
-      snprintf(buffer, buffer_size, "%.1f kiB", size / 1024.);
-    }
-  else if (size < 1024 * 1024 * 1024)
-    {
-      snprintf(buffer, buffer_size, "%.1f MiB", size / (1024. * 1024.));
-    }
-  else
-    {
-      snprintf(buffer, buffer_size, "%1.f GiB", size / (1024. * 1024. * 1024.));
-    }
 }
 
 void
@@ -1440,50 +1435,22 @@ vk_app_state_print(const vk_app_state_t * app_state)
   printf("     driverVersion:    0x%x\n", app_state->pdp.driverVersion);
   printf("     vendorID:         0x%x\n", app_state->pdp.vendorID);
   printf("     deviceID:         0x%x\n", app_state->pdp.deviceID);
-  printf("     deviceType:       %s\n", deviceTypeString(app_state->pdp.deviceType));
+  printf("     deviceType:       %s\n",
+         vk_physical_device_type_to_string(app_state->pdp.deviceType));
   printf("     deviceName:       %s\n", app_state->pdp.deviceName);
 
   printf("  VkPhysicalDeviceMemoryProperties:\n");
   for (uint32_t n = 0; n < app_state->pdmp.memoryHeapCount; ++n)
     {
-      uint32_t flags = app_state->pdmp.memoryHeaps[n].flags;
-      char     size_str[32];
-      size_to_string(app_state->pdmp.memoryHeaps[n].size, size_str, sizeof(size_str));
-      printf("      heap index=%-2d size=%-8s flags=0x%08x", n, size_str, flags);
-#define FLAG_BIT(name)                                                                             \
-  do                                                                                               \
-    {                                                                                              \
-      if (flags & VK_MEMORY_HEAP_##name##_BIT)                                                     \
-        printf(" " #name);                                                                         \
-    }                                                                                              \
-  while (0)
-      FLAG_BIT(DEVICE_LOCAL);
-      FLAG_BIT(MULTI_INSTANCE);
-#undef FLAG_BIT
-      printf("\n");
+      printf("      heap index=%-2d %s\n",
+             n,
+             vk_memory_heap_to_string(&app_state->pdmp.memoryHeaps[n]));
     }
   for (uint32_t n = 0; n < app_state->pdmp.memoryTypeCount; ++n)
     {
-      uint32_t flags = app_state->pdmp.memoryTypes[n].propertyFlags;
-      printf("      type index=%-2d heap=%-2d flags=0x%08x",
+      printf("      type index=%-2d %s\n",
              n,
-             app_state->pdmp.memoryTypes[n].heapIndex,
-             flags);
-#define FLAG_BIT(name)                                                                             \
-  do                                                                                               \
-    {                                                                                              \
-      if (flags & VK_MEMORY_PROPERTY_##name##_BIT)                                                 \
-        printf(" " #name);                                                                         \
-    }                                                                                              \
-  while (0)
-      FLAG_BIT(DEVICE_LOCAL);
-      FLAG_BIT(HOST_VISIBLE);
-      FLAG_BIT(HOST_COHERENT);
-      FLAG_BIT(HOST_CACHED);
-      FLAG_BIT(LAZILY_ALLOCATED);
-      FLAG_BIT(PROTECTED);
-#undef FLAG_BIT
-      printf("\n");
+             vk_memory_type_to_string(&app_state->pdmp.memoryTypes[n]));
     }
 
   printf("  has_debug_report:           %s\n", app_state->has_debug_report ? "true" : "false");
@@ -1493,13 +1460,6 @@ vk_app_state_print(const vk_app_state_t * app_state)
          app_state->has_subgroup_size_control ? "true" : "false");
 
   printf("  Queue families:\n");
-  if (app_state->qfi != UINT32_MAX)
-    printf("    Graphics:  %u\n", app_state->qfi);
-  else
-    printf("    Graphics:  NONE\n");
-
-  if (app_state->compute_qfi != UINT32_MAX)
-    printf("    Compute:   %u\n", app_state->compute_qfi);
-  else
-    printf("    Compute:   NONE\n");
+  printf("    Graphics:  %s\n", vk_queue_family_index_to_string(app_state->qfi));
+  printf("    Compute:   %s\n", vk_queue_family_index_to_string(app_state->compute_qfi));
 }

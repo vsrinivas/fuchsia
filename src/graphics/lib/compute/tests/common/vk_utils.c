@@ -79,3 +79,114 @@ vk_panic_(VkResult result, const char * file, int line, const char * fmt, ...)
   fprintf(stderr, "\n");
   abort();
 }
+
+void
+vk_instance_create_info_print(const VkInstanceCreateInfo * info)
+{
+  fprintf(stderr, "Instance create info:\n");
+  fprintf(stderr, "  flags:          %u\n", info->flags);
+
+  const VkApplicationInfo * appInfo = info->pApplicationInfo;
+  fprintf(stderr, "  app info:\n");
+  fprintf(stderr, "    app name:       %s\n", appInfo->pApplicationName);
+  fprintf(stderr, "    app version:    %u\n", appInfo->applicationVersion);
+  fprintf(stderr, "    engine name:    %s\n", appInfo->pEngineName);
+  fprintf(stderr, "    engine version: %u\n", appInfo->engineVersion);
+  fprintf(stderr, "    api version:    %u\n", appInfo->apiVersion);
+
+  fprintf(stderr, "  layers (%u): ", info->enabledLayerCount);
+  for (uint32_t nn = 0; nn < info->enabledLayerCount; ++nn)
+    fprintf(stderr, " %s", info->ppEnabledLayerNames[nn]);
+  fprintf(stderr, "\n  extensions (%u): ", info->enabledExtensionCount);
+  for (uint32_t nn = 0; nn < info->enabledExtensionCount; ++nn)
+    fprintf(stderr, " %s", info->ppEnabledExtensionNames[nn]);
+  fprintf(stderr, "\n");
+}
+
+void
+vk_device_create_info_print(const VkDeviceCreateInfo * info)
+{
+  fprintf(stderr, "Device creation info:\n");
+  fprintf(stderr, "  flags:                 %u\n", info->flags);
+  fprintf(stderr, "  queueCreateInfoCount:  %u\n", info->queueCreateInfoCount);
+  if (info->queueCreateInfoCount)
+    {
+      for (uint32_t nn = 0; nn < info->queueCreateInfoCount; ++nn)
+        {
+          const VkDeviceQueueCreateInfo * qinfo = info->pQueueCreateInfos + nn;
+          fprintf(stderr, "    [%d] flags:       %u\n", nn, qinfo->flags);
+          fprintf(stderr, "        familyIndex: %u\n", qinfo->queueFamilyIndex);
+          fprintf(stderr, "        count:       %u\n", qinfo->queueCount);
+          if (qinfo->queueCount > 0)
+            {
+              fprintf(stderr, "        priorities: ");
+              for (uint32_t mm = 0; mm < qinfo->queueCount; ++mm)
+                fprintf(stderr, " %f", qinfo->pQueuePriorities[mm]);
+              fprintf(stderr, "\n");
+            }
+        }
+    }
+  fprintf(stderr, "  extensions (%d): ", info->enabledExtensionCount);
+  for (uint32_t nn = 0; nn < info->enabledExtensionCount; ++nn)
+    fprintf(stderr, " %s", info->ppEnabledExtensionNames[nn]);
+  if (info->pEnabledFeatures)
+    {
+      fprintf(stderr, "\n  features:\n");
+
+#define CHECK_FEATURE(feature)                                                                     \
+  do                                                                                               \
+    {                                                                                              \
+      if (info->pEnabledFeatures->feature == VK_TRUE)                                              \
+        {                                                                                          \
+          fprintf(stderr, "    %s\n", #feature);                                                   \
+        }                                                                                          \
+    }                                                                                              \
+  while (0);
+
+      CHECK_FEATURE(robustBufferAccess)
+      CHECK_FEATURE(shaderInt64)
+      CHECK_FEATURE(shaderFloat64)
+
+#undef CHECK_FEATURE
+
+      // Memory dump.
+      {
+        const uint32_t * data      = (const uint32_t *)info->pEnabledFeatures;
+        size_t           data_size = sizeof(info->pEnabledFeatures[0]);
+        for (uint32_t nn = 0; nn < data_size / 4; ++nn)
+          {
+            fprintf(stderr, " %02X", data[nn]);
+            if ((nn + 1) % 16 == 0)
+              fprintf(stderr, "\n");
+          }
+        fprintf(stderr, "\n");
+      }
+    }
+}
+
+bool
+vk_check_image_usage_vs_format_features(VkImageUsageFlags    image_usage,
+                                        VkFormatFeatureFlags format_features)
+{
+// Helper macro. |usage_| and |feature_| are abbreviated image usage and format
+// feature bit constants, respectively.
+#define CHECK_COMBO(usage_, feature_)                                                              \
+  if ((image_usage & VK_IMAGE_USAGE_##usage_##_BIT) != 0 &&                                        \
+      (format_features & VK_FORMAT_FEATURE_##feature_##_BIT) == 0)                                 \
+    {                                                                                              \
+      return false;                                                                                \
+    }
+
+  CHECK_COMBO(TRANSFER_SRC, TRANSFER_SRC)
+  CHECK_COMBO(TRANSFER_DST, TRANSFER_DST)
+  CHECK_COMBO(SAMPLED, SAMPLED_IMAGE)
+  CHECK_COMBO(STORAGE, STORAGE_IMAGE)
+  CHECK_COMBO(COLOR_ATTACHMENT, COLOR_ATTACHMENT)
+  CHECK_COMBO(DEPTH_STENCIL_ATTACHMENT, DEPTH_STENCIL_ATTACHMENT)
+
+  // CHECK_COMBO(TRANSIENT_ATTACHMENT, )  // No matching format feature flag.
+  // CHECK_COMBO(INPUT_ATTACHMENT, )      // No matching format feature flag.
+
+#undef CHECK_COMBO
+  return true;
+}

@@ -45,6 +45,31 @@ assert_panic_(const char * file, int line, const char * fmt, ...) FUNC_ATTRIBUTE
     }                                                                                              \
   while (0)
 
+// Use UNUSED(variable) to notify the compiler that |variable| is not used.
+// Useful when implementation callback functions, as in:
+//
+//   void my_callback(foo_t * foo_param) {
+//      // Do nothing
+//      UNUSED(foo_param);
+//   }
+//
+#define UNUSED(variable) (void)(variable)
+
+// Force macro expansion of an expression, This is useful because using
+// # or ## within the expression usually prevents macro expansion.
+// Usage is:
+//    #define foo 10
+//    #define bar 20
+//    #define CALL1 CALL(foo ## bar)                // expands to CALL(foobar)
+//    #define CALL2 CALL(MACRO_EXPAND(foo ## bar))  // expands to CALL(1020)
+//
+#define MACRO_EXPAND(x) MACRO_EXPAND_(x)
+#define MACRO_EXPAND_(x) x
+
+// Force macro stringificaton of an expression, even if it uses # or ##
+#define MACRO_STRING(x) MACRO_STRING_(x)
+#define MACRO_STRING_(x) #x
+
 #ifdef __cplusplus
 }
 #endif
