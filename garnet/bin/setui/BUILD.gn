@@ -43,6 +43,9 @@ rustc_library("lib") {
     "//sdk/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
     "//sdk/fidl/fuchsia.ui.policy:fuchsia.ui.policy-rustc",
     "//sdk/fidl/fuchsia.ui.types:fuchsia.ui.types-rustc",
+    "//src/lib/icu/rust/rust_icu_ucal",
+    "//src/lib/icu/rust/rust_icu_uenum",
+    "//src/lib/icu_data/rust/icu_data",
     "//third_party/rust_crates:bitflags",
     "//third_party/rust_crates:byteorder",
     "//third_party/rust_crates:failure",
@@ -68,6 +71,13 @@ test_package("setui_service_tests") {
     {
       name = "settings_lib_test"
       environments = basic_envs
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
     },
   ]
 }
@@ -112,6 +122,14 @@ package("setui_service") {
     {
       path = rebase_path("meta/setui_service.cmx")
       dest = "setui_service.cmx"
+    },
+  ]
+
+  # Timezone resources, needed to validate input to fuchsia.settings.intl
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
     },
   ]
 }

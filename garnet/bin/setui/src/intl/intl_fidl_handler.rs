@@ -101,8 +101,8 @@ impl IntlFidlHandler {
             Ok(_) => {
                 fasync::spawn(async move {
                     let result = match response_rx.await {
-                        Ok(_) => responder.send(&mut Ok(())),
-                        Err(_) => responder.send(&mut Err(Error::Failed)),
+                        Ok(Ok(_)) => responder.send(&mut Ok(())),
+                        _ => responder.send(&mut Err(Error::Failed)),
                     };
                     result.log_fidl_response_error(IntlMarker::DEBUG_NAME);
                 });
