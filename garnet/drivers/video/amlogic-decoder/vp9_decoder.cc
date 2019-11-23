@@ -262,6 +262,10 @@ zx_status_t Vp9Decoder::InitializeHardware() {
       owner_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kHevc, is_secure());
   if (status != ZX_OK)
     return status;
+  if (should_inject_initialization_fault_for_testing_) {
+    should_inject_initialization_fault_for_testing_ = false;
+    return ZX_ERR_BAD_STATE;
+  }
   FirmwareBlob::FirmwareType firmware_type =
       IsDeviceAtLeast(owner_->device_type(), DeviceType::kG12A)
           ? FirmwareBlob::FirmwareType::kDec_Vp9_G12a
@@ -897,6 +901,8 @@ void Vp9Decoder::ConfigureFrameOutput(bool bit_depth_8) {
 }
 
 bool Vp9Decoder::CanBeSwappedIn() {
+  if (have_fatal_error_)
+    return false;
   bool has_available_output_frames = false;
   for (uint32_t i = 0; i < frames_.size(); i++) {
     if (frames_[i]->refcount == 0) {

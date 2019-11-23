@@ -5,12 +5,13 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_MPEG12_DECODER_H_
 
-#include <ddk/platform-defs.h>
 #include <lib/device-protocol/platform-device.h>
-#include <ddk/protocol/platform/device.h>
 
 #include <thread>
 #include <vector>
+
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform/device.h>
 
 #include "registers.h"
 #include "video_decoder.h"
@@ -27,6 +28,7 @@ class Mpeg12Decoder : public VideoDecoder {
   void ReturnFrame(std::shared_ptr<VideoFrame> video_frame) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
+  void CallErrorHandler() override { exit(-1); }
 
  private:
   struct ReferenceFrame {

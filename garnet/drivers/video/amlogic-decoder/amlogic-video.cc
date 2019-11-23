@@ -361,12 +361,14 @@ void AmlogicVideo::SwapOutCurrentInstance() {
     current_instance_->InitializeInputContext();
     if (core_->InitializeInputContext(current_instance_->input_context(),
                                       current_instance_->decoder()->is_secure()) != ZX_OK) {
-      // TODO: exit cleanly
-      exit(-1);
+      video_decoder_->CallErrorHandler();
+      // Continue trying to swap out.
     }
   }
   video_decoder_->SetSwappedOut();
-  core_->SaveInputContext(current_instance_->input_context());
+  if (current_instance_->input_context()) {
+    core_->SaveInputContext(current_instance_->input_context());
+  }
   core_->StopDecoding();
   core_->WaitForIdle();
   // TODO: Avoid power off if swapping to another instance on the same core.
@@ -420,8 +422,17 @@ void AmlogicVideo::SwapInCurrentInstance() {
   if (status != ZX_OK) {
     // Probably failed to load the right firmware.
     DECODE_ERROR("Failed to initialize hardware: %d\n", status);
-    // TODO: exit cleanly
-    exit(-1);
+    core_->PowerOff();
+    core_ = nullptr;
+    swapped_out_instances_.push_back(std::move(current_instance_));
+    VideoDecoder* video_decoder = video_decoder_;
+    video_decoder_ = nullptr;
+    stream_buffer_ = nullptr;
+    video_decoder->CallErrorHandler();
+    // CallErrorHandler should have marked the decoder as having a fatal error
+    // so it will never be rescheduled.
+    TryToReschedule();
+    return;
   }
   if (!current_instance_->input_context()) {
     InitializeStreamInput(false);

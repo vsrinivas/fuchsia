@@ -99,8 +99,9 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
       DecoderInstance* other_instance = video_->swapped_out_instances_.front().get();
       // Only try to execute from the other instance if it hasn't decoded all
       // its data yet.
-      if (!other_instance->input_context() || (other_instance->input_context()->processed_video <
-                                               other_instance->stream_buffer()->data_size())) {
+      if (other_instance->decoder()->CanBeSwappedIn() &&
+          (!other_instance->input_context() || (other_instance->input_context()->processed_video <
+                                                other_instance->stream_buffer()->data_size()))) {
         video_->current_instance_ = std::move(video_->swapped_out_instances_.front());
         video_->swapped_out_instances_.pop_front();
         swapped_in_other = true;
@@ -399,7 +400,7 @@ class TestVP9 {
     video.reset();
   }
 
-  static void DecodeMultiInstance() {
+  static void DecodeMultiInstance(bool inject_initialization_fault) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -460,10 +461,15 @@ class TestVP9 {
     }
     uint32_t frame_count1 = 0;
     std::promise<void> wait_valid1;
+    bool got_error = false;
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
-      video->swapped_out_instances_.back()->decoder()->SetFrameReadyNotifier(
-          [&video, &frame_count1, &wait_valid1](std::shared_ptr<VideoFrame> frame) {
+      VideoDecoder* second_decoder = video->swapped_out_instances_.back()->decoder();
+      second_decoder->SetFrameReadyNotifier(
+          [&video, &frame_count1, &wait_valid1,
+           inject_initialization_fault](std::shared_ptr<VideoFrame> frame) {
+            // This is called from the interrupt handler, which already holds the lock.
+            video->AssertVideoDecoderLockHeld();
             ++frame_count1;
             DLOG("Decoder 2 Got frame %d\n", frame_count1);
             EXPECT_EQ(320u, frame->display_width);
@@ -472,9 +478,22 @@ class TestVP9 {
             DumpVideoFrameToFile(frame.get(), "/tmp/bearmulti2.yuv");
 #endif
             ReturnFrame(video.get(), frame);
-            if (frame_count1 == 30)
-              wait_valid1.set_value();
+            constexpr uint32_t kFrameToFaultAt = 20;
+            if (frame_count1 == kFrameToFaultAt && inject_initialization_fault) {
+              static_cast<Vp9Decoder*>(video->video_decoder())->InjectInitializationFault();
+            }
+            if (inject_initialization_fault) {
+              // If an initialization fault was injected, decoding shouldn't continue.
+              EXPECT_LE(frame_count1, kFrameToFaultAt);
+            } else {
+              if (frame_count1 == 30)
+                wait_valid1.set_value();
+            }
           });
+      second_decoder->SetErrorHandler([&got_error, &wait_valid1]() {
+        got_error = true;
+        wait_valid1.set_value();
+      });
     }
 
     // The default stack size is ZIRCON_DEFAULT_STACK_SIZE - 256kB.
@@ -530,6 +549,15 @@ class TestVP9 {
     EXPECT_EQ(std::future_status::ready,
               wait_valid1.get_future().wait_for(std::chrono::seconds(10)));
 
+    EXPECT_EQ(49u, frame_count);
+    if (inject_initialization_fault) {
+      EXPECT_TRUE(got_error);
+      EXPECT_EQ(20u, frame_count1);
+    } else {
+      EXPECT_FALSE(got_error);
+      EXPECT_EQ(30u, frame_count1);
+    }
+
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->current_instance_.reset();
@@ -582,4 +610,6 @@ TEST(VP9, DecodeResetHardwareWithParser) {
   TestVP9::DecodeResetHardware("/tmp/bearvp9resetwithparser.yuv", true);
 }
 
-TEST(VP9, DecodeMultiInstance) { TestVP9::DecodeMultiInstance(); }
+TEST(VP9, DecodeMultiInstance) { TestVP9::DecodeMultiInstance(false); }
+
+TEST(VP9, DecodeMultiInstanceWithInitializationFault) { TestVP9::DecodeMultiInstance(true); }

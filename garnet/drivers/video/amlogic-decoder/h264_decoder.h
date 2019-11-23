@@ -5,9 +5,9 @@
 #ifndef GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_H264_DECODER_H_
 #define GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_H264_DECODER_H_
 
-#include <ddk/io-buffer.h>
-
 #include <vector>
+
+#include <ddk/io-buffer.h>
 
 #include "internal_buffer.h"
 #include "registers.h"
@@ -34,6 +34,7 @@ class H264Decoder : public VideoDecoder {
   void SetInitializeFramesHandler(InitializeFramesHandler handler) override;
   // All H264Decoder errors require creating a new H264Decoder to recover.
   void SetErrorHandler(fit::closure error_handler) override;
+  void CallErrorHandler() override { error_handler_(); }
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;

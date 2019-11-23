@@ -82,6 +82,10 @@ class Vp9Decoder : public VideoDecoder {
   void SetEosHandler(EosHandler eos_handler) override;
   void ReturnFrame(std::shared_ptr<VideoFrame> frame) override;
   void SetErrorHandler(fit::closure error_handler) override;
+  void CallErrorHandler() override {
+    have_fatal_error_ = true;
+    error_handler_();
+  }
   void SetCheckOutputReady(CheckOutputReady check_output_ready) override;
   void InitializedFrames(std::vector<CodecFrame> frames, uint32_t width, uint32_t height,
                          uint32_t stride) override;
@@ -108,6 +112,8 @@ class Vp9Decoder : public VideoDecoder {
   void set_reallocate_buffers_next_frame_for_testing() {
     reallocate_buffers_next_frame_for_testing_ = true;
   }
+
+  void InjectInitializationFault() { should_inject_initialization_fault_for_testing_ = true; }
 
  private:
   friend class Vp9UnitTest;
@@ -309,6 +315,8 @@ class Vp9Decoder : public VideoDecoder {
   // This is used to force new buffers to be allocated without needing a test stream that
   // resizes.
   bool reallocate_buffers_next_frame_for_testing_ = false;
+  // This forces the next InitializeHardware call to fail.
+  bool should_inject_initialization_fault_for_testing_ = false;
 
   PictureData last_frame_data_;
   PictureData current_frame_data_;
@@ -329,6 +337,7 @@ class Vp9Decoder : public VideoDecoder {
   Frame* current_reference_frames_[3] = {};
 
   bool use_compressed_output_ = {};
+  bool have_fatal_error_ = false;
 };
 
 #endif  // GARNET_DRIVERS_VIDEO_AMLOGIC_DECODER_VP9_DECODER_H_
