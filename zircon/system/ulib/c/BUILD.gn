@@ -30,6 +30,10 @@ zx_library("c") {
   # Don't link against the shared libc++.
   configs += [ "$zx/public/gn/config:static-libc++" ]
 
+  # TODO(33224): Enabling ICF for libc breaks some tests.  Turn it on
+  # when that's figured out and fix.
+  configs += [ "$zx/public/gn/config:no-icf" ]
+
   metadata = {
     # This library is on the allowlist for driver() shared library deps.
     # It doesn't cause driver-denylist-check.sh to fail, and it prunes the
