@@ -99,10 +99,6 @@ static const char* zedboot_banner =
     "\n";
 
 int main(int argc, char** argv) {
-  if (debuglog_init() < 0) {
-    return -1;
-  }
-
   const char* interface = NULL;
   bool print_nodename_and_exit = false;
   bool should_advertise = false;
@@ -117,6 +113,12 @@ int main(int argc, char** argv) {
   if (g_netbootloader && !g_all_features) {
     printf("netsvc: fatal: --netboot requires --all-features\n");
     return -1;
+  }
+
+  if (g_all_features) {
+    if (debuglog_init() < 0) {
+      return -1;
+    }
   }
 
   printf("netsvc: running in %s mode\n", g_all_features ? "full" : "limited");
@@ -159,15 +161,13 @@ int main(int argc, char** argv) {
         printf("netsvc: netifc_poll() failed - terminating\n");
         break;
       }
-      zx_time_t now = zx_clock_get_monotonic();
 
-      if (g_all_features) {
-        if (now > debuglog_next_timeout()) {
-          debuglog_timeout_expired();
-        }
-        if (now > tftp_next_timeout()) {
-          tftp_timeout_expired();
-        }
+      zx_time_t now = zx_clock_get_monotonic();
+      if (now > debuglog_next_timeout()) {
+        debuglog_timeout_expired();
+      }
+      if (now > tftp_next_timeout()) {
+        tftp_timeout_expired();
       }
     }
     netifc_close();
