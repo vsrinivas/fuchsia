@@ -21,13 +21,14 @@ const SLOW_SCAN_TIMEOUT_MS: i64 = 2000;
 const QUICK_SCAN_TIMEOUT_MS: i64 = 100;
 // What constitutes a large change in brightness?
 // This seems small but it is significant and works nicely.
-const LARGE_CHANGE_THRESHOLD_NITS: i32 = 4;
+const LARGE_CHANGE_THRESHOLD_NITS: i32 = 0.016 as i32;
 
 //This is the default table, and a default curve will be generated base on this table.
 //This will be replaced once SetBrightnessTable is called.
 lazy_static! {
     static ref BRIGHTNESS_TABLE: BrightnessTable = {
         let mut lux_to_nits = Vec::new();
+        lux_to_nits.push(BrightnessPoint { ambient_lux: 0., display_nits: 0. });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 10., display_nits: 10. });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 30., display_nits: 20. });
         lux_to_nits.push(BrightnessPoint { ambient_lux: 60., display_nits: 40. });
@@ -47,7 +48,6 @@ pub struct Control {
     set_brightness_abort_handle: Option<AbortHandle>,
     auto_brightness_on: bool,
     auto_brightness_abort_handle: AbortHandle,
-    max_brightness: f64,
     spline: Spline<f32, f32>,
 }
 
@@ -76,7 +76,6 @@ impl Control {
             set_brightness_abort_handle,
             auto_brightness_on,
             auto_brightness_abort_handle,
-            max_brightness: 250.0,
             spline: spline_arg,
         }
     }
@@ -144,10 +143,9 @@ impl Control {
         }
 
         // TODO(b/138455663): remove this when the driver changes.
-        let adjusted_value = self.convert_to_scaled_value_based_on_max_brightness(value);
-        let nits = num_traits::clamp(adjusted_value, 0, self.max_brightness as u16);
+        let value = num_traits::clamp(value, 0.0, 1.0);
         let backlight_clone = self.backlight.clone();
-        self.set_brightness_abort_handle = Some(set_brightness(nits, backlight_clone, false).await);
+        self.set_brightness_abort_handle = Some(set_brightness(value, backlight_clone).await);
     }
 
     async fn watch_current_brightness(&mut self) -> f64 {
@@ -156,18 +154,10 @@ impl Control {
         fx_log_info!("Received get current brightness request");
         let backlight_clone = self.backlight.clone();
         let backlight = backlight_clone.lock().await;
-        if self.auto_brightness_on {
-            backlight.get_brightness(true).await.unwrap_or_else(|e| {
-                fx_log_err!("Failed to get brightness: {}", e);
-                self.max_brightness
-            })
-        } else {
-            let brightness = backlight.get_brightness(false).await.unwrap_or_else(|e| {
-                fx_log_err!("Failed to get brightness: {}", e);
-                self.max_brightness
-            });
-            self.convert_from_scaled_value_based_on_max_brightness(brightness)
-        }
+        backlight.get_brightness().await.unwrap_or_else(|e| {
+            fx_log_err!("Failed to get brightness: {}", e);
+            1.0
+        })
     }
 
     /// auto brightness need to stop at this point or not
@@ -183,18 +173,6 @@ impl Control {
                 self.spline.clone(),
             );
         }
-    }
-
-    /// Converts from our FIDL's 0.0-1.0 value to backlight's 0-max_brightness value
-    fn convert_to_scaled_value_based_on_max_brightness(&self, value: f32) -> u16 {
-        let value = num_traits::clamp(value, 0.0, 1.0);
-        (value * self.max_brightness as f32) as u16
-    }
-
-    /// Converts from backlight's 0-max_brightness value to our FIDL's 0.0-1.0 value
-    fn convert_from_scaled_value_based_on_max_brightness(&self, value: f64) -> f64 {
-        let value = num_traits::clamp(value, 0.0, self.max_brightness);
-        value / self.max_brightness
     }
 }
 
@@ -239,21 +217,26 @@ fn start_auto_brightness_task(
     fasync::spawn(
         Abortable::new(
             async move {
+                let max_brightness = {
+                    let backlight = backlight.lock().await;
+                    backlight.get_max_absolute_brightness()
+                };
                 let mut set_brightness_abort_handle = None::<AbortHandle>;
                 // initialize to an impossible number
-                let mut last_nits: i32 = -1000;
+                let mut last_value: i32 = -1;
                 loop {
                     let sensor = sensor.clone();
-                    let nits = read_sensor_and_get_brightness(sensor, &spline).await;
+                    let value =
+                        read_sensor_and_get_brightness(sensor, &spline, max_brightness).await;
                     let backlight_clone = backlight.clone();
                     if let Some(handle) = set_brightness_abort_handle {
                         handle.abort();
                     }
                     set_brightness_abort_handle =
-                        Some(set_brightness(nits, backlight_clone, true).await);
+                        Some(set_brightness(value, backlight_clone).await);
                     let large_change =
-                        (last_nits as i32 - nits as i32).abs() > LARGE_CHANGE_THRESHOLD_NITS;
-                    last_nits = nits as i32;
+                        (last_value as i32 - value as i32).abs() > LARGE_CHANGE_THRESHOLD_NITS;
+                    last_value = value as i32;
                     let delay_timeout =
                         if large_change { QUICK_SCAN_TIMEOUT_MS } else { SLOW_SCAN_TIMEOUT_MS };
                     fuchsia_async::Timer::new(Duration::from_millis(delay_timeout).after_now())
@@ -270,7 +253,8 @@ fn start_auto_brightness_task(
 async fn read_sensor_and_get_brightness(
     sensor: Arc<Mutex<dyn SensorControl>>,
     spline: &Spline<f32, f32>,
-) -> u16 {
+    max_brightness: f64,
+) -> f32 {
     let lux = {
         // Get the sensor reading in its own mutex block
         let sensor = sensor.lock().await;
@@ -279,56 +263,40 @@ async fn read_sensor_and_get_brightness(
         let report = fut.await.expect("Could not read from the sensor");
         report.illuminance
     };
-    brightness_curve_lux_to_nits(lux, spline).await
+    brightness_curve_lux_to_nits(lux, spline).await / max_brightness as f32
 }
 
-/// Sets the appropriate backlight brightness based on the ambient light sensor reading.
-/// This will be a brightness curve but for the time being we know that the sensor
-/// goes from 0 to 800 for the office and the backlight takes 0-255 so we take a simple approach.
-
-async fn brightness_curve_lux_to_nits(lux: u16, spline: &Spline<f32, f32>) -> u16 {
+async fn brightness_curve_lux_to_nits(lux: u16, spline: &Spline<f32, f32>) -> f32 {
     let result = (*spline).clamped_sample(lux as f32);
     match result {
         Some(nits) => {
-            return nits as u16;
+            return nits;
         }
-        None => return 1 as u16,
+        None => return 1.0,
     }
 }
 
 /// Sets the brightness of the backlight to a specific value.
 /// An abortable task is spawned to handle this as it can take a while to do.
-async fn set_brightness(
-    nits: u16,
-    backlight: Arc<Mutex<dyn BacklightControl>>,
-    auto_brightness_on: bool,
-) -> AbortHandle {
+async fn set_brightness(value: f32, backlight: Arc<Mutex<dyn BacklightControl>>) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
         Abortable::new(
             async move {
                 let mut backlight = backlight.lock().await;
-                let max_brightness = backlight.get_max_absolute_brightness();
-                let current_nits = {
-                    let fut = backlight.get_brightness(auto_brightness_on);
+                let current_value = {
+                    let fut = backlight.get_brightness();
                     fut.await.unwrap_or_else(|e| {
-                        fx_log_err!("Failed to get backlight: {}. assuming 200", e);
-                        200.0
-                    }) as u16
+                        fx_log_err!("Failed to get backlight: {}. assuming 1.0", e);
+                        1.0
+                    }) as f32
                 };
-                let set_brightness = |nits| {
+                let set_brightness = |value| {
                     backlight
-                        .set_brightness(nits, auto_brightness_on)
+                        .set_brightness(value)
                         .unwrap_or_else(|e| fx_log_err!("Failed to set backlight: {}", e))
                 };
-                set_brightness_slowly(
-                    current_nits,
-                    nits,
-                    set_brightness,
-                    10.millis(),
-                    max_brightness,
-                )
-                .await;
+                set_brightness_slowly(current_value, value, set_brightness, 10.millis()).await;
             },
             abort_registration,
         )
@@ -342,27 +310,24 @@ async fn set_brightness(
 /// The time per step can be changed if needed e.g. to fade up slowly and down quickly.
 /// When testing we set time_per_step to zero.
 async fn set_brightness_slowly(
-    current_nits: u16,
-    to_nits: u16,
+    current_value: f32,
+    to_value: f32,
     mut set_brightness: impl FnMut(f64),
     time_per_step: Duration,
-    max_brightness: f64,
 ) {
-    let mut current_nits = current_nits;
-    let to_nits = num_traits::clamp(to_nits, 0, max_brightness as u16);
-    assert!(to_nits <= max_brightness as u16);
-    assert!(current_nits <= max_brightness as u16);
-    let difference = to_nits as i16 - current_nits as i16;
-    // TODO(kpt): Assume step size of 1, change when driver accepts more values (b/138455166)
-    let steps = difference.abs();
+    let mut current_value = current_value;
+    let to_value = num_traits::clamp(to_value, 0.0, 1.0);
+    assert!(to_value <= 1.0);
+    assert!(current_value <= 1.0);
+    let difference = to_value - current_value;
+    // TODO(kpt): Steps is determined basing on the change size, change when driver accepts more values (b/138455166)
+    let steps = (difference.abs() / 0.005) as u16;
 
     if steps > 0 {
-        let step_size = difference / steps;
+        let step_size = difference / steps as f32;
         for _i in 0..steps {
-            // Don't go below 1 so that we can see it at night.
-            current_nits =
-                num_traits::clamp(current_nits as i16 + step_size, 1, max_brightness as i16) as u16;
-            set_brightness(current_nits as f64);
+            current_value = current_value + step_size;
+            set_brightness(current_value as f64);
             if time_per_step.into_millis() > 0 {
                 fuchsia_async::Timer::new(time_per_step.after_now()).await;
             }
@@ -370,7 +335,7 @@ async fn set_brightness_slowly(
     }
     // Make sure we get to the correct value, there may be rounding errors
 
-    set_brightness(to_nits as f64);
+    set_brightness(to_value as f64);
 }
 
 #[cfg(test)]
@@ -408,11 +373,11 @@ mod tests {
 
     #[async_trait]
     impl BacklightControl for MockBacklight {
-        async fn get_brightness(&self, _auto_brightness_on: bool) -> Result<f64, Error> {
+        async fn get_brightness(&self) -> Result<f64, Error> {
             Ok(self.value)
         }
 
-        fn set_brightness(&mut self, value: f64, _auto_brightness_on: bool) -> Result<(), Error> {
+        fn set_brightness(&mut self, value: f64) -> Result<(), Error> {
             self.value = value;
             Ok(())
         }
@@ -433,12 +398,8 @@ mod tests {
         (sensor, backlight)
     }
 
-    fn approx(v: f64) -> f64 {
-        (v * 10.0).round() / 10.0
-    }
-
     fn generate_control_struct() -> Control {
-        let (sensor, _backlight) = set_mocks(400, 253.0);
+        let (sensor, _backlight) = set_mocks(400, 0.5);
         let set_brightness_abort_handle = None::<AbortHandle>;
         let (auto_brightness_abort_handle, _abort_registration) = AbortHandle::new_pair();
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
@@ -450,7 +411,6 @@ mod tests {
             set_brightness_abort_handle,
             auto_brightness_on: true,
             auto_brightness_abort_handle,
-            max_brightness: 250.0,
             spline: spline_arg,
         }
     }
@@ -468,22 +428,29 @@ mod tests {
         Spline::from_iter(lux_to_nits_table_to_splines.iter().cloned())
     }
 
+    fn cmp_float(value1: f32, value2: f32) -> bool {
+        (value1 - value2).abs() < 0.01
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_brightness_curve() {
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
 
-        assert_eq!(10, brightness_curve_lux_to_nits(0, &spline).await);
-        assert_eq!(10, brightness_curve_lux_to_nits(1, &spline).await);
-        assert_eq!(10, brightness_curve_lux_to_nits(2, &spline).await);
-        assert_eq!(12, brightness_curve_lux_to_nits(15, &spline).await);
-        assert_eq!(13, brightness_curve_lux_to_nits(16, &spline).await);
-        assert_eq!(70, brightness_curve_lux_to_nits(100, &spline).await);
-        assert_eq!(110, brightness_curve_lux_to_nits(150, &spline).await);
-        assert_eq!(151, brightness_curve_lux_to_nits(200, &spline).await);
-        assert_eq!(190, brightness_curve_lux_to_nits(240, &spline).await);
-        assert_eq!(250, brightness_curve_lux_to_nits(300, &spline).await);
+        assert_eq!(cmp_float(0., brightness_curve_lux_to_nits(0, &spline).await), true);
+        assert_eq!(cmp_float(1., brightness_curve_lux_to_nits(1, &spline).await), true);
+        assert_eq!(cmp_float(2., brightness_curve_lux_to_nits(2, &spline).await), true);
+        assert_eq!(cmp_float(12.5, brightness_curve_lux_to_nits(15, &spline).await), true);
+        assert_eq!(cmp_float(13., brightness_curve_lux_to_nits(16, &spline).await), true);
+        assert_eq!(cmp_float(70., brightness_curve_lux_to_nits(100, &spline).await), true);
+        assert_eq!(cmp_float(110., brightness_curve_lux_to_nits(150, &spline).await), true);
+        assert_eq!(
+            cmp_float(151.66 as f32, brightness_curve_lux_to_nits(200, &spline).await),
+            true
+        );
+        assert_eq!(cmp_float(190. as f32, brightness_curve_lux_to_nits(240, &spline).await), true);
+        assert_eq!(cmp_float(250. as f32, brightness_curve_lux_to_nits(300, &spline).await), true);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -503,81 +470,71 @@ mod tests {
             BrightnessTable { points: lux_to_nits }
         };
         control.set_brightness_table(brightness_table).await;
-        assert_eq!(50, brightness_curve_lux_to_nits(0, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(1, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(2, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(15, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(16, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(100, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(150, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(200, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(240, &control.spline).await);
-        assert_eq!(50, brightness_curve_lux_to_nits(300, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(0, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(1, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(2, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(15, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(16, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(100, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(150, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(200, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(240, &control.spline).await);
+        assert_eq!(50.0, brightness_curve_lux_to_nits(300, &control.spline).await);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_in_range() {
         let mut result = Vec::new();
         let set_brightness = |nits| {
-            result.push(nits as u16);
+            result.push(nits as f32);
         };
-        set_brightness_slowly(100, 200, set_brightness, 0.millis(), 250.0).await;
-        assert_eq!(101, result.len(), "wrong length");
-        assert_eq!(101, result[0]);
-        assert_eq!(102, result[1]);
-        assert_eq!(151, result[50]);
-        assert_eq!(199, result[98]);
-        assert_eq!(200, result[99]);
-        assert_eq!(200, result[100]);
+        set_brightness_slowly(0.4, 0.8, set_brightness, 0.millis()).await;
+        assert_eq!(81, result.len(), "wrong length");
+        assert_eq!(cmp_float(0.40, result[0]), true);
+        assert_eq!(cmp_float(0.41, result[1]), true);
+        assert_eq!(cmp_float(0.47, result[15]), true);
+        assert_eq!(cmp_float(0.52, result[25]), true);
+        assert_eq!(cmp_float(0.57, result[35]), true);
+        assert_eq!(cmp_float(0.62, result[45]), true);
+        assert_eq!(cmp_float(0.72, result[65]), true);
+        assert_eq!(cmp_float(0.75, result[70]), true);
+        assert_eq!(cmp_float(0.79, result[79]), true);
+        assert_eq!(cmp_float(0.80, result[80]), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_min() {
         let mut result = Vec::new();
         let set_brightness = |nits| {
-            result.push(nits as u16);
+            result.push(nits as f32);
         };
-        set_brightness_slowly(100, 0, set_brightness, 0.millis(), 250.0).await;
-        assert_eq!(101, result.len(), "wrong length");
-        assert_eq!(99, result[0]);
-        assert_eq!(98, result[1]);
-        assert_eq!(49, result[50]);
-        assert_eq!(2, result[97]);
-        assert_eq!(1, result[99]);
-        assert_eq!(0, result[100]);
+        set_brightness_slowly(0.4, 0.0, set_brightness, 0.millis()).await;
+        assert_eq!(81, result.len(), "wrong length");
+        assert_eq!(cmp_float(0.39, result[0]), true);
+        assert_eq!(cmp_float(0.39, result[1]), true);
+        assert_eq!(cmp_float(0.32, result[15]), true);
+        assert_eq!(cmp_float(0.27, result[25]), true);
+        assert_eq!(cmp_float(0.22, result[35]), true);
+        assert_eq!(cmp_float(0.17, result[45]), true);
+        assert_eq!(cmp_float(0.07, result[65]), true);
+        assert_eq!(cmp_float(0.04, result[70]), true);
+        assert_eq!(cmp_float(0.0, result[79]), true);
+        assert_eq!(cmp_float(0.0, result[80]), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_slowly_max() {
         let mut result = Vec::new();
         let set_brightness = |nits| {
-            result.push(nits as u16);
+            result.push(nits as f32);
         };
-        set_brightness_slowly(240, 260, set_brightness, 0.millis(), 250.0).await;
-        assert_eq!(11, result.len(), "wrong length");
-        assert_eq!(241, result[0]);
-        assert_eq!(244, result[3]);
-        assert_eq!(250, result[9]);
-        assert_eq!(250, result[10]);
-    }
-
-    #[test]
-    fn test_to_old_backlight_value() {
-        let control = generate_control_struct();
-        assert_eq!(0, control.convert_to_scaled_value_based_on_max_brightness(0.0));
-        assert_eq!(125, control.convert_to_scaled_value_based_on_max_brightness(0.5));
-        assert_eq!(250, control.convert_to_scaled_value_based_on_max_brightness(1.0));
-        // Out of bounds
-        assert_eq!(0, control.convert_to_scaled_value_based_on_max_brightness(-0.5));
-        assert_eq!(250, control.convert_to_scaled_value_based_on_max_brightness(2.0));
-    }
-
-    #[test]
-    fn test_from_old_backlight_value() {
-        let control = generate_control_struct();
-        assert_eq!(0.0, approx(control.convert_from_scaled_value_based_on_max_brightness(0.0)));
-        assert_eq!(0.5, approx(control.convert_from_scaled_value_based_on_max_brightness(125.0)));
-        assert_eq!(1.0, approx(control.convert_from_scaled_value_based_on_max_brightness(250.0)));
+        set_brightness_slowly(0.9, 1.2, set_brightness, 0.millis()).await;
+        assert_eq!(cmp_float(21.0, result.len() as f32), true, "wrong length");
+        assert_eq!(cmp_float(0.90, result[0]), true);
+        assert_eq!(cmp_float(0.91, result[3]), true);
+        assert_eq!(cmp_float(0.94, result[9]), true);
+        assert_eq!(cmp_float(0.97, result[15]), true);
+        assert_eq!(cmp_float(1.0, result[20]), true);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -585,9 +542,9 @@ mod tests {
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
-        let (sensor, _backlight) = set_mocks(400, 253.0);
-        let nits = read_sensor_and_get_brightness(sensor, &spline).await;
-        assert_eq!(250, nits);
+        let (sensor, _backlight) = set_mocks(400, 1.2);
+        let value = read_sensor_and_get_brightness(sensor, &spline, 250.0).await;
+        assert_eq!(cmp_float(1.0, value), true);
     }
 
     #[fasync::run_singlethreaded(test)]
@@ -596,35 +553,36 @@ mod tests {
         let brightness_table = BrightnessTable { points: points.to_vec() };
         let spline = generate_spline(brightness_table);
         let (sensor, _backlight) = set_mocks(0, 0.0);
-        let nits = read_sensor_and_get_brightness(sensor, &spline).await;
-        assert_eq!(10, nits);
+        let value = read_sensor_and_get_brightness(sensor, &spline, 250.0).await;
+        assert_eq!(cmp_float(0.0, value), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_is_abortable_with_auto_brightness_on() {
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight_clone = backlight.clone();
-        let abort_handle = set_brightness(100, backlight_clone, true).await;
+        let abort_handle = set_brightness(0.04, backlight_clone).await;
         // Abort the task before it really gets going
         abort_handle.abort();
         // It should not have reached the final value yet.
         // We know that set_brightness_slowly, at the bottom of the task, finishes at the correct
         // nits value from other tests if it has sufficient time.
         let backlight = backlight.lock().await;
-        assert_ne!(100_f64, backlight.get_brightness(true).await.unwrap());
+
+        assert_ne!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), true);
     }
 
     #[fasync::run_singlethreaded(test)]
     async fn test_set_brightness_is_abortable_with_auto_brightness_off() {
         let (_sensor, backlight) = set_mocks(0, 0.0);
         let backlight_clone = backlight.clone();
-        let abort_handle = set_brightness(100, backlight_clone, false).await;
+        let abort_handle = set_brightness(0.04, backlight_clone).await;
         // Abort the task before it really gets going
         abort_handle.abort();
         // It should not have reached the final value yet.
         // We know that set_brightness_slowly, at the bottom of the task, finishes at the correct
         // nits value from other tests if it has sufficient time.
         let backlight = backlight.lock().await;
-        assert_ne!(100_f64, backlight.get_brightness(false).await.unwrap());
+        assert_ne!(cmp_float(0.04, backlight.get_brightness().await.unwrap() as f32), true);
     }
 }

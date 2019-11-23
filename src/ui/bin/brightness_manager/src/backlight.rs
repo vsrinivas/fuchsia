@@ -11,6 +11,8 @@ use fidl_fuchsia_hardware_backlight::{
 };
 use fuchsia_syslog::fx_log_info;
 
+const AUTO_MINIMUM_BRIGHTNESS: f64 = 0.004;
+
 fn open_backlight() -> Result<BacklightProxy, Error> {
     fx_log_info!("Opening backlight");
     let (proxy, server) = fidl::endpoints::create_proxy::<BacklightMarker>()
@@ -55,51 +57,38 @@ impl Backlight {
         self.max_brightness
     }
 
-    async fn get(&self, auto_brightness_on: bool) -> Result<f64, Error> {
-        if auto_brightness_on {
-            let result = self.proxy.get_state_absolute().await?;
-            let backlight_info =
-                result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
-            Ok(backlight_info.brightness)
-        } else {
-            let result = self.proxy.get_state_normalized().await?;
-            let backlight_info =
-                result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
-            Ok(backlight_info.brightness * self.max_brightness)
-        }
+    async fn get(&self) -> Result<f64, Error> {
+        let result = self.proxy.get_state_normalized().await?;
+        let backlight_info =
+            result.map_err(|e| failure::format_err!("Failed to get state: {:?}", e))?;
+        Ok(backlight_info.brightness)
     }
 
-    fn set(&mut self, nits: f64, auto_brightness_on: bool) -> Result<(), Error> {
+    fn set(&mut self, value: f64) -> Result<(), Error> {
         // TODO(fxb/36302): Handle error here as well, similar to get_brightness above. Might involve
-        if auto_brightness_on {
-            let _result = self.proxy.set_state_absolute(&mut BacklightState {
-                backlight_on: nits != 0.0,
-                brightness: nits,
-            });
-        } else {
-            let _result = self.proxy.set_state_normalized(&mut BacklightState {
-                backlight_on: nits != 0.0,
-                brightness: nits / self.max_brightness,
-            });
-        }
+        let regulated_value = num_traits::clamp(value, AUTO_MINIMUM_BRIGHTNESS, 1.0);
+        let _result = self.proxy.set_state_normalized(&mut BacklightState {
+            backlight_on: regulated_value != 0.0,
+            brightness: regulated_value,
+        });
         Ok(())
     }
 }
 
 #[async_trait]
 pub trait BacklightControl: Send {
-    async fn get_brightness(&self, auto_brightness_on: bool) -> Result<f64, Error>;
-    fn set_brightness(&mut self, value: f64, auto_brightness_on: bool) -> Result<(), Error>;
+    async fn get_brightness(&self) -> Result<f64, Error>;
+    fn set_brightness(&mut self, value: f64) -> Result<(), Error>;
     fn get_max_absolute_brightness(&self) -> f64;
 }
 
 #[async_trait]
 impl BacklightControl for Backlight {
-    async fn get_brightness(&self, auto_brightness_on: bool) -> Result<f64, Error> {
-        self.get(auto_brightness_on).await
+    async fn get_brightness(&self) -> Result<f64, Error> {
+        self.get().await
     }
-    fn set_brightness(&mut self, value: f64, auto_brightness_on: bool) -> Result<(), Error> {
-        self.set(value, auto_brightness_on)
+    fn set_brightness(&mut self, value: f64) -> Result<(), Error> {
+        self.set(value)
     }
     fn get_max_absolute_brightness(&self) -> f64 {
         self.get_max_absolute_brightness()
