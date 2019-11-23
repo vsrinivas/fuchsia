@@ -26,12 +26,9 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
-          focus_provider_connector,
-      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
-          puppet_master_connector,
-      fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
-          intl_property_provider,
+      fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
+      fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
+      fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider,
       fit::function<bool()> is_terminating_cb);
 
   ~UserIntelligenceProviderImpl() override = default;

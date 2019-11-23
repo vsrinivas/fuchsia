@@ -46,15 +46,11 @@ void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceReques
 }
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
-        focus_provider_connector,
-    fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
-        puppet_master_connector,
-    fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
-        intl_property_provider_connector,
+    fidl::InterfaceRequestHandler<fuchsia::modular::FocusProvider> focus_provider_connector,
+    fidl::InterfaceRequestHandler<fuchsia::modular::PuppetMaster> puppet_master_connector,
+    fidl::InterfaceRequestHandler<fuchsia::intl::PropertyProvider> intl_property_provider_connector,
     fit::function<bool()> is_terminating_cb)
-    :
-      focus_provider_connector_(std::move(focus_provider_connector)),
+    : focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       is_terminating_cb_(std::move(is_terminating_cb)){};
