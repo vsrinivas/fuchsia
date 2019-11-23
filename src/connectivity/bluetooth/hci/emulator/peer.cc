@@ -143,11 +143,7 @@ void Peer::EmulateDisconnectionComplete() {
 
 void Peer::WatchConnectionStates(WatchConnectionStatesCallback callback) {
   logf(TRACE, "Peer.WatchConnectionState\n");
-  if (!connection_state_getter_.Watch(std::move(callback))) {
-    logf(TRACE, "Watcher already registered! Closing Peer channel");
-    binding_.Unbind();
-    NotifyChannelClosed();
-  }
+  connection_state_getter_.Watch(std::move(callback));
 }
 
 void Peer::UpdateConnectionState(bool connected) {

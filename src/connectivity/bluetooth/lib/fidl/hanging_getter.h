@@ -5,10 +5,12 @@
 #ifndef SRC_CONNECTIVITY_BLUETOOTH_LIB_FIDL_HANGING_GETTER_H_
 #define SRC_CONNECTIVITY_BLUETOOTH_LIB_FIDL_HANGING_GETTER_H_
 
+#include <lib/fidl/cpp/clone.h>
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
 #include <optional>
+#include <queue>
 
 namespace bt_lib_fidl {
 
@@ -47,7 +49,7 @@ class HangingGetterBase {
   using Mutator = fit::function<T(T)>;
 
   // Returns true if a callback is already assigned to this getter.
-  bool armed() const { return static_cast<bool>(callback_); }
+  bool armed() const { return !callbacks_.empty(); }
 
   // Assign |value| to the stored state and notify any pending Watch callbacks.
   void Set(T value) {
@@ -79,20 +81,17 @@ class HangingGetterBase {
   //
   // Once |callback| runs, the store state becomes cleared. The next call to one of the Set()
   // functions will default-construct a new state.
-  bool Watch(Callback callback) {
-    if (callback_) {
-      return false;
-    }
-
-    callback_ = std::move(callback);
+  //
+  // Multiple callbacks can be queued to be notified simultaneously next time the state gets
+  // updated. All callbacks will get invoked with a separate copy of the new state, however there is
+  // no requirement that the state type T itself be copiable. How the value is passed to the
+  // callbacks is left up to the Notify() member function implementation.
+  void Watch(Callback callback) {
+    callbacks_.push(std::move(callback));
     WatchInternal();
-
-    return true;
   }
 
  protected:
-  Callback* callback() { return &callback_; }
-
   // This member function is called when a value update triggers a registered watcher Callback to be
   // notified. This is abstract to allow HangingGetter variants to apply any necessary
   // transformations between the stored value type "T" and the parameter type of the callback type
@@ -101,26 +100,35 @@ class HangingGetterBase {
   // For example, this is useful when the stored type is a custom accumulator type. A
   // HangingGetterBase implementation can, for example, implement a custom mapping from the stored
   // accumulator to a FIDL struct type that the callback expects.
-  virtual void Notify(T&& value) = 0;
+  virtual void Notify(std::queue<Callback> callbacks, T value) = 0;
 
  private:
   void WatchInternal() {
-    if (callback_ && value_) {
+    if (!callbacks_.empty() && value_) {
+      auto q = std::move(callbacks_);
       auto v = std::move(*value_);
       value_.reset();
-      Notify(std::move(v));
+
+      Notify(std::move(q), std::move(v));
     }
   }
 
   std::optional<T> value_;
-  Callback callback_;
+  std::queue<Callback> callbacks_;
 };
 
-// HangingGetter type where the stored type is identical to the callback parameter type.
+// HangingGetter type where the stored type is identical to the callback parameter type. T must be
+// clonable by fidl::Clone().
 template <typename T>
 class HangingGetter : public HangingGetterBase<T> {
  protected:
-  void Notify(T&& value) override { (*HangingGetterBase<T>::callback())(std::forward<T>(value)); }
+  void Notify(std::queue<typename HangingGetter<T>::Callback> callbacks, T value) override {
+    while (!callbacks.empty()) {
+      auto f = std::move(callbacks.front());
+      callbacks.pop();
+      f(fidl::Clone(value));
+    }
+  }
 };
 
 template <typename T>

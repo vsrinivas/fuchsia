@@ -12,8 +12,8 @@ namespace {
 template <typename T, typename Getter = HangingGetter<T>>
 class HangingGetterTestBase : public ::testing::Test {
  public:
-  bool Watch() {
-    return getter_.Watch([this](T value) {
+  void Watch() {
+    getter_.Watch([this](T value) {
       callback_count_++;
       last_value_ = value;
     });
@@ -34,19 +34,19 @@ using HangingGetterTest = HangingGetterTestBase<bool>;
 
 TEST_F(HangingGetterTest, Armed) {
   EXPECT_FALSE(getter()->armed());
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_TRUE(getter()->armed());
 }
 
 TEST_F(HangingGetterTest, WatchFailsWhilePending) {
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(0, callback_count());
-  EXPECT_FALSE(Watch());
+  Watch();
   EXPECT_EQ(0, callback_count());
 }
 
 TEST_F(HangingGetterTest, WatchCallbackDeferredWithoutAValue) {
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(0, callback_count());
   EXPECT_FALSE(last_value().has_value());
 
@@ -67,25 +67,55 @@ TEST_F(HangingGetterTest, WatchCallbackRunsRightAwayWithAValue) {
   EXPECT_FALSE(last_value().has_value());
   EXPECT_FALSE(getter()->armed());
 
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
   ASSERT_TRUE(last_value().has_value());
   EXPECT_TRUE(*last_value());
 
   // Calling Watch() again should succeed and defer the callback.
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
+}
+
+TEST_F(HangingGetterTest, MultipleWatchersPending) {
+  Watch();  // 1
+  Watch();  // 2
+  Watch();  // 3
+  getter()->Set(true);
+  EXPECT_EQ(3, callback_count());
+  ASSERT_TRUE(last_value().has_value());
+  EXPECT_TRUE(*last_value());
+  EXPECT_FALSE(getter()->armed());
+}
+
+TEST_F(HangingGetterTest, OnlyFirstOfManyWatchersRunsWithAValue) {
+  getter()->Set(true);
+
+  // Only the first watch call should result in a callback. The following two are expected to remain
+  // pending until a new value gets assigned.
+  Watch();  // 1
+  Watch();  // 2
+  Watch();  // 3
+  EXPECT_EQ(1, callback_count());
+  ASSERT_TRUE(last_value().has_value());
+  EXPECT_TRUE(*last_value());
+
+  EXPECT_TRUE(getter()->armed());
+  getter()->Set(false);
+  EXPECT_EQ(3, callback_count());
+  ASSERT_TRUE(last_value().has_value());
+  EXPECT_FALSE(*last_value());
 }
 
 TEST_F(HangingGetterTest, WatchClearsExistingValue) {
   getter()->Set(true);
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
   ASSERT_TRUE(last_value().has_value());
   EXPECT_TRUE(*last_value());
 
   // Callback should be deferred.
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
 
   // Test the deferral.
@@ -100,7 +130,7 @@ TEST_F(HangingGetterTest, Transform) {
     return true;
   });
 
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
   ASSERT_TRUE(last_value().has_value());
   EXPECT_TRUE(*last_value());
@@ -112,7 +142,7 @@ TEST_F(HangingVectorGetterTest, AddAndWatch) {
   getter()->Add(false);
   getter()->Add(true);
 
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(1, callback_count());
   EXPECT_TRUE(last_value().has_value());
   EXPECT_EQ(2u, last_value()->size());
@@ -121,7 +151,7 @@ TEST_F(HangingVectorGetterTest, AddAndWatch) {
 }
 
 TEST_F(HangingVectorGetterTest, WatchAndAdd) {
-  EXPECT_TRUE(Watch());
+  Watch();
   EXPECT_EQ(0, callback_count());
 
   getter()->Add(true);

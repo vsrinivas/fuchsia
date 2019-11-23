@@ -124,9 +124,8 @@ protocol Peer {
     /// Notifies the most recent controller connection state if there has been a change since the
     /// last time this method was called.
     ///
-    /// Only one call to this method can be outstanding at a given time. The
-    /// [`fuchsia.bluetooth.test/Peer`] channel will be closed if a call is received when one is
-    /// already pending.
+    /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
+    /// a response as soon as there is a change to the connection state.
     WatchConnectionStates() -> (vector<ConnectionState> states);
 };
 
@@ -170,9 +169,8 @@ protocol HciEmulator {
     /// method returns when there has been a state change since the last invocation of this method
     /// by this client.
     ///
-    /// Only one call to this method can be outstanding at a given time. The
-    /// [`fuchsia.bluetooth.test/HciEmulator`] channel will be closed if a call received when one is
-    /// already pending.
+    /// Multiple calls to this method can be outstanding at a given time. All calls will resolve in
+    /// a response as soon as there is a change to the scan state.
     /// (see [hanging get pattern](//docs/development/api/fidl.md#delay-responses-using-hanging-gets))
     WatchLeScanStates() -> (vector<LeScanState> states);
 

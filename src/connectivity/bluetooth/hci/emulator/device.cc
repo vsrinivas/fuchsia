@@ -321,10 +321,7 @@ void Device::WatchLeScanStates(WatchLeScanStatesCallback callback) {
 
 void Device::WatchLegacyAdvertisingStates(WatchLegacyAdvertisingStatesCallback callback) {
   logf(TRACE, "HciEmulator.WatchLegacyAdvertisingState\n");
-  if (!legacy_adv_state_getter_.Watch(std::move(callback))) {
-    binding_.Unbind();
-    UnpublishHci();
-  }
+  legacy_adv_state_getter_.Watch(std::move(callback));
 }
 
 void Device::AddPeer(std::unique_ptr<Peer> peer) {
