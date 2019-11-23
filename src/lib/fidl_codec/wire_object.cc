@@ -68,22 +68,24 @@ void InlineValue::DecodeContent(MessageDecoder* /*decoder*/, uint64_t /*offset*/
 
 void InlineValue::Visit(Visitor* visitor) const { visitor->VisitInlineValue(this); }
 
-int RawValue::DisplaySize(int /*remaining_size*/) const { return static_cast<int>(size_) * 3 - 1; }
+int RawValue::DisplaySize(int /*remaining_size*/) const {
+  return data_ ? static_cast<int>(data_->size()) * 3 - 1 : 0;
+}
 
 void RawValue::PrettyPrint(std::ostream& os, const Colors& /*colors*/,
                            const fidl_message_header_t* /*header*/,
                            std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                            int /*max_line_size*/) const {
-  if ((size_ == 0) || (data() == nullptr)) {
+  if (!data_ || data_->size() == 0) {
     return;
   }
-  size_t buffer_size = size_ * 3;
+  size_t buffer_size = data_->size() * 3;
   std::vector<char> buffer(buffer_size);
-  for (size_t i = 0; i < size_; ++i) {
+  for (size_t i = 0; i < data_->size(); ++i) {
     if (i != 0) {
       buffer[i * 3 - 1] = ' ';
     }
-    snprintf(buffer.data() + (i * 3), 4, "%02x", data()[i]);
+    snprintf(buffer.data() + (i * 3), 4, "%02x", (*data_)[i]);
   }
   os << buffer.data();
 }
@@ -135,14 +137,15 @@ int StringValue::DisplaySize(int /*remaining_size*/) const {
   if (is_null()) {
     return strlen(kNull);
   }
-  if (data_ == nullptr) {
+  if (!string_) {
     return strlen(kInvalid);
   }
-  return static_cast<int>(string_length_) + 2;  // The two quotes.
+  return static_cast<int>(string_->size()) + 2;  // The two quotes.
 }
 
 void StringValue::DecodeContent(MessageDecoder* decoder, uint64_t offset) {
-  data_ = decoder->GetAddress(offset, string_length_);
+  auto data = reinterpret_cast<const char*>(decoder->GetAddress(offset, string_length_));
+  string_ = data ? std::optional(std::string(data, data + string_length_)) : std::nullopt;
 }
 
 void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
@@ -152,10 +155,10 @@ void StringValue::PrettyPrint(std::ostream& os, const Colors& colors,
   os << colors.red;
   if (is_null()) {
     os << kNull;
-  } else if (data_ == nullptr) {
+  } else if (!string_) {
     os << kInvalid;
   } else {
-    os << '"' << std::string_view(reinterpret_cast<const char*>(data_), string_length_) << '"';
+    os << '"' << *string_ << '"';
   }
   os << colors.reset;
 }
@@ -166,17 +169,17 @@ int BoolValue::DisplaySize(int /*remaining_size*/) const {
   constexpr int kTrueSize = 4;
   constexpr int kFalseSize = 5;
   constexpr int kInvalidSize = 7;
-  return (data() == nullptr) ? kInvalidSize : (*data() ? kTrueSize : kFalseSize);
+  return value_ ? kInvalidSize : (*value_ ? kTrueSize : kFalseSize);
 }
 
 void BoolValue::PrettyPrint(std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
-  if (data() == nullptr) {
+  if (!value_) {
     os << colors.red << "invalid" << colors.reset;
   } else {
-    os << colors.blue << (*data() ? "true" : "false") << colors.reset;
+    os << colors.blue << (*value_ ? "true" : "false") << colors.reset;
   }
 }
 
@@ -456,7 +459,7 @@ void UnionValue::DecodeAt(MessageDecoder* decoder, uint64_t base_offset) {
   const UnionMember* member = union_definition_.MemberWithTag(tag);
   if (member == nullptr) {
     field_ =
-        Field("unknown$" + std::to_string(tag), std::make_unique<RawValue>(nullptr, nullptr, 0));
+        Field("unknown$" + std::to_string(tag), std::make_unique<RawValue>(nullptr, std::nullopt));
   } else {
     field_ = Field(std::string(member->name()),
                    member->type()->Decode(decoder, base_offset + member->offset()));
@@ -671,40 +674,40 @@ void VectorValue::PrettyPrint(std::ostream& os, const Colors& colors,
 void VectorValue::Visit(Visitor* visitor) const { visitor->VisitVectorValue(this); }
 
 int EnumValue::DisplaySize(int /*remaining_size*/) const {
-  if (data() == nullptr) {
+  if (!data_) {
     return strlen(kInvalid);
   }
-  return enum_definition_.GetNameFromBytes(data()).size();
+  return enum_definition_.GetNameFromBytes(data_->data()).size();
 }
 
 void EnumValue::PrettyPrint(std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
-  if (data() == nullptr) {
+  if (!data_) {
     os << colors.red << kInvalid << colors.reset;
   } else {
-    os << colors.blue << enum_definition_.GetNameFromBytes(data()) << colors.reset;
+    os << colors.blue << enum_definition_.GetNameFromBytes(data_->data()) << colors.reset;
   }
 }
 
 void EnumValue::Visit(Visitor* visitor) const { visitor->VisitEnumValue(this); }
 
 int BitsValue::DisplaySize(int /*remaining_size*/) const {
-  if (data() == nullptr) {
+  if (!data_) {
     return strlen(kInvalid);
   }
-  return bits_definition_.GetNameFromBytes(data()).size();
+  return bits_definition_.GetNameFromBytes(data_->data()).size();
 }
 
 void BitsValue::PrettyPrint(std::ostream& os, const Colors& colors,
                             const fidl_message_header_t* /*header*/,
                             std::string_view /*line_header*/, int /*tabs*/, int /*remaining_size*/,
                             int /*max_line_size*/) const {
-  if (data() == nullptr) {
+  if (!data_) {
     os << colors.red << kInvalid << colors.reset;
   } else {
-    os << colors.blue << bits_definition_.GetNameFromBytes(data()) << colors.reset;
+    os << colors.blue << bits_definition_.GetNameFromBytes(data_->data()) << colors.reset;
   }
 }
 

@@ -121,6 +121,17 @@ class MessageDecoder {
     return start_byte_pos_ + offset;
   }
 
+  // Same as GetAddress but copies the fetched data into a new vector. Returns std::nullopt when
+  // GetAddress would return null.
+  std::optional<std::vector<uint8_t>> CopyAddress(uint64_t offset, uint64_t size) {
+    auto got = GetAddress(offset, size);
+    if (!got) {
+      return std::nullopt;
+    }
+
+    return std::vector(got, got + size);
+  }
+
   // Sets the next object offset. The current object (which is at the previous value of next object
   // offset) is not decoded yet. It will be decoded just after this call.
   // The new offset is 8 byte aligned.

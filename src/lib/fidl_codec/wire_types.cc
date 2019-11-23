@@ -37,7 +37,7 @@ std::unique_ptr<Value> Type::Decode(MessageDecoder* /*decoder*/, uint64_t /*offs
 }
 
 std::unique_ptr<Value> RawType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<RawValue>(this, decoder->GetAddress(offset, inline_size_), inline_size_);
+  return std::make_unique<RawValue>(this, decoder->CopyAddress(offset, inline_size_));
 }
 
 std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offset) const {
@@ -47,7 +47,7 @@ std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offs
     decoder->AddError() << std::hex << (decoder->absolute_offset() + offset) << std::dec
                         << ": Not enough data for string (missing "
                         << (offset + string_length - decoder->num_bytes()) << " bytes)\n";
-    return std::make_unique<StringValue>(this, 0);
+    return std::make_unique<StringValue>(this, string_length);
   }
   offset += sizeof(string_length);
 
@@ -60,7 +60,8 @@ std::unique_ptr<Value> StringType::Decode(MessageDecoder* decoder, uint64_t offs
 }
 
 std::unique_ptr<Value> BoolType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<BoolValue>(this, decoder->GetAddress(offset, sizeof(uint8_t)));
+  auto byte = decoder->GetAddress(offset, sizeof(uint8_t));
+  return std::make_unique<BoolValue>(this, byte ? std::optional(*byte) : std::nullopt);
 }
 
 size_t StructType::InlineSize(MessageDecoder* decoder) const {
@@ -149,13 +150,13 @@ std::unique_ptr<Value> VectorType::Decode(MessageDecoder* decoder, uint64_t offs
 EnumType::EnumType(const Enum& e) : enum_(e) {}
 
 std::unique_ptr<Value> EnumType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<EnumValue>(this, decoder->GetAddress(offset, enum_.size()), enum_);
+  return std::make_unique<EnumValue>(this, decoder->CopyAddress(offset, enum_.size()), enum_);
 }
 
 BitsType::BitsType(const Bits& b) : bits_(b) {}
 
 std::unique_ptr<Value> BitsType::Decode(MessageDecoder* decoder, uint64_t offset) const {
-  return std::make_unique<BitsValue>(this, decoder->GetAddress(offset, bits_.size()), bits_);
+  return std::make_unique<BitsValue>(this, decoder->CopyAddress(offset, bits_.size()), bits_);
 }
 
 std::unique_ptr<Value> HandleType::Decode(MessageDecoder* decoder, uint64_t offset) const {

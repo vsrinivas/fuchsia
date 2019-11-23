@@ -33,9 +33,13 @@ class Encoder : public Visitor {
   template <typename T>
   void Write(T t);
 
-  // Write data from the node's data field into our buffer.
+  // Write data into our buffer.
+  void WriteData(const uint8_t* data, size_t size);
+  void WriteData(const std::optional<std::vector<uint8_t>>& data, size_t size);
+
+  // Write a literal value into our buffer.
   template <typename T>
-  void WriteNodeData(const T& node, size_t size);
+  void WriteValue(std::optional<T>);
 
   // Execute all functions in the deferred queue. Manipulates the queue such that additional
   // deferred actions caused by each call are executed depth-first. Also pads to 8-byte alignment

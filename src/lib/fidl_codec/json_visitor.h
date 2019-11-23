@@ -25,11 +25,10 @@ class JsonVisitor : public Visitor {
   void VisitStringValue(const StringValue* node) override {
     if (node->is_null()) {
       result_->SetNull();
-    } else if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
+    } else if (auto str = node->string()) {
+      result_->SetString(str->data(), str->size(), *allocator_);
     } else {
-      result_->SetString(reinterpret_cast<const char*>(node->data()), node->string_length(),
-                         *allocator_);
+      result_->SetString("(invalid)", *allocator_);
     }
   }
 
@@ -113,20 +112,20 @@ class JsonVisitor : public Visitor {
   }
 
   void VisitEnumValue(const EnumValue* node) override {
-    if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
-    } else {
-      std::string name = node->enum_definition().GetNameFromBytes(node->data());
+    if (auto data = node->data()) {
+      std::string name = node->enum_definition().GetNameFromBytes(data->data());
       result_->SetString(name.c_str(), *allocator_);
+    } else {
+      result_->SetString("(invalid)", *allocator_);
     }
   }
 
   void VisitBitsValue(const BitsValue* node) override {
-    if (node->data() == nullptr) {
-      result_->SetString("(invalid)", *allocator_);
-    } else {
-      std::string name = node->bits_definition().GetNameFromBytes(node->data());
+    if (auto data = node->data()) {
+      std::string name = node->bits_definition().GetNameFromBytes(data->data());
       result_->SetString(name.c_str(), *allocator_);
+    } else {
+      result_->SetString("(invalid)", *allocator_);
     }
   }
 

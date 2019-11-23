@@ -70,6 +70,6 @@ class TableValueWithNullFields : public TableValue {
 
 TEST_PRINT_OBJECT(TableValue, TableValueWithNullFields(), "{}", "{}");
 
-TEST_PRINT_OBJECT(RawValue, RawValue(nullptr, nullptr, 100), "", "\"\"");
+TEST_PRINT_OBJECT(RawValue, RawValue(nullptr, std::nullopt), "", "\"\"");
 
 }  // namespace fidl_codec

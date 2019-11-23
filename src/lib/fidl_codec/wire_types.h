@@ -146,7 +146,8 @@ class NumericType : public Type {
   size_t InlineSize(MessageDecoder* decoder) const override { return sizeof(T); }
 
   std::unique_ptr<Value> Decode(MessageDecoder* decoder, uint64_t offset) const override {
-    return std::make_unique<NumericValue<T>>(this, decoder->GetAddress(offset, sizeof(T)));
+    auto got = decoder->GetAddress(offset, sizeof(T));
+    return std::make_unique<NumericValue<T>>(this, reinterpret_cast<const T*>(got));
   }
 };
 

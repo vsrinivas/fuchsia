@@ -106,25 +106,20 @@ class NullableField {
 // Base class for inlined values (the data is not in a secondary object).
 class InlineValue : public Value {
  public:
-  InlineValue(const Type* type, const uint8_t* data) : Value(type), data_(data) {}
-
-  const uint8_t* data() const { return data_; }
+  InlineValue(const Type* type) : Value(type) {}
 
   void DecodeContent(MessageDecoder* decoder, uint64_t offset) override;
 
   void Visit(Visitor* visitor) const override;
-
- private:
-  const uint8_t* const data_;
 };
 
 // A value with no known representation (we only print the raw data).
 class RawValue : public InlineValue {
  public:
-  RawValue(const Type* type, const uint8_t* data, uint64_t size)
-      : InlineValue(type, data), size_(size) {}
+  RawValue(const Type* type, std::optional<std::vector<uint8_t>> data)
+      : InlineValue(type), data_(std::move(data)) {}
 
-  uint64_t size() const { return size_; }
+  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -135,49 +130,58 @@ class RawValue : public InlineValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  const uint64_t size_;
+  std::optional<std::vector<uint8_t>> data_;
 };
 
 // All numeric values (integer and floating point numbers).
 template <typename T>
 class NumericValue : public InlineValue {
  public:
-  NumericValue(const Type* type, const uint8_t* data) : InlineValue(type, data) {}
+  explicit NumericValue(const Type* type, std::optional<T> value = std::nullopt)
+      : InlineValue(type), value_(std::move(value)) {}
+  explicit NumericValue(const Type* type, const T* value)
+      : NumericValue(type, value ? std::optional(*value) : std::nullopt) {}
+
+  std::optional<T> value() const { return value_; }
 
   int DisplaySize(int remaining_size) const override {
-    return (data() == nullptr)
-               ? 7
-               : std::to_string(internal::MemoryFrom<T, const uint8_t*>(data())).size();
+    if (value_) {
+      return std::to_string(*value_).size();
+    } else {
+      return 7;  // length of "invalid"
+    }
   }
 
   uint8_t GetUint8Value() const override {
-    return ((data() != nullptr) && (sizeof(T) == 1))
-               ? internal::MemoryFrom<T, const uint8_t*>(data())
-               : 0;
+    return (sizeof(T) == 1 && value_) ? static_cast<uint8_t>(*value_) : 0;
   }
 
   void PrettyPrint(std::ostream& os, const Colors& colors, const fidl_message_header_t* header,
                    std::string_view line_header, int tabs, int remaining_size,
                    int max_line_size) const override {
-    if (data() == nullptr) {
-      os << colors.red << "invalid" << colors.reset;
+    if (value_) {
+      os << colors.blue << std::to_string(*value_) << colors.reset;
     } else {
-      os << colors.blue << std::to_string(internal::MemoryFrom<T, const uint8_t*>(data()))
-         << colors.reset;
+      os << colors.red << "invalid" << colors.reset;
     }
   }
 
   void Visit(Visitor* visitor) const override;
+
+ private:
+  std::optional<T> value_;
 };
 
 // A string value.
 class StringValue : public NullableValue {
  public:
-  StringValue(const Type* type, uint64_t string_length)
-      : NullableValue(type), string_length_(string_length) {}
+  StringValue(const Type* type, std::string str)
+      : NullableValue(type), string_length_(str.size()), string_(str) {}
+  StringValue(const Type* type, size_t string_length)
+      : NullableValue(type), string_length_(string_length), string_(std::nullopt) {}
 
-  uint64_t string_length() const { return string_length_; }
-  const uint8_t* data() const { return data_; }
+  const std::optional<std::string>& string() const { return string_; }
+  size_t size() const { return string_length_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -190,14 +194,19 @@ class StringValue : public NullableValue {
   void Visit(Visitor* visitor) const override;
 
  private:
-  const uint64_t string_length_;
-  const uint8_t* data_ = nullptr;
+  size_t string_length_;
+  std::optional<std::string> string_;
 };
 
 // A Boolean value.
 class BoolValue : public InlineValue {
  public:
-  BoolValue(const Type* type, const uint8_t* data) : InlineValue(type, data) {}
+  BoolValue(const Type* type, std::optional<uint8_t> value)
+      : InlineValue(type), value_(std::move(value)) {}
+  BoolValue(const Type* type, const uint8_t* value)
+      : BoolValue(type, value ? std::optional(*value) : std::nullopt) {}
+
+  const std::optional<uint8_t> value() const { return value_; }
 
   int DisplaySize(int remaining_size) const override;
 
@@ -206,6 +215,9 @@ class BoolValue : public InlineValue {
                    int max_line_size) const override;
 
   void Visit(Visitor* visitor) const override;
+
+ private:
+  std::optional<uint8_t> value_;
 };
 
 // An object. This represents a struct, a request or a response.
@@ -388,8 +400,10 @@ class VectorValue : public NullableValue {
 // An enum.
 class EnumValue : public InlineValue {
  public:
-  EnumValue(const Type* type, const uint8_t* data, const Enum& enum_definition)
-      : InlineValue(type, data), enum_definition_(enum_definition) {}
+  EnumValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Enum& enum_definition)
+      : InlineValue(type), enum_definition_(enum_definition), data_(std::move(data)) {}
+
+  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
   const Enum& enum_definition() const { return enum_definition_; };
 
@@ -403,13 +417,16 @@ class EnumValue : public InlineValue {
 
  private:
   const Enum& enum_definition_;
+  std::optional<std::vector<uint8_t>> data_;
 };
 
 // Bits.
 class BitsValue : public InlineValue {
  public:
-  BitsValue(const Type* type, const uint8_t* data, const Bits& bits_definition)
-      : InlineValue(type, data), bits_definition_(bits_definition) {}
+  BitsValue(const Type* type, std::optional<std::vector<uint8_t>> data, const Bits& bits_definition)
+      : InlineValue(type), bits_definition_(bits_definition), data_(std::move(data)) {}
+
+  const std::optional<std::vector<uint8_t>>& data() const { return data_; }
 
   const Bits& bits_definition() const { return bits_definition_; };
 
@@ -423,6 +440,7 @@ class BitsValue : public InlineValue {
 
  private:
   const Bits& bits_definition_;
+  std::optional<std::vector<uint8_t>> data_;
 };
 
 // A handle.

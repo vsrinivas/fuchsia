@@ -45,13 +45,33 @@ void Encoder::Write(T t) {
   *reinterpret_cast<T*>(bytes_.data() + old_size) = t;
 }
 
-template <typename T>
-void Encoder::WriteNodeData(const T& node, size_t size) {
-  if (node.data() == nullptr) {
+void Encoder::WriteData(const uint8_t* data, size_t size) {
+  if (data == nullptr) {
     bytes_.resize(bytes_.size() + size);
   } else {
-    std::copy(node.data(), node.data() + size, std::back_inserter(bytes_));
+    std::copy(data, data + size, std::back_inserter(bytes_));
   }
+}
+
+void Encoder::WriteData(const std::optional<std::vector<uint8_t>>& data, size_t size) {
+  const uint8_t* data_ptr = nullptr;
+
+  if (data && data->size() >= size) {
+    data_ptr = data->data();
+  }
+
+  WriteData(data_ptr, size);
+}
+
+template <typename T>
+void Encoder::WriteValue(std::optional<T> value) {
+  T real_value = 0;
+
+  if (value) {
+    real_value = *value;
+  }
+
+  WriteData(reinterpret_cast<uint8_t*>(&real_value), sizeof(T));
 }
 
 void Encoder::Pump() {
@@ -141,24 +161,40 @@ void Encoder::VisitUnionAsXUnion(const UnionValue* node) {
   }
 }
 
-void Encoder::VisitRawValue(const RawValue* node) { WriteNodeData(*node, node->size()); }
+void Encoder::VisitRawValue(const RawValue* node) {
+  const auto& data = node->data();
+  size_t size = 0;
+
+  if (data) {
+    size = data->size();
+  }
+
+  WriteData(data, size);
+}
 
 void Encoder::VisitStringValue(const StringValue* node) {
   if (node->is_null()) {
     Write<uint64_t>(0);
     Write<uint64_t>(0);
   } else {
-    Write<uint64_t>(node->string_length());
+    Write<uint64_t>(node->size());
     Write<uint64_t>(UINTPTR_MAX);
-    Defer([this, node]() mutable { WriteNodeData(*node, node->string_length()); });
+    Defer([this, node]() mutable {
+      const uint8_t* data = nullptr;
+      if (node->string()) {
+        data = reinterpret_cast<const uint8_t*>(node->string()->data());
+      }
+
+      WriteData(data, node->size());
+    });
   }
 }
 
 void Encoder::VisitBoolValue(const BoolValue* node) {
-  if (node->data() == nullptr) {
-    bytes_.push_back(false);
+  if (auto value = node->value()) {
+    bytes_.push_back(*value);
   } else {
-    bytes_.push_back(node->data()[0]);
+    bytes_.push_back(false);
   }
 }
 
@@ -224,11 +260,11 @@ void Encoder::VisitVectorValue(const VectorValue* node) {
 }
 
 void Encoder::VisitEnumValue(const EnumValue* node) {
-  WriteNodeData(*node, node->enum_definition().size());
+  WriteData(node->data(), node->enum_definition().size());
 }
 
 void Encoder::VisitBitsValue(const BitsValue* node) {
-  WriteNodeData(*node, node->bits_definition().size());
+  WriteData(node->data(), node->bits_definition().size());
 }
 
 void Encoder::VisitHandleValue(const HandleValue* node) {
@@ -251,52 +287,24 @@ void Encoder::VisitObject(const Object* node) {
   }
 }
 
-void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) {
-  if (node->data() == nullptr) {
-    bytes_.push_back(0);
-  } else {
-    bytes_.push_back(node->data()[0]);
-  }
-}
+void Encoder::VisitU8Value(const NumericValue<uint8_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitU16Value(const NumericValue<uint16_t>* node) {
-  WriteNodeData(*node, sizeof(uint16_t));
-}
+void Encoder::VisitU16Value(const NumericValue<uint16_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitU32Value(const NumericValue<uint32_t>* node) {
-  WriteNodeData(*node, sizeof(uint32_t));
-}
+void Encoder::VisitU32Value(const NumericValue<uint32_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitU64Value(const NumericValue<uint64_t>* node) {
-  WriteNodeData(*node, sizeof(uint64_t));
-}
+void Encoder::VisitU64Value(const NumericValue<uint64_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitI8Value(const NumericValue<int8_t>* node) {
-  if (node->data() == nullptr) {
-    bytes_.push_back(0);
-  } else {
-    bytes_.push_back(node->data()[0]);
-  }
-}
+void Encoder::VisitI8Value(const NumericValue<int8_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitI16Value(const NumericValue<int16_t>* node) {
-  WriteNodeData(*node, sizeof(int16_t));
-}
+void Encoder::VisitI16Value(const NumericValue<int16_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitI32Value(const NumericValue<int32_t>* node) {
-  WriteNodeData(*node, sizeof(int32_t));
-}
+void Encoder::VisitI32Value(const NumericValue<int32_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitI64Value(const NumericValue<int64_t>* node) {
-  WriteNodeData(*node, sizeof(int64_t));
-}
+void Encoder::VisitI64Value(const NumericValue<int64_t>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitF32Value(const NumericValue<float>* node) {
-  WriteNodeData(*node, sizeof(float));
-}
+void Encoder::VisitF32Value(const NumericValue<float>* node) { WriteValue(node->value()); }
 
-void Encoder::VisitF64Value(const NumericValue<double>* node) {
-  WriteNodeData(*node, sizeof(double));
-}
+void Encoder::VisitF64Value(const NumericValue<double>* node) { WriteValue(node->value()); }
 
 }  // namespace fidl_codec
