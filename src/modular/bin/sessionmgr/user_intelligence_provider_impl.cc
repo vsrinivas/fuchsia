@@ -23,6 +23,8 @@ namespace {
 
 static constexpr modular::RateLimitedRetry::Threshold kSessionAgentRetryLimit = {3, zx::sec(45)};
 
+static constexpr char kInternalAgentRunnerRequestorUrl[] = "builtin://modular";
+
 }  // namespace
 
 template <class Interface>
@@ -44,8 +46,6 @@ void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceReques
 }
 
 UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
-    fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
-        story_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
         focus_provider_connector,
     fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
@@ -53,27 +53,25 @@ UserIntelligenceProviderImpl::UserIntelligenceProviderImpl(
     fit::function<void(fidl::InterfaceRequest<fuchsia::intl::PropertyProvider>)>
         intl_property_provider_connector,
     fit::function<bool()> is_terminating_cb)
-    : story_provider_connector_(std::move(story_provider_connector)),
+    :
       focus_provider_connector_(std::move(focus_provider_connector)),
       puppet_master_connector_(std::move(puppet_master_connector)),
       intl_property_provider_connector_(std::move(intl_property_provider_connector)),
       is_terminating_cb_(std::move(is_terminating_cb)){};
 
-void UserIntelligenceProviderImpl::StartAgents(
-    fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
-    std::vector<std::string> session_agents, std::vector<std::string> startup_agents) {
-  component_context_.Bind(std::move(component_context_handle));
-
+void UserIntelligenceProviderImpl::StartAgents(AgentRunner* agent_runner,
+                                               std::vector<std::string> session_agents,
+                                               std::vector<std::string> startup_agents) {
   FXL_LOG(INFO) << "Starting session_agents:";
   for (const auto& agent : session_agents) {
     FXL_LOG(INFO) << " " << agent;
-    StartSessionAgent(agent);
+    StartSessionAgent(agent_runner, agent);
   }
 
   FXL_LOG(INFO) << "Starting startup_agents:";
   for (const auto& agent : startup_agents) {
     FXL_LOG(INFO) << " " << agent;
-    StartAgent(agent);
+    StartAgent(agent_runner, agent);
   }
 }
 
@@ -86,18 +84,21 @@ void UserIntelligenceProviderImpl::GetServicesForAgent(std::string url,
   callback(std::move(service_list));
 }
 
-void UserIntelligenceProviderImpl::StartAgent(const std::string& url) {
+void UserIntelligenceProviderImpl::StartAgent(AgentRunner* agent_runner, const std::string& url) {
   fuchsia::modular::AgentControllerPtr controller;
   fuchsia::sys::ServiceProviderPtr services;
-  component_context_->ConnectToAgent(url, services.NewRequest(), controller.NewRequest());
+  agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url, services.NewRequest(),
+                               controller.NewRequest());
   agent_controllers_.push_back(std::move(controller));
 }
 
-void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
+void UserIntelligenceProviderImpl::StartSessionAgent(AgentRunner* agent_runner,
+                                                     const std::string& url) {
   SessionAgentData* const agent_data = &session_agents_[url];
 
-  component_context_->ConnectToAgent(url, agent_data->services.NewRequest(),
-                                     agent_data->controller.NewRequest());
+  agent_runner->ConnectToAgent(kInternalAgentRunnerRequestorUrl, url,
+                               agent_data->services.NewRequest(),
+                               agent_data->controller.NewRequest());
 
   // complete any pending connection requests
   for (auto& request : agent_data->pending_service_requests) {
@@ -122,7 +123,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
   //
   // It is also because of this delay that we must queue any pending service
   // connection requests until we can restart.
-  agent_data->controller.set_error_handler([this, url](zx_status_t status) {
+  agent_data->controller.set_error_handler([this, agent_runner, url](zx_status_t status) {
     auto it = session_agents_.find(url);
     FXL_DCHECK(it != session_agents_.end()) << "Controller and services not registered for " << url;
     FXL_LOG(INFO) << url << " session agent appears to have crashed, with status: "
@@ -138,7 +139,7 @@ void UserIntelligenceProviderImpl::StartSessionAgent(const std::string& url) {
     } else {
       if (agent_data.restart.ShouldRetry()) {
         FXL_LOG(INFO) << "Restarting " << url << "...";
-        StartSessionAgent(url);
+        StartSessionAgent(agent_runner, url);
       } else {
         FXL_LOG(WARNING) << url << " failed to restart more than " << kSessionAgentRetryLimit.count
                          << " times in " << kSessionAgentRetryLimit.period.to_secs() << " seconds.";

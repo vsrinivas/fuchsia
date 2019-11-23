@@ -89,9 +89,9 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
       fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request);
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
-  void InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
-                                   fuchsia::modular::AppConfig story_shell_config,
-                                   bool use_session_shell_for_story_shell_factory);
+  void InitializeModular(const fidl::StringPtr& session_shell_url,
+                         fuchsia::modular::AppConfig story_shell_config,
+                         bool use_session_shell_for_story_shell_factory);
   void InitializeDiscovermgr();
   void InitializeSessionShell(fuchsia::modular::AppConfig session_shell_config,
                               fuchsia::ui::views::ViewToken view_token);

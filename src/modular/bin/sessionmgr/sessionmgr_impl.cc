@@ -47,9 +47,6 @@ namespace {
 
 constexpr char kAppId[] = "modular_sessionmgr";
 
-constexpr char kMaxwellComponentNamespace[] = "maxwell";
-constexpr char kMaxwellUrl[] = "maxwell";
-
 constexpr char kDiscovermgrUrl[] = "fuchsia-pkg://fuchsia.com/discovermgr#meta/discovermgr.cmx";
 
 constexpr char kSessionEnvironmentLabelPrefix[] = "session-";
@@ -199,8 +196,8 @@ void SessionmgrImpl::Initialize(
     InitializeLedger(std::move(ledger_token_manager));
     InitializeIntlPropertyProvider();
     InitializeDiscovermgr();
-    InitializeMaxwellAndModular(std::move(session_shell_url), std::move(story_shell_config),
-                                use_session_shell_for_story_shell_factory);
+    InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
+                      use_session_shell_for_story_shell_factory);
     ConnectSessionShellToStoryProvider();
     AtEnd([this](fit::function<void()> cont) { TerminateSessionShell(std::move(cont)); });
     ReportEvent(ModularLifetimeEventsMetricDimensionEventType::BootedToSessionMgr);
@@ -239,8 +236,8 @@ void SessionmgrImpl::InitializeSessionEnvironment(std::string session_id) {
 
   // Create the session's environment (in which we run stories, modules, agents, and so on) as a
   // child of sessionmgr's environment. Add session-provided additional services, |kEnvServices|.
-  static const auto* const kEnvServices = new std::vector<std::string>{
-      fuchsia::intl::PropertyProvider::Name_};
+  static const auto* const kEnvServices =
+      new std::vector<std::string>{fuchsia::intl::PropertyProvider::Name_};
   session_environment_ = std::make_unique<Environment>(
       /* parent_env = */ sessionmgr_context_->svc()->Connect<fuchsia::sys::Environment>(),
       std::string(kSessionEnvironmentLabelPrefix) + session_id_, *kEnvServices,
@@ -400,14 +397,14 @@ void SessionmgrImpl::InitializeIntlPropertyProvider() {
       });
 }
 
-void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_shell_url,
-                                                 fuchsia::modular::AppConfig story_shell_config,
-                                                 bool use_session_shell_for_story_shell_factory) {
+void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
+                                       fuchsia::modular::AppConfig story_shell_config,
+                                       bool use_session_shell_for_story_shell_factory) {
   // NOTE: There is an awkward service exchange here between
   // AgentRunner, StoryProviderImpl, FocusHandler, VisibleStoriesHandler.
   //
   // AgentRunner needs a UserIntelligenceProvider. Initializing the
-  // Maxwell process UserIntelligenceProvider requires a ComponentContext.
+  // UserIntelligenceProvider requires a ComponentContext.
   // ComponentContext requires an AgentRunner, which creates a circular
   // dependency.
   //
@@ -427,12 +424,6 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
   auto puppet_master_request = puppet_master.NewRequest();
 
   user_intelligence_provider_impl_.reset(new UserIntelligenceProviderImpl(
-      [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
-        if (terminating_) {
-          return;
-        }
-        story_provider_impl_->Connect(std::move(request));
-      },
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
         if (terminating_) {
           return;
@@ -487,21 +478,11 @@ void SessionmgrImpl::InitializeMaxwellAndModular(const fidl::StringPtr& session_
       std::move(agent_service_index), sessionmgr_context_));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
-  maxwell_component_context_bindings_ =
-      std::make_unique<fidl::BindingSet<fuchsia::modular::ComponentContext,
-                                        std::unique_ptr<ComponentContextImpl>>>();
-  AtEnd(Reset(&maxwell_component_context_bindings_));
-
   ComponentContextInfo component_context_info{agent_runner_.get(), ledger_repository_.get(),
                                               entity_provider_runner_.get()};
 
-  auto maxwell_app_component_context =
-      maxwell_component_context_bindings_->AddBinding(std::make_unique<ComponentContextImpl>(
-          component_context_info, kMaxwellComponentNamespace, kMaxwellUrl, kMaxwellUrl));
-
-  user_intelligence_provider_impl_->StartAgents(std::move(maxwell_app_component_context),
-                                                (config_.session_agents()),
-                                                (config_.startup_agents()));
+  user_intelligence_provider_impl_->StartAgents(agent_runner_.get(), config_.session_agents(),
+                                                config_.startup_agents());
 
   local_module_resolver_ = std::make_unique<LocalModuleResolver>();
   AtEnd(Reset(&local_module_resolver_));

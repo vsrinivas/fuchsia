@@ -21,7 +21,7 @@
   "fidl/fuchsia.modular/module/module_manifest.fidl": "44ad6d834499f0cbeb99d1eb762bf305",
   "fidl/fuchsia.modular/module/module_state.fidl": "200892e14d9a6f3f1b46473477a02b99",
   "fidl/fuchsia.modular/module_resolver/module_resolver.fidl": "c1934fa7777cb992efda8e08c0c45060",
-  "fidl/fuchsia.modular/session/focus.fidl": "5d86d06a6ac2fabbe04f71353094a075",
+  "fidl/fuchsia.modular/session/focus.fidl": "3abbe3b15c28a7b430f93e0e36d28c93",
   "fidl/fuchsia.modular/session/session_shell.fidl": "f281bc653809ce9218b5d0a70569fd75",
   "fidl/fuchsia.modular/story/create_link.fidl": "f408177279214b9b2bb6308909f62899",
   "fidl/fuchsia.modular/story/create_module_parameter_map.fidl": "17545269dc4b61302b6bb53e5a66d68f",
@@ -30,11 +30,11 @@
   "fidl/fuchsia.modular/story/story_controller.fidl": "88e8b50ce08ba451bada68c4a44be8c6",
   "fidl/fuchsia.modular/story/story_info.fidl": "5f1fdcd6b6e43396b634514fb4e0c569",
   "fidl/fuchsia.modular/story/story_options.fidl": "8a860f205fd44ec331d6115dea19897f",
-  "fidl/fuchsia.modular/story/story_provider.fidl": "421c27c23db459bb1877e9c52f0c6d8c",
+  "fidl/fuchsia.modular/story/story_provider.fidl": "da1bcf40e5a3105b6bb23072d6a16914",
   "fidl/fuchsia.modular/story/story_shell.fidl": "17b3ab4fa4bd5015de8bb99b287b6da5",
   "fidl/fuchsia.modular/story/story_shell_factory.fidl": "23fe9c32b4bcfc794ce32c1d890cdff5",
   "fidl/fuchsia.modular/story/story_state.fidl": "e76164e4aab96201a244e5ba979dcada",
   "fidl/fuchsia.modular/story/story_visibility_state.fidl": "843f5de3bd99588b32e94eb0cda2242c",
   "fidl/fuchsia.modular/surface/surface.fidl": "ed54e678c1a007dcfdbc21249116c3a1",
-  "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "d47f25c490232624c1c72eb2e0f10c37"
+  "fidl/fuchsia.modular/user_intelligence/user_intelligence_provider.fidl": "f2332b5ce5584729d6fcb8c589e28072"
 }

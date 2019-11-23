@@ -56,11 +56,11 @@ class AgentContextImpl::InitializeCall : public Operation<> {
     }
 
     agent_context_impl_->user_intelligence_provider_->GetServicesForAgent(
-        agent_context_impl_->url_, [this, flow](fuchsia::sys::ServiceList maxwell_service_list) {
+        agent_context_impl_->url_, [this, flow](fuchsia::sys::ServiceList agent_service_list) {
           auto service_list = fuchsia::sys::ServiceList::New();
-          service_list->names = std::move(maxwell_service_list.names);
+          service_list->names = std::move(agent_service_list.names);
           agent_context_impl_->service_provider_impl_.SetDefaultServiceProvider(
-              maxwell_service_list.provider.Bind());
+              agent_service_list.provider.Bind());
           Continue(std::move(service_list), flow);
         });
   }

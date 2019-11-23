@@ -17,6 +17,7 @@
 #include <string>
 #include <vector>
 
+#include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/rate_limited_retry.h"
 
 namespace modular {
@@ -25,8 +26,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
  public:
   // |context| is not owned and must outlive this instance.
   UserIntelligenceProviderImpl(
-      fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
-          story_provider_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
           focus_provider_connector,
       fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>
@@ -37,10 +36,10 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
 
   ~UserIntelligenceProviderImpl() override = default;
 
-  void StartAgents(
-      fidl::InterfaceHandle<fuchsia::modular::ComponentContext> component_context_handle,
-      std::vector<std::string> session_agents, std::vector<std::string> startup_agents) override;
+  void StartAgents(AgentRunner* agent_runner, std::vector<std::string> session_agents,
+                   std::vector<std::string> startup_agents);
 
+  // |UserIntelligenceProvider
   void GetServicesForAgent(std::string url, GetServicesForAgentCallback callback) override;
 
  private:
@@ -77,9 +76,9 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
   std::vector<std::string> AddAgentServices(const std::string& url,
                                             component::ServiceNamespace* agent_host);
 
-  void StartAgent(const std::string& url);
+  void StartAgent(AgentRunner* agent_runner, const std::string& url);
 
-  void StartSessionAgent(const std::string& url);
+  void StartSessionAgent(AgentRunner* agent_runner, const std::string& url);
 
   std::map<std::string, SessionAgentData> session_agents_;
 
@@ -88,8 +87,6 @@ class UserIntelligenceProviderImpl : public fuchsia::modular::UserIntelligencePr
   fidl::InterfacePtr<fuchsia::modular::FocusProvider> focus_provider_;
   fidl::InterfacePtr<fuchsia::intl::PropertyProvider> property_provider_;
 
-  fit::function<void(fidl::InterfaceRequest<fuchsia::modular::StoryProvider>)>
-      story_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::FocusProvider>)>
       focus_provider_connector_;
   fit::function<void(fidl::InterfaceRequest<fuchsia::modular::PuppetMaster>)>

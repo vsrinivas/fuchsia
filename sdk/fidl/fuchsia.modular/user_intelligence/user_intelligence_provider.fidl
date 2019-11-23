@@ -7,11 +7,6 @@ library fuchsia.modular;
 using fuchsia.sys;
 
 protocol UserIntelligenceProvider {
-    /// The `ComponentContext` is used to create agents and use message queues.
-    StartAgents(ComponentContext user_intelligence_context,
-                vector<string> session_agents,
-                vector<string> startup_agents);
-
     /// A standard set of services provided to all agents at startup,
     /// along with services particuarly for this agent.
     GetServicesForAgent(string agent_url)

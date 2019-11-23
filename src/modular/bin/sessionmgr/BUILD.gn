@@ -221,6 +221,7 @@ source_set("user_intelligence_provider") {
   deps = [
     ":focus",
     ":rate_limited_retry",
+    "agent_runner",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.intl",

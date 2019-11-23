@@ -10,7 +10,7 @@ library fuchsia.modular;
 /// {Focus,VisibleStories}Controller is used by session shell to update
 /// information whenever changes take place.
 ///
-/// FocusProvider is used by maxwell and session shell to
+/// FocusProvider is used by session shell to
 /// query and get updates on which story is in focus on which device
 /// and visible stories on this device.
 ///
