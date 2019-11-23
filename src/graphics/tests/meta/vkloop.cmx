@@ -8,7 +8,7 @@
         }
     },
     "program": {
-        "binary": "test/disabled/vkloop"
+        "binary": "test/vkloop"
     },
     "sandbox": {
         "features": [

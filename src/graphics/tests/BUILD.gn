@@ -51,9 +51,7 @@ test_package("vulkan-tests") {
     },
     {
       name = "vkloop"
-
-      # TODO(MA-530): re-enable once working again.
-      disabled = true
+      environments = magma_libvulkan_hardware_envs
     },
     {
       name = "vkext"
