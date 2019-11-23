@@ -199,6 +199,20 @@ test("use_vp9_decoder_secure_output_test") {
   ]
 }
 
+test("use_vp9_decoder_secure_input_output_test") {
+  testonly = true
+
+  output_name = "use_vp9_decoder_secure_input_output_test"
+
+  sources = [
+    "test/use_vp9_decoder_secure_input_output_test.cc",
+  ]
+
+  deps = [
+    ":use_media_decoder_source_set",
+  ]
+}
+
 test("vp9_decoder_conformance_test") {
   testonly = true
 

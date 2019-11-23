@@ -31,7 +31,7 @@ bool CodecAdapterAacEncoder::IsCoreCodecRequiringOutputConfigForFormatDetection(
 
 bool CodecAdapterAacEncoder::IsCoreCodecMappedBufferUseful(CodecPort port) { return true; }
 
-bool CodecAdapterAacEncoder::IsCoreCodecHwBased() { return false; }
+bool CodecAdapterAacEncoder::IsCoreCodecHwBased(CodecPort port) { return false; }
 
 void CodecAdapterAacEncoder::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {

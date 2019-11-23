@@ -305,6 +305,42 @@ package("use_vp9_decoder_secure_output_test") {
   ]
 }
 
+package("use_vp9_decoder_secure_input_output_test") {
+  testonly = true
+
+  deps = [
+    "//src/media/codec:codec_factory",
+    "//src/media/codec/examples/use_media_decoder:use_vp9_decoder_secure_input_output_test",
+  ]
+
+  meta = [
+    {
+      path = rebase_path(
+              "use_media_decoder/meta/use_vp9_decoder_secure_input_output_test.cmx")
+      dest = "use_vp9_decoder_secure_input_output_test.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "use_vp9_decoder_secure_input_output_test"
+
+      environments = [
+        sherlock_env,
+        astro_env,
+      ]
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "//garnet/test_data/media/third_party/chromium_media_test_data/bear-vp9.ivf")
+      dest = "bear-vp9.ivf"
+    },
+  ]
+}
+
 template("vp9_file_decoder_conformance_test") {
   package(target_name) {
     testonly = true

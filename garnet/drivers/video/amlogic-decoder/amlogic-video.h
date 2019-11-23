@@ -23,6 +23,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
 #include <ddk/protocol/tee.h>
+#include <tee-client-api/tee-client-types.h>
 
 #include "decoder_core.h"
 #include "decoder_instance.h"
@@ -30,7 +31,9 @@
 #include "firmware_blob.h"
 #include "parser.h"
 #include "registers.h"
+#include "secmem_client_session.h"
 #include "stream_buffer.h"
+#include "teec_context.h"
 #include "video_decoder.h"
 #include "watchdog.h"
 
@@ -44,34 +47,37 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   ~AmlogicVideo();
 
-  __WARN_UNUSED_RESULT zx_status_t InitRegisters(zx_device_t* parent);
-  __WARN_UNUSED_RESULT zx_status_t InitDecoder();
+  [[nodiscard]] zx_status_t InitRegisters(zx_device_t* parent);
+  [[nodiscard]] zx_status_t InitDecoder();
 
   // VideoDecoder::Owner implementation.
-  __WARN_UNUSED_RESULT DosRegisterIo* dosbus() override { return dosbus_.get(); }
-  __WARN_UNUSED_RESULT zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
-  __WARN_UNUSED_RESULT DeviceType device_type() override { return device_type_; }
-  __WARN_UNUSED_RESULT FirmwareBlob* firmware_blob() override { return firmware_.get(); }
+  [[nodiscard]] DosRegisterIo* dosbus() override { return dosbus_.get(); }
+  [[nodiscard]] zx::unowned_bti bti() override { return zx::unowned_bti(bti_); }
+  [[nodiscard]] DeviceType device_type() override { return device_type_; }
+  [[nodiscard]] FirmwareBlob* firmware_blob() override { return firmware_.get(); }
   [[nodiscard]] bool is_tee_available() override { return is_tee_available_; }
   [[nodiscard]] zx_status_t TeeSmcLoadVideoFirmware(
       FirmwareBlob::FirmwareType index, FirmwareBlob::FirmwareVdecLoadMode vdec) override;
-  __WARN_UNUSED_RESULT std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
+  [[nodiscard]] zx_status_t TeeVp9AddHeaders(
+      zx_paddr_t page_phys_base, uint32_t before_size, uint32_t max_after_size,
+      uint32_t *after_size) override;
+  [[nodiscard]] std::unique_ptr<CanvasEntry> ConfigureCanvas(io_buffer_t* io_buffer,
                                                                     uint32_t offset, uint32_t width,
                                                                     uint32_t height, uint32_t wrap,
                                                                     uint32_t blockmode) override;
 
-  __WARN_UNUSED_RESULT DecoderCore* core() override { return core_; }
-  __WARN_UNUSED_RESULT zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
+  [[nodiscard]] DecoderCore* core() override { return core_; }
+  [[nodiscard]] zx_status_t AllocateIoBuffer(io_buffer_t* buffer, size_t size,
                                                     uint32_t alignment_log2, uint32_t flags,
                                                     const char* name) override;
   [[nodiscard]] fuchsia::sysmem::AllocatorSyncPtr& SysmemAllocatorSyncPtr() override;
 
-  __WARN_UNUSED_RESULT bool IsDecoderCurrent(VideoDecoder* decoder) override {
+  [[nodiscard]] bool IsDecoderCurrent(VideoDecoder* decoder) override {
     AssertVideoDecoderLockHeld();
     assert(decoder);
     return decoder == video_decoder_;
   }
-  __WARN_UNUSED_RESULT zx_status_t SetProtected(ProtectableHardwareUnit unit,
+  [[nodiscard]] zx_status_t SetProtected(ProtectableHardwareUnit unit,
                                                 bool protect) override;
   // This tries to schedule the next runnable decoder. It may leave the current
   // decoder scheduled if no other decoder is runnable.
@@ -81,7 +87,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   }
 
   // DecoderCore::Owner implementation.
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   MmioRegisters* mmio() override { return registers_.get(); }
   void UngateClocks() override;
   void GateClocks() override;
@@ -97,7 +103,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
 
   // The pts manager has its own locking, so don't worry about the video decoder
   // lock.
-  __WARN_UNUSED_RESULT PtsManager* pts_manager() __TA_NO_THREAD_SAFETY_ANALYSIS {
+  [[nodiscard]] PtsManager* pts_manager() __TA_NO_THREAD_SAFETY_ANALYSIS {
     ZX_DEBUG_ASSERT(video_decoder_);
     return video_decoder_->pts_manager();
   }
@@ -110,17 +116,17 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // running.
   void RemoveDecoder(VideoDecoder* decoder);
 
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   zx_status_t InitializeStreamBuffer(bool use_parser, uint32_t size, bool is_secure);
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   zx_status_t InitializeEsParser();
 
-  __WARN_UNUSED_RESULT Parser* parser() { return parser_.get(); }
+  [[nodiscard]] Parser* parser() { return parser_.get(); }
 
   void UngateParserClock();
   void GateParserClock();
 
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   zx_status_t ProcessVideoNoParser(const void* data, uint32_t len, uint32_t* written_out = nullptr);
 
   [[nodiscard]] uint32_t GetStreamBufferEmptySpaceAfterOffset(uint32_t write_offset);
@@ -128,8 +134,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // Similar to GetStreamBufferEmptySpaceAfterOffset, but uses the current core write offset.
   [[nodiscard]] uint32_t GetStreamBufferEmptySpace();
 
-  __WARN_UNUSED_RESULT DecoderCore* hevc_core() const { return hevc_core_.get(); }
-  __WARN_UNUSED_RESULT DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
+  [[nodiscard]] DecoderCore* hevc_core() const { return hevc_core_.get(); }
+  [[nodiscard]] DecoderCore* vdec1_core() const { return vdec1_core_.get(); }
 
   // Add the instance as a swapped-out decoder.
   void AddNewDecoderInstance(std::unique_ptr<DecoderInstance> instance)
@@ -138,11 +144,11 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // For single-instance decoders, set the default instance.
   void SetDefaultInstance(std::unique_ptr<VideoDecoder> decoder, bool hevc)
       __TA_REQUIRES(video_decoder_lock_);
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   std::mutex* video_decoder_lock() __TA_RETURN_CAPABILITY(video_decoder_lock_) {
     return &video_decoder_lock_;
   }
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   VideoDecoder* video_decoder() __TA_REQUIRES(video_decoder_lock_) { return video_decoder_; }
   [[nodiscard]] DecoderInstance* current_instance() __TA_REQUIRES(video_decoder_lock_) {
     return current_instance_.get();
@@ -153,7 +159,7 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // actually be implemented on top of std::mutex.
   void AssertVideoDecoderLockHeld() __TA_ASSERT(video_decoder_lock_) {}
 
-  __WARN_UNUSED_RESULT zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
+  [[nodiscard]] zx_status_t AllocateStreamBuffer(StreamBuffer* buffer, uint32_t size,
                                                         bool use_parser, bool is_secure);
 
   // This gets started connecting to sysmem, but returns an InterfaceHandle
@@ -166,11 +172,14 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   friend class TestVP9;
   friend class TestFrameProvider;
 
+  [[nodiscard]] zx_status_t InitTeecContext(TeecContext* teec_context);
   void InitializeStreamInput(bool use_parser);
 
-  __WARN_UNUSED_RESULT
+  [[nodiscard]]
   zx_status_t ProcessVideoNoParserAtOffset(const void* data, uint32_t len, uint32_t current_offset,
                                            uint32_t* written_out = nullptr);
+  [[nodiscard]]
+  zx_status_t InitSecmemClientSession();
   zx_status_t PreloadFirmwareViaTee();
   void InitializeInterrupts();
   void SwapOutCurrentInstance() __TA_REQUIRES(video_decoder_lock_);
@@ -184,6 +193,8 @@ class AmlogicVideo final : public VideoDecoder::Owner,
   // Unlike sysmem and canvas, tee is optional (no tee on vim2).
   tee_protocol_t tee_{};
   bool is_tee_available_ = false;
+  TeecContext secmem_teec_context_{};
+  std::optional<SecmemClientSession> secmem_client_session_;
 
   DeviceType device_type_ = DeviceType::kUnknown;
   zx::handle secure_monitor_;

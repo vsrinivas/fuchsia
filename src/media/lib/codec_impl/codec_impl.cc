@@ -184,9 +184,6 @@ std::mutex& CodecImpl::lock() { return lock_; }
 void CodecImpl::SetCoreCodecAdapter(std::unique_ptr<CodecAdapter> codec_adapter) {
   ZX_DEBUG_ASSERT(!codec_adapter_);
   codec_adapter_ = std::move(codec_adapter);
-  if (IsCoreCodecHwBased()) {
-    core_codec_bti_ = CoreCodecBti();
-  }
 }
 
 void CodecImpl::BindAsync(fit::closure error_handler) {
@@ -233,6 +230,10 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
 
     CoreCodecSetSecureMemoryMode(kOutputPort, PortSecureMemoryMode(kOutputPort));
     CoreCodecSetSecureMemoryMode(kInputPort, PortSecureMemoryMode(kInputPort));
+
+    if (IsCoreCodecHwBased(kInputPort) || IsCoreCodecHwBased(kOutputPort)) {
+      core_codec_bti_ = CoreCodecBti();
+    }
 
     // We touch FIDL stuff only from the fidl_thread().  While it would
     // be more efficient to post once to bind and send up to two messages below,
@@ -982,8 +983,23 @@ void CodecImpl::QueueInputPacket_StreamControl(fuchsia::media::Packet packet) {
     core_codec_packet->ClearTimestampIsh();
   }
 
+  if (core_codec_packet->valid_length_bytes() <= 0) {
+    Fail("client QueueInputPacket() with valid_length_bytes 0 - not allowed");
+    return;
+  }
+  if (core_codec_packet->start_offset() + core_codec_packet->valid_length_bytes() <
+      core_codec_packet->start_offset()) {
+    Fail("client QueueInputPacket() start_offset + valid_length_bytes overflow");
+    return;
+  }
+  if (core_codec_packet->start_offset() + core_codec_packet->valid_length_bytes() >
+      core_codec_packet->buffer()->size()) {
+    Fail("client QueueInputPacket() with packet end > buffer size");
+    return;
+  }
+
   // Flush the data out to RAM if needed.
-  if (IsCoreCodecHwBased() &&
+  if (IsCoreCodecHwBased(kInputPort) &&
       port_settings_[kInputPort]->coherency_domain() == fuchsia::sysmem::CoherencyDomain::CPU) {
     // This flushes only the portion of the buffer that the packet is
     // referencing.
@@ -2115,10 +2131,10 @@ bool CodecImpl::AddBufferCommon(bool is_client, CodecPort port,
     // TODO(38651): Currently OEMCrypto's indirect (via FIDL) SMC calls that take physical addresses
     // are not guaranteed to be fully over/done before VMO handles are auto-closed by OEMCrypto
     // assuming OEMCryto's process dies/terminates.
-    if (IsCoreCodecHwBased() && *core_codec_bti_) {
+    if (IsCoreCodecHwBased(port) && *core_codec_bti_) {
       zx_status_t status = local_buffer->Pin();
       if (status != ZX_OK) {
-        FailLocked("buffer->Pin() failed - status: %d", status);
+        FailLocked("buffer->Pin() failed - status: %d port: %d", status, port);
         return false;
       }
     }
@@ -2849,7 +2865,7 @@ bool CodecImpl::FixupBufferCollectionConstraintsLocked(
     if (port == kOutputPort) {
       usage.video |= fuchsia::sysmem::videoUsageDecryptorOutput;
     }
-  } else if (IsCoreCodecHwBased()) {
+  } else if (IsCoreCodecHwBased(port)) {
     // Let's see if we can deprecate videoUsageHwProtected, since it's redundant
     // with secure_required.
     if (usage.video & fuchsia::sysmem::videoUsageHwProtected) {
@@ -3875,10 +3891,12 @@ bool CodecImpl::IsCoreCodecMappedBufferUseful(CodecPort port) {
   return codec_adapter_->IsCoreCodecMappedBufferUseful(port);
 }
 
-bool CodecImpl::IsCoreCodecHwBased() { return codec_adapter_->IsCoreCodecHwBased(); }
+bool CodecImpl::IsCoreCodecHwBased(CodecPort port) {
+  return codec_adapter_->IsCoreCodecHwBased(port);
+}
 
 zx::unowned_bti CodecImpl::CoreCodecBti() {
-  ZX_DEBUG_ASSERT(IsCoreCodecHwBased());
+  ZX_DEBUG_ASSERT(IsCoreCodecHwBased(kInputPort) || IsCoreCodecHwBased(kOutputPort));
   return codec_adapter_->CoreCodecBti();
 }
 

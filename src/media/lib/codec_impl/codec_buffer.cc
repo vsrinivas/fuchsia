@@ -162,6 +162,9 @@ void CodecBuffer::SetVideoFrame(std::weak_ptr<VideoFrame> video_frame) const {
 std::weak_ptr<VideoFrame> CodecBuffer::video_frame() const { return video_frame_; }
 
 zx_status_t CodecBuffer::Pin() {
+  if (is_pinned()) {
+    return ZX_OK;
+  }
   ZX_DEBUG_ASSERT(buffer_.has_data());
   ZX_DEBUG_ASSERT(buffer_.data().is_vmo());
   fuchsia::media::StreamBufferDataVmo& data_vmo = buffer_.mutable_data()->vmo();

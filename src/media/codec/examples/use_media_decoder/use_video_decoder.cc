@@ -20,6 +20,7 @@
 
 #include <fbl/algorithm.h>
 #include <src/media/lib/raw_video_writer/raw_video_writer.h>
+#include <tee-client-api/tee-client-types.h>
 
 #include "in_stream_peeker.h"
 #include "input_copier.h"
@@ -171,7 +172,8 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
       packet->set_start_access_unit(bytes_so_far == 0);
       packet->set_known_end_access_unit(bytes_so_far + bytes_to_copy == byte_count);
       if (tvp) {
-        tvp->DecryptVideo(bytes + bytes_so_far, bytes_to_copy, buffer.vmo());
+        TEEC_Result result = tvp->DecryptVideo(bytes + bytes_so_far, bytes_to_copy, buffer.vmo());
+        ZX_ASSERT(result == TEEC_SUCCESS);
       } else {
         memcpy(buffer.base(), bytes + bytes_so_far, bytes_to_copy);
       }
@@ -249,9 +251,10 @@ void QueueH264Frames(CodecClient* codec_client, InStreamPeeker* in_stream, Input
   // input thread done
 }
 
-void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
+void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream, InputCopier* tvp) {
   uint64_t input_frame_pts_counter = 0;
-  auto queue_access_unit = [&codec_client, in_stream, &input_frame_pts_counter](size_t byte_count) {
+  auto queue_access_unit = [&codec_client, in_stream, &input_frame_pts_counter, tvp](
+      size_t byte_count) {
     std::unique_ptr<fuchsia::media::Packet> packet = codec_client->BlockingGetFreeInputPacket();
     ZX_ASSERT(packet->has_header());
     ZX_ASSERT(packet->header().has_packet_index());
@@ -262,7 +265,7 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     ZX_ASSERT(byte_count <= buffer.size_bytes());
 
     // Check that we don't waste contiguous space on non-secure VP9 input buffers.
-    ZX_ASSERT(!buffer.is_physically_contiguous());
+    ZX_ASSERT(!buffer.is_physically_contiguous() || tvp);
     packet->set_stream_lifetime_ordinal(kStreamLifetimeOrdinal);
     packet->set_start_offset(0);
     packet->set_valid_length_bytes(byte_count);
@@ -276,13 +279,32 @@ void QueueVp9Frames(CodecClient* codec_client, InStreamPeeker* in_stream) {
     packet->set_start_access_unit(true);
     packet->set_known_end_access_unit(true);
     uint32_t actual_bytes_read;
-    zx_status_t status = in_stream->ReadBytesComplete(byte_count, &actual_bytes_read, buffer.base(),
-                                                      zx::deadline_after(kReadDeadlineDuration));
+
+    std::unique_ptr<uint8_t[]> bytes;
+    uint8_t* read_address = nullptr;
+
+    if (tvp) {
+      bytes = std::make_unique<uint8_t[]>(byte_count);
+      read_address = bytes.get();
+    } else {
+      read_address = buffer.base();
+    }
+
+    zx_status_t status = in_stream->ReadBytesComplete(
+        byte_count, &actual_bytes_read, read_address, zx::deadline_after(kReadDeadlineDuration));
     ZX_ASSERT(status == ZX_OK);
     if (actual_bytes_read < byte_count) {
       Exit("Frame truncated.");
     }
     ZX_DEBUG_ASSERT(actual_bytes_read == byte_count);
+
+    if (tvp) {
+      VLOGF("before DecryptVideo...");
+      TEEC_Result result = tvp->DecryptVideo(bytes.get(), byte_count, buffer.vmo());
+      VLOGF("after DecryptVideo");
+      ZX_ASSERT(result == TEEC_SUCCESS);
+    }
+
     codec_client->QueueInputPacket(std::move(packet));
   };
   IvfHeader header;
@@ -419,7 +441,7 @@ static void use_video_decoder(async::Loop* fidl_loop, thrd_t fidl_thread,
             break;
 
           case Format::kVp9:
-            QueueVp9Frames(&codec_client, in_stream);
+            QueueVp9Frames(&codec_client, in_stream, copier);
             break;
         }
         VLOGF("in_thread done");

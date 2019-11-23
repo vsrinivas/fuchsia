@@ -79,7 +79,7 @@ class CodecAdapter {
   // If true, the codec is HW-based, in the sense that at least some of the
   // processing is performed by specialized processing HW running separately
   // from any CPU execution context.
-  virtual bool IsCoreCodecHwBased() = 0;
+  virtual bool IsCoreCodecHwBased(CodecPort port) = 0;
   // Any core codec that performs DMA that will potentially continue beyond the
   // lifetime of the process that holds open the VMO handles being DMA(ed)
   // should override this method to provide CodecImpl with the driver's BTI so

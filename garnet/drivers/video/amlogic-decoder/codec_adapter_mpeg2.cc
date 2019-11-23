@@ -28,7 +28,7 @@ bool CodecAdapterMpeg2::IsCoreCodecMappedBufferUseful(CodecPort port) {
   return true;
 }
 
-bool CodecAdapterMpeg2::IsCoreCodecHwBased() { return true; }
+bool CodecAdapterMpeg2::IsCoreCodecHwBased(CodecPort port) { return true; }
 
 void CodecAdapterMpeg2::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {

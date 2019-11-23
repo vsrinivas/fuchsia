@@ -1,0 +1,29 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.mediacodec.CodecFactory": "fuchsia-pkg://fuchsia.com/codec_factory#meta/codec_factory.cmx",
+                "fuchsia.sysmem.Allocator": "fuchsia-pkg://fuchsia.com/sysmem_connector#meta/sysmem_connector.cmx",
+                "fuchsia.tee.Device": "fuchsia-pkg://fuchsia.com/tee_manager#meta/tee_manager.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/use_vp9_decoder_secure_input_output_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec",
+            "class/securemem",
+            "class/sysmem"
+        ],
+        "services": [
+            "fuchsia.tee.Device",
+            "fuchsia.sys.Environment",
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.sysmem.Allocator"
+        ]
+    }
+}

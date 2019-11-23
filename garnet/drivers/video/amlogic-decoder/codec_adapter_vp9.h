@@ -29,9 +29,10 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override;
-  bool IsCoreCodecHwBased() override;
+  bool IsCoreCodecHwBased(CodecPort port) override;
 
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override;
+  zx::unowned_bti CoreCodecBti() override;
   void CoreCodecSetSecureMemoryMode(
       CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) override;
   fuchsia::sysmem::BufferCollectionConstraints CoreCodecGetBufferCollectionConstraints(
@@ -89,7 +90,8 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   bool IsPortSecurePermitted(CodecPort port);
   bool IsPortSecure(CodecPort port);
   bool IsOutputSecure();
-  void SubmitDataToStreamBuffer(const std::vector<uint8_t>& data);
+  void SubmitDataToStreamBuffer(zx_paddr_t paddr_base, uint32_t paddr_size,
+                                const std::vector<uint8_t>& data);
 
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
@@ -99,6 +101,7 @@ class CodecAdapterVp9 : public CodecAdapter, public Vp9Decoder::FrameDataProvide
   fuchsia::media::FormatDetails initial_input_format_details_;
 
   fuchsia::mediacodec::SecureMemoryMode secure_memory_mode_[kPortCount] = {};
+  bool secure_memory_mode_set_[kPortCount] = {};
   std::optional<fuchsia::sysmem::SingleBufferSettings> buffer_settings_[kPortCount];
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability

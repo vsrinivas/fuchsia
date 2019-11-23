@@ -121,7 +121,17 @@ bool CodecAdapterVp9::IsCoreCodecMappedBufferUseful(CodecPort port) {
   return true;
 }
 
-bool CodecAdapterVp9::IsCoreCodecHwBased() { return true; }
+bool CodecAdapterVp9::IsCoreCodecHwBased(CodecPort port) {
+  if (port == kOutputPort) {
+    // Output is HW based regardless of whether output is secure or not.
+    return true;
+  }
+  ZX_DEBUG_ASSERT(port == kInputPort);
+  // Input is HW based only when secure input at least permitted.
+  return IsPortSecurePermitted(kInputPort);
+}
+
+zx::unowned_bti CodecAdapterVp9::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
 void CodecAdapterVp9::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {
@@ -142,6 +152,26 @@ void CodecAdapterVp9::CoreCodecInit(
 void CodecAdapterVp9::CoreCodecSetSecureMemoryMode(
     CodecPort port, fuchsia::mediacodec::SecureMemoryMode secure_memory_mode) {
   secure_memory_mode_[port] = secure_memory_mode;
+  secure_memory_mode_set_[port] = true;
+  if (port == kOutputPort) {
+    // Check output secure mode (not input), since overall secure vs. not-secure setup is based on
+    // output secure memory mode.  In particular, when output is secure, the stream buffer is secure, which means we
+    // can't use the CPU to copy into the stream buffer.  Using parser, input can be non-secure or secure.
+    //
+    // If output non-secure and input secure:
+    //   * by design, this doesn't work for vp9 decode
+    // If output non-secure and input non-secure:
+    //   * CPU copy from BufferCollection buffer to stream buffer.
+    // If output secure and input non-secure:
+    //   * CPU copy from BufferCollection buffer to tmp then parser copy from tmp to stream buffer.
+    // If output secure and input secure:
+    //   * Parser copy from BufferCollection buffer to stream buffer.
+    //
+    // TODO(dustingreen): (or jbauman@) Probably we can just do use_parser_ true always?
+    if (IsOutputSecure()) {
+      use_parser_ = true;
+    }
+  }
 }
 
 fuchsia::sysmem::BufferCollectionConstraints
@@ -430,8 +460,8 @@ void CodecAdapterVp9::CoreCodecStartStream() {
     auto instance = std::make_unique<DecoderInstance>(std::move(decoder), video_->hevc_core());
     // The video decoder can read from non-secure buffers even in secure mode.
     status = video_->AllocateStreamBuffer(instance->stream_buffer(), 512 * PAGE_SIZE,
-                                          /*use_parser=*/false,
-                                          /*is_secure=*/false);
+                                          /*use_parser=*/use_parser_,
+                                          /*is_secure=*/IsPortSecure(kInputPort));
     if (status != ZX_OK) {
       events_->onCoreCodecFailCodec("AllocateStreamBuffer() failed");
       return;
@@ -876,13 +906,13 @@ CodecInputItem CodecAdapterVp9::DequeueInputItem() {
   }  // ~lock
 }
 
-void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data) {
+void CodecAdapterVp9::SubmitDataToStreamBuffer(
+    zx_paddr_t paddr_base, uint32_t paddr_size, const std::vector<uint8_t>& data) {
+  ZX_DEBUG_ASSERT(paddr_size == 0 || use_parser_);
   video_->AssertVideoDecoderLockHeld();
   if (use_parser_) {
-    // Should match protectedness of current stream buffer.
-    // TODO(fxb/35200): Set to true for protected inputs.
-    if (ZX_OK !=
-        video_->SetProtected(VideoDecoder::Owner::ProtectableHardwareUnit::kParser, false)) {
+    if (ZX_OK != video_->SetProtected(
+        VideoDecoder::Owner::ProtectableHardwareUnit::kParser, IsPortSecure(kInputPort))) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
@@ -892,19 +922,27 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data)
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    if (data.size() + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
+    uint32_t size = paddr_size ? paddr_size : data.size();
+    if (size + sizeof(kFlushThroughZeroes) > video_->GetStreamBufferEmptySpace()) {
       // We don't want the parser to hang waiting for output buffer space, since new space will
       // never be released to it since we need to manually update the read pointer. TODO(fxb/41825):
       // Handle copying only as much as can fit and waiting for kVp9InputBufferEmpty to continue
       // copying the remainder.
       DECODE_ERROR("Empty space in stream buffer %d too small for video data (%lu)",
-                   video_->GetStreamBufferEmptySpace(), data.size() + sizeof(kFlushThroughZeroes));
+                   video_->GetStreamBufferEmptySpace(), size + sizeof(kFlushThroughZeroes));
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-
     video_->parser()->SyncFromDecoderInstance(video_->current_instance());
-    if (ZX_OK != video_->parser()->ParseVideo(data.data(), data.size())) {
+
+    zx_status_t status;
+    if (paddr_size) {
+      status = video_->parser()->ParseVideoPhysical(paddr_base, paddr_size);
+    } else {
+      status = video_->parser()->ParseVideo(data.data(), data.size());
+    }
+
+    if (status != ZX_OK) {
       DECODE_ERROR("Parsing video failed");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
@@ -930,6 +968,7 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data)
 
     video_->parser()->SyncToDecoderInstance(video_->current_instance());
   } else {
+    ZX_DEBUG_ASSERT(!paddr_size);
     if (ZX_OK != video_->ProcessVideoNoParser(data.data(), data.size())) {
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
@@ -940,9 +979,14 @@ void CodecAdapterVp9::SubmitDataToStreamBuffer(const std::vector<uint8_t>& data)
     }
   }
 }
+
 // The decoder lock is held by caller during this method.
 void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
   if (queued_frame_sizes_.size()) {
+    // This can pass in 0 when a superframe is being decoded from protected memory and this is a
+    // frame of the superframe other than frame 0 of the superframe, in which case the input data
+    // for the whole superframe was already part of the decode size given to the HW when starting
+    // frame 0 of the superframe.
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
     return;
@@ -966,7 +1010,7 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
       std::vector<uint8_t> split_data;
       SplitSuperframe(reinterpret_cast<const uint8_t*>(&new_stream_ivf[kHeaderSkipBytes]),
                       new_stream_ivf_len - kHeaderSkipBytes, &split_data);
-      SubmitDataToStreamBuffer(split_data);
+      SubmitDataToStreamBuffer(/*paddr_base=*/0, /*paddr_size=*/0, split_data);
       // Intentionally not including kFlushThroughZeroes - this only includes
       // data in AMLV frames.
       decoder->UpdateDecodeSize(split_data.size());
@@ -980,21 +1024,63 @@ void CodecAdapterVp9::ReadMoreInputData(Vp9Decoder* decoder) {
 
     video_->pts_manager()->InsertPts(parsed_video_size_, item.packet()->has_timestamp_ish(),
                                      item.packet()->timestamp_ish());
+
+    zx_paddr_t paddr_base = 0;
+    uint32_t paddr_size = 0;
     std::vector<uint8_t> split_data;
     std::vector<uint32_t> new_queued_frame_sizes;
-    SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);
+    uint32_t split_data_size = 0;
 
-    parsed_video_size_ += split_data.size() + kFlushThroughBytes;
-    SubmitDataToStreamBuffer(split_data);
+    if (IsPortSecure(kInputPort)) {
+      uint32_t after_repack_len;
+      ZX_DEBUG_ASSERT(item.packet()->buffer()->is_pinned());
+      paddr_base = item.packet()->buffer()->physical_base() + item.packet()->start_offset();
+
+      // These are enforced by codec_impl.cc as a packet arrives.
+      ZX_DEBUG_ASSERT(len > 0);
+      ZX_DEBUG_ASSERT(item.packet()->start_offset() + len <= item.packet()->buffer()->size());
+
+      zx_status_t status = video_->TeeVp9AddHeaders(
+          paddr_base, len, item.packet()->buffer()->size() - item.packet()->start_offset(),
+          &after_repack_len);
+      if (status != ZX_OK) {
+        LOG(ERROR, "TeeVp9AddHeaders() failed - status: %d", status);
+        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+        return;
+      }
+
+      uint32_t increased_size = after_repack_len - len;
+      if ((after_repack_len < len) || (increased_size % 16 != 0) || (increased_size < 16)) {
+        LOG(ERROR, "TeeVp9AddHeaders() gave bad size 0x%x from 0x%x", after_repack_len, len);
+        OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
+        return;
+      }
+      uint32_t frame_count = increased_size / 16;
+
+      paddr_size = after_repack_len;
+      new_queued_frame_sizes.push_back(after_repack_len);
+      // This prevents ReadMoreInputData() from adding more data to the stream buffer until the
+      // whole superframe is done.
+      for (uint32_t i = 1; i < frame_count; i++) {
+        new_queued_frame_sizes.push_back(0);
+      }
+      split_data_size = after_repack_len;
+    } else {
+      SplitSuperframe(data, len, &split_data, &new_queued_frame_sizes);
+      split_data_size = split_data.size();
+    }
+
+    parsed_video_size_ += split_data_size + kFlushThroughBytes;
+    SubmitDataToStreamBuffer(paddr_base, paddr_size, split_data);
     queued_frame_sizes_ = std::move(new_queued_frame_sizes);
 
     if (queued_frame_sizes_.size() == 0) {
+      LOG(ERROR, "queued_frame_sizes_.size() == 0");
       OnCoreCodecFailStream(fuchsia::media::StreamError::DECODER_UNKNOWN);
       return;
     }
-    // Only one frame per superframe should be given at a time, as otherwise the
-    // data for frames after that will be thrown away after that first frame is
-    // decoded.
+
+    // Only one frame per superframe should be given at a time, when possible.
     decoder->UpdateDecodeSize(queued_frame_sizes_.front());
     queued_frame_sizes_.erase(queued_frame_sizes_.begin());
 
@@ -1189,14 +1275,17 @@ CodecPacket* CodecAdapterVp9::GetFreePacket() {
 }
 
 bool CodecAdapterVp9::IsPortSecureRequired(CodecPort port) {
+  ZX_DEBUG_ASSERT(secure_memory_mode_set_[port]);
   return secure_memory_mode_[port] == fuchsia::mediacodec::SecureMemoryMode::ON;
 }
 
 bool CodecAdapterVp9::IsPortSecurePermitted(CodecPort port) {
+  ZX_DEBUG_ASSERT(secure_memory_mode_set_[port]);
   return secure_memory_mode_[port] != fuchsia::mediacodec::SecureMemoryMode::OFF;
 }
 
 bool CodecAdapterVp9::IsPortSecure(CodecPort port) {
+  ZX_DEBUG_ASSERT(secure_memory_mode_set_[port]);
   ZX_DEBUG_ASSERT(buffer_settings_[port]);
   return buffer_settings_[port]->buffer_settings.is_secure;
 }

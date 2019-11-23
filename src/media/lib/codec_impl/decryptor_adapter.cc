@@ -90,7 +90,7 @@ bool DecryptorAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) {
   return (port == kInputPort) || (port == kOutputPort && !is_secure());
 }
 
-bool DecryptorAdapter::IsCoreCodecHwBased() { return false; }
+bool DecryptorAdapter::IsCoreCodecHwBased(CodecPort port) { return false; }
 
 void DecryptorAdapter::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {

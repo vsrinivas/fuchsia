@@ -32,19 +32,28 @@ class ClearTvpSession : public InputCopier {
     // clearTVP adds 0x00, 0x00, 0x00, 0x01 to end of copied data.
     return 4;
   }
-  int DecryptVideo(void* data, uint32_t data_len, const zx::vmo& vmo) override;
+  zx_status_t DecryptVideo(void* data, uint32_t data_len, const zx::vmo& vmo) override;
 
  private:
+  void EnsureSessionClosed();
+  zx_status_t OpenSession();
+
   fuchsia::hardware::securemem::DeviceSyncPtr securemem_;
   std::unique_ptr<TEEC_Context> context_;
   std::unique_ptr<TEEC_Session> session_;
 };
 
 ClearTvpSession::~ClearTvpSession() {
-  if (session_)
-    TEEC_CloseSession(session_.get());
+  EnsureSessionClosed();
   if (context_)
     TEEC_FinalizeContext(context_.get());
+}
+
+void ClearTvpSession::EnsureSessionClosed() {
+  if (session_) {
+    TEEC_CloseSession(session_.get());
+    session_.reset();
+  }
 }
 
 zx_status_t ClearTvpSession::Init() {
@@ -54,70 +63,109 @@ zx_status_t ClearTvpSession::Init() {
     FXL_LOG(ERROR) << "Connecting to securemem failed";
     return status;
   }
-  uint32_t return_origin;
   context_ = std::make_unique<TEEC_Context>();
   TEEC_Result result = TEEC_InitializeContext(NULL, context_.get());
   if (result != TEEC_SUCCESS) {
     context_.reset();
-    FXL_LOG(ERROR) << "TEEC_InitializeContext failed " << result;
+    FXL_LOG(ERROR) << "TEEC_InitializeContext failed " << std::hex << result;
     return ZX_ERR_INVALID_ARGS;
   }
 
-  session_ = std::make_unique<TEEC_Session>();
-  result = TEEC_OpenSession(context_.get(), session_.get(), &kClearTvpUuid, TEEC_LOGIN_PUBLIC, NULL,
-                            NULL, &return_origin);
-  if (result != TEEC_SUCCESS) {
-    session_.reset();
-    FXL_LOG(ERROR) << "TEEC_OpenSession failed with result " << result << " origin "
-                   << return_origin << ". Maybe bootloader the version is incorrect.";
-    return ZX_ERR_INVALID_ARGS;
+  status = OpenSession();
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "OpenSession() failed with status " << status;
+    return status;
   }
+
   return ZX_OK;
+}
+
+zx_status_t ClearTvpSession::OpenSession() {
+  ZX_DEBUG_ASSERT(!session_);
+  zx_status_t status = ZX_ERR_INTERNAL;
+  for (uint32_t i = 0; i < 20; ++i) {
+    session_ = std::make_unique<TEEC_Session>();
+    uint32_t return_origin;
+    TEEC_Result result = TEEC_OpenSession(context_.get(), session_.get(), &kClearTvpUuid, TEEC_LOGIN_PUBLIC, NULL,
+                              NULL, &return_origin);
+    if (result != TEEC_SUCCESS) {
+      session_.reset();
+      FXL_LOG(ERROR) << "TEEC_OpenSession failed with result " << std::hex << result << " origin "
+                    << return_origin << ". Maybe the bootloader version is incorrect.";
+      status = ZX_ERR_INTERNAL;
+      continue;
+    }
+    return ZX_OK;
+  }
+  return status;
 }
 
 constexpr uint32_t kClearTvpCommandDecryptVideo = 6;
 
 int ClearTvpSession::DecryptVideo(void* data, uint32_t data_len, const zx::vmo& vmo) {
-  zx::vmo dup_vmo;
-  zx_status_t status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
-  if (status != ZX_OK) {
-    return TEEC_ERROR_GENERIC;
-  }
-  zx_status_t status2 = ZX_OK;
-  zx_paddr_t output_paddr;
+  zx_status_t status = ZX_ERR_INTERNAL;
+  for (uint32_t i = 0; i < 20; ++i) {
+    if (!session_) {
+      status = OpenSession();
+      if (status != ZX_OK) {
+        FXL_LOG(ERROR) << "OpenSession() failed - status: " << status;
+        return status;
+      }
+    }
 
-  status = securemem_->GetSecureMemoryPhysicalAddress(std::move(dup_vmo), &status2, &output_paddr);
-  if (status != ZX_OK || status2 != ZX_OK) {
-    FXL_LOG(ERROR) << "Failed to get physical address: " << status << " " << status2;
-    return TEEC_ERROR_GENERIC;
-  }
+    zx::vmo dup_vmo;
+    status = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    if (status != ZX_OK) {
+      FXL_LOG(ERROR) << "vmo.duplicate() failed - status: " << status;
+      return status;
+    }
+    zx_status_t status2 = ZX_OK;
+    zx_paddr_t output_paddr;
 
-  TEEC_Operation operation = {};
+    status = securemem_->GetSecureMemoryPhysicalAddress(std::move(dup_vmo), &status2, &output_paddr);
+    if (status != ZX_OK || status2 != ZX_OK) {
+      FXL_LOG(ERROR) << "Failed to get physical address: " << status << " " << status2;
+      if (status == ZX_OK) {
+        status = status2;
+      }
+      return status;
+    }
 
-  operation.paramTypes =
-      TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INPUT, TEEC_VALUE_INPUT, TEEC_NONE);
-  operation.params[0].tmpref.buffer = data;
-  operation.params[0].tmpref.size = data_len;
-  // clear data len
-  operation.params[1].value.a = data_len;
-  // enc data len - all input data is clear
-  operation.params[1].value.b = 0;
-  // output_offset - not needed since any offset is baked into output_handle
-  operation.params[2].value.a = 0;
-  // output_handle
-  operation.params[2].value.b = output_paddr;
-  TEEC_Result res =
-      TEEC_InvokeCommand(session_.get(), kClearTvpCommandDecryptVideo, &operation, nullptr);
-  if (res != TEEC_SUCCESS) {
-    FXL_LOG(ERROR) << "Failed to invoke command: " << res;
-    return res;
+    TEEC_Operation operation = {};
+
+    operation.paramTypes =
+        TEEC_PARAM_TYPES(TEEC_MEMREF_TEMP_INPUT, TEEC_VALUE_INPUT, TEEC_VALUE_INPUT, TEEC_NONE);
+    operation.params[0].tmpref.buffer = data;
+    operation.params[0].tmpref.size = data_len;
+    // clear data len
+    operation.params[1].value.a = data_len;
+    // enc data len - all input data is clear
+    operation.params[1].value.b = 0;
+    // output_offset - not needed since any offset is baked into output_handle
+    operation.params[2].value.a = 0;
+    // output_handle
+    operation.params[2].value.b = output_paddr;
+    uint32_t return_origin = -1;
+    TEEC_Result res =
+        TEEC_InvokeCommand(session_.get(), kClearTvpCommandDecryptVideo, &operation, &return_origin);
+    if (res != TEEC_SUCCESS) {
+      FXL_LOG(ERROR) << "Failed to invoke command: 0x" << std::hex << res <<
+          " return_origin: " << return_origin;
+      EnsureSessionClosed();
+      status = ZX_ERR_INTERNAL;
+      continue;
+    }
+    return ZX_OK;
   }
-  return 0;
+  return status;
 }
 
 std::unique_ptr<InputCopier> InputCopier::Create() {
   auto tvp = std::make_unique<ClearTvpSession>();
-  if (tvp->Init() != ZX_OK)
+  if (tvp->Init() != ZX_OK) {
+    // Give up if this happens.
+    ZX_PANIC("tvp->Init() failed (ClearTvpSession)");
     return nullptr;
+  }
   return tvp;
 }

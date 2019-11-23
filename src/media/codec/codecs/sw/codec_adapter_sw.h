@@ -61,7 +61,7 @@ class CodecAdapterSW : public CodecAdapter {
 
   bool IsCoreCodecMappedBufferUseful(CodecPort port) override { return true; }
 
-  bool IsCoreCodecHwBased() override { return false; }
+  bool IsCoreCodecHwBased(CodecPort port) override { return false; }
 
   void CoreCodecInit(const fuchsia::media::FormatDetails& initial_input_format_details) override {
     if (!initial_input_format_details.has_format_details_version_ordinal()) {

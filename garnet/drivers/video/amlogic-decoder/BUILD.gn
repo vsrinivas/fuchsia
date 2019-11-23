@@ -93,6 +93,10 @@ if (target_cpu == "arm64") {
       "pts_manager.cc",
       "pts_manager.h",
       "registers.h",
+      "secmem_client_session.cc",
+      "secmem_client_session.h",
+      "teec_context.cc",
+      "teec_context.h",
       "third_party/vp9_adapt_probs/vp9_coefficient_adaptation.c",
       "vdec1.cc",
       "vdec1.h",
@@ -131,6 +135,7 @@ if (target_cpu == "arm64") {
       "//zircon/public/lib/fbl",
       "//zircon/public/lib/hwreg",
       "//zircon/public/lib/mmio",
+      "//zircon/public/lib/tee-client-api",
       "//zircon/public/lib/zx",
       "//zircon/system/banjo/ddk.protocol.amlogiccanvas",
       "//zircon/system/banjo/ddk.protocol.composite",
@@ -143,7 +148,6 @@ if (target_cpu == "arm64") {
       "//sdk/fidl/fuchsia.mediacodec",
       "//sdk/lib/fidl/cpp",
       "//src/media/lib/codec_impl",
-      "//zircon/public/lib/tee-client-api",
       "//zircon/system/fidl/fuchsia-hardware-mediacodec:fuchsia-hardware-mediacodec_c",
     ]
     public_configs = [ ":sources_include_config" ]

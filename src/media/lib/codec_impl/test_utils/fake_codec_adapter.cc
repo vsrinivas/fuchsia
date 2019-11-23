@@ -56,7 +56,7 @@ bool FakeCodecAdapter::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 
 bool FakeCodecAdapter::IsCoreCodecMappedBufferUseful(CodecPort port) { return true; }
 
-bool FakeCodecAdapter::IsCoreCodecHwBased() { return false; }
+bool FakeCodecAdapter::IsCoreCodecHwBased(CodecPort port) { return false; }
 
 void FakeCodecAdapter::CoreCodecInit(
     const fuchsia::media::FormatDetails& initial_input_format_details) {

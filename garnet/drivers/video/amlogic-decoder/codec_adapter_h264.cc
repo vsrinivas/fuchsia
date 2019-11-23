@@ -134,7 +134,7 @@ bool CodecAdapterH264::IsCoreCodecMappedBufferUseful(CodecPort port) {
   }
 }
 
-bool CodecAdapterH264::IsCoreCodecHwBased() { return true; }
+bool CodecAdapterH264::IsCoreCodecHwBased(CodecPort port) { return true; }
 
 zx::unowned_bti CodecAdapterH264::CoreCodecBti() { return zx::unowned_bti(video_->bti()); }
 
