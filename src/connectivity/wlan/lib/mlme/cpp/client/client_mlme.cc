@@ -177,7 +177,7 @@ zx_status_t ClientMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
   if (auto deauth_req = msg.As<wlan_mlme::DeauthenticateRequest>()) {
     return sta_->Deauthenticate(deauth_req->body()->reason_code);
   } else if (auto assoc_req = msg.As<wlan_mlme::AssociateRequest>()) {
-    return sta_->Associate(assoc_req->body()->rsne.value_or(std::vector<uint8_t>{}));
+    return sta_->Associate(*assoc_req->body());
   } else if (auto eapol_req = msg.As<wlan_mlme::EapolRequest>()) {
     auto body = eapol_req->body();
     return sta_->SendEapolFrame(body->data, common::MacAddr(body->src_addr),

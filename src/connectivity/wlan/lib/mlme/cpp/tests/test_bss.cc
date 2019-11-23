@@ -185,6 +185,7 @@ MlmeMsg<wlan_mlme::AssociateRequest> CreateAssocRequest(bool rsne) {
 
   auto req = wlan_mlme::AssociateRequest::New();
   std::memcpy(req->peer_sta_address.data(), bssid.byte, common::kMacAddrLen);
+  req->rates = {std::cbegin(kRates), std::cend(kRates)};
   if (rsne) {
     req->rsne.emplace(std::vector<uint8_t>(kRsne, kRsne + sizeof(kRsne)));
   } else {

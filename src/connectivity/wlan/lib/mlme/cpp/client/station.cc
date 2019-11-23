@@ -283,7 +283,7 @@ zx_status_t Station::Deauthenticate(wlan_mlme::ReasonCode reason_code) {
   return ZX_OK;
 }
 
-zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
+zx_status_t Station::Associate(const wlan_mlme::AssociateRequest& req) {
   debugfn();
   WLAN_STATS_INC(svc_msg.in);
 
@@ -298,64 +298,24 @@ zx_status_t Station::Associate(fbl::Span<const uint8_t> rsne) {
     }
   }
 
-  debugjoin("associating to %s\n", join_ctx_->bssid().ToString().c_str());
-
-  auto ifc_info = device_->GetWlanInfo().ifc_info;
-  auto client_capability = MakeClientAssocCtx(ifc_info, join_ctx_->channel());
-  auto cap_info = OverrideCapability(client_capability.cap);
-  join_ctx_->set_listen_interval(0);
-
-  auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->rates, client_capability.rates);
-  if (!rates.has_value()) {
-    service::SendAssocConfirm(device_,
-                              wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH);
-    return ZX_ERR_NOT_SUPPORTED;
-  } else if (rates->empty()) {
-    service::SendAssocConfirm(device_,
-                              wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH);
-    return ZX_ERR_NOT_SUPPORTED;
+  fbl::Span<const uint8_t> rsne{};
+  if (req.rsne.has_value()) {
+    rsne = req.rsne.value();
   }
 
-  HtCapabilities ht_cap{};
-  const auto* ht_cap_ptr = &ht_cap;
-  if (join_ctx_->IsHt() || join_ctx_->IsVht()) {
-    ht_cap = client_capability.ht_cap.value_or(HtCapabilities{});
-    ht_cap_ptr = &ht_cap;
-    debugf("HT cap(hardware reports): %s\n", debug::Describe(ht_cap).c_str());
-
-    zx_status_t status = OverrideHtCapability(&ht_cap);
-    if (status != ZX_OK) {
-      errorf("could not build HtCapabilities. status %d\n", status);
-      service::SendAssocConfirm(device_,
-                                wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-      return ZX_ERR_IO;
-    }
-    debugf("HT cap(after overriding): %s\n", debug::Describe(ht_cap).c_str());
+  fbl::Span<const uint8_t> ht_cap{};
+  if (req.ht_cap != nullptr) {
+    ht_cap = req.ht_cap->bytes;
   }
 
-  VhtCapabilities vht_cap{};
-  const VhtCapabilities* vht_cap_ptr = nullptr;
-  if (join_ctx_->IsVht()) {
-    vht_cap = client_capability.vht_cap.value_or(VhtCapabilities{});
-    vht_cap_ptr = &vht_cap;
-    // debugf("VHT cap(hardware reports): %s\n",
-    // debug::Describe(vht_cap).c_str());
-    if (auto status = OverrideVhtCapability(&vht_cap, *join_ctx_); status != ZX_OK) {
-      errorf("could not build VhtCapabilities (%s)\n", zx_status_get_string(status));
-      service::SendAssocConfirm(device_,
-                                wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
-      return ZX_ERR_IO;
-    }
-    // debugf("VHT cap(after overriding): %s\n",
-    // debug::Describe(vht_cap).c_str());
+  fbl::Span<const uint8_t> vht_cap{};
+  if (req.vht_cap != nullptr) {
+    vht_cap = req.vht_cap->bytes;
   }
-
-  const auto& ssid = join_ctx_->bss()->ssid;
-  fbl::Span<SupportedRate> rates_span{rates->data(), rates->size()};
 
   zx_status_t status = client_sta_send_assoc_req_frame(
-      rust_client_.get(), cap_info.val(), AsWlanSpan(ssid), AsWlanSpan(rates_span),
-      AsWlanSpan(rsne), AsWlanSpan(ht_cap_ptr), AsWlanSpan(vht_cap_ptr));
+      rust_client_.get(), req.cap_info, AsWlanSpan({join_ctx_->bss()->ssid}),
+      AsWlanSpan({req.rates}), AsWlanSpan(rsne), AsWlanSpan(ht_cap), AsWlanSpan(vht_cap));
   if (status != ZX_OK) {
     errorf("could not send assoc packet: %d\n", status);
     service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_REASON_UNSPECIFIED);
@@ -931,59 +891,6 @@ zx::duration Station::FullAutoDeauthDuration() {
   return WLAN_TU(join_ctx_->bss()->beacon_period * kAutoDeauthBcnCountTimeout);
 }
 
-bool Station::IsCbw40Rx() const {
-  // Station can receive CBW40 data frames only when
-  // the AP is capable of transmitting CBW40,
-  // the client is capable of receiving CBW40,
-  // and the association is to configured to use CBW40.
-
-  const auto& join_chan = join_ctx_->channel();
-  auto ifc_info = device_->GetWlanInfo().ifc_info;
-  auto client_assoc = MakeClientAssocCtx(ifc_info, join_chan);
-
-  const HtCapabilities* ht_cap = nullptr;
-  if (join_ctx_->bss()->ht_cap != nullptr) {
-    static_assert(sizeof(join_ctx_->bss()->ht_cap->bytes) == sizeof(HtCapabilities));
-    ht_cap = common::ParseHtCapabilities(join_ctx_->bss()->ht_cap->bytes);
-  }
-  debugf(
-      "IsCbw40Rx: join_chan.cbw:%u, bss.ht_cap:%s, bss.chan_width_set:%s "
-      "client_assoc.has_ht_cap:%s "
-      "client_assoc.chan_width_set:%u\n",
-      join_chan.cbw, (join_ctx_->bss()->ht_cap != nullptr) ? "yes" : "no",
-      (ht_cap == nullptr) ? "invalid"
-                          : (ht_cap->ht_cap_info.chan_width_set() ==
-                             to_enum_type(HtCapabilityInfo::ChanWidthSet::TWENTY_ONLY))
-                                ? "20"
-                                : "40",
-      client_assoc.ht_cap.has_value() ? "yes" : "no",
-      static_cast<uint8_t>(client_assoc.ht_cap->ht_cap_info.chan_width_set()));
-
-  if (join_chan.cbw == WLAN_CHANNEL_BANDWIDTH__20) {
-    debugjoin("Disable CBW40: configured to use less CBW than capability\n");
-    return false;
-  }
-  if (ht_cap == nullptr) {
-    debugjoin("Disable CBW40: no HT support in target BSS\n");
-    return false;
-  }
-  if (ht_cap->ht_cap_info.chan_width_set() ==
-      to_enum_type(HtCapabilityInfo::ChanWidthSet::TWENTY_ONLY)) {
-    debugjoin("Disable CBW40: no CBW40 support in target BSS\n");
-    return false;
-  }
-
-  if (!client_assoc.ht_cap) {
-    debugjoin("Disable CBW40: no HT support in the this device\n");
-    return false;
-  } else if (client_assoc.ht_cap->ht_cap_info.chan_width_set() == HtCapabilityInfo::TWENTY_ONLY) {
-    debugjoin("Disable CBW40: no CBW40 support in the this device\n");
-    return false;
-  }
-
-  return true;
-}
-
 bool Station::IsQosReady() const {
   // TODO(NET-567,NET-599): Determine for each outbound data frame,
   // given the result of the dynamic capability negotiation, data frame
@@ -992,59 +899,6 @@ bool Station::IsQosReady() const {
   // Aruba / Ubiquiti are confirmed to be compatible with QoS field for the
   // BlockAck session, independently of 40MHz operation.
   return assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_HT || assoc_ctx_.phy == WLAN_INFO_PHY_TYPE_VHT;
-}
-
-CapabilityInfo Station::OverrideCapability(CapabilityInfo cap) const {
-  // parameter is of 2 bytes
-  cap.set_ess(1);            // reserved in client role. 1 for better interop.
-  cap.set_ibss(0);           // reserved in client role
-  cap.set_cf_pollable(0);    // not supported
-  cap.set_cf_poll_req(0);    // not supported
-  cap.set_privacy(0);        // reserved in client role
-  cap.set_spectrum_mgmt(0);  // not supported
-  return cap;
-}
-
-zx_status_t Station::OverrideHtCapability(HtCapabilities* ht_cap) const {
-  // TODO(porce): Determine which value to use for each field
-  // (a) client radio capabilities, as reported by device driver
-  // (b) intersection of (a) and radio configurations
-  // (c) intersection of (b) and BSS capabilities
-  // (d) intersection of (c) and radio configuration
-
-  ZX_DEBUG_ASSERT(ht_cap != nullptr);
-  if (ht_cap == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  HtCapabilityInfo& hci = ht_cap->ht_cap_info;
-  if (!IsCbw40Rx()) {
-    hci.set_chan_width_set(HtCapabilityInfo::TWENTY_ONLY);
-  }
-
-  // TODO(NET-1403): Lift up the restriction after broader interop and
-  // assoc_ctx_ adjustment.
-  hci.set_tx_stbc(0);
-
-  return ZX_OK;
-}
-
-zx_status_t Station::OverrideVhtCapability(VhtCapabilities* vht_cap,
-                                           const JoinContext& join_ctx) const {
-  ZX_DEBUG_ASSERT(vht_cap != nullptr);
-  if (vht_cap == nullptr) {
-    return ZX_ERR_INVALID_ARGS;
-  }
-
-  // See IEEE Std 802.11-2016 Table 9-250. Note zero in comparison has no name.
-  VhtCapabilitiesInfo& vci = vht_cap->vht_cap_info;
-  if (vci.supported_cbw_set() > 0) {
-    auto cbw = join_ctx.channel().cbw;
-    if (cbw != WLAN_CHANNEL_BANDWIDTH__160 && cbw != WLAN_CHANNEL_BANDWIDTH__80P80) {
-      vht_cap->vht_cap_info.set_supported_cbw_set(0);
-    }
-  }
-  return ZX_OK;
 }
 
 uint8_t Station::GetTid() {

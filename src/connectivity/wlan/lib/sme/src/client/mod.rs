@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 mod bss;
+mod capabilities;
 mod event;
 pub mod info;
 mod inspect;
@@ -62,6 +63,7 @@ mod internal {
         pub att_id: ConnectionAttemptId,
         pub(crate) inspect: Arc<inspect::SmeTree>,
         pub(crate) info: InfoReporter,
+        pub(crate) is_softmac: bool,
     }
 }
 
@@ -176,6 +178,7 @@ impl ClientSme {
         cfg: ClientConfig,
         info: DeviceInfo,
         iface_tree_holder: Arc<wlan_inspect::iface_mgr::IfaceTreeHolder>,
+        is_softmac: bool,
     ) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
@@ -197,6 +200,7 @@ impl ClientSme {
                     att_id: 0,
                     inspect,
                     info: InfoReporter::new(InfoSink::new(info_sink)),
+                    is_softmac,
                 },
             },
             mlme_stream,
@@ -615,6 +619,7 @@ mod tests {
             ClientConfig::from_config(SmeConfig::default().with_wep()),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+            true, // is_softmac
         );
         assert_eq!(Status { connected_to: None, connecting_to: None }, sme.status());
 
@@ -1180,6 +1185,7 @@ mod tests {
             ClientConfig::default(),
             test_utils::fake_device_info(CLIENT_ADDR),
             Arc::new(wlan_inspect::iface_mgr::IfaceTreeHolder::new(sme_root_node)),
+            true, // is_softmac
         )
     }
 }

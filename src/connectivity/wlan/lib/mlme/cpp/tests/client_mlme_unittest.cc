@@ -938,54 +938,6 @@ TEST_F(ClientTest, InvalidAuthenticationResponse) {
   ASSERT_TRUE(device.svc_queue.empty());
 }
 
-TEST_F(ClientTest, FailureToAssociateWithAPWithUnsupportedBasicRate) {
-  // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
-  // to SME.
-  auto join_msg = CreateJoinRequest(false);
-  // The AP contains basic_rate that the client does not support.
-  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.rates = {
-      SupportedRate::basic(7)};
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(join_msg));
-
-  Authenticate();
-
-  // (sme->mlme) Send ASSOCIATE.request.
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.HandleMlmeMsg(CreateAssocRequest(false)));
-
-  // Verify no wlan frame was sent.
-  ASSERT_EQ(device.wlan_queue.size(), 0ULL);
-
-  // Verify that confirmation (with failure) was sent.
-  ASSERT_EQ(device.svc_queue.size(), 1ULL);
-  auto assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
-  AssertAssocConfirm(std::move(assocs[0]), 0,
-                     wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH);
-}
-
-TEST_F(ClientTest, FailureToAssociateWithAPWithoutAnySupportedRate) {
-  // (sme->mlme) Send JOIN.request. Verify a JOIN.confirm message was then sent
-  // to SME.
-  auto join_msg = CreateJoinRequest(false);
-  // The client does not support any rate that this AP announces.
-  const_cast<wlan_mlme::JoinRequest*>(join_msg.body())->selected_bss.rates = {7};
-  ASSERT_EQ(ZX_OK, client.HandleMlmeMsg(join_msg));
-
-  Authenticate();
-
-  ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, client.HandleMlmeMsg(CreateAssocRequest(false)));
-  ASSERT_EQ(device.wlan_queue.size(), 0ULL);
-  ASSERT_EQ(device.svc_queue.size(), 1ULL);
-  auto assocs = device.GetServiceMsgs<wlan_mlme::AssociateConfirm>(
-      fuchsia::wlan::mlme::internal::kMLME_AssociateConf_GenOrdinal);
-  ASSERT_EQ(assocs.size(), static_cast<size_t>(1));
-
-  // Different error code from previous test case
-  AssertAssocConfirm(std::move(assocs[0]), 0,
-                     wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH);
-}
-
 TEST_F(ClientTest, ProcessZeroRssiFrame) {
   auto no_rssi_pkt = CreateDataFrame(kTestPayload);
   auto rx_info = const_cast<wlan_rx_info_t*>(no_rssi_pkt->ctrl_data<wlan_rx_info_t>());

@@ -31,7 +31,7 @@ class ClientInterface {
   virtual zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                                    uint32_t timeout) = 0;
   virtual zx_status_t Deauthenticate(::fuchsia::wlan::mlme::ReasonCode reason_code) = 0;
-  virtual zx_status_t Associate(fbl::Span<const uint8_t> rsne) = 0;
+  virtual zx_status_t Associate(const ::fuchsia::wlan::mlme::AssociateRequest& req) = 0;
   virtual zx_status_t SendEapolFrame(fbl::Span<const uint8_t> eapol_frame,
                                      const common::MacAddr& src, const common::MacAddr& dst) = 0;
   virtual zx_status_t SetKeys(fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) = 0;

@@ -327,6 +327,10 @@ struct DeauthenticateIndication {
 
 struct AssociateRequest {
     array<uint8>:6 peer_sta_address;
+    CapabilityInfo cap_info;
+    bytes:RATES_MAX_LEN rates;
+    HtCapabilities? ht_cap;
+    VhtCapabilities? vht_cap;
     bytes? rsne;
     // Serialized list of vendor IEs to be appended after all other associate request IEs.
     bytes? vendor_ies;

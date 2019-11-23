@@ -60,6 +60,8 @@ static constexpr uint8_t kRsne[] = {
     0x00, 0x0f, 0xac, 0x02,  // akm suite list
     0xa8, 0x04,              // rsn capabilities
 };
+static constexpr uint8_t kRates[] = {0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12,
+                                     0x18, 0x24, 0x30, 0x48, 0x60, 0x6c};
 static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 static const AssocContext kAssocCtx = {};

@@ -25,21 +25,8 @@ ClientStation NewClientStation(mlme_device_ops_t device, mlme_buffer_provider_op
 ApStation NewApStation(mlme_device_ops_t device, mlme_buffer_provider_ops_t buf_provider,
                        wlan_scheduler_ops_t scheduler, common::MacAddr bssid);
 
-template <class T, typename = std::enable_if_t<std::is_class<T>::value>>
-static inline constexpr wlan_span_t AsWlanSpan(const T* data) {
-  return wlan_span_t{.data = reinterpret_cast<const uint8_t*>(data), .size = sizeof(*data)};
-}
-
-template <typename C,
-          typename = std::enable_if_t<std::is_convertible_v<typename C::value_type, const uint8_t>>>
-static inline constexpr wlan_span_t AsWlanSpan(const C& container) {
-  return wlan_span_t{.data = container.data(), .size = container.size()};
-}
-
-template <class T, typename = std::enable_if_t<std::is_convertible_v<T, const uint8_t>>>
-static inline constexpr wlan_span_t AsWlanSpan(fbl::Span<T> span) {
-  return wlan_span_t{.data = reinterpret_cast<const uint8_t*>(span.data()),
-                     .size = span.size_bytes()};
+static inline constexpr wlan_span_t AsWlanSpan(fbl::Span<const uint8_t> span) {
+  return wlan_span_t{.data = span.data(), .size = span.size_bytes()};
 }
 
 }  // namespace wlan

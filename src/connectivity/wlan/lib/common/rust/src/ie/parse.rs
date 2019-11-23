@@ -221,8 +221,10 @@ pub fn parse_vendor_ie<B: ByteSlice>(raw_body: B) -> FrameParseResult<VendorIe<B
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use crate::assert_variant;
+    use {
+        super::*, crate::assert_variant, fidl_fuchsia_wlan_mlme as fidl_mlme,
+        std::convert::TryInto, zerocopy::AsBytes,
+    };
 
     #[test]
     pub fn ssid_ok() {
@@ -968,5 +970,41 @@ mod tests {
         let raw_body: Vec<u8> = vec![0x00, 0x12, 0x34]; // Made up OUI
         let ie = parse_vendor_ie(&raw_body[..]).expect("failed to parse wpa vendor ie");
         assert_variant!(ie, VendorIe::Unknown { .. });
+    }
+
+    #[test]
+    fn to_and_from_fidl_ht_cap() {
+        fidl_mlme::HtCapabilities {
+            bytes: fake_ht_capabilities().as_bytes().try_into().expect("HT Cap to FIDL"),
+        };
+        let fidl = fidl_mlme::HtCapabilities { bytes: [0; fidl_mlme::HT_CAP_LEN as usize] };
+        assert!(parse_ht_capabilities(&fidl.bytes[..]).is_ok());
+    }
+
+    #[test]
+    fn to_and_from_fidl_vht_cap() {
+        fidl_mlme::VhtCapabilities {
+            bytes: fake_vht_capabilities().as_bytes().try_into().expect("VHT Cap to FIDL"),
+        };
+        let fidl = fidl_mlme::VhtCapabilities { bytes: [0; fidl_mlme::VHT_CAP_LEN as usize] };
+        assert!(parse_vht_capabilities(&fidl.bytes[..]).is_ok());
+    }
+
+    #[test]
+    fn to_and_from_fidl_ht_op() {
+        fidl_mlme::HtOperation {
+            bytes: fake_ht_operation().as_bytes().try_into().expect("HT Op to FIDL"),
+        };
+        let fidl = fidl_mlme::HtOperation { bytes: [0; fidl_mlme::HT_OP_LEN as usize] };
+        assert!(parse_ht_operation(&fidl.bytes[..]).is_ok());
+    }
+
+    #[test]
+    fn to_and_from_fidl_vht_op() {
+        fidl_mlme::VhtOperation {
+            bytes: fake_vht_operation().as_bytes().try_into().expect("VHT Op to FIDL"),
+        };
+        let fidl = fidl_mlme::VhtOperation { bytes: [0; fidl_mlme::VHT_OP_LEN as usize] };
+        assert!(parse_vht_operation(&fidl.bytes[..]).is_ok());
     }
 }

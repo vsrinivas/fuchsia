@@ -51,8 +51,9 @@ where
     S: Stream<Item = StatsRequest> + Unpin,
 {
     let cfg = client_sme::ClientConfig::from_config(cfg);
+    let is_softmac = device_info.driver_features.contains(&fidl_common::DriverFeature::TempSoftmac);
     let (sme, mlme_stream, info_stream, time_stream) =
-        Sme::new(cfg, device_info, iface_tree_holder);
+        Sme::new(cfg, device_info, iface_tree_holder, is_softmac);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
         proxy,

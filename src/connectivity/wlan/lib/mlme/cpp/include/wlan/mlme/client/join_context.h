@@ -5,12 +5,13 @@
 #ifndef SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_
 #define SRC_CONNECTIVITY_WLAN_LIB_MLME_CPP_INCLUDE_WLAN_MLME_CLIENT_JOIN_CONTEXT_H_
 
-#include <ddk/hw/wlan/wlaninfo.h>
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
+#include <zircon/types.h>
+
+#include <ddk/hw/wlan/wlaninfo.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
 #include <wlan/common/macaddr.h>
-#include <zircon/types.h>
 
 namespace wlan {
 
@@ -45,7 +46,7 @@ class JoinContext {
   common::MacAddr bssid_;
 
   // TODO(NET-1819): Redesign AssocContext and move this there.
-  uint16_t listen_interval_;
+  uint16_t listen_interval_ = 0;
 };
 
 }  // namespace wlan

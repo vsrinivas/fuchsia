@@ -153,7 +153,14 @@ pub fn wpa1_cipher() -> Cipher {
 }
 
 pub fn fake_device_info(addr: MacAddr) -> DeviceInfo {
-    DeviceInfo { addr, bands: vec![], driver_features: vec![] }
+    DeviceInfo {
+        addr,
+        bands: vec![
+            fake_2ghz_band_capabilities_vht(),
+            fake_band_capabilities_5ghz_vht(ChanWidthSet::TWENTY_FORTY),
+        ],
+        driver_features: vec![],
+    }
 }
 
 pub fn fake_device_info_ht(chanwidth: ChanWidthSet) -> DeviceInfo {
@@ -227,8 +234,35 @@ pub fn fake_capability_info() -> CapabilityInfo {
 pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
     fidl_mlme::BandCapabilities {
         band_id: fidl_common::Band::WlanBand5Ghz,
-        rates: vec![1, 2, 3],
+        rates: vec![0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         base_frequency: 5000,
+        channels: vec![],
+        cap: fake_capability_info().0,
+        ht_cap: None,
+        vht_cap: None,
+    }
+}
+
+pub fn fake_2ghz_band_capabilities_vht() -> fidl_mlme::BandCapabilities {
+    fidl_mlme::BandCapabilities {
+        ht_cap: Some(Box::new(fidl_mlme::HtCapabilities {
+            bytes: fake_ht_capabilities_cbw(ChanWidthSet::TWENTY_FORTY)
+                .as_bytes()
+                .try_into()
+                .unwrap(),
+        })),
+        vht_cap: Some(Box::new(fidl_mlme::VhtCapabilities {
+            bytes: fake_vht_capabilities().as_bytes().try_into().unwrap(),
+        })),
+        ..fake_2ghz_band_capabilities()
+    }
+}
+
+pub fn fake_2ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
+    fidl_mlme::BandCapabilities {
+        band_id: fidl_common::Band::WlanBand2Ghz,
+        rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
+        base_frequency: 2407,
         channels: vec![],
         cap: fake_capability_info().0,
         ht_cap: None,

@@ -59,7 +59,7 @@ pub struct TimView<B> {
 
 // IEEE Std 802.11-2016, 9.4.2.56
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
 pub struct HtCapabilities {
     pub ht_cap_info: HtCapabilityInfo, // u16
     pub ampdu_params: AmpduParams,     // u8
@@ -705,7 +705,7 @@ pub enum VendorIe<B: ByteSlice> {
 
 // IEEE Std 802.11-2016, 9.4.2.57
 #[repr(C, packed)]
-#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy, Debug)]
 pub struct VhtCapabilities {
     pub vht_cap_info: VhtCapabilitiesInfo, // u32
     pub vht_mcs_nss: VhtMcsNssSet,         // u64

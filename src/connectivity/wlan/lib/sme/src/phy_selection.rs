@@ -347,7 +347,7 @@ mod tests {
     #[test]
     fn test_get_device_rates() {
         assert_eq!(
-            &[1, 2, 3][..],
+            &[12, 18, 24, 36, 48, 72, 96, 108][..],
             get_device_rates(
                 &fake_device_info_ht(ChanWidthSet::TWENTY_FORTY),
                 Channel::new(36, Cbw::Cbw20)

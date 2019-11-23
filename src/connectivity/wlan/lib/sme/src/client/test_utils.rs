@@ -38,7 +38,7 @@ fn fake_bss_description(ssid: Ssid, rsne: Option<Vec<u8>>) -> fidl_mlme::BssDesc
         timestamp: 0,
         local_time: 0,
         cap: mac::CapabilityInfo(0).with_privacy(rsne.is_some()).0,
-        rates: vec![],
+        rates: vec![0x82, 0x84, 0x8b, 0x96, 0x0c, 0x12, 0x18, 0x24, 0x30, 0x48, 0x60, 0x6c],
         country: None,
         rsne,
         vendor_ies: None,

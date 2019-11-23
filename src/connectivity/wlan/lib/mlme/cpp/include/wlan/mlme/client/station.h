@@ -55,7 +55,7 @@ class Station : public ClientInterface {
   zx_status_t Authenticate(::fuchsia::wlan::mlme::AuthenticationTypes auth_type,
                            uint32_t timeout) override;
   zx_status_t Deauthenticate(::fuchsia::wlan::mlme::ReasonCode reason_code) override;
-  zx_status_t Associate(fbl::Span<const uint8_t> rsne) override;
+  zx_status_t Associate(const ::fuchsia::wlan::mlme::AssociateRequest& req) override;
   zx_status_t SendEapolFrame(fbl::Span<const uint8_t> eapol_frame, const common::MacAddr& src,
                              const common::MacAddr& dst) override;
   zx_status_t SetKeys(fbl::Span<const ::fuchsia::wlan::mlme::SetKeyDescriptor> keys) override;
@@ -106,12 +106,8 @@ class Station : public ClientInterface {
   // Returns the STA's own MAC address.
   const common::MacAddr& self_addr() const { return device_->GetState()->address(); }
 
-  bool IsCbw40Rx() const;
   bool IsQosReady() const;
 
-  CapabilityInfo OverrideCapability(CapabilityInfo cap) const;
-  zx_status_t OverrideHtCapability(HtCapabilities* htc) const;
-  zx_status_t OverrideVhtCapability(VhtCapabilities* vht_cap, const JoinContext& join_ctx) const;
   uint8_t GetTid();
   uint8_t GetTid(const EthFrame& frame);
   zx_status_t SetAssocContext(const MgmtFrameView<AssociationResponse>& resp);
