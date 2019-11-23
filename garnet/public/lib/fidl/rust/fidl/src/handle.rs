@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 //! A portable representation of handle-like objects for fidl.
-//! Since this code needs implementation of the fidlhdl_* groups of functions, tests for this
-//! module exist in th src/connectivity/overnet/lib/hoist/src/fidlhdl.rs module (which provides
-//! them).
+
+#[cfg(target_os = "fuchsia")]
+pub use fuchsia_handles::*;
+
+#[cfg(not(target_os = "fuchsia"))]
+pub use non_fuchsia_handles::*;
 
 /// Fuchsia implementation of handles just aliases the zircon library
 #[cfg(target_os = "fuchsia")]
@@ -49,68 +52,14 @@ pub mod non_fuchsia_handles {
     use fuchsia_zircon_status as zx_status;
     use futures::task::{AtomicWaker, Context};
     use parking_lot::Mutex;
-    use std::{borrow::BorrowMut, pin::Pin, sync::Arc, task::Poll};
+    use slab::Slab;
+    use std::{borrow::BorrowMut, collections::VecDeque, pin::Pin, sync::Arc, task::Poll};
 
     /// Invalid handle value
     pub const INVALID_HANDLE: u32 = 0xffff_ffff;
 
-    /// Read result for IO operations
-    #[repr(C)]
-    pub enum FidlHdlReadResult {
-        /// Success!
-        Ok,
-        /// Nothing read
-        Pending,
-        /// Peer handle is closed
-        PeerClosed,
-        /// Not enough buffer space
-        BufferTooSmall,
-    }
-
-    /// Write result for IO operations
-    #[repr(C)]
-    pub enum FidlHdlWriteResult {
-        /// Success!
-        Ok,
-        /// Peer handle is closed
-        PeerClosed,
-    }
-
-    /// Return type for fidlhdl_channel_create
-    // Upon success, left=first handle, right=second handle
-    // Upon failure, left=INVALID_HANDLE, right=reason
-    #[repr(C)]
-    pub struct FidlHdlPairCreateResult {
-        left: u32,
-        right: u32,
-    }
-
-    impl FidlHdlPairCreateResult {
-        unsafe fn into_handles<T: HandleBased>(&self) -> Result<(T, T), zx_status::Status> {
-            match self.left {
-                INVALID_HANDLE => Err(zx_status::Status::from_raw(self.right as i32)),
-                _ => Ok((
-                    T::from_handle(Handle::from_raw(self.left)),
-                    T::from_handle(Handle::from_raw(self.right)),
-                )),
-            }
-        }
-
-        /// Create a new (successful) result
-        pub fn new(left: u32, right: u32) -> Self {
-            assert_ne!(left, INVALID_HANDLE);
-            assert_ne!(right, INVALID_HANDLE);
-            Self { left, right }
-        }
-
-        /// Create a new (failed) result
-        pub fn new_err(status: zx_status::Status) -> Self {
-            Self { left: INVALID_HANDLE, right: status.into_raw() as u32 }
-        }
-    }
-
     /// The type of a handle
-    #[repr(C)]
+    #[derive(Debug, PartialEq)]
     pub enum FidlHdlType {
         /// An invalid handle
         Invalid,
@@ -118,48 +67,6 @@ pub mod non_fuchsia_handles {
         Channel,
         /// A socket
         Socket,
-    }
-
-    /// Non-Fuchsia implementation of handles
-    extern "C" {
-        /// Close the handle: no action if hdl==INVALID_HANDLE
-        fn fidlhdl_close(hdl: u32);
-        /// Return the type of a handle
-        fn fidlhdl_type(hdl: u32) -> FidlHdlType;
-        /// Create a channel pair
-        fn fidlhdl_channel_create() -> FidlHdlPairCreateResult;
-        /// Read from a channel - takes ownership of all handles
-        fn fidlhdl_channel_read(
-            hdl: u32,
-            bytes: *mut u8,
-            handles: *mut u32,
-            num_bytes: usize,
-            num_handles: usize,
-            actual_bytes: *mut usize,
-            actual_handles: *mut usize,
-        ) -> FidlHdlReadResult;
-        /// Write to a channel
-        fn fidlhdl_channel_write(
-            hdl: u32,
-            bytes: *const u8,
-            handles: *mut Handle,
-            num_bytes: usize,
-            num_handles: usize,
-        ) -> FidlHdlWriteResult;
-        /// Write to a socket
-        fn fidlhdl_socket_write(hdl: u32, bytes: *const u8, num_bytes: usize)
-            -> FidlHdlWriteResult;
-        /// Read from a socket
-        fn fidlhdl_socket_read(
-            hdl: u32,
-            bytes: *const u8,
-            num_bytes: usize,
-            actual_bytes: *mut usize,
-        ) -> FidlHdlReadResult;
-        /// Signal that a read is required
-        fn fidlhdl_need_read(hdl: u32);
-        /// Create a socket pair
-        fn fidlhdl_socket_create(sock_opts: SocketOpts) -> FidlHdlPairCreateResult;
     }
 
     #[derive(Debug)]
@@ -171,9 +78,7 @@ pub mod non_fuchsia_handles {
     impl HdlWaker {
         fn sched(&self, cx: &mut Context<'_>) {
             self.waker.register(cx.waker());
-            unsafe {
-                fidlhdl_need_read(self.hdl);
-            }
+            hdl_need_read(self.hdl);
         }
     }
 
@@ -184,9 +89,9 @@ pub mod non_fuchsia_handles {
     /// Awaken a handle by index.
     ///
     /// Wakeup flow:
-    ///   There are no wakeups issued unless fidlhdl_need_read is called.
-    ///   fidlhdl_need_read arms the wakeup, and no wakeups will occur until that call is made.
-    pub fn awaken_hdl(hdl: u32) {
+    ///   There are no wakeups issued unless hdl_need_read is called.
+    ///   hdl_need_read arms the wakeup, and no wakeups will occur until that call is made.
+    fn hdl_awaken(hdl: u32) {
         HANDLE_WAKEUPS.lock()[hdl as usize].waker.wake();
     }
 
@@ -227,15 +132,12 @@ pub mod non_fuchsia_handles {
     }
 
     /// Representation of a handle-like object
-    #[repr(C)]
     #[derive(PartialEq, Eq, Debug, Ord, PartialOrd, Hash)]
     pub struct Handle(u32);
 
     impl Drop for Handle {
         fn drop(&mut self) {
-            unsafe {
-                fidlhdl_close(self.0);
-            }
+            hdl_close(self.0);
         }
     }
 
@@ -253,7 +155,12 @@ pub mod non_fuchsia_handles {
             if self.is_invalid() {
                 FidlHdlType::Invalid
             } else {
-                unsafe { fidlhdl_type(self.0) }
+                with_handle(self.0, |obj| match obj {
+                    FidlHandle::LeftChannel(_, _) => FidlHdlType::Channel,
+                    FidlHandle::RightChannel(_, _) => FidlHdlType::Channel,
+                    FidlHandle::LeftSocket(_, _) => FidlHdlType::Socket,
+                    FidlHandle::RightSocket(_, _) => FidlHdlType::Socket,
+                })
             }
         }
 
@@ -347,7 +254,7 @@ pub mod non_fuchsia_handles {
 
             impl Drop for $name {
                 fn drop(&mut self) {
-                    unsafe { fidlhdl_close(self.0) };
+                    hdl_close(self.0);
                 }
             }
         };
@@ -359,7 +266,19 @@ pub mod non_fuchsia_handles {
         /// Create a channel, resulting in a pair of `Channel` objects representing both
         /// sides of the channel. Messages written into one maybe read from the opposite.
         pub fn create() -> Result<(Channel, Channel), zx_status::Status> {
-            unsafe { fidlhdl_channel_create().into_handles() }
+            let cs = Arc::new(Mutex::new(ChannelState::Open(
+                HalfChannelState::new(),
+                HalfChannelState::new(),
+            )));
+            let mut h = HANDLES.lock();
+            let left = h.insert(FidlHandle::LeftChannel(cs.clone(), INVALID_HANDLE)) as u32;
+            let right = h.insert(FidlHandle::RightChannel(cs, left)) as u32;
+            if let FidlHandle::LeftChannel(_, peer) = &mut h[left as usize] {
+                *peer = right;
+            } else {
+                unreachable!();
+            }
+            Ok((Channel(left), Channel(right)))
         }
 
         /// Read a message from a channel.
@@ -369,63 +288,35 @@ pub mod non_fuchsia_handles {
         }
 
         /// Read a message from a channel into a separate byte vector and handle vector.
-        ///
-        /// Note that this method can cause internal reallocations in the `MessageBuf`
-        /// if it is lacks capacity to hold the full message. If such reallocations
-        /// are not desirable, use `read_raw` instead.
         pub fn read_split(
             &self,
             bytes: &mut Vec<u8>,
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
-            loop {
-                match self.read_raw(bytes, handles) {
-                    Ok(result) => return result,
-                    Err((num_bytes, num_handles)) => {
-                        ensure_capacity(bytes, num_bytes);
-                        ensure_capacity(handles, num_handles);
-                    }
-                }
-            }
+            with_handle(self.0, |obj| match obj {
+                FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
+                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState::Open(ref mut st, _) => Self::dequeue_read(st, bytes, handles),
+                },
+                FidlHandle::RightChannel(cs, _) => match *cs.lock() {
+                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState::Open(_, ref mut st) => Self::dequeue_read(st, bytes, handles),
+                },
+                _ => panic!("Non channel passed to Channel::read_split"),
+            })
         }
 
-        /// Read a message from a channel. Wraps the
-        /// [zx_channel_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_read.md)
-        /// syscall.
-        ///
-        /// If the vectors lack the capacity to hold the pending message,
-        /// returns an `Err` with the number of bytes and number of handles needed.
-        /// Otherwise returns an `Ok` with the result as usual.
-        pub fn read_raw(
-            &self,
+        fn dequeue_read(
+            st: &mut HalfChannelState,
             bytes: &mut Vec<u8>,
             handles: &mut Vec<Handle>,
-        ) -> Result<Result<(), zx_status::Status>, (usize, usize)> {
-            unsafe {
-                bytes.clear();
-                handles.clear();
-                let mut num_bytes = bytes.capacity();
-                let mut num_handles = handles.capacity();
-                match fidlhdl_channel_read(
-                    self.0,
-                    bytes.as_mut_ptr(),
-                    handles.as_mut_ptr() as *mut u32,
-                    num_bytes,
-                    num_handles,
-                    &mut num_bytes,
-                    &mut num_handles,
-                ) {
-                    FidlHdlReadResult::Ok => {
-                        bytes.set_len(num_bytes as usize);
-                        handles.set_len(num_handles as usize);
-                        Ok(Ok(()))
-                    }
-                    FidlHdlReadResult::Pending => Ok(Err(zx_status::Status::SHOULD_WAIT)),
-                    FidlHdlReadResult::PeerClosed => Ok(Err(zx_status::Status::PEER_CLOSED)),
-                    FidlHdlReadResult::BufferTooSmall => {
-                        Err((num_bytes as usize, num_handles as usize))
-                    }
-                }
+        ) -> Result<(), zx_status::Status> {
+            if let Some(mut msg) = st.messages.pop_front() {
+                std::mem::swap(bytes, &mut msg.bytes);
+                std::mem::swap(handles, &mut msg.handles);
+                Ok(())
+            } else {
+                Err(zx_status::Status::SHOULD_WAIT)
             }
         }
 
@@ -435,18 +326,42 @@ pub mod non_fuchsia_handles {
             bytes: &[u8],
             handles: &mut Vec<Handle>,
         ) -> Result<(), zx_status::Status> {
-            match unsafe {
-                fidlhdl_channel_write(
-                    self.0,
-                    bytes.as_ptr(),
-                    handles.as_mut_ptr(),
-                    bytes.len(),
-                    handles.len(),
-                )
-            } {
-                FidlHdlWriteResult::Ok => Ok(()),
-                FidlHdlWriteResult::PeerClosed => Err(zx_status::Status::PEER_CLOSED),
+            let wakeup = with_handle(self.0, |obj| match obj {
+                FidlHandle::LeftChannel(cs, peer) => match *cs.lock() {
+                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState::Open(_, ref mut st) => {
+                        Self::enqueue_write(st, *peer, bytes, handles)
+                    }
+                },
+                FidlHandle::RightChannel(cs, peer) => match *cs.lock() {
+                    ChannelState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    ChannelState::Open(ref mut st, _) => {
+                        Self::enqueue_write(st, *peer, bytes, handles)
+                    }
+                },
+                _ => panic!("Non channel passed to Channel::write"),
+            })?;
+            if wakeup != INVALID_HANDLE {
+                hdl_awaken(wakeup);
             }
+            Ok(())
+        }
+
+        fn enqueue_write(
+            st: &mut HalfChannelState,
+            peer: u32,
+            bytes: &[u8],
+            handles: &mut Vec<Handle>,
+        ) -> Result<u32, zx_status::Status> {
+            let mut b = Vec::new();
+            b.extend_from_slice(bytes);
+            st.messages.push_back(ChannelMessage {
+                bytes: b,
+                handles: std::mem::replace(handles, Vec::new()),
+            });
+            let wakeup = st.need_read;
+            st.need_read = false;
+            Ok(if wakeup { peer } else { INVALID_HANDLE })
         }
     }
 
@@ -532,7 +447,6 @@ pub mod non_fuchsia_handles {
     }
 
     /// Socket options available portable
-    #[repr(C)]
     pub enum SocketOpts {
         /// A bytestream style socket
         STREAM,
@@ -543,30 +457,93 @@ pub mod non_fuchsia_handles {
     impl Socket {
         /// Create a pair of sockets
         pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), zx_status::Status> {
-            unsafe { fidlhdl_socket_create(sock_opts).into_handles() }
+            // TODO(https://bugs.fuchsia.dev/p/fuchsia/issues/detail?id=41608): This method
+            // currently only works for stream type sockets... rectify this at some point.
+            // This provides a compile time assert to that fact:
+            match sock_opts {
+                SocketOpts::STREAM => (),
+            };
+            let cs = Arc::new(Mutex::new(SocketState::Open(
+                HalfSocketState::new(),
+                HalfSocketState::new(),
+            )));
+            let mut h = HANDLES.lock();
+            let left = h.insert(FidlHandle::LeftSocket(cs.clone(), INVALID_HANDLE)) as u32;
+            let right = h.insert(FidlHandle::RightSocket(cs, left)) as u32;
+            if let FidlHandle::LeftSocket(_, peer) = &mut h[left as usize] {
+                *peer = right;
+            } else {
+                unreachable!();
+            }
+            Ok((Socket(left), Socket(right)))
         }
 
         /// Write the given bytes into the socket.
         /// Return value (on success) is number of bytes actually written.
         pub fn write(&self, bytes: &[u8]) -> Result<usize, zx_status::Status> {
-            match unsafe { fidlhdl_socket_write(self.0, bytes.as_ptr(), bytes.len()) } {
-                FidlHdlWriteResult::Ok => Ok(bytes.len()),
-                FidlHdlWriteResult::PeerClosed => Err(zx_status::Status::PEER_CLOSED),
+            let (result, wakeup) = with_handle(self.0, |obj| match obj {
+                FidlHandle::LeftSocket(cs, peer) => match *cs.lock() {
+                    SocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    SocketState::Open(_, ref mut st) => Self::enqueue_write(st, *peer, bytes),
+                },
+                FidlHandle::RightSocket(cs, peer) => match *cs.lock() {
+                    SocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    SocketState::Open(ref mut st, _) => Self::enqueue_write(st, *peer, bytes),
+                },
+                _ => panic!("Non socket passed to Socket::write"),
+            })?;
+            if wakeup != INVALID_HANDLE {
+                hdl_awaken(wakeup);
+            }
+            Ok(result)
+        }
+
+        fn enqueue_write(
+            st: &mut HalfSocketState,
+            peer: u32,
+            bytes: &[u8],
+        ) -> Result<(usize, u32), zx_status::Status> {
+            if bytes.len() > 0 {
+                st.bytes.extend(bytes);
+                let wakeup = st.need_read;
+                st.need_read = false;
+                Ok((bytes.len(), if wakeup { peer } else { INVALID_HANDLE }))
+            } else {
+                Ok((bytes.len(), INVALID_HANDLE))
             }
         }
 
         /// Read bytes from the socket.
         /// Return value (on success) is number of bytes actually read.
         pub fn read(&self, bytes: &mut [u8]) -> Result<usize, zx_status::Status> {
-            let mut actual_len: usize = 0;
-            match unsafe {
-                fidlhdl_socket_read(self.0, bytes.as_ptr(), bytes.len(), &mut actual_len)
-            } {
-                FidlHdlReadResult::Ok => Ok(actual_len),
-                FidlHdlReadResult::Pending => Err(zx_status::Status::SHOULD_WAIT),
-                FidlHdlReadResult::PeerClosed => Err(zx_status::Status::PEER_CLOSED),
-                FidlHdlReadResult::BufferTooSmall => unimplemented!(),
+            with_handle(self.0, |obj| match obj {
+                FidlHandle::LeftSocket(cs, _) => match *cs.lock() {
+                    SocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    SocketState::Open(ref mut st, _) => Self::dequeue_read(st, bytes),
+                },
+                FidlHandle::RightSocket(cs, _) => match *cs.lock() {
+                    SocketState::Closed => Err(zx_status::Status::PEER_CLOSED),
+                    SocketState::Open(_, ref mut st) => Self::dequeue_read(st, bytes),
+                },
+                _ => panic!("Non socket passed to Socket::read"),
+            })
+        }
+
+        fn dequeue_read(
+            st: &mut HalfSocketState,
+            bytes: &mut [u8],
+        ) -> Result<usize, zx_status::Status> {
+            if bytes.len() == 0 {
+                return Ok(0);
             }
+            let copy_bytes = std::cmp::min(bytes.len(), st.bytes.len());
+            if copy_bytes == 0 {
+                return Err(zx_status::Status::SHOULD_WAIT);
+            }
+            for (i, b) in st.bytes.drain(..copy_bytes).enumerate() {
+                bytes[i] = b;
+            }
+            Ok(copy_bytes)
         }
     }
 
@@ -717,14 +694,354 @@ pub mod non_fuchsia_handles {
             vec.reserve(size - len);
         }
     }
+
+    struct ChannelMessage {
+        bytes: Vec<u8>,
+        handles: Vec<Handle>,
+    }
+
+    struct HalfChannelState {
+        messages: VecDeque<ChannelMessage>,
+        need_read: bool,
+    }
+
+    impl HalfChannelState {
+        fn new() -> HalfChannelState {
+            HalfChannelState { messages: VecDeque::new(), need_read: false }
+        }
+    }
+
+    enum ChannelState {
+        Closed,
+        Open(HalfChannelState, HalfChannelState),
+    }
+
+    struct HalfSocketState {
+        bytes: VecDeque<u8>,
+        need_read: bool,
+    }
+
+    impl HalfSocketState {
+        fn new() -> HalfSocketState {
+            HalfSocketState { bytes: VecDeque::new(), need_read: false }
+        }
+    }
+
+    enum SocketState {
+        Closed,
+        Open(HalfSocketState, HalfSocketState),
+    }
+
+    enum FidlHandle {
+        LeftChannel(Arc<Mutex<ChannelState>>, u32),
+        RightChannel(Arc<Mutex<ChannelState>>, u32),
+        LeftSocket(Arc<Mutex<SocketState>>, u32),
+        RightSocket(Arc<Mutex<SocketState>>, u32),
+    }
+
+    lazy_static::lazy_static! {
+        static ref HANDLES: Mutex<Slab<FidlHandle>> = Mutex::new(Slab::new());
+    }
+
+    fn with_handle<R>(hdl: u32, f: impl FnOnce(&mut FidlHandle) -> R) -> R {
+        f(&mut HANDLES.lock()[hdl as usize])
+    }
+
+    /// Close the handle: no action if hdl==INVALID_HANDLE
+    fn hdl_close(hdl: u32) {
+        if hdl == INVALID_HANDLE {
+            return;
+        }
+        let wakeup = match HANDLES.lock().remove(hdl as usize) {
+            FidlHandle::LeftChannel(cs, peer) => {
+                let st = &mut *cs.lock();
+                let wakeup = match st {
+                    ChannelState::Closed => false,
+                    ChannelState::Open(_, st) => st.need_read,
+                };
+                *st = ChannelState::Closed;
+                if wakeup {
+                    peer
+                } else {
+                    INVALID_HANDLE
+                }
+            }
+            FidlHandle::RightChannel(cs, peer) => {
+                let st = &mut *cs.lock();
+                let wakeup = match st {
+                    ChannelState::Closed => false,
+                    ChannelState::Open(st, _) => st.need_read,
+                };
+                *st = ChannelState::Closed;
+                if wakeup {
+                    peer
+                } else {
+                    INVALID_HANDLE
+                }
+            }
+            FidlHandle::LeftSocket(cs, peer) => {
+                let st = &mut *cs.lock();
+                let wakeup = match st {
+                    SocketState::Closed => false,
+                    SocketState::Open(_, st) => st.need_read,
+                };
+                *st = SocketState::Closed;
+                if wakeup {
+                    peer
+                } else {
+                    INVALID_HANDLE
+                }
+            }
+            FidlHandle::RightSocket(cs, peer) => {
+                let st = &mut *cs.lock();
+                let wakeup = match st {
+                    SocketState::Closed => false,
+                    SocketState::Open(st, _) => st.need_read,
+                };
+                *st = SocketState::Closed;
+                if wakeup {
+                    peer
+                } else {
+                    INVALID_HANDLE
+                }
+            }
+        };
+        if wakeup != INVALID_HANDLE {
+            hdl_awaken(wakeup);
+        }
+    }
+
+    /// Signal that a read is required
+    fn hdl_need_read(hdl: u32) {
+        let wakeup = with_handle(hdl, |obj| match obj {
+            FidlHandle::LeftChannel(cs, _) => match *cs.lock() {
+                ChannelState::Closed => true,
+                ChannelState::Open(ref mut st, _) => {
+                    if st.messages.is_empty() {
+                        st.need_read = true;
+                        false
+                    } else {
+                        true
+                    }
+                }
+            },
+            FidlHandle::RightChannel(cs, _) => match *cs.lock() {
+                ChannelState::Closed => true,
+                ChannelState::Open(_, ref mut st) => {
+                    if st.messages.is_empty() {
+                        st.need_read = true;
+                        false
+                    } else {
+                        true
+                    }
+                }
+            },
+            FidlHandle::LeftSocket(cs, _) => match *cs.lock() {
+                SocketState::Closed => true,
+                SocketState::Open(ref mut st, _) => {
+                    if st.bytes.is_empty() {
+                        st.need_read = true;
+                        false
+                    } else {
+                        true
+                    }
+                }
+            },
+            FidlHandle::RightSocket(cs, _) => match *cs.lock() {
+                SocketState::Closed => true,
+                SocketState::Open(_, ref mut st) => {
+                    if st.bytes.is_empty() {
+                        st.need_read = true;
+                        false
+                    } else {
+                        true
+                    }
+                }
+            },
+        });
+        if wakeup {
+            hdl_awaken(hdl);
+        }
+    }
 }
 
-#[cfg(target_os = "fuchsia")]
-pub use fuchsia_handles::*;
+#[cfg(test)]
+mod test {
+    use super::*;
+    use fuchsia_zircon_status as zx_status;
+    use futures::io::{AsyncReadExt, AsyncWriteExt};
+    use futures::task::{noop_waker, Context};
+    use futures::Future;
+    use std::pin::Pin;
+    use zx_status::Status;
 
-#[cfg(not(target_os = "fuchsia"))]
-pub use non_fuchsia_handles::*;
+    #[cfg(target_os = "fuchsia")]
+    use fuchsia_async as fasync;
 
-#[cfg(all(test, not(target_os = "fuchsia")))]
-#[no_mangle]
-pub extern "C" fn fidlhdl_close(_hdl: u32) {}
+    #[cfg(not(target_os = "fuchsia"))]
+    use futures::executor::block_on;
+
+    #[cfg(target_os = "fuchsia")]
+    fn run_async_test(f: impl Future<Output = ()>) {
+        fasync::Executor::new().unwrap().run_singlethreaded(f);
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    fn run_async_test(f: impl Future<Output = ()>) {
+        block_on(f);
+    }
+
+    #[test]
+    fn channel_write_read() {
+        let (a, b) = Channel::create().unwrap();
+        let (c, d) = Channel::create().unwrap();
+        let mut incoming = MessageBuf::new();
+
+        assert_eq!(b.read(&mut incoming).err().unwrap(), Status::SHOULD_WAIT);
+        d.write(&[4, 5, 6], &mut vec![]).unwrap();
+        a.write(&[1, 2, 3], &mut vec![c.into(), d.into()]).unwrap();
+
+        b.read(&mut incoming).unwrap();
+        assert_eq!(incoming.bytes(), &[1, 2, 3]);
+        assert_eq!(incoming.n_handles(), 2);
+        let c: Channel = incoming.take_handle(0).unwrap().into();
+        let d: Channel = incoming.take_handle(1).unwrap().into();
+        c.read(&mut incoming).unwrap();
+        drop(d);
+        assert_eq!(incoming.bytes(), &[4, 5, 6]);
+        assert_eq!(incoming.n_handles(), 0);
+    }
+
+    #[test]
+    fn socket_write_read() {
+        let (a, b) = Socket::create(SocketOpts::STREAM).unwrap();
+        a.write(&[1, 2, 3]).unwrap();
+        let mut buf = [0u8; 128];
+        assert_eq!(b.read(&mut buf).unwrap(), 3);
+        assert_eq!(&buf[0..3], &[1, 2, 3]);
+    }
+
+    #[test]
+    fn async_channel_write_read() {
+        run_async_test(async move {
+            let (a, b) = Channel::create().unwrap();
+            let (a, b) =
+                (AsyncChannel::from_channel(a).unwrap(), AsyncChannel::from_channel(b).unwrap());
+            let mut buf = MessageBuf::new();
+
+            let waker = noop_waker();
+            let mut cx = Context::from_waker(&waker);
+
+            let mut rx = b.recv_msg(&mut buf);
+            assert_eq!(Pin::new(&mut rx).poll(&mut cx), std::task::Poll::Pending);
+            a.write(&[1, 2, 3], &mut vec![]).unwrap();
+            rx.await.unwrap();
+            assert_eq!(buf.bytes(), &[1, 2, 3]);
+
+            let mut rx = a.recv_msg(&mut buf);
+            assert!(Pin::new(&mut rx).poll(&mut cx).is_pending());
+            b.write(&[1, 2, 3], &mut vec![]).unwrap();
+            rx.await.unwrap();
+            assert_eq!(buf.bytes(), &[1, 2, 3]);
+        })
+    }
+
+    #[test]
+    fn async_socket_write_read() {
+        run_async_test(async move {
+            let (a, b) = Socket::create(SocketOpts::STREAM).unwrap();
+            let (mut a, mut b) =
+                (AsyncSocket::from_socket(a).unwrap(), AsyncSocket::from_socket(b).unwrap());
+            let mut buf = [0u8; 128];
+
+            let waker = noop_waker();
+            let mut cx = Context::from_waker(&waker);
+
+            let mut rx = b.read(&mut buf);
+            assert!(Pin::new(&mut rx).poll(&mut cx).is_pending());
+            assert!(Pin::new(&mut a.write(&[1, 2, 3])).poll(&mut cx).is_ready());
+            rx.await.unwrap();
+            assert_eq!(&buf[0..3], &[1, 2, 3]);
+
+            let mut rx = a.read(&mut buf);
+            assert!(Pin::new(&mut rx).poll(&mut cx).is_pending());
+            assert!(Pin::new(&mut b.write(&[1, 2, 3])).poll(&mut cx).is_ready());
+            rx.await.unwrap();
+            assert_eq!(&buf[0..3], &[1, 2, 3]);
+        })
+    }
+
+    #[test]
+    fn channel_basic() {
+        let (p1, p2) = Channel::create().unwrap();
+
+        let mut empty = vec![];
+        assert!(p1.write(b"hello", &mut empty).is_ok());
+
+        let mut buf = MessageBuf::new();
+        assert!(p2.read(&mut buf).is_ok());
+        assert_eq!(buf.bytes(), b"hello");
+    }
+
+    #[test]
+    fn channel_send_handle() {
+        let hello_length: usize = 5;
+
+        // Create a pair of channels and a pair of sockets.
+        let (p1, p2) = Channel::create().unwrap();
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+
+        // Send one socket down the channel
+        let mut handles_to_send: Vec<Handle> = vec![s1.into_handle()];
+        assert!(p1.write(b"", &mut handles_to_send).is_ok());
+        // Handle should be removed from vector.
+        assert!(handles_to_send.is_empty());
+
+        // Read the handle from the receiving channel.
+        let mut buf = MessageBuf::new();
+        assert!(p2.read(&mut buf).is_ok());
+        assert_eq!(buf.n_handles(), 1);
+        // Take the handle from the buffer.
+        let received_handle = buf.take_handle(0).unwrap();
+        // Should not affect number of handles.
+        assert_eq!(buf.n_handles(), 1);
+        // Trying to take it again should fail.
+        assert!(buf.take_handle(0).is_none());
+
+        // Now to test that we got the right handle, try writing something to it...
+        let received_socket = Socket::from(received_handle);
+        assert!(received_socket.write(b"hello").is_ok());
+
+        // ... and reading it back from the original VMO.
+        let mut read_vec = vec![0; hello_length];
+        assert!(s2.read(&mut read_vec).is_ok());
+        assert_eq!(read_vec, b"hello");
+    }
+
+    #[test]
+    fn socket_basic() {
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+
+        // Write two packets and read from other end
+        assert_eq!(s1.write(b"hello").unwrap(), 5);
+        assert_eq!(s1.write(b"world").unwrap(), 5);
+
+        let mut read_vec = vec![0; 11];
+        assert_eq!(s2.read(&mut read_vec).unwrap(), 10);
+        assert_eq!(&read_vec[0..10], b"helloworld");
+
+        // Try reading when there is nothing to read.
+        assert_eq!(s2.read(&mut read_vec), Err(Status::SHOULD_WAIT));
+    }
+
+    #[cfg(not(target_os = "fuchsia"))]
+    #[test]
+    fn handle_type_is_correct() {
+        let (c1, c2) = Channel::create().unwrap();
+        let (s1, s2) = Socket::create(SocketOpts::STREAM).unwrap();
+        assert_eq!(c1.into_handle().handle_type(), FidlHdlType::Channel);
+        assert_eq!(c2.into_handle().handle_type(), FidlHdlType::Channel);
+        assert_eq!(s1.into_handle().handle_type(), FidlHdlType::Socket);
+        assert_eq!(s2.into_handle().handle_type(), FidlHdlType::Socket);
+    }
+}

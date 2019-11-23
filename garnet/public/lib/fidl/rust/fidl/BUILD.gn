@@ -27,7 +27,10 @@ rustc_library("fidl") {
       "//garnet/public/rust/fuchsia-zircon",
     ]
   } else {
-    deps += [ "//third_party/rust_crates:lazy_static" ]
+    deps += [
+      "//third_party/rust_crates:lazy_static",
+      "//third_party/rust_crates:slab",
+    ]
   }
   test_deps = [
     "//src/lib/test_util",
