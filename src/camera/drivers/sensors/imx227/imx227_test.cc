@@ -43,7 +43,7 @@ TEST_F(Imx227DeviceTest, StartAndStopStreaming) {
 }
 
 TEST_F(Imx227DeviceTest, DeInitStateThrowsErrors) {
-  TearDown();
+  imx227_device_->CameraSensorDeInit();
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorSetMode(kValidSensorMode));
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStartStreaming());
   EXPECT_NE(ZX_OK, imx227_device_->CameraSensorStopStreaming());
