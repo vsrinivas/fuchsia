@@ -119,10 +119,28 @@ class TestFrameProvider : public Vp9Decoder::FrameDataProvider {
   bool multi_instance_;
 };
 
+// Repeatedly try to process video, either it's all processed or until a flag is set.
+static void FeedDataUntilFlag(AmlogicVideo* video, const uint8_t* input, uint32_t input_size,
+                              std::atomic<bool>* stop_parsing) {
+  uint32_t current_offset = 0;
+  while (!*stop_parsing) {
+    uint32_t processed_data;
+    EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(input + current_offset,
+                                                 input_size - current_offset, &processed_data));
+    current_offset += processed_data;
+    if (current_offset == input_size)
+      break;
+    zx_nanosleep(zx_deadline_after(ZX_MSEC(15)));
+  }
+}
+
+static const uint8_t kFlushThroughBytes[16384] = {};
+constexpr uint32_t kTestVideoFrameCount = 249;
+
 class TestVP9 {
  public:
-  static void Decode(bool use_parser, bool use_compressed_output, const char* input_filename,
-                     const char* filename) {
+  static void Decode(bool use_parser, bool use_compressed_output, bool delayed_return,
+                     const char* input_filename, const char* filename) {
     auto video = std::make_unique<AmlogicVideo>();
     ASSERT_TRUE(video);
 
@@ -154,7 +172,7 @@ class TestVP9 {
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       video->video_decoder_->SetFrameReadyNotifier([&video, &frames_to_return, &frame_count,
-                                                    &wait_valid, &frames_returned,
+                                                    &wait_valid, &frames_returned, delayed_return,
                                                     filename](std::shared_ptr<VideoFrame> frame) {
         ++frame_count;
         DLOG("Got frame %d\n", frame_count);
@@ -164,14 +182,16 @@ class TestVP9 {
 #if DUMP_VIDEO_TO_FILE
         DumpVideoFrameToFile(frame.get(), filename);
 #endif
-        if (frames_returned)
+        if (frames_returned || !delayed_return)
           ReturnFrame(video.get(), frame);
         else
           frames_to_return.push_back(frame);
-        if (frame_count == 241)
+        if (frame_count == kTestVideoFrameCount)
           wait_valid.set_value();
 
-        if (frame_count % 5 == 0)
+        // Testing delayed return doesn't work well with reallocating buffers, since the
+        // decoder will throw out the old buffers and continue decoding anyway.
+        if (!delayed_return && (frame_count % 5 == 0))
           SetReallocateBuffersNextFrameForTesting(video.get());
       });
     }
@@ -186,20 +206,14 @@ class TestVP9 {
       if (use_parser) {
         EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(aml_data.data(), aml_data.size()));
         EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
+        EXPECT_EQ(ZX_OK,
+                  video->parser()->ParseVideo(kFlushThroughBytes, sizeof(kFlushThroughBytes)));
+        EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
       } else {
         video->core_->InitializeDirectInput();
-        uint32_t current_offset = 0;
-        uint8_t* data = aml_data.data();
-        while (!stop_parsing) {
-          uint32_t processed_data;
-          EXPECT_EQ(ZX_OK,
-                    video->ProcessVideoNoParser(data + current_offset,
-                                                aml_data.size() - current_offset, &processed_data));
-          current_offset += processed_data;
-          if (current_offset == aml_data.size())
-            break;
-          zx_nanosleep(zx_deadline_after(ZX_MSEC(15)));
-        }
+        FeedDataUntilFlag(video.get(), aml_data.data(), aml_data.size(), &stop_parsing);
+        FeedDataUntilFlag(video.get(), kFlushThroughBytes, sizeof(kFlushThroughBytes),
+                          &stop_parsing);
       }
     });
 
@@ -215,7 +229,8 @@ class TestVP9 {
       frames_returned = true;
     }
 
-    EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(2)));
+    EXPECT_EQ(std::future_status::ready,
+              wait_valid.get_future().wait_for(std::chrono::seconds(10)));
 
     stop_parsing = true;
 
@@ -272,7 +287,7 @@ class TestVP9 {
             // 25 fps video
             next_pts = frame->pts + 1000 / 25;
             ReturnFrame(video.get(), frame);
-            if (frame_count == 241)
+            if (frame_count == kTestVideoFrameCount)
               wait_valid.set_value();
           });
     }
@@ -288,6 +303,8 @@ class TestVP9 {
         EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
         stream_offset += data.data.size();
       }
+      EXPECT_EQ(ZX_OK, video->parser()->ParseVideo(kFlushThroughBytes, sizeof(kFlushThroughBytes)));
+      EXPECT_EQ(ZX_OK, video->parser()->WaitForParsingCompleted(ZX_SEC(10)));
     });
 
     EXPECT_EQ(std::future_status::ready, wait_valid.get_future().wait_for(std::chrono::seconds(2)));
@@ -461,7 +478,6 @@ class TestVP9 {
     }
 
     // The default stack size is ZIRCON_DEFAULT_STACK_SIZE - 256kB.
-    uint8_t padding[16384] = {};
     {
       std::lock_guard<std::mutex> lock(video->video_decoder_lock_);
       StreamBuffer* buffer = video->current_instance_->stream_buffer();
@@ -474,9 +490,9 @@ class TestVP9 {
         EXPECT_EQ(ZX_OK,
                   video->ProcessVideoNoParser(aml_data[i].data.data(), aml_data[i].data.size()));
       }
-      buffer->set_padding_size(sizeof(padding));
+      buffer->set_padding_size(sizeof(kFlushThroughBytes));
       // Force all frames to be processed.
-      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(padding, sizeof(padding)));
+      EXPECT_EQ(ZX_OK, video->ProcessVideoNoParser(kFlushThroughBytes, sizeof(kFlushThroughBytes)));
     }
 
     // Normally we'd probably want to always fill the stream buffer when the
@@ -498,9 +514,9 @@ class TestVP9 {
         offset += aml_data2[i].data.size();
       }
       buffer->set_data_size(offset);
-      buffer->set_padding_size(sizeof(padding));
-      memcpy(buffer->buffer().virt_base() + offset, padding, sizeof(padding));
-      offset += sizeof(padding);
+      buffer->set_padding_size(sizeof(kFlushThroughBytes));
+      memcpy(buffer->buffer().virt_base() + offset, kFlushThroughBytes, sizeof(kFlushThroughBytes));
+      offset += sizeof(kFlushThroughBytes);
       buffer->buffer().CacheFlush(0, offset);
     }
     {
@@ -540,15 +556,20 @@ class TestVP9 {
 class VP9Compression : public ::testing::TestWithParam</*compressed_output=*/bool> {};
 
 TEST_P(VP9Compression, Decode) {
-  TestVP9::Decode(true, GetParam(), "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
+  TestVP9::Decode(true, GetParam(), false, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
+}
+
+TEST_P(VP9Compression, DecodeDelayedReturn) {
+  TestVP9::Decode(true, GetParam(), true, "video_test_data/test-25fps.vp9", "/tmp/bearvp9.yuv");
 }
 
 TEST_P(VP9Compression, DecodeNoParser) {
-  TestVP9::Decode(false, GetParam(), "video_test_data/test-25fps.vp9", "/tmp/bearvp9noparser.yuv");
+  TestVP9::Decode(false, GetParam(), false, "video_test_data/test-25fps.vp9",
+                  "/tmp/bearvp9noparser.yuv");
 }
 
 TEST_P(VP9Compression, Decode10Bit) {
-  TestVP9::Decode(false, GetParam(), "video_test_data/test-25fps.vp9_2",
+  TestVP9::Decode(false, GetParam(), false, "video_test_data/test-25fps.vp9_2",
                   "/tmp/bearvp9noparser.yuv");
 }
 
