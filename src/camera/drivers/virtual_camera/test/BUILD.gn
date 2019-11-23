@@ -29,3 +29,20 @@ executable("virtual_camera_test") {
     "//zircon/public/lib/zx",
   ]
 }
+
+executable("hsv_generator_test") {
+  testonly = true
+  sources = [
+    "hsv_generator_test.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/gtest",
+    "//sdk/lib/fidl/cpp",
+    "//src/camera/drivers/virtual_camera/:hsv_color_source",
+    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/image-format",
+    "//zircon/public/lib/syslog",
+  ]
+}

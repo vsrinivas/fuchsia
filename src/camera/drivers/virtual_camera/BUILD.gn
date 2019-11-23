@@ -18,8 +18,6 @@ driver_module("virtual_camera_driver") {
 
 source_set("virtual_camera_source") {
   sources = [
-    "color_source.cc",
-    "color_source.h",
     "virtual_camera.cc",
     "virtual_camera2_control.cc",
     "virtual_camera2_control.h",
@@ -30,6 +28,7 @@ source_set("virtual_camera_source") {
   ]
 
   deps = [
+    ":hsv_color_source",
     "//sdk/fidl/fuchsia.camera",
     "//sdk/fidl/fuchsia.camera2",
     "//sdk/fidl/fuchsia.camera2.hal",
@@ -50,6 +49,27 @@ source_set("virtual_camera_source") {
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.usb",
     "//zircon/system/fidl/fuchsia-hardware-camera:fuchsia-hardware-camera_c",
+  ]
+}
+
+source_set("hsv_color_source") {
+  sources = [
+    "color_source.cc",
+    "hsv_generator.cc",
+  ]
+
+  public = [
+    "color_source.h",
+    "hsv_generator.h",
+  ]
+
+  deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/syslog/cpp",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+    "//zircon/system/fidl/fuchsia-sysmem",
   ]
 }
 

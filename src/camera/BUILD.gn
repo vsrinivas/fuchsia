@@ -54,6 +54,7 @@ test_package("camera_tests") {
     "//src/camera/drivers/sensors/mock-sensor:mock-sensor-integration-test",
     "//src/camera/drivers/test_utils/test:button_checker_test",
     "//src/camera/drivers/test_utils/test:test_utils_test",
+    "//src/camera/drivers/virtual_camera/test:hsv_generator_test",
     "//src/camera/drivers/virtual_camera/test:virtual_camera_test",
     "//src/camera/examples/demo/stream_provider/test",
     "//src/camera/examples/demo/test",
@@ -132,7 +133,11 @@ test_package("camera_tests") {
       manifest = "drivers/virtual_camera/test/meta/virtual_camera_test.cmx"
       environments = basic_envs
     },
-
+    {
+      name = "hsv_generator_test"
+      manifest = "drivers/virtual_camera/test/meta/hsv_generator_test.cmx"
+      environments = basic_envs
+    },
     {
       name = "image_writer_test"
       manifest = "image_writer/test/meta/image_writer_test.cmx"

@@ -62,6 +62,7 @@ void ColorSource::FillARGB(void* start, size_t buffer_size) {
 }
 
 void ColorSource::hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b) {
+  index = index % kMaxFrameColor;
   uint8_t pos = index & kLowByteMask;
   uint8_t neg = kLowByteMask - (index & kLowByteMask);
   uint8_t phase = (index >> kIndexDownshift) & kLowThreeBitMask;

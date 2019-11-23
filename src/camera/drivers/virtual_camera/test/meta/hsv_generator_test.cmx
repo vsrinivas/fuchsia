@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/hsv_generator_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.Log",
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

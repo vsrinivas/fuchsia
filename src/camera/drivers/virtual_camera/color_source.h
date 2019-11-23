@@ -18,9 +18,9 @@ class ColorSource {
   // Write the next color in the progression to the buffer.
   void FillARGB(void* start, size_t buffer_size);
 
- private:
   static void hsv_color(uint32_t index, uint8_t* r, uint8_t* g, uint8_t* b);
 
+ private:
   static constexpr uint32_t kStartingFrameColor = 0x80;
   uint32_t frame_color_ = kStartingFrameColor;
 };
