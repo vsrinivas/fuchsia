@@ -9,6 +9,8 @@
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/zx/eventpair.h>
 
+#include <cmath>
+
 #include <trace/event.h>
 
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -1104,6 +1106,13 @@ bool GfxCommandApplier::ApplyCreateRectangle(Session* session, ResourceId id,
     return false;
   }
 
+  if (std::isnan(args.width.vector1()) || std::isnan(args.height.vector1())) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateRectangle(): "
+           "attempted to create a rectangle with nan dimensions.";
+    return false;
+  }
+
   auto rectangle = CreateRectangle(session, id, args.width.vector1(), args.height.vector1());
   return rectangle ? session->resources()->AddResource(id, std::move(rectangle)) : false;
 }
@@ -1137,6 +1146,15 @@ bool GfxCommandApplier::ApplyCreateRoundedRectangle(Session* session,
   const float bottom_right_radius = args.bottom_right_radius.vector1();
   const float bottom_left_radius = args.bottom_left_radius.vector1();
 
+  if (std::isnan(width) || std::isnan(height) || std::isnan(top_left_radius) ||
+      std::isnan(top_right_radius) || std::isnan(bottom_left_radius) ||
+      std::isnan(bottom_right_radius)) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateRoundedRectangle(): "
+           "attempted to create a rounded rectangle with nan dimensions.";
+    return false;
+  }
+
   auto rectangle =
       CreateRoundedRectangle(session, command_context, id, width, height, top_left_radius,
                              top_right_radius, bottom_right_radius, bottom_left_radius);
@@ -1156,14 +1174,23 @@ bool GfxCommandApplier::ApplyCreateCircle(Session* session, ResourceId id,
     return false;
   }
 
+  const float radius = args.radius.vector1();
+
+  if (std::isnan(radius)) {
+    session->error_reporter()->ERROR()
+        << "scenic_impl::gfx::GfxCommandApplier::ApplyCreateCircle(): "
+           "attempted to create a circle with nan radius.";
+    return false;
+  }
+
   // Emit a warning that the radius is too small.
   // TODO(FLK-467): Convert warning to error and kill the session if the
   // code enters this path.
-  if (args.radius.vector1() <= escher::kEpsilon) {
+  if (radius <= escher::kEpsilon) {
     session->error_reporter()->WARN() << "Circle radius is too small " << args.radius.vector1();
   }
 
-  auto circle = CreateCircle(session, id, args.radius.vector1());
+  auto circle = CreateCircle(session, id, radius);
   return circle ? session->resources()->AddResource(id, std::move(circle)) : false;
 }
 

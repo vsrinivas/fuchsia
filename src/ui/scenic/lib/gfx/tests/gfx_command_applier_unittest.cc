@@ -56,6 +56,13 @@ TEST_F(GfxCommandApplierTest, SeparateSessionsAreIndependent) {
                                               scenic::NewReleaseResourceCmd(/*id*/ 3)));
 }
 
+TEST_F(GfxCommandApplierTest, NansWillFailToBeApplied) {
+  const ResourceId id = 1;
+  EXPECT_FALSE(Apply(scenic::NewCreateRoundedRectangleCmd(id, NAN, 40.f, 2.f, 4.f, 6.f, 8.f)));
+  EXPECT_FALSE(Apply(scenic::NewCreateRectangleCmd(id, NAN, 8.f)));
+  EXPECT_FALSE(Apply(scenic::NewCreateCircleCmd(id, NAN)));
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl
