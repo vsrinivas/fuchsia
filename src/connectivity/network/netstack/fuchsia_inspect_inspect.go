@@ -14,8 +14,11 @@ import (
 	"syscall/zx/fidl"
 
 	"app/context"
+	"netstack/dhcp"
+	"netstack/link"
 	"syslog"
 
+	"fidl/fuchsia/hardware/ethernet"
 	inspect "fidl/fuchsia/inspect/deprecated"
 
 	"github.com/google/netstack/tcpip"
@@ -31,6 +34,12 @@ type inspectInner interface {
 	ListChildren() []string
 	GetChild(string) inspectInner
 }
+
+const (
+	stats      = "Stats"
+	socketInfo = "Socket Info"
+	dhcpInfo   = "DHCP Info"
+)
 
 // An adapter that implements fuchsia.inspect.Inspect using the above.
 
@@ -175,8 +184,21 @@ func (impl *statCounterInspectImpl) GetChild(childName string) inspectInner {
 
 var _ inspectInner = (*nicInfoMapInspectImpl)(nil)
 
+// Picking info to inspect from ifState in netstack.
+type ifStateInfo struct {
+	stack.NICInfo
+	nicid       tcpip.NICID
+	filepath    string
+	features    uint32
+	state       link.State
+	dnsServers  []tcpip.Address
+	dhcpEnabled bool
+	dhcpInfo    dhcp.Info
+	dhcpStats   *dhcp.Stats
+}
+
 type nicInfoMapInspectImpl struct {
-	value map[tcpip.NICID]stack.NICInfo
+	value map[tcpip.NICID]ifStateInfo
 }
 
 func (impl *nicInfoMapInspectImpl) ReadData() inspect.Object {
@@ -213,7 +235,7 @@ var _ inspectInner = (*nicInfoInspectImpl)(nil)
 
 type nicInfoInspectImpl struct {
 	name  string
-	value stack.NICInfo
+	value ifStateInfo
 }
 
 func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
@@ -236,7 +258,7 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 			Value: inspect.PropertyValueWithStr(linkAddress.String()),
 		})
 	}
-	for _, protocolAddress := range impl.value.ProtocolAddresses {
+	for i, protocolAddress := range impl.value.ProtocolAddresses {
 		protocol := "unknown"
 		switch protocolAddress.Protocol {
 		case header.IPv4ProtocolNumber:
@@ -247,25 +269,98 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 			protocol = "arp"
 		}
 		object.Properties = append(object.Properties, inspect.Property{
-			Key:   "ProtocolAddress",
+			Key:   fmt.Sprintf("ProtocolAddress%d", i),
 			Value: inspect.PropertyValueWithStr(fmt.Sprintf("[%s] %s", protocol, protocolAddress.AddressWithPrefix)),
 		})
 	}
+
+	object.Properties = append(object.Properties, []inspect.Property{
+		{Key: "Filepath", Value: inspect.PropertyValueWithStr(impl.value.filepath)},
+		{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(impl.value.features))},
+	}...)
+	for i, addr := range impl.value.dnsServers {
+		object.Properties = append(object.Properties, inspect.Property{
+			Key: fmt.Sprintf("DNS server%d", i), Value: inspect.PropertyValueWithStr(addr.String())})
+	}
+	object.Properties = append(object.Properties, inspect.Property{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(impl.value.dhcpEnabled))})
 	return object
 }
 
 func (impl *nicInfoInspectImpl) ListChildren() []string {
-	return []string{
-		"Stats",
+	children := []string{
+		stats,
 	}
+	if impl.value.dhcpEnabled {
+		children = append(children, "DHCP Info")
+	}
+	return children
 }
 
 func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 	switch childName {
-	case "Stats":
+	case stats:
 		return &statCounterInspectImpl{
 			name:  childName,
 			value: reflect.ValueOf(impl.value.Stats),
+		}
+	case dhcpInfo:
+		return &dhcpInfoInspectImpl{
+			name:  childName,
+			info:  impl.value.dhcpInfo,
+			stats: impl.value.dhcpStats,
+		}
+	default:
+		return nil
+	}
+}
+
+var _ inspectInner = (*dhcpInfoInspectImpl)(nil)
+
+type dhcpInfoInspectImpl struct {
+	name  string
+	info  dhcp.Info
+	stats *dhcp.Stats
+}
+
+func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
+	addrString := func(addr tcpip.Address) string {
+		if addr == "" {
+			return "[none]"
+		}
+		return addr.String()
+	}
+	addrPrefixString := func(addr tcpip.AddressWithPrefix) string {
+		if addr == (tcpip.AddressWithPrefix{}) {
+			return "[none]"
+		}
+		return addr.String()
+	}
+	return inspect.Object{
+		Name: impl.name,
+		Properties: []inspect.Property{
+			{Key: "State", Value: inspect.PropertyValueWithStr(impl.info.State.String())},
+			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.Addr))},
+			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr(addrString(impl.info.Server))},
+			{Key: "OldAddress", Value: inspect.PropertyValueWithStr(addrPrefixString(impl.info.OldAddr))},
+			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(impl.info.Acquisition.String())},
+			{Key: "Backoff", Value: inspect.PropertyValueWithStr(impl.info.Backoff.String())},
+			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(impl.info.Retransmission.String())},
+		},
+	}
+}
+
+func (impl *dhcpInfoInspectImpl) ListChildren() []string {
+	return []string{
+		stats,
+	}
+}
+
+func (impl *dhcpInfoInspectImpl) GetChild(childName string) inspectInner {
+	switch childName {
+	case stats:
+		return &statCounterInspectImpl{
+			name:  childName,
+			value: reflect.ValueOf(impl.stats).Elem(),
 		}
 	default:
 		return nil
@@ -280,7 +375,7 @@ type socketInfoMapInspectImpl struct {
 
 func (impl *socketInfoMapInspectImpl) ReadData() inspect.Object {
 	return inspect.Object{
-		Name: "Socket Info",
+		Name: socketInfo,
 	}
 }
 
@@ -387,13 +482,13 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 
 func (impl *socketInfoInspectImpl) ListChildren() []string {
 	return []string{
-		"Stats",
+		stats,
 	}
 }
 
 func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
 	switch childName {
-	case "Stats":
+	case stats:
 		var value reflect.Value
 		switch t := impl.stats.(type) {
 		case *tcp.Stats:
@@ -409,4 +504,19 @@ func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
 		}
 	}
 	return nil
+}
+
+func featuresString(v uint32) string {
+	switch v {
+	case 0:
+		return "[none]"
+	case ethernet.InfoFeatureWlan:
+		return "WLAN"
+	case ethernet.InfoFeatureSynth:
+		return "SYNTHETIC"
+	case ethernet.InfoFeatureLoopback:
+		return "LOOPBACK"
+	default:
+		return "[unknown]"
+	}
 }

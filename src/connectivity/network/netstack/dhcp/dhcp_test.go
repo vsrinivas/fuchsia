@@ -105,6 +105,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 		clientLinkEPs = append(clientLinkEPs, clientLinkEP)
 		const clientLinkAddr = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 		c := NewClient(clientStack, clientNICID, clientLinkAddr, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+		info := c.Info()
 		go func() {
 			// Packets from the clients get sent to the server.
 			for pkt := range clientLinkEP.C {
@@ -112,7 +113,7 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 			}
 		}()
 		go func() {
-			_, err := c.acquire(ctx, initSelecting)
+			_, err := c.acquire(ctx, &info)
 			errs <- err
 		}()
 	}
@@ -161,6 +162,22 @@ func TestSimultaneousDHCPClients(t *testing.T) {
 	}
 }
 
+func (c *Client) verifyClientStats(t *testing.T, want uint64) {
+	t.Helper()
+	if got := c.stats.SendDiscovers.Value(); got != want {
+		t.Errorf("DHCPStats.SendDiscovers=%d want=%d", got, want)
+	}
+	if got := c.stats.RecvOffers.Value(); got != want {
+		t.Errorf("DHCPStats.RecvOffers=%d want=%d", got, want)
+	}
+	if got := c.stats.SendRequests.Value(); got != want {
+		t.Errorf("DHCPStats.SendRequests=%d want=%d", got, want)
+	}
+	if got := c.stats.RecvAcks.Value(); got != want {
+		t.Errorf("DHCPStats.RecvAcks=%d want=%d", got, want)
+	}
+}
+
 func TestDHCP(t *testing.T) {
 	s, _ := createTestStackWithChannel(t, []tcpip.Address{serverAddr})
 	clientAddrs := []tcpip.Address{"\xc0\xa8\x03\x02", "\xc0\xa8\x03\x03"}
@@ -182,62 +199,66 @@ func TestDHCP(t *testing.T) {
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 	c0 := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
+	info := c0.Info()
 	{
 		{
-			cfg, err := c0.acquire(ctx, initSelecting)
+			cfg, err := c0.acquire(ctx, &info)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := c0.addr.Address, clientAddrs[0]; got != want {
+			if got, want := info.Addr.Address, clientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 			}
+			c0.verifyClientStats(t, 1)
 		}
 		{
-			cfg, err := c0.acquire(ctx, initSelecting)
+			cfg, err := c0.acquire(ctx, &info)
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got, want := c0.addr.Address, clientAddrs[0]; got != want {
+			if got, want := info.Addr.Address, clientAddrs[0]; got != want {
 				t.Errorf("c.addr=%s, want=%s", got, want)
 			}
 			if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
 				t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 			}
+			c0.verifyClientStats(t, 2)
 		}
 	}
 
 	{
 		const clientLinkAddr1 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x53")
 		c1 := NewClient(s, testNICID, clientLinkAddr1, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
-		cfg, err := c1.acquire(ctx, initSelecting)
+		info := c1.Info()
+		cfg, err := c1.acquire(ctx, &info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := c1.addr.Address, clientAddrs[1]; got != want {
+		if got, want := info.Addr.Address, clientAddrs[1]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
 			t.Errorf("cfg.SubnetMask=%s, want=%s", got, want)
 		}
+		c1.verifyClientStats(t, 1)
 	}
 
 	{
 		if err := s.AddProtocolAddressWithOptions(testNICID, tcpip.ProtocolAddress{
 			Protocol:          ipv4.ProtocolNumber,
-			AddressWithPrefix: c0.addr,
+			AddressWithPrefix: info.Addr,
 		}, stack.NeverPrimaryEndpoint); err != nil {
 			t.Fatalf("failed to add address to stack: %s", err)
 		}
-		defer s.RemoveAddress(testNICID, c0.addr.Address)
-
-		cfg, err := c0.acquire(ctx, initSelecting)
+		defer s.RemoveAddress(testNICID, info.Addr.Address)
+		cfg, err := c0.acquire(ctx, &info)
 		if err != nil {
 			t.Fatal(err)
 		}
-		if got, want := c0.addr.Address, clientAddrs[0]; got != want {
+		if got, want := info.Addr.Address, clientAddrs[0]; got != want {
 			t.Errorf("c.addr=%s, want=%s", got, want)
 		}
 		if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -247,6 +268,7 @@ func TestDHCP(t *testing.T) {
 		if got, want := cfg, serverCfg; !equalConfig(got, want) {
 			t.Errorf("client config:\n\t%#+v\nwant:\n\t%#+v", got, want)
 		}
+		c0.verifyClientStats(t, 3)
 	}
 }
 
@@ -333,14 +355,15 @@ func TestDelayRetransmission(t *testing.T) {
 
 			const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 			c0 := NewClient(clientStack, testNICID, clientLinkAddr0, tc.acquisition, defaulBackoffTime, tc.retransmission, nil)
+			info := c0.Info()
 			ctx, cancel = context.WithTimeout(ctx, tc.acquisition)
 			defer cancel()
-			cfg, err := c0.acquire(ctx, initSelecting)
+			cfg, err := c0.acquire(ctx, &info)
 			if tc.success {
 				if err != nil {
 					t.Fatal(err)
 				}
-				if got, want := c0.addr.Address, clientAddrs[0]; got != want {
+				if got, want := info.Addr.Address, clientAddrs[0]; got != want {
 					t.Errorf("c.addr=%s, want=%s", got, want)
 				}
 				if got, want := cfg.SubnetMask, serverCfg.SubnetMask; got != want {
@@ -638,7 +661,8 @@ func TestTwoServers(t *testing.T) {
 
 	const clientLinkAddr0 = tcpip.LinkAddress("\x52\x11\x22\x33\x44\x52")
 	c := NewClient(s, testNICID, clientLinkAddr0, defaultAcquireTimeout, defaulBackoffTime, defaultResendTime, nil)
-	if _, err := c.acquire(ctx, initSelecting); err != nil {
+	info := c.Info()
+	if _, err := c.acquire(ctx, &info); err != nil {
 		t.Fatal(err)
 	}
 }

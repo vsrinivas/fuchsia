@@ -710,6 +710,35 @@ func (ns *Netstack) addEndpoint(
 	return ifs, nil
 }
 
+func (ns *Netstack) getIfStateInfo(nicInfo map[tcpip.NICID]stack.NICInfo) map[tcpip.NICID]ifStateInfo {
+	ifStates := make(map[tcpip.NICID]ifStateInfo)
+	ns.mu.Lock()
+	for id, ifs := range ns.mu.ifStates {
+		ni, ok := nicInfo[id]
+		if !ok {
+			continue
+		}
+		ifs.mu.Lock()
+		info := ifStateInfo{
+			NICInfo:     ni,
+			nicid:       ifs.nicid,
+			features:    ifs.features,
+			filepath:    ifs.filepath,
+			state:       ifs.mu.state,
+			dnsServers:  ifs.mu.dnsServers,
+			dhcpEnabled: ifs.mu.dhcp.enabled,
+		}
+		if ifs.mu.dhcp.enabled {
+			info.dhcpInfo = ifs.mu.dhcp.Info()
+			info.dhcpStats = ifs.mu.dhcp.Stats()
+		}
+		ifs.mu.Unlock()
+		ifStates[id] = info
+	}
+	ns.mu.Unlock()
+	return ifStates
+}
+
 func findAddress(addrs []tcpip.ProtocolAddress, addr tcpip.ProtocolAddress) (tcpip.ProtocolAddress, bool) {
 	// Ignore prefix length.
 	addr.AddressWithPrefix.PrefixLen = 0

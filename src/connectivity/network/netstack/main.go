@@ -159,7 +159,7 @@ func Main() {
 			// asService is late-bound so that each call retrieves fresh NIC info.
 			asService: func() *context.Service {
 				return (&inspectImpl{
-					inner:   &nicInfoMapInspectImpl{value: stk.NICInfo()},
+					inner:   &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
 					service: &inspectService,
 				}).asService()
 			},

@@ -16,7 +16,6 @@ import (
 	"github.com/google/go-cmp/cmp/cmpopts"
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/network/ipv4"
-	"github.com/google/netstack/tcpip/stack"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
@@ -194,7 +193,7 @@ func TestSocketStatCounterInspectImpl(t *testing.T) {
 
 func TestNicInfoMapInspectImpl(t *testing.T) {
 	v := nicInfoMapInspectImpl{
-		value: map[tcpip.NICID]stack.NICInfo{
+		value: map[tcpip.NICID]ifStateInfo{
 			1: {},
 			2: {},
 		},
@@ -250,6 +249,7 @@ func TestNicInfoInspectImpl(t *testing.T) {
 
 	v.value.Flags.Up = true
 	v.value.Flags.Loopback = true
+	v.value.dnsServers = []tcpip.Address{"\x01\x02\x03\x04"}
 
 	if diff := cmp.Diff(v.ReadData(), inspect.Object{
 		Name: v.name,
@@ -259,9 +259,52 @@ func TestNicInfoInspectImpl(t *testing.T) {
 			{Key: "Running", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Running))},
 			{Key: "Loopback", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Loopback))},
 			{Key: "Promiscuous", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.Flags.Promiscuous))},
+			{Key: "Filepath", Value: inspect.PropertyValueWithStr(v.value.filepath)},
+			{Key: "Features", Value: inspect.PropertyValueWithStr(featuresString(v.value.features))},
+			{Key: "DNS server0", Value: inspect.PropertyValueWithStr(v.value.dnsServers[0].String())},
+			{Key: "DHCP enabled", Value: inspect.PropertyValueWithStr(strconv.FormatBool(v.value.dhcpEnabled))},
 		},
 		Metrics: []inspect.Metric{
 			{Key: "MTU", Value: inspect.MetricValueWithUintValue(uint64(v.value.MTU))},
+		},
+	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
+		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)
+	}
+}
+
+func TestDHCPInfoInspectImpl(t *testing.T) {
+	v := dhcpInfoInspectImpl{
+		name: "doesn't matter",
+	}
+	children := v.ListChildren()
+	if diff := cmp.Diff(children, []string{
+		"Stats",
+	}); diff != "" {
+		t.Errorf("ListChildren() mismatch (-want +got):\n%s", diff)
+	}
+	for _, childName := range children {
+		if child := v.GetChild(childName); child == nil {
+			t.Errorf("got GetChild(%s) = %v, want non-nil", childName, child)
+		} else if _, ok := child.(*statCounterInspectImpl); !ok {
+			t.Errorf("got GetChild(%s) = %T, want %T", childName, child, &statCounterInspectImpl{})
+		}
+	}
+
+	childName := "not a real child"
+	if child := v.GetChild(childName); child != nil {
+		t.Errorf("got GetChild(%s) = %s, want = %v", childName, child, nil)
+	}
+
+	if diff := cmp.Diff(v.ReadData(), inspect.Object{
+		Name: v.name,
+		Properties: []inspect.Property{
+			{Key: "State", Value: inspect.PropertyValueWithStr(v.info.State.String())},
+			{Key: "AcquiredAddress", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "ServerAddress", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "OldAddress", Value: inspect.PropertyValueWithStr("[none]")},
+			{Key: "Acquisition", Value: inspect.PropertyValueWithStr(v.info.Acquisition.String())},
+			{Key: "Backoff", Value: inspect.PropertyValueWithStr(v.info.Backoff.String())},
+			{Key: "Retransmission", Value: inspect.PropertyValueWithStr(v.info.Retransmission.String())},
 		},
 	}, cmpopts.IgnoreUnexported(inspect.Object{}, inspect.Property{}, inspect.Metric{})); diff != "" {
 		t.Errorf("ReadData() mismatch (-want +got):\n%s", diff)

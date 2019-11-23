@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"math"
 	"net"
+	"sync/atomic"
 	"time"
 
 	"syslog"
@@ -31,27 +32,14 @@ type AcquiredFunc func(oldAddr, newAddr tcpip.AddressWithPrefix, cfg Config)
 
 // Client is a DHCP client.
 type Client struct {
-	stack    *stack.Stack
-	nicid    tcpip.NICID
-	linkAddr tcpip.LinkAddress
-	// acquisition is the duration within which a complete DHCP transaction must
-	// complete before timing out.
-	acquisition time.Duration
-	// backoff is the duration for which the client must wait before starting a
-	// new DHCP transaction after a failed transaction.
-	backoff time.Duration
-	// retransmission is the duration to wait before resending a DISCOVER or
-	// REQUEST within an active transaction.
-	retransmission time.Duration
-	acquiredFunc   AcquiredFunc
+	stack *stack.Stack
+
+	// info holds the Client's state as type Info.
+	info atomic.Value
+
+	acquiredFunc AcquiredFunc
 
 	wq waiter.Queue
-
-	addr   tcpip.AddressWithPrefix
-	server tcpip.Address
-
-	// The address reported in the last call to acquiredFunc.
-	oldAddr tcpip.AddressWithPrefix
 
 	// Used to ensure that only one Run goroutine per interface may be
 	// permitted to run at a time. In certain cases, rapidly flapping the
@@ -60,6 +48,8 @@ type Client struct {
 	// At the time of writing, TestDhcpConfiguration was creating this
 	// scenario and causing panics.
 	sem chan struct{}
+
+	stats Stats
 }
 
 type dhcpClientState uint8
@@ -70,6 +60,53 @@ const (
 	rebinding
 )
 
+// Stats collects DHCP statistics per client.
+type Stats struct {
+	SendDiscovers               tcpip.StatCounter
+	RecvOffers                  tcpip.StatCounter
+	SendRequests                tcpip.StatCounter
+	RecvAcks                    tcpip.StatCounter
+	RecvNaks                    tcpip.StatCounter
+	SendDiscoverErrors          tcpip.StatCounter
+	SendRequestErrors           tcpip.StatCounter
+	RecvOfferErrors             tcpip.StatCounter
+	RecvOfferUnexpectedType     tcpip.StatCounter
+	RecvOfferOptsDecodeErrors   tcpip.StatCounter
+	RecvOfferTimeout            tcpip.StatCounter
+	RecvOfferAcquisitionTimeout tcpip.StatCounter
+	RecvAckErrors               tcpip.StatCounter
+	RecvNakErrors               tcpip.StatCounter
+	RecvAckOptsDecodeErrors     tcpip.StatCounter
+	RecvAckAddrErrors           tcpip.StatCounter
+	RecvAckUnexpectedType       tcpip.StatCounter
+	RecvAckTimeout              tcpip.StatCounter
+	RecvAckAcquisitionTimeout   tcpip.StatCounter
+}
+
+type Info struct {
+	// NICID is the identifer to the associated NIC.
+	NICID tcpip.NICID
+	// LinkAddr is the link-address of the associated NIC.
+	LinkAddr tcpip.LinkAddress
+	// Acquisition is the duration within which a complete DHCP transaction must
+	// complete before timing out.
+	Acquisition time.Duration
+	// Backoff is the duration for which the client must wait before starting a
+	// new DHCP transaction after a failed transaction.
+	Backoff time.Duration
+	// Retransmission is the duration to wait before resending a DISCOVER or
+	// REQUEST within an active transaction.
+	Retransmission time.Duration
+	// Addr is the acquired network address.
+	Addr tcpip.AddressWithPrefix
+	// Server is the network address of the DHCP server.
+	Server tcpip.Address
+	// State is the DHCP client state.
+	State dhcpClientState
+	// OldAddr is the address reported in the last call to acquiredFunc.
+	OldAddr tcpip.AddressWithPrefix
+}
+
 // NewClient creates a DHCP client.
 //
 // acquiredFunc will be called after each DHCP acquisition, and is responsible
@@ -78,27 +115,41 @@ const (
 // TODO: use (*stack.Stack).NICInfo()[nicid].LinkAddress instead of passing
 // linkAddr when broadcasting on multiple interfaces works.
 func NewClient(s *stack.Stack, nicid tcpip.NICID, linkAddr tcpip.LinkAddress, acquisition, backoff, retransmission time.Duration, acquiredFunc AcquiredFunc) *Client {
-	return &Client{
-		stack:          s,
-		nicid:          nicid,
-		linkAddr:       linkAddr,
-		acquisition:    acquisition,
-		backoff:        backoff,
-		retransmission: retransmission,
-		acquiredFunc:   acquiredFunc,
-		sem:            make(chan struct{}, 1),
+	c := &Client{
+		stack:        s,
+		acquiredFunc: acquiredFunc,
+		sem:          make(chan struct{}, 1),
 	}
+	c.info.Store(Info{
+		NICID:          nicid,
+		LinkAddr:       linkAddr,
+		Acquisition:    acquisition,
+		Retransmission: retransmission,
+		Backoff:        backoff,
+	})
+	return c
+}
+
+// Info returns a copy of the synchronized state of the Info.
+func (c *Client) Info() Info {
+	return c.info.Load().(Info)
+}
+
+// Stats returns a reference to the Client`s stats.
+func (c *Client) Stats() *Stats {
+	return &c.stats
 }
 
 // Run starts the DHCP client.
 //
 // The function periodically searches for a new IP address.
 func (c *Client) Run(ctx context.Context) {
+	info := c.Info()
 	// For the initial iteration of the acquisition loop, the client should
 	// be in the initSelecting state, corresponding to the
 	// INIT->SELECTING->REQUESTING->BOUND state transition:
 	// https://tools.ietf.org/html/rfc2131#section-4.4
-	clientState := initSelecting
+	info.State = initSelecting
 
 	initSelectingTimer := time.NewTimer(math.MaxInt64)
 	rebindTimer := time.NewTimer(math.MaxInt64)
@@ -109,19 +160,20 @@ func (c *Client) Run(ctx context.Context) {
 		defer func() { <-c.sem }()
 		defer func() {
 			syslog.WarnTf(tag, "client is stopping, cleaning up")
-			c.cleanup()
+			c.cleanup(&info)
+			// cleanup mutates info.
+			c.info.Store(info)
 		}()
 
 		for {
 			if err := func() error {
-				ctx, cancel := context.WithTimeout(ctx, c.acquisition)
+				ctx, cancel := context.WithTimeout(ctx, info.Acquisition)
 				defer cancel()
 
-				cfg, err := c.acquire(ctx, clientState)
+				cfg, err := c.acquire(ctx, &info)
 				if err != nil {
 					return err
 				}
-
 				// Avoid races between lease acquisition and timers firing.
 				for _, timer := range []*time.Timer{initSelectingTimer, rebindTimer, renewTimer} {
 					if !timer.Stop() {
@@ -164,9 +216,9 @@ func (c *Client) Run(ctx context.Context) {
 				rebindTimer.Reset(cfg.RebindingTime)
 
 				if fn := c.acquiredFunc; fn != nil {
-					fn(c.oldAddr, c.addr, cfg)
+					fn(info.OldAddr, info.Addr, cfg)
 				}
-				c.oldAddr = c.addr
+				info.OldAddr = info.Addr
 
 				return nil
 			}(); err != nil {
@@ -174,7 +226,7 @@ func (c *Client) Run(ctx context.Context) {
 					return
 				}
 				var timer *time.Timer
-				switch clientState {
+				switch info.State {
 				case initSelecting:
 					timer = initSelectingTimer
 				case renewing:
@@ -182,14 +234,17 @@ func (c *Client) Run(ctx context.Context) {
 				case rebinding:
 					timer = rebindTimer
 				default:
-					panic(fmt.Sprintf("unknown client state: clientState=%s", clientState))
+					panic(fmt.Sprintf("unknown client state: state=%s", info.State))
 				}
-				timer.Reset(c.backoff)
+				timer.Reset(info.Backoff)
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "%s; retrying", err)
 			}
 
-			// Attempt complete. Wait for the next event.
+			// Synchronize info after attempt to acquire is complete.
+			c.info.Store(info)
 
+			// Wait for the next event.
+			//
 			// In the error case, a retry timer will have been set. If a state transition timer fires at the
 			// same time as the retry timer, then the non-determinism of the selection between the two timers
 			// could lead to the client incorrectly bouncing back and forth between two states, e.g.
@@ -207,31 +262,33 @@ func (c *Client) Run(ctx context.Context) {
 				next = rebinding
 			}
 
-			if clientState != initSelecting && next == initSelecting {
+			if info.State != initSelecting && next == initSelecting {
 				syslog.WarnTf(tag, "lease time expired, cleaning up")
-				c.cleanup()
+				c.cleanup(&info)
 			}
 
-			if clientState <= next || next == initSelecting {
-				clientState = next
+			if info.State <= next || next == initSelecting {
+				info.State = next
 			}
+			// Synchronize info after any state updates.
+			c.info.Store(info)
 		}
 	}()
 }
 
-func (c *Client) cleanup() {
-	if c.oldAddr == (tcpip.AddressWithPrefix{}) {
+func (c *Client) cleanup(info *Info) {
+	if info.OldAddr == (tcpip.AddressWithPrefix{}) {
 		return
 	}
 
 	// Remove the old address and configuration.
 	if fn := c.acquiredFunc; fn != nil {
-		fn(c.oldAddr, tcpip.AddressWithPrefix{}, Config{})
+		fn(info.OldAddr, tcpip.AddressWithPrefix{}, Config{})
 	}
-	c.oldAddr = tcpip.AddressWithPrefix{}
+	info.OldAddr = tcpip.AddressWithPrefix{}
 }
 
-func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Config, error) {
+func (c *Client) acquire(ctx context.Context, info *Info) (Config, error) {
 	// https://tools.ietf.org/html/rfc2131#section-4.3.6 Client messages:
 	//
 	//  ---------------------------------------------------------------------
@@ -243,18 +300,18 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 	// |ciaddr        |zero         |zero         |IP address   |IP address|
 	// ---------------------------------------------------------------------
 	bindAddress := tcpip.FullAddress{
-		Addr: c.addr.Address,
+		Addr: info.Addr.Address,
 		Port: ClientPort,
-		NIC:  c.nicid,
+		NIC:  info.NICID,
 	}
 	writeOpts := tcpip.WriteOptions{
 		To: &tcpip.FullAddress{
 			Addr: tcpipHeader.IPv4Broadcast,
 			Port: ServerPort,
-			NIC:  c.nicid,
+			NIC:  info.NICID,
 		},
 	}
-	switch clientState {
+	switch info.State {
 	case initSelecting:
 		bindAddress.Addr = tcpipHeader.IPv4Broadcast
 
@@ -265,20 +322,20 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 				PrefixLen: 0,
 			},
 		}
-		if err := c.stack.AddProtocolAddress(c.nicid, protocolAddress); err != nil {
-			panic(fmt.Sprintf("AddProtocolAddress(%d, %s): %s", c.nicid, protocolAddress.AddressWithPrefix, err))
+		if err := c.stack.AddProtocolAddress(info.NICID, protocolAddress); err != nil {
+			panic(fmt.Sprintf("AddProtocolAddress(%d, %s): %s", info.NICID, protocolAddress.AddressWithPrefix, err))
 		}
 		defer func() {
-			if err := c.stack.RemoveAddress(c.nicid, protocolAddress.AddressWithPrefix.Address); err != nil {
-				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", c.nicid, protocolAddress.AddressWithPrefix.Address, err))
+			if err := c.stack.RemoveAddress(info.NICID, protocolAddress.AddressWithPrefix.Address); err != nil {
+				panic(fmt.Sprintf("RemoveAddress(%d, %s): %s", info.NICID, protocolAddress.AddressWithPrefix.Address, err))
 			}
 		}()
 
 	case renewing:
-		writeOpts.To.Addr = c.server
+		writeOpts.To.Addr = info.Server
 	case rebinding:
 	default:
-		panic(fmt.Sprintf("unknown client state: clientState=%s", clientState))
+		panic(fmt.Sprintf("unknown client state: c.State=%s", info.State))
 	}
 	ep, err := c.stack.NewEndpoint(tcpipHeader.UDPProtocolNumber, tcpipHeader.IPv4ProtocolNumber, &c.wq)
 	if err != nil {
@@ -315,8 +372,8 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 			6,  // domain name server
 		}},
 	}
-	requestedAddr := c.addr
-	if clientState == initSelecting {
+	requestedAddr := info.Addr
+	if info.State == initSelecting {
 		discOpts := append(options{
 			{optDHCPMsgType, []byte{byte(dhcpDISCOVER)}},
 		}, commonOpts...)
@@ -328,6 +385,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 		for {
 			if err := c.send(
 				ctx,
+				info,
 				ep,
 				discOpts,
 				writeOpts,
@@ -338,28 +396,38 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 				true,  /* broadcast */
 				false, /* ciaddr */
 			); err != nil {
+				c.stats.SendDiscoverErrors.Increment()
 				return Config{}, fmt.Errorf("%s: %s", dhcpDISCOVER, err)
 			}
+			c.stats.SendDiscovers.Increment()
 
 			// Receive a DHCPOFFER message from a responding DHCP server.
-			//
 			for {
-				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:])
+				srcAddr, addr, opts, typ, timedOut, err := c.recv(ctx, info, ep, ch, xid[:])
 				if err != nil {
+					if timedOut {
+						c.stats.RecvOfferAcquisitionTimeout.Increment()
+					} else {
+						c.stats.RecvOfferErrors.Increment()
+					}
 					return Config{}, errors.Wrapf(err, "recv %s", dhcpOFFER)
 				}
 				if timedOut {
+					c.stats.RecvOfferTimeout.Increment()
 					syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpOFFER, dhcpDISCOVER)
 					continue retransmitDiscover
 				}
 
 				if typ != dhcpOFFER {
+					c.stats.RecvOfferUnexpectedType.Increment()
 					syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s, want = %s", typ, dhcpOFFER)
 					continue
 				}
+				c.stats.RecvOffers.Increment()
 
 				var cfg Config
 				if err := cfg.decode(opts); err != nil {
+					c.stats.RecvOfferOptsDecodeErrors.Increment()
 					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 				}
 
@@ -368,10 +436,10 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 				//
 				// We do not perform sophisticated offer selection and instead merely
 				// select the first valid offer we receive.
-				c.server = cfg.ServerAddress
+				info.Server = cfg.ServerAddress
 
 				if len(cfg.SubnetMask) == 0 {
-					cfg.SubnetMask = tcpip.AddressMask(net.IP(c.addr.Address).DefaultMask())
+					cfg.SubnetMask = tcpip.AddressMask(net.IP(info.Addr.Address).DefaultMask())
 				}
 
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
@@ -380,7 +448,7 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 					PrefixLen: prefixLen,
 				}
 
-				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, c.server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
+				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s: Address=%s, server=%s, leaseTime=%s, renewalTime=%s, rebindTime=%s", typ, srcAddr.Addr, requestedAddr, info.Server, cfg.LeaseLength, cfg.RenewalTime, cfg.RebindingTime)
 
 				break retransmitDiscover
 			}
@@ -390,10 +458,10 @@ func (c *Client) acquire(ctx context.Context, clientState dhcpClientState) (Conf
 	reqOpts := append(options{
 		{optDHCPMsgType, []byte{byte(dhcpREQUEST)}},
 	}, commonOpts...)
-	if clientState == initSelecting {
+	if info.State == initSelecting {
 		reqOpts = append(reqOpts,
 			options{
-				{optDHCPServer, []byte(c.server)},
+				{optDHCPServer, []byte(info.Server)},
 				{optReqIPAddr, []byte(requestedAddr.Address)},
 			}...)
 	}
@@ -402,23 +470,32 @@ retransmitRequest:
 	for {
 		if err := c.send(
 			ctx,
+			info,
 			ep,
 			reqOpts,
 			writeOpts,
 			xid[:],
-			clientState == initSelecting, /* broadcast */
-			clientState != initSelecting, /* ciaddr */
+			info.State == initSelecting, /* broadcast */
+			info.State != initSelecting, /* ciaddr */
 		); err != nil {
+			c.stats.SendRequestErrors.Increment()
 			return Config{}, fmt.Errorf("%s: %s", dhcpREQUEST, err)
 		}
+		c.stats.SendRequests.Increment()
 
 		// Receive a DHCPACK/DHCPNAK from the server.
 		for {
-			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, ep, ch, xid[:])
+			fromAddr, addr, opts, typ, timedOut, err := c.recv(ctx, info, ep, ch, xid[:])
 			if err != nil {
+				if timedOut {
+					c.stats.RecvAckAcquisitionTimeout.Increment()
+				} else {
+					c.stats.RecvAckErrors.Increment()
+				}
 				return Config{}, errors.Wrapf(err, "recv %s", dhcpACK)
 			}
 			if timedOut {
+				c.stats.RecvAckTimeout.Increment()
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "recv timeout waiting for %s, retransmitting %s", dhcpACK, dhcpREQUEST)
 				continue retransmitRequest
 			}
@@ -427,6 +504,7 @@ retransmitRequest:
 			case dhcpACK:
 				var cfg Config
 				if err := cfg.decode(opts); err != nil {
+					c.stats.RecvAckOptsDecodeErrors.Increment()
 					return Config{}, fmt.Errorf("%s decode: %s", typ, err)
 				}
 				prefixLen, _ := net.IPMask(cfg.SubnetMask).Size()
@@ -435,20 +513,24 @@ retransmitRequest:
 					PrefixLen: prefixLen,
 				}
 				if addr != requestedAddr {
+					c.stats.RecvAckAddrErrors.Increment()
 					return Config{}, fmt.Errorf("%s with unexpected address=%s expected=%s", typ, addr, requestedAddr)
 				}
+				c.stats.RecvAcks.Increment()
 
 				// Now that we've successfully acquired the address, update the client state.
-				c.addr = requestedAddr
-
+				info.Addr = requestedAddr
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "got %s from %s with lease %s", typ, fromAddr.Addr, cfg.LeaseLength)
 				return cfg, nil
 			case dhcpNAK:
 				if msg := opts.message(); len(msg) != 0 {
+					c.stats.RecvNakErrors.Increment()
 					return Config{}, fmt.Errorf("%s: %x", typ, msg)
 				}
+				c.stats.RecvNaks.Increment()
 				return Config{}, fmt.Errorf("empty %s", typ)
 			default:
+				c.stats.RecvAckUnexpectedType.Increment()
 				syslog.VLogTf(syslog.DebugVerbosity, tag, "got DHCP type = %s from %s, want = %s or %s", typ, fromAddr.Addr, dhcpACK, dhcpNAK)
 				continue
 			}
@@ -456,7 +538,7 @@ retransmitRequest:
 	}
 }
 
-func (c *Client) send(ctx context.Context, ep tcpip.Endpoint, opts options, writeOpts tcpip.WriteOptions, xid []byte, broadcast, ciaddr bool) error {
+func (c *Client) send(ctx context.Context, info *Info, ep tcpip.Endpoint, opts options, writeOpts tcpip.WriteOptions, xid []byte, broadcast, ciaddr bool) error {
 	h := make(header, headerBaseSize+opts.len()+1)
 	h.init()
 	h.setOp(opRequest)
@@ -465,10 +547,10 @@ func (c *Client) send(ctx context.Context, ep tcpip.Endpoint, opts options, writ
 		h.setBroadcast()
 	}
 	if ciaddr {
-		copy(h.ciaddr(), c.addr.Address)
+		copy(h.ciaddr(), info.Addr.Address)
 	}
 
-	copy(h.chaddr(), c.linkAddr)
+	copy(h.chaddr(), info.LinkAddr)
 	h.setOptions(opts)
 
 	typ, err := opts.dhcpMsgType()
@@ -502,7 +584,7 @@ func (c *Client) send(ctx context.Context, ep tcpip.Endpoint, opts options, writ
 	}
 }
 
-func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
+func (c *Client) recv(ctx context.Context, info *Info, ep tcpip.Endpoint, ch <-chan struct{}, xid []byte) (tcpip.FullAddress, tcpip.Address, options, dhcpMsgType, bool, error) {
 	for {
 		var srcAddr tcpip.FullAddress
 		v, _, err := ep.Read(&srcAddr)
@@ -510,10 +592,10 @@ func (c *Client) recv(ctx context.Context, ep tcpip.Endpoint, ch <-chan struct{}
 			select {
 			case <-ch:
 				continue
-			case <-time.After(c.retransmission):
+			case <-time.After(info.Retransmission):
 				return tcpip.FullAddress{}, "", nil, 0, true, nil
 			case <-ctx.Done():
-				return tcpip.FullAddress{}, "", nil, 0, false, errors.Wrap(ctx.Err(), "read failed")
+				return tcpip.FullAddress{}, "", nil, 0, true, errors.Wrap(ctx.Err(), "read failed")
 			}
 		}
 		if err != nil {
