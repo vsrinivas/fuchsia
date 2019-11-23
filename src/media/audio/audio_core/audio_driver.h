@@ -78,7 +78,7 @@ class AudioDriver {
   zx_status_t Init(zx::channel stream_channel);
   void Cleanup();
   void SnapshotRingBuffer(RingBufferSnapshot* snapshot) const;
-  fuchsia::media::AudioStreamTypePtr GetSourceFormat() const;
+  std::optional<Format> GetFormat() const;
 
   bool plugged() const {
     std::lock_guard<std::mutex> lock(plugged_lock_);
@@ -94,14 +94,8 @@ class AudioDriver {
   // use the static lock analysis to ensure this, I would do so, but unfortunately the compiler is
   // unable to figure out that the owner calling these methods is always the same as owner_.
   const std::vector<audio_stream_format_range_t>& format_ranges() const { return format_ranges_; }
-
   State state() const { return state_; }
-  uint32_t frames_per_sec() const { return frames_per_sec_; }
   zx::duration external_delay() const { return external_delay_; }
-  uint16_t channel_count() const { return channel_count_; }
-  audio_sample_format_t sample_format() const { return sample_format_; }
-  uint32_t bytes_per_frame() const { return bytes_per_frame_; }
-  uint32_t fifo_depth_bytes() const { return fifo_depth_bytes_; }
   uint32_t fifo_depth_frames() const { return fifo_depth_frames_; }
   zx::duration fifo_depth_duration() const { return fifo_depth_duration_; }
   zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
@@ -120,9 +114,7 @@ class AudioDriver {
   }
 
   zx_status_t GetDriverInfo();
-  zx_status_t Configure(uint32_t frames_per_second, uint32_t channels,
-                        fuchsia::media::AudioSampleFormat fmt,
-                        zx::duration min_ring_buffer_duration);
+  zx_status_t Configure(const Format& format, zx::duration min_ring_buffer_duration);
   zx_status_t Start();
   zx_status_t Stop();
   zx_status_t SetPlugDetectEnabled(bool enabled);
@@ -252,13 +244,8 @@ class AudioDriver {
   std::vector<audio_stream_format_range_t> format_ranges_;
 
   // Configuration state.
-  uint32_t frames_per_sec_;
   zx::duration external_delay_;
-  uint16_t channel_count_;
-  audio_sample_format_t sample_format_;
-  uint32_t bytes_per_frame_;
   zx::duration min_ring_buffer_duration_;
-  uint32_t fifo_depth_bytes_;
   uint32_t fifo_depth_frames_;
   zx::duration fifo_depth_duration_;
   zx::time configuration_deadline_ = zx::time::infinite();
@@ -266,7 +253,7 @@ class AudioDriver {
   // A stashed copy of current format, queryable by destinations (outputs or AudioCapturers) when
   // determining which mixer to use.
   mutable std::mutex configured_format_lock_;
-  fuchsia::media::AudioStreamTypePtr configured_format_ FXL_GUARDED_BY(configured_format_lock_);
+  std::optional<Format> configured_format_ FXL_GUARDED_BY(configured_format_lock_);
 
   // Ring buffer state. Details are lock-protected and changes tracked with generation counter,
   // allowing AudioCapturer clients to snapshot ring-buffer state during mix/resample operations.

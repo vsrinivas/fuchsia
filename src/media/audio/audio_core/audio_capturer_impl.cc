@@ -1575,20 +1575,19 @@ zx_status_t AudioCapturerImpl::ChooseMixer(const fbl::RefPtr<AudioLink>& link) {
   }
 
   // Get the driver's current format. Without one, we can't setup the mixer.
-  fuchsia::media::AudioStreamTypePtr source_format;
-  source_format = device.driver()->GetSourceFormat();
+  std::optional<Format> source_format = device.driver()->GetFormat();
   if (!source_format) {
-    FX_LOGS(WARNING) << "Failed to find mixer. Source currently has no configured format";
+    FX_LOGS(WARNING) << "Source driver has no configured format";
     return ZX_ERR_BAD_STATE;
   }
 
   // Select a mixer.
-  auto mixer = Mixer::Select(*source_format, format_);
+  auto mixer = Mixer::Select(source_format->stream_type(), format_);
   if (!mixer) {
     FX_LOGS(WARNING) << "Failed to find mixer for capturer.";
-    FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second << " ch "
-                     << source_format->channels << " sample fmt "
-                     << fidl::ToUnderlying(source_format->sample_format);
+    FX_LOGS(WARNING) << "Source cfg: rate " << source_format->frames_per_second() << " ch "
+                     << source_format->channels() << " sample fmt "
+                     << fidl::ToUnderlying(source_format->sample_format());
     FX_LOGS(WARNING) << "Dest cfg  : rate " << format_.frames_per_second << " ch "
                      << format_.channels << " sample fmt "
                      << fidl::ToUnderlying(format_.sample_format);

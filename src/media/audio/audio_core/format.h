@@ -25,6 +25,10 @@ class Format : public fbl::RefCounted<Format> {
   Format& operator=(const Format&);
 
   const fuchsia::media::AudioStreamType& stream_type() const { return stream_type_; }
+  uint32_t channels() const { return stream_type_.channels; }
+  uint32_t frames_per_second() const { return stream_type_.frames_per_second; }
+  fuchsia::media::AudioSampleFormat sample_format() const { return stream_type_.sample_format; }
+
   const TimelineRate& frames_per_ns() const { return frames_per_ns_; }
   const TimelineRate& frame_to_media_ratio() const { return frame_to_media_ratio_; }
   uint32_t bytes_per_frame() const { return bytes_per_frame_; }

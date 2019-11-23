@@ -330,11 +330,12 @@ void DriverOutput::OnDriverInfoFetched() {
   driver()->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(retention_frames));
 
   // Select our output producer
-  fuchsia::media::AudioStreamType config;
-  config.frames_per_second = pref_fps;
-  config.channels = pref_chan;
-  config.sample_format = pref_fmt;
-  output_producer_ = OutputProducer::Select(config);
+  Format format(fuchsia::media::AudioStreamType{
+      .sample_format = pref_fmt,
+      .channels = pref_chan,
+      .frames_per_second = pref_fps,
+  });
+  output_producer_ = OutputProducer::Select(format.stream_type());
   if (!output_producer_) {
     FX_LOGS(ERROR) << "Output: OutputProducer cannot support this request: " << pref_fps << " Hz, "
                    << pref_chan << "-channel, sample format 0x" << std::hex
@@ -343,7 +344,7 @@ void DriverOutput::OnDriverInfoFetched() {
   }
 
   // Start the process of configuring our driver
-  res = driver()->Configure(pref_fps, pref_chan, pref_fmt, min_rb_duration);
+  res = driver()->Configure(format, min_rb_duration);
   if (res != ZX_OK) {
     FX_LOGS(ERROR) << "Output: failed to configure driver for: " << pref_fps << " Hz, " << pref_chan
                    << "-channel, sample format 0x" << std::hex << static_cast<uint32_t>(pref_fmt)
@@ -356,7 +357,7 @@ void DriverOutput::OnDriverInfoFetched() {
     uint32_t instance_count = final_mix_instance_num_.fetch_add(1);
     file_name_ += (std::to_string(instance_count) + kWavFileExtension);
     wav_writer_.Initialize(file_name_.c_str(), pref_fmt, pref_chan, pref_fps,
-                           driver()->bytes_per_frame() * 8 / pref_chan);
+                           format.bytes_per_frame() * 8 / pref_chan);
   }
 
   // Tell AudioDeviceManager we are ready to be an active audio device.
@@ -429,7 +430,10 @@ void DriverOutput::OnDriverStartComplete() {
   // in frames, rounded up.  Then compute our low water mark (in frames) and
   // where we want to start mixing.  Finally kick off the mixing engine by
   // manually calling Process.
-  uint32_t bytes_per_frame = driver()->bytes_per_frame();
+  auto format = driver()->GetFormat();
+  FX_CHECK(format);
+
+  uint32_t bytes_per_frame = format->bytes_per_frame();
   int64_t offset = static_cast<int64_t>(1) - bytes_per_frame;
   const TimelineFunction bytes_to_frames(0, offset, 1, bytes_per_frame);
   const TimelineFunction& t_bytes = driver_clock_mono_to_ring_pos_bytes();

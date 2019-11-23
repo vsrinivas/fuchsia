@@ -72,6 +72,11 @@ void AudioInput::OnDriverInfoFetched() {
     ShutdownSelf();
     return;
   }
+  Format selected_format = Format(fuchsia::media::AudioStreamType{
+      .sample_format = pref_fmt,
+      .channels = pref_chan,
+      .frames_per_second = pref_fps,
+  });
 
   const auto& hw_gain = driver()->hw_gain_state();
   if (hw_gain.min_gain > hw_gain.max_gain) {
@@ -84,7 +89,7 @@ void AudioInput::OnDriverInfoFetched() {
   // TODO(mpuryear): Save to the hub the configured format for this input.
 
   // Send config request; recompute distance between start|end sampling fences.
-  driver()->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
+  driver()->Configure(selected_format, kMaxFenceDistance);
 
   int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance.to_nsecs());
   FX_DCHECK(dist < std::numeric_limits<uint32_t>::max());

@@ -123,16 +123,10 @@ void AudioDriver::SnapshotRingBuffer(RingBufferSnapshot* snapshot) const {
   snapshot->gen_id = ring_buffer_state_gen_.get();
 }
 
-fuchsia::media::AudioStreamTypePtr AudioDriver::GetSourceFormat() const {
-  TRACE_DURATION("audio", "AudioDriver::GetSourceFormat");
+std::optional<Format> AudioDriver::GetFormat() const {
+  TRACE_DURATION("audio", "AudioDriver::GetFormat");
   std::lock_guard<std::mutex> lock(configured_format_lock_);
-
-  if (!configured_format_)
-    return nullptr;
-
-  fuchsia::media::AudioStreamTypePtr result;
-  fidl::Clone(configured_format_, &result);
-  return result;
+  return configured_format_;
 }
 
 zx_status_t AudioDriver::GetDriverInfo() {
@@ -227,17 +221,19 @@ zx_status_t AudioDriver::GetDriverInfo() {
   return ZX_OK;
 }
 
-zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels,
-                                   fuchsia::media::AudioSampleFormat fmt,
-                                   zx::duration min_ring_buffer_duration) {
+zx_status_t AudioDriver::Configure(const Format& format, zx::duration min_ring_buffer_duration) {
   TRACE_DURATION("audio", "AudioDriver::Configure");
   // TODO(MTWN-385): Figure out a better way to assert this!
   OBTAIN_EXECUTION_DOMAIN_TOKEN(token, &owner_->mix_domain());
 
+  uint32_t channels = format.channels();
+  uint32_t frames_per_second = format.frames_per_second();
+  fuchsia::media::AudioSampleFormat sample_format = format.sample_format();
+
   // Sanity check arguments.
   audio_sample_format_t driver_format;
-  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(fmt, &driver_format)) {
-    FX_LOGS(ERROR) << "Failed to convert Fmt 0x" << std::hex << static_cast<uint32_t>(fmt)
+  if (!driver_utils::AudioSampleFormatToDriverSampleFormat(sample_format, &driver_format)) {
+    FX_LOGS(ERROR) << "Failed to convert Fmt 0x" << std::hex << static_cast<uint32_t>(sample_format)
                    << " to driver format.";
     return ZX_ERR_INVALID_ARGS;
   }
@@ -262,7 +258,7 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
   if (!found_format) {
     FX_LOGS(ERROR) << "No compatible format range found when setting format to "
                    << frames_per_second << " Hz " << channels << " Ch Fmt 0x" << std::hex
-                   << static_cast<uint32_t>(fmt);
+                   << static_cast<uint32_t>(sample_format);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -270,35 +266,26 @@ zx_status_t AudioDriver::Configure(uint32_t frames_per_second, uint32_t channels
   // TODO(MTWN-387): Also permit this if we are in Configured state.
   if (state_ != State::Unconfigured) {
     FX_LOGS(ERROR) << "Bad state while attempting to configure for " << frames_per_second << " Hz "
-                   << channels << " Ch Fmt 0x" << std::hex << static_cast<uint32_t>(fmt)
+                   << channels << " Ch Fmt 0x" << std::hex << static_cast<uint32_t>(sample_format)
                    << " (state = " << static_cast<uint32_t>(state_) << ")";
     return ZX_ERR_BAD_STATE;
   }
 
   // Record the details of our intended target format
-  frames_per_sec_ = frames_per_second;
-  channel_count_ = static_cast<uint16_t>(channels);
-  sample_format_ = driver_format;
-  bytes_per_frame_ = ::audio::utils::ComputeFrameSize(channel_count_, sample_format_);
-
   min_ring_buffer_duration_ = min_ring_buffer_duration;
+  {
+    std::lock_guard<std::mutex> lock(configured_format_lock_);
+    configured_format_ = {format};
+  }
 
   // Start the process of configuring by sending the message to set the format.
   audio_stream_cmd_set_format_req_t req;
 
   req.hdr.cmd = AUDIO_STREAM_CMD_SET_FORMAT;
   req.hdr.transaction_id = TXID;
-  req.frames_per_second = frames_per_sec_;
-  req.channels = channel_count_;
-  req.sample_format = sample_format_;
-
-  {
-    std::lock_guard<std::mutex> lock(configured_format_lock_);
-    configured_format_ = fuchsia::media::AudioStreamType::New();
-    configured_format_->sample_format = fmt;
-    configured_format_->channels = channels;
-    configured_format_->frames_per_second = frames_per_second;
-  }
+  req.frames_per_second = frames_per_second;
+  req.channels = channels;
+  req.sample_format = driver_format;
 
   zx_status_t res = stream_channel_.write(0, &req, sizeof(req), nullptr, 0);
   if (res != ZX_OK) {
@@ -739,10 +726,12 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(const audio_stream_cmd_set_for
     return ZX_ERR_BAD_STATE;
   }
 
+  auto format = GetFormat();
   if (resp.result != ZX_OK) {
     FX_PLOGS(WARNING, resp.result)
-        << "Error attempting to set format: " << frames_per_sec_ << " Hz, " << channel_count_
-        << "-chan, 0x" << std::hex << sample_format_;
+        << "Error attempting to set format: " << format->frames_per_second() << " Hz, "
+        << format->channels() << "-chan, 0x" << std::hex
+        << fidl::ToUnderlying(format->sample_format());
     if (resp.result == ZX_ERR_ACCESS_DENIED) {
       FX_LOGS(ERROR) << "Another client has likely already opened this device!";
     }
@@ -803,40 +792,43 @@ zx_status_t AudioDriver::ProcessGetFifoDepthResponse(
     return resp.result;
   }
 
-  fifo_depth_bytes_ = resp.fifo_depth;
-  fifo_depth_frames_ = (fifo_depth_bytes_ + bytes_per_frame_ - 1) / bytes_per_frame_;
+  auto format = GetFormat();
+  auto bytes_per_frame = format->bytes_per_frame();
+  auto frames_per_second = format->frames_per_second();
+
+  uint32_t fifo_depth_bytes = resp.fifo_depth;
+  fifo_depth_frames_ = (fifo_depth_bytes + bytes_per_frame - 1) / bytes_per_frame;
   fifo_depth_duration_ =
-      zx::nsec(TimelineRate::Scale(fifo_depth_frames_, ZX_SEC(1), frames_per_sec_));
+      zx::nsec(TimelineRate::Scale(fifo_depth_frames_, ZX_SEC(1), frames_per_second));
 
   AUD_VLOG(TRACE) << "Received fifo depth response (in frames) of " << fifo_depth_frames_;
 
   // Figure out how many frames we need in our ring buffer.
   int64_t min_frames_64 = TimelineRate::Scale(min_ring_buffer_duration_.to_nsecs(),
-                                              bytes_per_frame_ * frames_per_sec_, ZX_SEC(1));
-  int64_t overhead = static_cast<int64_t>(fifo_depth_bytes_) + bytes_per_frame_ - 1;
+                                              bytes_per_frame * frames_per_second, ZX_SEC(1));
+  int64_t overhead = static_cast<int64_t>(fifo_depth_bytes) + bytes_per_frame - 1;
   bool overflow = ((min_frames_64 == TimelineRate::kOverflow) ||
                    (min_frames_64 > (std::numeric_limits<int64_t>::max() - overhead)));
 
   if (!overflow) {
     min_frames_64 += overhead;
-    min_frames_64 /= bytes_per_frame_;
+    min_frames_64 /= bytes_per_frame;
     overflow = min_frames_64 > std::numeric_limits<uint32_t>::max();
   }
 
   if (overflow) {
     FX_LOGS(ERROR) << "Overflow while attempting to compute ring buffer size in frames.";
     FX_LOGS(ERROR) << "duration        : " << min_ring_buffer_duration_.get();
-    FX_LOGS(ERROR) << "bytes per frame : " << bytes_per_frame_;
-    FX_LOGS(ERROR) << "frames per sec  : " << frames_per_sec_;
-    FX_LOGS(ERROR) << "fifo depth      : " << fifo_depth_bytes_;
-    FX_LOGS(ERROR) << "bytes per frame : " << bytes_per_frame_;
+    FX_LOGS(ERROR) << "bytes per frame : " << bytes_per_frame;
+    FX_LOGS(ERROR) << "frames per sec  : " << frames_per_second;
+    FX_LOGS(ERROR) << "fifo depth      : " << fifo_depth_bytes;
     return ZX_ERR_INTERNAL;
   }
 
   AUD_VLOG_OBJ(TRACE, this) << "for audio " << (owner_->is_input() ? "input" : "output")
-                            << " -- fifo_depth_bytes:" << fifo_depth_bytes_
+                            << " -- fifo_depth_bytes:" << fifo_depth_bytes
                             << ", fifo_depth_frames:" << fifo_depth_frames_
-                            << ", bytes_per_frame:" << bytes_per_frame_;
+                            << ", bytes_per_frame:" << bytes_per_frame;
 
   // Request the ring buffer.
   audio_rb_cmd_get_buffer_req_t req;
@@ -871,10 +863,11 @@ zx_status_t AudioDriver::ProcessGetBufferResponse(const audio_rb_cmd_get_buffer_
     return resp.result;
   }
 
+  auto format = GetFormat();
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
 
-    ring_buffer_ = RingBuffer::Create(std::move(rb_vmo), bytes_per_frame_,
+    ring_buffer_ = RingBuffer::Create(std::move(rb_vmo), format->bytes_per_frame(),
                                       resp.num_ring_buffer_frames, owner_->is_input());
     if (ring_buffer_ == nullptr) {
       ShutdownSelf("Failed to allocate and map driver ring buffer", ZX_ERR_NO_MEMORY);
@@ -905,9 +898,12 @@ zx_status_t AudioDriver::ProcessStartResponse(const audio_rb_cmd_start_resp_t& r
     return resp.result;
   }
 
+  auto format = GetFormat();
+
   // We are almost Started, so compute the translation from clock-monotonic to ring-buffer-position
   // (in bytes), then update the ring buffer state's transformation and bump the generation counter.
-  TimelineFunction func(0, resp.start_time, frames_per_sec_ * bytes_per_frame_, ZX_SEC(1));
+  TimelineFunction func(0, resp.start_time, format->frames_per_second() * format->bytes_per_frame(),
+                        ZX_SEC(1));
   {
     std::lock_guard<std::mutex> lock(ring_buffer_state_lock_);
     FX_DCHECK(!clock_mono_to_ring_pos_bytes_.invertible());
