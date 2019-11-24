@@ -534,6 +534,8 @@ VK_TEST(VmaGpuAllocatorTest, ProtectedMemoryIsDedicated) {
       .Times(1)
       .WillOnce(DoAll(::testing::SaveArg<1>(&allocation_create_info), ::testing::Return(false)));
   ImageInfo info;
+  info.format = vk::Format::eB8G8R8A8Unorm;
+  info.usage = vk::ImageUsageFlagBits::eTransferDst;
   info.memory_flags = vk::MemoryPropertyFlagBits::eProtected;
   auto image0 = allocator.AllocateImage(nullptr, info, nullptr);
   EXPECT_TRUE(allocation_create_info.flags & VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT);
