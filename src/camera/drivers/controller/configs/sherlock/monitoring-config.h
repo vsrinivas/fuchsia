@@ -12,7 +12,7 @@
 
 #include "common-util.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/stream_utils/camera_stream_constraints.h"
+#include "src/camera/stream_utils/stream_constraints.h"
 
 // This file contains static information for the Monitor Configuration
 // There are three streams in one configuration
@@ -92,8 +92,8 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLFRImageFormats(
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
-  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                                 fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+  StreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   stream.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                         kOutputStreamMlFRPixelFormat);
   stream.set_bytes_per_row_divisor(kISPPerRowDivisor);
@@ -123,8 +123,8 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMLDSImageFormats(
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMLDSConfig() {
-  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                                 fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+  StreamConstraints stream(fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   stream.AddImageFormat(kOutputStreamMlDSWidth, kOutputStreamMlDSHeight,
                         kOutputStreamMlFRPixelFormat);
   stream.set_bytes_per_row_divisor(kGdcBytesPerRowDivisor);
@@ -186,7 +186,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> OutputStreamMonitoringImageFo
 }
 
 static fuchsia::camera2::hal::StreamConfig OutputStreamMonitoringConfig() {
-  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::MONITORING);
+  StreamConstraints stream(fuchsia::camera2::CameraStreamType::MONITORING);
   stream.AddImageFormat(kOutputStreamMonitoringWidth, kOutputStreamMonitoringHeight,
                         kOutputStreamMonitoringPixelFormat);
   stream.AddImageFormat(kOutputStreamMonitoringWidth1, kOutputStreamMonitoringHeight1,

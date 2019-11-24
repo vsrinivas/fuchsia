@@ -12,7 +12,7 @@
 
 #include "common-util.h"
 #include "src/camera/drivers/controller/configs/sherlock/internal-config.h"
-#include "src/camera/stream_utils/camera_stream_constraints.h"
+#include "src/camera/stream_utils/stream_constraints.h"
 
 // This file contains static information for the ISP Debug Configuration
 // There are three streams in one configuration
@@ -58,7 +58,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() 
 }
 
 static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
-  CameraStreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  StreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
   stream.AddImageFormat(kIspStreamWidth, kIspStreamHeight, kIspStreamPixelFormat);
   stream.set_bytes_per_row_divisor(kIspStreamBytesPerRowDivisor);
   stream.set_contiguous(true);

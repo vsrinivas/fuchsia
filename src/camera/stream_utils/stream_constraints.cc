@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "camera_stream_constraints.h"
+#include "stream_constraints.h"
 
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <fuchsia/camera2/hal/cpp/fidl.h>
@@ -80,18 +80,19 @@ static fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t h
       .coded_height = height,
       .bytes_per_row = bytes_per_row,
       .display_width = width,
-      .display_height = width,
+      .display_height = height,
       .layers = 1,
       .color_space = {.type = fuchsia::sysmem::ColorSpaceType::REC601_PAL},
   };
 }
 
-void CameraStreamConstraints::AddImageFormat(uint32_t width, uint32_t height,
-                                             fuchsia::sysmem::PixelFormatType format) {
+void StreamConstraints::AddImageFormat(uint32_t width, uint32_t height,
+                                       fuchsia::sysmem::PixelFormatType format) {
   formats_.push_back(MakeImageFormat(width, height, format));
 }
 
-fuchsia::camera2::hal::StreamConfig CameraStreamConstraints::ConvertToStreamConfig() {
+fuchsia::sysmem::BufferCollectionConstraints StreamConstraints::MakeBufferCollectionConstraints()
+    const {
   // Don't make a stream config if AddImageFormats has not been called.
   ZX_ASSERT(!formats_.empty());
   fuchsia::sysmem::BufferCollectionConstraints constraints;
@@ -133,13 +134,19 @@ fuchsia::camera2::hal::StreamConfig CameraStreamConstraints::ConvertToStreamConf
       .layers = 1,
       .bytes_per_row_divisor = bytes_per_row_divisor_,
   };
+  return constraints;
+}
+
+fuchsia::camera2::hal::StreamConfig StreamConstraints::ConvertToStreamConfig() {
+  // Don't make a stream config if AddImageFormats has not been called.
+  ZX_ASSERT(!formats_.empty());
   fuchsia::camera2::StreamProperties stream_properties{};
   stream_properties.set_stream_type(stream_type_);
 
   return {
       .frame_rate = {.frames_per_sec_numerator = frames_per_second_,
                      .frames_per_sec_denominator = 1},
-      .constraints = constraints,
+      .constraints = MakeBufferCollectionConstraints(),
       .properties = std::move(stream_properties),
       .image_formats = fidl::Clone(formats_),
   };

@@ -11,7 +11,7 @@
 
 #include <vector>
 
-#include "src/camera/stream_utils/camera_stream_constraints.h"
+#include "src/camera/stream_utils/stream_constraints.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace camera {
@@ -24,22 +24,22 @@ std::vector<fuchsia::camera2::hal::Config> FakeController::InvalidConfigs() {
 std::vector<fuchsia::camera2::hal::Config> FakeController::StandardConfigs() {
   std::vector<fuchsia::camera2::hal::Config> configs(2);
 
-  CameraStreamConstraints ml_mon_stream(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                                        fuchsia::camera2::CameraStreamType::MONITORING);
+  StreamConstraints ml_mon_stream(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                                  fuchsia::camera2::CameraStreamType::MONITORING);
   ml_mon_stream.AddImageFormat(640, 512, fuchsia::sysmem::PixelFormatType::NV12);
   configs[0].stream_configs.push_back(ml_mon_stream.ConvertToStreamConfig());
 
-  CameraStreamConstraints mon_stream(fuchsia::camera2::CameraStreamType::MONITORING);
+  StreamConstraints mon_stream(fuchsia::camera2::CameraStreamType::MONITORING);
   mon_stream.AddImageFormat(640, 512, fuchsia::sysmem::PixelFormatType::NV12);
   mon_stream.AddImageFormat(896, 1600, fuchsia::sysmem::PixelFormatType::NV12);
   configs[0].stream_configs.push_back(mon_stream.ConvertToStreamConfig());
 
-  CameraStreamConstraints ml_vid_stream(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
-                                        fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+  StreamConstraints ml_vid_stream(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   ml_vid_stream.AddImageFormat(640, 512, fuchsia::sysmem::PixelFormatType::NV12);
   configs[1].stream_configs.push_back(ml_vid_stream.ConvertToStreamConfig());
 
-  CameraStreamConstraints vid_stream(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+  StreamConstraints vid_stream(fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   vid_stream.AddImageFormat(640, 512, fuchsia::sysmem::PixelFormatType::NV12);
   vid_stream.AddImageFormat(2176, 2720, fuchsia::sysmem::PixelFormatType::NV12);
   configs[1].stream_configs.push_back(vid_stream.ConvertToStreamConfig());
