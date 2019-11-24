@@ -22,11 +22,14 @@ config("common_public_config") {
 source_set("common") {
   public = [
     "common/argparse.h",
+    "common/fps_counter.h",
     "common/utils.h",
   ]
   sources = [
     "common/argparse.c",
     "common/argparse.h",
+    "common/fps_counter.c",
+    "common/fps_counter.h",
     "common/utils.c",
     "common/utils.h",
   ]
@@ -36,6 +39,7 @@ source_set("common") {
 graphics_compute_unittests("common_unittests") {
   sources = [
     "common/argparse_unittest.cc",
+    "common/fps_counter_unittest.cc",
   ]
   deps = [
     ":common",
@@ -47,6 +51,9 @@ graphics_compute_unittests("common_unittests") {
 source_set("common_vk") {
   public = [
     "common/vk_app_state.h",
+    "common/vk_buffer.h",
+    "common/vk_image.h",
+    "common/vk_sampler.h",
     "common/vk_strings.h",
     "common/vk_swapchain.h",
     "common/vk_utils.h",
@@ -54,6 +61,12 @@ source_set("common_vk") {
   sources = [
     "common/vk_app_state.c",
     "common/vk_app_state.h",
+    "common/vk_buffer.c",
+    "common/vk_buffer.h",
+    "common/vk_image.c",
+    "common/vk_image.h",
+    "common/vk_sampler.c",
+    "common/vk_sampler.h",
     "common/vk_strings.c",
     "common/vk_strings.h",
     "common/vk_swapchain.c",
@@ -93,6 +106,9 @@ source_set("common_vk") {
 graphics_compute_unittests("common_vk_unittests") {
   sources = [
     "common/vk_app_state_unittest.cc",
+    "common/vk_buffer_unittest.cc",
+    "common/vk_image_unittest.cc",
+    "common/vk_sampler_unittest.cc",
     "common/vk_strings_unittest.cc",
     "common/vk_utils_unittest.cc",
   ]

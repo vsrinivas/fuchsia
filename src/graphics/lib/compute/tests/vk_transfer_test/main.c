@@ -6,6 +6,7 @@
 #include <stdlib.h>
 
 #include "tests/common/vk_app_state.h"
+#include "tests/common/vk_buffer.h"
 #include "tests/common/vk_swapchain.h"
 #include "tests/common/vk_utils.h"
 #include "triangle_shaders.h"
@@ -231,127 +232,6 @@ create_graphics_pipeline(VkDevice                      device,
 //
 //
 
-typedef struct
-{
-  VkBuffer       buffer;
-  VkDeviceMemory memory;
-  VkDeviceSize   size;
-  void *         mapped;
-
-  // For debugging, mostly.
-  VkMemoryRequirements memory_requirements;
-  uint32_t             memory_type_index;  // debug only.
-} vk_buffer_t;
-
-static void
-vk_buffer_init(vk_buffer_t *                            buffer,
-               VkDeviceSize                             buffer_size,
-               VkDevice                                 device,
-               const VkAllocationCallbacks *            allocator,
-               const VkPhysicalDeviceMemoryProperties * memory_properties)
-{
-  *buffer = (const vk_buffer_t){};
-
-  // First create a buffer that can be used as a transfer source for our
-  // application.
-  VkBufferCreateInfo createInfo = {
-    .sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-    .pNext = NULL,
-    .flags = 0,
-    .size  = buffer_size,
-    .usage = VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-
-    // NOTE: If the buffer was to be accessed from different queues
-    // at the same time, sharingMode should be VK_SHARING_MODE_EXCLUSIVE
-    // and the family queue indices should be listed through
-    // queueFamilyIndexCount and pQueueFamilyIndices...
-    .sharingMode           = VK_SHARING_MODE_EXCLUSIVE,
-    .queueFamilyIndexCount = 0,
-    .pQueueFamilyIndices   = NULL,
-  };
-
-  vk(CreateBuffer(device, &createInfo, allocator, &buffer->buffer));
-
-  // Get its memory requirements to ensure we have the right memory type.
-  VkMemoryRequirements memory_requirements;
-  vkGetBufferMemoryRequirements(device, buffer->buffer, &memory_requirements);
-  buffer->size                = memory_requirements.size;
-  buffer->memory_requirements = memory_requirements;
-
-  // Find the right memory type for this buffer. We want it to be host-visible.
-  uint32_t memory_type_index = UINT32_MAX;
-  {
-    VkMemoryPropertyFlags memory_flags =
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT;
-
-    for (uint32_t n = 0; n < memory_properties->memoryTypeCount; n++)
-      {
-        if ((memory_requirements.memoryTypeBits & (1u << n)) == 0)
-          continue;
-
-        if ((memory_properties->memoryTypes[n].propertyFlags & memory_flags) == memory_flags)
-          {
-            memory_type_index = n;
-            break;
-          }
-      }
-    if (memory_type_index == UINT32_MAX)
-      {
-        fprintf(stderr, "ERROR: Could not find memory for host-visible coherent buffer!\n");
-        abort();
-      }
-    buffer->memory_type_index = memory_type_index;
-  }
-
-  // Allocate memory for our buffer. No need for a custom allocator in our
-  // trivial application.
-  const VkMemoryAllocateInfo allocateInfo = {
-    .sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
-    .pNext           = NULL,
-    .allocationSize  = memory_requirements.size,
-    .memoryTypeIndex = memory_type_index,
-  };
-
-  vk(AllocateMemory(device, &allocateInfo, allocator, &buffer->memory));
-
-  // Bind the memory to the buffer.
-  vk(BindBufferMemory(device, buffer->buffer, buffer->memory, 0));
-
-  // Map it now!
-  vk(MapMemory(device, buffer->memory, 0, buffer->size, 0, &buffer->mapped));
-}
-
-static void
-vk_buffer_flush(vk_buffer_t * buffer, VkDevice device)
-{
-  vk(FlushMappedMemoryRanges(device,
-                             1,
-                             &(const VkMappedMemoryRange){
-                               .sType  = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE,
-                               .pNext  = NULL,
-                               .memory = buffer->memory,
-                               .offset = 0,
-                               .size   = buffer->size,
-                             }));
-}
-
-static void
-vk_buffer_destroy(vk_buffer_t * buffer, VkDevice device, const VkAllocationCallbacks * allocator)
-{
-  if (buffer->mapped != NULL)
-    {
-      vkUnmapMemory(device, buffer->memory);
-      buffer->mapped = NULL;
-    }
-
-  vkFreeMemory(device, buffer->memory, allocator);
-  vkDestroyBuffer(device, buffer->buffer, allocator);
-}
-
-//
-//
-//
-
 static void
 fill_buffer(vk_buffer_t * buffer, uint32_t width, uint32_t height, uint32_t counter)
 {
@@ -438,7 +318,13 @@ main(int argc, char const * argv[])
   const uint32_t buffer_width  = 256;
 
   VkDeviceSize my_buffer_size = buffer_width * buffer_height * 4;
-  vk_buffer_init(&my_buffer, my_buffer_size, device, allocator, &app_state.pdmp);
+  vk_buffer_alloc_host_coherent(
+    &my_buffer,
+    my_buffer_size,
+    VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
+    app_state.pd,
+    device,
+    allocator);
 
   // Main loop.
   uint32_t counter = 0;
@@ -593,7 +479,7 @@ main(int argc, char const * argv[])
       }
 
       fill_buffer(&my_buffer, buffer_width, buffer_height, counter);
-      vk_buffer_flush(&my_buffer, device);
+      vk_buffer_flush_all(&my_buffer);
 
       vk_swapchain_submit_image(swapchain);
 
@@ -610,7 +496,7 @@ main(int argc, char const * argv[])
   // Dispose of Vulkan resources
   //
 
-  vk_buffer_destroy(&my_buffer, device, allocator);
+  vk_buffer_free(&my_buffer);
 
   vk_swapchain_destroy(swapchain);
 
