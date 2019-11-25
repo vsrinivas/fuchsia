@@ -35,8 +35,8 @@ zx_test("cobalt-client-unit") {
     "counter_test.cc",
     "histogram_test.cc",
     "in-memory-logger-test.cc",
-    "main.cc",
     "metric_options_test.cc",
+    "main.cc",
   ]
   deps = [
     ":cobalt-logger-test",

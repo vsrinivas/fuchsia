@@ -36,7 +36,7 @@ class BaseCounter {
 
   BaseCounter() : counter_(0) {}
   BaseCounter(const BaseCounter&) = delete;
-  BaseCounter(BaseCounter&& other) : counter_(other.Exchange(0)) {}
+  BaseCounter(BaseCounter&& other) noexcept : counter_(other.Exchange(0)) {}
   BaseCounter& operator=(const BaseCounter&) = delete;
   BaseCounter& operator=(BaseCounter&&) = delete;
   ~BaseCounter() = default;
@@ -65,9 +65,9 @@ class BaseCounter {
 class RemoteCounter : public BaseCounter<int64_t>, public FlushInterface {
  public:
   RemoteCounter() = default;
-  RemoteCounter(const MetricOptions& metric_options);
+  explicit RemoteCounter(const MetricOptions& metric_options);
   RemoteCounter(const RemoteCounter&) = delete;
-  RemoteCounter(RemoteCounter&&);
+  RemoteCounter(RemoteCounter&&) noexcept;
   RemoteCounter& operator=(const RemoteCounter&) = delete;
   RemoteCounter& operator=(RemoteCounter&&) = delete;
   ~RemoteCounter() override = default;

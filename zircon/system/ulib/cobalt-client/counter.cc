@@ -19,7 +19,7 @@ RemoteCounter::RemoteCounter(const MetricOptions& metric_options)
   buffer_ = 0;
 }
 
-RemoteCounter::RemoteCounter(RemoteCounter&& other)
+RemoteCounter::RemoteCounter(RemoteCounter&& other) noexcept
     : BaseCounter(std::move(other)),
       buffer_(std::move(other.buffer_)),
       metric_options_(other.metric_options_) {}

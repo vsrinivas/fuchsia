@@ -2,453 +2,322 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fuchsia/cobalt/c/fidl.h>
-#include <lib/sync/completion.h>
-#include <lib/zx/time.h>
-#include <stdint.h>
-#include <string.h>
-#include <threads.h>
-#include <unistd.h>
+#include <cobalt-client/cpp/counter.h>
 
-#include <atomic>
+#include <lib/sync/completion.h>
+#include <stdint.h>
+
+#include <array>
+#include <cstdint>
+#include <mutex>
+#include <thread>
 
 #include <cobalt-client/cpp/counter-internal.h>
-#include <cobalt-client/cpp/counter.h>
-#include <fbl/auto_call.h>
-#include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
-#include <fbl/string.h>
-#include <fbl/string_printf.h>
-#include <unittest/unittest.h>
-
-#include "fake_logger.h"
+#include <cobalt-client/cpp/in-memory-logger.h>
+#include <cobalt-client/cpp/metric-options.h>
+#include <zxtest/zxtest.h>
 
 namespace cobalt_client {
 namespace {
 
+using internal::RemoteCounter;
+
+using TestCounter = internal::BaseCounter<int64_t>;
+
+// Default |MetricOption| values.
 constexpr uint64_t kMetricId = 1;
+constexpr std::string_view kComponentName = "TestCounter";
+constexpr std::array<uint32_t, MetricOptions::kMaxEventCodes> kEventCodes = {0, 1, 2, 3, 4};
 
-// Number of threads spawned for multi-threaded tests.
-constexpr uint64_t kThreads = 20;
-
-// Component name.
-constexpr char kComponent[] = "SomeRamdomCounterComponent";
-
-constexpr uint32_t kEventCode = 2;
-
-}  // namespace
-
-namespace internal {
-namespace {
-
+// Returns a set of options with the default values.
 MetricOptions MakeMetricOptions() {
-  MetricOptions options;
+  MetricOptions options = {};
   options.metric_id = kMetricId;
-  options.component = kComponent;
-  options.event_codes = {kEventCode, 0, 0, 0, 0};
+  options.component = kComponentName;
+  options.event_codes = kEventCodes;
   return options;
 }
 
 RemoteCounter MakeRemoteCounter() { return RemoteCounter(MakeMetricOptions()); }
 
-// Verify that increments increases the underlying count by 1.
-// This is veryfying the default behaviour.
-bool TestIncrement() {
-  BEGIN_TEST;
-  BaseCounter<uint64_t> counter;
+TEST(BaseCounterTest, OnCreateCountIsZero) {
+  TestCounter counter = {};
 
-  ASSERT_EQ(counter.Load(), 0);
+  EXPECT_EQ(0, counter.Load());
+}
+
+TEST(BaseCounterTest, IncrementByDefaultIncreasesCountByOne) {
+  TestCounter counter = {};
+
+  ASSERT_EQ(0, counter.Load());
+
   counter.Increment();
-  ASSERT_EQ(counter.Load(), 1);
+
+  EXPECT_EQ(1, counter.Load());
+}
+
+TEST(BaseCounterTest, IncrementByValueIncreasesCountByValue) {
+  constexpr int64_t kValue = -25;
+  TestCounter counter = {};
+
+  ASSERT_EQ(0, counter.Load());
+
+  counter.Increment(kValue);
+
+  EXPECT_EQ(kValue, counter.Load());
+}
+
+TEST(BaseCounterTest, IncrementRepeateadlyAccumulateCorrectly) {
+  TestCounter counter = {};
+
+  ASSERT_EQ(0, counter.Load());
+
+  for (int64_t i = 0; i < 10; ++i) {
+    counter.Increment(i);
+  }
+  constexpr int64_t kExpected = 9 * (9 + 1) / 2;
+  EXPECT_EQ(kExpected, counter.Load());
+
   counter.Increment();
-  ASSERT_EQ(counter.Load(), 2);
-  END_TEST;
+  EXPECT_EQ(kExpected + 1, counter.Load());
 }
 
-// Verify that increments increases the underlying count by val.
-bool TestIncrementByVal() {
-  BEGIN_TEST;
-  BaseCounter<uint64_t> counter;
+TEST(BaseCounterTest, ExchangeByDefaultSetsToZero) {
+  constexpr int64_t kValue = -1;
+  TestCounter counter = {};
 
-  ASSERT_EQ(counter.Load(), 0);
-  counter.Increment(23);
-  ASSERT_EQ(counter.Load(), 23);
-  END_TEST;
+  ASSERT_EQ(0, counter.Load());
+  counter.Increment(kValue);
+
+  EXPECT_EQ(kValue, counter.Exchange());
+  EXPECT_EQ(0, counter.Load());
 }
 
-// Verify that exchangest the underlying count to 0, and returns the current value.
-// This is veryfying the default behaviour.
-bool TestExchange() {
-  BEGIN_TEST;
-  BaseCounter<uint64_t> counter;
+TEST(BaseCounterTest, ExchangeByValueSetsToValue) {
+  constexpr int64_t kValue = -1;
+  TestCounter counter = {};
 
-  counter.Increment(24);
-  ASSERT_EQ(counter.Load(), 24);
-  EXPECT_EQ(counter.Exchange(), 24);
-  ASSERT_EQ(counter.Load(), 0);
-  END_TEST;
+  ASSERT_EQ(0, counter.Load());
+  counter.Increment(kValue);
+
+  constexpr int64_t kExpectedValue = -1234556;
+  EXPECT_EQ(kValue, counter.Exchange(kExpectedValue));
+  EXPECT_EQ(kExpectedValue, counter.Load());
 }
 
-// Verify that exchangest the underlying count to 0, and returns the current value.
-// This is veryfying the default behaviour.
-bool TestExchangeByVal() {
-  BEGIN_TEST;
-  BaseCounter<uint64_t> counter;
+TEST(BaseCounterTest, IncrementByMultipleThreadsIsEventuallyConsistent) {
+  constexpr uint64_t kThreadCount = 20;
+  constexpr uint64_t kTimes = 10;
+  TestCounter counter = {};
+  std::array<std::thread, kThreadCount> spamming_threads = {};
+  sync_completion_t start_signal = {};
 
-  counter.Increment(4);
-  ASSERT_EQ(counter.Load(), 4);
-  EXPECT_EQ(counter.Exchange(3), 4);
-  ASSERT_EQ(counter.Load(), 3);
-  EXPECT_EQ(counter.Exchange(2), 3);
-  ASSERT_EQ(counter.Load(), 2);
-  END_TEST;
-}
+  auto increment_fn = [&counter, &start_signal](uint64_t times, int64_t value) {
+    sync_completion_wait(&start_signal, zx::duration::infinite().get());
+    for (uint64_t i = 0; i < times; ++i) {
+      counter.Increment(value);
+    }
+  };
 
-struct IncrementArgs {
-  // Counter to be operated on.
-  BaseCounter<uint64_t>* counter;
-
-  // Wait for main thread to signal before we start.
-  sync_completion_t* start;
-
-  // Amount to increment the counter with.
-  BaseCounter<uint64_t>::Type value;
-};
-
-int IncrementFn(void* args) {
-  IncrementArgs* increment_args = static_cast<IncrementArgs*>(args);
-  sync_completion_wait(increment_args->start, zx::sec(20).get());
-  for (uint64_t i = 0; i < increment_args->value; ++i) {
-    increment_args->counter->Increment(increment_args->value);
-  }
-  return thrd_success;
-}
-
-bool TestIncrementMultiThread() {
-  BEGIN_TEST;
-  sync_completion_t start;
-  BaseCounter<uint64_t> counter;
-  fbl::Vector<thrd_t> thread_ids;
-  IncrementArgs args[kThreads];
-
-  thread_ids.reserve(kThreads);
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    thread_ids.push_back({});
+  for (uint64_t i = 0; i < kThreadCount; ++i) {
+    spamming_threads[i] = std::thread(increment_fn, kTimes, static_cast<int64_t>(i));
   }
 
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    auto& thread_id = thread_ids[i];
-    args[i].counter = &counter;
-    args[i].value = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
-    args[i].start = &start;
-    ASSERT_EQ(thrd_create(&thread_id, IncrementFn, &args[i]), thrd_success);
+  sync_completion_signal(&start_signal);
+
+  for (auto& thread : spamming_threads) {
+    thread.join();
   }
+  // Sum from (0, kN) = Sum from (0, kThreadCount - 1)
+  constexpr uint64_t kN = kThreadCount - 1;
+  // Each thread does |kTimes| calls, meaning |kTimes| * |Sum(0, kN)|.
+  constexpr int64_t kExpectedCount = kTimes * (kN * (kN + 1)) / 2;
 
-  // Notify threads to start incrementing the count.
-  sync_completion_signal(&start);
-
-  // Wait for all threads to finish.
-  for (const auto& thread_id : thread_ids) {
-    thrd_join(thread_id, nullptr);
-  }
-
-  // Each thread should increase the counter by a total of value^2, which yields a total of:
-  // kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6 = Sum(i=1, kThreads) i^2
-  ASSERT_EQ(counter.Load(), kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6);
-  END_TEST;
+  EXPECT_EQ(kExpectedCount, counter.Load());
 }
 
-struct ExchangeArgs {
-  // Counter to be operated on.
-  BaseCounter<uint64_t>* counter;
+TEST(BaseCounterTest, ExchangeByMultipleThreadsIsConsistent) {
+  constexpr uint64_t kTimes = 100;
+  constexpr uint64_t kThreadCount = 20;
+  constexpr uint64_t kValueCount = 20;
 
-  // Accumulated value of exchanged values in the counter.
-  std::atomic<BaseCounter<uint64_t>::Type>* accumulated;
+  TestCounter counter = {};
+  std::array<std::atomic<uint64_t>, kValueCount> seen_values = {0};
+  std::array<std::thread, kThreadCount> spamming_threads = {};
+  sync_completion_t start_signal = {};
 
-  // Wait for main thread to signal before we start.
-  sync_completion_t* start;
+  auto exchange_fn = [&seen_values, &counter, &start_signal](uint64_t times, uint64_t index) {
+    sync_completion_wait(&start_signal, zx::duration::infinite().get());
+    const uint64_t kTotalTimes = times + index;
+    for (uint64_t i = 0; i < kTotalTimes; ++i) {
+      auto previous = counter.Exchange(index);
+      seen_values[previous]++;
+    }
+  };
 
-  // Amount to increment the counter with.
-  BaseCounter<uint64_t>::Type value;
-};
+  for (uint64_t i = 0; i < kThreadCount; ++i) {
+    spamming_threads[i] = std::thread(exchange_fn, kTimes, static_cast<int64_t>(i));
+  }
 
-// After all threads exit, all but one value has been added to the accumulated var,
-// this is the last thread to call exchange, which is why test should add the current
-// value of the counter to the accumulated atomic obtain a deterministic result.
-int ExchangeFn(void* args) {
-  ExchangeArgs* exchange_args = static_cast<ExchangeArgs*>(args);
-  sync_completion_wait(exchange_args->start, zx::sec(20).get());
-  BaseCounter<uint64_t>::Type value = exchange_args->counter->Exchange(exchange_args->value);
-  exchange_args->accumulated->fetch_add(value, std::memory_order_relaxed);
-  return thrd_success;
+  sync_completion_signal(&start_signal);
+
+  for (auto& thread : spamming_threads) {
+    thread.join();
+  }
+  // One last exchange which enforces that everything but 0-index has kTimes, and 0 index has kTimes
+  // + 1.
+  exchange_fn(1, 0);
+  ASSERT_EQ(0, counter.Load());
+
+  for (uint64_t i = 1; i < kValueCount; ++i) {
+    EXPECT_EQ(kTimes + i, seen_values[i].load());
+  }
+  EXPECT_EQ(kTimes + 1, seen_values[0].load());
 }
 
-// Verify that when exchanging all intermediate values are seen by exactly 1 thread.
-// Everythread will exhange the seen value with their value, and add it to an atomic,
-// the result should be the same as above except that we need to add counter.Load() +
-// accumulated_value.
-bool TestExchangeMultiThread() {
-  BEGIN_TEST;
-  sync_completion_t start;
-  BaseCounter<uint64_t> counter;
-  std::atomic<BaseCounter<uint64_t>::Type> accumulated(0);
-  fbl::Vector<thrd_t> thread_ids;
-  ExchangeArgs args[kThreads];
-
-  thread_ids.reserve(kThreads);
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    thread_ids.push_back({});
-  }
-
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    auto& thread_id = thread_ids[i];
-    args[i].counter = &counter;
-    args[i].value = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
-    args[i].start = &start;
-    args[i].accumulated = &accumulated;
-    ASSERT_EQ(thrd_create(&thread_id, ExchangeFn, &args[i]), thrd_success);
-  }
-
-  // Notify threads to start incrementing the count.
-  sync_completion_signal(&start);
-
-  // Wait for all threads to finish.
-  for (const auto& thread_id : thread_ids) {
-    thrd_join(thread_id, nullptr);
-  }
-
-  // Each thread should increase the counter by a total of value, which yields a total of:
-  // kThreads * (kThreads + 1)/ 2 = Sum(i=1, kThreads) i
-  ASSERT_EQ(counter.Load() + accumulated.load(std::memory_order_relaxed),
-            kThreads * (kThreads + 1) / 2);
-  END_TEST;
-}
-
-// Verify flushed values match and the delta is set to 0.
-bool TestFlush() {
-  BEGIN_TEST;
+TEST(RemoteCounterTest, FlushSetsCounterToZeroAndReturnsTrueIfLogSucceeds) {
+  constexpr int64_t kValue = 25;
+  InMemoryLogger logger;
   RemoteCounter counter = MakeRemoteCounter();
-  counter.Increment(20);
-  MetricOptions actual_metric_info;
-  MetricOptions expected_metric_info = MakeMetricOptions();
-  FakeLogger logger;
-  logger.set_should_fail(false);
-  int64_t actual_count;
+  logger.fail_logging(false);
 
-  // Check that all data is present, we abuse some implementation details which guarantee
-  // that metadata is first in the flushed values, and the last element is the event_data we
-  // are measuring, which adds some restrictions to the internal implementation, but makes the
-  // test cleaner and readable.
+  ASSERT_EQ(0, counter.Load());
+  counter.Increment(kValue);
+
   ASSERT_TRUE(counter.Flush(&logger));
+  ASSERT_NE(logger.counters().end(), logger.counters().find(counter.metric_options()));
 
-  actual_metric_info = logger.logged_counts()[0].metric_info;
-  actual_count = logger.logged_counts()[0].count;
-
-  // We capture the values and then verify outside to avoid having to pass flag around,
-  // and have more descriptive messages on errors.
-  ASSERT_TRUE(actual_metric_info == expected_metric_info);
-  ASSERT_EQ(actual_count, 20);
-  ASSERT_EQ(counter.Load(), 0);
-  END_TEST;
+  EXPECT_EQ(0, counter.Load());
+  EXPECT_EQ(kValue, logger.counters().at(counter.metric_options()));
 }
 
-// Verify that the metadata used to create the counter is part of the flushes observation
-// and that the current value of the counter is correct, plus resets to 0 after flush.
-bool TestUndoFlush() {
-  BEGIN_TEST;
+TEST(RemoteCounterTest, FlushSetsCounterToZeroAndReturnsFalseIfLogSucceeds) {
+  constexpr int64_t kValue = 25;
+  InMemoryLogger logger;
   RemoteCounter counter = MakeRemoteCounter();
-  FakeLogger logger;
-  logger.set_should_fail(false);
+  logger.fail_logging(true);
 
-  counter.Increment(20);
-  ASSERT_TRUE(counter.Flush(&logger));
-  ASSERT_EQ(counter.Load(), 0);
+  ASSERT_EQ(0, counter.Load());
+  counter.Increment(kValue);
+
+  ASSERT_FALSE(counter.Flush(&logger));
+  ASSERT_EQ(logger.counters().end(), logger.counters().find(counter.metric_options()));
+
+  // Still resets itself.
+  EXPECT_EQ(0, counter.Load());
+}
+
+TEST(RemoteCounterTest, UndoFlushSetsCounterToPreviousValue) {
+  constexpr int64_t kValue = 25;
+  InMemoryLogger logger;
+  RemoteCounter counter = MakeRemoteCounter();
+  logger.fail_logging(true);
+
+  ASSERT_EQ(0, counter.Load());
+  counter.Increment(kValue);
+
+  ASSERT_FALSE(counter.Flush(&logger));
   counter.UndoFlush();
-  ASSERT_EQ(counter.Load(), 20);
-  END_TEST;
+
+  EXPECT_EQ(kValue, counter.Load());
 }
 
-struct FlushArgs {
-  // Counter to be incremented or flushed by a given thread.
-  RemoteCounter* counter;
-
-  // Used to make the threads wait until all have been initialized.
-  sync_completion_t* start;
-
-  // Flushed accumulated value.
-  std::atomic<RemoteCounter::Type>* accumulated;
-
-  // Number of times to perform the operation.
-  size_t operation_count = 0;
-
-  // Flush operations are thread-compatible and we use a mutex
-  // to provide a barrier. Interaction between other operations
-  // and flushes should remain thread-safe and eventually consistent.
-  fbl::Mutex* flush_mutex = nullptr;
-
-  // Whether the thread should flush or increment.
-  bool flush = false;
-};
-
-int FlushFn(void* args) {
-  FlushArgs* flush_args = static_cast<FlushArgs*>(args);
-  sync_completion_wait(flush_args->start, zx::sec(20).get());
-  FakeLogger logger;
-  for (size_t i = 0; i < flush_args->operation_count; ++i) {
-    if (flush_args->flush) {
-      fbl::AutoLock lock(flush_args->flush_mutex);
-      flush_args->counter->Flush(&logger);
-    } else {
-      flush_args->counter->Increment();
-    }
-  }
-
-  if (flush_args->flush) {
-    for (auto count_entry : logger.logged_counts()) {
-      flush_args->accumulated->fetch_add(count_entry.count, std::memory_order_relaxed);
-    }
-  }
-  return thrd_success;
+TEST(CounterTest, ConstructFromOptionsIsOk) {
+  ASSERT_NO_DEATH([] { [[maybe_unused]] Counter counter(MakeMetricOptions()); });
 }
 
-// Verify the consistency calling flush from multiple threads. There will be kThreads incrementing
-// the counter, kThreads flushing, and at the end we flush again, and the accumulated counter should
-// be equal to the total |kThreads| (|kThreads| + 1) / 2.
-bool TestFlushMultithread() {
-  BEGIN_TEST;
-  sync_completion_t start;
-  RemoteCounter counter = MakeRemoteCounter();
-  std::atomic<BaseCounter<int64_t>::Type> accumulated(0);
-  fbl::Vector<thrd_t> thread_ids;
-  fbl::Mutex flush_mutex;
-  FlushArgs args[kThreads];
-
-  thread_ids.reserve(kThreads);
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    thread_ids.push_back({});
-  }
-
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    auto& thread_id = thread_ids[i];
-    args[i].counter = &counter;
-    args[i].operation_count = static_cast<BaseCounter<uint64_t>::Type>(i + 1);
-    args[i].start = &start;
-    args[i].accumulated = &accumulated;
-    args[i].flush = i % 2;
-    args[i].flush_mutex = &flush_mutex;
-    ASSERT_EQ(thrd_create(&thread_id, FlushFn, &args[i]), thrd_success);
-  }
-
-  // Notify threads to start incrementing the count.
-  sync_completion_signal(&start);
-
-  // Wait for all threads to finish.
-  for (const auto& thread_id : thread_ids) {
-    thrd_join(thread_id, nullptr);
-  }
-
-  // The total number of increment is the sum of odd numbers from 1 to 20 so
-  // |ceil(kThreads/2)|^2.
-  constexpr size_t ceil_threads = (kThreads / 2) + kThreads % 2;
-
-  // Since the last thread to finish might not have flushed, we verify that the total of whats
-  // left, plust what we have accumulated equals the expected amount.
-  ASSERT_EQ(counter.Load() + accumulated.load(std::memory_order_relaxed),
-            ceil_threads * ceil_threads);
-  END_TEST;
+TEST(CounterTest, ConstructFromOptionsWithCollectorIsOk) {
+  ASSERT_NO_DEATH([] {
+    std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+    Collector collector(std::move(logger));
+    [[maybe_unused]] Counter counter(MakeMetricOptions(), &collector);
+  });
 }
 
-BEGIN_TEST_CASE(BaseCounterTest)
-RUN_TEST(TestIncrement)
-RUN_TEST(TestIncrementByVal)
-RUN_TEST(TestExchange)
-RUN_TEST(TestExchangeByVal)
-RUN_TEST(TestIncrementMultiThread)
-RUN_TEST(TestExchangeMultiThread)
-END_TEST_CASE(BaseCounterTest)
+TEST(CounterTest, InitializeWithOptionsAndCollectorIsOk) {
+  ASSERT_NO_DEATH([]() {
+    std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+    Collector collector(std::move(logger));
+    Counter counter;
+    counter.Initialize(MakeMetricOptions(), &collector);
+  });
+}
 
-BEGIN_TEST_CASE(RemoteCounterTest)
-RUN_TEST(TestFlush)
-RUN_TEST(TestUndoFlush)
-RUN_TEST(TestFlushMultithread)
-END_TEST_CASE(RemoteCounterTest)
+TEST(CounterTest, InitilizeAlreadyInitializedCounterIsAssertionError) {
+  ASSERT_DEATH([]() {
+    std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+    Collector collector(std::move(logger));
+    Counter counter(MakeMetricOptions(), &collector);
+    counter.Initialize(MakeMetricOptions(), &collector);
+  });
+}
 
-}  // namespace
-}  // namespace internal
+TEST(CounterTest, IncrementIncreasesCountByOne) {
+  Counter counter(MakeMetricOptions());
 
-namespace {
-
-bool TestIncrement() {
-  BEGIN_TEST;
-  Counter counter(internal::MakeMetricOptions());
-
-  ASSERT_EQ(counter.GetCount(), 0);
   counter.Increment();
-  ASSERT_EQ(counter.GetCount(), 1);
-  counter.Increment(24);
-  ASSERT_EQ(counter.GetCount(), 25);
-  END_TEST;
+
+  EXPECT_EQ(1, counter.GetCount());
 }
 
-struct IncrementArgs {
-  // Counter to be incremented.
-  Counter* counter;
+TEST(CounterTest, IncrementByValueIncreasesCountByValue) {
+  constexpr uint64_t kValue = -20;
+  Counter counter(MakeMetricOptions());
 
-  // Number of times to call increment.
-  size_t times = 0;
+  counter.Increment(kValue);
 
-  // Signals threads to start incrementing.
-  sync_completion_t* start;
-};
-
-int IncrementFn(void* args) {
-  IncrementArgs* increment_args = static_cast<IncrementArgs*>(args);
-  sync_completion_wait(increment_args->start, zx::sec(20).get());
-
-  for (size_t i = 0; i < increment_args->times; ++i) {
-    increment_args->counter->Increment(increment_args->times);
-  }
-  return thrd_success;
+  EXPECT_EQ(kValue, counter.GetCount());
 }
 
-bool TestIncrementMultiThread() {
-  BEGIN_TEST;
-  sync_completion_t start;
-  Counter counter(internal::MakeMetricOptions());
-  fbl::Vector<thrd_t> thread_ids;
-  IncrementArgs args[kThreads];
+TEST(CounterTest, IncrementOnMultipleThreadsWithSynchronizedFlushingIsConsistent) {
+  constexpr uint64_t kTimes = 500;
+  constexpr uint64_t kThreadCount = 20;
+  std::unique_ptr<InMemoryLogger> logger = std::make_unique<InMemoryLogger>();
+  auto* logger_ptr = logger.get();
+  std::mutex logger_mutex;
+  Collector collector(std::move(logger));
+  Counter counter(MakeMetricOptions(), &collector);
+  sync_completion_t start_signal;
+  std::array<std::thread, kThreadCount> spamming_threads = {};
 
-  thread_ids.reserve(kThreads);
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    thread_ids.push_back({});
+  auto increment_fn = [&counter, &start_signal]() {
+    sync_completion_wait(&start_signal, zx::duration::infinite().get());
+    for (uint64_t i = 0; i < kTimes; ++i) {
+      counter.Increment();
+    }
+  };
+
+  auto flushing_fn = [&collector, &logger_ptr, &logger_mutex, &start_signal]() {
+    sync_completion_wait(&start_signal, zx::duration::infinite().get());
+    for (uint64_t i = 0; i < kTimes; ++i) {
+      bool result = collector.Flush();
+      {
+        std::lock_guard lock(logger_mutex);
+        logger_ptr->fail_logging(!result);
+      }
+    }
+  };
+
+  for (uint64_t thread = 0; thread < kThreadCount; ++thread) {
+    if (thread % 2 == 0) {
+      spamming_threads[thread] = std::thread(increment_fn);
+    } else {
+      spamming_threads[thread] = std::thread(flushing_fn);
+    }
   }
 
-  for (uint64_t i = 0; i < kThreads; ++i) {
-    auto& thread_id = thread_ids[i];
-    args[i].counter = &counter;
-    args[i].times = static_cast<Counter::Count>(i + 1);
-    args[i].start = &start;
-    ASSERT_EQ(thrd_create(&thread_id, IncrementFn, &args[i]), thrd_success);
+  sync_completion_signal(&start_signal);
+
+  for (auto& thread : spamming_threads) {
+    thread.join();
   }
+  logger_ptr->fail_logging(false);
+  ASSERT_TRUE(collector.Flush());
 
-  // Notify threads to start incrementing the count.
-  sync_completion_signal(&start);
-
-  // Wait for all threads to finish.
-  for (const auto& thread_id : thread_ids) {
-    thrd_join(thread_id, nullptr);
-  }
-
-  // Each thread should increase the counter by a total of value^2, which yields a total of:
-  // kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6 = Sum(i=1, kThreads) i^2
-  ASSERT_EQ(counter.GetCount(), kThreads * (kThreads + 1) * (2 * kThreads + 1) / 6);
-  END_TEST;
+  constexpr uint64_t kExpectedCount = (kThreadCount / 2) * kTimes;
+  ASSERT_NE(logger_ptr->counters().end(), logger_ptr->counters().find(counter.GetOptions()));
+  EXPECT_EQ(kExpectedCount, logger_ptr->counters().at(counter.GetOptions()));
 }
-
-BEGIN_TEST_CASE(CounterTest)
-RUN_TEST(TestIncrement)
-RUN_TEST(TestIncrementMultiThread)
-END_TEST_CASE(CounterTest)
 
 }  // namespace
 }  // namespace cobalt_client

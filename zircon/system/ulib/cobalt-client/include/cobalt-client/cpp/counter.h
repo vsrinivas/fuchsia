@@ -34,7 +34,7 @@ class Counter {
   Counter(Counter&&) = delete;
   ~Counter();
 
-  // Optionally initialize lazily the histogram, if is more readable to do so
+  // Optionally initialize lazily the counter, if is more readable to do so
   // in the constructor or function body.
   void Initialize(const MetricOptions& options, Collector* collector);
 
