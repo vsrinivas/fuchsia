@@ -8,6 +8,7 @@
 #include <lib/fidl/cpp/encoder.h>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/fsl/vmo/vector.h"
 
 namespace cloud_provider {
@@ -26,7 +27,7 @@ bool EncodeCommitPack(std::vector<CommitPackEntry> commits, CommitPack* commit_p
                                                        .set_data(convert::ToArray(commit.data))));
   }
 
-  return EncodeToBuffer(&serialized_commits, &commit_pack->buffer);
+  return ledger::EncodeToBuffer(&serialized_commits, &commit_pack->buffer);
 }
 
 bool DecodeCommitPack(const CommitPack& commit_pack, std::vector<CommitPackEntry>* commits) {
@@ -34,7 +35,7 @@ bool DecodeCommitPack(const CommitPack& commit_pack, std::vector<CommitPackEntry
   commits->clear();
 
   fuchsia::ledger::cloud::Commits result;
-  if (!DecodeFromBuffer(commit_pack.buffer, &result)) {
+  if (!ledger::DecodeFromBuffer(commit_pack.buffer, &result)) {
     return false;
   }
 

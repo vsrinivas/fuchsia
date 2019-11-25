@@ -15,7 +15,7 @@
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/data_source.h"
 #include "src/ledger/bin/storage/public/read_data_source.h"
-#include "src/ledger/lib/commit_pack/commit_pack.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/callback/waiter.h"
 #include "src/lib/fxl/strings/concatenate.h"
 
@@ -170,7 +170,7 @@ void PageDownload::StartDownload() {
                   backoff_->Reset();
 
                   cloud_provider::Commits commits_container;
-                  if (!cloud_provider::DecodeFromBuffer(commit_pack->buffer, &commits_container)) {
+                  if (!ledger::DecodeFromBuffer(commit_pack->buffer, &commits_container)) {
                     FXL_LOG(ERROR) << "Failed to decode the commits.";
                     SetCommitState(DOWNLOAD_PERMANENT_ERROR);
                     return;
@@ -263,7 +263,7 @@ void PageDownload::OnNewCommits(cloud_provider::CommitPack commit_pack,
                                 cloud_provider::PositionToken position_token,
                                 OnNewCommitsCallback callback) {
   cloud_provider::Commits commits_container;
-  if (!cloud_provider::DecodeFromBuffer(commit_pack.buffer, &commits_container)) {
+  if (!ledger::DecodeFromBuffer(commit_pack.buffer, &commits_container)) {
     HandleDownloadCommitError("Failed to decode the commits");
     return;
   }
@@ -463,7 +463,7 @@ void PageDownload::DecodeAndParseDiff(
   cloud_provider::Diff diff;
   std::optional<std::string> base_remote_commit_id;
   std::vector<storage::EntryChange> changes;
-  if (!cloud_provider::DecodeFromBuffer(diff_pack.buffer, &diff)) {
+  if (!ledger::DecodeFromBuffer(diff_pack.buffer, &diff)) {
     callback(ledger::Status::INVALID_ARGUMENT, {}, {});
     return;
   }

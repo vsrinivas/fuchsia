@@ -12,6 +12,7 @@
 #include "src/ledger/bin/tests/cloud_provider/validation_test.h"
 #include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -115,7 +116,7 @@ class PageCloudTest : public ValidationTest, public PageCloudWatcher {
     if (!diff_pack) {
       return ::testing::AssertionFailure() << "Received an empty diff pack.";
     }
-    if (!DecodeFromBuffer(diff_pack->buffer, diff)) {
+    if (!ledger::DecodeFromBuffer(diff_pack->buffer, diff)) {
       return ::testing::AssertionFailure() << "Received invalid data in diff pack.";
     }
     return ::testing::AssertionSuccess();
@@ -437,7 +438,7 @@ TEST_F(PageCloudTest, Diff_GetDiffFromEmpty) {
 
   CommitPack commit_pack;
   Commits commits{std::move(entries)};
-  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
@@ -490,7 +491,7 @@ TEST_F(PageCloudTest, Diff_GetMultipleDiff) {
   // Upload both commits.
   CommitPack commit_pack;
   Commits commits{std::move(entries)};
-  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
@@ -527,7 +528,7 @@ TEST_F(PageCloudTest, DiffCompat_GetNoDiff) {
 
   CommitPack commit_pack;
   Commits commits{std::move(entries)};
-  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
@@ -574,7 +575,7 @@ TEST_F(PageCloudTest, DiffCompat_GetDiffFromNoDiff) {
   // Upload both commits.
   CommitPack commit_pack;
   Commits commits{std::move(entries)};
-  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);
@@ -631,7 +632,7 @@ TEST_F(PageCloudTest, Diff_GetDiffIntermediateCommit) {
   // Upload both commits.
   CommitPack commit_pack;
   Commits commits{std::move(entries)};
-  ASSERT_TRUE(EncodeToBuffer(&commits, &commit_pack.buffer));
+  ASSERT_TRUE(ledger::EncodeToBuffer(&commits, &commit_pack.buffer));
   Status status = Status::INTERNAL_ERROR;
   ASSERT_EQ(page_cloud->AddCommits(std::move(commit_pack), &status), ZX_OK);
   EXPECT_EQ(status, Status::OK);

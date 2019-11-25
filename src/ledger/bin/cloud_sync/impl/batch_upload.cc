@@ -15,10 +15,10 @@
 #include "src/ledger/bin/cloud_sync/impl/entry_payload_encoding.h"
 #include "src/ledger/bin/cloud_sync/impl/status.h"
 #include "src/ledger/bin/storage/public/constants.h"
-#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/ledger/lib/coroutine/coroutine.h"
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/ledger/lib/coroutine/coroutine_waiter.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/callback/scoped_callback.h"
 #include "src/lib/callback/trace_callback.h"
 #include "src/lib/callback/waiter.h"
@@ -395,7 +395,7 @@ void BatchUpload::UploadCommits() {
         }
         cloud_provider::CommitPack commit_pack;
         cloud_provider::Commits commits_container{std::move(commits)};
-        if (!cloud_provider::EncodeToBuffer(&commits_container, &commit_pack.buffer)) {
+        if (!ledger::EncodeToBuffer(&commits_container, &commit_pack.buffer)) {
           SetUploadStatus(UploadStatus::PERMANENT_ERROR);
           SignalError();
           return;

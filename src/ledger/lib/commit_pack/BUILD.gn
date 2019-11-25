@@ -12,6 +12,7 @@ source_set("commit_pack") {
 
   deps = [
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/encoding",
   ]
 
   public_deps = [

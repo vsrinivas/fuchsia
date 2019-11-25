@@ -47,6 +47,7 @@ source_set("impl") {
 
   deps = [
     "//src/ledger/bin/encryption/primitives",
+    "//src/ledger/lib/encoding",
     "//src/lib/fsl",
     "//zircon/public/lib/trace",
   ]

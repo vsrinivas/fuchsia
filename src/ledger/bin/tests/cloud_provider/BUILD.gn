@@ -30,6 +30,7 @@ executable("cloud_provider") {
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
     "//src/ledger/lib/commit_pack",
+    "//src/ledger/lib/encoding",
     "//src/lib/fxl",
     "//src/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",

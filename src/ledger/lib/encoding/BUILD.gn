@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/fuzzing/fuzzer.gni")
+
+source_set("encoding") {
+  sources = [
+    "encoding.h",
+  ]
+
+  deps = [
+    "//src/ledger/lib/convert",
+  ]
+
+  public_deps = [
+    "//sdk/lib/fidl/cpp",
+    "//src/lib/fsl",
+    "//src/lib/fxl",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+fidl("testing_fidl") {
+  testonly = true
+
+  name = "fuchsia.ledger.testing"
+
+  sources = [
+    "testing.test.fidl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "encoding_unittest.cc",
+  ]
+
+  deps = [
+    ":encoding",
+    ":testing_fidl",
+    "//src/ledger/lib/convert",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+fuzzer("encoding_buffer_fuzzer") {
+  sources = [
+    "encoding_fuzztest.cc",
+  ]
+  deps = [
+    ":encoding",
+    ":testing_fidl",
+    "//sdk/fidl/fuchsia.ledger.cloud",
+    "//src/ledger/lib/convert",
+  ]
+}

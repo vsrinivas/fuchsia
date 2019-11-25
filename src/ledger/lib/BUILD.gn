@@ -20,6 +20,7 @@ executable("ledger_lib_unittests") {
     "//src/ledger/lib/convert:unittests",
     "//src/ledger/lib/coroutine:unittests",
     "//src/ledger/lib/coroutine/context:unittests",
+    "//src/ledger/lib/encoding:unittests",
     "//src/ledger/lib/socket:unittests",
     "//src/lib/fxl/test:gtest_main",
   ]

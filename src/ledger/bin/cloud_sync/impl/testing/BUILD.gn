@@ -32,6 +32,7 @@ source_set("testing") {
   ]
 
   deps = [
+    "//src/ledger/lib/encoding",
     "//src/lib/callback",
     "//src/lib/fsl",
     "//zircon/public/lib/trace",

@@ -9,6 +9,7 @@
 
 #include "src/ledger/bin/storage/public/commit.h"
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 
@@ -30,7 +31,7 @@ std::unique_ptr<cloud_provider::CommitPack> MakeTestCommitPack(
     commits_container.commits.push_back(MakeTestCommit(encryption_service, data));
   }
   cloud_provider::CommitPack result;
-  if (!cloud_provider::EncodeToBuffer(&commits_container, &result.buffer)) {
+  if (!ledger::EncodeToBuffer(&commits_container, &result.buffer)) {
     return nullptr;
   }
   return fidl::MakeOptional(std::move(result));
@@ -55,7 +56,7 @@ void TestPageCloud::RunPendingCallbacks() {
 void TestPageCloud::AddCommits(cloud_provider::CommitPack commit_pack,
                                AddCommitsCallback callback) {
   cloud_provider::Commits commits;
-  if (!cloud_provider::DecodeFromBuffer(commit_pack.buffer, &commits)) {
+  if (!ledger::DecodeFromBuffer(commit_pack.buffer, &commits)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -73,7 +74,7 @@ void TestPageCloud::GetCommits(
   get_commits_calls++;
   cloud_provider::CommitPack commit_pack;
   cloud_provider::Commits commits_container{std::move(commits_to_return)};
-  if (!cloud_provider::EncodeToBuffer(&commits_container, &commit_pack.buffer)) {
+  if (!ledger::EncodeToBuffer(&commits_container, &commit_pack.buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
     return;
   }
@@ -148,7 +149,7 @@ void TestPageCloud::GetDiff(std::vector<uint8_t> commit_id,
   FXL_DCHECK(status == ZX_OK);
   std::unique_ptr<cloud_provider::DiffPack> diff_pack =
       std::make_unique<cloud_provider::DiffPack>();
-  bool encoded = cloud_provider::EncodeToBuffer(&diff, &diff_pack->buffer);
+  bool encoded = ledger::EncodeToBuffer(&diff, &diff_pack->buffer);
   FXL_DCHECK(encoded);
   callback(cloud_provider::Status::OK, std::move(diff_pack));
 }
