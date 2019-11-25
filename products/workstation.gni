@@ -29,10 +29,7 @@ cache_package_labels += [
   "//src/media/audio/bundles:audio",
 ]
 
-universe_package_labels += [
-  "//src/ledger/cloud_provider_firestore/bin",
-  "//src/modular/bundles:tools",
-]
+universe_package_labels += [ "//src/modular/bundles:tools" ]
 
 kernel_cmdline_args += [
   # hide the virtual console on boot

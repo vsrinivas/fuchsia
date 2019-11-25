@@ -36,8 +36,6 @@ source_set("cpp") {
     "//src/ledger/bin/testing:get_ledger",
     "//src/ledger/bin/testing:memory_usage_test_benchmark",
     "//src/ledger/bin/tests/e2e_local",
-    "//src/ledger/bin/tests/e2e_sync",
-    "//src/ledger/cloud_provider_firestore/bin/testing",
     "//src/lib/component/cpp/testing:testing",
     "//src/lib/component/cpp:cpp",
     "//src/media/codec/factory",

@@ -11,4 +11,4 @@ launcher applications that configure and run the validation tests against their
 implementation of CloudProvider ([example]).
 
 [CloudProvider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
-[example]: /src/ledger/cloud_provider_firestore/bin/validation/
+[example]: /src/ledger/cloud_provider_in_memory/bin/validation/

@@ -28,7 +28,6 @@ source_set("deprecated_cobalt_logger") {
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
     "//src/ledger/bin/cobalt",
-    "//src/ledger/lib/firebase_auth",
     "//src/modular/bin/basemgr/cobalt",
   ]
 

@@ -55,10 +55,6 @@ Documentation for integrating with Ledger in client apps:
  - [Data Organization](data_organization.md)
  - [Examples](examples.md)
 
-Documentation for setting up a remote Cloud sync provider:
-
- - [Firestore]
-
 Documentation for developing Ledger:
 
  - [C++ in Ledger](cpp.md)
@@ -76,5 +72,4 @@ Design documentation:
 
 [cloud provider]: /peridot/public/fidl/fuchsia.ledger.cloud/cloud_provider.fidl
 [component context]: /peridot/public/fidl/fuchsia.modular/component/component_context.fidl
-[Firestore]: /src/ledger/cloud_provider_firestore/README.md
 [Modular]: /peridot/docs/modular/overview.md

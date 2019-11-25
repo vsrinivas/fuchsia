@@ -3,21 +3,16 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//src/ledger/bin/testing/sync_params.gni")
 
 group("benchmark") {
   testonly = true
   deps = [
     ":ledger_benchmarks",
-    "backlog",
-    "convergence",
     "delete_entry",
     "disk_space",
-    "fetch",
     "get_entry",
     "get_page",
     "put",
-    "sync",
     "update_entry",
   ]
 }
@@ -30,24 +25,16 @@ package("ledger_benchmarks") {
   testonly = true
 
   deps = [
-    "//src/ledger/bin/tests/benchmark/backlog",
-    "//src/ledger/bin/tests/benchmark/convergence",
     "//src/ledger/bin/tests/benchmark/delete_entry",
     "//src/ledger/bin/tests/benchmark/disk_space",
-    "//src/ledger/bin/tests/benchmark/fetch",
     "//src/ledger/bin/tests/benchmark/get_entry",
     "//src/ledger/bin/tests/benchmark/get_page",
     "//src/ledger/bin/tests/benchmark/put",
     "//src/ledger/bin/tests/benchmark/stories_simulation",
-    "//src/ledger/bin/tests/benchmark/sync",
     "//src/ledger/bin/tests/benchmark/update_entry",
   ]
 
   meta = [
-    {
-      path = rebase_path("backlog/backlog.cmx")
-      dest = "backlog.cmx"
-    },
     {
       path = rebase_path("get_page/get_page.cmx")
       dest = "get_page.cmx"
@@ -65,20 +52,8 @@ package("ledger_benchmarks") {
       dest = "disk_space.cmx"
     },
     {
-      path = rebase_path("convergence/convergence.cmx")
-      dest = "convergence.cmx"
-    },
-    {
-      path = rebase_path("fetch/fetch.cmx")
-      dest = "fetch.cmx"
-    },
-    {
       path = rebase_path("put/put.cmx")
       dest = "put.cmx"
-    },
-    {
-      path = rebase_path("sync/sync.cmx")
-      dest = "sync.cmx"
     },
     {
       path = rebase_path("update_entry/update_entry.cmx")
@@ -91,10 +66,6 @@ package("ledger_benchmarks") {
   ]
 
   binaries = [
-    {
-      name = "ledger_benchmark_backlog"
-    },
-
     {
       name = "ledger_benchmark_get_page"
     },
@@ -112,23 +83,11 @@ package("ledger_benchmarks") {
     },
 
     {
-      name = "ledger_benchmark_convergence"
-    },
-
-    {
-      name = "ledger_benchmark_fetch"
-    },
-
-    {
       name = "ledger_benchmark_put"
     },
 
     {
       name = "ledger_benchmark_stories_simulation"
-    },
-
-    {
-      name = "ledger_benchmark_sync"
     },
 
     {
@@ -150,36 +109,6 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("get_page/add_new_page_after_clear.tspec")
       dest = "add_new_page_after_clear.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog.tspec")
-      dest = "backlog.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog_big_entry.tspec")
-      dest = "backlog_big_entry.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog_big_entry_updates.tspec")
-      dest = "backlog_big_entry_updates.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog_many_big_entries.tspec")
-      dest = "backlog_many_big_entries.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog_many_small_entries.tspec")
-      dest = "backlog_many_small_entries.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/backlog_small_entry_updates.tspec")
-      dest = "DISABLED_backlog_small_entry_updates.tspec"
     },
 
     {
@@ -213,21 +142,6 @@ package("ledger_benchmarks") {
     },
 
     {
-      path = rebase_path("backlog/disk_space_synced_updates.tspec")
-      dest = "disk_space_synced_updates.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/disk_space_synced_entries.tspec")
-      dest = "disk_space_synced_entries.tspec"
-    },
-
-    {
-      path = rebase_path("backlog/disk_space_synced_entries_small_keys.tspec")
-      dest = "disk_space_synced_entries_small_keys.tspec"
-    },
-
-    {
       path = rebase_path("disk_space/updates.tspec")
       dest = "disk_space_updates.tspec"
     },
@@ -258,16 +172,6 @@ package("ledger_benchmarks") {
     },
 
     {
-      path = rebase_path("convergence/convergence.tspec")
-      dest = "convergence.tspec"
-    },
-
-    {
-      path = rebase_path("convergence/multidevice_convergence.tspec")
-      dest = "multidevice_convergence.tspec"
-    },
-
-    {
       path = rebase_path("put/transaction.tspec")
       dest = "transaction.tspec"
     },
@@ -293,16 +197,6 @@ package("ledger_benchmarks") {
     },
 
     {
-      path = rebase_path("sync/sync.tspec")
-      dest = "sync.tspec"
-    },
-
-    {
-      path = rebase_path("sync/sync_big_change.tspec")
-      dest = "sync_big_change.tspec"
-    },
-
-    {
       path = rebase_path("update_entry/update_entry.tspec")
       dest = "update_entry.tspec"
     },
@@ -315,16 +209,6 @@ package("ledger_benchmarks") {
     {
       path = rebase_path("update_entry/update_entry_transactions.tspec")
       dest = "update_entry_transactions.tspec"
-    },
-
-    {
-      path = rebase_path("fetch/fetch.tspec")
-      dest = "fetch.tspec"
-    },
-
-    {
-      path = rebase_path("fetch/fetch_partial_big_entry.tspec")
-      dest = "fetch_partial_big_entry.tspec"
     },
 
     {
@@ -362,13 +246,4 @@ package("ledger_benchmarks") {
       dest = "stories_memory.tspec"
     },
   ]
-
-  if (ledger_sync_credentials_file != "") {
-    resources += [
-      {
-        path = ledger_sync_credentials_file
-        dest = "sync_credentials.json"
-      },
-    ]
-  }
 }

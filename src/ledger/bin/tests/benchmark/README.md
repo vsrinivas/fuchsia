@@ -67,19 +67,6 @@ Unless the name of the benchmark suggest otherwise, default values are:
 Benchmarks under `sync` and `convergence` use smaller number of entries and
 smaller value size.
 
-### Benchmarks using sync
-
-Some benchmarks exercise cloud synchronization using `cloud_provider_firestore`.
-
-To run these, follow the [cloud sync set-up instructions] to set up a Firestore instance,
-configure the build environment and obtain the sync parameters needed below.
-
-Then, run the selected benchmark as follows:
-
-```sh
-trace record --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/sync.tspec
-```
-
 ### A note regarding benchmark apps
 Since the benchmark apps are designed to be used with tracing, running them
 without a tracing will not generate any results.
@@ -151,43 +138,6 @@ page.
       entry, but long commit history
     * `disk_space_one_commit_per_entry.tspec`: ledger with one page containing
       several entries, each of them added in a separate commit
-
-### Sync benchmarks
-These benchmarks exercise synchronisation and need an ID of a Firestore instance
-passed to them as described [in a previous
-section](README.md#benchmarks-using-sync).
-
-* __Backlog__: How long does it take to download all existing data when
-  establishing a new connection to an already populated data?
-    * `backlog.tspec`: basic case
-    * `backlog_big_entry.tspec`: page contains one entry, but of a big size
-    * `backlog_big_entry_updates.tspec`: one big entry, but that was updated several
-      times prior to the new connection (commit history)
-    * `backlog_many_big_entries.tspec`: page contains several big entries
-    * `backlog_many_small_entries.tspec`: many small entries
-    * `backlog_small_entry_updates.tspec`: small entry, but a long commit
-      history
-    * `disk_space_synced_entries.tspec`: how much disk space does ledger take on a
-    writer and a reader device, when several entries have been written (in one
-    commit) on one device and then downloaded on another?
-    * `disk_space_synced_entries_small_keys.tspec`: same, but with small (10
-      bytes) keys.
-    * `disk_space_synced_updates.tspec`: how much disk space does ledger take on a
-    writer and a reader device, when several commits with updates has been made on
-    one device and then downloaded on another?
-* __Convergence__: Several devices make concurrent changes to the page. How long does
-  it take for all devices to see each other changes?
-    * `convergence.tspec`: two devices
-    * `multidevice_convergence`: several devices
-* __Fetch__: How long does it take to fetch a [lazy value]?
-    * `fetch.tspec`: basic case
-    * `fetch_partial_big_entry.tspec`: using FetchPartial (fetch in several
-    parts) on a big entry
-* __Sync__: When one device makes changes to the page, how long does it take for
-  another one to receive these changes?
-    * `sync.tspec`: basic case
-    * `sync_big_change.tspec`: syncing a big change (containing several write
-      operations)
 
 [trace-based benchmarks]: /docs/development/benchmarking/trace_based_benchmarking.md
 [cloud sync set-up instructions]: /src/ledger/docs/testing.md#cloud-sync

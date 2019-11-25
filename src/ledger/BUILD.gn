@@ -4,7 +4,6 @@
 
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
-import("//src/ledger/bin/testing/sync_params.gni")
 
 # Public targets
 group("ledger") {
@@ -13,7 +12,6 @@ group("ledger") {
     ":ledger_tests",
     ":tests",
     "bin",
-    "cloud_provider_firestore",
     "cloud_provider_in_memory",
     "lib",
     "third_party",
@@ -75,9 +73,7 @@ package("ledger_tests") {
     "//src/ledger/bin/testing:memory_usage_test_benchmark",
     "//src/ledger/bin/tests/cloud_provider",
     "//src/ledger/bin/tests/e2e_local",
-    "//src/ledger/bin/tests/e2e_sync",
     "//src/ledger/bin/tests/integration",
-    "//src/ledger/cloud_provider_firestore/bin:tests",
     "//src/ledger/cloud_provider_in_memory/bin:tests",
     "//src/ledger/lib:ledger_lib_unittests",
   ]
@@ -98,22 +94,8 @@ package("ledger_tests") {
       dest = "ledger_e2e_local.cmx"
     },
     {
-      path = rebase_path("//src/ledger/bin/tests/e2e_sync/ledger_e2e_sync.cmx")
-      dest = "ledger_e2e_sync.cmx"
-    },
-    {
       path = rebase_path("//src/ledger/lib/ledger_lib_unittests.cmx")
       dest = "ledger_lib_unittests.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/ledger/cloud_provider_firestore/bin/cloud_provider_firestore_unittests.cmx")
-      dest = "cloud_provider_firestore_unittests.cmx"
-    },
-    {
-      path = rebase_path(
-              "//src/ledger/cloud_provider_firestore/bin/validation/validation_firestore.cmx")
-      dest = "validation_firestore.cmx"
     },
     {
       path = rebase_path(
@@ -121,7 +103,7 @@ package("ledger_tests") {
       dest = "validation_in_memory.cmx"
     },
     {
-      # This test must be started by validation_firestore or
+      # This test must be started by validation_in_memory or
       # validation_in_memory and will fail if started on its own.
       path = rebase_path(
               "//src/ledger/bin/tests/cloud_provider/cloud_provider_validation_tests.cmx")
@@ -152,35 +134,13 @@ package("ledger_tests") {
       environments = basic_envs
     },
     {
-      name = "cloud_provider_firestore_unittests"
-      environments = basic_envs
-    },
-    {
       name = "validation_in_memory"
-      environments = basic_envs
-    },
-    {
-      name = "ledger_e2e_sync"
-
-      # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in `test/disabled/` under the
-      # package directory.
-      disabled = true
-      environments = basic_envs
-    },
-    {
-      name = "launch_validation_tests_firestore"
-
-      # This test needs additional configuration and should not run by default.
-      # Marking it as disabled puts the binary in `test/disabled/` under the
-      # package directory.
-      disabled = true
       environments = basic_envs
     },
     {
       name = "cloud_provider_validation_tests"
 
-      # This test must be started by validation_firestore and will fail if started on its own.
+      # This test must be started by validation_in_memory and will fail if started on its own.
       # Marking it as disabled puts the binary in `test/disabled/` under the
       # package directory.
       disabled = true
@@ -201,13 +161,4 @@ package("ledger_tests") {
       dest = "memory_usage_test_benchmark.tspec"
     },
   ]
-
-  if (ledger_sync_credentials_file != "") {
-    resources += [
-      {
-        path = ledger_sync_credentials_file
-        dest = "sync_credentials.json"
-      },
-    ]
-  }
 }

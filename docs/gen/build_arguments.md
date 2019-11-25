@@ -1122,12 +1122,6 @@ Each element of the list is one variant, which is a scope defining:
 
 From //build/config/BUILDCONFIG.gn:344
 
-### ledger_sync_credentials_file
-
-**Current value (from the default):** `""`
-
-From //src/ledger/bin/testing/sync_params.gni:6
-
 ### linux_guest_extras_path
 
 **Current value (from the default):** `""`

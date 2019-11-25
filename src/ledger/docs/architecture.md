@@ -86,7 +86,6 @@ Code:
  - [/bin/ledger/cloud_sync] implements high-level cloud sync logic, in particular:
    - [/bin/ledger/cloud_sync/public] contains the public (exposed to other components) API
    - [/bin/ledger/cloud_sync/impl] contains the implementation
- - [/bin/cloud_provider_firestore] implements integration with cloud services
 
 [/bin/ledger/storage]: /src/ledger/bin/storage/
 [/bin/ledger/storage/public]: /src/ledger/bin/storage/public/
@@ -97,4 +96,3 @@ Code:
 [/bin/ledger/cloud_sync]: /src/ledger/bin/cloud_sync/
 [/bin/ledger/cloud_sync/public]: /src/ledger/bin/cloud_sync/public/
 [/bin/ledger/cloud_sync/impl]: /src/ledger/bin/cloud_sync/impl/
-[/bin/cloud_provider_firestore]: /src/ledger/bin/cloud_provider_firestore/

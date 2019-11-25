@@ -11,13 +11,12 @@ group("ledger") {
   testonly = true
   public_deps = [
     "//src/ledger:ledger_tests",
-    "//src/ledger/bin:ledger_fuzzers",
     "//src/ledger/bin",
+    "//src/ledger/bin:ledger_fuzzers",
     "//src/ledger/bin/testing/ledger_test_instance_provider:ledger_test_instance_provider",
-    "//src/ledger/cloud_provider_firestore/bin",
     "//src/ledger/cloud_provider_in_memory/bin",
-    "//src/ledger/cloud_provider_memory_diff:cloud_provider_memory_diff_tests",
     "//src/ledger/cloud_provider_memory_diff",
+    "//src/ledger/cloud_provider_memory_diff:cloud_provider_memory_diff_tests",
   ]
 }
 
