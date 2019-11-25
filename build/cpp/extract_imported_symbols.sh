@@ -45,7 +45,7 @@ then
   exit 1
 fi
 
-${NM} --dynamic --undefined-only ${LIBRARY} \
+${NM} --dynamic --undefined-only --no-weak ${LIBRARY} \
   | awk '{ print $2; }' \
   | env LC_COLLATE=C sort \
   > ${SYMBOLS}
