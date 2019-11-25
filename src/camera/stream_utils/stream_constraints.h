@@ -33,6 +33,7 @@ namespace camera {
 
 struct StreamConstraints {
  public:
+  StreamConstraints(){};
   StreamConstraints(fuchsia::camera2::CameraStreamType type) : stream_type_(type) {}
 
   void AddImageFormat(uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format);
@@ -44,6 +45,10 @@ struct StreamConstraints {
   void set_buffer_count_for_camping(uint32_t buffer_count_for_camping) {
     buffer_count_for_camping_ = buffer_count_for_camping;
   }
+
+  static fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
+                                                        fuchsia::sysmem::PixelFormatType format);
+
   void set_frames_per_second(uint32_t frames_per_second) { frames_per_second_ = frames_per_second; }
 
   fuchsia::sysmem::BufferCollectionConstraints MakeBufferCollectionConstraints() const;

@@ -68,8 +68,8 @@ static fuchsia_sysmem_PixelFormat ConvertPixelFormatToC(fuchsia::sysmem::PixelFo
 }
 
 // Make an ImageFormat_2 struct with default values except for width, height and format.
-static fuchsia::sysmem::ImageFormat_2 MakeImageFormat(uint32_t width, uint32_t height,
-                                                      fuchsia::sysmem::PixelFormatType format) {
+fuchsia::sysmem::ImageFormat_2 StreamConstraints::MakeImageFormat(
+    uint32_t width, uint32_t height, fuchsia::sysmem::PixelFormatType format) {
   fuchsia::sysmem::PixelFormat pixel_format = {.type = format, .has_format_modifier = false};
   fuchsia_sysmem_PixelFormat pixel_format_c = ConvertPixelFormatToC(pixel_format);
   uint32_t bytes_per_row = ImageFormatStrideBytesPerWidthPixel(&pixel_format_c) * width;
