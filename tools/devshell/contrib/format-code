@@ -122,7 +122,7 @@ while [ $# -gt 0 ]; do
   shift
 done
 # TODO(fxbug.dev/3240): remove the exclusion when llcpp bindings are no longer checked in.
-GIT_FILTER=("$@" :!zircon/system/fidl/*/gen/llcpp/*)
+GIT_FILTER=("$@" :!zircon/system/*/gen/llcpp/*)
 
 get_git_files() {
   FILES=$(canonicalize $(git rev-parse --show-toplevel) \
