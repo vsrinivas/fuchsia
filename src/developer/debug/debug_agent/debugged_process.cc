@@ -481,6 +481,15 @@ zx_status_t DebuggedProcess::RegisterWatchpoint(Breakpoint* bp,
       << "Breakpoint type must be kWatchpoint, got: "
       << debug_ipc::BreakpointTypeToString(bp->type());
 
+  // NOTE: Even though the watchpoint system can handle un-aligned ranges, there is no way for
+  //       an exception to determine which byte access actually triggered the exception. This means
+  //       that watchpoint installed and nominal ranges should be the same.
+  //
+  //       We make that check here and fail early if the range is not correctly aligned.
+  auto aligned_range = arch::AlignRange(range);
+  if (!aligned_range.has_value() || aligned_range.value() != range)
+    return ZX_ERR_INVALID_ARGS;
+
   auto it = watchpoints_.find(range);
   if (it == watchpoints_.end()) {
     auto watchpoint = std::make_unique<Watchpoint>(bp, this, arch_provider_, range);
