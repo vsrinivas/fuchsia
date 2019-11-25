@@ -26,6 +26,9 @@ namespace wlan::simulation {
 //
 class FakeAp : public StationIfc {
  public:
+  // How to handle an association request
+  enum AssocHandling {ASSOC_ALLOWED, ASSOC_IGNORED, ASSOC_REJECTED};
+
   struct Security {
     enum ieee80211_cipher_suite cipher_suite;
 
@@ -66,6 +69,9 @@ class FakeAp : public StationIfc {
 
   // Stop beaconing.
   void DisableBeacon();
+
+  // Specify how to handle association requests
+  void SetAssocHandling(enum AssocHandling mode);
 
   // StationIfc operations - these are the functions that allow the simulated AP to be used
   // inside of a sim-env environment.
@@ -108,6 +114,8 @@ class FakeAp : public StationIfc {
     // Unique value that is associated with the next beacon event
     uint64_t beacon_notification_id;
   } beacon_state_;
+
+  enum AssocHandling assoc_handling_mode_ = ASSOC_ALLOWED;
 
   // Delay between an association request and an association response
   zx::duration assoc_resp_interval_ = zx::msec(1);

@@ -69,6 +69,15 @@ void FakeAp::RxAssocReq(const wlan_channel_t& channel, const common::MacAddr& sr
     return;
   }
 
+  if (assoc_handling_mode_ == ASSOC_IGNORED) {
+    return;
+  }
+
+  if (assoc_handling_mode_ == ASSOC_REJECTED) {
+    ScheduleAssocResp(WLAN_STATUS_CODE_REFUSED, src);
+    return;
+  }
+
   // Make sure the client is not already associated
   for (auto client : clients_) {
     if (client == src) {
@@ -109,6 +118,10 @@ void FakeAp::ReceiveNotification(void* payload) {
   auto handler = static_cast<std::function<void()>*>(payload);
   (*handler)();
   delete handler;
+}
+
+void FakeAp::SetAssocHandling(enum AssocHandling mode) {
+  assoc_handling_mode_ = mode;
 }
 
 }  // namespace wlan::simulation

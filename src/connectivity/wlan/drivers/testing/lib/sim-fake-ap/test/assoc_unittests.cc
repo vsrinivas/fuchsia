@@ -140,4 +140,48 @@ TEST_F(AssocTest, BasicUse) {
   status_list_.pop_front();
 }
 
+/* Verify that association requests are ignored when the association handling state is set to
+   ASSOC_IGNORED.
+
+   Timeline for this test:
+   1s: send assoc request
+ */
+TEST_F(AssocTest, IgnoreAssociations) {
+  // Schedule assoc req
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&simulation::Environment::TxAssocReq, &env_, this, kDefaultChannel,
+                       kClientMacAddr, kApBssid);
+  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+
+  ap_.SetAssocHandling(simulation::FakeAp::ASSOC_IGNORED);
+
+  env_.Run();
+
+  // Verify that no assoc responses were seen in the environment
+  EXPECT_EQ(assoc_resp_count_, 0U);
+}
+
+/* Verify that association requests are rejected when the association handling state is set to
+   ASSOC_REJECTED.
+
+   Timeline for this test:
+   1s: send assoc request
+ */
+TEST_F(AssocTest, RejectAssociations) {
+  // Schedule first request
+  auto handler = new std::function<void()>;
+  *handler = std::bind(&simulation::Environment::TxAssocReq, &env_, this, kDefaultChannel,
+                       kClientMacAddr, kApBssid);
+  env_.ScheduleNotification(this, zx::sec(1), static_cast<void*>(handler));
+
+  ap_.SetAssocHandling(simulation::FakeAp::ASSOC_REJECTED);
+
+  env_.Run();
+
+  EXPECT_EQ(assoc_resp_count_, 1U);
+  ASSERT_EQ(status_list_.size(), (size_t)1);
+  EXPECT_EQ(status_list_.front(), (uint16_t)WLAN_STATUS_CODE_REFUSED);
+  status_list_.pop_front();
+}
+
 }  // namespace wlan::testing
