@@ -7,6 +7,7 @@
 
 #include <vector>
 
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/symbols/dwarf_expr_eval.h"
 #include "src/lib/fxl/memory/ref_counted.h"
@@ -43,14 +44,14 @@ class AsyncDwarfExprEval : public fxl::RefCountedThreadSafe<AsyncDwarfExprEval> 
   // the given type.
   //
   // Note this class is derived from in a test so these need to be protected and virtual.
-  explicit AsyncDwarfExprEval(ValueCallback cb, fxl::RefPtr<Type> type)
+  explicit AsyncDwarfExprEval(EvalCallback cb, fxl::RefPtr<Type> type)
       : callback_(std::move(cb)), type_(std::move(type)) {}
   virtual ~AsyncDwarfExprEval() = default;
 
   void OnEvalComplete(const Err& err, const fxl::RefPtr<EvalContext>& context);
 
   DwarfExprEval dwarf_eval_;
-  ValueCallback callback_;
+  EvalCallback callback_;
 
   // Not necessarily a concrete type, this is the type of the result the user will see.
   fxl::RefPtr<Type> type_;

@@ -155,7 +155,7 @@ void ResolveArrayItem(const fxl::RefPtr<EvalContext>& eval_context, const ExprVa
   // if it was needed until the function returns. We want to try regular resolution first to avoid
   // over-triggering pretty-printing if something is configured incorrectly. This case is not
   // performance sensitive so this extra allocation doesn't matter much.
-  auto shared_cb = std::make_shared<fit::callback<void(ErrOrValue)>>(std::move(cb));
+  auto shared_cb = std::make_shared<EvalCallback>(std::move(cb));
 
   // Try a regular access first.
   if (DoResolveArray(eval_context, array, index, index + 1, [shared_cb](ErrOrValueVector result) {

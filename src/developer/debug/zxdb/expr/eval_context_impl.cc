@@ -120,7 +120,7 @@ EvalContextImpl::~EvalContextImpl() = default;
 
 ExprLanguage EvalContextImpl::GetLanguage() const { return language_; }
 
-void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCallback cb) const {
+void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, EvalCallback cb) const {
   if (FoundName found =
           FindName(GetFindNameContext(), FindNameOptions(FindNameOptions::kAllKinds), identifier)) {
     switch (found.kind()) {
@@ -171,7 +171,7 @@ void EvalContextImpl::GetNamedValue(const ParsedIdentifier& identifier, ValueCal
   }
 }
 
-void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, ValueCallback cb) const {
+void EvalContextImpl::GetVariableValue(fxl::RefPtr<Value> input_val, EvalCallback cb) const {
   // Handle const values.
   if (input_val->const_value().has_value())
     return cb(ResolveConstValue(RefPtrTo(this), input_val.get()));
@@ -323,7 +323,7 @@ Err EvalContextImpl::ResolveExternValue(const fxl::RefPtr<Value>& input_value,
   return Err();
 }
 
-void EvalContextImpl::DoResolve(FoundName found, ValueCallback cb) const {
+void EvalContextImpl::DoResolve(FoundName found, EvalCallback cb) const {
   if (found.kind() == FoundName::kVariable) {
     // Simple variable resolution.
     GetVariableValue(found.variable_ref(), std::move(cb));

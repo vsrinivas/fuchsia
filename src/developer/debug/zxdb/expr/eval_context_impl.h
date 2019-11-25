@@ -58,8 +58,8 @@ class EvalContextImpl : public EvalContext {
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override;
-  void GetNamedValue(const ParsedIdentifier& name, ValueCallback cb) const override;
-  void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const override;
+  void GetNamedValue(const ParsedIdentifier& name, EvalCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
@@ -80,7 +80,7 @@ class EvalContextImpl : public EvalContext {
 
   // Computes the value of the given variable and issues the callback (possibly asynchronously,
   // possibly not).
-  void DoResolve(FoundName found, ValueCallback cb) const;
+  void DoResolve(FoundName found, EvalCallback cb) const;
 
   // Implements type name lookup on the target's symbol index.
   FoundName DoTargetSymbolsNameLookup(const ParsedIdentifier& ident);

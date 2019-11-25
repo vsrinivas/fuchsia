@@ -157,9 +157,6 @@ using ErrOrValue = ErrOr<ExprValue>;
 
 using ErrOrValueVector = ErrOr<std::vector<ExprValue>>;
 
-// Callback for something that computes an error or an ExprValue.
-using ValueCallback = fit::callback<void(ErrOrValue)>;
-
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EXPR_VALUE_H_

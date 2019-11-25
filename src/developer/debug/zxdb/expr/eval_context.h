@@ -6,6 +6,7 @@
 #define SRC_DEVELOPER_DEBUG_ZXDB_EXPR_EVAL_CONTEXT_H_
 
 #include "lib/fit/function.h"
+#include "src/developer/debug/zxdb/expr/eval_callback.h"
 #include "src/developer/debug/zxdb/expr/expr_language.h"
 #include "src/developer/debug/zxdb/expr/expr_value.h"
 #include "src/developer/debug/zxdb/expr/name_lookup.h"
@@ -53,16 +54,16 @@ class EvalContext : public fxl::RefCountedThreadSafe<EvalContext> {
   // available data.
   //
   // If the EvalContext is destroyed before the data is ready, the callback will not be issued.
-  virtual void GetNamedValue(const ParsedIdentifier& identifier, ValueCallback cb) const = 0;
+  virtual void GetNamedValue(const ParsedIdentifier& identifier, EvalCallback cb) const = 0;
 
   // Like GetNamedValue() but takes an already-identified Variable.
   //
-  // This will handle extern variables and will resolve them. In this case the ValueCallback's
+  // This will handle extern variables and will resolve them. In this case the EvalCallback's
   // variable will be the resolved extern one. Otherwise it will be the input Value.
   //
   // The value is normally a Variable but it can also be an extern DataMember (which will transform
   // into a Variable when the extern is resolved).
-  virtual void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const = 0;
+  virtual void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const = 0;
 
   // Attempts to resolve a type that is a declaration (is_declaration() is set on the type) by
   // looking up a non-declaration type with the same name.

@@ -29,7 +29,7 @@ class TrackedAsyncDwarfExprEval : public AsyncDwarfExprEval {
   FRIEND_MAKE_REF_COUNTED(TrackedAsyncDwarfExprEval);
 
   // Sets the given boolean in the destructor. The pointer must outlive this class.
-  explicit TrackedAsyncDwarfExprEval(ValueCallback cb, fxl::RefPtr<Type> type, bool* destroyed)
+  explicit TrackedAsyncDwarfExprEval(EvalCallback cb, fxl::RefPtr<Type> type, bool* destroyed)
       : AsyncDwarfExprEval(std::move(cb), std::move(type)), destroyed_(destroyed) {}
 
   ~TrackedAsyncDwarfExprEval() override { *destroyed_ = true; }

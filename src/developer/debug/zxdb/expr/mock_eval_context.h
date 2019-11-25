@@ -39,8 +39,8 @@ class MockEvalContext : public EvalContext {
 
   // EvalContext implementation.
   ExprLanguage GetLanguage() const override { return language_; }
-  void GetNamedValue(const ParsedIdentifier& ident, ValueCallback cb) const override;
-  void GetVariableValue(fxl::RefPtr<Value> variable, ValueCallback cb) const override;
+  void GetNamedValue(const ParsedIdentifier& ident, EvalCallback cb) const override;
+  void GetVariableValue(fxl::RefPtr<Value> variable, EvalCallback cb) const override;
   fxl::RefPtr<Type> ResolveForwardDefinition(const Type* type) const override;
   fxl::RefPtr<Type> GetConcreteType(const Type* type) const override;
   fxl::RefPtr<SymbolDataProvider> GetDataProvider() override;
