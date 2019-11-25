@@ -15,10 +15,8 @@ use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
 use crate::device::{receive_frame, DeviceId, DeviceLayerEventDispatcher};
-use crate::ip::icmp::{
-    IcmpConnId, IcmpEventDispatcher, Icmpv4ErrorCode, Icmpv4EventDispatcher, Icmpv6ErrorCode,
-    Icmpv6EventDispatcher,
-};
+use crate::error::NoRouteError;
+use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::ip::IpProto;
 use crate::testutil::benchmarks::{black_box, Bencher};
 use crate::testutil::{DummyEventDispatcherBuilder, FakeCryptoRng, DUMMY_CONFIG_V4};
@@ -63,20 +61,18 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for BenchmarkEventDispatcher {
     }
 }
 
-impl Icmpv4EventDispatcher for BenchmarkEventDispatcher {
-    fn receive_icmpv4_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv4ErrorCode) {
+impl<I: IcmpIpExt> IcmpEventDispatcher<I> for BenchmarkEventDispatcher {
+    fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
+        unimplemented!()
+    }
+
+    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
         unimplemented!()
     }
 }
 
-impl Icmpv6EventDispatcher for BenchmarkEventDispatcher {
-    fn receive_icmpv6_error(&mut self, _conn: IcmpConnId, _seq_num: u16, _err: Icmpv6ErrorCode) {
-        unimplemented!()
-    }
-}
-
-impl<B: BufferMut> IcmpEventDispatcher<B> for BenchmarkEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId, _seq_num: u16, _data: B) {
+impl<I: IcmpIpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for BenchmarkEventDispatcher {
+    fn receive_icmp_echo_reply(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _data: B) {
         unimplemented!()
     }
 }

@@ -10,18 +10,17 @@ use futures::channel::mpsc;
 use log::{error, trace};
 use rand::RngCore;
 
-use net_types::ip::{Ip, IpAddr, IpAddress};
+use net_types::ip::{IpAddr, Ipv4, Ipv6};
 use net_types::SpecifiedAddr;
 
 use fidl_fuchsia_net_icmp::{EchoSocketConfig, EchoSocketRequestStream, ProviderRequest};
 
-use netstack3_core::icmp as core_icmp;
 use netstack3_core::{Context, EventDispatcher};
 
 use crate::eventloop::icmp::echo::EchoSocketWorker;
 use crate::eventloop::icmp::RX_BUFFER_SIZE;
 use crate::eventloop::util::CoreCompatible;
-use crate::eventloop::{EchoSocket, EventLoop, EventLoopInner};
+use crate::eventloop::{EchoSocket, EventLoop, EventLoopInner, IpExt};
 
 /// Handle a [`fidl_fuchsia_net_icmp::ProviderRequest`], which is used for opening ICMP sockets.
 pub fn handle_request(event_loop: &mut EventLoop, req: ProviderRequest) -> Result<(), fidl::Error> {
@@ -57,46 +56,50 @@ fn open_echo_socket(
     use net_types::ip::IpAddr::{V4, V6};
     match local {
         Some(local) => match (local.into(), remote.into()) {
-            (V4(local), V4(remote)) => connect_echo_socket(ctx, stream, Some(local), remote),
-            (V6(local), V6(remote)) => connect_echo_socket(ctx, stream, Some(local), remote),
+            (V4(local), V4(remote)) => {
+                connect_echo_socket::<Ipv4>(ctx, stream, Some(local), remote)
+            }
+            (V6(local), V6(remote)) => {
+                connect_echo_socket::<Ipv6>(ctx, stream, Some(local), remote)
+            }
             _ => Err(zx::Status::INVALID_ARGS),
         },
         None => match remote.into() {
-            V4(remote) => connect_echo_socket(ctx, stream, None, remote),
-            V6(remote) => connect_echo_socket(ctx, stream, None, remote),
+            V4(remote) => connect_echo_socket::<Ipv4>(ctx, stream, None, remote),
+            V6(remote) => connect_echo_socket::<Ipv6>(ctx, stream, None, remote),
         },
     }
 }
 
-fn connect_echo_socket<A: IpAddress>(
+fn connect_echo_socket<I: IpExt>(
     ctx: &mut Context<EventLoopInner>,
     stream: EchoSocketRequestStream,
-    local: Option<SpecifiedAddr<A>>,
-    remote: SpecifiedAddr<A>,
+    local: Option<SpecifiedAddr<I::Addr>>,
+    remote: SpecifiedAddr<I::Addr>,
 ) -> Result<(), zx::Status> {
-    // TODO(fxb/36212): Generate icmp_ids without relying on RNG. This line of code does not handle
-    // conflicts very well, requiring the client to continuously create sockets until it succeeds.
+    // TODO(fxb/36212): Generate icmp_ids without relying on an RNG. This line
+    // of code does not handle conflicts very well, requiring the client to
+    // continuously create sockets until it succeeds.
     let icmp_id = ctx.dispatcher_mut().rng().next_u32() as u16;
-    connect_echo_socket_inner(ctx, stream, local, remote, icmp_id)
+    connect_echo_socket_inner::<I>(ctx, stream, local, remote, icmp_id)
 }
 
-fn connect_echo_socket_inner<A: IpAddress>(
+fn connect_echo_socket_inner<I: IpExt>(
     ctx: &mut Context<EventLoopInner>,
     stream: EchoSocketRequestStream,
-    local: Option<SpecifiedAddr<A>>,
-    remote: SpecifiedAddr<A>,
+    local: Option<SpecifiedAddr<I::Addr>>,
+    remote: SpecifiedAddr<I::Addr>,
     icmp_id: u16,
 ) -> Result<(), zx::Status> {
-    match core_icmp::new_icmp_connection(ctx, local, remote, icmp_id) {
+    match I::new_icmp_connection(ctx, local, remote, icmp_id) {
         Ok(conn) => {
             let (reply_tx, reply_rx) = mpsc::channel(RX_BUFFER_SIZE);
-            let worker =
-                EchoSocketWorker::new(stream, reply_rx, A::Version::VERSION, conn, icmp_id);
+            let worker = EchoSocketWorker::new(stream, reply_rx, conn.into(), icmp_id);
             worker.spawn(ctx.dispatcher().event_send.clone());
             trace!("Spawned ICMP Echo socket worker");
 
             let socket = EchoSocket { reply_tx };
-            ctx.dispatcher_mut().icmp_echo_sockets.insert(conn, socket);
+            I::get_icmp_echo_sockets(ctx.dispatcher_mut()).insert(conn, socket);
             Ok(())
         }
         Err(e) => {
@@ -117,7 +120,7 @@ mod test {
         EchoPacket, EchoSocketConfig, EchoSocketEvent, EchoSocketMarker, EchoSocketProxy,
     };
 
-    use net_types::ip::{AddrSubnetEither, Ipv4Addr};
+    use net_types::ip::{AddrSubnetEither, Ipv4, Ipv4Addr};
     use net_types::{SpecifiedAddr, Witness};
 
     use super::connect_echo_socket_inner;
@@ -357,7 +360,7 @@ mod test {
         let request_stream = socket_server.into_stream().unwrap();
 
         assert_eq!(
-            connect_echo_socket_inner(
+            connect_echo_socket_inner::<Ipv4>(
                 &mut t.event_loop(ALICE).ctx,
                 request_stream,
                 local,
@@ -372,7 +375,7 @@ mod test {
         let request_stream = socket_server.into_stream().unwrap();
 
         assert_eq!(
-            connect_echo_socket_inner(
+            connect_echo_socket_inner::<Ipv4>(
                 &mut t.event_loop(ALICE).ctx,
                 request_stream,
                 local,

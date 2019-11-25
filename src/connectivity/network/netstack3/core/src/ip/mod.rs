@@ -14,7 +14,7 @@ mod igmp;
 mod ipv6;
 mod mld;
 pub(crate) mod reassembly;
-mod socket;
+pub(crate) mod socket;
 mod types;
 
 // It's ok to `pub use` rather `pub(crate) use` here because the items in
@@ -37,9 +37,9 @@ use crate::device::{DeviceId, FrameDestination};
 use crate::error::{ExistsError, IpParseError, NotFoundError};
 use crate::ip::forwarding::{Destination, ForwardingTable};
 use crate::ip::icmp::{
-    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, IcmpContext, IcmpEventDispatcher,
-    Icmpv4Context, Icmpv4ErrorCode, Icmpv4State, Icmpv4StateBuilder, Icmpv6Context,
-    Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder,
+    send_icmpv4_parameter_problem, send_icmpv6_parameter_problem, BufferIcmpEventDispatcher,
+    IcmpContext, IcmpEventDispatcher, Icmpv4Context, Icmpv4ErrorCode, Icmpv4State,
+    Icmpv4StateBuilder, Icmpv6Context, Icmpv6ErrorCode, Icmpv6State, Icmpv6StateBuilder,
 };
 use crate::ip::igmp::{IgmpContext, IgmpInterface, IgmpPacketMetadata, IgmpTimerId};
 use crate::ip::ipv6::Ipv6PacketAction;
@@ -49,6 +49,7 @@ use crate::ip::reassembly::{
     handle_reassembly_timer, process_fragment, reassemble_packet, FragmentCacheKey,
     FragmentProcessingState, IpLayerFragmentCache,
 };
+use crate::ip::socket::{IpSock, IpSockUpdate};
 use crate::wire::icmp::{Icmpv4ParameterProblem, Icmpv6ParameterProblem};
 use crate::wire::ipv4::{
     Ipv4Packet, Ipv4PacketBuilder, Ipv4PacketBuilderWithOptions, Ipv4PacketRaw,
@@ -242,7 +243,7 @@ impl Ipv4StateBuilder {
         &mut self.icmp
     }
 
-    pub(crate) fn build<Instant: crate::Instant>(self) -> Ipv4State<Instant> {
+    pub(crate) fn build<Instant: crate::Instant, D>(self) -> Ipv4State<Instant, D> {
         Ipv4State {
             inner: IpStateInner {
                 forward: self.forward,
@@ -287,7 +288,7 @@ impl Ipv6StateBuilder {
         &mut self.icmp
     }
 
-    pub(crate) fn build<Instant: crate::Instant>(self) -> Ipv6State<Instant> {
+    pub(crate) fn build<Instant: crate::Instant, D>(self) -> Ipv6State<Instant, D> {
         Ipv6State {
             inner: IpStateInner {
                 forward: self.forward,
@@ -301,13 +302,13 @@ impl Ipv6StateBuilder {
     }
 }
 
-pub(crate) struct Ipv4State<Instant: crate::Instant> {
+pub(crate) struct Ipv4State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv4, Instant>,
-    icmp: Icmpv4State<Instant>,
+    icmp: Icmpv4State<Instant, IpSock<Ipv4, D>>,
     igmp: IdMap<IgmpInterface<Instant>>,
 }
 
-impl<Instant: crate::Instant> Ipv4State<Instant> {
+impl<Instant: crate::Instant, D> Ipv4State<Instant, D> {
     /// Get the IGMP state associated with the device immutably.
     pub(crate) fn get_igmp_state(&self, device_id: usize) -> &IgmpInterface<Instant> {
         self.igmp.get(device_id).unwrap()
@@ -319,13 +320,13 @@ impl<Instant: crate::Instant> Ipv4State<Instant> {
     }
 }
 
-pub(crate) struct Ipv6State<Instant: crate::Instant> {
+pub(crate) struct Ipv6State<Instant: crate::Instant, D> {
     inner: IpStateInner<Ipv6, Instant>,
-    icmp: Icmpv6State<Instant>,
+    icmp: Icmpv6State<Instant, IpSock<Ipv6, D>>,
     mld: IdMap<MldInterface<Instant>>,
 }
 
-impl<Instant: crate::Instant> Ipv6State<Instant> {
+impl<Instant: crate::Instant, D> Ipv6State<Instant, D> {
     /// Get the MLD state associated with the device immutably.
     fn get_mld_state(&self, device_id: usize) -> &MldInterface<Instant> {
         self.mld.get(device_id).unwrap()
@@ -412,7 +413,13 @@ impl<I: Ip, D: EventDispatcher> StateContext<IpLayerPathMtuCache<I, D::Instant>>
 /// An event dispatcher for the IP layer.
 ///
 /// See the `EventDispatcher` trait in the crate root for more details.
-pub trait IpLayerEventDispatcher<B: BufferMut>: IcmpEventDispatcher<B> {}
+pub trait IpLayerEventDispatcher<B: BufferMut>:
+    BufferIcmpEventDispatcher<Ipv4, B>
+    + BufferIcmpEventDispatcher<Ipv6, B>
+    + IcmpEventDispatcher<Ipv4>
+    + IcmpEventDispatcher<Ipv6>
+{
+}
 
 /// The identifier for timer events in the IP layer.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Hash)]
@@ -1349,31 +1356,64 @@ pub(crate) fn lookup_route<A: IpAddress, D: EventDispatcher>(
 
 /// Add a route to the forwarding table, returning `Err` if the subnet
 /// is already in the table.
+#[specialize_ip_address]
 pub(crate) fn add_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     next_hop: SpecifiedAddr<A>,
 ) -> Result<(), ExistsError> {
-    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_route(subnet, next_hop)
+    let res =
+        get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_route(subnet, next_hop);
+
+    if res.is_ok() {
+        #[ipv4addr]
+        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        #[ipv6addr]
+        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+    }
+
+    res
 }
 
 /// Add a device route to the forwarding table, returning `Err` if the
 /// subnet is already in the table.
+#[specialize_ip_address]
 pub(crate) fn add_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
     device: DeviceId,
 ) -> Result<(), ExistsError> {
-    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.add_device_route(subnet, device)
+    let res = get_state_inner_mut::<A::Version, _>(ctx.state_mut())
+        .table
+        .add_device_route(subnet, device);
+
+    if res.is_ok() {
+        #[ipv4addr]
+        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        #[ipv6addr]
+        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+    }
+
+    res
 }
 
 /// Delete a route from the forwarding table, returning `Err` if no
 /// route was found to be deleted.
+#[specialize_ip_address]
 pub(crate) fn del_device_route<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     subnet: Subnet<A>,
 ) -> Result<(), NotFoundError> {
-    get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.del_route(subnet)
+    let res = get_state_inner_mut::<A::Version, _>(ctx.state_mut()).table.del_route(subnet);
+
+    if res.is_ok() {
+        #[ipv4addr]
+        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        #[ipv6addr]
+        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
+    }
+
+    res
 }
 
 /// Return all the routes for the provided `IpAddress` type
@@ -1680,22 +1720,32 @@ impl<D: EventDispatcher> MldContext for Context<D> {
     }
 }
 
-impl<D: EventDispatcher> StateContext<Icmpv4State<D::Instant>> for Context<D> {
-    fn get_state_with(&self, _id: ()) -> &Icmpv4State<D::Instant> {
+impl<D: EventDispatcher> StateContext<Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>>>
+    for Context<D>
+{
+    fn get_state_with(&self, _id: ()) -> &Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>> {
         &self.state().ipv4.icmp
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv4State<D::Instant> {
+    fn get_state_mut_with(
+        &mut self,
+        _id: (),
+    ) -> &mut Icmpv4State<D::Instant, IpSock<Ipv4, DeviceId>> {
         &mut self.state_mut().ipv4.icmp
     }
 }
 
-impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant>> for Context<D> {
-    fn get_state_with(&self, _id: ()) -> &Icmpv6State<D::Instant> {
+impl<D: EventDispatcher> StateContext<Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>>>
+    for Context<D>
+{
+    fn get_state_with(&self, _id: ()) -> &Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>> {
         &self.state().ipv6.icmp
     }
 
-    fn get_state_mut_with(&mut self, _id: ()) -> &mut Icmpv6State<D::Instant> {
+    fn get_state_mut_with(
+        &mut self,
+        _id: (),
+    ) -> &mut Icmpv6State<D::Instant, IpSock<Ipv6, DeviceId>> {
         &mut self.state_mut().ipv6.icmp
     }
 }

@@ -20,7 +20,7 @@ use fidl_fuchsia_net_icmp::{
     EchoSocketWatchResult,
 };
 
-use net_types::ip::IpVersion;
+use net_types::ip::{Ip, Ipv4, Ipv6};
 use netstack3_core::icmp as core_icmp;
 use netstack3_core::icmp::IcmpConnId;
 use netstack3_core::{BufferDispatcher, Context};
@@ -29,10 +29,49 @@ use packet_new::{Buf, BufferMut};
 use crate::eventloop::icmp::RX_BUFFER_SIZE;
 use crate::eventloop::{Event, EventLoop};
 
+#[derive(Debug, Eq, PartialEq)]
+pub enum InnerIcmpConnId<V4 = IcmpConnId<Ipv4>, V6 = IcmpConnId<Ipv6>> {
+    V4(V4),
+    V6(V6),
+}
+
+impl<I: IpExt> From<IcmpConnId<I>> for InnerIcmpConnId {
+    fn from(id: IcmpConnId<I>) -> InnerIcmpConnId {
+        I::icmp_conn_id_to_dynamic(id)
+    }
+}
+
+/// An `Ip` extension trait that lets us write more generic code.
+///
+/// `IpExt` provides generic functionality backed by version-specific
+/// implementations, allowing most code to be written agnostic to IP version.
+pub trait IpExt: Ip {
+    /// Convert a statically-typed ICMP connection ID to a dynamically-typed
+    /// one.
+    ///
+    /// Callers should not call this directly, and should instead call
+    /// `ConnId::from` or `ConnId::into`.
+    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Self>) -> InnerIcmpConnId;
+}
+
+impl IpExt for Ipv4 {
+    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Ipv4>) -> InnerIcmpConnId {
+        InnerIcmpConnId::V4(id)
+    }
+}
+
+impl IpExt for Ipv6 {
+    fn icmp_conn_id_to_dynamic(id: IcmpConnId<Ipv6>) -> InnerIcmpConnId {
+        InnerIcmpConnId::V6(id)
+    }
+}
+
 /// A request event for an [`EchoSocketWorker`].
 #[derive(Debug)]
 pub struct Request {
-    worker: Arc<Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId>>>,
+    worker: Arc<
+        Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>>>,
+    >,
     request: EchoSocketRequest,
 }
 
@@ -47,28 +86,25 @@ impl Request {
 pub struct EchoSocketWorker {
     stream: EchoSocketRequestStream,
     reply_rx: mpsc::Receiver<EchoPacket>,
-    inner: Arc<Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId>>>,
+    inner: Arc<
+        Mutex<EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>>>,
+    >,
 }
 
 impl EchoSocketWorker {
-    /// Create a new EchoSocketWorker, a wrapper around a background worker that handles requests
-    /// from a [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
-    pub fn new(
+    /// Create a new EchoSocketWorker, a wrapper around a background worker that
+    /// handles requests from a
+    /// [`fidl_fuchsia_net_icmp::EchoSocketRequestStream`].
+    pub(super) fn new(
         stream: EchoSocketRequestStream,
         reply_rx: mpsc::Receiver<EchoPacket>,
-        net_proto: IpVersion,
-        conn: IcmpConnId,
+        conn: InnerIcmpConnId,
         icmp_id: u16,
     ) -> EchoSocketWorker {
         EchoSocketWorker {
             stream,
             reply_rx,
-            inner: Arc::new(Mutex::new(EchoSocketWorkerInner::new(
-                net_proto,
-                conn,
-                icmp_id,
-                RX_BUFFER_SIZE,
-            ))),
+            inner: Arc::new(Mutex::new(EchoSocketWorkerInner::new(conn, icmp_id, RX_BUFFER_SIZE))),
         }
     }
 
@@ -140,20 +176,21 @@ impl Responder for EchoSocketWatchResponder {
 }
 
 /// Implementation for an `EchoSocket`.
+///
+/// `CV4` and `CV6` are the type of connection IDs for IPv4 and IPv6
+/// respectively.
 #[derive(Debug)]
-pub struct EchoSocketWorkerInner<R: Responder, C> {
-    net_proto: IpVersion,
-    conn: C,
+pub struct EchoSocketWorkerInner<R: Responder, CV4, CV6> {
+    conn: InnerIcmpConnId<CV4, CV6>,
     icmp_id: u16,
     results: VecDeque<EchoSocketWatchResult>,
     responders: VecDeque<R>,
     capacity: usize,
 }
 
-impl<R: Responder, C: fmt::Debug> EchoSocketWorkerInner<R, C> {
-    fn new(net_proto: IpVersion, conn: C, icmp_id: u16, capacity: usize) -> Self {
+impl<R: Responder, CV4: fmt::Debug, CV6: fmt::Debug> EchoSocketWorkerInner<R, CV4, CV6> {
+    fn new(conn: InnerIcmpConnId<CV4, CV6>, icmp_id: u16, capacity: usize) -> Self {
         EchoSocketWorkerInner {
-            net_proto,
             conn,
             icmp_id,
             capacity,
@@ -185,13 +222,13 @@ impl<R: Responder, C: fmt::Debug> EchoSocketWorkerInner<R, C> {
     }
 
     fn watch(&mut self, responder: R) -> Result<(), ResponderError> {
-        trace!("Watching for an ICMP Echo reply for {:?} on {:?}", self.conn, self.net_proto);
+        trace!("Watching for an ICMP Echo reply for {:?}", self.conn);
         self.responders.push_back(responder);
         self.respond()
     }
 }
 
-impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId> {
+impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId<Ipv4>, IcmpConnId<Ipv6>> {
     /// Handle a `fidl_fuchsia_net_icmp::EchoSocketRequest`, which is used for sending ICMP echo
     /// requests and receiving ICMP echo replies.
     fn handle_request(&mut self, event_loop: &mut EventLoop, req: EchoSocketRequest) {
@@ -222,12 +259,16 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId> {
         payload: B,
     ) {
         trace!("Sending ICMP Echo request for {:?} w/ sequence number {}", self.conn, seq_num);
-        match self.net_proto {
-            IpVersion::V4 => core_icmp::send_icmpv4_echo_request(ctx, self.conn, seq_num, payload),
-            IpVersion::V6 => core_icmp::send_icmpv6_echo_request(ctx, self.conn, seq_num, payload),
+        // TODO(fxb/37143): Report ICMP errors to responders, once implemented
+        // in the core, by pushing a `zx::Status` to `self.results`.
+        let _ = match self.conn {
+            InnerIcmpConnId::V4(conn) => {
+                core_icmp::send_icmpv4_echo_request(ctx, conn, seq_num, payload)
+            }
+            InnerIcmpConnId::V6(conn) => {
+                core_icmp::send_icmpv6_echo_request(ctx, conn, seq_num, payload)
+            }
         };
-        // TODO(fxb/37143): Report ICMP errors to responders, once implemented in the core, by
-        // pushing a zx::Status to `self.results`.
     }
 }
 
@@ -235,9 +276,8 @@ impl EchoSocketWorkerInner<EchoSocketWatchResponder, IcmpConnId> {
 mod test {
     use fidl_fuchsia_net_icmp::{EchoPacket, EchoSocketWatchResult};
     use fuchsia_zircon as zx;
-    use net_types::ip::IpVersion;
 
-    use super::{EchoSocketWorkerInner, Responder, ResponderError};
+    use super::*;
 
     struct TestResponder {
         expected: Result<EchoPacket, zx::Status>,
@@ -250,8 +290,10 @@ mod test {
         }
     }
 
-    fn create_worker_with_capacity(capacity: usize) -> EchoSocketWorkerInner<TestResponder, u8> {
-        EchoSocketWorkerInner::new(IpVersion::V4, 1, 1, capacity)
+    fn create_worker_with_capacity(
+        capacity: usize,
+    ) -> EchoSocketWorkerInner<TestResponder, u8, u8> {
+        EchoSocketWorkerInner::new(InnerIcmpConnId::V4(1), 1, capacity)
     }
 
     #[test]

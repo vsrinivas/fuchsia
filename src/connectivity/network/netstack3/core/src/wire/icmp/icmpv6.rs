@@ -138,7 +138,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
 }
 
 create_net_enum! {
-    pub(crate) Icmpv6MessageType,
+    pub Icmpv6MessageType,
     DestUnreachable: DEST_UNREACHABLE = 1,
     PacketTooBig: PACKET_TOO_BIG = 2,
     TimeExceeded: TIME_EXCEEDED = 3,

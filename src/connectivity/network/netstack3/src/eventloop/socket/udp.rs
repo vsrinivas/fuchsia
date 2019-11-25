@@ -720,7 +720,7 @@ impl IntoErrno for ConnectError {
     /// Converts Fuchsia `ConnectError` errors into the most equivalent POSIX error.
     fn into_errno(self) -> libc::c_int {
         match self {
-            ConnectError::NoRouteToHost => libc::ENETUNREACH,
+            ConnectError::NoRoute => libc::ENETUNREACH,
             ConnectError::CannotBindToAddress => libc::EADDRNOTAVAIL,
             ConnectError::FailedToAllocateLocalPort => libc::EADDRNOTAVAIL,
             ConnectError::ConnectionInUse => libc::EADDRINUSE,

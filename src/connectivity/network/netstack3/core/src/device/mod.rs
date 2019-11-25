@@ -18,7 +18,7 @@ use net_types::ethernet::Mac;
 use net_types::ip::{AddrSubnet, Ip, IpAddress, Ipv4, Ipv6, Ipv6Addr};
 use net_types::{LinkLocalAddr, MulticastAddr, SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, EmptyBuf, Serializer};
-use specialize_ip_macro::specialize_ip;
+use specialize_ip_macro::{specialize_ip, specialize_ip_address};
 use zerocopy::ByteSlice;
 
 use crate::context::{
@@ -30,6 +30,7 @@ use crate::device::ethernet::{
 };
 use crate::device::link::LinkDevice;
 use crate::device::ndp::NdpPacketHandler;
+use crate::ip::socket::IpSockUpdate;
 use crate::wire::icmp::ndp::NdpPacket;
 use crate::{BufferDispatcher, Context, EventDispatcher, Instant, StackState};
 
@@ -786,6 +787,7 @@ pub(crate) fn is_local_addr<D: EventDispatcher, A: IpAddress>(
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
+#[specialize_ip_address]
 pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -796,11 +798,20 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 
     trace!("add_ip_addr_subnet: adding addr {:?} to device {:?}", addr_sub, device);
 
-    match device.protocol {
+    let res = match device.protocol {
         DeviceProtocol::Ethernet => {
             self::ethernet::add_ip_addr_subnet(ctx, device.id.into(), addr_sub)
         }
+    };
+
+    if res.is_ok() {
+        #[ipv4addr]
+        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        #[ipv6addr]
+        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
     }
+
+    res
 }
 
 /// Removes an IP address and associated subnet to this device.
@@ -808,6 +819,7 @@ pub fn add_ip_addr_subnet<D: EventDispatcher, A: IpAddress>(
 /// # Panics
 ///
 /// Panics if `device` is not initialized.
+#[specialize_ip_address]
 pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
     ctx: &mut Context<D>,
     device: DeviceId,
@@ -818,9 +830,18 @@ pub fn del_ip_addr<D: EventDispatcher, A: IpAddress>(
 
     trace!("del_ip_addr: removing addr {:?} from device {:?}", addr, device);
 
-    match device.protocol {
+    let res = match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::del_ip_addr(ctx, device.id.into(), addr),
+    };
+
+    if res.is_ok() {
+        #[ipv4addr]
+        crate::ip::socket::apply_ipv4_socket_update(ctx, IpSockUpdate::new());
+        #[ipv6addr]
+        crate::ip::socket::apply_ipv6_socket_update(ctx, IpSockUpdate::new());
     }
+
+    res
 }
 
 /// Add `device` to a multicast group `multicast_addr`.

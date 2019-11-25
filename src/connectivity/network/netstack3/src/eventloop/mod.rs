@@ -108,9 +108,9 @@ use futures::channel::mpsc;
 use futures::prelude::*;
 #[cfg(test)]
 use integration_tests::TestEvent;
-use log::{debug, error, info, trace};
+use log::{debug, error, info, trace, warn};
 use net_types::ethernet::Mac;
-use net_types::ip::{Ipv4, Ipv6};
+use net_types::ip::{Ip, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr};
 use net_types::SpecifiedAddr;
 use packet::{Buf, BufferMut, Serializer};
 use rand::rngs::OsRng;
@@ -118,8 +118,9 @@ use util::{ContextFidlCompatible, ConversionContext, CoreCompatible, FidlCompati
 
 use crate::devices::{BindingId, CommonInfo, DeviceInfo, Devices, ToggleError};
 
+use netstack3_core::error::{ConnectError, NoRouteError};
 use netstack3_core::icmp::{
-    IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher, Icmpv6EventDispatcher,
+    self as core_icmp, BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt,
 };
 use netstack3_core::{
     add_ip_addr_subnet, add_route, del_device_route, del_ip_addr, get_all_ip_addr_subnets,
@@ -174,7 +175,7 @@ impl EthernetSetupWorker {
                 sender.unbounded_send(eth_device_event)?;
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -201,7 +202,7 @@ impl EthernetWorker {
                 }
                 Ok(())
             }
-                .unwrap_or_else(|e: Error| error!("{:?}", e)),
+            .unwrap_or_else(|e: Error| error!("{:?}", e)),
         );
     }
 }
@@ -261,7 +262,8 @@ impl EventLoop {
                 EventLoopInner {
                     devices: Devices::default(),
                     timers: timers::TimerDispatcher::new(event_send.clone()),
-                    icmp_echo_sockets: HashMap::new(),
+                    icmpv4_echo_sockets: HashMap::new(),
+                    icmpv6_echo_sockets: HashMap::new(),
                     // TODO(joshlf): Is unwrapping safe here? Alternatively,
                     // wait until we upgrade to rand 0.7, where OsRng is an
                     // empty struct.
@@ -726,7 +728,8 @@ struct EventLoopInner {
     devices: Devices,
     timers: timers::TimerDispatcher<TimerId, Event>,
     rng: OsRng,
-    icmp_echo_sockets: HashMap<IcmpConnId, EchoSocket>,
+    icmpv4_echo_sockets: HashMap<IcmpConnId<Ipv4>, EchoSocket>,
+    icmpv6_echo_sockets: HashMap<IcmpConnId<Ipv6>, EchoSocket>,
     event_send: mpsc::UnboundedSender<Event>,
     #[cfg(test)]
     test_events: Option<mpsc::UnboundedSender<TestEvent>>,
@@ -841,25 +844,30 @@ impl<B: BufferMut> DeviceLayerEventDispatcher<B> for EventLoopInner {
 impl TransportLayerEventDispatcher<Ipv4> for EventLoopInner {}
 impl TransportLayerEventDispatcher<Ipv6> for EventLoopInner {}
 
-impl Icmpv4EventDispatcher for EventLoopInner {}
-impl Icmpv6EventDispatcher for EventLoopInner {}
+impl<I: IcmpIpExt> IcmpEventDispatcher<I> for EventLoopInner {
+    fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
+        // TODO(joshlf)
+        warn!("IcmpEventDispatcher::receive_icmp_error unimplemented; ignoring error");
+    }
 
-// TODO(rheacock): remove `allow(unused)` once the implementation uses the inputs
-#[allow(unused)]
-impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
-    // TODO(fxb/38633): `IcmpConnId` does not carry IP version information, making it possible to
-    // receive two of the same IcmpConnId for two different connections with different IP versions.
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
+    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
+        // TODO(joshlf)
+        unimplemented!()
+    }
+}
+
+impl<I: IpExt, B: BufferMut> BufferIcmpEventDispatcher<I, B> for EventLoopInner {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<I>, seq_num: u16, data: B) {
         trace!("Received ICMP echo reply w/ seq_num={}, len={}", seq_num, data.len());
 
         #[cfg(test)]
         self.send_test_event(TestEvent::IcmpEchoReply {
-            conn,
+            conn: conn.into(),
             seq_num,
             data: data.as_ref().to_owned(),
         });
 
-        let socket = match self.icmp_echo_sockets.get_mut(&conn) {
+        let socket = match I::get_icmp_echo_sockets(self).get_mut(&conn) {
             Some(socket) => socket,
             None => {
                 trace!("Received ICMP echo reply for unknown socket w/ id: {:?}", conn);
@@ -884,3 +892,59 @@ impl<B: BufferMut> IcmpEventDispatcher<B> for EventLoopInner {
 }
 
 impl<B: BufferMut> IpLayerEventDispatcher<B> for EventLoopInner {}
+
+/// An `Ip` extension trait that lets us write more generic code.
+///
+/// `IpExt` provides generic functionality backed by version-specific
+/// implementations, allowing most code to be written agnostic to IP version.
+trait IpExt: Ip + self::icmp::echo::IpExt + IcmpIpExt {
+    /// Get the map of ICMP echo sockets.
+    fn get_icmp_echo_sockets(
+        evtloop: &mut EventLoopInner,
+    ) -> &mut HashMap<IcmpConnId<Self>, EchoSocket>;
+
+    /// Create a new ICMP connection.
+    ///
+    /// `new_icmp_connection` calls the core functions `new_icmpv4_connection`
+    /// or `new_icmpv6_connection` as appropriate.
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        local_addr: Option<SpecifiedAddr<Self::Addr>>,
+        remote_addr: SpecifiedAddr<Self::Addr>,
+        icmp_id: u16,
+    ) -> Result<IcmpConnId<Self>, ConnectError>;
+}
+
+impl IpExt for Ipv4 {
+    fn get_icmp_echo_sockets(
+        evtloop: &mut EventLoopInner,
+    ) -> &mut HashMap<IcmpConnId<Ipv4>, EchoSocket> {
+        &mut evtloop.icmpv4_echo_sockets
+    }
+
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        local_addr: Option<SpecifiedAddr<Ipv4Addr>>,
+        remote_addr: SpecifiedAddr<Ipv4Addr>,
+        icmp_id: u16,
+    ) -> Result<IcmpConnId<Ipv4>, ConnectError> {
+        core_icmp::new_icmpv4_connection(ctx, local_addr, remote_addr, icmp_id)
+    }
+}
+
+impl IpExt for Ipv6 {
+    fn get_icmp_echo_sockets(
+        evtloop: &mut EventLoopInner,
+    ) -> &mut HashMap<IcmpConnId<Ipv6>, EchoSocket> {
+        &mut evtloop.icmpv6_echo_sockets
+    }
+
+    fn new_icmp_connection<D: EventDispatcher>(
+        ctx: &mut Context<D>,
+        local_addr: Option<SpecifiedAddr<Ipv6Addr>>,
+        remote_addr: SpecifiedAddr<Ipv6Addr>,
+        icmp_id: u16,
+    ) -> Result<IcmpConnId<Ipv6>, ConnectError> {
+        core_icmp::new_icmpv6_connection(ctx, local_addr, remote_addr, icmp_id)
+    }
+}

@@ -99,7 +99,7 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
 }
 
 create_net_enum! {
-    pub(crate) Icmpv4MessageType,
+    pub Icmpv4MessageType,
     EchoReply: ECHO_REPLY = 0,
     DestUnreachable: DEST_UNREACHABLE = 3,
     Redirect: REDIRECT = 5,

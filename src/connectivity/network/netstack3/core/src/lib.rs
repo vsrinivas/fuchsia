@@ -8,7 +8,7 @@
 // stabilized.
 #![allow(stable_features)]
 #![feature(specialization)]
-#![deny(missing_docs, unreachable_patterns, unused_imports)]
+#![deny(missing_docs, unreachable_patterns)]
 // This is a hack until we migrate to a different benchmarking framework. To run
 // benchmarks, edit your Cargo.toml file to add a "benchmark" feature, and then
 // run with that feature enabled.
@@ -33,7 +33,7 @@ mod benchmarks;
 mod context;
 mod data_structures;
 mod device;
-mod error;
+pub mod error;
 mod ip;
 #[cfg(test)]
 mod testutil;
@@ -168,8 +168,8 @@ impl StackStateBuilder {
 /// The state associated with the network stack.
 pub struct StackState<D: EventDispatcher> {
     transport: TransportLayerState,
-    ipv4: Ipv4State<D::Instant>,
-    ipv6: Ipv6State<D::Instant>,
+    ipv4: Ipv4State<D::Instant, DeviceId>,
+    ipv6: Ipv6State<D::Instant, DeviceId>,
     device: DeviceLayerState<D::Instant>,
     #[cfg(test)]
     test_counters: testutil::TestCounters,

@@ -13,7 +13,7 @@ use fuchsia_component::client;
 use futures::{future, Future};
 use net_types::ip::{AddrSubnetEither, IpAddr, Ipv4Addr, Ipv6Addr, SubnetEither};
 use net_types::{SpecifiedAddr, Witness};
-use netstack3_core::icmp::{self as core_icmp, IcmpConnId};
+use netstack3_core::icmp as core_icmp;
 use netstack3_core::EntryDest;
 use packet::Buf;
 use pin_utils::pin_mut;
@@ -22,6 +22,7 @@ use std::convert::TryFrom;
 use std::sync::{Arc, Mutex, Once};
 
 use super::*;
+use crate::eventloop::icmp::echo::InnerIcmpConnId;
 use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
 
 /// log::Log implementation that uses stdout.
@@ -58,7 +59,7 @@ fn set_logger_for_test() {
 #[derive(Debug)]
 pub enum TestEvent {
     DeviceStatusChanged { id: u64, status: EthernetStatus },
-    IcmpEchoReply { conn: IcmpConnId, seq_num: u16, data: Vec<u8> },
+    IcmpEchoReply { conn: InnerIcmpConnId, seq_num: u16, data: Vec<u8> },
 }
 
 #[derive(Default)]
@@ -572,7 +573,7 @@ async fn test_ping() {
 
     debug!("creating icmp connection");
     // create icmp connection on alice:
-    let conn_id = core_icmp::new_icmp_connection::<_, Ipv4Addr>(
+    let conn_id = core_icmp::new_icmpv4_connection(
         t.ctx(0),
         Some(SpecifiedAddr::new(ALICE_IP.into()).unwrap()),
         SpecifiedAddr::new(BOB_IP.into()).unwrap(),
@@ -603,13 +604,14 @@ async fn test_ping() {
             conn_id,
             seq,
             Buf::new(ping_bod.to_vec(), ..),
-        );
+        )
+        .unwrap();
 
         // wait until the response comes along:
         let (rsp_id, rsp_seq, rsp_bod) = t.run_until(recv.next()).await.unwrap().unwrap();
         debug!("Received ping seq {}", rsp_seq);
         // validate seq and body:
-        assert_eq!(rsp_id, conn_id);
+        assert_eq!(rsp_id, conn_id.into());
         assert_eq!(rsp_seq, seq);
         assert_eq!(&rsp_bod, &ping_bod);
     }

@@ -101,7 +101,7 @@ pub(crate) trait IpSocketContext<I: Ip> {
 
 /// An error in sending a packet on an IP socket.
 #[derive(Debug, Eq, PartialEq)]
-pub(crate) enum SendError {
+pub enum SendError {
     /// An MTU was exceeded.
     ///
     /// This could be caused by an MTU at any layer of the stack, including both
@@ -131,8 +131,8 @@ pub(crate) trait BufferIpSocketContext<I: Ip, B: BufferMut>: IpSocketContext<I> 
 ///
 /// `UnroutableBehavior` describes how a socket is configured to behave if it
 /// becomes unroutable.
-#[allow(unused)] // TODO(joshlf): Remove once this is used
 #[derive(Copy, Clone, Eq, PartialEq)]
+#[allow(unused)]
 pub(crate) enum UnroutableBehavior {
     /// The socket should stay open. Attempting to send a packet while the
     /// socket is unroutable will return an error on a per-packet basis. If the
@@ -181,13 +181,9 @@ pub(crate) struct IpSock<I: IpExt, D> {
 /// Information which is cached inside an [`IpSock`].
 #[derive(Clone)]
 #[cfg_attr(test, derive(Eq, PartialEq))]
+#[allow(unused)]
 enum CachedInfo<I: IpExt, D> {
-    Routable {
-        builder: I::PacketBuilder,
-        device: D,
-        next_hop: SpecifiedAddr<I::Addr>,
-    },
-    #[allow(unused)] // TODO(joshlf): Remove once this is used
+    Routable { builder: I::PacketBuilder, device: D, next_hop: SpecifiedAddr<I::Addr> },
     Unroutable,
 }
 
@@ -205,7 +201,6 @@ pub(crate) struct IpSockUpdate<I: IpExt> {
 
 impl<I: IpExt> IpSockUpdate<I> {
     /// Constructs a new `IpSocketUpdate`.
-    #[allow(dead_code)] // TODO(joshlf): Remove once this is used
     pub(crate) fn new() -> IpSockUpdate<I> {
         IpSockUpdate { _marker: PhantomData }
     }
@@ -243,12 +238,11 @@ impl<I: IpExt, D> IpSocket<I> for IpSock<I, D> {
 /// `apply_ipv4_socket_update` applies the given socket update to all IPv4
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv4 sockets.
-#[allow(dead_code)] // TODO(joshlf): Remove once this is used
 pub(crate) fn apply_ipv4_socket_update<D: EventDispatcher>(
-    _ctx: &mut Context<D>,
-    _update: IpSockUpdate<Ipv4>,
+    ctx: &mut Context<D>,
+    update: IpSockUpdate<Ipv4>,
 ) {
-    unimplemented!()
+    crate::ip::icmp::apply_ipv4_socket_update(ctx, update);
 }
 
 /// Apply an update to all IPv6 sockets.
@@ -256,12 +250,11 @@ pub(crate) fn apply_ipv4_socket_update<D: EventDispatcher>(
 /// `apply_ipv6_socket_update` applies the given socket update to all IPv6
 /// sockets in existence. It does this by delegating to every module that is
 /// responsible for storing IPv6 sockets.
-#[allow(dead_code)] // TODO(joshlf): Remove once this is used
 pub(crate) fn apply_ipv6_socket_update<D: EventDispatcher>(
-    _ctx: &mut Context<D>,
-    _update: IpSockUpdate<Ipv6>,
+    ctx: &mut Context<D>,
+    update: IpSockUpdate<Ipv6>,
 ) {
-    unimplemented!()
+    crate::ip::icmp::apply_ipv6_socket_update(ctx, update);
 }
 
 // TODO(joshlf): Once we support configuring transport-layer protocols using
@@ -453,7 +446,6 @@ impl<B: BufferMut, D: BufferDispatcher<B>> BufferIpSocketContext<Ipv6, B> for Co
 
 /// Test mock implementations of the traits defined in the `socket` module.
 #[cfg(test)]
-#[allow(unused)] // TODO(joshlf): Remove once this is used
 pub(crate) mod testutil {
     use net_types::ip::IpAddress;
 
@@ -571,8 +563,8 @@ pub(crate) mod testutil {
     {
         fn send_ip_packet<SS: Serializer<Buffer = B>>(
             &mut self,
-            socket: &Self::IpSocket,
-            body: SS,
+            _socket: &Self::IpSocket,
+            _body: SS,
         ) -> Result<(), (SS, SendError)> {
             unimplemented!()
         }

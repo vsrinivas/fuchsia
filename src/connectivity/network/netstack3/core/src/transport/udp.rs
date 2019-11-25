@@ -697,8 +697,7 @@ pub fn connect_udp<A: IpAddress, C: UdpContext<A::Version>>(
     remote_addr: SpecifiedAddr<A>,
     remote_port: NonZeroU16,
 ) -> std::result::Result<UdpConnId<A::Version>, ConnectError> {
-    let default_local =
-        ctx.local_address_for_remote(remote_addr).ok_or(ConnectError::NoRouteToHost)?;
+    let default_local = ctx.local_address_for_remote(remote_addr).ok_or(ConnectError::NoRoute)?;
 
     let local_addr = local_addr.unwrap_or(default_local);
 
@@ -1194,7 +1193,7 @@ mod tests {
         )
         .unwrap_err();
 
-        assert_eq!(conn_err, ConnectError::NoRouteToHost);
+        assert_eq!(conn_err, ConnectError::NoRoute);
     }
 
     /// Tests that UDP connections fail with an appropriate error when local address is non-local.

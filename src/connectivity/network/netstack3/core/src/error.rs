@@ -13,7 +13,7 @@ use crate::device::AddressError;
 use crate::wire::icmp::IcmpIpTypes;
 
 /// Results returned from many functions in the netstack.
-pub(crate) type Result<T> = std::result::Result<T, NetstackError>;
+pub type Result<T> = std::result::Result<T, NetstackError>;
 
 /// Results returned from parsing functions in the netstack.
 pub(crate) type ParseResult<T> = std::result::Result<T, ParseError>;
@@ -66,12 +66,16 @@ impl From<AddressError> for NetstackError {
 /// Error type for packet parsing.
 #[derive(Fail, Debug, PartialEq)]
 pub enum ParseError {
+    /// Operation is not supported.
     #[fail(display = "Operation is not supported")]
     NotSupported,
-    #[fail(display = "Operation was not expected in this context")]
+    /// Operation is not expected in this context.
+    #[fail(display = "Operation is not expected in this context")]
     NotExpected,
+    /// Checksum is invalid.
     #[fail(display = "Invalid checksum")]
     Checksum,
+    /// Packet is not formatted properly.
     #[fail(display = "Packet is not formatted properly")]
     Format,
 }
@@ -164,6 +168,12 @@ impl From<ExistsError> for NetstackError {
     }
 }
 
+impl From<ExistsError> for ConnectError {
+    fn from(_: ExistsError) -> ConnectError {
+        ConnectError::ConnectionInUse
+    }
+}
+
 /// Error when something unexpectedly doesn't exist, such as trying to
 /// remove an element when the element is not present.
 #[derive(Debug, PartialEq, Eq)]
@@ -194,13 +204,19 @@ impl<S: Serializer> From<S> for NetstackError {
     }
 }
 
-/// Error type for connection errors.
+// TODO(joshlf): Rename this to something like SocketError once we support a
+// more general model of sockets in which UDP and ICMP connections are special
+// cases of UDP and ICMP sockets. We can then introduce a more specialized
+// ListenerError which does not contain the NoRoute variant.
+
+/// An error encountered when attempting to create a UDP, TCP, or ICMP connection.
 #[derive(Fail, Debug, PartialEq)]
 pub enum ConnectError {
     /// No route to host.
     #[fail(display = "no route to host")]
-    NoRouteToHost,
-    /// Cannot bind to address.
+    NoRoute,
+
+    /// Cannot bind to local address.
     #[fail(display = "can't bind to address")]
     CannotBindToAddress,
 
@@ -208,7 +224,7 @@ pub enum ConnectError {
     #[fail(display = "failed to allocate local port")]
     FailedToAllocateLocalPort,
 
-    /// Connection in use.
+    /// The requested socket conflicts with an existing socket.
     #[fail(display = "Connection in use")]
     ConnectionInUse,
 }
@@ -220,5 +236,11 @@ pub struct NoRouteError;
 impl From<NoRouteError> for NetstackError {
     fn from(_: NoRouteError) -> NetstackError {
         NetstackError::NoRoute
+    }
+}
+
+impl From<NoRouteError> for ConnectError {
+    fn from(_: NoRouteError) -> ConnectError {
+        ConnectError::NoRoute
     }
 }

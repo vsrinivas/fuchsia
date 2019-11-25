@@ -135,7 +135,7 @@ impl IcmpIpTypes for Ipv6 {
 }
 
 /// An extension trait adding ICMP-related functionality to `Ipv4` and `Ipv6`.
-pub(crate) trait IcmpIpExt: Ip {
+pub trait IcmpIpExt: Ip {
     /// The type of ICMP messages.
     ///
     /// For `Ipv4`, this is `Icmpv4MessageType`, and for `Ipv6`, this is

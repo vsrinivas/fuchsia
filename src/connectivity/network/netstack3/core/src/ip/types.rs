@@ -133,7 +133,7 @@ create_protocol_enum!(
         /// For IPv4, this is the protocol number. For IPv6, this is the next
         /// header number.
         #[derive(Copy, Clone, Hash, Eq, PartialEq)]
-        pub(crate) enum IpProto: u8 {
+        pub enum IpProto: u8 {
             Icmp, 1, "ICMP";
             Igmp, 2, "IGMP";
             Tcp, 6, "TCP";

@@ -15,7 +15,9 @@ use std::time::Duration;
 use byteorder::{ByteOrder, NativeEndian};
 use log::{debug, trace};
 use net_types::ethernet::Mac;
-use net_types::ip::{AddrSubnet, Ip, IpAddr, IpAddress, Ipv4Addr, Ipv6Addr, Subnet, SubnetEither};
+use net_types::ip::{
+    AddrSubnet, Ip, IpAddr, IpAddress, Ipv4, Ipv4Addr, Ipv6, Ipv6Addr, Subnet, SubnetEither,
+};
 use net_types::{SpecifiedAddr, Witness};
 use packet::{Buf, BufferMut, ParsablePacket, ParseBuffer, Serializer};
 use rand::{self, CryptoRng, RngCore, SeedableRng};
@@ -23,16 +25,14 @@ use rand_xorshift::XorShiftRng;
 
 use crate::device::ethernet::EtherType;
 use crate::device::{DeviceId, DeviceLayerEventDispatcher};
-use crate::error::{IpParseResult, ParseError, ParseResult};
-use crate::ip::icmp::{
-    IcmpConnId, IcmpEventDispatcher, Icmpv4EventDispatcher, Icmpv6EventDispatcher,
-};
+use crate::error::{IpParseResult, NoRouteError, ParseError, ParseResult};
+use crate::ip::icmp::{BufferIcmpEventDispatcher, IcmpConnId, IcmpEventDispatcher, IcmpIpExt};
 use crate::ip::{IpExtByteSlice, IpLayerEventDispatcher, IpProto, IPV6_MIN_MTU};
 use crate::transport::tcp::TcpOption;
 use crate::transport::udp::UdpEventDispatcher;
 use crate::transport::TransportLayerEventDispatcher;
 use crate::wire::ethernet::EthernetFrame;
-use crate::wire::icmp::{IcmpIpExt, IcmpMessage, IcmpPacket, IcmpParseArgs};
+use crate::wire::icmp::{self as wire_icmp, IcmpMessage, IcmpPacket, IcmpParseArgs};
 use crate::wire::ipv4::Ipv4Packet;
 use crate::wire::ipv6::Ipv6Packet;
 use crate::wire::tcp::TcpSegment;
@@ -458,7 +458,7 @@ pub(crate) fn parse_ip_packet<I: Ip>(
 /// some important fields. Before returning, it invokes the callback `f` on the
 /// parsed packet.
 pub(crate) fn parse_icmp_packet<
-    I: IcmpIpExt,
+    I: wire_icmp::IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
@@ -508,7 +508,7 @@ pub(crate) fn parse_ip_packet_in_ethernet_frame<I: Ip>(
 /// headers. Before returning, it invokes the callback `f` on the parsed packet.
 #[allow(clippy::type_complexity)]
 pub(crate) fn parse_icmp_packet_in_ip_packet_in_ethernet_frame<
-    I: IcmpIpExt,
+    I: wire_icmp::IcmpIpExt,
     C,
     M: for<'a> IcmpMessage<I, &'a [u8], Code = C>,
     F: for<'a> Fn(&IcmpPacket<I, &'a [u8], M>),
@@ -908,7 +908,8 @@ pub(crate) struct DummyEventDispatcher {
     timer_events: BinaryHeap<PendingTimer>,
     current_time: DummyInstant,
     rng: FakeCryptoRng<XorShiftRng>,
-    icmp_replies: HashMap<IcmpConnId, Vec<(u16, Vec<u8>)>>,
+    icmpv4_replies: HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>>,
+    icmpv6_replies: HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>>,
 }
 
 impl Default for DummyEventDispatcher {
@@ -918,8 +919,31 @@ impl Default for DummyEventDispatcher {
             timer_events: Default::default(),
             current_time: Default::default(),
             rng: FakeCryptoRng(new_rng(0)),
-            icmp_replies: Default::default(),
+            icmpv4_replies: Default::default(),
+            icmpv6_replies: Default::default(),
         }
+    }
+}
+
+pub(crate) trait TestutilIpExt: Ip {
+    fn icmp_replies(
+        evt: &mut DummyEventDispatcher,
+    ) -> &mut HashMap<IcmpConnId<Self>, Vec<(u16, Vec<u8>)>>;
+}
+
+impl TestutilIpExt for Ipv4 {
+    fn icmp_replies(
+        evt: &mut DummyEventDispatcher,
+    ) -> &mut HashMap<IcmpConnId<Ipv4>, Vec<(u16, Vec<u8>)>> {
+        &mut evt.icmpv4_replies
+    }
+}
+
+impl TestutilIpExt for Ipv6 {
+    fn icmp_replies(
+        evt: &mut DummyEventDispatcher,
+    ) -> &mut HashMap<IcmpConnId<Ipv6>, Vec<(u16, Vec<u8>)>> {
+        &mut evt.icmpv6_replies
     }
 }
 
@@ -936,9 +960,12 @@ impl DummyEventDispatcher {
         self.timer_events.iter().map(|t| (&t.0, &t.1))
     }
 
-    /// Takes all the received icmp replies for a given `conn`.
-    pub(crate) fn take_icmp_replies(&mut self, conn: IcmpConnId) -> Vec<(u16, Vec<u8>)> {
-        self.icmp_replies.remove(&conn).unwrap_or_else(Vec::default)
+    /// Takes all the received ICMP replies for a given `conn`.
+    pub(crate) fn take_icmp_replies<I: TestutilIpExt>(
+        &mut self,
+        conn: IcmpConnId<I>,
+    ) -> Vec<(u16, Vec<u8>)> {
+        I::icmp_replies(self).remove(&conn).unwrap_or_else(Vec::default)
     }
 }
 
@@ -946,13 +973,26 @@ impl<I: Ip> UdpEventDispatcher<I> for DummyEventDispatcher {}
 
 impl<I: Ip> TransportLayerEventDispatcher<I> for DummyEventDispatcher {}
 
-impl Icmpv4EventDispatcher for DummyEventDispatcher {}
+impl<I: IcmpIpExt> IcmpEventDispatcher<I> for DummyEventDispatcher {
+    fn receive_icmp_error(&mut self, _conn: IcmpConnId<I>, _seq_num: u16, _err: I::ErrorCode) {
+        unimplemented!()
+    }
 
-impl Icmpv6EventDispatcher for DummyEventDispatcher {}
+    fn close_icmp_connection(&mut self, _conn: IcmpConnId<I>, _err: NoRouteError) {
+        unimplemented!()
+    }
+}
 
-impl<B: BufferMut> IcmpEventDispatcher<B> for DummyEventDispatcher {
-    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId, seq_num: u16, data: B) {
-        let replies = self.icmp_replies.entry(conn).or_insert_with(Vec::default);
+impl<B: BufferMut> BufferIcmpEventDispatcher<Ipv4, B> for DummyEventDispatcher {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv4>, seq_num: u16, data: B) {
+        let replies = self.icmpv4_replies.entry(conn).or_insert_with(Vec::default);
+        replies.push((seq_num, data.as_ref().to_owned()))
+    }
+}
+
+impl<B: BufferMut> BufferIcmpEventDispatcher<Ipv6, B> for DummyEventDispatcher {
+    fn receive_icmp_echo_reply(&mut self, conn: IcmpConnId<Ipv6>, seq_num: u16, data: B) {
+        let replies = self.icmpv6_replies.entry(conn).or_insert_with(Vec::default);
         replies.push((seq_num, data.as_ref().to_owned()))
     }
 }
