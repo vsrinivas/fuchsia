@@ -19,7 +19,7 @@ namespace http = ::fuchsia::net::oldhttp;
 using lib::clearcut::HTTPClient;
 using lib::clearcut::HTTPRequest;
 using lib::clearcut::HTTPResponse;
-using statusor::StatusOr;
+using lib::statusor::StatusOr;
 
 namespace {
 

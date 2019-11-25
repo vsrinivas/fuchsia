@@ -24,7 +24,7 @@ source_set("fuchsia_http_client") {
   public_deps = [
     "//src/lib/network_wrapper:network_wrapper",
     "//third_party/cobalt/src/lib/clearcut",
-    "//third_party/cobalt/third_party/statusor:statusor",
+    "//third_party/cobalt/src/lib/statusor",
   ]
 }
 

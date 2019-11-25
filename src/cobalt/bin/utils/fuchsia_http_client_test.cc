@@ -17,9 +17,9 @@ namespace http = ::fuchsia::net::oldhttp;
 
 using lib::clearcut::HTTPRequest;
 using lib::clearcut::HTTPResponse;
+using lib::statusor::StatusOr;
 using network_wrapper::FakeNetworkWrapper;
 using network_wrapper::NetworkWrapper;
-using statusor::StatusOr;
 
 class CVBool {
  public:
