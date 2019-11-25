@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#define MAGMA_DLOG_ENABLE 1
-
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -14,8 +12,8 @@
 
 #include <vulkan/vulkan.h>
 
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
+#define PRINT_STDERR(format, ...) \
+  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 class VkCopyTest {
  public:
@@ -43,11 +41,15 @@ bool VkCopyTest::Initialize() {
   if (is_initialized_)
     return false;
 
-  if (!InitVulkan())
-    return DRETF(false, "failed to initialize Vulkan");
+  if (!InitVulkan()) {
+    PRINT_STDERR("failed to initialize Vulkan");
+    return false;
+  }
 
-  if (!InitBuffers(buffer_size_))
-    return DRETF(false, "InitImage failed");
+  if (!InitBuffers(buffer_size_)) {
+    PRINT_STDERR("InitBuffers failed");
+    return false;
+  }
 
   is_initialized_ = true;
 
@@ -70,42 +72,37 @@ bool VkCopyTest::InitVulkan() {
   VkResult result;
 
   result = vkCreateInstance(&create_info, allocation_callbacks, &instance);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkCreateInstance failed %d", result);
-
-  DLOG("vkCreateInstance succeeded");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateInstance failed %d", result);
+    return false;
+  }
 
   uint32_t physical_device_count;
   result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
-  if (physical_device_count < 1)
-    return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
-
-  DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
+  if (physical_device_count < 1) {
+    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
+    return false;
+  }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
   result = vkEnumeratePhysicalDevices(instance, &physical_device_count, physical_devices.data());
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
-
-  for (auto device : physical_devices) {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(device, &properties);
-    DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
-    DLOG("apiVersion 0x%x", properties.apiVersion);
-    DLOG("driverVersion 0x%x", properties.driverVersion);
-    DLOG("vendorID 0x%x", properties.vendorID);
-    DLOG("deviceID 0x%x", properties.deviceID);
-    DLOG("deviceType 0x%x", properties.deviceType);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
   }
 
   uint32_t queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
-  if (queue_family_count < 1)
-    return DRETF(false, "invalid queue_family_count %d", queue_family_count);
+  if (queue_family_count < 1) {
+    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
+    return false;
+  }
 
   std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
@@ -119,8 +116,10 @@ bool VkCopyTest::InitVulkan() {
     }
   }
 
-  if (queue_family_index < 0)
-    return DRETF(false, "couldn't find an appropriate queue");
+  if (queue_family_index < 0) {
+    PRINT_STDERR("couldn't find an appropriate queue");
+    return false;
+  }
 
   float queue_priorities[1] = {0.0};
 
@@ -143,8 +142,10 @@ bool VkCopyTest::InitVulkan() {
   VkDevice vkdevice;
 
   if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateDevice failed: %d", result);
+                               &vkdevice)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateDevice failed: %d", result);
+    return false;
+  }
 
   vk_physical_device_ = physical_devices[0];
   vk_device_ = vkdevice;
@@ -166,8 +167,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
       break;
   }
 
-  if (memory_type >= 32)
-    return DRETF(false, "Can't find compatible mappable memory for image");
+  if (memory_type >= 32) {
+    PRINT_STDERR("Can't find compatible mappable memory for image");
+    return false;
+  }
 
   for (uint32_t i = 0; i < 2; i++) {
     VkBufferCreateInfo create_info = {
@@ -182,8 +185,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     };
 
     result = vkCreateBuffer(vk_device_, &create_info, nullptr, &vk_buffer_[i]);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateBuffer failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateBuffer failed: %d", result);
+      return false;
+    }
 
     VkMemoryAllocateInfo alloc_info = {
         .sType = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO,
@@ -193,25 +198,27 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
     };
 
     result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_[i]);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkAllocateMemory failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkAllocateMemory failed: %d", result);
+      return false;
+    }
 
     void* addr;
     result = vkMapMemory(vk_device_, vk_device_memory_[i], 0, VK_WHOLE_SIZE, 0, &addr);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkMapMeory failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkMapMeory failed: %d", result);
+      return false;
+    }
 
     memset(addr, (uint8_t)i, buffer_size);
 
     vkUnmapMemory(vk_device_, vk_device_memory_[i]);
 
-    DLOG("Allocated and initialized buffer %d", i);
-
     result = vkBindBufferMemory(vk_device_, vk_buffer_[i], vk_device_memory_[i], 0);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkBindBufferMemory failed: %d", result);
-
-    DLOG("Bound memory to buffer");
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkBindBufferMemory failed: %d", result);
+      return false;
+    }
   }
 
   VkCommandPoolCreateInfo command_pool_create_info = {
@@ -222,10 +229,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
   };
 
   result = vkCreateCommandPool(vk_device_, &command_pool_create_info, nullptr, &vk_command_pool_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkCreateCommandPool failed: %d", result);
-
-  DLOG("Created command buffer pool");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateCommandPool failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferAllocateInfo command_buffer_create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -234,10 +241,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = 1};
   result = vkAllocateCommandBuffers(vk_device_, &command_buffer_create_info, &vk_command_buffer_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkAllocateCommandBuffers failed: %d", result);
-
-  DLOG("Created command buffer");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkAllocateCommandBuffers failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferBeginInfo begin_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -246,10 +253,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
       .pInheritanceInfo = nullptr,  // ignored for primary buffers
   };
   result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkBeginCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer begin");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkBeginCommandBuffer failed: %d", result);
+    return false;
+  }
 
   VkBufferCopy copy_region = {
       .srcOffset = 0,
@@ -260,10 +267,10 @@ bool VkCopyTest::InitBuffers(uint32_t buffer_size) {
   vkCmdCopyBuffer(vk_command_buffer_, vk_buffer_[0], vk_buffer_[1], 1, &copy_region);
 
   result = vkEndCommandBuffer(vk_command_buffer_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEndCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer end");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEndCommandBuffer failed: %d", result);
+    return false;
+  }
 
   return true;
 }
@@ -282,8 +289,10 @@ bool VkCopyTest::Exec() {
   };
 
   VkResult result;
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed");
+  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed");
+    return false;
+  }
 
   vkQueueWaitIdle(vk_queue_);
 
@@ -296,22 +305,26 @@ int main(void) {
 
   VkCopyTest app(buffer_size);
 
-  if (!app.Initialize())
-    return DRET_MSG(-1, "could not initialize app");
+  if (!app.Initialize()) {
+    PRINT_STDERR("could not initialize app");
+    return -1;
+  }
 
-  printf("Copying buffer_size %u iterations %u...\n", buffer_size, iterations);
+  printf("Copying buffer_size %u iterations %u...", buffer_size, iterations);
   fflush(stdout);
 
   auto start = std::chrono::high_resolution_clock::now();
 
   for (uint32_t iter = 0; iter < iterations; iter++) {
-    if (!app.Exec())
-      return DRET_MSG(-1, "Exec failed");
+    if (!app.Exec()) {
+      PRINT_STDERR("Exec failed");
+      return -1;
+    }
   }
 
   std::chrono::duration<double> elapsed = std::chrono::high_resolution_clock::now() - start;
 
-  printf("copy rate %g MB/s\n", (double)buffer_size * iterations / 1024 / 1024 / elapsed.count());
+  printf("copy rate %g MB/s", (double)buffer_size * iterations / 1024 / 1024 / elapsed.count());
 
   return 0;
 }

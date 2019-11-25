@@ -4,15 +4,28 @@
 
 #include "vkreadback.h"
 
+#define PRINT_STDERR(format, ...) \
+  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
+
+// Note, alignment must be a power of 2
+template <class T>
+static inline T round_up(T val, uint32_t alignment) {
+  return ((val - 1) | (alignment - 1)) + 1;
+}
+
 bool VkReadbackTest::Initialize() {
   if (is_initialized_)
     return false;
 
-  if (!InitVulkan())
-    return DRETF(false, "failed to initialize Vulkan");
+  if (!InitVulkan()) {
+    PRINT_STDERR("failed to initialize Vulkan");
+    return false;
+  }
 
-  if (!InitImage())
-    return DRETF(false, "InitImage failed");
+  if (!InitImage()) {
+    PRINT_STDERR("InitImage failed");
+    return false;
+  }
 
   is_initialized_ = true;
 
@@ -44,35 +57,33 @@ bool VkReadbackTest::InitVulkan() {
   VkInstance instance;
   VkResult result;
 
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateInstance failed %d", result);
-
-  DLOG("vkCreateInstance succeeded");
+  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateInstance failed %d", result);
+    return false;
+  }
 
   uint32_t physical_device_count;
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
-  if (physical_device_count < 1)
-    return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
-
-  DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
+  if (physical_device_count < 1) {
+    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
+    return false;
+  }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+                                           physical_devices.data())) != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
   for (auto device : physical_devices) {
     VkPhysicalDeviceProperties properties;
     vkGetPhysicalDeviceProperties(device, &properties);
-    DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
-    DLOG("apiVersion 0x%x", properties.apiVersion);
-    DLOG("driverVersion 0x%x", properties.driverVersion);
-    DLOG("vendorID 0x%x", properties.vendorID);
-    DLOG("deviceID 0x%x", properties.deviceID);
-    DLOG("deviceType 0x%x", properties.deviceType);
 
     if (ext_ == NONE) {
       continue;
@@ -80,7 +91,7 @@ bool VkReadbackTest::InitVulkan() {
 
     if (VK_VERSION_MAJOR(properties.apiVersion) == 1 &&
         VK_VERSION_MINOR(properties.apiVersion) == 0) {
-      printf("Skipping 1.1 checks\n");
+      printf("Skipping 1.1 checks");
       continue;
     }
 
@@ -139,8 +150,10 @@ bool VkReadbackTest::InitVulkan() {
   uint32_t queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
-  if (queue_family_count < 1)
-    return DRETF(false, "invalid queue_family_count %d", queue_family_count);
+  if (queue_family_count < 1) {
+    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
+    return false;
+  }
 
   std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
@@ -154,8 +167,10 @@ bool VkReadbackTest::InitVulkan() {
     }
   }
 
-  if (queue_family_index < 0)
-    return DRETF(false, "couldn't find an appropriate queue");
+  if (queue_family_index < 0) {
+    PRINT_STDERR("couldn't find an appropriate queue");
+    return false;
+  }
 
   float queue_priorities[1] = {0.0};
 
@@ -189,21 +204,27 @@ bool VkReadbackTest::InitVulkan() {
   VkDevice vkdevice;
 
   if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateDevice failed: %d", result);
+                               &vkdevice)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateDevice failed: %d", result);
+    return false;
+  }
 
   switch (ext_) {
     case VK_FUCHSIA_EXTERNAL_MEMORY:
       vkGetMemoryZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetMemoryZirconHandleFUCHSIA>(
           vkGetInstanceProcAddr(instance, "vkGetMemoryZirconHandleFUCHSIA"));
-      if (!vkGetMemoryZirconHandleFUCHSIA_)
-        return DRETF(false, "Couldn't find vkGetMemoryZirconHandleFUCHSIA");
+      if (!vkGetMemoryZirconHandleFUCHSIA_) {
+        PRINT_STDERR("Couldn't find vkGetMemoryZirconHandleFUCHSIA");
+        return false;
+      }
 
       vkGetMemoryZirconHandlePropertiesFUCHSIA_ =
           reinterpret_cast<PFN_vkGetMemoryZirconHandlePropertiesFUCHSIA>(
               vkGetInstanceProcAddr(instance, "vkGetMemoryZirconHandlePropertiesFUCHSIA"));
-      if (!vkGetMemoryZirconHandlePropertiesFUCHSIA_)
-        return DRETF(false, "Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA");
+      if (!vkGetMemoryZirconHandlePropertiesFUCHSIA_) {
+        PRINT_STDERR("Couldn't find vkGetMemoryZirconHandlePropertiesFUCHSIA");
+        return false;
+      }
       break;
 
     default:
@@ -239,10 +260,10 @@ bool VkReadbackTest::InitImage() {
 
   VkResult result;
 
-  if ((result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateImage failed: %d", result);
-
-  DLOG("Created image");
+  if ((result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateImage failed: %d", result);
+    return false;
+  }
 
   VkMemoryRequirements memory_reqs;
   vkGetImageMemoryRequirements(vk_device_, vk_image_, &memory_reqs);
@@ -251,7 +272,7 @@ bool VkReadbackTest::InitImage() {
   // cause it to point to a separate page.
   bind_offset_ = PAGE_SIZE + 128;
   if (memory_reqs.alignment) {
-    bind_offset_ = magma::round_up(bind_offset_, memory_reqs.alignment);
+    bind_offset_ = round_up(bind_offset_, memory_reqs.alignment);
   }
 
   VkPhysicalDeviceMemoryProperties memory_props;
@@ -263,8 +284,10 @@ bool VkReadbackTest::InitImage() {
         (memory_props.memoryTypes[memory_type].propertyFlags & VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT))
       break;
   }
-  if (memory_type >= 32)
-    return DRETF(false, "Can't find compatible mappable memory for image");
+  if (memory_type >= 32) {
+    PRINT_STDERR("Can't find compatible mappable memory for image");
+    return false;
+  }
 
   VkExportMemoryAllocateInfoKHR export_info = {
       .sType = VK_STRUCTURE_TYPE_EXPORT_MEMORY_ALLOCATE_INFO_KHR,
@@ -281,8 +304,10 @@ bool VkReadbackTest::InitImage() {
   };
 
   if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkAllocateMemory failed");
+      VK_SUCCESS) {
+    PRINT_STDERR("vkAllocateMemory failed");
+    return false;
+  }
 
   if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY && device_memory_handle_) {
     size_t vmo_size;
@@ -295,8 +320,10 @@ bool VkReadbackTest::InitImage() {
     result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
         vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA,
         device_memory_handle_, &properties);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
+      return false;
+    }
     // Find index of lowest set bit.
     memory_type = __builtin_ctz(properties.memoryTypeBits);
 
@@ -312,8 +339,10 @@ bool VkReadbackTest::InitImage() {
                                  .memoryTypeIndex = memory_type};
 
     if ((result = vkAllocateMemory(vk_device_, &info, nullptr, &vk_imported_device_memory_)) !=
-        VK_SUCCESS)
-      return DRETF(false, "vkAllocateMemory failed");
+        VK_SUCCESS) {
+      PRINT_STDERR("vkAllocateMemory failed");
+      return false;
+    }
 
   } else if (ext_ == VK_FUCHSIA_EXTERNAL_MEMORY) {
     uint32_t handle;
@@ -323,8 +352,10 @@ bool VkReadbackTest::InitImage() {
         .memory = vk_device_memory_,
         .handleType = VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA};
     if ((result = vkGetMemoryZirconHandleFUCHSIA_(vk_device_, &get_handle_info, &handle)) !=
-        VK_SUCCESS)
-      return DRETF(false, "vkGetMemoryZirconHandleFUCHSIA failed");
+        VK_SUCCESS) {
+      PRINT_STDERR("vkGetMemoryZirconHandleFUCHSIA failed");
+      return false;
+    }
 
     VkMemoryZirconHandlePropertiesFUCHSIA properties{
         .sType = VK_STRUCTURE_TYPE_TEMP_MEMORY_ZIRCON_HANDLE_PROPERTIES_FUCHSIA,
@@ -333,30 +364,30 @@ bool VkReadbackTest::InitImage() {
     result = vkGetMemoryZirconHandlePropertiesFUCHSIA_(
         vk_device_, VK_EXTERNAL_MEMORY_HANDLE_TYPE_TEMP_ZIRCON_VMO_BIT_FUCHSIA, handle,
         &properties);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkGetMemoryZirconHandlePropertiesFUCHSIA returned %d", result);
+      return false;
+    }
 
     device_memory_handle_ = handle;
-    DLOG("got device_memory_handle_ 0x%x memoryTypeBits 0x%x", device_memory_handle_,
-         properties.memoryTypeBits);
   }
 
   void* addr;
   if ((result = vkMapMemory(vk_device_, vk_device_memory_, 0, VK_WHOLE_SIZE, 0, &addr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkMapMemory failed: %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkMapMemory failed: %d", result);
+    return false;
+  }
 
   memset(addr, 0xab, memory_reqs.size + bind_offset_);
 
   vkUnmapMemory(vk_device_, vk_device_memory_);
 
-  DLOG("Allocated memory for image");
-
   if ((result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, bind_offset_)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkBindImageMemory failed");
-
-  DLOG("Bound memory to image");
+      VK_SUCCESS) {
+    PRINT_STDERR("vkBindImageMemory failed");
+    return false;
+  }
 
   VkCommandPoolCreateInfo command_pool_create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -365,10 +396,10 @@ bool VkReadbackTest::InitImage() {
       .queueFamilyIndex = 0,
   };
   if ((result = vkCreateCommandPool(vk_device_, &command_pool_create_info, nullptr,
-                                    &vk_command_pool_)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateCommandPool failed: %d", result);
-
-  DLOG("Created command buffer pool");
+                                    &vk_command_pool_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateCommandPool failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferAllocateInfo command_buffer_create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -377,10 +408,10 @@ bool VkReadbackTest::InitImage() {
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = 1};
   if ((result = vkAllocateCommandBuffers(vk_device_, &command_buffer_create_info,
-                                         &vk_command_buffer_)) != VK_SUCCESS)
-    return DRETF(false, "vkAllocateCommandBuffers failed: %d", result);
-
-  DLOG("Created command buffer");
+                                         &vk_command_buffer_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkAllocateCommandBuffers failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferBeginInfo begin_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -388,10 +419,10 @@ bool VkReadbackTest::InitImage() {
       .flags = 0,
       .pInheritanceInfo = nullptr,  // ignored for primary buffers
   };
-  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS)
-    return DRETF(false, "vkBeginCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer begin");
+  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS) {
+    PRINT_STDERR("vkBeginCommandBuffer failed: %d", result);
+    return false;
+  }
 
   VkClearColorValue color_value = {.float32 = {1.0f, 0.0f, 0.5f, 0.75f}};
 
@@ -406,10 +437,10 @@ bool VkReadbackTest::InitImage() {
   vkCmdClearColorImage(vk_command_buffer_, vk_image_, VK_IMAGE_LAYOUT_GENERAL, &color_value, 1,
                        &image_subres_range);
 
-  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS)
-    return DRETF(false, "vkEndCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer end");
+  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkEndCommandBuffer failed: %d", result);
+    return false;
+  }
 
   return true;
 }
@@ -428,8 +459,10 @@ bool VkReadbackTest::Exec() {
   };
 
   VkResult result;
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed");
+  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed");
+    return false;
+  }
 
   vkQueueWaitIdle(vk_queue_);
 
@@ -444,8 +477,10 @@ bool VkReadbackTest::Readback() {
       ext_ == VkReadbackTest::NONE ? vk_device_memory_ : vk_imported_device_memory_;
 
   if ((result = vkMapMemory(vk_device_, vk_device_memory, 0, VK_WHOLE_SIZE, 0, &addr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkMapMeory failed: %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkMapMeory failed: %d", result);
+    return false;
+  }
 
   auto data = reinterpret_cast<uint32_t*>(static_cast<uint8_t*>(addr) + bind_offset_);
 
@@ -454,14 +489,12 @@ bool VkReadbackTest::Readback() {
   for (uint32_t i = 0; i < kWidth * kHeight; i++) {
     if (data[i] != expected_value) {
       if (mismatches++ < 10)
-        printf("Value Mismatch at index %d - expected 0x%04x, got 0x%08x\n", i, expected_value,
-               data[i]);
+        fprintf(stderr, "Value Mismatch at index %d - expected 0x%04x, got 0x%08x\n", i,
+                expected_value, data[i]);
     }
   }
   if (mismatches) {
-    DLOG("****** Test Failed! %d mismatches", mismatches);
-  } else {
-    DLOG("****** Test Passed! All values matched.");
+    fprintf(stdout, "****** Test Failed! %d mismatches\n", mismatches);
   }
 
   vkUnmapMemory(vk_device_, vk_device_memory);

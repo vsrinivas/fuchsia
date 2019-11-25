@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
-
 executable("vkloop") {
   testonly = true
 
@@ -18,7 +16,6 @@ executable("vkloop") {
     "//zircon/public/lib/fdio",
   ]
   public_deps = [
-    "//garnet/lib/magma/src/magma_util",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]

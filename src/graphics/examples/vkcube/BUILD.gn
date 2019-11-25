@@ -104,7 +104,6 @@ executable("vkcube_on_scenic") {
     "CUBE_USE_IMAGE_PIPE",
   ]
   deps = [
-    "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",
@@ -126,7 +125,6 @@ executable("vkcube_on_fb") {
   cflags = [ "-Wno-reorder-init-list" ]
   defines = [ "VK_USE_PLATFORM_FUCHSIA" ]
   deps = [
-    "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",
@@ -153,7 +151,6 @@ executable("vkcube_skip_present") {
     "CUBE_SKIP_PRESENT",
   ]
   deps = [
-    "$magma_build_root/src/magma_util",
     "$zircon_build_root/public/lib/async-loop-cpp",
     "$zircon_build_root/public/lib/async-loop-default",
     "$zircon_build_root/public/lib/trace",

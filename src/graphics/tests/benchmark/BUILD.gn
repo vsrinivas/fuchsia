@@ -47,10 +47,6 @@ executable("vkcopy") {
     "test_vkcopy.cc",
   ]
 
-  public_deps = [
-    "$magma_build_root/src/magma_util",
-  ]
-
   deps = [
     "//src/lib/vulkan",
   ]

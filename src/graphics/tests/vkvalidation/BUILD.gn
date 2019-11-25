@@ -31,7 +31,6 @@ executable("test_vk_validation") {
     "test_validation_layers.cc",
   ]
   deps = [
-    "//garnet/lib/magma/src/magma_util",
     "//src/lib/fxl/test:gtest_main",
     "//src/lib/vulkan",
   ]

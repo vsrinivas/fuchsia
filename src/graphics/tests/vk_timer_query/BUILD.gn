@@ -14,7 +14,6 @@ executable("vk_timer_query") {
 
   deps = [
     "$magma_build_root/include:magma_abi",
-    "$magma_build_root/src/magma_util",
     "$magma_build_root/src/magma_util/platform:semaphore",
     "../vkreadback:vkreadback_src",
     "//garnet/drivers/gpu/msd-arm-mali/include",

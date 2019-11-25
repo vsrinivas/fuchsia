@@ -404,19 +404,29 @@ source_set("object") {
   allow_circular_includes_from = [ "zircon:object" ]
 }
 
-source_set("semaphore") {
+source_set("semaphore_header") {
   public_configs = [ ":platform_include_config" ]
 
   sources = [
     "platform_semaphore.h",
   ]
 
-  deps = [
+  public_deps = [
     ":object",
-    "zircon:semaphore",
+    "$magma_build_root/src/magma_util",
+  ]
+}
+
+source_set("semaphore") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":semaphore_header",
   ]
 
-  allow_circular_includes_from = [ "zircon:semaphore" ]
+  deps = [
+    "zircon:semaphore",
+  ]
 }
 
 source_set("port") {

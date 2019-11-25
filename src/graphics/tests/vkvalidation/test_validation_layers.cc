@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <gtest/gtest.h>
-#include <magma_util/dlog.h>
 #include <vulkan/vulkan.h>
 
 TEST(ValidationLayers, InstanceLayers) {
@@ -18,7 +17,6 @@ TEST(ValidationLayers, InstanceLayers) {
   bool found_khronos_validation = false;
 
   for (auto& layer : layers) {
-    DLOG("Found layer: %s", layer.layerName);
     if (strcmp(layer.layerName, "VK_LAYER_LUNARG_standard_validation") == 0)
       found_std_validation = true;
     else if (strcmp(layer.layerName, "VK_LAYER_KHRONOS_validation") == 0)
@@ -35,7 +33,6 @@ VkBool32 debugMessageCallback(VkDebugUtilsMessageSeverityFlagBitsEXT messageSeve
                               VkDebugUtilsMessageTypeFlagsEXT messageTypes,
                               const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
                               void* pUserData) {
-  DLOG("debugMessageCallback: %s %s", pCallbackData->pMessageIdName, pCallbackData->pMessage);
   if (messageTypes & VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT) {
     auto validation_error_count = reinterpret_cast<uint32_t*>(pUserData);
     *validation_error_count += 1;
@@ -55,7 +52,6 @@ void test_validation_layer(const char* layer_name) {
 
   bool found_debug_ext = false;
   for (auto& extension : instance_extensions) {
-    DLOG("Found instance extension: %s", extension.extensionName);
     if (strcmp(VK_EXT_DEBUG_UTILS_EXTENSION_NAME, extension.extensionName) == 0) {
       found_debug_ext = true;
     }
@@ -112,8 +108,8 @@ void test_validation_layer(const char* layer_name) {
   VkResult result = vkEnumeratePhysicalDevices(vk_instance, &phys_device_count, &phys_device);
   ASSERT_TRUE(result == VK_SUCCESS || result == VK_INCOMPLETE);
   if (result == VK_INCOMPLETE) {
-    DLOG("vkEnumeratePhysicalDevices returned VK_INCOMPLETE: phys_device_count %u",
-         phys_device_count);
+    printf("vkEnumeratePhysicalDevices returned VK_INCOMPLETE: phys_device_count %u\n",
+           phys_device_count);
   }
 
   uint32_t queue_family_count;

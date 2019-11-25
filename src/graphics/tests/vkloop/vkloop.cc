@@ -15,9 +15,10 @@
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
-#include "magma.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
+#include "magma_common_defs.h"
+
+#define PRINT_STDERR(format, ...) \
+  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -50,14 +51,20 @@ bool VkLoopTest::Initialize() {
   if (is_initialized_)
     return false;
 
-  if (!InitVulkan())
-    return DRETF(false, "failed to initialize Vulkan");
+  if (!InitVulkan()) {
+    PRINT_STDERR("failed to initialize Vulkan");
+    return false;
+  }
 
-  if (!InitBuffer())
-    return DRETF(false, "failed to init buffer");
+  if (!InitBuffer()) {
+    PRINT_STDERR("failed to init buffer");
+    return false;
+  }
 
-  if (!InitCommandBuffer())
-    return DRETF(false, "InitImage failed");
+  if (!InitCommandBuffer()) {
+    PRINT_STDERR("InitImage failed");
+    return false;
+  }
 
   is_initialized_ = true;
 
@@ -79,42 +86,37 @@ bool VkLoopTest::InitVulkan() {
   VkInstance instance;
   VkResult result;
 
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateInstance failed %d", result);
-
-  DLOG("vkCreateInstance succeeded");
+  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateInstance failed %d", result);
+    return false;
+  }
 
   uint32_t physical_device_count;
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
-  if (physical_device_count < 1)
-    return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
-
-  DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
+  if (physical_device_count < 1) {
+    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
+    return false;
+  }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
-
-  for (auto device : physical_devices) {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(device, &properties);
-    DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
-    DLOG("apiVersion 0x%x", properties.apiVersion);
-    DLOG("driverVersion 0x%x", properties.driverVersion);
-    DLOG("vendorID 0x%x", properties.vendorID);
-    DLOG("deviceID 0x%x", properties.deviceID);
-    DLOG("deviceType 0x%x", properties.deviceType);
+                                           physical_devices.data())) != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
   }
 
   uint32_t queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
-  if (queue_family_count < 1)
-    return DRETF(false, "invalid queue_family_count %d", queue_family_count);
+  if (queue_family_count < 1) {
+    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
+    return false;
+  }
 
   std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
@@ -128,8 +130,10 @@ bool VkLoopTest::InitVulkan() {
     }
   }
 
-  if (queue_family_index < 0)
-    return DRETF(false, "couldn't find an appropriate queue");
+  if (queue_family_index < 0) {
+    PRINT_STDERR("couldn't find an appropriate queue");
+    return false;
+  }
 
   float queue_priorities[1] = {0.0};
 
@@ -156,8 +160,10 @@ bool VkLoopTest::InitVulkan() {
   VkDevice vkdevice;
 
   if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateDevice failed: %d", result);
+                               &vkdevice)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateDevice failed: %d", result);
+    return false;
+  }
 
   vk_physical_device_ = physical_devices[0];
   vk_device_ = vkdevice;
@@ -183,7 +189,8 @@ bool VkLoopTest::InitBuffer() {
 
   if ((result = vkCreateBuffer(vk_device_, &buffer_create_info, nullptr, &vk_buffer_)) !=
       VK_SUCCESS) {
-    return DRETF(false, "vkCreateBuffer failed: %d", result);
+    PRINT_STDERR("vkCreateBuffer failed: %d", result);
+    return false;
   }
 
   VkMemoryRequirements buffer_memory_reqs = {};
@@ -203,14 +210,17 @@ bool VkLoopTest::InitBuffer() {
 
       if ((result = vkAllocateMemory(vk_device_, &allocate_info, nullptr, &device_memory_)) !=
           VK_SUCCESS) {
-        return DRETF(false, "vkAllocateMemory failed: %d", result);
+        PRINT_STDERR("vkAllocateMemory failed: %d", result);
+        return false;
       }
       break;
     }
   }
 
-  if (device_memory_ == VK_NULL_HANDLE)
-    return DRETF(false, "Couldn't find host visible memory");
+  if (device_memory_ == VK_NULL_HANDLE) {
+    PRINT_STDERR("Couldn't find host visible memory");
+    return false;
+  }
 
   {
     void* data;
@@ -219,7 +229,8 @@ bool VkLoopTest::InitBuffer() {
                               VK_WHOLE_SIZE,
                               0,  // flags
                               &data)) != VK_SUCCESS) {
-      return DRETF(false, "vkMapMemory failed: %d", result);
+      PRINT_STDERR("vkMapMemory failed: %d", result);
+      return false;
     }
     // Set to 1 so the shader will ping pong about zero
     *reinterpret_cast<uint32_t*>(data) = 1;
@@ -230,14 +241,16 @@ bool VkLoopTest::InitBuffer() {
                                         .offset = 0,
                                         .size = VK_WHOLE_SIZE};
     if ((result = vkFlushMappedMemoryRanges(vk_device_, 1, &memory_range)) != VK_SUCCESS) {
-      return DRETF(false, "vkFlushMappedMemoryRanges failed: %d", result);
+      PRINT_STDERR("vkFlushMappedMemoryRanges failed: %d", result);
+      return false;
     }
   }
 
   if ((result = vkBindBufferMemory(vk_device_, vk_buffer_, device_memory_,
                                    0  // memoryOffset
                                    )) != VK_SUCCESS) {
-    return DRETF(false, "vkBindBufferMemory failed: %d", result);
+    PRINT_STDERR("vkBindBufferMemory failed: %d", result);
+    return false;
   }
 
   return true;
@@ -252,9 +265,10 @@ bool VkLoopTest::InitCommandBuffer() {
   };
   VkResult result;
   if ((result = vkCreateCommandPool(vk_device_, &command_pool_create_info, nullptr,
-                                    &vk_command_pool_)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateCommandPool failed: %d", result);
-  DLOG("Created command buffer pool");
+                                    &vk_command_pool_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateCommandPool failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferAllocateInfo command_buffer_create_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -263,10 +277,10 @@ bool VkLoopTest::InitCommandBuffer() {
       .level = VK_COMMAND_BUFFER_LEVEL_PRIMARY,
       .commandBufferCount = 1};
   if ((result = vkAllocateCommandBuffers(vk_device_, &command_buffer_create_info,
-                                         &vk_command_buffer_)) != VK_SUCCESS)
-    return DRETF(false, "vkAllocateCommandBuffers failed: %d", result);
-
-  DLOG("Created command buffer");
+                                         &vk_command_buffer_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkAllocateCommandBuffers failed: %d", result);
+    return false;
+  }
 
   VkCommandBufferBeginInfo begin_info = {
       .sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
@@ -274,10 +288,10 @@ bool VkLoopTest::InitCommandBuffer() {
       .flags = 0,
       .pInheritanceInfo = nullptr,  // ignored for primary buffers
   };
-  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS)
-    return DRETF(false, "vkBeginCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer begin");
+  if ((result = vkBeginCommandBuffer(vk_command_buffer_, &begin_info)) != VK_SUCCESS) {
+    PRINT_STDERR("vkBeginCommandBuffer failed: %d", result);
+    return false;
+  }
 
   VkShaderModule compute_shader_module_;
   VkShaderModuleCreateInfo sh_info = {};
@@ -286,8 +300,10 @@ bool VkLoopTest::InitCommandBuffer() {
   std::vector<uint8_t> shader;
   {
     int fd = open("/pkg/data/vkloop.spv", O_RDONLY);
-    if (fd < 0)
-      return DRETF(false, "couldn't open shader binary: %d", fd);
+    if (fd < 0) {
+      PRINT_STDERR("couldn't open shader binary: %d", fd);
+      return false;
+    }
 
     struct stat buf;
     fstat(fd, &buf);
@@ -301,7 +317,8 @@ bool VkLoopTest::InitCommandBuffer() {
 
   if ((result = vkCreateShaderModule(vk_device_, &sh_info, NULL, &compute_shader_module_)) !=
       VK_SUCCESS) {
-    return DRETF(false, "vkCreateShaderModule failed: %d", result);
+    PRINT_STDERR("vkCreateShaderModule failed: %d", result);
+    return false;
   }
 
   VkDescriptorSetLayoutBinding descriptor_set_layout_bindings = {
@@ -322,7 +339,8 @@ bool VkLoopTest::InitCommandBuffer() {
 
   if ((result = vkCreateDescriptorSetLayout(vk_device_, &descriptor_set_layout_create_info, nullptr,
                                             &descriptor_set_layout)) != VK_SUCCESS) {
-    return DRETF(false, "vkCreateDescriptorSetLayout failed: %d", result);
+    PRINT_STDERR("vkCreateDescriptorSetLayout failed: %d", result);
+    return false;
   }
 
   VkDescriptorPoolSize pool_size = {.type = VK_DESCRIPTOR_TYPE_STORAGE_BUFFER,
@@ -339,7 +357,8 @@ bool VkLoopTest::InitCommandBuffer() {
   VkDescriptorPool descriptor_pool;
   if ((result = vkCreateDescriptorPool(vk_device_, &descriptor_pool_create_info, nullptr,
                                        &descriptor_pool)) != VK_SUCCESS) {
-    return DRETF(false, "vkCreateDescriptorPool failed: %d", result);
+    PRINT_STDERR("vkCreateDescriptorPool failed: %d", result);
+    return false;
   }
 
   VkDescriptorSetAllocateInfo descriptor_set_allocate_info = {
@@ -354,7 +373,8 @@ bool VkLoopTest::InitCommandBuffer() {
 
   if ((result = vkAllocateDescriptorSets(vk_device_, &descriptor_set_allocate_info,
                                          &descriptor_set)) != VK_SUCCESS) {
-    return DRETF(false, "vkAllocateDescriptorSets failed: %d", result);
+    PRINT_STDERR("vkAllocateDescriptorSets failed: %d", result);
+    return false;
   }
 
   VkDescriptorBufferInfo descriptor_buffer_info = {
@@ -389,7 +409,8 @@ bool VkLoopTest::InitCommandBuffer() {
 
   if ((result = vkCreatePipelineLayout(vk_device_, &pipeline_create_info, nullptr,
                                        &pipeline_layout)) != VK_SUCCESS) {
-    return DRETF(false, "vkCreatePipelineLayout failed: %d", result);
+    PRINT_STDERR("vkCreatePipelineLayout failed: %d", result);
+    return false;
   }
 
   VkPipeline compute_pipeline;
@@ -411,15 +432,18 @@ bool VkLoopTest::InitCommandBuffer() {
 
   if ((result = vkCreateComputePipelines(vk_device_, VK_NULL_HANDLE, 1, &pipeline_info, nullptr,
                                          &compute_pipeline)) != VK_SUCCESS) {
-    return DRETF(false, "vkCreateComputePipelines failed: %d", result);
+    PRINT_STDERR("vkCreateComputePipelines failed: %d", result);
+    return false;
   }
 
   if (hang_on_event_) {
     VkEvent event;
     VkEventCreateInfo event_info = {
         .sType = VK_STRUCTURE_TYPE_EVENT_CREATE_INFO, .pNext = nullptr, .flags = 0};
-    if ((result = vkCreateEvent(vk_device_, &event_info, nullptr, &event)) != VK_SUCCESS)
-      return DRETF(false, "vkCreateEvent failed: %d", result);
+    if ((result = vkCreateEvent(vk_device_, &event_info, nullptr, &event)) != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateEvent failed: %d", result);
+      return false;
+    }
 
     vkCmdWaitEvents(vk_command_buffer_, 1, &event, VK_PIPELINE_STAGE_HOST_BIT,
                     VK_PIPELINE_STAGE_TRANSFER_BIT, 0, nullptr, 0, nullptr, 0, nullptr);
@@ -436,10 +460,10 @@ bool VkLoopTest::InitCommandBuffer() {
     vkCmdDispatch(vk_command_buffer_, 1, 1, 1);
   }
 
-  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS)
-    return DRETF(false, "vkEndCommandBuffer failed: %d", result);
-
-  DLOG("Command buffer end");
+  if ((result = vkEndCommandBuffer(vk_command_buffer_)) != VK_SUCCESS) {
+    PRINT_STDERR("vkEndCommandBuffer failed: %d", result);
+    return false;
+  }
 
   return true;
 }
@@ -447,8 +471,10 @@ bool VkLoopTest::InitCommandBuffer() {
 bool VkLoopTest::Exec(bool kill_driver) {
   VkResult result;
   result = vkQueueWaitIdle(vk_queue_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueWaitIdle failed with result %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueWaitIdle failed with result %d", result);
+    return false;
+  }
 
   VkSubmitInfo submit_info = {
       .sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -462,13 +488,15 @@ bool VkLoopTest::Exec(bool kill_driver) {
       .pSignalSemaphores = nullptr,
   };
 
-  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed");
+  if ((result = vkQueueSubmit(vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed");
+    return false;
+  }
 
   if (kill_driver) {
     uint32_t fd = open("/dev/class/gpu/000", O_RDONLY);
     if (fd < 0) {
-      DLOG("Couldn't find driver, skipping test\n");
+      printf("Couldn't find driver, skipping test");
       return true;
     }
     fdio_t* fdio = fdio_unsafe_fd_to_io(fd);
@@ -477,7 +505,7 @@ bool VkLoopTest::Exec(bool kill_driver) {
         fdio_unsafe_borrow_channel(fdio), MAGMA_QUERY_IS_TEST_RESTART_SUPPORTED, &is_supported);
     if (status != ZX_OK || !is_supported) {
       fdio_unsafe_release(fdio);
-      printf("Test restart not supported: status %d is_supported %lu\n", status, is_supported);
+      printf("Test restart not supported: status %d is_supported %lu", status, is_supported);
       return true;
     }
 
@@ -491,8 +519,10 @@ bool VkLoopTest::Exec(bool kill_driver) {
     if (result != VK_SUCCESS)
       break;
   }
-  if (result != VK_ERROR_DEVICE_LOST)
-    return DRETF(false, "Result was %d instead of VK_ERROR_DEVICE_LOST", result);
+  if (result != VK_ERROR_DEVICE_LOST) {
+    PRINT_STDERR("Result was %d instead of VK_ERROR_DEVICE_LOST", result);
+    return false;
+  }
 
   return true;
 }

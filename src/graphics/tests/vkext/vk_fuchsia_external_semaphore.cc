@@ -14,9 +14,10 @@
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
 #include "platform_semaphore.h"
+
+#define PRINT_STDERR(format, ...) \
+  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -48,8 +49,10 @@ bool VulkanTest::Initialize() {
   if (is_initialized_)
     return false;
 
-  if (!InitVulkan())
-    return DRETF(false, "failed to initialize Vulkan");
+  if (!InitVulkan()) {
+    PRINT_STDERR("failed to initialize Vulkan");
+    return false;
+  }
 
   is_initialized_ = true;
 
@@ -61,14 +64,18 @@ bool VulkanTest::InitVulkan() {
 
   uint32_t extension_count;
   result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count, nullptr);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumerateInstanceExtensionProperties returned %d", result);
+    return false;
+  }
 
   std::vector<VkExtensionProperties> extension_properties(extension_count);
   result = vkEnumerateInstanceExtensionProperties(nullptr, &extension_count,
                                                   extension_properties.data());
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumerateInstanceExtensionProperties returned %d\n", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumerateInstanceExtensionProperties returned %d", result);
+    return false;
+  }
 
   std::array<const char*, 2> instance_extensions{
       VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME,
@@ -78,21 +85,24 @@ bool VulkanTest::InitVulkan() {
 
   uint32_t found_count = 0;
   for (auto& prop : extension_properties) {
-    DLOG("instance extension name %s version %u", prop.extensionName, prop.specVersion);
     for (uint32_t i = 0; i < instance_extensions.size(); i++) {
       if ((strcmp(prop.extensionName, instance_extensions[i]) == 0))
         found_count++;
     }
   }
 
-  if (found_count != instance_extensions.size())
-    return DRETF(false, "failed to find instance extensions");
+  if (found_count != instance_extensions.size()) {
+    PRINT_STDERR("failed to find instance extensions");
+    return false;
+  }
 
   // Setup validation layer.
   uint32_t layer_count;
   result = vkEnumerateInstanceLayerProperties(&layer_count, nullptr);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumerateInstanceLayerProperties returned %d\n", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumerateInstanceLayerProperties returned %d", result);
+    return false;
+  }
 
   std::vector<VkLayerProperties> layer_properties(layer_count);
   result = vkEnumerateInstanceLayerProperties(&layer_count, layer_properties.data());
@@ -129,42 +139,37 @@ bool VulkanTest::InitVulkan() {
   VkAllocationCallbacks* allocation_callbacks = nullptr;
   VkInstance instance;
 
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateInstance failed %d", result);
-
-  DLOG("vkCreateInstance succeeded");
+  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateInstance failed %d", result);
+    return false;
+  }
 
   uint32_t physical_device_count = 0;
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
-  if (physical_device_count < 1)
-    return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
-
-  DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
+  if (physical_device_count < 1) {
+    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
+    return false;
+  }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
-
-  for (auto device : physical_devices) {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(device, &properties);
-    DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
-    DLOG("apiVersion 0x%x", properties.apiVersion);
-    DLOG("driverVersion 0x%x", properties.driverVersion);
-    DLOG("vendorID 0x%x", properties.vendorID);
-    DLOG("deviceID 0x%x", properties.deviceID);
-    DLOG("deviceType 0x%x", properties.deviceType);
+                                           physical_devices.data())) != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
   }
 
   uint32_t queue_family_count = 0;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
-  if (queue_family_count < 1)
-    return DRETF(false, "invalid queue_family_count %d", queue_family_count);
+  if (queue_family_count < 1) {
+    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
+    return false;
+  }
 
   std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
@@ -178,31 +183,38 @@ bool VulkanTest::InitVulkan() {
     }
   }
 
-  if (queue_family_index < 0)
-    return DRETF(false, "couldn't find an appropriate queue");
+  if (queue_family_index < 0) {
+    PRINT_STDERR("couldn't find an appropriate queue");
+    return false;
+  }
 
   result =
       vkEnumerateDeviceExtensionProperties(physical_devices[0], nullptr, &extension_count, nullptr);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumerateDeviceExtensionProperties returned %d\n", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumerateDeviceExtensionProperties returned %d", result);
+    return false;
+  }
 
   extension_properties.resize(extension_count);
   result = vkEnumerateDeviceExtensionProperties(physical_devices[0], nullptr, &extension_count,
                                                 extension_properties.data());
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkEnumerateDeviceExtensionProperties returned %d\n", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumerateDeviceExtensionProperties returned %d", result);
+    return false;
+  }
 
   found_count = 0;
   for (const auto& prop : extension_properties) {
-    DLOG("device extension name %s version %u", prop.extensionName, prop.specVersion);
     for (uint32_t i = 0; i < device_extensions.size(); i++) {
       if ((strcmp(prop.extensionName, device_extensions[i]) == 0))
         found_count++;
     }
   }
 
-  if (found_count != device_extensions.size())
-    return DRETF(false, "failed to find device extensions");
+  if (found_count != device_extensions.size()) {
+    PRINT_STDERR("failed to find device extensions");
+    return false;
+  }
 
   // Create the device
   float queue_priorities[1] = {0.0};
@@ -227,8 +239,10 @@ bool VulkanTest::InitVulkan() {
   VkDevice vkdevice;
 
   if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateDevice failed: %d", result);
+                               &vkdevice)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateDevice failed: %d", result);
+    return false;
+  }
 
   vk_physical_device_ = physical_devices[0];
   vk_device_ = vkdevice;
@@ -239,19 +253,25 @@ bool VulkanTest::InitVulkan() {
   vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_ =
       reinterpret_cast<PFN_vkGetPhysicalDeviceExternalSemaphorePropertiesKHR>(
           vkGetInstanceProcAddr(instance, "vkGetPhysicalDeviceExternalSemaphorePropertiesKHR"));
-  if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_)
-    return DRETF(false, "couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
+  if (!vkGetPhysicalDeviceExternalSemaphorePropertiesKHR_) {
+    PRINT_STDERR("couldn't find vkGetPhysicalDeviceExternalSemaphorePropertiesKHR");
+    return false;
+  }
 
   vkImportSemaphoreZirconHandleFUCHSIA_ =
       reinterpret_cast<PFN_vkImportSemaphoreZirconHandleFUCHSIA>(
           vkGetDeviceProcAddr(vk_device_, "vkImportSemaphoreZirconHandleFUCHSIA"));
-  if (!vkImportSemaphoreZirconHandleFUCHSIA_)
-    return DRETF(false, "couldn't find vkImportSemaphoreZirconHandleFUCHSIA");
+  if (!vkImportSemaphoreZirconHandleFUCHSIA_) {
+    PRINT_STDERR("couldn't find vkImportSemaphoreZirconHandleFUCHSIA");
+    return false;
+  }
 
   vkGetSemaphoreZirconHandleFUCHSIA_ = reinterpret_cast<PFN_vkGetSemaphoreZirconHandleFUCHSIA>(
       vkGetDeviceProcAddr(vk_device_, "vkGetSemaphoreZirconHandleFUCHSIA"));
-  if (!vkGetSemaphoreZirconHandleFUCHSIA_)
-    return DRETF(false, "couldn't find vkGetSemaphoreZirconHandleFUCHSIA");
+  if (!vkGetSemaphoreZirconHandleFUCHSIA_) {
+    PRINT_STDERR("couldn't find vkGetSemaphoreZirconHandleFUCHSIA");
+    return false;
+  }
 
   VkExternalSemaphorePropertiesKHR external_semaphore_properties = {
       .sType = VK_STRUCTURE_TYPE_EXTERNAL_SEMAPHORE_PROPERTIES_KHR,
@@ -286,8 +306,10 @@ bool VulkanTest::InitVulkan() {
 
     VkSemaphore semaphore;
     result = vkCreateSemaphore(vk_device_, &create_info, nullptr, &semaphore);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateSemaphore returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateSemaphore returned %d", result);
+      return false;
+    }
 
     vk_semaphore_.push_back(semaphore);
   }
@@ -309,8 +331,10 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
     };
     result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t1->vk_device_, &info, &handle[i]);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkGetSemaphoreZirconHandleFUCHSIA returned %d", result);
+      return false;
+    }
   }
 
   std::vector<std::unique_ptr<magma::PlatformSemaphore>> exported;
@@ -330,8 +354,10 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
         .handle = import_handle};
 
     result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkImportSemaphoreZirconHandleFUCHSIA failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkImportSemaphoreZirconHandleFUCHSIA failed: %d", result);
+      return false;
+    }
   }
 
   // Test semaphores
@@ -346,14 +372,15 @@ bool VulkanTest::Exec(VulkanTest* t1, VulkanTest* t2, bool temporary) {
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
     };
     result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &info, &handle[i]);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
+      return false;
+    }
 
     std::shared_ptr<magma::PlatformSemaphore> platform_semaphore_import =
         magma::PlatformSemaphore::Import(handle[i]);
 
     EXPECT_EQ(platform_semaphore_export->id(), platform_semaphore_import->id());
-    DLOG("Testing semaphore %u: 0x%lx", i, platform_semaphore_export->id());
 
     platform_semaphore_export->Reset();
 
@@ -387,8 +414,10 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
         .handleType = VK_EXTERNAL_SEMAPHORE_HANDLE_TYPE_TEMP_ZIRCON_EVENT_BIT_FUCHSIA,
     };
     result = t1->vkGetSemaphoreZirconHandleFUCHSIA_(t1->vk_device_, &info, &handle[i]);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkGetSemaphoreZirconHandleFUCHSIA_ returned %d", result);
+      return false;
+    }
   }
 
   // Import semaphores
@@ -403,16 +432,20 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
         .handle = handle[i]};
 
     result = t1->vkImportSemaphoreZirconHandleFUCHSIA_(t2->vk_device_, &import_info);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkImportSemaphoreZirconHandleFUCHSIA_ failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkImportSemaphoreZirconHandleFUCHSIA_ failed: %d", result);
+      return false;
+    }
   }
 
   VkSubmitInfo submit_info1 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                                .signalSemaphoreCount = 1,
                                .pSignalSemaphores = &t1->vk_semaphore_[0]};
   result = vkQueueSubmit(t1->vk_queue_, 1, &submit_info1, VK_NULL_HANDLE);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed: %d", result);
+    return false;
+  }
 
   VkPipelineStageFlags stage_flags = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT;
   VkSubmitInfo submit_info2 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -422,23 +455,31 @@ bool VulkanTest::ExecUsingQueue(VulkanTest* t1, VulkanTest* t2, bool temporary) 
                                .signalSemaphoreCount = 1,
                                .pSignalSemaphores = &t2->vk_semaphore_[1]};
   result = vkQueueSubmit(t2->vk_queue_, 1, &submit_info2, VK_NULL_HANDLE);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed: %d", result);
+    return false;
+  }
 
   VkSubmitInfo submit_info3 = {.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO,
                                .waitSemaphoreCount = 1,
                                .pWaitSemaphores = &t1->vk_semaphore_[1],
                                .pWaitDstStageMask = &stage_flags};
   vkQueueSubmit(t1->vk_queue_, 1, &submit_info3, VK_NULL_HANDLE);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueSubmit failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueSubmit failed: %d", result);
+    return false;
+  }
 
   result = vkQueueWaitIdle(t1->vk_queue_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueWaitIdle failed: %d", result);
+    return false;
+  }
   result = vkQueueWaitIdle(t2->vk_queue_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkQueueWaitIdle failed: %d", result);
+    return false;
+  }
 
   // Destroy semaphores
   for (uint32_t i = 0; i < kSemaphoreCount; i++) {

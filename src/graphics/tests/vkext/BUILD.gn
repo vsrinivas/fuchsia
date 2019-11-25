@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
-
 executable("vkext") {
   testonly = true
 
@@ -15,9 +13,8 @@ executable("vkext") {
   ]
 
   deps = [
-    "$magma_build_root/src/magma_util",
-    "$magma_build_root/src/magma_util/platform:semaphore",
     "../vkreadback:vkreadback_src",
+    "//garnet/lib/magma/src/magma_util/platform:semaphore",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/fdio",

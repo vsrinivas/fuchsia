@@ -2,8 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//garnet/lib/magma/gnbuild/magma.gni")
-
 source_set("icd_load_src") {
   testonly = true
 
@@ -12,7 +10,6 @@ source_set("icd_load_src") {
     "icd_load.h",
   ]
   public_deps = [
-    "$magma_build_root/src/magma_util",
     "//src/lib/fxl/test:test_settings",
     "//third_party/googletest:gtest",
   ]

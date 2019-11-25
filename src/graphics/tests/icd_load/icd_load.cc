@@ -11,7 +11,6 @@
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
-#include "magma_util/dlog.h"
 #include "src/lib/fxl/test/test_settings.h"
 
 void IcdLoadTest::LoadIcd() {
@@ -28,7 +27,6 @@ void IcdLoadTest::LoadIcd() {
   const char* kRequiredExtension = "VK_KHR_get_physical_device_properties2";
   bool found_extension = false;
   for (const auto& extension : extensions) {
-    DLOG("%s\n", extension.extensionName);
     if (!strcmp(extension.extensionName, kRequiredExtension)) {
       found_extension = true;
       break;

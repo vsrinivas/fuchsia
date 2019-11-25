@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "gtest/gtest.h"
-
-#define MAGMA_DLOG_ENABLE 1
 #include <lib/fdio/directory.h>
 #include <lib/zx/channel.h>
 #include <stdint.h>
@@ -17,8 +14,10 @@
 #include <vulkan/vulkan.h>
 
 #include "fuchsia/sysmem/cpp/fidl.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
+#include "gtest/gtest.h"
+
+#define PRINT_STDERR(format, ...) \
+  fprintf(stderr, "%s:%d " format "\n", __FILE__, __LINE__, ##__VA_ARGS__)
 
 namespace {
 
@@ -99,8 +98,10 @@ bool VulkanTest::Initialize() {
   if (is_initialized_)
     return false;
 
-  if (!InitVulkan())
-    return DRETF(false, "failed to initialize Vulkan");
+  if (!InitVulkan()) {
+    PRINT_STDERR("failed to initialize Vulkan");
+    return false;
+  }
 
   is_initialized_ = true;
 
@@ -133,42 +134,37 @@ bool VulkanTest::InitVulkan() {
   VkInstance instance;
   VkResult result;
 
-  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateInstance failed %d", result);
-
-  DLOG("vkCreateInstance succeeded");
+  if ((result = vkCreateInstance(&create_info, allocation_callbacks, &instance)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateInstance failed %d", result);
+    return false;
+  }
 
   uint32_t physical_device_count;
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count, nullptr)) !=
-      VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
+      VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
+  }
 
-  if (physical_device_count < 1)
-    return DRETF(false, "unexpected physical_device_count %d", physical_device_count);
-
-  DLOG("vkEnumeratePhysicalDevices returned count %d", physical_device_count);
+  if (physical_device_count < 1) {
+    PRINT_STDERR("unexpected physical_device_count %d", physical_device_count);
+    return false;
+  }
 
   std::vector<VkPhysicalDevice> physical_devices(physical_device_count);
   if ((result = vkEnumeratePhysicalDevices(instance, &physical_device_count,
-                                           physical_devices.data())) != VK_SUCCESS)
-    return DRETF(false, "vkEnumeratePhysicalDevices failed %d", result);
-
-  for (auto device : physical_devices) {
-    VkPhysicalDeviceProperties properties;
-    vkGetPhysicalDeviceProperties(device, &properties);
-    DLOG("PHYSICAL DEVICE: %s", properties.deviceName);
-    DLOG("apiVersion 0x%x", properties.apiVersion);
-    DLOG("driverVersion 0x%x", properties.driverVersion);
-    DLOG("vendorID 0x%x", properties.vendorID);
-    DLOG("deviceID 0x%x", properties.deviceID);
-    DLOG("deviceType 0x%x", properties.deviceType);
+                                           physical_devices.data())) != VK_SUCCESS) {
+    PRINT_STDERR("vkEnumeratePhysicalDevices failed %d", result);
+    return false;
   }
 
   uint32_t queue_family_count;
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
-  if (queue_family_count < 1)
-    return DRETF(false, "invalid queue_family_count %d", queue_family_count);
+  if (queue_family_count < 1) {
+    PRINT_STDERR("invalid queue_family_count %d", queue_family_count);
+    return false;
+  }
 
   std::vector<VkQueueFamilyProperties> queue_family_properties(queue_family_count);
   vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count,
@@ -182,8 +178,10 @@ bool VulkanTest::InitVulkan() {
     }
   }
 
-  if (queue_family_index < 0)
-    return DRETF(false, "couldn't find an appropriate queue");
+  if (queue_family_index < 0) {
+    PRINT_STDERR("couldn't find an appropriate queue");
+    return false;
+  }
 
   float queue_priorities[1] = {0.0};
 
@@ -227,8 +225,10 @@ bool VulkanTest::InitVulkan() {
   VkDevice vkdevice;
 
   if ((result = vkCreateDevice(physical_devices[0], &createInfo, nullptr /* allocationcallbacks */,
-                               &vkdevice)) != VK_SUCCESS)
-    return DRETF(false, "vkCreateDevice failed: %d", result);
+                               &vkdevice)) != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateDevice failed: %d", result);
+    return false;
+  }
 
   vk_physical_device_ = physical_devices[0];
   vk_device_ = vkdevice;
@@ -238,34 +238,39 @@ bool VulkanTest::InitVulkan() {
   vkCreateBufferCollectionFUCHSIA_ = reinterpret_cast<PFN_vkCreateBufferCollectionFUCHSIA>(
       vkGetDeviceProcAddr(vk_device_, "vkCreateBufferCollectionFUCHSIA"));
   if (!vkCreateBufferCollectionFUCHSIA_) {
-    return DRETF(false, "No vkCreateBufferCollectionFUCHSIA");
+    PRINT_STDERR("No vkCreateBufferCollectionFUCHSIA");
+    return false;
   }
 
   vkDestroyBufferCollectionFUCHSIA_ = reinterpret_cast<PFN_vkDestroyBufferCollectionFUCHSIA>(
       vkGetDeviceProcAddr(vk_device_, "vkDestroyBufferCollectionFUCHSIA"));
   if (!vkDestroyBufferCollectionFUCHSIA_) {
-    return DRETF(false, "No vkDestroyBufferCollectionFUCHSIA");
+    PRINT_STDERR("No vkDestroyBufferCollectionFUCHSIA");
+    return false;
   }
 
   vkSetBufferCollectionConstraintsFUCHSIA_ =
       reinterpret_cast<PFN_vkSetBufferCollectionConstraintsFUCHSIA>(
           vkGetDeviceProcAddr(vk_device_, "vkSetBufferCollectionConstraintsFUCHSIA"));
   if (!vkSetBufferCollectionConstraintsFUCHSIA_) {
-    return DRETF(false, "No vkSetBufferCollectionConstraintsFUCHSIA");
+    PRINT_STDERR("No vkSetBufferCollectionConstraintsFUCHSIA");
+    return false;
   }
 
   vkSetBufferCollectionBufferConstraintsFUCHSIA_ =
       reinterpret_cast<PFN_vkSetBufferCollectionBufferConstraintsFUCHSIA>(
           vkGetDeviceProcAddr(vk_device_, "vkSetBufferCollectionBufferConstraintsFUCHSIA"));
   if (!vkSetBufferCollectionBufferConstraintsFUCHSIA_) {
-    return DRETF(false, "No vkSetBufferCollectionBufferConstraintsFUCHSIA");
+    PRINT_STDERR("No vkSetBufferCollectionBufferConstraintsFUCHSIA");
+    return false;
   }
 
   vkGetBufferCollectionPropertiesFUCHSIA_ =
       reinterpret_cast<PFN_vkGetBufferCollectionPropertiesFUCHSIA>(
           vkGetDeviceProcAddr(vk_device_, "vkGetBufferCollectionPropertiesFUCHSIA"));
   if (!vkGetBufferCollectionPropertiesFUCHSIA_) {
-    return DRETF(false, "No vkGetBufferCollectionPropertiesFUCHSIA_");
+    PRINT_STDERR("No vkGetBufferCollectionPropertiesFUCHSIA_");
+    return false;
   }
 
   return true;
@@ -275,28 +280,31 @@ bool VulkanTest::Exec(
     VkFormat format, uint32_t width, bool direct, bool linear,
     bool repeat_constraints_as_non_protected,
     const std::vector<fuchsia::sysmem::ImageFormatConstraints>& format_constraints) {
-  DLOG("%s", __func__);
   VkResult result;
   fuchsia::sysmem::AllocatorSyncPtr sysmem_allocator;
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    return DRETF(false, "fdio_service_connect failed: %d", status);
+    PRINT_STDERR("fdio_service_connect failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
   status = sysmem_allocator->AllocateSharedCollection(vulkan_token.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "AllocateSharedCollection failed: %d", status);
+    PRINT_STDERR("AllocateSharedCollection failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
 
   status = vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), local_token.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "Duplicate failed: %d", status);
+    PRINT_STDERR("Duplicate failed: %d", status);
+    return false;
   }
   status = local_token->Sync();
   if (status != ZX_OK) {
-    return DRETF(false, "Sync failed: %d", status);
+    PRINT_STDERR("Sync failed: %d", status);
+    return false;
   }
 
   // This bool suggests that we dup another token to set the same constraints, skipping protected
@@ -306,11 +314,13 @@ bool VulkanTest::Exec(
     status =
         vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), repeat_token.NewRequest());
     if (status != ZX_OK) {
-      return DRETF(false, "Duplicate failed: %d", status);
+      PRINT_STDERR("Duplicate failed: %d", status);
+      return false;
     }
     status = vulkan_token->Sync();
     if (status != ZX_OK) {
-      return DRETF(false, "Sync failed: %d", status);
+      PRINT_STDERR("Sync failed: %d", status);
+      return false;
     }
 
     VkImageCreateInfo image_create_info =
@@ -323,12 +333,12 @@ bool VulkanTest::Exec(
     VkBufferCollectionFUCHSIA collection;
     result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+      PRINT_STDERR("Failed to import buffer collection: %d", result);
       return false;
     }
     result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, collection, &image_create_info);
     if (result != VK_SUCCESS) {
-      fprintf(stderr, "Failed to set buffer constraints: %d\n", result);
+      PRINT_STDERR("Failed to set buffer constraints: %d", result);
       return false;
     }
   }
@@ -343,14 +353,14 @@ bool VulkanTest::Exec(
   VkBufferCollectionFUCHSIA collection;
   result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+    PRINT_STDERR("Failed to import buffer collection: %d", result);
     return false;
   }
 
   result = vkSetBufferCollectionConstraintsFUCHSIA_(vk_device_, collection, &image_create_info);
 
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to set buffer constraints: %d\n", result);
+    PRINT_STDERR("Failed to set buffer constraints: %d", result);
     return false;
   }
 
@@ -358,13 +368,14 @@ bool VulkanTest::Exec(
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
                                                   sysmem_collection.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "BindSharedCollection failed: %d", status);
+    PRINT_STDERR("BindSharedCollection failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionConstraints constraints{};
   if (!format_constraints.empty()) {
     // Use the other connection to specify the actual desired format and size,
     // which should be compatible with what the vulkan driver can use.
-    DASSERT(direct);
+    assert(direct);
     constraints.usage.vulkan = fuchsia::sysmem::vulkanUsageTransferDst;
     // Try multiple format modifiers.
     constraints.image_format_constraints_count = format_constraints.size();
@@ -382,31 +393,34 @@ bool VulkanTest::Exec(
     status = sysmem_collection->SetConstraints(true, constraints);
   }
   if (status != ZX_OK) {
-    return DRETF(false, "SetConstraints failed: %d", status);
+    PRINT_STDERR("SetConstraints failed: %d", status);
+    return false;
   }
 
   zx_status_t allocation_status;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
   status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK) {
-    return DRETF(false, "WaitForBuffersAllocated failed: %d", status);
+    PRINT_STDERR("WaitForBuffersAllocated failed: %d", status);
+    return false;
   }
   if (allocation_status != ZX_OK) {
     if (use_protected_memory_) {
-      return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
+      PRINT_STDERR("WaitForBuffersAllocated failed: %d", allocation_status);
+      return false;
     }
-    return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
+    PRINT_STDERR("WaitForBuffersAllocated failed: %d", allocation_status);
+    return false;
   }
   status = sysmem_collection->Close();
   if (status != ZX_OK) {
-    return DRETF(false, "Close failed: %d", status);
+    PRINT_STDERR("Close failed: %d", status);
+    return false;
   }
 
   EXPECT_EQ(1u, buffer_collection_info.buffer_count);
   fuchsia::sysmem::PixelFormat pixel_format =
       buffer_collection_info.settings.image_format_constraints.pixel_format;
-  DLOG("Allocated format %d has_modifier %d modifier %lx\n", pixel_format.type,
-       pixel_format.has_format_modifier, pixel_format.format_modifier.value);
 
   if (!direct) {
     fidl::Encoder encoder(fidl::Encoder::NO_HEADER);
@@ -422,9 +436,10 @@ bool VulkanTest::Exec(
     image_create_info.pNext = &image_format_fuchsia;
 
     result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateImage failed: %d", result);
-    DLOG("image created");
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateImage failed: %d", result);
+      return false;
+    }
   } else {
     VkBufferCollectionImageCreateInfoFUCHSIA image_format_fuchsia = {
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_IMAGE_CREATE_INFO_FUCHSIA,
@@ -442,9 +457,10 @@ bool VulkanTest::Exec(
     image_create_info.pNext = &image_format_fuchsia;
 
     result = vkCreateImage(vk_device_, &image_create_info, nullptr, &vk_image_);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateImage failed: %d", result);
-    DLOG("image created");
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateImage failed: %d", result);
+      return false;
+    }
   }
 
   if (linear) {
@@ -501,12 +517,14 @@ bool VulkanTest::Exec(
 
     if ((result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_)) !=
         VK_SUCCESS) {
-      return DRETF(false, "vkAllocateMemory failed");
+      PRINT_STDERR("vkAllocateMemory failed");
+      return false;
     }
 
     result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0);
     if (result != VK_SUCCESS) {
-      return DRETF(false, "vkBindImageMemory failed");
+      PRINT_STDERR("vkBindImageMemory failed");
+      return false;
     }
   } else {
     VkMemoryRequirements requirements;
@@ -515,7 +533,8 @@ bool VulkanTest::Exec(
         .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
     result = vkGetBufferCollectionPropertiesFUCHSIA_(vk_device_, collection, &properties);
     if (result != VK_SUCCESS) {
-      return DRETF(false, "vkBindImageMemory failed");
+      PRINT_STDERR("vkBindImageMemory failed");
+      return false;
     }
 
     EXPECT_EQ(1u, properties.count);
@@ -554,12 +573,16 @@ bool VulkanTest::Exec(
     alloc_info.memoryTypeIndex = memory_type;
 
     result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateImage failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateImage failed: %d", result);
+      return false;
+    }
 
     result = vkBindImageMemory(vk_device_, vk_image_, vk_device_memory_, 0u);
-    if (result != VK_SUCCESS)
-      return DRETF(false, "vkCreateImage failed: %d", result);
+    if (result != VK_SUCCESS) {
+      PRINT_STDERR("vkCreateImage failed: %d", result);
+      return false;
+    }
   }
 
   vkDestroyImage(vk_device_, vk_image_, nullptr);
@@ -567,8 +590,6 @@ bool VulkanTest::Exec(
   vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
 
   vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
-
-  DLOG("image destroyed");
 
   return true;
 }
@@ -579,22 +600,26 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   zx_status_t status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator",
                                             sysmem_allocator.NewRequest().TakeChannel().release());
   if (status != ZX_OK) {
-    return DRETF(false, "fdio_service_connect failed: %d", status);
+    PRINT_STDERR("fdio_service_connect failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr vulkan_token;
   status = sysmem_allocator->AllocateSharedCollection(vulkan_token.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "AllocateSharedCollection failed: %d", status);
+    PRINT_STDERR("AllocateSharedCollection failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token;
 
   status = vulkan_token->Duplicate(std::numeric_limits<uint32_t>::max(), local_token.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "Duplicate failed: %d", status);
+    PRINT_STDERR("Duplicate failed: %d", status);
+    return false;
   }
   status = local_token->Sync();
   if (status != ZX_OK) {
-    return DRETF(false, "Sync failed: %d", status);
+    PRINT_STDERR("Sync failed: %d", status);
+    return false;
   }
 
   VkBufferCreateInfo buffer_create_info = {
@@ -616,7 +641,7 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   VkBufferCollectionFUCHSIA collection;
   result = vkCreateBufferCollectionFUCHSIA_(vk_device_, &import_info, nullptr, &collection);
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to import buffer collection: %d\n", result);
+    PRINT_STDERR("Failed to import buffer collection: %d", result);
     return false;
   }
 
@@ -631,7 +656,7 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   result = vkSetBufferCollectionBufferConstraintsFUCHSIA_(vk_device_, collection, &constraints);
 
   if (result != VK_SUCCESS) {
-    fprintf(stderr, "Failed to set buffer constraints: %d\n", result);
+    PRINT_STDERR("Failed to set buffer constraints: %d", result);
     return false;
   }
 
@@ -639,26 +664,31 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   status = sysmem_allocator->BindSharedCollection(std::move(local_token),
                                                   sysmem_collection.NewRequest());
   if (status != ZX_OK) {
-    return DRETF(false, "BindSharedCollection failed: %d", status);
+    PRINT_STDERR("BindSharedCollection failed: %d", status);
+    return false;
   }
   fuchsia::sysmem::BufferCollectionConstraints sysmem_constraints{};
   status = sysmem_collection->SetConstraints(false, sysmem_constraints);
   if (status != ZX_OK) {
-    return DRETF(false, "SetConstraints failed: %d", status);
+    PRINT_STDERR("SetConstraints failed: %d", status);
+    return false;
   }
 
   zx_status_t allocation_status;
   fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info{};
   status = sysmem_collection->WaitForBuffersAllocated(&allocation_status, &buffer_collection_info);
   if (status != ZX_OK) {
-    return DRETF(false, "WaitForBuffersAllocated failed: %d", status);
+    PRINT_STDERR("WaitForBuffersAllocated failed: %d", status);
+    return false;
   }
   if (allocation_status != ZX_OK) {
-    return DRETF(false, "WaitForBuffersAllocated failed: %d", allocation_status);
+    PRINT_STDERR("WaitForBuffersAllocated failed: %d", allocation_status);
+    return false;
   }
   status = sysmem_collection->Close();
   if (status != ZX_OK) {
-    return DRETF(false, "Close failed: %d", status);
+    PRINT_STDERR("Close failed: %d", status);
+    return false;
   }
 
   VkBufferCollectionBufferCreateInfoFUCHSIA collection_buffer_create_info = {
@@ -671,9 +701,10 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   VkBuffer buffer;
 
   result = vkCreateBuffer(vk_device_, &buffer_create_info, nullptr, &buffer);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkCreateBuffer failed: %d", result);
-  DLOG("buffer created");
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkCreateBuffer failed: %d", result);
+    return false;
+  }
 
   VkMemoryRequirements requirements;
   vkGetBufferMemoryRequirements(vk_device_, buffer, &requirements);
@@ -681,7 +712,8 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
       .sType = VK_STRUCTURE_TYPE_BUFFER_COLLECTION_PROPERTIES_FUCHSIA};
   result = vkGetBufferCollectionPropertiesFUCHSIA_(vk_device_, collection, &properties);
   if (result != VK_SUCCESS) {
-    return DRETF(false, "vkGetBufferCollectionProperties failed");
+    PRINT_STDERR("vkGetBufferCollectionProperties failed");
+    return false;
   }
 
   EXPECT_EQ(2u, properties.count);
@@ -719,20 +751,22 @@ bool VulkanTest::ExecBuffer(uint32_t size) {
   alloc_info.memoryTypeIndex = memory_type;
 
   result = vkAllocateMemory(vk_device_, &alloc_info, nullptr, &vk_device_memory_);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkBindBufferMemory failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkBindBufferMemory failed: %d", result);
+    return false;
+  }
 
   result = vkBindBufferMemory(vk_device_, buffer, vk_device_memory_, 0u);
-  if (result != VK_SUCCESS)
-    return DRETF(false, "vkBindBufferMemory failed: %d", result);
+  if (result != VK_SUCCESS) {
+    PRINT_STDERR("vkBindBufferMemory failed: %d", result);
+    return false;
+  }
 
   vkDestroyBuffer(vk_device_, buffer, nullptr);
 
   vkFreeMemory(vk_device_, vk_device_memory_, nullptr);
 
   vkDestroyBufferCollectionFUCHSIA_(vk_device_, collection, nullptr);
-
-  DLOG("buffer destroyed");
 
   return true;
 }

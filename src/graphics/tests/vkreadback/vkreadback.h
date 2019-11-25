@@ -16,8 +16,6 @@
 #include <vulkan/vulkan.h>
 
 #include "gtest/gtest.h"
-#include "magma_util/dlog.h"
-#include "magma_util/macros.h"
 
 // Supports Fuchsia external memory extension.
 class VkReadbackTest {
