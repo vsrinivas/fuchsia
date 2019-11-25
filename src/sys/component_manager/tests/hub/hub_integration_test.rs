@@ -5,9 +5,8 @@
 use {
     component_manager_lib::{
         model::{
-            self, hooks::*, testing::breakpoints::*, testing::breakpoints_capability::*,
-            testing::test_helpers, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig,
-            Model,
+            self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker,
+            BuiltinEnvironment, ComponentManagerConfig, Model,
         },
         startup,
     },
@@ -31,8 +30,7 @@ struct TestRunner {
     pub builtin_environment: BuiltinEnvironment,
     hub_test_hook: Arc<HubTestHook>,
     _breakpoint_system: BreakpointSystem,
-    _breakpoint_capability_hook: BreakpointCapabilityHook,
-    breakpoint_receiver: BreakpointInvocationReceiver,
+    invocation_receiver: InvocationReceiver,
     hub_proxy: DirectoryProxy,
 }
 
@@ -52,13 +50,12 @@ async fn install_hub_test_hook(model: &Model) -> Arc<HubTestHook> {
 async fn register_breakpoints(
     model: &Model,
     event_types: Vec<EventType>,
-) -> (BreakpointSystem, BreakpointCapabilityHook, BreakpointInvocationReceiver) {
+) -> (BreakpointSystem, InvocationReceiver) {
     let breakpoint_system = BreakpointSystem::new();
-    let breakpoint_capability_hook = breakpoint_system.create_capability_hook();
     let breakpoint_receiver = breakpoint_system.register(event_types).await;
     model.root_realm.hooks.install(breakpoint_system.hooks()).await;
-    model.root_realm.hooks.install(breakpoint_capability_hook.hooks()).await;
-    (breakpoint_system, breakpoint_capability_hook, breakpoint_receiver)
+    model.root_realm.hooks.install(breakpoint_system.capability_hooks()).await;
+    (breakpoint_system, breakpoint_receiver)
 }
 
 impl TestRunner {
@@ -86,7 +83,7 @@ impl TestRunner {
         let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
 
         // Setup the breakpoints system for the test and the components in the tree.
-        let (breakpoint_system, breakpoint_capability_hook, breakpoint_receiver) =
+        let (breakpoint_system, breakpoint_receiver) =
             register_breakpoints(&model, event_types).await;
 
         // Bind the model, starting the root component
@@ -101,8 +98,7 @@ impl TestRunner {
             hub_proxy,
             hub_test_hook,
             _breakpoint_system: breakpoint_system,
-            _breakpoint_capability_hook: breakpoint_capability_hook,
-            breakpoint_receiver,
+            invocation_receiver: breakpoint_receiver,
         })
     }
 
@@ -110,13 +106,13 @@ impl TestRunner {
         &self,
         expected_event: EventType,
         components: Vec<&str>,
-    ) -> BreakpointInvocation {
-        let breakpoint = self.breakpoint_receiver.receive().await;
+    ) -> Invocation {
+        let invocation = self.invocation_receiver.receive().await;
         let expected_moniker = AbsoluteMoniker::from(components);
-        assert_eq!(breakpoint.event.type_(), expected_event);
-        let moniker = breakpoint.event.target_realm().abs_moniker.clone();
+        assert_eq!(invocation.event.type_(), expected_event);
+        let moniker = invocation.event.target_realm().abs_moniker.clone();
         assert_eq!(moniker, expected_moniker);
-        breakpoint
+        invocation
     }
 
     async fn connect_to_echo_service(&self, echo_service_path: String) -> Result<(), Error> {
@@ -230,7 +226,7 @@ async fn advanced_routing_test() -> Result<(), Error> {
 
     let echo_service_name = "fidl.examples.routing.echo.Echo";
     let hub_report_service_name = "fuchsia.test.hub.HubReport";
-    let breakpoints_service_name = "fuchsia.test.breakpoints.Breakpoints";
+    let breakpoints_service_name = "fuchsia.test.breakpoints.BreakpointSystem";
     let expose_svc_dir = "children/echo_server/exec/expose/svc";
 
     // Verify that the Echo service is exposed by echo_server

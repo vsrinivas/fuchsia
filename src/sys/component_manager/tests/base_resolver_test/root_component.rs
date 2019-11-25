@@ -2,8 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![recursion_limit = "512"]
-
 use {
     directory_broker,
     failure::Error,

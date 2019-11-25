@@ -21,20 +21,19 @@ async fn base_resolver_test() -> Result<(), Error> {
         "fuchsia-boot:///#meta/root.cm",
         vec![("/boot".to_string(), pkg_channel.into())],
     )
-    .await;
+    .await?;
 
-    test.register_breakpoints(vec![fbreak::EventType::StartInstance]).await;
-
-    // Begin component manager's execution
-    test.resume_breakpoint().await;
+    // Register breakpoints and begin execution of component manager
+    let receiver = test.breakpoint_system.register(vec![fbreak::EventType::StartInstance]).await?;
 
     // Expect the root component to be bound to
-    test.expect_breakpoint(fbreak::EventType::StartInstance, vec![]).await;
-    test.resume_breakpoint().await;
+    let invocation = receiver.expect(fbreak::EventType::StartInstance, vec![]).await?;
+    invocation.resume().await?;
 
     // Expect the echo_server component to be bound to
-    test.expect_breakpoint(fbreak::EventType::StartInstance, vec!["echo_server:0"]).await;
-    test.resume_breakpoint().await;
+    let invocation =
+        receiver.expect(fbreak::EventType::StartInstance, vec!["echo_server:0"]).await?;
+    invocation.resume().await?;
 
     // Connect to the echo service
     let path_to_service_dir =

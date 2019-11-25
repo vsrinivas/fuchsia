@@ -10,13 +10,14 @@ rustc_binary("advanced_routing_reporter_bin") {
   edition = "2018"
   source_root = "advanced_routing/reporter.rs"
   deps = [
-    ":component_side_testing_lib",
+    ":hub_report_lib",
     "//examples/components/routing/fidl:echo-rustc",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
@@ -38,13 +39,14 @@ rustc_binary("dynamic_child_reporter_bin") {
   edition = "2018"
   source_root = "dynamic_child/reporter.rs"
   deps = [
-    ":component_side_testing_lib",
+    ":hub_report_lib",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//src/sys/component_manager/tests:breakpoint_system_client",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
@@ -57,7 +59,7 @@ rustc_binary("visibility_reporter_bin") {
   edition = "2018"
   source_root = "visibility/reporter.rs"
   deps = [
-    ":component_side_testing_lib",
+    ":hub_report_lib",
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
@@ -69,10 +71,10 @@ rustc_binary("visibility_reporter_bin") {
   ]
 }
 
-rustc_library("component_side_testing_lib") {
-  name = "component_side_testing"
+rustc_library("hub_report_lib") {
+  name = "hub_report"
   edition = "2018"
-  source_root = "component_side_testing.rs"
+  source_root = "hub_report.rs"
   deps = [
     "//garnet/lib/rust/files_async",
     "//garnet/lib/rust/io_util",
@@ -81,7 +83,6 @@ rustc_library("component_side_testing_lib") {
     "//garnet/public/rust/fuchsia-component",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager/tests/fidl:hub-rustc",
-    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",

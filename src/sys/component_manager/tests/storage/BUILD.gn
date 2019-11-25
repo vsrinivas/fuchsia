@@ -13,25 +13,14 @@ rustc_test("storage_integration_test_bin") {
   deps = [
     "//garnet/lib/rust/io_util",
     "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//src/sys/component_manager:lib",
-    "//src/sys/component_manager/tests:test_utils",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
     "//third_party/rust_crates:lazy_static",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
-  ]
-  non_rust_deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
   ]
 }
 
@@ -51,29 +40,13 @@ rustc_binary("storage_user_bin") {
     "//third_party/rust_crates:failure",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
-  non_rust_deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
-    "//zircon/public/lib/async-loop-default",
-    "//zircon/public/lib/sync",
-    "//zircon/public/lib/memfs",
-  ]
 }
 
 test_package("storage_integration_test") {
   deps = [
     ":storage_integration_test_bin",
     ":storage_user_bin",
-    "//garnet/lib/rust/io_util",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_manager/tests/memfs",
-    "//third_party/rust_crates:failure",
-    "//zircon/system/fidl/fuchsia-io:fuchsia-io-rustc",
   ]
 
   meta = [

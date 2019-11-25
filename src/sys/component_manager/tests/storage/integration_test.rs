@@ -157,12 +157,14 @@ async fn storage_from_collection() -> Result<(), Error> {
         .context("failed to destroy child")?
         .expect("failed to destroy child");
 
-    breakpoint_receiver
+    let invocation = breakpoint_receiver
         .wait_until(EventType::PostDestroyInstance, vec!["coll:storage_user:1"].into())
         .await;
 
     println!("checking that storage was destroyed");
     assert_eq!(test_helpers::list_directory(&memfs_proxy).await, Vec::<String>::new());
+
+    invocation.resume();
 
     Ok(())
 }

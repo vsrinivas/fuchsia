@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::{format_err, Error},
+    breakpoint_system_client::BreakpointSystemClient,
+    failure::{format_err, Error, ResultExt},
     fidl_fuchsia_sys::{
         ComponentControllerEvent, EnvironmentControllerEvent, EnvironmentControllerProxy,
         EnvironmentMarker, EnvironmentOptions, FileDescriptor, LauncherProxy,
     },
-    fidl_fuchsia_test_breakpoints::{BreakpointsMarker, BreakpointsProxy, EventType},
+    fidl_fuchsia_test_breakpoints::*,
     fuchsia_component::client::*,
     fuchsia_runtime::HandleType,
     fuchsia_zircon as zx,
@@ -74,7 +75,7 @@ pub struct BlackBoxTest {
     /// The breakpoints FIDL service connected to component manager.
     /// An integration test can use this service to halt tasks of component manager
     /// at various points during its execution.
-    pub breakpoints: BreakpointsProxy,
+    pub breakpoint_system: BreakpointSystemClient,
 
     /// The path from Hub v1 to component manager.
     /// To get to Hub v2, append "out/hub" to this path.
@@ -86,76 +87,39 @@ impl BlackBoxTest {
     /// additional directory handles that are passed in to component manager.
     /// At the end of this function call, a component manager has been created
     /// in a hermetic environment and its execution is halted.
-    pub async fn default(root_component_url: &str) -> Self {
+    pub async fn default(root_component_url: &str) -> Result<Self, Error> {
         Self::custom(COMPONENT_MANAGER_URL, root_component_url, vec![]).await
     }
 
-    /// Creates a black box test with a custom component manager URL and
-    /// additional directory handles that are passed in to component manager.
-    /// At the end of this function call, a component manager has been created
-    /// in a hermetic environment and its execution is halted.
     pub async fn custom(
         component_manager_url: &str,
         root_component_url: &str,
         dir_handles: Vec<(String, zx::Handle)>,
-    ) -> Self {
+    ) -> Result<Self, Error> {
         // Use a random integer to identify this component manager
         let random_num = random::<u32>();
         let label = format!("test_{}", random_num);
 
-        let (env, launcher) = create_isolated_environment(&label).await;
+        let (env, launcher) = create_isolated_environment(&label).await?;
         let (component_manager_app, out_file) = launch_component_manager(
             launcher,
             component_manager_url,
             root_component_url,
             dir_handles,
         )
-        .await;
+        .await?;
         let component_manager_path = find_component_manager_in_hub(component_manager_url, &label);
-        let breakpoints = connect_to_breakpoint_service(&component_manager_path).await;
+        let breakpoint_system = connect_to_breakpoint_system(&component_manager_path).await?;
 
-        Self { env, component_manager_app, out_file, breakpoints, component_manager_path }
-    }
+        let test = Self {
+            env,
+            component_manager_app,
+            out_file,
+            breakpoint_system,
+            component_manager_path,
+        };
 
-    /// The methods below define how breakpoints work in a black-box test.
-    /// After a test creates a BlackBoxTest object, it must do the following:
-    /// 1. Register breakpoints it is interested in waiting on.
-    /// 2. Since component manager has been halted on a breakpoint
-    ///    (RootRealmCreated), resume from the last breakpoint to begin
-    ///    its execution.
-    ///
-    /// To verify state when certain events occur, a test must do the following:
-    /// 1. Expect a breakpoint.
-    /// 2. Verify state.
-    /// 3. Resume from the breakpoint.
-    ///
-    /// For a detailed working example, see /src/sys/component_manager/tests/base_resolver_test
-
-    /// Registers for breakpoints against the provided event types.
-    /// Can only be invoked before component manager begins execution.
-    pub async fn register_breakpoints(&self, event_types: Vec<EventType>) {
-        self.breakpoints
-            .register(&mut event_types.into_iter())
-            .await
-            .expect("could not register breakpoints");
-    }
-
-    /// Expects a breakpoint matching a particular event type and component moniker.
-    /// If the breakpoint is unexpected, this method will fail.
-    ///
-    /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly by calling resume_breakpoint().
-    pub async fn expect_breakpoint(&self, event_type: EventType, component: Vec<&str>) {
-        self.breakpoints
-            .expect(event_type, &mut component.into_iter())
-            .await
-            .expect("could not expect breakpoint");
-    }
-
-    /// Resumes component manager's execution from the last breakpoint.
-    /// The first call to this method will start component manager's execution.
-    pub async fn resume_breakpoint(&self) {
-        self.breakpoints.resume().await.expect("could not expect breakpoint");
+        Ok(test)
     }
 }
 
@@ -179,25 +143,26 @@ pub async fn launch_component_and_expect_output_with_extra_dirs(
     dir_handles: Vec<(String, zx::Handle)>,
     expected_output: String,
 ) -> Result<(), Error> {
-    let test = BlackBoxTest::custom(COMPONENT_MANAGER_URL, root_component_url, dir_handles).await;
-    test.register_breakpoints(vec![]).await;
-    test.resume_breakpoint().await;
+    let test = BlackBoxTest::custom(COMPONENT_MANAGER_URL, root_component_url, dir_handles).await?;
+    test.breakpoint_system.register(vec![]).await?;
     read_from_pipe(test.out_file, expected_output)
 }
 
 /// Creates an isolated environment for component manager inside this component.
 /// This isolated environment will be given the provided label so as to identify
 /// it uniquely in the hub.
-async fn create_isolated_environment(label: &str) -> (EnvironmentControllerProxy, LauncherProxy) {
+async fn create_isolated_environment(
+    label: &str,
+) -> Result<(EnvironmentControllerProxy, LauncherProxy), Error> {
     let env = connect_to_service::<EnvironmentMarker>()
-        .expect("could not connect to current environment");
+        .context("could not connect to current environment")?;
 
     let (new_env, new_env_server_end) =
-        fidl::endpoints::create_proxy().expect("could not create proxy");
+        fidl::endpoints::create_proxy().context("could not create proxy")?;
     let (controller, controller_server_end) =
-        fidl::endpoints::create_proxy().expect("could not create proxy");
+        fidl::endpoints::create_proxy().context("could not create proxy")?;
     let (launcher, launcher_server_end) =
-        fidl::endpoints::create_proxy().expect("could not create proxy");
+        fidl::endpoints::create_proxy().context("could not create proxy")?;
 
     // Component manager will run with these environment options
     let mut env_options = EnvironmentOptions {
@@ -216,7 +181,7 @@ async fn create_isolated_environment(label: &str) -> (EnvironmentControllerProxy
         None,
         &mut env_options,
     )
-    .expect("could not create isolated environment");
+    .context("could not create isolated environment")?;
 
     // Wait for the environment to be setup.
     // There is only one type of event (OnCreated) in this protocol, so just get the next one.
@@ -224,9 +189,11 @@ async fn create_isolated_environment(label: &str) -> (EnvironmentControllerProxy
         controller.take_event_stream().next().await.unwrap().unwrap();
 
     // Get the launcher for this environment so it can be used to start component manager.
-    new_env.get_launcher(launcher_server_end).expect("could not get isolated environment launcher");
+    new_env
+        .get_launcher(launcher_server_end)
+        .context("could not get isolated environment launcher")?;
 
-    (controller, launcher)
+    Ok((controller, launcher))
 }
 
 /// Use the provided launcher from the isolated environment to startup component manager.
@@ -238,7 +205,7 @@ async fn launch_component_manager(
     component_manager_url: &str,
     root_component_url: &str,
     dir_handles: Vec<(String, zx::Handle)>,
-) -> (App, std::fs::File) {
+) -> Result<(App, std::fs::File), Error> {
     // Create a pipe for the stdout from component manager
     let (file, pipe_handle) = make_pipe();
     let mut options = LaunchOptions::new();
@@ -256,7 +223,7 @@ async fn launch_component_manager(
         Some(vec![root_component_url.to_string(), "--debug".to_string()]),
         options,
     )
-    .expect("could not launch CM2");
+    .context("could not launch component manager")?;
 
     // Wait for component manager to setup the out directory
     let event_stream = component_manager_app.controller().take_event_stream();
@@ -271,16 +238,19 @@ async fn launch_component_manager(
         .next()
         .await;
 
-    (component_manager_app, file)
+    Ok((component_manager_app, file))
 }
 
 /// Use the path to component manager's hub to find the Breakpoint service
 /// and connect to it
-async fn connect_to_breakpoint_service(component_manager_path: &PathBuf) -> BreakpointsProxy {
+async fn connect_to_breakpoint_system(
+    component_manager_path: &PathBuf,
+) -> Result<BreakpointSystemClient, Error> {
     let path_to_svc = component_manager_path.join("out/svc");
-    let path_to_svc =
-        path_to_svc.to_str().expect("found invalid chars in path to breakpoint service");
-    connect_to_service_at::<BreakpointsMarker>(path_to_svc).expect("could not connect")
+    let path_to_svc = path_to_svc.to_str().expect("found invalid chars");
+    let proxy = connect_to_service_at::<BreakpointSystemMarker>(path_to_svc)
+        .context("could not connect to BreakpointSystem service")?;
+    Ok(BreakpointSystemClient::from_proxy(proxy))
 }
 
 /// Explore the hub to find the component manager running in the environment

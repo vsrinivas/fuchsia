@@ -49,7 +49,7 @@ async fn destruction() -> Result<(), Error> {
     model.bind(&root_moniker).await?;
 
     // Wait for `coll:root` to be destroyed.
-    breakpoint_receiver
+    let invocation = breakpoint_receiver
         .wait_until(EventType::PostDestroyInstance, vec!["coll:root:1"].into())
         .await;
 
@@ -94,6 +94,8 @@ async fn destruction() -> Result<(), Error> {
     ];
     assert_eq!(next, expected);
     assert_eq!(events, vec![Lifecycle::Destroy(vec!["coll:root:1"].into())]);
+
+    invocation.resume();
 
     Ok(())
 }

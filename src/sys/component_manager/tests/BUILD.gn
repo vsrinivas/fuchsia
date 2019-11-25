@@ -23,20 +23,31 @@ group("tests") {
   ]
 }
 
+rustc_library("breakpoint_system_client") {
+  name = "breakpoint_system_client"
+  edition = "2018"
+  source_root = "breakpoint_system_client.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-component",
+    "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
+    "//third_party/rust_crates:failure",
+  ]
+}
+
 rustc_library("test_utils") {
   name = "test_utils"
   edition = "2018"
   source_root = "test_utils.rs"
   deps = [
+    ":breakpoint_system_client",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
-    "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/component_manager/tests/fidl:breakpoints-rustc",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
     "//third_party/rust_crates:parking_lot",
@@ -72,7 +83,6 @@ test_package("shutdown_integration_test") {
   deps = [
     ":shutdown_integration_test_bin",
     ":system_controller_client",
-    ":test_utils",
   ]
 
   components =
@@ -107,15 +117,11 @@ rustc_test("elf_runner_test_bin") {
   edition = "2018"
   source_root = "elf_runner_test.rs"
   deps = [
-    "//garnet/lib/rust/cm_fidl_translator",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//third_party/rust_crates:failure",
   ]
 }
 

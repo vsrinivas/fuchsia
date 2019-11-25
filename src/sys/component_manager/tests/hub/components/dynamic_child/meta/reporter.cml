@@ -12,7 +12,7 @@
             "from": "framework"
         },
         {
-            "legacy_service": "/svc/fuchsia.test.breakpoints.Breakpoints",
+            "legacy_service": "/svc/fuchsia.test.breakpoints.BreakpointSystem",
             "from": "framework"
         },
         {

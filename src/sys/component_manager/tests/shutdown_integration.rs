@@ -9,10 +9,9 @@ async fn test() -> Result<(), Error> {
     let test = BlackBoxTest::default(
         "fuchsia-pkg://fuchsia.com/shutdown_integration_test#meta/shutdown_integration_root.cm",
     )
-    .await;
+    .await?;
 
-    test.register_breakpoints(vec![]).await;
-    test.resume_breakpoint().await;
+    test.breakpoint_system.register(vec![]).await?;
 
     test.component_manager_app
         .wait_with_output()

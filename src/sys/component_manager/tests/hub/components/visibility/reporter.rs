@@ -2,23 +2,23 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {component_side_testing::*, failure::Error, fuchsia_async as fasync};
+use {failure::Error, fuchsia_async as fasync, hub_report::HubReport};
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
-    let testing = ComponentSideTesting::new()?;
+    let hub_report = HubReport::new()?;
 
     // Read the children of this component and pass the results to the integration test
     // via HubReport.
-    testing.report_directory_contents("/hub/children").await?;
+    hub_report.report_directory_contents("/hub/children").await?;
 
     // Read the hub of the child and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/child").await?;
+    hub_report.report_directory_contents("/hub/children/child").await?;
 
     // Read the grandchildren and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/child/children").await?;
+    hub_report.report_directory_contents("/hub/children/child/children").await?;
 
     Ok(())
 }

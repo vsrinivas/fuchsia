@@ -45,7 +45,7 @@ impl HubCapabilityProvider {
         HubCapabilityProvider { abs_moniker, relative_path, hub_inner }
     }
 
-    pub async fn open_async(
+    async fn open_async(
         &self,
         flags: u32,
         open_mode: u32,

@@ -19,10 +19,8 @@ rustc_test("routing_integration_test_bin") {
   edition = "2018"
   source_root = "routing_integration_test.rs"
   deps = [
-    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
     "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//src/sys/component_manager/tests:test_utils",

@@ -11,22 +11,10 @@ rustc_test("destruction_integration_test_bin") {
   edition = "2018"
   source_root = "integration_test.rs"
   deps = [
-    "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-syslog",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//src/sys/component_manager:lib",
-    "//src/sys/component_manager/tests:test_utils",
-    "//third_party/rust_crates:async-trait",
     "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-  ]
-  non_rust_deps = [
-    "//zircon/public/lib/async",
-    "//zircon/public/lib/async-default",
-    "//zircon/public/lib/async-loop",
   ]
 }
 

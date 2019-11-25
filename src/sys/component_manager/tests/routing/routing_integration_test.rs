@@ -9,7 +9,6 @@ use {
     fuchsia_runtime::{HandleInfo, HandleType},
     fuchsia_zircon::{self as zx, HandleBased},
     std::ffi::CString,
-    test_utils,
 };
 
 #[fasync::run_singlethreaded(test)]

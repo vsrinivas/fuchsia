@@ -57,28 +57,44 @@ enum EventType {
     USE_CAPABILITY = 4;
 };
 
-/// A protocol used in testing by a component instance to block the
-/// component manager until specific events occur.
+/// Registers breakpoints in component manager.
 [Discoverable]
-protocol Breakpoints {
-    /// Register breakpoints for the given EventTypes.
-    /// Must be called exactly once before Expect or Resume.
-    Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types) -> ();
+protocol BreakpointSystem {
+    /// Registers breakpoints for the given EventTypes.
+    /// Returns a BreakpointInvocationReceiver which can be used
+    /// to expect the registered types.
+    ///
+    /// If component manager is in debug mode, the first call to this
+    /// method implicitly starts component manager's execution.
+    Register(vector<EventType>:MAX_NUM_EVENT_TYPES event_types, request<InvocationReceiver> server_end) -> ();
+};
 
+/// Receives invocations for registered events in component manager.
+protocol InvocationReceiver {
     /// Blocks until the next invocation of a breakpoint occurs and verifies
-    /// that the EventType and component list are as expected.
+    /// that the EventType and component are as expected.
     ///
     /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly by calling Resume().
-    Expect(EventType event_type, vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component) -> ();
+    /// allowed to proceed until resumed explicitly via the Invocation object.
+    Expect(EventType event_type, vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, request<Invocation> server_end) -> ();
+
+    /// Blocks until the next invocation of a breakpoint occurs and verifies
+    /// that the EventType is as expected.
+    ///
+    /// Note: The component manager is blocked after this call and will not be
+    /// allowed to proceed until resumed explicitly via the Invocation object.
+    ExpectType(EventType event_type, request<Invocation> server_end) -> ();
 
     /// Blocks until a UseCapability invocation matching the specified component
     /// and capability path. All other invocations are ignored.
     ///
     /// Note: The component manager is blocked after this call and will not be
-    /// allowed to proceed until resumed explicitly by calling Resume().
-    WaitUntilUseCapability(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path) -> ();
+    /// allowed to proceed until resumed explicitly via the Invocation object.
+    WaitUntilUseCapability(vector<string:MAX_MONIKER_LENGTH>:MAX_COMPONENT_DEPTH component, string:MAX_CAPABILITY_PATH_LENGTH requested_capability_path, request<Invocation> server_end) -> ();
+};
 
-    /// Resume the component manager from the last expected invocation.
+/// A single invocation of a breakpoint in component manager.
+protocol Invocation {
+    /// Resume/unblock the component manager from this invocation.
     Resume() -> ();
 };

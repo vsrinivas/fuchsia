@@ -3,12 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    component_side_testing::*,
+    breakpoint_system_client::BreakpointSystemClient,
     failure::{Error, ResultExt},
     fidl::endpoints,
     fidl_fuchsia_io::DirectoryMarker,
     fidl_fuchsia_sys2 as fsys, fidl_fuchsia_test_breakpoints as fbreak, fuchsia_async as fasync,
     fuchsia_component::client::connect_to_service,
+    hub_report::HubReport,
 };
 
 #[fasync::run_singlethreaded]
@@ -27,11 +28,12 @@ async fn main() -> Result<(), Error> {
         .context("create_child failed")?
         .expect("failed to create child");
 
-    let testing = ComponentSideTesting::new()?;
+    let hub_report = HubReport::new()?;
+    let breakpoint_system = BreakpointSystemClient::new()?;
 
     // Register breakpoints for relevant events
-    testing
-        .register_breakpoints(vec![
+    let receiver = breakpoint_system
+        .register(vec![
             fbreak::EventType::StopInstance,
             fbreak::EventType::PreDestroyInstance,
             fbreak::EventType::PostDestroyInstance,
@@ -40,19 +42,19 @@ async fn main() -> Result<(), Error> {
 
     // Read the children of this component and pass the results to the integration test
     // via HubReport.
-    testing.report_directory_contents("/hub/children").await?;
+    hub_report.report_directory_contents("/hub/children").await?;
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/coll:simple_instance").await?;
+    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await?;
 
     // Read the instance id of the dynamic child and pass the results to the integration test
     // via HubReport
-    testing.report_file_content("/hub/children/coll:simple_instance/id").await?;
+    hub_report.report_file_content("/hub/children/coll:simple_instance/id").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
+    hub_report.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
 
     // Bind to the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -64,15 +66,15 @@ async fn main() -> Result<(), Error> {
 
     // Read the hub of the dynamic child and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/coll:simple_instance").await?;
+    hub_report.report_directory_contents("/hub/children/coll:simple_instance").await?;
 
     // Read the children of the dynamic child and pass the results to the integration test
     // via HubReport
-    testing.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
+    hub_report.report_directory_contents("/hub/children/coll:simple_instance/children").await?;
 
     // Read the instance id of the dynamic child's static child and pass the results to the
     // integration test via HubReport
-    testing.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
+    hub_report.report_file_content("/hub/children/coll:simple_instance/children/child/id").await?;
 
     // Delete the dynamic child
     let mut child_ref = fsys::ChildRef {
@@ -86,51 +88,44 @@ async fn main() -> Result<(), Error> {
         .expect("failed to delete child");
 
     // Wait for the dynamic child to begin deletion
-    testing
-        .expect_invocation(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
+    let invocation = receiver
+        .expect(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
-    testing.report_directory_contents("/hub/children").await?;
-    testing.report_directory_contents("/hub/deleting").await?;
-    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    testing.resume_invocation().await?;
+    hub_report.report_directory_contents("/hub/children").await?;
+    hub_report.report_directory_contents("/hub/deleting").await?;
+    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
+    invocation.resume().await?;
 
     // Wait for the dynamic child to stop
-    testing
-        .expect_invocation(fbreak::EventType::StopInstance, vec!["coll:simple_instance:1"])
-        .await?;
-    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
-    testing.resume_invocation().await?;
+    let invocation =
+        receiver.expect(fbreak::EventType::StopInstance, vec!["coll:simple_instance:1"]).await?;
+    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1").await?;
+    invocation.resume().await?;
 
     // Wait for the dynamic child's static child to begin deletion
-    testing
-        .expect_invocation(
-            fbreak::EventType::PreDestroyInstance,
-            vec!["coll:simple_instance:1", "child:0"],
-        )
+    let invocation = receiver
+        .expect(fbreak::EventType::PreDestroyInstance, vec!["coll:simple_instance:1", "child:0"])
         .await?;
-    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
-    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
-    testing
+    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/children").await?;
+    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
+    hub_report
         .report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting/child:0")
         .await?;
-    testing.resume_invocation().await?;
+    invocation.resume().await?;
 
     // Wait for the dynamic child's static child to be destroyed
-    testing
-        .expect_invocation(
-            fbreak::EventType::PostDestroyInstance,
-            vec!["coll:simple_instance:1", "child:0"],
-        )
+    let invocation = receiver
+        .expect(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1", "child:0"])
         .await?;
-    testing.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
-    testing.resume_invocation().await?;
+    hub_report.report_directory_contents("/hub/deleting/coll:simple_instance:1/deleting").await?;
+    invocation.resume().await?;
 
     // Wait for the dynamic child to be destroyed
-    testing
-        .expect_invocation(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
+    let invocation = receiver
+        .expect(fbreak::EventType::PostDestroyInstance, vec!["coll:simple_instance:1"])
         .await?;
-    testing.report_directory_contents("/hub/deleting").await?;
-    testing.resume_invocation().await?;
+    hub_report.report_directory_contents("/hub/deleting").await?;
+    invocation.resume().await?;
 
     Ok(())
 }

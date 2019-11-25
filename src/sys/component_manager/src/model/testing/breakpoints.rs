@@ -8,29 +8,23 @@ use {
     },
     crate::model::*,
     futures::{channel::*, future::BoxFuture, lock::Mutex, sink::SinkExt, StreamExt},
-    lazy_static::lazy_static,
     std::{
         collections::HashMap,
-        convert::TryInto,
         sync::{Arc, Weak},
     },
 };
 
-lazy_static! {
-    pub static ref BREAKPOINTS_SERVICE: cm_rust::CapabilityPath =
-        "/svc/fuchsia.test.breakpoints.Breakpoints".try_into().unwrap();
-}
-
 /// Created for a particular invocation of a breakpoint in component manager.
 /// Contains the Event that occurred along with a means to resume/unblock the component manager.
-pub struct BreakpointInvocation {
+#[must_use = "invoke resume() otherwise component manager will be halted indefinitely!"]
+pub struct Invocation {
     pub event: Event,
 
     // This Sender is used to unblock the component manager.
     responder: oneshot::Sender<()>,
 }
 
-impl BreakpointInvocation {
+impl Invocation {
     pub fn resume(self) {
         self.responder.send(()).unwrap()
     }
@@ -46,12 +40,12 @@ impl BreakpointInvocation {
 /// BreakpointCapability. It receives a BreakpointInvocation from a BreakpointInvocationSender
 /// and propagates it to the client.
 #[derive(Clone)]
-pub struct BreakpointInvocationSender {
-    tx: Arc<Mutex<mpsc::Sender<BreakpointInvocation>>>,
+pub struct InvocationSender {
+    tx: Arc<Mutex<mpsc::Sender<Invocation>>>,
 }
 
-impl BreakpointInvocationSender {
-    fn new(tx: mpsc::Sender<BreakpointInvocation>) -> Self {
+impl InvocationSender {
+    fn new(tx: mpsc::Sender<Invocation>) -> Self {
         Self { tx: Arc::new(Mutex::new(tx)) }
     }
 
@@ -60,24 +54,24 @@ impl BreakpointInvocationSender {
         let (responder_tx, responder_rx) = oneshot::channel();
         {
             let mut tx = self.tx.lock().await;
-            tx.send(BreakpointInvocation { event, responder: responder_tx }).await.unwrap();
+            tx.send(Invocation { event, responder: responder_tx }).await.unwrap();
         }
         Ok(responder_rx)
     }
 }
 
 #[derive(Clone)]
-pub struct BreakpointInvocationReceiver {
-    rx: Arc<Mutex<mpsc::Receiver<BreakpointInvocation>>>,
+pub struct InvocationReceiver {
+    rx: Arc<Mutex<mpsc::Receiver<Invocation>>>,
 }
 
-impl BreakpointInvocationReceiver {
-    fn new(rx: mpsc::Receiver<BreakpointInvocation>) -> Self {
+impl InvocationReceiver {
+    fn new(rx: mpsc::Receiver<Invocation>) -> Self {
         Self { rx: Arc::new(Mutex::new(rx)) }
     }
 
     /// Receives an invocation from the sender.
-    pub async fn receive(&self) -> BreakpointInvocation {
+    pub async fn receive(&self) -> Invocation {
         let mut rx = self.rx.lock().await;
         rx.next().await.expect("Breakpoint did not occur")
     }
@@ -88,7 +82,7 @@ impl BreakpointInvocationReceiver {
         &self,
         expected_event_type: EventType,
         expected_moniker: AbsoluteMoniker,
-    ) -> BreakpointInvocation {
+    ) -> Invocation {
         loop {
             let invocation = self.receive().await;
             let actual_event_type = invocation.event.type_();
@@ -103,7 +97,7 @@ impl BreakpointInvocationReceiver {
 
 /// Registers breakpoints from multiple tasks and sends events to all of them.
 pub struct BreakpointRegistry {
-    sender_map: Arc<Mutex<HashMap<EventType, Vec<BreakpointInvocationSender>>>>,
+    sender_map: Arc<Mutex<HashMap<EventType, Vec<InvocationSender>>>>,
 }
 
 impl BreakpointRegistry {
@@ -112,10 +106,10 @@ impl BreakpointRegistry {
     }
 
     /// Registers breakpoints against a set of EventTypes.
-    pub async fn register(&self, event_types: Vec<EventType>) -> BreakpointInvocationReceiver {
+    pub async fn register(&self, event_types: Vec<EventType>) -> InvocationReceiver {
         let (tx, rx) = mpsc::channel(0);
-        let sender = BreakpointInvocationSender::new(tx);
-        let receiver = BreakpointInvocationReceiver::new(rx);
+        let sender = InvocationSender::new(tx);
+        let receiver = InvocationReceiver::new(rx);
 
         let mut sender_map = self.sender_map.lock().await;
         for event_type in event_types {
@@ -152,7 +146,12 @@ impl BreakpointRegistry {
         }
 
         // Wait until all tasks have used the responder to unblock.
-        futures::future::join_all(responder_channels).await;
+        let results = futures::future::join_all(responder_channels).await;
+
+        // Ensure that all tasks did unblock
+        for result in results {
+            result.expect("BreakpointRegistry::send -> a task did not unblock");
+        }
         Ok(())
     }
 }
@@ -163,16 +162,18 @@ impl BreakpointRegistry {
 pub struct BreakpointSystem {
     registry: Arc<BreakpointRegistry>,
     hook: Arc<BreakpointHook>,
+    capability_hook: Arc<BreakpointCapabilityHook>,
 }
 
 impl BreakpointSystem {
     pub fn new() -> Self {
         let registry = Arc::new(BreakpointRegistry::new());
         let hook = Arc::new(BreakpointHook::new(registry.clone()));
-        Self { registry, hook }
+        let capability_hook = Arc::new(BreakpointCapabilityHook::new(registry.clone()));
+        Self { registry, hook, capability_hook }
     }
 
-    pub async fn register(&self, event_types: Vec<EventType>) -> BreakpointInvocationReceiver {
+    pub async fn register(&self, event_types: Vec<EventType>) -> InvocationReceiver {
         self.registry.register(event_types).await
     }
 
@@ -194,10 +195,12 @@ impl BreakpointSystem {
         }]
     }
 
-    /// Creates a capability hook that can be attached to a realm, so that components
-    /// can request the BreakpointCapability.
-    pub fn create_capability_hook(&self) -> BreakpointCapabilityHook {
-        BreakpointCapabilityHook::new(self.registry.clone())
+    /// This hook allows components in the tree to request the breakpoint capability.
+    pub fn capability_hooks(&self) -> Vec<HooksRegistration> {
+        vec![HooksRegistration {
+            events: vec![EventType::RouteFrameworkCapability],
+            callback: Arc::downgrade(&self.capability_hook) as Weak<dyn Hook>,
+        }]
     }
 
     /// Creates a capability provider used for debugging purposes.
