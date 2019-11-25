@@ -21,6 +21,7 @@ use {
         prelude::*,
         stream::FuturesUnordered,
     },
+    http::Uri,
     hyper::{body::Payload, Body, Request, StatusCode},
     parking_lot::Mutex,
     std::{
@@ -32,7 +33,6 @@ use {
             Arc,
         },
     },
-    url::Url,
 };
 
 mod retry;
@@ -454,7 +454,7 @@ impl FetchError {
             FetchError::Fidl(_) => Status::IO,
             FetchError::Io(_) => Status::IO,
             FetchError::NoMirrors => Status::INTERNAL,
-            FetchError::BadMirrorUrl(_) => Status::INTERNAL,
+            FetchError::BlobUrl(_) => Status::INTERNAL,
         }
     }
 }
@@ -620,27 +620,69 @@ async fn fetch_blob(
     .await
 }
 
-fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<Url, url::ParseError> {
-    // Url::join does not perform as might be expected.  Notably, it will:
-    // * strip the final path segment in the lhs if it does not end with '/'
-    // * strip the lhs's entire path if the rhs starts with '/'.
-    // Url::path_segments_mut provides a type with fewer unexpected edge cases.
+#[derive(Debug, Fail)]
+pub enum BlobUrlError {
+    #[fail(display = "mirror URI doesn't have a path")]
+    UriWithoutPath,
 
-    let mut blob_url = blob_mirror_url.parse::<Url>()?;
-    {
-        let mut path_mut = blob_url
-            .path_segments_mut()
-            .map_err(|()| url::ParseError::RelativeUrlWithCannotBeABaseBase)?;
-        // if the url ends with '/', remove it, as push always pushes a '/'.
-        path_mut.pop_if_empty();
-        path_mut.push(&merkle.to_string());
+    #[fail(display = "HTTP error: {}", _0)]
+    Http(#[cause] http::Error),
+
+    #[fail(display = "invalid URI: {}", _0)]
+    InvalidUri(#[cause] http::uri::InvalidUri),
+
+    #[fail(display = "invalid URI parts: {}", _0)]
+    InvalidUriParts(#[cause] http::uri::InvalidUriParts),
+}
+
+impl From<http::Error> for BlobUrlError {
+    fn from(x: http::Error) -> Self {
+        BlobUrlError::Http(x)
     }
-    Ok(blob_url)
+}
+
+impl From<http::uri::InvalidUri> for BlobUrlError {
+    fn from(x: http::uri::InvalidUri) -> Self {
+        BlobUrlError::InvalidUri(x)
+    }
+}
+
+impl From<http::uri::InvalidUriParts> for BlobUrlError {
+    fn from(x: http::uri::InvalidUriParts) -> Self {
+        BlobUrlError::InvalidUriParts(x)
+    }
+}
+
+fn make_blob_url(blob_mirror_url: &str, merkle: &BlobId) -> Result<hyper::Uri, BlobUrlError> {
+    let uri = blob_mirror_url.parse::<Uri>()?;
+
+    let mut uri_parts = uri.into_parts();
+    let (path, query) = match &uri_parts.path_and_query {
+        Some(path_and_query) => {
+            // Remove a trailing slash from path, if any.
+            let mut modified_path = path_and_query.path().to_owned();
+            if modified_path.ends_with('/') {
+                modified_path.pop();
+            }
+            (modified_path, path_and_query.query())
+        }
+        None => return Err(BlobUrlError::UriWithoutPath),
+    };
+    // Add the merkle string to the end of the path.
+    // There isn't a way to reconstruct a PathAndQuery by its struct members,
+    // so we have to use format and then parse from a string...
+    uri_parts.path_and_query = if let Some(query) = query {
+        Some(format!("{}/{}?{}", path, &merkle, query).parse()?)
+    } else {
+        Some(format!("{}/{}", path, &merkle).parse()?)
+    };
+
+    Ok(Uri::from_parts(uri_parts)?)
 }
 
 async fn download_blob(
     client: &fuchsia_hyper::HttpsClient,
-    url: &Url,
+    uri: &http::Uri,
     blob_kind: BlobKind,
     expected_len: Option<u64>,
     dest: FileProxy,
@@ -664,7 +706,7 @@ async fn download_blob(
 
     let _fpc = FileProxyCloserGuard { f: &dest };
 
-    let request = Request::get(url.to_string()).body(Body::empty())?;
+    let request = Request::get(uri).body(Body::empty())?;
     let response = client.request(request).compat().await?;
 
     if response.status() != StatusCode::OK {
@@ -742,9 +784,6 @@ pub enum FetchError {
     #[fail(display = "repository has no configured mirrors")]
     NoMirrors,
 
-    #[fail(display = "mirror url is not valid")]
-    BadMirrorUrl(#[cause] url::ParseError),
-
     #[fail(display = "expected blob length of {}, got {}", expected, actual)]
     ContentLengthMismatch { expected: u64, actual: u64 },
 
@@ -774,12 +813,9 @@ pub enum FetchError {
 
     #[fail(display = "io error: {}", _0)]
     Io(#[cause] Status),
-}
 
-impl From<url::ParseError> for FetchError {
-    fn from(x: url::ParseError) -> Self {
-        FetchError::BadMirrorUrl(x)
-    }
+    #[fail(display = "blob url error: {}", _0)]
+    BlobUrl(#[cause] BlobUrlError),
 }
 
 impl From<hyper::Error> for FetchError {
@@ -791,6 +827,12 @@ impl From<hyper::Error> for FetchError {
 impl From<hyper::http::Error> for FetchError {
     fn from(x: hyper::http::Error) -> Self {
         FetchError::Http(x)
+    }
+}
+
+impl From<BlobUrlError> for FetchError {
+    fn from(x: BlobUrlError) -> Self {
+        FetchError::BlobUrl(x)
     }
 }
 
@@ -818,6 +860,7 @@ pub enum FetchErrorKind {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use matches::assert_matches;
 
     #[test]
     fn test_make_blob_url() {
@@ -826,23 +869,41 @@ mod tests {
             .unwrap();
 
         assert_eq!(
-            make_blob_url("http://example.com", &merkle),
-            Ok(format!("http://example.com/{}", merkle).parse().unwrap())
+            make_blob_url("http://example.com", &merkle).unwrap(),
+            format!("http://example.com/{}", merkle).parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("http://example.com/noslash", &merkle),
-            Ok(format!("http://example.com/noslash/{}", merkle).parse().unwrap())
+            make_blob_url("http://example.com/noslash", &merkle).unwrap(),
+            format!("http://example.com/noslash/{}", merkle).parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("http://example.com/slash/", &merkle),
-            Ok(format!("http://example.com/slash/{}", merkle).parse().unwrap())
+            make_blob_url("http://example.com/slash/", &merkle).unwrap(),
+            format!("http://example.com/slash/{}", merkle).parse::<Uri>().unwrap()
         );
 
         assert_eq!(
-            make_blob_url("data:text/plain,HelloWorld", &merkle),
-            Err(url::ParseError::RelativeUrlWithCannotBeABaseBase)
+            make_blob_url("http://example.com/twoslashes//", &merkle).unwrap(),
+            format!("http://example.com/twoslashes//{}", merkle).parse::<Uri>().unwrap()
+        );
+
+        assert_matches!(
+            make_blob_url("HelloWorld", &merkle).unwrap_err(),
+            BlobUrlError::UriWithoutPath
+        );
+
+        assert_matches!(
+            make_blob_url("server:80", &merkle).unwrap_err(),
+            BlobUrlError::UriWithoutPath
+        );
+
+        // IPv6 zone id
+        assert_eq!(
+            make_blob_url("http://[fe80::e022:d4ff:fe13:8ec3%252]:8083/blobs/", &merkle).unwrap(),
+            format!("http://[fe80::e022:d4ff:fe13:8ec3%252]:8083/blobs/{}", merkle)
+                .parse::<Uri>()
+                .unwrap()
         );
     }
 }
