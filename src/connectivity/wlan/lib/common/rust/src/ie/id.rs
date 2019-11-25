@@ -19,6 +19,7 @@ impl Id {
     pub const RSNE: Self = Self(48);
     pub const EXT_SUPPORTED_RATES: Self = Self(50);
     pub const HT_OPERATION: Self = Self(61);
+    pub const BSS_MAX_IDLE_PERIOD: Self = Self(90);
     pub const MESH_PEERING_MGMT: Self = Self(117);
     pub const PREQ: Self = Self(130);
     pub const PREP: Self = Self(131);

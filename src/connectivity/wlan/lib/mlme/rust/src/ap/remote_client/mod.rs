@@ -27,6 +27,7 @@ use {
 /// that the number of 1000 TUs that pass before an AP disassociates an inactive non-AP STA. This
 /// value is transmitted via the BSS Max Idle Period element (IEEE Std 802.11-2016, 9.4.2.79) in
 /// Association Response and Reassociation Response frames, which contains a 16-bit integer.
+// TODO(37891): Move this setting into the SME.
 const BSS_MAX_IDLE_PERIOD: u16 = 90;
 
 /// The MLME state machine. The actual state machine transitions are managed and validated in the
@@ -401,6 +402,7 @@ impl RemoteClient {
                 capabilities,
                 aid,
                 rates,
+                Some(BSS_MAX_IDLE_PERIOD),
             ),
             _ => ctx.send_assoc_resp_frame_error(
                 self.addr,
@@ -975,6 +977,7 @@ mod tests {
             // IEs
             1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
             50, 2, 9, 10, // Extended rates
+            90, 3, 90, 0, 0, // BSS max idle period
         ][..]);
         assert_eq!(
             *fake_scheduler.deadlines.get(active_timeout_event_id).unwrap(),

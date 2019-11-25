@@ -116,6 +116,13 @@ pub fn write_tim<B: Appendable>(
     write_ie!(buf, Id::TIM, header, bitmap)
 }
 
+pub fn write_bss_max_idle_period<B: Appendable>(
+    buf: &mut B,
+    bss_max_idle_period: &BssMaxIdlePeriod,
+) -> Result<(), FrameWriteError> {
+    write_ie!(buf, Id::BSS_MAX_IDLE_PERIOD, bss_max_idle_period)
+}
+
 pub fn write_mpm_open<B: Appendable>(
     buf: &mut B,
     header: &MpmHeader,
@@ -984,5 +991,19 @@ mod tests {
                 172, 2, // byte 16-17
             ]
         );
+    }
+
+    #[test]
+    fn bss_max_idle_period_ok() {
+        let mut buf = vec![];
+        write_bss_max_idle_period(
+            &mut buf,
+            &BssMaxIdlePeriod {
+                max_idle_period: 99,
+                idle_options: IdleOptions(0).with_protected_keep_alive_required(true),
+            },
+        )
+        .expect("writing bss max idle period");
+        assert_eq!(&buf[..], &[90, 3, 99, 0, 1]);
     }
 }

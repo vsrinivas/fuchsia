@@ -45,6 +45,7 @@ pub fn write_assoc_resp_frame<B: Appendable>(
     capabilities: mac::CapabilityInfo,
     aid: Aid,
     rates: &[u8],
+    max_idle_period: Option<u16>,
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
@@ -68,6 +69,19 @@ pub fn write_assoc_resp_frame<B: Appendable>(
 
     // 5: Extended Supported Rates and BSS Membership Selectors
     rates_writer.write_ext_supported_rates(buf);
+
+    if let Some(max_idle_period) = max_idle_period {
+        // 19: BSS Max Idle Period
+        write_bss_max_idle_period(
+            buf,
+            &BssMaxIdlePeriod {
+                max_idle_period,
+                idle_options: IdleOptions(0)
+                    // TODO(37891): Support configuring this.
+                    .with_protected_keep_alive_required(false),
+            },
+        )?;
+    }
 
     Ok(())
 }
@@ -284,6 +298,7 @@ mod tests {
             mac::CapabilityInfo(0),
             1,
             &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            Some(99),
         )
         .expect("failed writing frame");
         assert_eq!(
@@ -302,6 +317,7 @@ mod tests {
                 // IEs
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
                 50, 2, 9, 10, // Extended rates
+                90, 3, 99, 0, 0, // BSS max idle period
             ][..],
             &buf[..]
         );

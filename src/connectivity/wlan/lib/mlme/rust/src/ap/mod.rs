@@ -22,7 +22,7 @@ use {
         appendable::Appendable,
         buffer_writer::BufferWriter,
         frame_len,
-        ie::{IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
+        ie::{self, IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{
             self, Aid, AuthAlgorithmNumber, Bssid, CapabilityInfo, MacAddr, OptionalField,
             Presence, StatusCode,
@@ -560,6 +560,7 @@ impl Context {
         capabilities: mac::CapabilityInfo,
         aid: Aid,
         rates: &[u8],
+        max_idle_period: Option<u16>,
     ) -> Result<(), Error> {
         let frame_len = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
         let rates_len = IE_PREFIX_LEN
@@ -570,7 +571,12 @@ impl Context {
             // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
             // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
             + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
-        let frame_len = frame_len + rates_len;
+        let max_idle_period_len = if max_idle_period.is_some() {
+            IE_PREFIX_LEN + std::mem::size_of::<ie::BssMaxIdlePeriod>()
+        } else {
+            0
+        };
+        let frame_len = frame_len + rates_len + max_idle_period_len;
 
         let mut buf = self.buf_provider.get_buffer(frame_len)?;
         let mut w = BufferWriter::new(&mut buf[..]);
@@ -582,6 +588,7 @@ impl Context {
             capabilities,
             aid,
             rates,
+            max_idle_period,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
@@ -1122,6 +1129,7 @@ mod tests {
             mac::CapabilityInfo(0),
             1,
             &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            Some(99),
         )
         .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -1141,6 +1149,7 @@ mod tests {
             // IEs
             1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
             50, 2, 9, 10, // Extended rates
+            90, 3, 99, 0, 0, // BSS max idle period
         ][..]);
     }
 
@@ -1169,6 +1178,39 @@ mod tests {
             0, 0, // Capabilities
             94, 0, // status code
             0, 0, // AID
+        ][..]);
+    }
+
+    #[test]
+    fn ctx_send_assoc_resp_frame_no_bss_max_idle_period() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        ctx.send_assoc_resp_frame(
+            CLIENT_ADDR,
+            mac::CapabilityInfo(0),
+            1,
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            None,
+        )
+        .expect("error delivering WLAN frame");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Mgmt header
+            0b00010000, 0, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0x10, 0, // Sequence Control
+            // Association response header:
+            0, 0, // Capabilities
+            0, 0, // status code
+            1, 0, // AID
+            // IEs
+            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+            50, 2, 9, 10, // Extended rates
         ][..]);
     }
 
@@ -1488,6 +1530,7 @@ mod tests {
                 // IEs
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
                 50, 2, 9, 10, // Extended rates
+                90, 3, 90, 0, 0, // BSS max idle period
             ][..]
         );
         assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
@@ -2968,6 +3011,7 @@ mod tests {
                 // IEs
                 1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
                 50, 2, 9, 10, // Extended rates
+                90, 3, 90, 0, 0, // BSS max idle period
             ][..]
         );
     }

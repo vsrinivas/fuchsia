@@ -743,6 +743,26 @@ pub struct VhtCapabilities {
 #[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
 pub struct VhtCapabilitiesInfo(pub u32);
 
+// IEEE Std 802.11-2016, 9.4.2.79
+#[repr(C, packed)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Unaligned, Clone, Copy)]
+pub struct BssMaxIdlePeriod {
+    // dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3) is measured in
+    // increments of 1000 TUs, with a range from 1-65535.
+    pub max_idle_period: u16,
+    pub idle_options: IdleOptions,
+}
+
+// IEEE Std 802.11-2016, 9.4.2.158.2
+#[bitfield(
+    0     protected_keep_alive_required, // Set to 1 to indicate only a protected frame indicates
+                                         // activity
+    1..=7 _, // reserved
+)]
+#[repr(C)]
+#[derive(PartialEq, Eq, Hash, AsBytes, FromBytes, Clone, Copy)]
+pub struct IdleOptions(pub u8);
+
 // IEEE Std 802.11-2016, Table 9-249
 #[derive(Debug, PartialOrd, PartialEq, Clone, Copy)]
 pub struct MaxMpduLen(pub u8);
