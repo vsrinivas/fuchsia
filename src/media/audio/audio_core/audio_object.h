@@ -81,6 +81,11 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
     return dest_links_.size();
   }
 
+  bool has_link_to(AudioObject* object) {
+    return ForAnyDestLink([object](auto& link) { return link.GetDest().get() == object; }) ||
+           ForAnySourceLink([object](auto& link) { return link.GetSource().get() == object; });
+  }
+
  protected:
   friend class fbl::RefPtr<AudioObject>;
   explicit AudioObject(Type type) : type_(type) {}
@@ -162,10 +167,11 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   // Run this task on every AudioLink in dest_links_. All links will be called.
   void ForEachDestLink(const LinkFunction& dest_task) FXL_LOCKS_EXCLUDED(links_lock_);
 
-  // Run this task on each dest link. If any returns 'true', ForAnyDestLink
+  // Run this task on each link. If any returns 'true', ForAny<Dest|Source>Link
   // immediately returns 'true' without calling the remaining links. If none
-  // returns 'true' or if link set is empty, ForAnyDestLink returns 'false'.
+  // returns 'true' or if link set is empty, ForAny<Dest|Source>Link returns 'false'.
   bool ForAnyDestLink(const LinkBoolFunction& dest_task) FXL_LOCKS_EXCLUDED(links_lock_);
+  bool ForAnySourceLink(const LinkBoolFunction& source_task) FXL_LOCKS_EXCLUDED(links_lock_);
 
  private:
   template <typename TagType>

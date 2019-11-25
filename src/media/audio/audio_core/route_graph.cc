@@ -38,12 +38,8 @@ void RouteGraph::SetThrottleOutput(ThreadingModel* threading_model,
 void RouteGraph::AddOutput(AudioDevice* output) {
   AUD_VLOG(TRACE) << "Added output device to route graph: " << output;
 
-  if (!outputs_.empty()) {
-    outputs_.front()->Unlink();
-  }
   outputs_.push_front(output);
-  LinkRenderersTo(output);
-  LinkLoopbackCapturersTo(output);
+  UpdateGraphForDevicesChange();
 }
 
 void RouteGraph::RemoveOutput(AudioDevice* output) {
@@ -55,23 +51,15 @@ void RouteGraph::RemoveOutput(AudioDevice* output) {
     return;
   }
 
-  const bool should_reroute = *it == outputs_.front();
-  (*it)->Unlink();
   outputs_.erase(it);
-  if (should_reroute && !outputs_.empty()) {
-    LinkRenderersTo(outputs_.front());
-    LinkLoopbackCapturersTo(outputs_.front());
-  }
+  UpdateGraphForDevicesChange();
 }
 
 void RouteGraph::AddInput(AudioDevice* input) {
   AUD_VLOG(TRACE) << "Added input device to route graph: " << input;
 
-  if (!inputs_.empty()) {
-    inputs_.front()->Unlink();
-  }
   inputs_.push_front(input);
-  LinkCapturersTo(input);
+  UpdateGraphForDevicesChange();
 }
 
 void RouteGraph::RemoveInput(AudioDevice* input) {
@@ -83,12 +71,8 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
     return;
   }
 
-  const bool should_reroute = *it == inputs_.front();
-  (*it)->Unlink();
   inputs_.erase(it);
-  if (should_reroute && !inputs_.empty()) {
-    LinkCapturersTo(inputs_.front());
-  }
+  UpdateGraphForDevicesChange();
 }
 
 void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
@@ -111,18 +95,24 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
     return;
   }
 
-  const bool was_unrouted = !it->second.profile.routable;
   it->second.profile = std::move(profile);
-  if (!it->second.profile.routable) {
+  if (!it->second.profile.routable || !it->second.profile.usage.is_render_usage()) {
     it->second.ref->Unlink();
-  } else if (was_unrouted) {
-    if (outputs_.empty()) {
-      FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no outputs exist.";
-      return;
-    }
-
-    AudioObject::LinkObjects(it->second.ref, fbl::RefPtr(outputs_.front()));
+    return;
   }
+
+  if (it->second.ref->has_link_to(targets_.render)) {
+    return;
+  }
+
+  it->second.ref->Unlink();
+
+  if (!targets_.render) {
+    FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no output for the given usage exist.";
+    return;
+  }
+
+  AudioObject::LinkObjects(it->second.ref, fbl::RefPtr(targets_.render));
 }
 
 void RouteGraph::RemoveRenderer(AudioObject* renderer) {
@@ -150,18 +140,24 @@ void RouteGraph::SetCapturerRoutingProfile(AudioObject* capturer, RoutingProfile
     return;
   }
 
-  const bool was_unrouted = !it->second.profile.routable;
   it->second.profile = std::move(profile);
-  if (!it->second.profile.routable) {
+  if (!it->second.profile.routable || !it->second.profile.usage.is_capture_usage()) {
     it->second.ref->Unlink();
-  } else if (was_unrouted) {
-    if (inputs_.empty()) {
-      FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
-      return;
-    }
-
-    AudioObject::LinkObjects(fbl::RefPtr(inputs_.front()), it->second.ref);
+    return;
   }
+
+  if (it->second.ref->has_link_to(targets_.capture)) {
+    return;
+  }
+
+  it->second.ref->Unlink();
+
+  if (!targets_.capture) {
+    FX_LOGS(WARNING) << "Tried to route AudioCapturer, but no inputs exist.";
+    return;
+  }
+
+  AudioObject::LinkObjects(fbl::RefPtr(targets_.capture), it->second.ref);
 }
 
 void RouteGraph::RemoveCapturer(AudioObject* capturer) {
@@ -192,18 +188,24 @@ void RouteGraph::SetLoopbackCapturerRoutingProfile(AudioObject* loopback_capture
     return;
   }
 
-  const bool was_unrouted = !it->second.profile.routable;
   it->second.profile = std::move(profile);
-  if (!it->second.profile.routable) {
+  if (!it->second.profile.routable || !it->second.profile.usage.is_capture_usage()) {
     it->second.ref->Unlink();
-  } else if (was_unrouted) {
-    if (outputs_.empty() || outputs_.front() == throttle_output_.get()) {
-      FX_LOGS(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
-      return;
-    }
-
-    AudioObject::LinkObjects(fbl::RefPtr(outputs_.front()), it->second.ref);
+    return;
   }
+
+  if (it->second.ref->has_link_to(targets_.loopback)) {
+    return;
+  }
+
+  it->second.ref->Unlink();
+
+  if (!targets_.loopback) {
+    FX_LOGS(WARNING) << "Tried to route loopback AudioCapturer, but no outputs exist.";
+    return;
+  }
+
+  AudioObject::LinkObjects(fbl::RefPtr(targets_.loopback), it->second.ref);
 }
 
 // TODO(39627): Only accept capturers of loopback type.
@@ -218,10 +220,11 @@ void RouteGraph::RemoveLoopbackCapturer(AudioObject* loopback_capturer) {
 void RouteGraph::LinkRenderersTo(AudioDevice* output) {
   std::for_each(renderers_.begin(), renderers_.end(), [output](auto& renderer_pair) {
     auto& [_, renderer] = renderer_pair;
-    if (!renderer.profile.routable || renderer.ref->dest_link_count() > 0) {
+    if (!renderer.profile.routable || !renderer.profile.usage.is_render_usage()) {
       return;
     }
 
+    FX_CHECK(renderer.ref->dest_link_count() == 0);
     AudioObject::LinkObjects(renderer.ref, fbl::RefPtr(output));
   });
 }
@@ -229,30 +232,80 @@ void RouteGraph::LinkRenderersTo(AudioDevice* output) {
 void RouteGraph::LinkCapturersTo(AudioDevice* input) {
   std::for_each(capturers_.begin(), capturers_.end(), [input](auto& capturer_pair) {
     auto& [_, capturer] = capturer_pair;
-    if (!capturer.profile.routable || capturer.ref->source_link_count() > 0) {
+    if (!capturer.profile.routable || !capturer.profile.usage.is_capture_usage()) {
       return;
     }
 
+    FX_CHECK(capturer.ref->source_link_count() == 0);
     AudioObject::LinkObjects(fbl::RefPtr(input), capturer.ref);
   });
 }
 
 void RouteGraph::LinkLoopbackCapturersTo(AudioDevice* output) {
-  // TODO(13339): Remove throttle_output_.
-  if (output == throttle_output_.get()) {
-    return;
+  std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
+                [output](auto& loopback_capturer_pair) {
+                  auto& [_, loopback_capturer] = loopback_capturer_pair;
+                  if (!loopback_capturer.profile.routable ||
+                      !loopback_capturer.profile.usage.is_capture_usage()) {
+                    return;
+                  }
+
+                  FX_CHECK(loopback_capturer.ref->source_link_count() == 0);
+                  AudioObject::LinkObjects(fbl::RefPtr(output), loopback_capturer.ref);
+                });
+}
+
+void RouteGraph::UpdateGraphForDevicesChange() {
+  auto [targets, unlink_command] = CalculateTargets();
+  targets_ = targets;
+  Unlink(unlink_command);
+
+  if (unlink_command.renderers && targets_.render) {
+    LinkRenderersTo(targets_.render);
   }
 
-  std::for_each(
-      loopback_capturers_.begin(), loopback_capturers_.end(),
-      [output](auto& loopback_capturer_pair) {
-        auto& [_, loopback_capturer] = loopback_capturer_pair;
-        if (!loopback_capturer.profile.routable || loopback_capturer.ref->source_link_count() > 0) {
-          return;
-        }
+  if (unlink_command.loopback_capturers && targets_.loopback) {
+    LinkLoopbackCapturersTo(targets_.loopback);
+  }
 
-        AudioObject::LinkObjects(fbl::RefPtr(output), loopback_capturer.ref);
-      });
+  if (unlink_command.capturers && targets_.capture) {
+    LinkCapturersTo(targets_.capture);
+  }
+}
+
+std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateTargets() const {
+  auto new_render_target = outputs_.empty() ? nullptr : outputs_.front();
+  auto new_loopback_target = [this]() {
+    auto it = std::find_if(outputs_.begin(), outputs_.end(),
+                           [this](auto output) { return output != throttle_output_.get(); });
+
+    return it == outputs_.end() ? nullptr : *it;
+  }();
+  auto new_capture_target = inputs_.empty() ? nullptr : inputs_.front();
+
+  return {Targets{.render = new_render_target,
+                  .loopback = new_loopback_target,
+                  .capture = new_capture_target},
+          UnlinkCommand{.renderers = new_render_target != targets_.render,
+                        .loopback_capturers = new_loopback_target != targets_.loopback,
+                        .capturers = new_capture_target != targets_.capture}};
+}
+
+void RouteGraph::Unlink(UnlinkCommand unlink_command) {
+  if (unlink_command.loopback_capturers) {
+    std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
+                  [](auto& loopback_capturer) { loopback_capturer.second.ref->Unlink(); });
+  }
+
+  if (unlink_command.renderers) {
+    std::for_each(renderers_.begin(), renderers_.end(),
+                  [](auto& renderer) { renderer.second.ref->Unlink(); });
+  }
+
+  if (unlink_command.capturers) {
+    std::for_each(capturers_.begin(), capturers_.end(),
+                  [](auto& capturer) { capturer.second.ref->Unlink(); });
+  }
 }
 
 }  // namespace media::audio

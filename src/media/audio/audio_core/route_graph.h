@@ -92,11 +92,39 @@ class RouteGraph {
     RoutingProfile profile;
   };
 
+  // Cached targets for linking renderers and capturers.
+  struct Targets {
+    AudioDevice* render = nullptr;
+    AudioDevice* loopback = nullptr;
+    AudioDevice* capture = nullptr;
+  };
+
+  // A command to unlink components of the graph.
+  struct UnlinkCommand {
+    // Iff true, renderers should be unlinked.
+    bool renderers = false;
+    // Iff true, loopback capturers should be unlinked.
+    bool loopback_capturers = false;
+    /// Iff true, capturers, should be unlinked.
+    bool capturers = false;
+  };
+
+  void UpdateGraphForDevicesChange();
+
+  // Calculate the new targets based on our routing policy and available devices.
+  // Returns the new targets and an unlink command to unlink any out of date
+  // routing links.
+  std::pair<Targets, UnlinkCommand> CalculateTargets() const;
+
+  void Unlink(UnlinkCommand unlink_command);
+
   void LinkRenderersTo(AudioDevice* output);
   void LinkCapturersTo(AudioDevice* input);
   void LinkLoopbackCapturersTo(AudioDevice* output);
 
   [[maybe_unused]] const RoutingConfig& routing_config_;
+
+  Targets targets_;
 
   // TODO(39624): convert to weak_ptr when ownership is explicit.
   std::deque<AudioDevice*> inputs_;
