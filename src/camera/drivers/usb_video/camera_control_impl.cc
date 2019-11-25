@@ -50,7 +50,6 @@ void ControlImpl::GetDeviceInfo(GetDeviceInfoCallback callback) {
   camera_device_info.vendor_id = usb_device_info.vendor_id;
   camera_device_info.product_name = usb_device_info.product_name;
   camera_device_info.product_id = usb_device_info.product_id;
-  camera_device_info.serial_number = usb_device_info.serial_number;
 
   // TODO(CAM-11): add more capabilities based on usb description
   camera_device_info.output_capabilities = fuchsia::camera::CAMERA_OUTPUT_STREAM;

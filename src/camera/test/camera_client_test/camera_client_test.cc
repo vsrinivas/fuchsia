@@ -60,8 +60,7 @@ static void dump_device_info(const fuchsia::camera::DeviceInfo &device_info) {
             << ", vendor_id: " << device_info.vendor_id
             << ", vendor_name: " << device_info.vendor_name << "\n"
             << "  product_id: " << device_info.product_id
-            << ", product_name: " << device_info.product_name
-            << ", serial_number: " << device_info.serial_number << "\n"
+            << ", product_name: " << device_info.product_name << "\n"
             << "  max_stream_count: " << device_info.max_stream_count
             << ", output_capabilities: " << device_info.output_capabilities << "\n";
 }

@@ -83,7 +83,7 @@ std::unique_ptr<StreamProvider> ManagerStreamProvider::Create() {
   FX_LOGS(INFO) << provider->devices_.size() << " devices reported:";
   for (const auto& device : provider->devices_) {
     FX_LOGS(INFO) << "  " << device.first << ": " << device.second.vendor_name() << " | "
-                  << device.second.product_name() << " | " << device.second.serial_number();
+                  << device.second.product_name();
   }
 
   return std::move(provider);

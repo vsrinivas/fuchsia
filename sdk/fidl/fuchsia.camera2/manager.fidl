@@ -81,8 +81,7 @@ table DeviceInfo {
     2: string:255 vendor_name;
     3: uint16 product_id;
     4: string:255 product_name;
-    5: string:255 serial_number;
 
     /// Information about the type of device:
-    6: DeviceType type;
+    5: DeviceType type;
 };
