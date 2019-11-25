@@ -79,8 +79,16 @@ class Breakpoint {
   HitResult OnHit();
 
  private:
+  zx_status_t SetBreakpointLocations(const debug_ipc::BreakpointSettings&);
+  zx_status_t SetWatchpointLocations(const debug_ipc::BreakpointSettings&);
+
   // A process koid + address identifies one unique location.
   using LocationPair = std::pair<zx_koid_t, uint64_t>;
+
+  using WatchpointLocationPair = std::pair<zx_koid_t, debug_ipc::AddressRange>;
+  struct WatchpointLocationPairCompare {
+    bool operator()(const WatchpointLocationPair&, const WatchpointLocationPair&) const;
+  };
 
   ProcessDelegate* process_delegate_;  // Non-owning.
 
@@ -90,6 +98,7 @@ class Breakpoint {
   debug_ipc::BreakpointStats stats_;
 
   std::set<LocationPair> locations_;
+  std::set<WatchpointLocationPair, WatchpointLocationPairCompare> watchpoint_locations_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Breakpoint);
 };

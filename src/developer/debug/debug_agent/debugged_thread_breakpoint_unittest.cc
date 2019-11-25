@@ -145,11 +145,13 @@ class TestStreamBackend : public LocalStreamBackend {
 
 class MockProcessDelegate : public Breakpoint::ProcessDelegate {
  public:
-  zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
-                                 uint64_t address) override {
+  zx_status_t RegisterBreakpoint(Breakpoint*, zx_koid_t, uint64_t) override { return ZX_OK; }
+  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
+
+  zx_status_t RegisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {
     return ZX_OK;
   }
-  void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid, uint64_t address) override {}
+  void UnregisterWatchpoint(Breakpoint*, zx_koid_t, const debug_ipc::AddressRange&) override {}
 };
 
 // Helpers -----------------------------------------------------------------------------------------

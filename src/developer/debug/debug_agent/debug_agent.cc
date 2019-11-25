@@ -328,15 +328,13 @@ void DebugAgent::OnAddOrChangeBreakpoint(const debug_ipc::AddOrChangeBreakpointR
   switch (request.breakpoint_type) {
     case debug_ipc::BreakpointType::kSoftware:
     case debug_ipc::BreakpointType::kHardware:
-      return SetupBreakpoint(request, reply);
     case debug_ipc::BreakpointType::kWatchpoint:
-      FXL_NOTREACHED() << "Not implemented.";
-      break;
+      return SetupBreakpoint(request, reply);
     case debug_ipc::BreakpointType::kLast:
       break;
   }
 
-  FXL_NOTREACHED() << "Invalid Breakpoint Type.";
+  FXL_NOTREACHED() << "Invalid Breakpoint Type: " << static_cast<int>(request.breakpoint_type);
 }
 
 void DebugAgent::OnRemoveBreakpoint(const debug_ipc::RemoveBreakpointRequest& request,

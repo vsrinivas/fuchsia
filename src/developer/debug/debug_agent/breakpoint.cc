@@ -64,6 +64,7 @@ void LogSetSettings(debug_ipc::FileLineFunction location, const Breakpoint* bp) 
 
     // Print the actual location.
     ss << ", 0x" << std::hex << location.address << "] ";
+    ss << ", range: " << location.address_range.ToString();
   }
 
   DEBUG_LOG_WITH_LOCATION(Breakpoint, location) << Preamble(bp) << ss.str();
@@ -86,12 +87,27 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
   settings_ = settings;
   LogSetSettings(FROM_HERE, this);
 
-  zx_status_t result = ZX_OK;
-
   // The stats needs to reference the current ID. We assume setting the
   // settings doesn't update the stats (an option to do this may need to be
   // added in the future).
   stats_.id = settings_.id;
+
+  switch (type) {
+    case debug_ipc::BreakpointType::kSoftware:
+    case debug_ipc::BreakpointType::kHardware:
+      return SetBreakpointLocations(settings);
+    case debug_ipc::BreakpointType::kWatchpoint:
+      return SetWatchpointLocations(settings);
+    case debug_ipc::BreakpointType::kLast:
+      break;
+  }
+
+  FXL_NOTREACHED() << "Invalid breakpoint type: " << static_cast<int>(type);
+  return ZX_ERR_INVALID_ARGS;
+}
+
+zx_status_t Breakpoint::SetBreakpointLocations(const debug_ipc::BreakpointSettings& settings) {
+  zx_status_t result = ZX_OK;
 
   // The set of new locations.
   std::set<LocationPair> new_set;
@@ -115,6 +131,34 @@ zx_status_t Breakpoint::SetSettings(debug_ipc::BreakpointType type,
   }
 
   locations_ = std::move(new_set);
+  return result;
+}
+
+zx_status_t Breakpoint::SetWatchpointLocations(const debug_ipc::BreakpointSettings& settings) {
+  zx_status_t result = ZX_OK;
+
+  // The set of new locations.
+  std::set<WatchpointLocationPair, WatchpointLocationPairCompare> new_set;
+  for (const auto& cur : settings.locations)
+    new_set.emplace(cur.process_koid, cur.address_range);
+
+  // Removed locations.
+  for (const auto& loc : watchpoint_locations_) {
+    if (new_set.find(loc) == new_set.end())
+      process_delegate_->UnregisterWatchpoint(this, loc.first, loc.second);
+  }
+
+  // Added locations.
+  for (const auto& loc : new_set) {
+    if (watchpoint_locations_.find(loc) == watchpoint_locations_.end()) {
+      zx_status_t process_status =
+          process_delegate_->RegisterWatchpoint(this, loc.first, loc.second);
+      if (process_status != ZX_OK)
+        result = process_status;
+    }
+  }
+
+  watchpoint_locations_ = std::move(new_set);
   return result;
 }
 
@@ -142,6 +186,18 @@ Breakpoint::HitResult Breakpoint::OnHit() {
     return HitResult::kOneShotHit;
   }
   return HitResult::kHit;
+}
+
+// WatchpointLocationPairCompare -------------------------------------------------------------------
+
+bool Breakpoint::WatchpointLocationPairCompare::operator()(
+    const WatchpointLocationPair& lhs, const WatchpointLocationPair& rhs) const {
+  if (lhs.first != rhs.first)
+    return lhs.first < rhs.first;
+
+  if (lhs.second.begin() != rhs.second.begin())
+    return lhs.second.begin() < rhs.second.begin();
+  return lhs.second.end() < rhs.second.end();
 }
 
 }  // namespace debug_agent
