@@ -79,6 +79,14 @@ TEST_F(VerbsSymbolTest, SymInfo_Demangle) {
   ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
   ASSERT_EQ("No symbol \"LogMessage6streamEv\" found in the current context.\n",
             event.output.AsString());
+
+  // Shouldn't demangle basic types. "i" would normally be converted to "int" by the demangler.
+  console.ProcessInputLine("sym-info i");
+  event = console.GetOutputEvent();
+  ASSERT_EQ(MockConsole::OutputEvent::Type::kOutput, event.type);
+  ASSERT_EQ("No symbol \"i\" found in the current context.\n",
+            event.output.AsString());
+
 }
 
 }  // namespace zxdb

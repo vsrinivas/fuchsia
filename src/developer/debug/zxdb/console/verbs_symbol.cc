@@ -454,6 +454,34 @@ Example
   thread 1 frame 4 sym-info i
 )";
 
+// Demangles specifically for sym-info (this attempts to filter out simple type remapping which
+// would normally be desirable for a generic demangler). Returns a nullopt on failure.
+std::optional<std::string> DemangleForSymInfo(const ParsedIdentifier& identifier) {
+  std::string full_input = identifier.GetFullNameNoQual();
+  if (full_input.empty() || full_input[0] != '_') {
+    // Filter out all names that don't start with underscores. sym-info is mostly used to look up
+    // functions and variables. Functions should be demangled, but variables shouldn't. The problem
+    // is that some common variables like "f" and "i" demangle to "float" and "int" respectively
+    // which is not what the user wants. By only unmangling when things start with an underscore,
+    // we mostly restrict to mangled function names.
+    return std::nullopt;
+  }
+
+  std::optional<std::string> result;
+
+  // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
+  // allocation problem.
+  int demangle_status = llvm::demangle_unknown_error;
+  char* demangled_buf =
+      llvm::itaniumDemangle(full_input.c_str(), nullptr, nullptr, &demangle_status);
+  if (demangle_status == llvm::demangle_success && full_input != demangled_buf)
+    result.emplace(demangled_buf);
+  if (demangled_buf)
+    free(demangled_buf);
+
+  return result;
+}
+
 Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
   if (cmd.args().empty())
     return Err("sym-info expects the name of the symbol to look up.");
@@ -472,36 +500,29 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
 
   // See if it looks mangled.
   OutputBuffer out;
-  std::string full_input = identifier.GetFullNameNoQual();
-  // TODO(brettw) use "demangled = llvm::demangle() when we roll LLVM. It avoids the buffer
-  // allocation problem.
-  int demangle_status = llvm::demangle_unknown_error;
-  char* demangled_buf =
-      llvm::itaniumDemangle(full_input.c_str(), nullptr, nullptr, &demangle_status);
-  if (demangle_status == llvm::demangle_success && full_input != demangled_buf) {
+  if (std::optional<std::string> demangled = DemangleForSymInfo(identifier)) {
     out.Append(Syntax::kHeading, "Demangled name: ");
 
     // Output the demangled name as a colored identifier if possible.
     ParsedIdentifier demangled_identifier;
-    err = ExprParser::ParseIdentifier(demangled_buf, &demangled_identifier);
-    if (err.has_error()) {
-      out.Append(demangled_buf);
+    if (ExprParser::ParseIdentifier(*demangled, &demangled_identifier).has_error()) {
+      // Not parseable as an identifier, just use the raw string.
+      out.Append(*demangled);
     } else {
       out.Append(FormatIdentifier(demangled_identifier, FormatIdentifierOptions()));
 
       // Use the demangled name to do the lookup.
       //
       // TODO(brettw) this might need to be revisited if the index supports lookup by mangled name.
+      // It would probably be best to look up both variants and compute the union.
       //
       // TODO(brettw) generally function lookup from this point will fail because our looker-upper
       // doesn't support function parameters, but the denamgled output will include the parameter
-      // types or at leask "()".
+      // types or at least "()".
       identifier = std::move(demangled_identifier);
     }
     out.Append("\n\n");
   }
-  if (demangled_buf)
-    free(demangled_buf);
 
   ProcessSymbols* process_symbols = nullptr;
   FindNameContext find_context;
