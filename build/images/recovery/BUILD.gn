@@ -20,7 +20,6 @@ recovery_packages = [
   "//src/sys/appmgr:appmgr_scheme_config",
   "//src/sys/appmgr",
   "//garnet/bin/network_time_service",
-  "//garnet/bin/omaha_client",
   "//garnet/bin/pkg_cache",
   "//garnet/bin/pkg_resolver",
   "//garnet/bin/sysmgr",
@@ -33,6 +32,7 @@ recovery_packages = [
   "//src/connectivity/wlan/wlancfg",
   "//src/connectivity/wlan/wlanstack",
   "//src/recovery/system",
+  "//src/sys/pkg/bin/omaha-client",
   "//src/sys/timekeeper",
   pkgfs_package_label,
 ]

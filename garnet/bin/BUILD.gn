@@ -26,7 +26,6 @@ group("bin") {
     "network-speed-test",
     "network_settings_server",
     "network_time_service",
-    "omaha_client",
     "pkg_cache",
     "pkg_ctl",
     "pkg_resolver",

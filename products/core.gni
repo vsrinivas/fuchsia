@@ -41,7 +41,6 @@ base_package_labels += [
   "//garnet/bin/thermd",
   "//garnet/bin/thermd:config",
   "//garnet/bin/timezone",
-  "//garnet/bin/update:update_bin",
   "//garnet/go/src/amber",
   "//garnet/go/src/amber:config",
   "//garnet/go/src/amber:pkgfs",
@@ -73,6 +72,7 @@ base_package_labels += [
   "//src/sys/appmgr:appmgr_deprecated_shell_allowlist",
   "//src/sys/appmgr:appmgr_global_data_allowlist",
   "//src/sys/appmgr:appmgr_scheme_config",
+  "//src/sys/pkg/bin/update:update-bin",
   "//src/sys/timekeeper",
   "//third_party/openssh-portable/fuchsia/developer-keys:ssh_config",
 ]

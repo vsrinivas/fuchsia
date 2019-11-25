@@ -2,18 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can
 # found in the LICENSE file.
 
-group("pkg") {
+group("bin") {
   testonly = true
   deps = [
-    "bin",
-    "lib",
+    "omaha-client",
+    "update:update-bin",
   ]
 }
 
 group("tests") {
   testonly = true
   deps = [
-    "bin:tests",
-    "lib:tests",
+    "omaha-client:tests",
+    "update:tests",
   ]
 }

@@ -208,7 +208,6 @@ group("all") {
     "//garnet/packages/prod:network",
     "//garnet/packages/prod:network-speed-test",
     "//garnet/packages/prod:odu",
-    "//garnet/packages/prod:omaha_client",
     "//garnet/packages/prod:openssh",
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:overnetstack",
@@ -971,15 +970,6 @@ group("magma-vsl-gc") {
   testonly = true
   public_deps = [
     "//garnet/lib/magma/gnbuild/magma-vsl-gc:magma-vulkan",
-  ]
-}
-
-group("omaha_client") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/omaha_client",
-    "//garnet/bin/omaha_client:omaha_client_config",
-    "//garnet/bin/update:update_bin",
   ]
 }
 

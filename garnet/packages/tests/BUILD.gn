@@ -343,7 +343,6 @@ group("all") {
     ":network_time",
     ":odu_host_tests",
     ":odu_tests",
-    ":omaha_client",
     ":pkg_cache",
     ":pkg_ctl",
     ":pkg_resolver",
@@ -1139,19 +1138,6 @@ group("sysmem_connector") {
   testonly = true
   public_deps = [
     "//garnet/bin/sysmem_connector:sysmem_connector_test",
-  ]
-}
-
-group("omaha_client") {
-  testonly = true
-  public_deps = [
-    "//garnet/bin/fake_channel_writer",
-    "//garnet/bin/omaha_client:omaha_client_channels_test_config",
-    "//garnet/bin/omaha_client:omaha_client_service_bin_tests",
-    "//garnet/bin/omaha_client:omaha_client_test_config",
-    "//garnet/bin/update:update_bin_tests",
-    "//garnet/lib/rust/omaha_client:omaha_client_lib_tests",
-    "//garnet/packages/prod:omaha_client",
   ]
 }
 

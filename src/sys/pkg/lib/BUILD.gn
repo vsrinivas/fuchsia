@@ -5,6 +5,7 @@
 group("lib") {
   testonly = true
   deps = [
+    "omaha-client",
     "repo",
   ]
 }
@@ -12,6 +13,7 @@ group("lib") {
 group("tests") {
   testonly = true
   deps = [
+    "omaha-client:tests",
     "repo:tests",
   ]
 }

@@ -2,140 +2,23 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/config.gni")
-import("//build/fidl/fidl.gni")
-import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
-import("//build/test/test_package.gni")
-import("//build/testing/environments.gni")
-import("//third_party/cobalt/metrics_registry.gni")
-
-rustc_binary("bin") {
-  name = "omaha_client_service"
-  with_unit_tests = true
-  edition = "2018"
-
-  deps = [
-    ":mos_metrics_registry_rustlib",
-    "//garnet/lib/rust/omaha_client",
-    "//garnet/lib/rust/sysconfig-client",
-    "//garnet/public/lib/fidl/rust/fidl",
-    "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/rust/fuchsia-component",
-    "//garnet/public/rust/fuchsia-hyper",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//garnet/public/rust/fuchsia-zircon",
-    "//sdk/fidl/fuchsia.stash:fuchsia.stash-rustc",
-    "//sdk/fidl/fuchsia.sys:fuchsia.sys-rustc",
-    "//sdk/fidl/fuchsia.update:fuchsia.update-rustc",
-    "//sdk/fidl/fuchsia.update.channelcontrol:fuchsia.update.channelcontrol-rustc",
-    "//sdk/fidl/fuchsia.update.installer:fuchsia.update.installer-rustc",
-    "//src/lib/cobalt/rust:fuchsia-cobalt",
-    "//src/lib/inspect/rust/fuchsia-inspect",
-    "//src/sys/lib/fuchsia_url:fuchsia_url",
-    "//third_party/rust_crates:failure",
-    "//third_party/rust_crates:futures",
-    "//third_party/rust_crates:hyper",
-    "//third_party/rust_crates:hyper-rustls",
-    "//third_party/rust_crates:log",
-    "//third_party/rust_crates:pretty_assertions",
-    "//third_party/rust_crates:serde",
-    "//third_party/rust_crates:serde_derive",
-    "//third_party/rust_crates:serde_json",
-    "//third_party/rust_crates:tempfile",
-    "//third_party/rust_crates:timebomb",
-    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
-  ]
-
-  non_rust_deps = [ "//zircon/public/lib/sysconfig-sync-client-c" ]
-}
-
-package("omaha_client") {
-  deprecated_misc_storage = "//build"
-
-  deps = [
-    ":bin",
-  ]
-
-  binaries = [
-    {
-      name = "omaha_client_service"
-      dest = "omaha_client_service"
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/omaha_client_service.cmx")
-      dest = "omaha_client_service.cmx"
-    },
+# Do not use this target directly, instead depend on //src/sys/pkg/bin/omaha_client.
+group("omaha_client") {
+  public_deps = [
+    "//src/sys/pkg/bin/omaha-client",
   ]
 }
 
-test_package("omaha_client_service_bin_tests") {
-  deps = [
-    ":bin_test",
-  ]
-
-  tests = [
-    {
-      name = "omaha_client_service_bin_test"
-      environments = basic_envs
-    },
+# Do not use this target directly, instead depend on //src/sys/pkg/bin/omaha_client:omaha_client_config.
+group("omaha_client_config") {
+  public_deps = [
+    "//src/sys/pkg/bin/omaha-client:omaha-client-config",
   ]
 }
 
-metrics_registry("mos_metrics_registry") {
-  project_name = "managed_os"
-  generate_rust = true
-  generate_binarypb = false
-}
-
-declare_args() {
-  # Default app id will always return no update.
-  omaha_app_id = "fuchsia-test:no-update"
-}
-omaha_app_id_file = "$root_gen_dir/omaha-app-id.txt"
-write_file(omaha_app_id_file, omaha_app_id)
-
-config_data("omaha_client_config") {
-  for_pkg = "omaha_client"
-  outputs = [
-    "omaha_app_id",
-  ]
-  sources = [
-    omaha_app_id_file,
-  ]
-}
-
-config_data("omaha_client_test_config") {
-  testonly = true
-  for_pkg = "omaha_client_service_bin_tests"
-  outputs = [
-    "omaha_app_id",
-  ]
-  sources = [
-    rebase_path("test_data/omaha_test_app_id"),
-  ]
-}
-
-config_data("omaha_client_channels_test_config") {
-  testonly = true
-  for_pkg = "omaha_client_service_bin_tests"
-  outputs = [
-    "channel_config.json",
-  ]
-  sources = [
-    rebase_path("test_data/test_channel_config.json"),
-  ]
-}
-
-config_data("omaha_client_sysmgr_config") {
-  for_pkg = "sysmgr"
-  outputs = [
-    "omaha_client.config",
-  ]
-  sources = [
-    "sysmgr.config",
+# Do not use this target directly, instead depend on //src/sys/pkg/bin/omaha_client:omaha_client_sysmgr_config.
+group("omaha_client_sysmgr_config") {
+  public_deps = [
+    "//src/sys/pkg/bin/omaha-client:omaha-client-sysmgr-config",
   ]
 }

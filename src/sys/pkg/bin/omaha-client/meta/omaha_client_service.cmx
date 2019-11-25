@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/omaha_client_service"
+        "binary": "bin/omaha-client-service"
     },
     "sandbox": {
         "dev": [
@@ -10,7 +10,6 @@
         "features": [
             "build-info",
             "config-data",
-            "deprecated-misc-storage",
             "root-ssl-certificates"
         ],
         "services": [
