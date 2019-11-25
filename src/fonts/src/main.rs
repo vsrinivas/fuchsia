@@ -11,10 +11,8 @@ use {
     fuchsia_component::server::ServiceFs,
     getopts,
     std::path::PathBuf,
+    fuchsia_syslog::{self as syslog, *},
 };
-
-#[macro_use]
-extern crate fuchsia_syslog as syslog;
 
 const FONT_MANIFEST_PATH: &str = "/pkg/data/manifest.json";
 const VENDOR_FONT_MANIFEST_PATH: &str = "/config/data/fonts/manifest.json";

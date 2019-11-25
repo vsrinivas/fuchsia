@@ -276,7 +276,7 @@ struct Intermediate {
 }
 
 impl Display for Intermediate {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         writeln!(f, "uri: {} ", self.uri)?;
         for (name, value) in &self.headers {
             writeln!(f, "header: {}={}", name, value)?;

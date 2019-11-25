@@ -23,7 +23,7 @@ impl H264Stream {
     }
 
     /// Returns an iterator over H264 NALs that does not copy.
-    fn nal_iter(&self) -> impl Iterator<Item = H264Nal> {
+    fn nal_iter(&self) -> impl Iterator<Item = H264Nal<'_>> {
         H264NalIter { data: &self.data, pos: 0 }
     }
 }
@@ -47,7 +47,7 @@ impl ElementaryStream for H264Stream {
         true
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
         Box::new(self.nal_iter().map(|nal| ElementaryStreamChunk {
             start_access_unit: true,
             known_end_access_unit: true,

@@ -16,6 +16,7 @@ use {
     std::collections::{HashMap, HashSet},
     std::fmt,
     std::sync::Arc,
+    maplit::hashset,
 };
 
 /// A DependencyNode represents a provider or user of a capability. This

@@ -106,7 +106,7 @@ impl<T: (FnMut(State) -> Pin<Box<dyn Future<Output = ()> + 'static>>) + 'static>
 }
 
 impl fmt::Debug for dyn StateCallback {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "StateCallback")
     }
 }

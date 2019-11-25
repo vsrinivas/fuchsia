@@ -104,7 +104,7 @@ pub struct Channel {
 
 // Fuchsia's short CBW notation. Not IEEE standard.
 impl fmt::Display for Cbw {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Cbw::Cbw20 => write!(f, ""),       // Vanilla plain 20 MHz bandwidth
             Cbw::Cbw40 => write!(f, "+"),      // SCA, often denoted by "+1"
@@ -117,7 +117,7 @@ impl fmt::Display for Cbw {
 }
 
 impl fmt::Display for Channel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}{}", self.primary, self.cbw)
     }
 }

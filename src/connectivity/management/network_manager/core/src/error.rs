@@ -86,7 +86,7 @@ pub struct ErrorWithContext {
     inner: Context<String>,
 }
 impl Display for ErrorWithContext {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         Display::fmt(&self.inner, f)
     }
 }

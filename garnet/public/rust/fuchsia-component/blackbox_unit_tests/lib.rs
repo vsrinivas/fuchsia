@@ -47,7 +47,7 @@ async fn serve_on_root_and_subdir() -> Result<(), Error> {
 
     // Example of serving a dummy service that just throws away
     // the channel on an arbitrary directory.
-    fn serve_on_dir(dir: &mut ServiceFsDir<'_, ServiceObj<()>>) {
+    fn serve_on_dir(dir: &mut ServiceFsDir<'_, ServiceObj<'_, ()>>) {
         dir.add_service_at(SERVICE_NAME, |_chan| Some(()));
     }
 

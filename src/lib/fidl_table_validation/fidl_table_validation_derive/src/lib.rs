@@ -278,7 +278,7 @@ fn impl_valid_fidl_table(
         }
 
         impl std::fmt::Display for #error_type_name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
                 write!(f, "Validation error: {:?}", self)
             }
         }

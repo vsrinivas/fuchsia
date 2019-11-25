@@ -10,11 +10,11 @@ use log::{Level, LevelFilter, Metadata, Record};
 struct Logger;
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         metadata.level() <= Level::Trace
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
             let msg = format!(
                 "{} {} {:?} {} {}{}",

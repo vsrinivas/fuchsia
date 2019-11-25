@@ -208,7 +208,6 @@ mod tests {
 
     #[cfg(feature = "benchmark")]
     mod bench {
-        extern crate test;
         use self::test::Bencher;
         use super::*;
         #[cfg()]

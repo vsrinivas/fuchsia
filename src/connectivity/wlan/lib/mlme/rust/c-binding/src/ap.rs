@@ -46,7 +46,7 @@ pub extern "C" fn ap_sta_timeout_fired(sta: &mut Ap, event_id: EventId) {
 }
 
 #[no_mangle]
-pub extern "C" fn ap_sta_handle_mlme_msg(sta: &mut Ap, bytes: CSpan) -> i32 {
+pub extern "C" fn ap_sta_handle_mlme_msg(sta: &mut Ap, bytes: CSpan<'_>) -> i32 {
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     match fidl_mlme::MlmeRequestMessage::decode(bytes.into(), &mut []) {
         Ok(msg) => sta.handle_mlme_msg(msg).into_raw_zx_status(),
@@ -60,7 +60,7 @@ pub extern "C" fn ap_sta_handle_mlme_msg(sta: &mut Ap, bytes: CSpan) -> i32 {
 #[no_mangle]
 pub extern "C" fn ap_sta_handle_mac_frame(
     sta: &mut Ap,
-    frame: CSpan,
+    frame: CSpan<'_>,
     body_aligned: bool,
 ) -> i32 {
     sta.handle_mac_frame::<&[u8]>(frame.into(), body_aligned);
@@ -73,7 +73,7 @@ pub extern "C" fn ap_sta_handle_eth_frame(
     dst_addr: &[u8; 6],
     src_addr: &[u8; 6],
     ether_type: u16,
-    body: CSpan,
+    body: CSpan<'_>,
 ) -> i32 {
     sta.handle_eth_frame(*dst_addr, *src_addr, ether_type, body.into());
     zx::sys::ZX_OK

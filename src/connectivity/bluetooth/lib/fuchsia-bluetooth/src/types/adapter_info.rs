@@ -61,7 +61,7 @@ impl From<AdapterState> for control::AdapterState {
 }
 
 impl fmt::Display for AdapterState {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         if let Some(local_name) = &self.local_name {
             writeln!(fmt, "Local Name:\t{}", local_name)?;
         }
@@ -107,7 +107,7 @@ impl From<AdapterInfo> for control::AdapterInfo {
 }
 
 impl fmt::Display for AdapterInfo {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "Adapter:")?;
         writeln!(fmt, "\tIdentifier:\t{}", self.identifier)?;
         writeln!(fmt, "\tAddress:\t{}", self.address.to_string())?;

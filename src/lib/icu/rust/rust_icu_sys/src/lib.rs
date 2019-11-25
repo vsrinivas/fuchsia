@@ -11,12 +11,11 @@ include!(concat!("../bindgen", "/lib.rs"));
 // Add the ability to print the error code, so that it can be reported in
 // aggregaated errors.
 impl std::fmt::Display for UErrorCode {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "{:?}", self)
         }
 }
 
-extern crate libc;
 
 // A "fake" extern used to express link preferences.
 #[link(name = "icui18n", kind = "dylib")]

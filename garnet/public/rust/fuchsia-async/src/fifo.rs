@@ -56,7 +56,7 @@ where
     ///
     /// An error during reading will cause the fifo and entry to get
     /// destroyed and the status will be returned.
-    fn read_entry(&self) -> ReadEntry<Self, R> {
+    fn read_entry(&self) -> ReadEntry<'_, Self, R> {
         ReadEntry::new(self)
     }
 
@@ -79,7 +79,7 @@ impl<R: FifoEntry, W: FifoEntry> AsRef<zx::Fifo> for Fifo<R, W> {
 }
 
 impl<R: FifoEntry, W: FifoEntry> AsHandleRef for Fifo<R, W> {
-    fn as_handle_ref(&self) -> zx::HandleRef {
+    fn as_handle_ref(&self) -> zx::HandleRef<'_> {
         self.handle.get_ref().as_handle_ref()
     }
 }
@@ -192,13 +192,13 @@ impl<R: FifoEntry, W: FifoEntry> FifoWritable<W> for Fifo<R, W> {
 }
 
 impl<R: FifoEntry, W: FifoEntry> fmt::Debug for Fifo<R, W> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.handle.get_ref().fmt(f)
     }
 }
 
 /// WriteEntry represents the future of one or more writes.
-pub struct WriteEntry<'a, F: 'a, W: 'a> {
+pub struct WriteEntry<'a, F, W> {
     fifo: &'a F,
     entries: &'a [W],
 }
@@ -227,7 +227,7 @@ impl<'a, F: FifoWritable<W>, W: FifoEntry> Future for WriteEntry<'a, F, W> {
 }
 
 /// ReadEntry represents the future of a single read.
-pub struct ReadEntry<'a, F: 'a, R: 'a> {
+pub struct ReadEntry<'a, F, R> {
     fifo: &'a F,
     read_marker: PhantomData<R>,
 }
@@ -237,7 +237,7 @@ impl<'a, F, W> Unpin for ReadEntry<'a, F, W> {}
 impl<'a, F: FifoReadable<R>, R: FifoEntry> ReadEntry<'a, F, R> {
     /// Create a new ReadEntry, which borrows the `FifoReadable` type
     /// until the future completes.
-    pub fn new(fifo: &'a F) -> ReadEntry<F, R> {
+    pub fn new(fifo: &'a F) -> ReadEntry<'_, F, R> {
         ReadEntry {
             fifo,
             read_marker: PhantomData,

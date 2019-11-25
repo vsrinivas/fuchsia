@@ -333,7 +333,7 @@ impl<B> Debug for Ipv4Packet<B>
 where
     B: ByteSlice,
 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.debug_struct("Ipv4Packet")
             .field("src_ip", &self.src_ip())
             .field("dst_ip", &self.dst_ip())

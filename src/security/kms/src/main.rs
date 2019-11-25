@@ -56,7 +56,7 @@ pub struct Config<'a> {
 
 fn get_provider_from_config() -> Result<KeyProvider, Error> {
     let json = fs::read_to_string(CONFIG_PATH)?;
-    let config: Config = serde_json::from_str(&json)?;
+    let config: Config<'_> = serde_json::from_str(&json)?;
     match config.crypto_provider {
         "OpteeProvider" => Ok(KeyProvider::OpteeProvider),
         "SoftwareProvider" => Ok(KeyProvider::SoftwareProvider),

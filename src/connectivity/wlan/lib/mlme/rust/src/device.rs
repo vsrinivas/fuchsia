@@ -76,7 +76,7 @@ impl Device {
     }
 
     #[allow(deprecated)] // Until Rust MLME is powered by a Rust-written message loop.
-    pub fn access_sme_sender<F: FnOnce(&fidl_mlme::MlmeServerSender) -> Result<(), fidl::Error>>(
+    pub fn access_sme_sender<F: FnOnce(&fidl_mlme::MlmeServerSender<'_>) -> Result<(), fidl::Error>>(
         &self,
         fun: F,
     ) -> Result<(), Error> {

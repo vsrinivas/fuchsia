@@ -49,13 +49,13 @@ impl From<Option<protocol::response::DayStart>> for UserCounting {
 pub struct Version(pub Vec<u32>);
 
 impl fmt::Display for Version {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0.iter().format("."))
     }
 }
 
 impl fmt::Debug for Version {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // The Debug trait just forwards to the Display trait implementation for this type
         fmt::Display::fmt(self, f)
     }
@@ -65,7 +65,7 @@ impl fmt::Debug for Version {
 struct TooManyNumbersError;
 
 impl fmt::Display for TooManyNumbersError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str("Too many numbers in version, the maximum is 4.")
     }
 }

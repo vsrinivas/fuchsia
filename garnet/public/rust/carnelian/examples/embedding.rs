@@ -74,7 +74,7 @@ struct EmbeddingViewAssistant {
 }
 
 impl EmbeddingViewAssistant {
-    fn create_and_setup_view(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn create_and_setup_view(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let token_pair = ViewTokenPair::new()?;
 
         let view_provider = self.app.connect_to_service::<ViewProviderMarker>()?;
@@ -140,7 +140,7 @@ impl EmbeddingViewAssistant {
 }
 
 impl ViewAssistant for EmbeddingViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         set_node_color(
             context.session(),
             &self.background_node,
@@ -155,7 +155,7 @@ impl ViewAssistant for EmbeddingViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         self.size = context.size;
 
         let center_x = self.size.width * 0.5;

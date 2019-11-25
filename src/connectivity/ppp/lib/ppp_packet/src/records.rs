@@ -659,7 +659,7 @@ mod test {
     }
 
     impl std::fmt::Debug for FilterContext {
-        fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
             write!(f, "FilterContext{{disallowed:{:?}}}", &self.disallowed[..])
         }
     }
@@ -1417,7 +1417,7 @@ pub mod options {
 
             let collected = options
                 .iter()
-                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl>::Option>>();
+                .collect::<Vec<<DummyOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();
@@ -1440,7 +1440,7 @@ pub mod options {
             let options = Options::<_, DummyNdpOptionsImpl>::parse(bytes.as_slice()).unwrap();
             let collected = options
                 .iter()
-                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl>::Option>>();
+                .collect::<Vec<<DummyNdpOptionsImpl as OptionsSerializerImpl<'_>>::Option>>();
             let ser = OptionsSerializer::<DummyNdpOptionsImpl, _, _>::new(collected.iter());
 
             let serialized = ser.serialize_outer().unwrap().as_ref().to_vec();

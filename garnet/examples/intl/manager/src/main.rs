@@ -210,7 +210,7 @@ enum Service {
 
 /// Manual implementation because `__RequestStream` doesn't implement `Debug`.
 impl Debug for Service {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{}",

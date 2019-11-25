@@ -48,7 +48,7 @@ pub enum BlockType {
 }
 
 impl fmt::Display for BlockType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
             BlockType::Free => write!(f, "FREE"),
             BlockType::Reserved => write!(f, "RESERVED"),

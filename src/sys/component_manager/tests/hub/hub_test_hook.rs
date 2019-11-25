@@ -96,7 +96,7 @@ impl HubTestHook {
 }
 
 impl Hook for HubTestHook {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
             match event {
                 Event::RouteFrameworkCapability { realm: _, capability, capability_provider } => {
@@ -187,7 +187,7 @@ impl ComponentManagerCapabilityProvider for HubTestCapabilityProvider {
         _open_mode: u32,
         _relative_path: String,
         server_chan: zx::Channel,
-    ) -> BoxFuture<Result<(), ModelError>> {
+    ) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(self.open_async(server_chan))
     }
 }

@@ -8,7 +8,7 @@ use fidl_fuchsia_net as fidl;
 pub struct IpAddress(pub std::net::IpAddr);
 
 impl std::fmt::Display for IpAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let IpAddress(ip_address) = self;
         write!(f, "{}", ip_address)
     }
@@ -51,7 +51,7 @@ pub struct Subnet {
 }
 
 impl std::fmt::Display for Subnet {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let Self { addr, prefix_len } = self;
         write!(f, "{}/{}", addr, prefix_len)
     }

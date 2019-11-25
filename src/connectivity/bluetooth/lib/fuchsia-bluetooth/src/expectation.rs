@@ -26,7 +26,7 @@ impl<T> Clone for Predicate<T> {
 }
 
 impl<T> Debug for Predicate<T> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.description)
     }
 }

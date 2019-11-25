@@ -274,11 +274,11 @@ impl<P: PixelSink> ColorBuffer for PixelSinkWrapper<P> {
 }
 
 impl ViewAssistant for DrawingViewAssistant {
-    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let canvas = context.canvas.as_ref().unwrap().borrow();
 
         // Temporary hack to deal with the fact that carnelian

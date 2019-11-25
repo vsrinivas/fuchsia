@@ -177,7 +177,7 @@ mod tests {
     pub(crate) fn assert_roundtrips<T>(
         val: T,
         encoder_method: impl Fn(&mut Encoder<Cursor<Vec<u8>>>, &T) -> Result<(), StreamError>,
-        parser: impl Fn(&[u8]) -> ParseResult<T>,
+        parser: impl Fn(&[u8]) -> ParseResult<'_, T>,
         canonical: Option<&[u8]>,
     ) where
         T: Debug + PartialEq,

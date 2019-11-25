@@ -49,7 +49,7 @@ pub(crate) struct PathSegments<'p> {
 /// right accuracy. It uses Wang's Formula, which guarantees this accuracy given some deviation
 /// parameters.
 fn subdivisions(
-    segments: &mut PathSegments,
+    segments: &mut PathSegments<'_>,
     first: Point<f32>,
     last: Point<f32>,
     deviation_x: f32,

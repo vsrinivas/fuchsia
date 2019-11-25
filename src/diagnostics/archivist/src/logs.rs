@@ -96,7 +96,7 @@ struct MemoryBoundedBuffer<T> {
 }
 
 /// `MemoryBoundedBuffer` mutable iterator.
-struct IterMut<'a, T: 'a> {
+struct IterMut<'a, T> {
     inner: vec_deque::IterMut<'a, (T, usize)>,
 }
 
@@ -134,7 +134,7 @@ impl<T> MemoryBoundedBuffer<T> {
         }
     }
 
-    pub fn iter_mut(&mut self) -> IterMut<T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         IterMut { inner: self.inner.iter_mut() }
     }
 }

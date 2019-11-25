@@ -28,7 +28,7 @@ pub enum HttpsDateError {
 
 impl std::error::Error for HttpsDateError {}
 impl std::fmt::Display for HttpsDateError {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         std::fmt::Debug::fmt(self, f)
     }
 }
@@ -66,7 +66,7 @@ impl RecordingVerifier {
     // the certificate chain we stored during the TLS handshake
     pub fn verify(
         &self,
-        dns_name: webpki::DNSNameRef,
+        dns_name: webpki::DNSNameRef<'_>,
         time: webpki::Time,
     ) -> Result<(), HttpsDateError> {
         let presented_certs = self.presented_certs.lock().unwrap();

@@ -155,7 +155,7 @@ impl suite_selector::Factory for Akm {
 }
 
 impl fmt::Debug for Akm {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
     }
 }

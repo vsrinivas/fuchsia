@@ -40,11 +40,11 @@ impl<'a> JsonSchema<'a> {
 }
 
 // Directly include schemas in the library. These are used to parse component manifests.
-pub const CM_SCHEMA: &JsonSchema =
+pub const CM_SCHEMA: &JsonSchema<'_> =
     &JsonSchema::new("cm_schema.json", include_str!("../cm_schema.json"));
-pub const CML_SCHEMA: &JsonSchema =
+pub const CML_SCHEMA: &JsonSchema<'_> =
     &JsonSchema::new("cml_schema.json", include_str!("../cml_schema.json"));
-pub const CMX_SCHEMA: &JsonSchema =
+pub const CMX_SCHEMA: &JsonSchema<'_> =
     &JsonSchema::new("cmx_schema.json", include_str!("../cmx_schema.json"));
 
 /// Enum type that can represent any error encountered by a cmx operation.
@@ -74,7 +74,7 @@ impl Error {
         Error::Validate { schema_name: None, err: err.to_string() }
     }
 
-    pub fn validate_schema(schema: &JsonSchema, err: impl Into<String>) -> Self {
+    pub fn validate_schema(schema: &JsonSchema<'_>, err: impl Into<String>) -> Self {
         Error::Validate { schema_name: Some(schema.name.to_string()), err: err.into() }
     }
 
@@ -88,7 +88,7 @@ impl Error {
 }
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
             Error::InvalidArgs(err) => write!(f, "Invalid args: {}", err),
             Error::Io(err) => write!(f, "IO error: {}", err),

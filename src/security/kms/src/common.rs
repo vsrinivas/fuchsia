@@ -69,7 +69,7 @@ pub trait KmsKey: Send + fmt::Debug {
     /// # Panics
     ///
     /// Panics if request type is invalid.
-    fn handle_request(&self, req: KeyRequestType) -> Result<(), fidl::Error>;
+    fn handle_request(&self, req: KeyRequestType<'_>) -> Result<(), fidl::Error>;
     /// The the type for the current key.
     fn get_key_type(&self) -> KeyType;
     /// Get the crypto provider for the key.

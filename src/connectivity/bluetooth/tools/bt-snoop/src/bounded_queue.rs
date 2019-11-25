@@ -92,7 +92,7 @@ where
     }
 
     /// Return an `Iterator` over mutable references to elements ordered from oldest to newest.
-    pub fn iter_mut(&mut self) -> IterMut<T> {
+    pub fn iter_mut(&mut self) -> IterMut<'_, T> {
         self.inner.iter_mut()
     }
 

@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 use {
     component_manager_lib::{
         klog,

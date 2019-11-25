@@ -48,7 +48,7 @@ impl CloudSessionShared {
         }
     }
 
-    pub fn filter(&self) -> Ref<Box<dyn RequestFilter>> {
+    pub fn filter(&self) -> Ref<'_, Box<dyn RequestFilter>> {
         self.filter.borrow()
     }
 

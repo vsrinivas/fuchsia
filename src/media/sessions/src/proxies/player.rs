@@ -240,7 +240,7 @@ impl Player {
 impl Stream for Player {
     type Item = FilterApplicant<(u64, PlayerEvent)>;
 
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         let proxy = self.inner.clone();
         let hanging_get = self.hanging_get.get_or_insert_with(move || proxy.watch_info_change());
 

@@ -199,7 +199,7 @@ impl<A: AmberConnect> RepositoryManager<A> {
     }
 
     /// Returns an iterator over all the managed [RepositoryConfig]s.
-    pub fn list(&self) -> List<A> {
+    pub fn list(&self) -> List<'_, A> {
         let keys = self
             .dynamic_configs
             .iter()
@@ -692,7 +692,7 @@ pub enum LoadError {
 }
 
 impl fmt::Display for LoadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LoadError::Io { path, error } => {
                 write!(f, "file {} failed to parse: {}", path.display(), error)

@@ -48,7 +48,7 @@ pub extern "C" fn client_sta_seq_mgr(sta: &mut Client) -> &mut SequenceManager {
 }
 
 #[no_mangle]
-pub extern "C" fn client_sta_handle_mlme_msg(sta: &mut Client, bytes: CSpan) -> i32 {
+pub extern "C" fn client_sta_handle_mlme_msg(sta: &mut Client, bytes: CSpan<'_>) -> i32 {
     #[allow(deprecated)] // Allow until main message loop is in Rust.
     match fidl_mlme::MlmeRequestMessage::decode(bytes.into(), &mut []) {
         Ok(msg) => sta.handle_mlme_msg(msg).into_raw_zx_status(),
@@ -73,11 +73,11 @@ pub extern "C" fn client_sta_send_deauth_frame(sta: &mut Client, reason_code: u1
 pub extern "C" fn client_sta_send_assoc_req_frame(
     sta: &mut Client,
     cap_info: u16,
-    ssid: CSpan,
-    rates: CSpan,
-    rsne: CSpan,
-    ht_cap: CSpan,
-    vht_cap: CSpan,
+    ssid: CSpan<'_>,
+    rates: CSpan<'_>,
+    rsne: CSpan<'_>,
+    ht_cap: CSpan<'_>,
+    vht_cap: CSpan<'_>,
 ) -> i32 {
     sta.send_assoc_req_frame(
         cap_info,
@@ -93,7 +93,7 @@ pub extern "C" fn client_sta_send_assoc_req_frame(
 #[no_mangle]
 pub extern "C" fn client_sta_handle_data_frame(
     sta: &mut Client,
-    data_frame: CSpan,
+    data_frame: CSpan<'_>,
     has_padding: bool,
     controlled_port_open: bool,
 ) -> i32 {
@@ -111,7 +111,7 @@ pub unsafe extern "C" fn client_sta_send_data_frame(
     is_protected: bool,
     is_qos: bool,
     ether_type: u16,
-    payload: CSpan,
+    payload: CSpan<'_>,
 ) -> i32 {
     sta.send_data_frame(*src, *dest, is_protected, is_qos, ether_type, payload.into())
         .into_raw_zx_status()
@@ -123,7 +123,7 @@ pub unsafe extern "C" fn client_sta_send_eapol_frame(
     src: &[u8; 6],
     dest: &[u8; 6],
     is_protected: bool,
-    payload: CSpan,
+    payload: CSpan<'_>,
 ) {
     sta.send_eapol_frame(*src, *dest, is_protected, payload.into())
 }

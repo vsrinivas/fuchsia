@@ -34,7 +34,7 @@ impl Service {
 }
 
 impl fmt::Display for Service {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_pretty =
             find_service_uuid(&self.info.type_).map(|an| an.name).unwrap_or(&self.info.type_);
         write!(
@@ -56,7 +56,7 @@ impl fmt::Display for Service {
 struct Characteristic(FidlCharacteristic);
 
 impl fmt::Display for Characteristic {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let type_pretty =
             find_characteristic_number(&self.0.type_).map(|an| an.name).unwrap_or(&self.0.type_);
         write!(

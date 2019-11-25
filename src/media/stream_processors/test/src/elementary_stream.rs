@@ -12,7 +12,7 @@ pub trait ElementaryStream {
     /// access units, the server must parse and/or buffer the bitstream.
     fn is_access_units(&self) -> bool;
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a>;
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a>;
 
     /// Returns the elementary stream with chunks capped at a given size. Chunks bigger than the cap
     /// will be divided into multiple chunks. Order is retained. Timestamps are not extrapolated.
@@ -20,7 +20,7 @@ pub trait ElementaryStream {
     fn capped_chunks<'a>(
         &'a self,
         max_size: usize,
-    ) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+    ) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
         Box::new(self.stream().flat_map(move |chunk| CappedSizeChunks {
             src: chunk,
             offset: 0,
@@ -113,7 +113,7 @@ where
         self.source.is_access_units()
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
         let mut timestamps = self.timestamps.clone();
         Box::new(self.source.stream().map(move |mut chunk| {
             match chunk.significance {
@@ -145,7 +145,7 @@ mod test {
             true
         }
 
-        fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+        fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
             Box::new(self.data.chunks(20).map(|data| ElementaryStreamChunk {
                 start_access_unit: true,
                 known_end_access_unit: true,

@@ -49,7 +49,7 @@ impl Fail for ClientError {
 }
 
 impl fmt::Display for ClientError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Client error ({:?})", self.status)?;
         if let Some(explanation) = &self.explanation {
             write!(f, ": {}", explanation)?
@@ -106,7 +106,7 @@ mod tests {
         #[derive(Debug)]
         struct TestError();
         impl fmt::Display for TestError {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "TestError")
             }
         }

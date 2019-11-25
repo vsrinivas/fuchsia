@@ -42,7 +42,7 @@ struct RainbowViewAssistant {
 impl RainbowViewAssistant {}
 
 impl ViewAssistant for RainbowViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         for _ in 0..BAND_COUNT {
             let node = ShapeNode::new(context.session().clone());
             context.root_node().add_child(&node);
@@ -52,7 +52,7 @@ impl ViewAssistant for RainbowViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let mut width = context.size.width;
         let mut height = context.size.height;
         let band_width = context.size.width / self.colors.len() as f32;

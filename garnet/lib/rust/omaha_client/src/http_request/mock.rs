@@ -20,7 +20,7 @@ pub struct MockHttpRequest {
 }
 
 impl HttpRequest for MockHttpRequest {
-    fn request(&mut self, req: Request<Body>) -> BoxFuture<Result<Response<Body>, hyper::Error>> {
+    fn request(&mut self, req: Request<Body>) -> BoxFuture<'_, Result<Response<Body>, hyper::Error>> {
         self.request = req;
 
         future::ok(if let Some(resp) = self.responses.pop_front() {

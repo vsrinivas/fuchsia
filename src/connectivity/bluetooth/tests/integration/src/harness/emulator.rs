@@ -208,7 +208,7 @@ pub trait EmulatorHarness: ExpectableState + Send + Sync {
     fn emulator(&self) -> HciEmulatorProxy;
 
     /// Return a guarded reference to the state object that implements `EmulatorHarnessState`.
-    fn state(&self) -> MappedRwLockWriteGuard<<Self as EmulatorHarness>::State>;
+    fn state(&self) -> MappedRwLockWriteGuard<'_, <Self as EmulatorHarness>::State>;
 }
 
 /// Record advertising state changes. The asynchronous execution doesn't complete until the

@@ -36,7 +36,7 @@ macro_rules! codegen_test {
 
                 let ast = banjo_lib::ast::BanjoAst::parse(pair_vec, Vec::new()).unwrap();
                 {
-                    let mut backend: Box<dyn backends::Backend<_>> =
+                    let mut backend: Box<dyn backends::Backend<'_, _>> =
                         Box::new(backends::$backend::new(&mut output $(, $subtype)?));
                     backend.codegen(ast).unwrap();
                 }

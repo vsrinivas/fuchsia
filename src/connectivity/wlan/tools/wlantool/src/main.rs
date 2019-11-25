@@ -391,7 +391,7 @@ fn make_credential(
 struct MacAddr([u8; 6]);
 
 impl fmt::Display for MacAddr {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
             "{:02x}:{:02x}:{:02x}:{:02x}:{:02x}:{:02x}",

@@ -126,7 +126,7 @@ impl ExpectedDigest {
 }
 
 impl fmt::Display for ExpectedDigest {
-    fn fmt(&self, w: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, w: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(w, "ExpectedDigest {{\n")?;
         write!(w, "\tlabel: {}", self.label)?;
         write!(w, "\tbytes: {}", encode(self.bytes))?;

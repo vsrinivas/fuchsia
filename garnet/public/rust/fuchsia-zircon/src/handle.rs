@@ -42,7 +42,7 @@ impl Koid {
 pub struct Handle(sys::zx_handle_t);
 
 impl AsHandleRef for Handle {
-    fn as_handle_ref(&self) -> HandleRef {
+    fn as_handle_ref(&self) -> HandleRef<'_> {
         Unowned { inner: ManuallyDrop::new(Handle(self.0)), marker: PhantomData }
     }
 }
@@ -94,7 +94,7 @@ unsafe impl PropertyQuerySet for NameProperty {}
 /// This is primarily used for working with borrowed values of `HandleBased` types.
 #[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[repr(transparent)]
-pub struct Unowned<'a, T: 'a> {
+pub struct Unowned<'a, T> {
     inner: ManuallyDrop<T>,
     marker: PhantomData<&'a T>,
 }
@@ -173,7 +173,7 @@ impl<'a, T: HandleBased> Unowned<'a, T> {
 pub trait AsHandleRef {
     /// Get a reference to the handle. One important use of such a reference is
     /// for `object_wait_many`.
-    fn as_handle_ref(&self) -> HandleRef;
+    fn as_handle_ref(&self) -> HandleRef<'_>;
 
     /// Interpret the reference as a raw handle (an integer type). Two distinct
     /// handles will have different raw values (so it can perhaps be used as a
@@ -260,7 +260,7 @@ pub trait AsHandleRef {
 }
 
 impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
-    fn as_handle_ref(&self) -> HandleRef {
+    fn as_handle_ref(&self) -> HandleRef<'_> {
         Unowned { inner: ManuallyDrop::new(Handle(self.raw_handle())), marker: PhantomData }
     }
 }
@@ -439,7 +439,7 @@ mod tests {
 
     #[test]
     fn set_get_name() {
-        // We need some concrete object to exercise the AsHandleRef set/get_name functions.
+        // We need some concrete object to exercise the AsHandleRef<'_> set/get_name functions.
         let vmo = Vmo::create(1).unwrap();
         let short_name = CStr::from_bytes_with_nul(b"v\0").unwrap();
         assert!(vmo.set_name(short_name).is_ok());

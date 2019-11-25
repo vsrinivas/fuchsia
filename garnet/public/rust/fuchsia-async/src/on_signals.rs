@@ -119,7 +119,7 @@ impl Future for OnSignals<'_> {
 }
 
 impl fmt::Debug for OnSignals<'_> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "OnSignals")
     }
 }

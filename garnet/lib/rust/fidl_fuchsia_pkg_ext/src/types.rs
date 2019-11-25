@@ -77,13 +77,13 @@ impl From<BlobId> for fidl::BlobId {
 }
 
 impl fmt::Display for BlobId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&hex::encode(self.0))
     }
 }
 
 impl fmt::Debug for BlobId {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.to_string())
     }
 }

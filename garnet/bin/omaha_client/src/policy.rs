@@ -94,7 +94,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> BoxFuture<UpdateCheckSchedule> {
+    ) -> BoxFuture<'_, UpdateCheckSchedule> {
         let schedule = FuchsiaPolicy::compute_next_update_time(
             &PolicyData { current_time: clock::now() },
             apps,
@@ -110,7 +110,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
-    ) -> BoxFuture<CheckDecision> {
+    ) -> BoxFuture<'_, CheckDecision> {
         let decision = FuchsiaPolicy::update_check_allowed(
             &PolicyData { current_time: clock::now() },
             apps,
@@ -121,7 +121,7 @@ impl PolicyEngine for FuchsiaPolicyEngine {
         future::ready(decision).boxed()
     }
 
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision> {
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<'_, UpdateDecision> {
         let decision = FuchsiaPolicy::update_can_start(
             &PolicyData { current_time: clock::now() },
             proposed_install_plan,

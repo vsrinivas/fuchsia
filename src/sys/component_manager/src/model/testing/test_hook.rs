@@ -92,7 +92,7 @@ pub enum Lifecycle {
 }
 
 impl fmt::Display for Lifecycle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Lifecycle::Bind(m) => write!(f, "bind({})", m),
             Lifecycle::Stop(m) => write!(f, "stop({})", m),
@@ -112,7 +112,7 @@ pub struct TestHookInner {
 }
 
 impl fmt::Display for TestHook {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(f, "{}", self.inner.print())?;
         Ok(())
     }

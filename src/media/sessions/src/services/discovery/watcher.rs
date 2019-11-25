@@ -36,7 +36,7 @@ impl WatcherSink {
 
 impl Sink<FilterApplicant<(u64, PlayerEvent)>> for WatcherSink {
     type Error = Error;
-    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<()>> {
+    fn poll_ready(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         if self.acks.len() < MAX_EVENTS_SENT_WITHOUT_ACK {
             return Poll::Ready(Ok(()));
         }
@@ -81,7 +81,7 @@ impl Sink<FilterApplicant<(u64, PlayerEvent)>> for WatcherSink {
         Ok(())
     }
 
-    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<()>> {
+    fn poll_flush(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         while let Poll::Ready(Some(r)) = Pin::new(&mut self.acks).poll_next(cx) {
             if let Err(e) = r {
                 return Poll::Ready(Err(e.into()));
@@ -95,7 +95,7 @@ impl Sink<FilterApplicant<(u64, PlayerEvent)>> for WatcherSink {
         }
     }
 
-    fn poll_close(self: Pin<&mut Self>, cx: &mut Context) -> Poll<Result<()>> {
+    fn poll_close(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Result<()>> {
         self.poll_flush(cx)
     }
 }

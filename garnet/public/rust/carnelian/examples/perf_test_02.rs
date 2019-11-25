@@ -10,7 +10,7 @@ use euclid::Vector2D;
 use failure::Error;
 use fuchsia_scenic::{EntityNode, Rectangle, SessionPtr, ShapeNode};
 
-fn make_bounds(context: &ViewAssistantContext) -> Rect {
+fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
@@ -132,7 +132,7 @@ const STATES: &[&str] = &[
 ];
 
 impl ViewAssistant for TextScrollViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         context.root_node().add_child(&self.container);
         self.container.add_child(&self.background_node);
         set_node_color(context.session(), &self.background_node, &self.bg_color);
@@ -158,7 +158,7 @@ impl ViewAssistant for TextScrollViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(

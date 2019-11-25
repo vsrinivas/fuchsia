@@ -47,7 +47,7 @@ impl BreakpointCapabilityHook {
 }
 
 impl Hook for BreakpointCapabilityHook {
-    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<Result<(), ModelError>> {
+    fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
             if let Event::RouteFrameworkCapability { realm: _, capability, capability_provider } =
                 event

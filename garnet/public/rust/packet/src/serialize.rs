@@ -199,14 +199,14 @@ impl<B: AsRef<[u8]>> Buf<B> {
     }
 
     /// Constructs a [`BufView`] which will be a [`BufferView`] into this `Buf`.
-    pub fn buffer_view(&mut self) -> BufView {
+    pub fn buffer_view(&mut self) -> BufView<'_> {
         BufView { buf: &self.buf.as_ref()[self.range.clone()], range: &mut self.range }
     }
 }
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> Buf<B> {
     /// Constructs a [`BufViewMut`] which will be a [`BufferViewMut`] into this `Buf`.
-    pub fn buffer_view_mut(&mut self) -> BufViewMut {
+    pub fn buffer_view_mut(&mut self) -> BufViewMut<'_> {
         BufViewMut { buf: &mut self.buf.as_mut()[self.range.clone()], range: &mut self.range }
     }
 }
@@ -443,7 +443,7 @@ pub trait PacketBuilder {
     /// All of the bytes of the header and footer should be initialized, even if
     /// only to zero, in order to avoid leaking the contents of packets
     /// previously stored in the same buffer.
-    fn serialize(self, buffer: SerializeBuffer);
+    fn serialize(self, buffer: SerializeBuffer<'_>);
 }
 
 /// A builder capable of serializing packets into an existing buffer, and which
@@ -815,7 +815,7 @@ where
 }
 
 impl<B: Debug, Buf: Debug, F> Debug for InnerSerializer<B, Buf, F> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("FnSerializer")
             .field("builder", &self.builder)
             .field("buf", &self.buf)
@@ -903,7 +903,7 @@ where
 }
 
 impl<B: Debug, F> Debug for FnSerializer<B, F> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("FnSerializer").field("builder", &self.builder).finish()
     }
 }
@@ -1037,7 +1037,7 @@ impl<B: BufferMut, O: BufferMut, F: FnOnce(usize) -> O> BufferSerializer<B, F> {
 }
 
 impl<B: Debug, F> Debug for BufferSerializer<B, F> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         f.debug_struct("BufferSerializer").field("buf", &self.buf).finish()
     }
 }
@@ -1274,7 +1274,7 @@ mod tests {
             std::usize::MAX
         }
 
-        fn serialize(self, _buffer: SerializeBuffer) {}
+        fn serialize(self, _buffer: SerializeBuffer<'_>) {}
     }
 
     impl InnerPacketBuilder for DummyPacketBuilder {

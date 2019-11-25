@@ -12,6 +12,7 @@ use {
         family::{FamilyOrAlias, FontFamily},
         typeface::{Collection as TypefaceCollection, Typeface, TypefaceInfoAndCharSet},
     },
+    fuchsia_syslog::*,
     failure::{format_err, Error, ResultExt},
     fidl::{
         self,

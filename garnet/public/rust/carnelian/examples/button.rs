@@ -88,7 +88,7 @@ impl Button {
         }
     }
 
-    pub fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    pub fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         // set up paint with different backgrounds depending on whether the button
         // is active. The active state is true when a pointer has gone down in the
         // button's bounds and the pointer has not moved outside the bounds since.
@@ -147,7 +147,7 @@ impl Button {
 
     pub fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         pointer_event: &PointerEvent,
     ) {
         if !self.focused {
@@ -209,7 +209,7 @@ impl ButtonViewAssistant {
 impl ViewAssistant for ButtonViewAssistant {
     // Called once by Carnelian when the view is first created. Good for setup
     // that isn't concerned with the size of the view.
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         set_node_color(
             context.session(),
             &self.background_node,
@@ -224,7 +224,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
     // Called  by Carnelian when the view is resized, after input events are processed
     // or if sent an explicit Update message.
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         // Position and size the background
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
@@ -273,7 +273,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         pointer_event: &PointerEvent,
     ) -> Result<(), Error> {
         self.button.handle_pointer_event(context, pointer_event);
@@ -283,7 +283,7 @@ impl ViewAssistant for ButtonViewAssistant {
 
     fn handle_focus_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         focus_event: &FocusEvent,
     ) -> Result<(), Error> {
         self.button.set_focused(focus_event.focused);

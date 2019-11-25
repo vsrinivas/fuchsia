@@ -158,7 +158,7 @@ impl<B: BufferMut, D: BufferDispatcher<B>> FrameContext<B, EthernetDeviceId> for
 pub(crate) struct EthernetDeviceId(usize);
 
 impl Debug for EthernetDeviceId {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         let device: DeviceId = self.clone().into();
         write!(f, "{:?}", device)
     }
@@ -247,13 +247,13 @@ impl DeviceId {
 }
 
 impl Display for DeviceId {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}:{}", self.protocol, self.id)
     }
 }
 
 impl Debug for DeviceId {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
     }
 }
@@ -279,7 +279,7 @@ pub enum DeviceProtocol {
 }
 
 impl Display for DeviceProtocol {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(
             f,
             "{}",

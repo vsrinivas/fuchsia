@@ -77,11 +77,11 @@ impl RasterSegments {
         self.commands.is_empty()
     }
 
-    pub fn iter(&self) -> RasterSegmentsIter {
+    pub fn iter(&self) -> RasterSegmentsIter<'_> {
         RasterSegmentsIter { commands: &self.commands, index: 0, previous_point: None }
     }
 
-    pub fn from(&self, previous_point: Point<i32>, range: Range<usize>) -> RasterSegmentsIter {
+    pub fn from(&self, previous_point: Point<i32>, range: Range<usize>) -> RasterSegmentsIter<'_> {
         RasterSegmentsIter {
             commands: &self.commands[range],
             index: 0,
@@ -114,7 +114,7 @@ impl FromIterator<Segment<i32>> for RasterSegments {
 }
 
 impl fmt::Debug for RasterSegments {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_list().entries(self.iter()).finish()
     }
 }

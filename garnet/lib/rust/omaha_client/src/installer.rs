@@ -45,7 +45,7 @@ pub trait Installer {
         &mut self,
         install_plan: &Self::InstallPlan,
         observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<Result<(), Self::Error>>;
+    ) -> BoxFuture<'_, Result<(), Self::Error>>;
 }
 
 /// The trait for observing progress on the initiated installation.

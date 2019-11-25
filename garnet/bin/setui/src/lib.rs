@@ -64,7 +64,7 @@ pub mod switchboard;
 /// service (switchboard, registry, etc.) and brings up the components necessary
 /// to support the components specified in the components HashSet.
 pub fn create_fidl_service<'a, T: DeviceStorageFactory>(
-    mut service_dir: ServiceFsDir<ServiceObj<'a, ()>>,
+    mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     components: HashSet<switchboard::base::SettingType>,
     service_context_handle: Arc<RwLock<ServiceContext>>,
     storage_factory: Box<T>,

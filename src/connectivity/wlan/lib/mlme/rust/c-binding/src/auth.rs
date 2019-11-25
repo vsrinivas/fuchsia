@@ -8,7 +8,7 @@ use {
 };
 
 #[no_mangle]
-pub extern "C" fn mlme_is_valid_open_auth_resp(auth_resp: wlan_span::CSpan) -> i32 {
+pub extern "C" fn mlme_is_valid_open_auth_resp(auth_resp: wlan_span::CSpan<'_>) -> i32 {
     // `slice` does not outlive `auth_resp`.
     let slice: &[u8] = auth_resp.into();
     match LayoutVerified::<_, mac::AuthHdr>::new_unaligned_from_prefix(slice) {

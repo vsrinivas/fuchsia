@@ -34,13 +34,13 @@ impl Fixed {
 }
 
 impl fmt::Display for Fixed {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.to_float())
     }
 }
 
 impl fmt::Debug for Fixed {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{:?}", self.to_float())
     }
 }

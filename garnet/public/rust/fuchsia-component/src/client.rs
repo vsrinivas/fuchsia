@@ -587,7 +587,7 @@ impl ExitStatus {
 }
 
 impl fmt::Display for ExitStatus {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.exited() {
             write!(f, "Exited with {}", self.code())
         } else {
@@ -631,11 +631,11 @@ impl Output {
 }
 
 impl fmt::Debug for OutputError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         struct RawMultilineString<'a>(&'a str);
 
         impl<'a> fmt::Debug for RawMultilineString<'a> {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 if self.0.is_empty() {
                     f.write_str(r#""""#)
                 } else {

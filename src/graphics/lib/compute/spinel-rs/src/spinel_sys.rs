@@ -16,7 +16,7 @@ macro_rules! spinel_errors {
         }
 
         impl fmt::Display for SpnError {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 write!(f, "{:?}", self)
             }
         }

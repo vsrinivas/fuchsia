@@ -168,7 +168,7 @@ impl BlobEncryptionKey {
 }
 
 impl fmt::Debug for BlobEncryptionKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("BlobEncryptionKey").field(&hex::encode(self.as_bytes())).finish()
     }
 }

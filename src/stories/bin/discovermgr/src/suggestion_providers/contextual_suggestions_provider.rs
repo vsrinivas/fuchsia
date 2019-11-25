@@ -56,7 +56,7 @@ struct ActionMatching<'a> {
 
 impl<'a> ActionMatching<'a> {
     pub fn try_to_match(action: Action, context: &Vec<&'a ContextEntity>) -> Option<Self> {
-        let mut parameters = HashMap::<String, Vec<EntityMatching>>::new();
+        let mut parameters = HashMap::<String, Vec<EntityMatching<'_>>>::new();
         for parameter in &action.parameters {
             for context_entity in context {
                 if let Some(ref t) =
@@ -120,8 +120,8 @@ impl<'a> ActionMatching<'a> {
 /// Results in: [{p1: a, p2: b, p3: d}, {p1: a, p2: b, p3: e},
 ///              {p1: a, p2: c, p3: d}, {p1: a, p2: c, p3: e}]
 fn all_matches(
-    matchings: HashMap<String, Vec<EntityMatching>>,
-) -> impl Iterator<Item = HashMap<String, EntityMatching>> {
+    matchings: HashMap<String, Vec<EntityMatching<'_>>>,
+) -> impl Iterator<Item = HashMap<String, EntityMatching<'_>>> {
     // First transform |matchings| into an iterator of (key, value_i) iterators.
     // In the example above, this would be: [[(p1, a)], [(p2, b), (p2, c)], [(p3, d), (p3, e)]]
     let pairs =

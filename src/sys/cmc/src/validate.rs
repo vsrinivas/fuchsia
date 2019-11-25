@@ -100,7 +100,7 @@ fn validate_file<P: AsRef<Path>>(
 }
 
 /// Validates a JSON document according to the given schema.
-pub fn validate_json(json: &Value, schema: &JsonSchema) -> Result<(), Error> {
+pub fn validate_json(json: &Value, schema: &JsonSchema<'_>) -> Result<(), Error> {
     // Parse the schema
     let cmx_schema_json = serde_json::from_str(&schema.schema).map_err(|e| {
         Error::internal(format!("Couldn't read schema '{}' as JSON: {}", schema.name, e))
@@ -2879,7 +2879,7 @@ mod tests {
 
     fn validate_extra_schemas_test(
         input: serde_json::value::Value,
-        extra_schemas: &[(&JsonSchema, Option<String>)],
+        extra_schemas: &[(&JsonSchema<'_>, Option<String>)],
         expected_result: Result<(), Error>,
     ) -> Result<(), Error> {
         let input_str = format!("{}", input);

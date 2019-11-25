@@ -62,7 +62,7 @@ impl<H: Hasher> Clone for Hmac<H> {
 }
 
 impl<H: Hasher> Debug for Hmac<H> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "Hmac")
     }
 }

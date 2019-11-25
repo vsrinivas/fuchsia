@@ -9,8 +9,6 @@
 //! bandwidth is in MB (10^6 bytes) per second
 //! IOPS is in number of IOs per second - duh
 
-extern crate log;
-
 use {
     crate::io_packet::TimeInterval,
     crate::operations::{OperationType, PipelineStages},
@@ -190,11 +188,11 @@ impl Stats {
 struct SimpleLogger;
 
 impl log::Log for SimpleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         metadata.level() <= Level::Debug
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
             println!("{} - {}", record.level(), record.args());
         }

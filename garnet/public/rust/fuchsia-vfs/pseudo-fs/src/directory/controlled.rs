@@ -57,7 +57,7 @@ pub enum AddEntryResError<'entries> {
 }
 
 impl<'entries> fmt::Debug for AddEntryResError<'entries> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             AddEntryResError::Terminated => write!(f, "Terminated"),
             AddEntryResError::AddFailed((status, _)) => {

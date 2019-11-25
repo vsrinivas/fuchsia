@@ -52,19 +52,19 @@ bt_fidl_wrap!(UInt16);
 bt_fidl_wrap!(DeviceClass, fidl_fuchsia_bluetooth_control::DeviceClass);
 
 impl fmt::Display for Bool {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.0.value)
     }
 }
 
 impl fmt::Display for Status {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{:?}", self.0.error)
     }
 }
 
 impl fmt::Debug for DeviceClass {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{:?}", self.0)
     }
 }

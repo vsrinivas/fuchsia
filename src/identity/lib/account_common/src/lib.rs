@@ -5,7 +5,6 @@
 //! Types that are shared across more than one Account Management crate.
 #![deny(missing_docs)]
 
-extern crate serde;
 
 /// An error type for problems encountered in the account manager and account handler.
 mod error;

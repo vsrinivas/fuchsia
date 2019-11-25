@@ -717,14 +717,14 @@ impl From<Ipv4Addr> for net::Ipv4Addr {
 
 impl Display for Ipv4Addr {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}.{}.{}.{}", self.0[0], self.0[1], self.0[2], self.0[3])
     }
 }
 
 impl Debug for Ipv4Addr {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
     }
 }
@@ -867,7 +867,7 @@ impl From<Ipv6Addr> for net::Ipv6Addr {
 
 impl Display for Ipv6Addr {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         // TODO(joshlf): Implement canonicalization even when the `std` feature
         // is not enabled.
 
@@ -905,7 +905,7 @@ impl Display for Ipv6Addr {
 
 impl Debug for Ipv6Addr {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         Display::fmt(self, f)
     }
 }
@@ -1003,14 +1003,14 @@ impl Subnet<Ipv4Addr> {
 
 impl<A: IpAddress> Display for Subnet<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }
 
 impl<A: IpAddress> Debug for Subnet<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}/{}", self.network, self.prefix)
     }
 }

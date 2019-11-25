@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate libc;
 mod tee_client_api;
 
 use self::tee_client_api::*;

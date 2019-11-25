@@ -15,7 +15,7 @@ use std::collections::BTreeMap;
 
 const SHAPE_Z: Coord = -10.0;
 
-fn make_bounds(context: &ViewAssistantContext) -> Rect {
+fn make_bounds(context: &ViewAssistantContext<'_>) -> Rect {
     Rect::new(Point::zero(), context.size)
 }
 
@@ -93,7 +93,7 @@ fn random_color() -> Color {
 }
 
 impl TouchHandler {
-    pub fn new(context: &mut ViewAssistantContext) -> TouchHandler {
+    pub fn new(context: &mut ViewAssistantContext<'_>) -> TouchHandler {
         let mut rng = thread_rng();
         let shape_type = match rng.gen_range(0, 3) {
             0 => ShapeType::Rectangle,
@@ -109,7 +109,7 @@ impl TouchHandler {
         t
     }
 
-    fn setup(&mut self, context: &mut ViewAssistantContext) {
+    fn setup(&mut self, context: &mut ViewAssistantContext<'_>) {
         set_node_color(context.session(), &self.shape, &random_color());
         match self.shape_type {
             ShapeType::Rectangle => {
@@ -141,7 +141,7 @@ impl TouchHandler {
         context.root_node().add_child(&self.shape);
     }
 
-    fn update(&mut self, context: &mut ViewAssistantContext, pointer_event: &PointerEvent) {
+    fn update(&mut self, context: &mut ViewAssistantContext<'_>, pointer_event: &PointerEvent) {
         let bounds = make_bounds(context);
         let location = Point::new(pointer_event.x, pointer_event.y)
             .clamp(bounds.origin, bounds.bottom_right());
@@ -170,7 +170,7 @@ impl ShapeDropViewAssistant {
 
     fn start_animating(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         pointer_event: &PointerEvent,
     ) {
         if let Some(handler) = self.touch_handlers.remove(&make_pointer_event_key(pointer_event)) {
@@ -184,7 +184,7 @@ impl ShapeDropViewAssistant {
 
     fn handle_pointer_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         pointer_event: &PointerEvent,
     ) {
         match pointer_event.phase {
@@ -216,7 +216,7 @@ impl ShapeDropViewAssistant {
 }
 
 impl ViewAssistant for ShapeDropViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         context.root_node().add_child(&self.background_node);
 
         set_node_color(
@@ -228,7 +228,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let center_x = context.size.width * 0.5;
         let center_y = context.size.height * 0.5;
         self.background_node.set_shape(&Rectangle::new(
@@ -251,7 +251,7 @@ impl ViewAssistant for ShapeDropViewAssistant {
 
     fn handle_input_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         event: &fidl_fuchsia_ui_input::InputEvent,
     ) -> Result<(), Error> {
         match event {

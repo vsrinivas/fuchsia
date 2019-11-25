@@ -164,7 +164,7 @@ impl Constant {
 }
 
 impl std::fmt::Display for Constant {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -228,7 +228,7 @@ pub enum Ty {
 }
 
 impl fmt::Display for Ty {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Ty::UInt32 => write!(f, "UInt32"),
             Ty::Identifier { .. } => write!(f, "<Ident>"),

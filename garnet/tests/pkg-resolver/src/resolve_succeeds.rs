@@ -610,7 +610,7 @@ impl BlockResponseBodyOnceUriPathHandler {
 }
 
 impl UriPathHandler for BlockResponseBodyOnceUriPathHandler {
-    fn handle(&self, uri_path: &Path, mut response: Response<Body>) -> BoxFuture<Response<Body>> {
+    fn handle(&self, uri_path: &Path, mut response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         // Only block requests for the duplicate blob
         let duplicate_blob_uri = Path::new(&self.path_to_block);
         if uri_path != duplicate_blob_uri {
@@ -750,7 +750,7 @@ impl BlockResponseUriPathHandler {
 }
 
 impl UriPathHandler for BlockResponseUriPathHandler {
-    fn handle(&self, path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+    fn handle(&self, path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         // Only block paths that were requested to be blocked
         if !self.paths_to_block.contains(path) {
             return async move { response }.boxed();

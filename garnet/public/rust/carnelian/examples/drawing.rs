@@ -103,11 +103,11 @@ impl DrawingViewAssistant {
 }
 
 impl ViewAssistant for DrawingViewAssistant {
-    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
 
@@ -175,7 +175,7 @@ impl ViewAssistant for DrawingViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         keyboard_event: &KeyboardEvent,
     ) -> Result<(), Error> {
         if keyboard_event.code_point == ' ' as u32

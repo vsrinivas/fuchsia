@@ -95,15 +95,15 @@ impl<'a> ViewAssistantContext<'a> {
 pub trait ViewAssistant {
     /// This method is called once when a view is created. It is a good point to create scenic
     /// commands that apply throughout the lifetime of the view.
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error>;
 
     /// This method is called when a view controller has been asked to update the view.
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error>;
 
     /// This method is called when input events come from scenic to this view.
     fn handle_input_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         event: &InputEvent,
     ) -> Result<(), Error> {
         match event {
@@ -120,7 +120,7 @@ pub trait ViewAssistant {
     /// This method is called when input events come from scenic to this view.
     fn handle_pointer_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        _: &mut ViewAssistantContext<'_>,
         _: &PointerEvent,
     ) -> Result<(), Error> {
         Ok(())
@@ -129,7 +129,7 @@ pub trait ViewAssistant {
     /// This method is called when keyboard events come from scenic to this view.
     fn handle_keyboard_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        _: &mut ViewAssistantContext<'_>,
         _: &KeyboardEvent,
     ) -> Result<(), Error> {
         Ok(())
@@ -138,7 +138,7 @@ pub trait ViewAssistant {
     /// This method is called when focus events come from scenic to this view.
     fn handle_focus_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        _: &mut ViewAssistantContext<'_>,
         _: &FocusEvent,
     ) -> Result<(), Error> {
         Ok(())
@@ -255,7 +255,7 @@ impl ScenicViewStrategy {
         Box::new(ScenicViewStrategy { scenic_resources })
     }
 
-    fn make_view_assistant_context(&self, view_details: &ViewDetails) -> ViewAssistantContext {
+    fn make_view_assistant_context(&self, view_details: &ViewDetails) -> ViewAssistantContext<'_> {
         ViewAssistantContext {
             key: view_details.key,
             logical_size: view_details.logical_size,
@@ -491,7 +491,7 @@ impl FrameBufferViewStrategy {
         &mut self,
         view_details: &ViewDetails,
         image_id: ImageId,
-    ) -> ViewAssistantContext {
+    ) -> ViewAssistantContext<'_> {
         let wait_event = if self.signals_wait_event {
             let stored_wait_event = self.wait_events.get(&image_id).expect("wait event");
             Some(stored_wait_event)

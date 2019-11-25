@@ -37,7 +37,7 @@ impl Distribution<RollResult> for Standard {
 }
 
 impl fmt::Display for RollResult {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let pips = match self {
             RollResult::One => [
                 [BLANK, BLANK, BLANK],

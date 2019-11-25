@@ -127,7 +127,7 @@ macro_rules! define_kind_specific_repr {
         }
 
         impl core::fmt::Display for $repr_name {
-            fn fmt(&self, f: &mut core::fmt::Formatter) -> core::fmt::Result {
+            fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
                 match self {
                     $($repr_name::$repr_variant => Repr::$repr_variant,)*
                     $repr_name::Align(u) => Repr::Align(*u),
@@ -200,7 +200,7 @@ impl Repr {
 }
 
 impl Display for Repr {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         if let Repr::Align(n) = self {
             return write!(f, "repr(align({}))", n);
         }

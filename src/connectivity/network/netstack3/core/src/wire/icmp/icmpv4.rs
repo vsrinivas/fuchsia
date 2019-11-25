@@ -39,7 +39,7 @@ pub(crate) enum Icmpv4Packet<B: ByteSlice> {
 }
 
 impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv4Packet<B> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::Icmpv4Packet::*;
         match self {
             DestUnreachable(ref p) => f.debug_tuple("DestUnreachable").field(p).finish(),

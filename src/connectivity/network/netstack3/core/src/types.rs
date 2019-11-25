@@ -102,7 +102,7 @@ impl<A: UnicastAddress> Deref for UnicastAddr<A> {
 }
 
 impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -145,7 +145,7 @@ impl<A: MulticastAddress> Deref for MulticastAddr<A> {
 }
 
 impl<A: MulticastAddress + Display> Display for MulticastAddr<A> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

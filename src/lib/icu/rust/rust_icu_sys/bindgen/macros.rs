@@ -1,6 +1,5 @@
 // Macros for changing function names.
 
-extern crate paste;
 
 // This library was build with version renaming, so rewrite every function name
 // with its name with version number appended.

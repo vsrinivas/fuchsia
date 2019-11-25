@@ -77,7 +77,7 @@ where
     fn handle_request(
         &mut self,
         request: DirectoryRequest,
-    ) -> BoxFuture<Result<ConnectionState, Error>>;
+    ) -> BoxFuture<'_, Result<ConnectionState, Error>>;
 }
 
 /// This is an API a directory needs to implement, in order for the `BaseConnection` to be able to

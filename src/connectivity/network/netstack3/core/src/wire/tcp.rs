@@ -530,7 +530,7 @@ mod options {
 // needed by Result::unwrap_err in the tests below
 #[cfg(test)]
 impl<B> Debug for TcpSegment<B> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         write!(fmt, "TcpSegment")
     }
 }

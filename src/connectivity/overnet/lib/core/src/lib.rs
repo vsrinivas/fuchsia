@@ -6,9 +6,6 @@
 
 #![deny(missing_docs)]
 
-#[cfg(test)]
-extern crate timebomb;
-
 mod coding;
 mod labels;
 mod node;

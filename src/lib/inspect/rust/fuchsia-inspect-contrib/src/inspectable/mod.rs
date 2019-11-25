@@ -42,7 +42,7 @@ where
 
     /// Returns a guard that `DerefMut`s to the wrapped `value`. The `watcher`
     /// will receive the updated `value` when the guard is `Drop`ped.
-    pub fn get_mut(&mut self) -> InspectableGuard<V, W> {
+    pub fn get_mut(&mut self) -> InspectableGuard<'_, V, W> {
         InspectableGuard { value: &mut self.value, watcher: &mut self.watcher }
     }
 }

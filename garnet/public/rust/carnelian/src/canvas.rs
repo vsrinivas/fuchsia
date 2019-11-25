@@ -104,7 +104,7 @@ pub struct FontFace<'a> {
 
 /// Struct containing font, size and baseline.
 #[allow(missing_docs)]
-pub struct FontDescription<'a, 'b: 'a> {
+pub struct FontDescription<'a, 'b> {
     pub face: &'a FontFace<'b>,
     pub size: u32,
     pub baseline: i32,
@@ -620,7 +620,7 @@ impl<T: PixelSink> Canvas<T> {
         text: &str,
         location: Point,
         size: Size,
-        font: &mut FontDescription,
+        font: &mut FontDescription<'_, '_>,
         paint: &Paint,
     ) {
         let mut x = location.x;
@@ -657,7 +657,7 @@ impl<T: PixelSink> Canvas<T> {
         &mut self,
         text: &str,
         location: Point,
-        font: &mut FontDescription,
+        font: &mut FontDescription<'_, '_>,
         paint: &Paint,
     ) {
         let scale = Scale::uniform(font.size as f32);
@@ -696,7 +696,7 @@ impl<T: PixelSink> Canvas<T> {
 
 /// Measure a line of text `text` and with the typographic characteristics in `font`.
 /// Returns the measured width and height.
-pub fn measure_text(text: &str, font: &FontDescription) -> Size {
+pub fn measure_text(text: &str, font: &FontDescription<'_, '_>) -> Size {
     if font.size == 0 {
         return Size::zero();
     }

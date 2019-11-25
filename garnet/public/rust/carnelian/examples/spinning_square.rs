@@ -88,7 +88,7 @@ struct SpinningSquareViewAssistant {
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         set_node_color(
             context.session(),
             &self.background_node,
@@ -104,7 +104,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
 
@@ -151,7 +151,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        context: &mut ViewAssistantContext,
+        context: &mut ViewAssistantContext<'_>,
         keyboard_event: &KeyboardEvent,
     ) -> Result<(), Error> {
         if keyboard_event.code_point == ' ' as u32

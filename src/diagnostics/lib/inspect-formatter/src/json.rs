@@ -113,7 +113,7 @@ macro_rules! impl_serialize_for_array_value {
                             let wrapped_buckets = buckets
                                 .iter()
                                 .map(|bucket| WrappedArrayBucket { bucket })
-                                .collect::<Vec<WrappedArrayBucket<$type>>>();
+                                .collect::<Vec<WrappedArrayBucket<'_, $type>>>();
                             s.serialize_entry("buckets", &wrapped_buckets)?;
                             s.end()
                         }

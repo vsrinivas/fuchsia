@@ -59,7 +59,7 @@ impl Installer for FuchsiaInstaller {
         &mut self,
         install_plan: &FuchsiaInstallPlan,
         _observer: Option<&dyn ProgressObserver>,
-    ) -> BoxFuture<Result<()>> {
+    ) -> BoxFuture<'_, Result<()>> {
         let url = install_plan.url.to_string();
         let initiator = match install_plan.install_source {
             InstallSource::ScheduledTask => "automatic",

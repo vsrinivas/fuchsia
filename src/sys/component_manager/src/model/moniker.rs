@@ -126,7 +126,7 @@ impl PartialOrd for ChildMoniker {
 }
 
 impl fmt::Display for ChildMoniker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
@@ -203,7 +203,7 @@ impl PartialOrd for PartialMoniker {
 }
 
 impl fmt::Display for PartialMoniker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.as_str())
     }
 }
@@ -300,7 +300,7 @@ impl PartialOrd for AbsoluteMoniker {
 }
 
 impl fmt::Display for AbsoluteMoniker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if self.path.is_empty() {
             write!(f, "/")?;
         } else {
@@ -379,7 +379,7 @@ impl RelativeMoniker {
 }
 
 impl fmt::Display for RelativeMoniker {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, ".")?;
         for segment in &self.up_path {
             write!(f, "\\{}", segment)?

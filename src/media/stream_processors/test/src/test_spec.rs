@@ -17,7 +17,7 @@ pub trait StreamProcessorFactory {
         &self,
         stream: &dyn ElementaryStream,
         format_details_version_ordinal: u64,
-    ) -> BoxFuture<Result<StreamProcessorProxy>>;
+    ) -> BoxFuture<'_, Result<StreamProcessorProxy>>;
 }
 
 /// A test spec describes all the cases that will run and the circumstances in which

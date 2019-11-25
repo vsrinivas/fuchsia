@@ -293,7 +293,7 @@ pub struct Executor {
 }
 
 impl fmt::Debug for Executor {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Executor").field("port", &self.inner.port).finish()
     }
 }
@@ -787,7 +787,7 @@ pub struct EHandle {
 }
 
 impl fmt::Debug for EHandle {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("EHandle").field("port", &self.inner.port).finish()
     }
 }
@@ -1162,7 +1162,7 @@ mod tests {
     fn stepwise_two_steps() {
         let fut_step = Cell::new(0);
         let fut_waker: Rc<RefCell<Option<Waker>>> = Rc::new(RefCell::new(None));
-        let fut_fn = |cx: &mut Context| {
+        let fut_fn = |cx: &mut Context<'_>| {
             fut_waker.borrow_mut().replace(cx.waker().clone());
             match fut_step.get() {
                 0 => {

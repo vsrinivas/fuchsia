@@ -418,11 +418,11 @@ impl<T: Context> ClockfaceViewAssistant<T> {
 }
 
 impl<T: Context> ViewAssistant for ClockfaceViewAssistant<T> {
-    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let canvas = context.canvas.as_ref().unwrap().borrow();
         let size = &context.size;
         let context = &mut self.context;

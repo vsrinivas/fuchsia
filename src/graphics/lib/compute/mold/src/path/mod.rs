@@ -159,11 +159,11 @@ impl Path {
         self.commands.push(PathCommand::Close);
     }
 
-    pub(crate) fn segments(&self) -> PathSegments {
+    pub(crate) fn segments(&self) -> PathSegments<'_> {
         PathSegments::new(&self.commands, None)
     }
 
-    pub(crate) fn transformed(&self, transform: &[f32; 9]) -> PathSegments {
+    pub(crate) fn transformed(&self, transform: &[f32; 9]) -> PathSegments<'_> {
         PathSegments::new(&self.commands, Some(Transform::new(transform)))
     }
 }

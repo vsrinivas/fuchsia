@@ -24,7 +24,7 @@ impl PolicyEngine for MockPolicyEngine {
         _apps: &[App],
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
-    ) -> BoxFuture<UpdateCheckSchedule> {
+    ) -> BoxFuture<'_, UpdateCheckSchedule> {
         future::ready(self.check_schedule.clone()).boxed()
     }
 
@@ -34,14 +34,14 @@ impl PolicyEngine for MockPolicyEngine {
         _scheduling: &UpdateCheckSchedule,
         _protocol_state: &ProtocolState,
         _check_options: &CheckOptions,
-    ) -> BoxFuture<CheckDecision> {
+    ) -> BoxFuture<'_, CheckDecision> {
         future::ready(self.check_decision.clone()).boxed()
     }
 
     fn update_can_start(
         &mut self,
         _proposed_install_plan: &impl Plan,
-    ) -> BoxFuture<UpdateDecision> {
+    ) -> BoxFuture<'_, UpdateDecision> {
         future::ready(self.update_decision.clone()).boxed()
     }
 }

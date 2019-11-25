@@ -64,7 +64,7 @@ macro_rules! __create_protocol_enum_inner {
         }
 
         impl std::fmt::Display for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                 write!(
                     f,
                     "{}",
@@ -77,7 +77,7 @@ macro_rules! __create_protocol_enum_inner {
         }
 
         impl std::fmt::Debug for $name {
-            fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+            fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
                 std::fmt::Display::fmt(self, f)
             }
         }

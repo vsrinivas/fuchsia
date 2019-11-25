@@ -176,6 +176,12 @@ def main():
         "--color=always",
         "-Zallow-features=%s" % ",".join(args.unstable_rust_features or [])
     ]
+
+    # Don't enforce this lint on anything in third_party
+    if "third_party" not in args.crate_root:
+        # Disable non-2018 style code (Ex: not using dyn w/ trait objects)
+        call_args += ["-Wrust-2018-idioms"]
+
     call_args += ["-Lnative=%s" % dir for dir in args.lib_dir]
     if args.test:
         call_args += ["--test"]

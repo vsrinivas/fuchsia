@@ -5,6 +5,7 @@
 //! Library and runtime for fidl bindings.
 
 #![deny(missing_docs)]
+#![allow(elided_lifetimes_in_paths)]
 
 #[macro_use]
 pub mod encoding;

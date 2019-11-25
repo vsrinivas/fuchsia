@@ -37,7 +37,7 @@ impl KmsKey for KmsSealingKey {
     /// # Panics
     ///
     /// Panics if the request is neither SealingKeyRequest or UnsealingKeyRequest.
-    fn handle_request(&self, req: KeyRequestType) -> Result<(), fidl::Error> {
+    fn handle_request(&self, req: KeyRequestType<'_>) -> Result<(), fidl::Error> {
         if let KeyRequestType::SealingKeyRequest(DataRequest { data, result }) = req {
             *result = self.seal_data(data);
         } else if let KeyRequestType::UnsealingKeyRequest(DataRequest { data, result }) = req {
@@ -80,7 +80,7 @@ impl KmsSealingKey {
     ///
     /// * `key_name` - The name for the new key.
     /// * `key_attributes` - The attributes for the new key.
-    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Error> {
+    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes<'_>) -> Result<Self, Error> {
         if key_attributes.key_type != KeyType::SealingKey {
             // The key is a different type. This should not happen unless the key file is corrupted.
             error!("The sealing key file is corrupted!");

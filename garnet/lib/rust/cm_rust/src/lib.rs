@@ -557,7 +557,7 @@ impl TryFrom<&str> for CapabilityPath {
 }
 
 impl fmt::Display for CapabilityPath {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         if &self.dirname == "/" {
             write!(f, "/{}", self.basename)
         } else {
@@ -613,7 +613,7 @@ impl From<&CapabilityName> for CapabilityName {
 }
 
 impl fmt::Display for CapabilityName {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&self.0)
     }
 }

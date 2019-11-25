@@ -445,7 +445,7 @@ impl EventFileGroupWriter {
         event_type: impl ToString,
         component_name: impl ToString,
         component_instance: impl ToString,
-    ) -> EventBuilder {
+    ) -> EventBuilder<'_> {
         EventBuilder {
             writer: self,
             event: Event::new(event_type, component_name, component_instance),
@@ -827,7 +827,6 @@ mod tests {
     use super::*;
     use std::io::Write;
     use std::iter::FromIterator;
-    extern crate tempfile;
 
     #[test]
     fn archive_open() {

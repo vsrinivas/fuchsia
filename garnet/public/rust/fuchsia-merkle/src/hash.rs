@@ -45,7 +45,7 @@ impl From<[u8; HASH_SIZE]> for Hash {
 }
 
 impl fmt::Display for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.write_hex(f)
     }
 }
@@ -60,7 +60,7 @@ impl Serialize for Hash {
 }
 
 impl fmt::Debug for Hash {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_tuple("Hash").field(&self.to_string()).finish()
     }
 }
@@ -70,7 +70,7 @@ impl fmt::Debug for Hash {
 pub struct ParseHashError(#[cause] FromHexError);
 
 impl fmt::Display for ParseHashError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.0 {
             FromHexError::InvalidStringLength => {
                 write!(f, "{}, expected {} hex encoded bytes", self.0, HASH_SIZE)

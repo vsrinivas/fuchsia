@@ -106,7 +106,7 @@ impl KnownEssStore {
         self.ess_by_ssid.lock().len()
     }
 
-    fn write(&self, guard: MutexGuard<EssMap>) -> Result<(), failure::Error> {
+    fn write(&self, guard: MutexGuard<'_, EssMap>) -> Result<(), failure::Error> {
         let temp_file = TempFile::create(&self.tmp_storage_path)?;
         let mut list = Vec::with_capacity(guard.len());
         for (ssid, ess) in guard.iter() {

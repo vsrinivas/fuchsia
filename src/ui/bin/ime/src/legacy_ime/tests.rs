@@ -87,7 +87,7 @@ impl uii::InputMethodEditorClientProxyInterface for MockImeClient {
     fn did_update_state(
         &self,
         state: &mut uii::TextInputState,
-        mut _event: Option<uii::OutOfLineUnion<uii::InputEvent>>,
+        mut _event: Option<uii::OutOfLineUnion<'_, uii::InputEvent>>,
     ) -> Result<(), fidl::Error> {
         let state2 = clone_state(state);
         self.state

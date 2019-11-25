@@ -7,6 +7,7 @@
 
 #![recursion_limit = "1024"]
 
+#![allow(unused_extern_crates)]
 use proc_macro_hack::proc_macro_hack;
 
 #[macro_use]

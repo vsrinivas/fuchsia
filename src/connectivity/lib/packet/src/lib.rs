@@ -409,7 +409,6 @@
 //! `as_buf_mut` call in order to break the cycle, pick the option which is the
 //! least in the hot path.
 
-extern crate zerocopy;
 
 mod fragmented;
 pub mod serialize;
@@ -439,7 +438,7 @@ pub trait FragmentedBuffer {
     /// [`FragmentedBytes`].
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes) -> R;
+        F: FnOnce(FragmentedBytes<'_>) -> R;
 
     /// Returns a flattened version of this buffer, copying its contents into a
     /// `Vec`.
@@ -454,7 +453,7 @@ pub trait FragmentedBufferMut: FragmentedBuffer {
     /// [`FragmentedBytesMut`].
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut) -> R;
+        F: FnOnce(FragmentedBytesMut<'_>) -> R;
 
     /// Sets all bytes in `range` to zero.
     ///
@@ -549,7 +548,7 @@ where
 
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes) -> R,
+        F: FnOnce(FragmentedBytes<'_>) -> R,
     {
         let mut bs = [self.as_ref()];
         f(FragmentedBytes::new(&mut bs))
@@ -575,7 +574,7 @@ where
 {
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut) -> R,
+        F: FnOnce(FragmentedBytesMut<'_>) -> R,
     {
         let mut bs = [self.as_mut()];
         f(FragmentedBytesMut::new(&mut bs))

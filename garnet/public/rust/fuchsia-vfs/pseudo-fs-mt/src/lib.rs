@@ -7,6 +7,10 @@
 
 #![recursion_limit = "1024"]
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+#![allow(unused_extern_crates)]
+
 use proc_macro_hack::proc_macro_hack;
 
 pub mod test_utils;

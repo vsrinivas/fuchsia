@@ -84,7 +84,7 @@ macro_rules! gen_commands {
         }
 
         impl fmt::Display for $name {
-            fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 match *self {
                     $($name::$variant => write!(f, $val)),* ,
                 }

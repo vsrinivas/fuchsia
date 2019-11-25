@@ -100,7 +100,7 @@ fn get_external_content_infos<'a, 'b>(
 ) -> Result<BTreeMap<String, ExternalContentInfo<'a>>, BuildError> {
     external_contents
         .iter()
-        .map(|(resource_path, _source_path)| -> Result<(String, ExternalContentInfo), BuildError> {
+        .map(|(resource_path, _source_path)| -> Result<(String, ExternalContentInfo<'_>), BuildError> {
             let file = file_system.open(_source_path)?;
             Ok((
                 resource_path.clone(),

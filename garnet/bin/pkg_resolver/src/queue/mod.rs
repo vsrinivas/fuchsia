@@ -174,7 +174,7 @@ where
     /// * Poll::Ready(None) if the input work queue is empty and closed.
     /// * Poll::Ready(Some(())) if new work was started.
     /// * Poll::Pending if at the concurrency limit or no work is enqueued.
-    fn find_work(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<()>> {
+    fn find_work(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<()>> {
         // Nothing to do if the stream of requests is EOF.
         if self.as_mut().pending().is_terminated() {
             return Poll::Ready(None);
@@ -212,7 +212,7 @@ where
         }
     }
 
-    fn do_work(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<K>> {
+    fn do_work(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<K>> {
         match self.as_mut().running().poll_next(cx) {
             Poll::Pending => Poll::Pending,
             Poll::Ready(None) => {
@@ -262,7 +262,7 @@ where
     O: Send + 'static,
 {
     type Item = K;
-    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
         match (self.as_mut().find_work(cx), self.as_mut().do_work(cx)) {
             (Poll::Ready(None), Poll::Ready(None)) => {
                 // There input queues are empty and closed, and all running work has been
@@ -713,7 +713,7 @@ mod tests {
         }
 
         let (enqueue, running, done) =
-            spawn_test_work_queue::<Params, (), &str>(executor.spawner(), 5);
+            spawn_test_work_queue::<Params<'_>, (), &str>(executor.spawner(), 5);
 
         let key_a = Params { key: "first", options: &[] };
         let key_b = Params { key: "first", options: &["unique"] };

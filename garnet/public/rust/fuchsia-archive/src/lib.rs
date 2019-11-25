@@ -185,7 +185,7 @@ pub fn write(
 }
 
 /// A struct to open and read FAR-formatted archive.
-pub struct Reader<'a, T: 'a>
+pub struct Reader<'a, T>
 where
     T: Read + Seek,
 {
@@ -291,7 +291,7 @@ where
     }
 
     /// Create an EntryReader for an entry with the specified name.
-    pub fn open(&mut self, archive_path: &str) -> Result<EntryReader<T>, Error> {
+    pub fn open(&mut self, archive_path: &str) -> Result<EntryReader<'_, T>, Error> {
         let directory_entry = self.find_directory_entry(archive_path)?;
 
         Ok(EntryReader {
@@ -316,7 +316,7 @@ where
 
 /// A structure that allows reading from the offset of an item in a
 /// FAR archive.
-pub struct EntryReader<'a, T: 'a>
+pub struct EntryReader<'a, T>
 where
     T: Read + Seek,
 {

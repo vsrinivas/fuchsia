@@ -16,6 +16,7 @@ use fuchsia_component::client::connect_to_service;
 use fuchsia_zircon as zx;
 use log::info;
 use serde_derive::{Deserialize, Serialize};
+use fuchsia_syslog as syslog;
 use serde_json;
 use std::fs;
 
@@ -24,7 +25,6 @@ use mundane::public::ec::ecdsa::EcdsaHash;
 use mundane::public::ec::*;
 use mundane::public::*;
 
-extern crate fuchsia_syslog as syslog;
 
 static TEST_KEY_NAME: &str = "test-key";
 static CONFIG_PATH: &str = "/config/data/crypto_provider_config.json";
@@ -54,7 +54,7 @@ pub struct Config<'a> {
 
 fn get_provider_from_config() -> Result<KeyProvider, failure::Error> {
     let json = fs::read_to_string(CONFIG_PATH)?;
-    let config: Config = serde_json::from_str(&json)?;
+    let config: Config<'_> = serde_json::from_str(&json)?;
     match config.crypto_provider {
         "OpteeProvider" => Ok(KeyProvider::OpteeProvider),
         "SoftwareProvider" => Ok(KeyProvider::SoftwareProvider),

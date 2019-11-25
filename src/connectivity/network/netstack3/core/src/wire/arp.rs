@@ -311,7 +311,7 @@ where
 
 #[cfg(test)]
 impl<B, HwAddr, ProtoAddr> Debug for ArpPacket<B, HwAddr, ProtoAddr> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         write!(fmt, "ArpPacket")
     }
 }

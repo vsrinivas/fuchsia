@@ -155,7 +155,7 @@ async fn inner_watch(path: PathBuf) -> Result<BoxStream<'static, PathEvent>, Err
 
     fasync::spawn(path_future);
 
-    Ok(rx.boxed() as BoxStream<_>)
+    Ok(rx.boxed() as BoxStream<'_, _>)
 }
 
 /// Watches a path and all directories under that path for changes.

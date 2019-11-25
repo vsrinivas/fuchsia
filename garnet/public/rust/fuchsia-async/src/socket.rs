@@ -69,7 +69,7 @@ impl AsRef<zx::Socket> for Socket {
 }
 
 impl AsHandleRef for Socket {
-    fn as_handle_ref(&self) -> zx::HandleRef {
+    fn as_handle_ref(&self) -> zx::HandleRef<'_> {
         self.handle.as_handle_ref()
     }
 }
@@ -278,7 +278,7 @@ impl Socket {
 }
 
 impl fmt::Debug for Socket {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.handle.fmt(f)
     }
 }

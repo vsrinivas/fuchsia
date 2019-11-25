@@ -85,7 +85,7 @@ async fn second_resolve_succeeds_when_blob_404() {
 
 struct OneByteShortThenErrorUriPathHandler;
 impl UriPathHandler for OneByteShortThenErrorUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         async {
             let mut bytes = body_to_bytes(response.into_body()).await;
             if let None = bytes.pop() {
@@ -157,7 +157,7 @@ async fn second_resolve_succeeds_when_blob_errors_mid_download() {
 
 struct OneByteShortThenDisconnectUriPathHandler;
 impl UriPathHandler for OneByteShortThenDisconnectUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         async {
             let mut bytes = body_to_bytes(response.into_body()).await;
             if let None = bytes.pop() {
@@ -218,7 +218,7 @@ async fn second_resolve_succeeds_disconnect_before_blob_complete() {
 
 struct OneByteFlippedUriPathHandler;
 impl UriPathHandler for OneByteFlippedUriPathHandler {
-    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+    fn handle(&self, _uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
         async {
             let mut bytes = body_to_bytes(response.into_body()).await;
             if bytes.is_empty() {

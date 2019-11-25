@@ -377,7 +377,7 @@ impl<A: IpAddress> PacketBuilder for UdpPacketBuilder<A> {
 // needed by Result::unwrap_err in the tests below
 #[cfg(test)]
 impl<B> Debug for UdpPacket<B> {
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         write!(fmt, "UdpPacket")
     }
 }

@@ -14,8 +14,6 @@ mod sequential_io_generator;
 mod target;
 mod verifier;
 
-extern crate serde;
-
 use {
     crate::generator::{run_load, GeneratorArgs},
     crate::log::{log_init, Stats},

@@ -161,7 +161,7 @@ impl<C: PCurve> PublicKey for EcPubKey<C> {
 }
 
 impl<C: PCurve> Debug for EcPubKey<C> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "EcPubKey")
     }
 }
@@ -203,7 +203,7 @@ impl<C: PCurve> PrivateKey for EcPrivKey<C> {
 }
 
 impl<C: PCurve> Debug for EcPrivKey<C> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "EcPrivKey")
     }
 }
@@ -469,7 +469,7 @@ pub mod ecdsa {
     }
 
     impl<C: PCurve, H: Hasher + EcdsaHash<C>> Debug for EcdsaSignature<C, H> {
-        fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
             write!(f, "EcdsaSignature")
         }
     }

@@ -107,7 +107,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
     ///    Request1 { arg1: u32 },
     ///    Request2 { name: String},
     ///  }
-    fn codegen_message_enum<F: Fn(&ast::Arg) -> Cow<str>>(
+    fn codegen_message_enum<F: Fn(&ast::Arg) -> Cow<'_, str>>(
         &mut self,
         name: &str,
         interface: &ast::Interface,
@@ -190,7 +190,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMess
                 interface.name, message.name
             )?;
             let mut message_args = vec![];
-            let mut format_args: Vec<Cow<str>> = vec!["this".into()];
+            let mut format_args: Vec<Cow<'_, str>> = vec!["this".into()];
             for arg in message.args.iter() {
                 match arg.kind {
                     ArgKind::Array => {
@@ -533,7 +533,7 @@ fn enum_path(name: &str) -> String {
     }
 }
 
-fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<str> {
+fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<'_, str> {
     if let Some(ref enum_type) = arg.enum_type {
         return format!("Enum<{}>", enum_path(enum_type)).into();
     }
@@ -555,7 +555,7 @@ fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<str> {
     }
 }
 
-fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<str> {
+fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<'_, str> {
     if let Some(ref enum_type) = arg.enum_type {
         return enum_path(enum_type).into();
     }

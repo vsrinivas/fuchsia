@@ -39,7 +39,7 @@ decl_derive!([FromBytes] => derive_from_bytes);
 decl_derive!([AsBytes] => derive_as_bytes);
 decl_derive!([Unaligned] => derive_unaligned);
 
-fn derive_from_bytes(s: Structure) -> proc_macro2::TokenStream {
+fn derive_from_bytes(s: Structure<'_>) -> proc_macro2::TokenStream {
     match &s.ast().data {
         Data::Struct(strct) => derive_from_bytes_struct(&s, strct),
         Data::Enum(enm) => derive_from_bytes_enum(&s, enm),
@@ -47,7 +47,7 @@ fn derive_from_bytes(s: Structure) -> proc_macro2::TokenStream {
     }
 }
 
-fn derive_as_bytes(s: Structure) -> proc_macro2::TokenStream {
+fn derive_as_bytes(s: Structure<'_>) -> proc_macro2::TokenStream {
     match &s.ast().data {
         Data::Struct(strct) => derive_as_bytes_struct(&s, strct),
         Data::Enum(enm) => derive_as_bytes_enum(&s, enm),
@@ -55,7 +55,7 @@ fn derive_as_bytes(s: Structure) -> proc_macro2::TokenStream {
     }
 }
 
-fn derive_unaligned(s: Structure) -> proc_macro2::TokenStream {
+fn derive_unaligned(s: Structure<'_>) -> proc_macro2::TokenStream {
     match &s.ast().data {
         Data::Struct(strct) => derive_unaligned_struct(&s, strct),
         Data::Enum(enm) => derive_unaligned_enum(&s, enm),
@@ -78,7 +78,7 @@ macro_rules! try_or_print {
 // - repr(C), repr(transparent) or repr(packed)
 // - all fields are FromBytes
 
-fn derive_from_bytes_struct(s: &Structure, strct: &DataStruct) -> proc_macro2::TokenStream {
+fn derive_from_bytes_struct(s: &Structure<'_>, strct: &DataStruct) -> proc_macro2::TokenStream {
     // We only need to validate that the repr is either repr(C),
     // repr(transparent), or repr(packed), possibly with a repr(align(N)); we
     // don't care which.
@@ -119,7 +119,7 @@ const STRUCT_FROM_BYTES_CFG: Config<StructRepr> = {
 //   platform-specific and, b) even on Rust's smallest bit width platform (32),
 //   this would require ~4 billion enum variants, which obviously isn't a thing.
 
-fn derive_from_bytes_enum(s: &Structure, enm: &DataEnum) -> proc_macro2::TokenStream {
+fn derive_from_bytes_enum(s: &Structure<'_>, enm: &DataEnum) -> proc_macro2::TokenStream {
     if !enm.is_c_like() {
         return Error::new_spanned(s.ast(), "only C-like enums can implement FromBytes")
             .to_compile_error();
@@ -178,7 +178,7 @@ const ENUM_FROM_BYTES_CFG: Config<EnumRepr> = {
 //   - no padding (size of struct equals sum of size of field types)
 // - repr(packed)
 
-fn derive_as_bytes_struct(s: &Structure, strct: &DataStruct) -> proc_macro2::TokenStream {
+fn derive_as_bytes_struct(s: &Structure<'_>, strct: &DataStruct) -> proc_macro2::TokenStream {
     // TODO(joshlf): Support type parameters.
     if !s.ast().generics.params.is_empty() {
         return Error::new(Span::call_site(), "unsupported on types with type parameters")
@@ -218,7 +218,7 @@ const STRUCT_AS_BYTES_CFG: Config<StructRepr> = {
 
 // An enum is AsBytes if it is C-like and has a defined repr
 
-fn derive_as_bytes_enum(s: &Structure, enm: &DataEnum) -> proc_macro2::TokenStream {
+fn derive_as_bytes_enum(s: &Structure<'_>, enm: &DataEnum) -> proc_macro2::TokenStream {
     if !enm.is_c_like() {
         return Error::new_spanned(s.ast(), "only C-like enums can implement AsBytes")
             .to_compile_error();
@@ -261,7 +261,7 @@ const ENUM_AS_BYTES_CFG: Config<EnumRepr> = {
 //     - all fields Unaligned
 //   - repr(packed)
 
-fn derive_unaligned_struct(s: &Structure, strct: &DataStruct) -> proc_macro2::TokenStream {
+fn derive_unaligned_struct(s: &Structure<'_>, strct: &DataStruct) -> proc_macro2::TokenStream {
     let reprs = try_or_print!(STRUCT_UNALIGNED_CFG.validate_reprs(s.ast()));
 
     let require_trait_bound = match reprs.as_slice() {
@@ -298,7 +298,7 @@ const STRUCT_UNALIGNED_CFG: Config<StructRepr> = {
 // - No repr(align(N > 1))
 // - repr(u8) or repr(i8)
 
-fn derive_unaligned_enum(s: &Structure, enm: &DataEnum) -> proc_macro2::TokenStream {
+fn derive_unaligned_enum(s: &Structure<'_>, enm: &DataEnum) -> proc_macro2::TokenStream {
     if !enm.is_c_like() {
         return Error::new_spanned(s.ast(), "only C-like enums can implement Unaligned")
             .to_compile_error();

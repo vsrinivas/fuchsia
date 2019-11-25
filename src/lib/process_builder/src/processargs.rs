@@ -42,7 +42,7 @@ impl ProcessargsError {
 
 // Can't use macro-based failure Display derive with the _MAX_MSG_BYTES argument below
 impl fmt::Display for ProcessargsError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             ProcessargsError::TryFromInt(e) => {
                 write!(f, "Value > u32 MAX when building processargs message: {}", e)

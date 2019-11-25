@@ -517,7 +517,7 @@ impl<'entries> Controllable<'entries> for Simple<'entries> {
         name: &str,
         entry: Box<dyn DirectoryEntry + 'entries>,
     ) -> Result<(), (Status, Box<dyn DirectoryEntry + 'entries>)> {
-        (self as &mut Simple).add_boxed_entry(name, entry)
+        (self as &mut Simple<'_>).add_boxed_entry(name, entry)
     }
 
     /// Removes a child entry from this directory.  In case an entry with the matching name was

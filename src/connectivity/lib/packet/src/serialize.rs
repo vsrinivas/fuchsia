@@ -144,7 +144,7 @@ where
 
     fn with_bytes<R, F>(&self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytes) -> R,
+        F: FnOnce(FragmentedBytes<'_>) -> R,
     {
         call_method_on_either!(self, with_bytes, f)
     }
@@ -203,7 +203,7 @@ where
 {
     fn with_bytes_mut<R, F>(&mut self, f: F) -> R
     where
-        F: FnOnce(FragmentedBytesMut) -> R,
+        F: FnOnce(FragmentedBytesMut<'_>) -> R,
     {
         call_method_on_either!(self, with_bytes_mut, f)
     }
@@ -318,14 +318,14 @@ impl<B: AsRef<[u8]>> Buf<B> {
     }
 
     /// Constructs a [`BufView`] which will be a [`BufferView`] into this `Buf`.
-    pub fn buffer_view(&mut self) -> BufView {
+    pub fn buffer_view(&mut self) -> BufView<'_> {
         BufView { buf: &self.buf.as_ref()[self.range.clone()], range: &mut self.range }
     }
 }
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> Buf<B> {
     /// Constructs a [`BufViewMut`] which will be a [`BufferViewMut`] into this `Buf`.
-    pub fn buffer_view_mut(&mut self) -> BufViewMut {
+    pub fn buffer_view_mut(&mut self) -> BufViewMut<'_> {
         BufViewMut { buf: &mut self.buf.as_mut()[self.range.clone()], range: &mut self.range }
     }
 }
@@ -647,7 +647,7 @@ pub trait PacketBuilder {
     /// `serialize` may panic if the `SerializeBuffer`'s header or footer are
     /// not large enough to fit the packet's header and footer, or if the body
     /// does not satisfy the minimum or maximum body length requirements.
-    fn serialize(&self, buffer: &mut SerializeBuffer);
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>);
 }
 
 /// One or more nested [`PacketBuilder`]s.
@@ -805,7 +805,7 @@ impl<'a, B: PacketBuilder> PacketBuilder for &'a B {
         B::constraints(self)
     }
     #[inline]
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         B::serialize(self, buffer)
     }
 }
@@ -816,7 +816,7 @@ impl<'a, B: PacketBuilder> PacketBuilder for &'a mut B {
         B::constraints(self)
     }
     #[inline]
-    fn serialize(&self, buffer: &mut SerializeBuffer) {
+    fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
         B::serialize(self, buffer)
     }
 }
@@ -827,7 +827,7 @@ impl PacketBuilder for () {
         PacketConstraints { header_len: 0, footer_len: 0, min_body_len: 0, max_body_len: MAX_USIZE }
     }
     #[inline]
-    fn serialize(&self, _buffer: &mut SerializeBuffer) {}
+    fn serialize(&self, _buffer: &mut SerializeBuffer<'_>) {}
 }
 
 /// One object encapsulated in another one.
@@ -1568,7 +1568,7 @@ impl<I: InnerPacketBuilder, B: BufferMut> Serializer for InnerSerializer<I, B> {
                 PacketConstraints::new(self.0.bytes_len(), 0, 0, MAX_USIZE)
             }
 
-            fn serialize(&self, buffer: &mut SerializeBuffer) {
+            fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
                 // Note that the body might be non-empty if an outer
                 // PacketBuilder added a minimum body length constraint that
                 // required padding.
@@ -1770,7 +1770,7 @@ mod tests {
             )
         }
 
-        fn serialize(&self, buffer: &mut SerializeBuffer) {
+        fn serialize(&self, buffer: &mut SerializeBuffer<'_>) {
             // // `serialize` is allowed to panic if called on a `PacketBuilder`
             // // with invalid constraints.
             // assert!(self.try_constraints().is_some());

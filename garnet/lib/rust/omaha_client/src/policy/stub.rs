@@ -61,7 +61,7 @@ impl PolicyEngine for StubPolicyEngine {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> BoxFuture<UpdateCheckSchedule> {
+    ) -> BoxFuture<'_, UpdateCheckSchedule> {
         let schedule = StubPolicy::compute_next_update_time(
             &PolicyData { current_time: clock::now() },
             apps,
@@ -77,7 +77,7 @@ impl PolicyEngine for StubPolicyEngine {
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
-    ) -> BoxFuture<CheckDecision> {
+    ) -> BoxFuture<'_, CheckDecision> {
         let decision = StubPolicy::update_check_allowed(
             &PolicyData { current_time: clock::now() },
             apps,
@@ -88,7 +88,7 @@ impl PolicyEngine for StubPolicyEngine {
         future::ready(decision).boxed()
     }
 
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision> {
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<'_, UpdateDecision> {
         let decision = StubPolicy::update_can_start(
             &PolicyData { current_time: clock::now() },
             proposed_install_plan,

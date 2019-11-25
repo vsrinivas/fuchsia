@@ -130,7 +130,7 @@ impl<E: Copy + PartialEq> Enum<E> {
 }
 
 impl<E: Copy + PartialEq + Display> Display for Enum<E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             Enum::Recognized(e) => write!(f, "{}", e),
             Enum::Unrecognized(v) => write!(f, "{}", v),
@@ -144,12 +144,12 @@ impl<E: Copy + PartialEq + Display> Display for Enum<E> {
 /// expected interface.
 pub struct NewObject<I: Interface + 'static>(PhantomData<I>, ObjectId);
 impl<I: Interface + 'static> Display for NewObject<I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "NewObject<{}>({})", I::NAME, self.1)
     }
 }
 impl<I: Interface + 'static> Debug for NewObject<I> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}", self)
     }
 }

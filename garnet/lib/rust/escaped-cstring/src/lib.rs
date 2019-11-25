@@ -2,9 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-extern crate memchr;
-extern crate smallvec;
-
 use std::ffi::CStr;
 use std::fmt;
 use std::io::{self, Write};
@@ -66,7 +63,7 @@ impl EscapedCString {
 }
 
 impl fmt::Debug for EscapedCString {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.as_ref().fmt(f)
     }
 }

@@ -37,7 +37,7 @@ impl BoundedListNode {
     /// children to be maintained in the list.
     ///
     /// If creating new entry exceeds capacity of the list, the oldest entry is evicted.
-    pub fn create_entry(&mut self) -> NodeWriter {
+    pub fn create_entry(&mut self) -> NodeWriter<'_> {
         if self.items.len() >= self.capacity {
             self.items.pop_front();
         }

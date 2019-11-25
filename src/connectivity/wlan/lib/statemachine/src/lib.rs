@@ -35,7 +35,7 @@ pub struct StateMachine<S> {
     state: Option<S>,
 }
 impl<S: Debug> Debug for StateMachine<S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "State: {:?}", self.state)
     }
 }
@@ -181,7 +181,7 @@ impl<S> DerefMut for State<S> {
 }
 
 impl<S: Debug> Debug for State<S> {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "State data: {:?}", self.data)
     }
 }

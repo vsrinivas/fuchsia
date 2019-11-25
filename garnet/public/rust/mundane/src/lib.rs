@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 //! Cryptography in Rust.
 //!
 //! Mundane is a Rust cryptography library backed by BoringSSL that is difficult
@@ -99,7 +102,7 @@ impl From<BoringError> for Error {
 }
 
 impl Display for Error {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match &self.0 {
             ErrorInner::Mundane(err) => write!(f, "{}", err),
             ErrorInner::Boring(err) => write!(f, "boringssl: {}", err),
@@ -108,7 +111,7 @@ impl Display for Error {
 }
 
 impl Debug for Error {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match &self.0 {
             ErrorInner::Mundane(err) => write!(f, "{}", err),
 

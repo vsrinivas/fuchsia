@@ -181,7 +181,7 @@ impl LoadError {
 }
 
 impl fmt::Display for LoadError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             LoadError::Io { path, error } => {
                 write!(f, "file {} failed to load: {}", path.display(), error)

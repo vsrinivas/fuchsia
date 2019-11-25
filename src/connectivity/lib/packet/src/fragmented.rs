@@ -14,7 +14,7 @@ use crate::{canonicalize_range, take_back, take_back_mut, take_front, take_front
 /// constructed from and, as a result, operations on a `FragmentedByteSlice` may
 /// mutate the backing slice.
 #[derive(Debug)]
-pub struct FragmentedByteSlice<'a, B: 'a + ByteSlice>(&'a mut [B]);
+pub struct FragmentedByteSlice<'a, B: ByteSlice>(&'a mut [B]);
 
 /// A single byte slice fragment in a [`FragmentedByteSlice`].
 pub trait Fragment: ByteSlice {

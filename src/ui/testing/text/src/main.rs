@@ -23,7 +23,7 @@ lazy_static! {
 
 macro_rules! text_field_tests {
     ($list:ident: $($test_fn:ident),*) => {
-        static $list: &'static [(&'static str, fn(&mut TextFieldWrapper) -> FutureObj<Result<(), Error>>)] = &[
+        static $list: &'static [(&'static str, fn(&mut TextFieldWrapper) -> FutureObj<'_, Result<(), Error>>)] = &[
             $( (stringify!($test_fn), move |wrapper| {
                 FutureObj::new(Box::new($test_fn(wrapper)))
             }) ),*

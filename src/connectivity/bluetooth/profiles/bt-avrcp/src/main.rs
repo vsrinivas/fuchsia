@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 #![recursion_limit = "512"]
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 use {
     failure::Error,
     fuchsia_async as fasync, fuchsia_syslog,

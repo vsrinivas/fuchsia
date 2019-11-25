@@ -255,7 +255,7 @@ impl TryFrom<fidl::KeyConfig> for KeyConfig {
 }
 
 impl fmt::Debug for KeyConfig {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let KeyConfig::Ed25519(ref value) = self;
         f.write_str(&hex::encode(value))
     }
@@ -300,7 +300,7 @@ impl TryFrom<Box<fidl::BlobEncryptionKey>> for BlobEncryptionKey {
 }
 
 impl fmt::Debug for BlobEncryptionKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.write_str(&hex::encode(self.data))
     }
 }

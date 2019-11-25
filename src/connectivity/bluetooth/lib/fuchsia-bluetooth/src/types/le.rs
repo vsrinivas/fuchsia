@@ -189,7 +189,7 @@ impl From<fidl::ManufacturerData> for ManufacturerData {
 }
 
 impl fmt::Display for RemoteDevice {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let connectable = if self.connectable { "connectable" } else { "non-connectable" };
 
         write!(f, "[device ({}) ", connectable)?;
@@ -209,7 +209,7 @@ impl fmt::Display for RemoteDevice {
 }
 
 impl fmt::Display for Peer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let connectable = if self.connectable { "connectable" } else { "non-connectable" };
 
         write!(f, "[peer ({}) ", connectable)?;

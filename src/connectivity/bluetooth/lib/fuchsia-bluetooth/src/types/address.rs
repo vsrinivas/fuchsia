@@ -119,7 +119,7 @@ impl Into<fidl::Address> for &Address {
 }
 
 impl fmt::Display for Address {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Address::Public(b) => write!(fmt, "[address (public) {}]", self.to_string()),
             Address::Random(b) => write!(fmt, "[address (random) {}]", self.to_string()),

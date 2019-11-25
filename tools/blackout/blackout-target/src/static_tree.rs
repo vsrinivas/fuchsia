@@ -62,7 +62,7 @@ pub struct FileEntry {
 }
 
 impl fmt::Debug for FileEntry {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "FileEntry {{ name: {:?} }}", self.name)
     }
 }

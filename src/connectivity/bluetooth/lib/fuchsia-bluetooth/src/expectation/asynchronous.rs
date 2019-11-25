@@ -122,7 +122,7 @@ pub trait ExpectableStateExt: ExpectableState + Sized {
         &self,
         expectation: Predicate<Self::State>,
         timeout: zx::Duration,
-    ) -> FutureObj<Result<Self::State, Error>>;
+    ) -> FutureObj<'_, Result<Self::State, Error>>;
 }
 
 impl<T: ExpectableState + Sized> ExpectableStateExt for T
@@ -134,7 +134,7 @@ where
         &self,
         expectation: Predicate<T::State>,
         timeout: zx::Duration,
-    ) -> FutureObj<Result<Self::State, Error>> {
+    ) -> FutureObj<'_, Result<Self::State, Error>> {
         let msg = expectation.describe();
         FutureObj::new(Box::pin(
             ExpectationFuture::new(self.clone(), expectation)
@@ -208,11 +208,11 @@ impl<S, A> ExpectationHarness<S, A> {
         ExpectationHarness(Arc::new(RwLock::new(HarnessInner { aux, tasks: Slab::new(), state })))
     }
 
-    pub fn aux(&self) -> MappedRwLockWriteGuard<A> {
+    pub fn aux(&self) -> MappedRwLockWriteGuard<'_, A> {
         RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.aux)
     }
 
-    pub fn write_state(&self) -> MappedRwLockWriteGuard<S> {
+    pub fn write_state(&self) -> MappedRwLockWriteGuard<'_, S> {
         RwLockWriteGuard::map(self.0.write(), |harness| &mut harness.state)
     }
 }

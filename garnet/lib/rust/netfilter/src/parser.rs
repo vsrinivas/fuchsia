@@ -127,7 +127,7 @@ impl std::fmt::Display for Error {
 
 impl std::error::Error for Error {}
 
-fn parse_action(pair: Pair<Rule>) -> filter::Action {
+fn parse_action(pair: Pair<'_, Rule>) -> filter::Action {
     assert_eq!(pair.as_rule(), Rule::action);
     match pair.into_inner().next().unwrap().as_rule() {
         Rule::pass => filter::Action::Pass,
@@ -137,7 +137,7 @@ fn parse_action(pair: Pair<Rule>) -> filter::Action {
     }
 }
 
-fn parse_direction(pair: Pair<Rule>) -> filter::Direction {
+fn parse_direction(pair: Pair<'_, Rule>) -> filter::Direction {
     assert_eq!(pair.as_rule(), Rule::direction);
     match pair.into_inner().next().unwrap().as_rule() {
         Rule::incoming => filter::Direction::Incoming,
@@ -146,12 +146,12 @@ fn parse_direction(pair: Pair<Rule>) -> filter::Direction {
     }
 }
 
-fn parse_quick(pair: Pair<Rule>) -> bool {
+fn parse_quick(pair: Pair<'_, Rule>) -> bool {
     assert_eq!(pair.as_rule(), Rule::quick);
     pair.as_str() == "quick"
 }
 
-fn parse_proto(pair: Pair<Rule>) -> filter::SocketProtocol {
+fn parse_proto(pair: Pair<'_, Rule>) -> filter::SocketProtocol {
     assert_eq!(pair.as_rule(), Rule::proto);
     match pair.into_inner().next() {
         Some(pair) => match pair.as_rule() {
@@ -165,21 +165,21 @@ fn parse_proto(pair: Pair<Rule>) -> filter::SocketProtocol {
 }
 
 fn parse_src(
-    pair: Pair<Rule>,
+    pair: Pair<'_, Rule>,
 ) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     assert_eq!(pair.as_rule(), Rule::src);
     parse_src_or_dst(pair)
 }
 
 fn parse_dst(
-    pair: Pair<Rule>,
+    pair: Pair<'_, Rule>,
 ) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     assert_eq!(pair.as_rule(), Rule::dst);
     parse_src_or_dst(pair)
 }
 
 fn parse_src_or_dst(
-    pair: Pair<Rule>,
+    pair: Pair<'_, Rule>,
 ) -> Result<(Option<Box<net::Subnet>>, bool, filter::PortRange), Error> {
     let mut inner = pair.into_inner();
     match inner.next() {
@@ -199,7 +199,7 @@ fn parse_src_or_dst(
     }
 }
 
-fn parse_invertible_subnet(pair: Pair<Rule>) -> Result<(net::Subnet, bool), Error> {
+fn parse_invertible_subnet(pair: Pair<'_, Rule>) -> Result<(net::Subnet, bool), Error> {
     assert_eq!(pair.as_rule(), Rule::invertible_subnet);
     let mut inner = pair.into_inner();
     let mut pair = inner.next().unwrap();
@@ -215,7 +215,7 @@ fn parse_invertible_subnet(pair: Pair<Rule>) -> Result<(net::Subnet, bool), Erro
     Ok((subnet, invert_match))
 }
 
-fn parse_subnet(pair: Pair<Rule>) -> Result<net::Subnet, Error> {
+fn parse_subnet(pair: Pair<'_, Rule>) -> Result<net::Subnet, Error> {
     assert_eq!(pair.as_rule(), Rule::subnet);
     let mut inner = pair.into_inner();
     let addr = parse_ipaddr(inner.next().unwrap())?;
@@ -224,7 +224,7 @@ fn parse_subnet(pair: Pair<Rule>) -> Result<net::Subnet, Error> {
     Ok(net::Subnet { addr: addr, prefix_len: prefix_len })
 }
 
-fn parse_ipaddr(pair: Pair<Rule>) -> Result<net::IpAddress, Error> {
+fn parse_ipaddr(pair: Pair<'_, Rule>) -> Result<net::IpAddress, Error> {
     assert_eq!(pair.as_rule(), Rule::ipaddr);
     let pair = pair.into_inner().next().unwrap();
     let addr = pair.as_str().parse().map_err(Error::Addr)?;
@@ -238,12 +238,12 @@ fn parse_ipaddr(pair: Pair<Rule>) -> Result<net::IpAddress, Error> {
     }
 }
 
-fn parse_prefix_len(pair: Pair<Rule>) -> Result<u8, Error> {
+fn parse_prefix_len(pair: Pair<'_, Rule>) -> Result<u8, Error> {
     assert_eq!(pair.as_rule(), Rule::prefix_len);
     pair.as_str().parse::<u8>().map_err(Error::Num)
 }
 
-fn parse_port_range(pair: Pair<Rule>) -> Result<filter::PortRange, Error> {
+fn parse_port_range(pair: Pair<'_, Rule>) -> Result<filter::PortRange, Error> {
     assert_eq!(pair.as_rule(), Rule::port_range);
     let mut inner = pair.into_inner();
     let pair = inner.next().unwrap();
@@ -261,16 +261,16 @@ fn parse_port_range(pair: Pair<Rule>) -> Result<filter::PortRange, Error> {
     }
 }
 
-fn parse_port_num(pair: Pair<Rule>) -> Result<u16, Error> {
+fn parse_port_num(pair: Pair<'_, Rule>) -> Result<u16, Error> {
     pair.as_str().parse::<u16>().map_err(Error::Num)
 }
 
-fn parse_log(pair: Pair<Rule>) -> bool {
+fn parse_log(pair: Pair<'_, Rule>) -> bool {
     assert_eq!(pair.as_rule(), Rule::log);
     pair.as_str() == "log"
 }
 
-fn parse_state(pair: Pair<Rule>) -> bool {
+fn parse_state(pair: Pair<'_, Rule>) -> bool {
     assert_eq!(pair.as_rule(), Rule::state);
     let mut inner = pair.into_inner();
     match inner.next() {
@@ -286,7 +286,7 @@ fn parse_state(pair: Pair<Rule>) -> bool {
     }
 }
 
-fn parse_rule(pair: Pair<Rule>) -> Result<filter::Rule, Error> {
+fn parse_rule(pair: Pair<'_, Rule>) -> Result<filter::Rule, Error> {
     assert_eq!(pair.as_rule(), Rule::rule);
     let mut pairs = pair.into_inner();
 
@@ -316,7 +316,7 @@ fn parse_rule(pair: Pair<Rule>) -> Result<filter::Rule, Error> {
     })
 }
 
-fn parse_nat(pair: Pair<Rule>) -> Result<filter::Nat, Error> {
+fn parse_nat(pair: Pair<'_, Rule>) -> Result<filter::Nat, Error> {
     assert_eq!(pair.as_rule(), Rule::nat);
     let mut pairs = pair.into_inner();
 
@@ -332,7 +332,7 @@ fn parse_nat(pair: Pair<Rule>) -> Result<filter::Nat, Error> {
     })
 }
 
-fn parse_rdr(pair: Pair<Rule>) -> Result<filter::Rdr, Error> {
+fn parse_rdr(pair: Pair<'_, Rule>) -> Result<filter::Rdr, Error> {
     assert_eq!(pair.as_rule(), Rule::rdr);
     let mut pairs = pair.into_inner();
 

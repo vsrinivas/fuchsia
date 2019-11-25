@@ -180,7 +180,7 @@ pub fn parse_auth_code_from_redirect(url: Url) -> AuthProviderResult<AuthCode> {
             .with_cause(format_err!("Redirected to unexpected URL")));
     }
 
-    let params = url.query_pairs().collect::<HashMap<Cow<str>, Cow<str>>>();
+    let params = url.query_pairs().collect::<HashMap<Cow<'_, str>, Cow<'_, str>>>();
 
     if let Some(auth_code) = params.get("code") {
         Ok(AuthCode(auth_code.as_ref().to_string()))

@@ -21,7 +21,7 @@ impl ManagedNode {
         Self { node: Arc::new(node), items: vec![] }
     }
 
-    pub fn writer(&mut self) -> NodeWriter {
+    pub fn writer(&mut self) -> NodeWriter<'_> {
         NodeWriter::new(self.node.clone(), &mut self.items)
     }
 }
@@ -81,7 +81,7 @@ impl<'c> NodeWriter<'c> {
         self
     }
 
-    pub fn create_child(&mut self, key: impl AsRef<str>) -> NodeWriter {
+    pub fn create_child(&mut self, key: impl AsRef<str>) -> NodeWriter<'_> {
         let child = Arc::new(self.node.create_child(key.as_ref()));
         self.items.push(NodeValue::Node(child.clone()));
         NodeWriter::new(child, self.items)

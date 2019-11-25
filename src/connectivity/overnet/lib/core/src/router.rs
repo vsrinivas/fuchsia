@@ -2113,11 +2113,11 @@ pub mod test_util {
     }
 
     impl log::Log for Logger {
-        fn enabled(&self, metadata: &log::Metadata) -> bool {
+        fn enabled(&self, metadata: &log::Metadata<'_>) -> bool {
             metadata.level() <= LOG_LEVEL
         }
 
-        fn log(&self, record: &log::Record) {
+        fn log(&self, record: &log::Record<'_>) {
             if self.enabled(record.metadata()) {
                 println!(
                     "{} [{}]: {}",
@@ -2218,7 +2218,7 @@ mod tests {
 
         fn step<OnIncoming>(&mut self, mut on_incoming: OnIncoming)
         where
-            OnIncoming: FnMut(IncomingMessage) -> Result<(), Error>,
+            OnIncoming: FnMut(IncomingMessage<'_>) -> Result<(), Error>,
         {
             let router1 = &mut self.router1;
             let router2 = &mut self.router2;
@@ -2230,7 +2230,7 @@ mod tests {
             struct R<'a, In>(u8, &'a mut In);
             impl<'a, In> MessageReceiver<u8> for R<'a, In>
             where
-                In: FnMut(IncomingMessage) -> Result<(), Error>,
+                In: FnMut(IncomingMessage<'_>) -> Result<(), Error>,
             {
                 type Handle = ();
                 fn connect_channel(

@@ -17,8 +17,6 @@ use {
     std::sync::Arc,
 };
 
-extern crate settings;
-
 const STASH_IDENTITY: &str = "settings_service";
 
 fn main() -> Result<(), Error> {

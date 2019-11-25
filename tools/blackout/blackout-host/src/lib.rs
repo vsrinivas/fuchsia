@@ -188,7 +188,7 @@ impl Seed {
 }
 
 impl fmt::Display for Seed {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             Seed::Constant(seed) => write!(f, "{}", seed),
             Seed::Variable(seed_cell) => write!(f, "{}", seed_cell.get()),
@@ -222,7 +222,7 @@ pub struct Test {
 }
 
 impl fmt::Display for Test {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "Test {{

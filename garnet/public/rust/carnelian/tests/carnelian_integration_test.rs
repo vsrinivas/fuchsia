@@ -31,11 +31,11 @@ struct IntegrationTestViewAssistant {
 }
 
 impl ViewAssistant for IntegrationTestViewAssistant {
-    fn setup(&mut self, _: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, _: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let canvas = &mut context.canvas.as_ref().unwrap().borrow_mut();
 
         let bounds = Rect::new(Point::zero(), context.size);

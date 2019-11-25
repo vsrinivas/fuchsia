@@ -358,7 +358,7 @@ pub const OUTPUT_TABLE_NONE: usize = std::usize::MAX;
 pub fn parse_option(
     arg: &str,
     remaining_args: &mut &[&str],
-    output_table: &mut [CmdOption],
+    output_table: &mut [CmdOption<'_>],
     arg_to_output: &[(&str, usize)],
 ) -> Result<(), String> {
     let pos = arg_to_output

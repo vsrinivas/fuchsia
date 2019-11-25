@@ -30,11 +30,11 @@ use crate::eventloop::util::{FidlCompatible, IntoFidlExt};
 struct Logger;
 
 impl log::Log for Logger {
-    fn enabled(&self, _metadata: &log::Metadata) -> bool {
+    fn enabled(&self, _metadata: &log::Metadata<'_>) -> bool {
         true
     }
 
-    fn log(&self, record: &log::Record) {
+    fn log(&self, record: &log::Record<'_>) {
         println!("[{}] ({}) {}", record.level(), record.module_path().unwrap_or(""), record.args())
     }
 

@@ -960,7 +960,7 @@ where
     T: FromBytes + Display,
 {
     #[inline]
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         let inner: &T = self;
         inner.fmt(fmt)
     }
@@ -972,7 +972,7 @@ where
     T: FromBytes + Debug,
 {
     #[inline]
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         let inner: &T = self;
         fmt.debug_tuple("LayoutVerified").field(&inner).finish()
     }
@@ -985,7 +985,7 @@ where
     [T]: Display,
 {
     #[inline]
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         let inner: &[T] = self;
         inner.fmt(fmt)
     }
@@ -997,7 +997,7 @@ where
     T: FromBytes + Debug,
 {
     #[inline]
-    fn fmt(&self, fmt: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut Formatter<'_>) -> fmt::Result {
         let inner: &[T] = self;
         fmt.debug_tuple("LayoutVerified").field(&inner).finish()
     }

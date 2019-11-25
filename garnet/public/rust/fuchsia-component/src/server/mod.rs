@@ -1361,7 +1361,7 @@ impl<ServiceObjTy: ServiceObjTrait> ServiceFs<ServiceObjTy> {
     /// Traverse directory listings at |path| starting from node |start_pos|, returning either
     /// the index of the local directory given by the path or a reference to a proxy for a remote
     /// directory, along with the remaining parts of the path.
-    fn descend(&self, start_pos: usize, path: Option<&str>) -> Result<DescendResult, Error> {
+    fn descend(&self, start_pos: usize, path: Option<&str>) -> Result<DescendResult<'_>, Error> {
         let mut pos = start_pos;
 
         if let Some(path) = path {

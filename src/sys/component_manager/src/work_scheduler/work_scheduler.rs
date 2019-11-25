@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! This module contains the public interface for component manager-hosted `WorkScheduler` FIDL protocols. The business
-//! logic and state for a `WorkScheduler` instance is guarded by a `Mutex`, and resides in
-//! `WorkSchedulerDelegate`.
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
+
+//! This module contains the core algorithm for `WorkScheduler`, a component manager subsytem for
+//! dispatching batches of work.
 //!
 //! The subsystem's interface consists of the following three FIDL prototocols:
 //!

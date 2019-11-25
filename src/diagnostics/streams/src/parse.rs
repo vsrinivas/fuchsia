@@ -16,7 +16,7 @@ use {
 pub(crate) type ParseResult<'a, T> = IResult<&'a [u8], T, StreamError>;
 
 /// Attempt to parse a diagnostic record from the head of this buffer.
-pub fn parse_record(buf: &[u8]) -> ParseResult<Record> {
+pub fn parse_record(buf: &[u8]) -> ParseResult<'_, Record> {
     let (after_header, header) = parse_header(buf)?;
 
     if header.raw_type() != crate::TRACING_FORMAT_LOG_RECORD_TYPE {
@@ -33,14 +33,14 @@ pub fn parse_record(buf: &[u8]) -> ParseResult<Record> {
     Ok((after_record, Record { timestamp, arguments }))
 }
 
-fn parse_header(buf: &[u8]) -> ParseResult<Header> {
+fn parse_header(buf: &[u8]) -> ParseResult<'_, Header> {
     let (after, header) = le_u64(buf)?;
     let header = Header(header);
 
     Ok((after, header))
 }
 
-pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<Argument> {
+pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<'_, Argument> {
     let (after_header, header) = parse_header(buf)?;
     let arg_ty = ArgType::try_from(header.raw_type()).map_err(nom::Err::Failure)?;
 
@@ -72,7 +72,7 @@ pub(super) fn parse_argument(buf: &[u8]) -> ParseResult<Argument> {
     Ok((after_value, Argument { name: name.to_string(), value }))
 }
 
-fn string_ref(ref_mask: u16, buf: &[u8]) -> ParseResult<StringRef> {
+fn string_ref(ref_mask: u16, buf: &[u8]) -> ParseResult<'_, StringRef<'_>> {
     Ok(if ref_mask == 0 {
         (buf, StringRef::Empty)
     } else if (ref_mask & 1 << 15) == 0 {

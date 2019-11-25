@@ -19,7 +19,7 @@ impl StreamProcessorFactory for EncoderFactory {
         &self,
         stream: &dyn ElementaryStream,
         format_details_version_ordinal: u64,
-    ) -> BoxFuture<Result<StreamProcessorProxy>> {
+    ) -> BoxFuture<'_, Result<StreamProcessorProxy>> {
         let get_encoder = || {
             let factory = client::connect_to_service::<CodecFactoryMarker>()?;
             let (encoder_client_end, encoder_request) = create_endpoints()?;

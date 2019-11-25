@@ -4,10 +4,7 @@
 
 //! C bindings for wlan-mlme crate.
 
-extern crate log;
 // Explicitly declare usage for cbindgen.
-extern crate wlan_common;
-extern crate wlan_mlme;
 
 #[macro_use]
 pub mod utils;

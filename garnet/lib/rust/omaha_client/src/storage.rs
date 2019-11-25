@@ -39,15 +39,15 @@ pub trait Storage {
 
     /// Get a string from the backing store.  Returns None if there is no value for the given key,
     /// or if the value for the key has a different type.
-    fn get_string<'a>(&'a self, key: &'a str) -> BoxFuture<Option<String>>;
+    fn get_string<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<String>>;
 
     /// Get an int from the backing store.  Returns None if there is no value for the given key,
     /// or if the value for the key has a different type.
-    fn get_int<'a>(&'a self, key: &'a str) -> BoxFuture<Option<i64>>;
+    fn get_int<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<i64>>;
 
     /// Get a boolean from the backing store.  Returns None if there is no value for the given key,
     /// or if the value for the key has a different type.
-    fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<Option<bool>>;
+    fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<bool>>;
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
@@ -55,26 +55,26 @@ pub trait Storage {
         &'a mut self,
         key: &'a str,
         value: &'a str,
-    ) -> BoxFuture<Result<(), Self::Error>>;
+    ) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<Result<(), Self::Error>>;
+    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<Result<(), Self::Error>>;
+    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Remove the value for |key| from the backing store.  The implementation should cache that
     /// the value has been removed until the |commit()| fn is called, and then persist all changes
     /// at that time.
     ///
     /// If there is no value for the key, this should return without error.
-    fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<Result<(), Self::Error>>;
+    fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<'_, Result<(), Self::Error>>;
 
     /// Set a value to be stored in the backing store.  The implementation should cache the value
     /// until the |commit()| fn is called, and then persist all cached values at that time.
-    fn commit(&mut self) -> BoxFuture<Result<(), Self::Error>>;
+    fn commit(&mut self) -> BoxFuture<'_, Result<(), Self::Error>>;
 }
 
 /// The storage::tests module contains test vectors that implementations of the Storage trait should

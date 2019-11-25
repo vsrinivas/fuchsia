@@ -110,7 +110,7 @@ impl Tiles {
         tile_width: usize,
         width: usize,
         height: usize,
-        layers: &Layers,
+        layers: &Layers<'_>,
         buffer: B,
     ) {
         self.tiles

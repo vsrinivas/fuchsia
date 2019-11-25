@@ -29,7 +29,7 @@ struct TransitionArgs {
 }
 
 impl Parse for TransitionArgs {
-    fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
+    fn parse(input: &ParseBuffer<'_>) -> syn::parse::Result<Self> {
         let from_name: Ident = input.parse()?;
         input.parse::<Token![=>]>()?;
         let to_names = match input.peek(Ident) {
@@ -52,7 +52,7 @@ impl Parse for TransitionArgs {
 struct InitStateArgs(Ident);
 
 impl Parse for InitStateArgs {
-    fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
+    fn parse(input: &ParseBuffer<'_>) -> syn::parse::Result<Self> {
         let _content;
         parenthesized!(_content in input);
         input.parse::<Token![=>]>()?;
@@ -84,7 +84,7 @@ struct EnumArgs {
 }
 
 impl Parse for EnumArgs {
-    fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
+    fn parse(input: &ParseBuffer<'_>) -> syn::parse::Result<Self> {
         let attrs = input.call(Attribute::parse_outer).ok();
         let public = input.peek(Token![pub]);
         if public {
@@ -127,7 +127,7 @@ struct StateMachineArgs {
 }
 
 impl Parse for StateMachineArgs {
-    fn parse(input: &ParseBuffer) -> syn::parse::Result<Self> {
+    fn parse(input: &ParseBuffer<'_>) -> syn::parse::Result<Self> {
         Ok(Self {
             enum_data: parse_enum_if_declared(input)?,
             init_state: input.parse()?,
@@ -281,7 +281,7 @@ pub fn process(input: TokenStream) -> TokenStream {
     })
 }
 
-fn parse_enum_if_declared(input: &ParseBuffer) -> syn::parse::Result<Option<EnumArgs>> {
+fn parse_enum_if_declared(input: &ParseBuffer<'_>) -> syn::parse::Result<Option<EnumArgs>> {
     if input.peek(Token![#]) || input.peek(Token![enum]) || input.peek(Token![pub]) {
         Ok(Some(input.parse()?))
     } else {

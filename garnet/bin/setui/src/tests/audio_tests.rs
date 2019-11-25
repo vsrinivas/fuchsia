@@ -110,7 +110,7 @@ fn create_services() -> (
 // This function is created so that we can manipulate the |pair_media_and_system_agent| flag.
 // TODO(go/fxb/37493): Remove this function and the related tests when the hack is removed.
 fn create_audio_fidl_service<'a>(
-    mut service_dir: ServiceFsDir<ServiceObj<'a, ()>>,
+    mut service_dir: ServiceFsDir<'_, ServiceObj<'a, ()>>,
     service_registry_handle: Arc<RwLock<ServiceRegistry>>,
     storage: Arc<Mutex<DeviceStorage<AudioInfo>>>,
     pair_media_and_system_agent: bool,

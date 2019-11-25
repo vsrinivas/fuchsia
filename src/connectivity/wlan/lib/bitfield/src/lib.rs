@@ -516,7 +516,7 @@ fn generate_debug_impl(struct_name: &Ident, fields: &FieldList, len_bits: usize)
     let format_string = format!("0x{{:0{}x}}", len_bits / 4);
     quote! {
         impl ::std::fmt::Debug for #struct_name {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 f.debug_struct(#struct_name_str)
                     .field("0", &format_args!(#format_string, self.0))
                     #( #per_alias )*

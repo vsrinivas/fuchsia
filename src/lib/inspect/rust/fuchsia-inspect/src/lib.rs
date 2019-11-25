@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 //! The Fuchsia Inspect format for structured metrics trees.
 
 use {
@@ -32,6 +35,7 @@ use {
     paste,
     std::{cmp::max, sync::Arc},
 };
+
 
 #[cfg(test)]
 use crate::format::block::Block;

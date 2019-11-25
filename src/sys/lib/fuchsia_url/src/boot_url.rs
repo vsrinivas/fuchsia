@@ -96,7 +96,7 @@ impl BootUrl {
 }
 
 impl fmt::Display for BootUrl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "fuchsia-boot://{}", self.path)?;
         if let Some(ref resource) = self.resource {
             write!(f, "#{}", percent_encoding::utf8_percent_encode(resource, crate::FRAGMENT))?;

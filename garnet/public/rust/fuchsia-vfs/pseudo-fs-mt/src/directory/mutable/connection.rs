@@ -161,7 +161,7 @@ where
     fn handle_request(
         &mut self,
         request: DirectoryRequest,
-    ) -> BoxFuture<Result<ConnectionState, Error>> {
+    ) -> BoxFuture<'_, Result<ConnectionState, Error>> {
         Box::pin(async move {
             match request.into() {
                 DirectoryRequestType::Base(request) => self.base.handle_request(request).await,

@@ -25,7 +25,7 @@ impl Into<fidl::MacAddress> for MacAddress {
 }
 
 impl std::fmt::Display for MacAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let Self { octets } = self;
         for (i, byte) in octets.iter().enumerate() {
             if i > 0 {

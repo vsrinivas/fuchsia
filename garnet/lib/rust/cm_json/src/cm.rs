@@ -499,7 +499,7 @@ impl<'de> de::Deserialize<'de> for Name {
         impl<'de> de::Visitor<'de> for NameVisitor {
             type Value = Name;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(
                     "a non-empty string no more than 100 characters in \
                      length, containing only alpha-numeric characters \
@@ -580,7 +580,7 @@ impl<'de> de::Deserialize<'de> for Path {
         impl<'de> de::Visitor<'de> for PathVisitor {
             type Value = Path;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str(
                     "a non-empty string no more than 1024 characters \
                      in length, with a leading `/`, and containing no \
@@ -658,7 +658,7 @@ impl<'de> de::Deserialize<'de> for Url {
         impl<'de> de::Visitor<'de> for UrlVisitor {
             type Value = Url;
 
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str("a non-empty URL no more than 4096 characters in length")
             }
 
@@ -704,7 +704,7 @@ impl<'de> de::Deserialize<'de> for Rights {
         struct RightsVisitor;
         impl<'de> de::Visitor<'de> for RightsVisitor {
             type Value = Rights;
-            fn expecting(&self, f: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
                 f.write_str("an array of strings representing rights with no duplicates.")
             }
             fn visit_seq<S>(self, mut s: S) -> Result<Self::Value, S::Error>

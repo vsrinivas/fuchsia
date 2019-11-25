@@ -107,7 +107,7 @@ impl PacketBuilder for PppPacketBuilder {
         0
     }
 
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
         let header = header.take_obj_front_zero::<PppHeader>().unwrap();
@@ -214,7 +214,7 @@ impl PacketBuilder for ControlProtocolPacketBuilder {
         0
     }
 
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
         let header = header.take_obj_front_zero::<ControlProtocolHeader>().unwrap();
@@ -278,7 +278,7 @@ impl PacketBuilder for ConfigurationPacketBuilder {
         0
     }
 
-    fn serialize(self, _buffer: SerializeBuffer) {}
+    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire termination packet header and the rest of the packet.
@@ -326,7 +326,7 @@ impl PacketBuilder for TerminationPacketBuilder {
         0
     }
 
-    fn serialize(self, _buffer: SerializeBuffer) {}
+    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
 }
 
 /// Wrapper around a parsed on-the-wire code reject packet header and the rest of the packet.
@@ -374,7 +374,7 @@ impl PacketBuilder for CodeRejectPacketBuilder {
         0
     }
 
-    fn serialize(self, _buffer: SerializeBuffer) {}
+    fn serialize(self, _buffer: SerializeBuffer<'_>) {}
 }
 
 #[derive(FromBytes, AsBytes, Unaligned)]
@@ -446,7 +446,7 @@ impl PacketBuilder for ProtocolRejectPacketBuilder {
         0
     }
 
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
         let header = header.take_obj_front_zero::<ProtocolRejectHeader>().unwrap();
@@ -525,7 +525,7 @@ impl PacketBuilder for EchoDiscardPacketBuilder {
         0
     }
 
-    fn serialize(self, mut buffer: SerializeBuffer) {
+    fn serialize(self, mut buffer: SerializeBuffer<'_>) {
         let (mut header, body, _) = buffer.parts();
         let mut header = &mut header;
         let header = header.take_obj_front_zero::<EchoDiscardHeader>().unwrap();

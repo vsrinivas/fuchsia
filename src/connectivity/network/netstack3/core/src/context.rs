@@ -382,7 +382,7 @@ pub(crate) mod testutil {
     }
 
     impl Debug for DummyInstant {
-        fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+        fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
             write!(f, "{:?}", self.offset)
         }
     }

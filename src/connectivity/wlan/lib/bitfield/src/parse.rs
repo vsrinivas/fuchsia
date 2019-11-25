@@ -20,7 +20,7 @@ pub enum BitRange {
 }
 
 impl Parse for BitRange {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let start: LitInt = input.parse()?;
         let lookahead = input.lookahead1();
         if lookahead.peek(Token![..=]) {
@@ -54,7 +54,7 @@ pub struct Alias {
 }
 
 impl Parse for Alias {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let name = input.parse()?;
         let lookahead = input.lookahead1();
         let user_type = if lookahead.peek(Token![as]) { Some(input.parse()?) } else { None };
@@ -70,7 +70,7 @@ pub struct UserType {
 }
 
 impl Parse for UserType {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let inside_parens;
         Ok(UserType {
             as_keyword: input.parse()?,
@@ -113,7 +113,7 @@ impl AliasSpec {
 }
 
 impl Parse for AliasSpec {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         let lookahead = input.lookahead1();
         Ok(if lookahead.peek(Token![_]) {
             AliasSpec::Unnamed(input.parse()?)
@@ -136,7 +136,7 @@ pub struct FieldDef {
 }
 
 impl Parse for FieldDef {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(FieldDef { bits: input.parse()?, aliases: input.parse()? })
     }
 }
@@ -146,7 +146,7 @@ pub struct FieldList {
 }
 
 impl Parse for FieldList {
-    fn parse(input: ParseStream) -> Result<Self> {
+    fn parse(input: ParseStream<'_>) -> Result<Self> {
         Ok(FieldList { fields: input.parse_terminated(FieldDef::parse)? })
     }
 }

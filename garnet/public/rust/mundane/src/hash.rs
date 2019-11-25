@@ -258,7 +258,7 @@ macro_rules! impl_hash {
         impl Eq for $digest_name {}
         #[allow(deprecated)]
         impl Display for $digest_name {
-            fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
                 for byte in &self.0[..] {
                     write!(f, "{:x}", byte)?;
                 }
@@ -267,7 +267,7 @@ macro_rules! impl_hash {
         }
         #[allow(deprecated)]
         impl Debug for $digest_name {
-            fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
                 Display::fmt(self, f)
             }
         }

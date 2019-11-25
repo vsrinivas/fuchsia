@@ -244,7 +244,7 @@ impl<T> From<Channel> for ClientEnd<T> {
 }
 
 impl<T: ServiceMarker> ::std::fmt::Debug for ClientEnd<T> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "ClientEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
     }
 }
@@ -328,7 +328,7 @@ impl<T> From<Channel> for ServerEnd<T> {
 }
 
 impl<T: ServiceMarker> ::std::fmt::Debug for ServerEnd<T> {
-    fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+    fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
         write!(f, "ServerEnd(name={}, channel={:?})", T::DEBUG_NAME, self.inner)
     }
 }

@@ -26,13 +26,13 @@ impl From<Error> for ClonableError {
 }
 
 impl fmt::Display for ClonableError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.err.fmt(f)
     }
 }
 
 impl fmt::Debug for ClonableError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.err.fmt(f)
     }
 }

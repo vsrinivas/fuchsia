@@ -71,7 +71,7 @@ impl<'de> serde::de::Deserialize<'de> for Ref {
         impl<'de> serde::de::Visitor<'de> for RefVisitor {
             type Value = Ref;
 
-            fn expecting(&self, formatter: &mut fmt::Formatter) -> fmt::Result {
+            fn expecting(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
                 formatter.write_str("a relative object reference")
             }
 

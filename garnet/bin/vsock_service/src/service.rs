@@ -543,7 +543,7 @@ impl Deref for Vsock {
 
 impl LockedState {
     // Acquires the lock on `inner`, and processes any pending messages
-    fn lock(&self) -> parking_lot::MutexGuard<State> {
+    fn lock(&self) -> parking_lot::MutexGuard<'_, State> {
         let mut guard = self.inner.lock();
         self.deregister_rx
             .try_iter()
@@ -552,7 +552,7 @@ impl LockedState {
     }
     // Tries to acquire the lock on `inner`, and processes any pending messages
     // if successful
-    fn try_lock(&self) -> Option<parking_lot::MutexGuard<State>> {
+    fn try_lock(&self) -> Option<parking_lot::MutexGuard<'_, State>> {
         if let Some(mut guard) = self.inner.try_lock() {
             self.deregister_rx
                 .try_iter()

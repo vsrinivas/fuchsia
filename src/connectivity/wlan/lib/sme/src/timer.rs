@@ -56,7 +56,7 @@ impl<E> Timer<E> {
 }
 
 impl<E: fmt::Debug> fmt::Debug for Timer<E> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("Timer").field("sender", &self.sender).finish()
     }
 }

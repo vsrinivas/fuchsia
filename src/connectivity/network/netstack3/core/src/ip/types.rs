@@ -31,7 +31,7 @@ impl<I: Ip> Default for IpVersionMarker<I> {
 }
 
 impl<I: Ip> Debug for IpVersionMarker<I> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "IpVersionMarker<{}>", I::NAME)
     }
 }

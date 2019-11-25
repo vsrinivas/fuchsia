@@ -27,7 +27,7 @@ impl KmsKey for KmsAsymmetricKey {
         self.deleted
     }
 
-    fn handle_request(&self, req: KeyRequestType) -> Result<(), fidl::Error> {
+    fn handle_request(&self, req: KeyRequestType<'_>) -> Result<(), fidl::Error> {
         if let KeyRequestType::AsymmetricPrivateKeyRequest(req) = req {
             self.handle_asym_request(req)?;
         } else {
@@ -88,7 +88,7 @@ impl KmsAsymmetricKey {
     ///
     /// * `key_name` - The name for the new key.
     /// * `key_attributes` - The attributes for the new key.
-    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Error> {
+    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes<'_>) -> Result<Self, Error> {
         if key_attributes.key_type != KeyType::AsymmetricPrivateKey {
             // The key is a different type.
             return Err(Error::KeyNotFound);

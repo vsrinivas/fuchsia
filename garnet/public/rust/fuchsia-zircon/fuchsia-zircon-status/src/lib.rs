@@ -38,7 +38,7 @@ macro_rules! assoc_values {
         }
 
         impl ::std::fmt::Debug for $typename {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 f.write_str(concat!(stringify!($typename), "("))?;
                 match self.assoc_const_name() {
                     Some(name) => f.write_str(&name)?,
@@ -202,7 +202,7 @@ impl From<Status> for io::ErrorKind {
 }
 
 impl fmt::Display for Status {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self.assoc_const_name() {
             Some(name) => name.fmt(f),
             None => write!(f, "Unknown zircon status code: {}", self.0),

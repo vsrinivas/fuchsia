@@ -14,6 +14,9 @@
 // run with that feature enabled.
 #![cfg_attr(feature = "benchmark", feature(test))]
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 #[cfg(all(test, feature = "benchmark"))]
 extern crate test;
 

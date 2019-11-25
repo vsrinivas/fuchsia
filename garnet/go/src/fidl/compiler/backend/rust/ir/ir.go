@@ -632,7 +632,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 		case types.ConstDeclType, types.StructDeclType, types.XUnionDeclType:
 			if val.Nullable {
 				if borrowed {
-					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<%s>>", t)
+					r = fmt.Sprintf("Option<fidl::encoding::OutOfLine<'_, %s>>", t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}
@@ -650,7 +650,7 @@ func (c *compiler) compileType(val types.Type, borrowed bool) Type {
 						Library: types.ParseCompoundIdentifier(val.Identifier).Library,
 						Name:    "OutOfLineUnion",
 					})
-					r = fmt.Sprintf("Option<%s<%s>>", wrapper, t)
+					r = fmt.Sprintf("Option<%s<'_, %s>>", wrapper, t)
 				} else {
 					r = fmt.Sprintf("Option<Box<%s>>", t)
 				}

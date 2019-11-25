@@ -189,7 +189,7 @@ impl PkgUrl {
 }
 
 impl fmt::Display for PkgUrl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.repo)?;
         if self.path != "/" {
             write!(f, "{}", self.path)?;
@@ -299,7 +299,7 @@ impl From<RepoUrl> for PkgUrl {
 }
 
 impl fmt::Display for RepoUrl {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "fuchsia-pkg://{}", self.host)
     }
 }
@@ -355,7 +355,7 @@ fn parse_path(mut path: &str) -> Result<(Option<&str>, Option<&str>), ParseError
     Ok((name, variant))
 }
 
-fn parse_query_pairs(pairs: url::form_urlencoded::Parse) -> Result<Option<String>, ParseError> {
+fn parse_query_pairs(pairs: url::form_urlencoded::Parse<'_>) -> Result<Option<String>, ParseError> {
     let mut query_hash = None;
     for (key, value) in pairs {
         if key == "hash" {

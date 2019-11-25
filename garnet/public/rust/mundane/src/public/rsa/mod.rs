@@ -178,7 +178,7 @@ impl<B: RsaKeyBits> PublicKey for RsaPubKey<B> {
 }
 
 impl<B: RsaKeyBits> Debug for RsaPubKey<B> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "RsaPubKey")
     }
 }
@@ -220,7 +220,7 @@ impl<B: RsaKeyBits> PrivateKey for RsaPrivKey<B> {
 }
 
 impl<B: RsaKeyBits> Debug for RsaPrivKey<B> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "RsaPrivKey")
     }
 }
@@ -375,7 +375,7 @@ pub struct RsaPkcs1v15;
 
 #[cfg(feature = "rsa-pkcs1v15")]
 impl Display for RsaPkcs1v15 {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "RSA-PKCS1v1.5")
     }
 }
@@ -402,7 +402,7 @@ impl self::inner::RsaSignatureScheme for RsaPkcs1v15 {
 }
 
 impl Display for RsaPss {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "RSA-PSS")
     }
 }
@@ -526,7 +526,7 @@ impl<B: RsaKeyBits, S: RsaSignatureScheme, H: Hasher> Signature for RsaSignature
 }
 
 impl<B: RsaKeyBits, S: RsaSignatureScheme, H: Hasher> Debug for RsaSignature<B, S, H> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "RsaSignature")
     }
 }

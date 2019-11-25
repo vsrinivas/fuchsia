@@ -39,7 +39,7 @@ impl Realm {
         })
     }
 
-    fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
+    fn write_indented(&self, f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
         writeln!(f, "{}Realm[{}]: {}", " ".repeat(indent), self.job_id, self.name)?;
 
         for comp in &self.child_components {
@@ -55,7 +55,7 @@ impl Realm {
 }
 
 impl fmt::Display for Realm {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_indented(f, 0)
     }
 }
@@ -77,7 +77,7 @@ impl Component {
         Ok(Component { job_id: job_id.parse::<u32>()?, name, path, url, child_components })
     }
 
-    fn write_indented(&self, f: &mut fmt::Formatter, indent: usize) -> fmt::Result {
+    fn write_indented(&self, f: &mut fmt::Formatter<'_>, indent: usize) -> fmt::Result {
         writeln!(f, "{}{}[{}]: {}", " ".repeat(indent), self.name, self.job_id, self.url)?;
 
         for child in &self.child_components {
@@ -89,7 +89,7 @@ impl Component {
 }
 
 impl fmt::Display for Component {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.write_indented(f, 0)
     }
 }

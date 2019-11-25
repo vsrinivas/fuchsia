@@ -1,6 +1,3 @@
-extern crate base64;
-extern crate webpki;
-
 #[macro_use]
 extern crate lazy_static;
 

@@ -213,11 +213,11 @@ impl TerminalViewAssistant {
 }
 
 impl ViewAssistant for TerminalViewAssistant {
-    fn setup(&mut self, _context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, _context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         self.spawn_pty_if_needed(&context.logical_size, context.key)?;
         self.resize_if_needed(&context.size, &context.logical_size)?;
 
@@ -251,7 +251,7 @@ impl ViewAssistant for TerminalViewAssistant {
 
     fn handle_keyboard_event(
         &mut self,
-        _: &mut ViewAssistantContext,
+        _: &mut ViewAssistantContext<'_>,
         event: &KeyboardEvent,
     ) -> Result<(), Error> {
         self.handle_keyboard_event(event)

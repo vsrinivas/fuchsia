@@ -53,7 +53,7 @@ impl Drop for RxBuffer {
 }
 
 impl fmt::Debug for RxBuffer {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.debug_struct("RxBuffer")
             .field("offset", &self.offset)
             .field("len", &self.data.len())
@@ -200,7 +200,7 @@ impl BufferPool {
 }
 
 impl fmt::Debug for BufferPool {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.debug_struct("BufferPool")
             .field("base", &self.base)
             .field("len", &self.len)

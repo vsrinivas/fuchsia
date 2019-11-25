@@ -103,7 +103,7 @@ impl Error {
 impl error::Error for Error {}
 
 impl fmt::Display for Error {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match &self {
             Error::MissingField(d, k) => write!(f, "{} missing {}", d, k),
             Error::EmptyField(d, k) => write!(f, "{} has empty {}", d, k),
@@ -152,7 +152,7 @@ impl ErrorList {
 impl error::Error for ErrorList {}
 
 impl fmt::Display for ErrorList {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let strs: Vec<String> = self.errs.iter().map(|e| format!("{}", e)).collect();
         write!(f, "{}", strs.join(", "))
     }

@@ -523,7 +523,7 @@ impl<B: ByteSliceMut> Ipv6Packet<B> {
 }
 
 impl<B: ByteSlice> Debug for Ipv6Packet<B> {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         f.debug_struct("Ipv6Packet")
             .field("src_ip", &self.src_ip())
             .field("dst_ip", &self.dst_ip())

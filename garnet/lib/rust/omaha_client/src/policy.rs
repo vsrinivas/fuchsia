@@ -101,7 +101,7 @@ pub trait PolicyEngine {
         apps: &[App],
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
-    ) -> BoxFuture<UpdateCheckSchedule>;
+    ) -> BoxFuture<'_, UpdateCheckSchedule>;
 
     /// Given the context provided by State, does the Policy allow an update check to
     /// happen at this time?  This should be consistent with the compute_next_update_time
@@ -113,9 +113,9 @@ pub trait PolicyEngine {
         scheduling: &UpdateCheckSchedule,
         protocol_state: &ProtocolState,
         check_options: &CheckOptions,
-    ) -> BoxFuture<CheckDecision>;
+    ) -> BoxFuture<'_, CheckDecision>;
 
     /// Given the current State, the current PolicyData, can the proposed InstallPlan
     /// be executed at this time.
-    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<UpdateDecision>;
+    fn update_can_start(&mut self, proposed_install_plan: &impl Plan) -> BoxFuture<'_, UpdateDecision>;
 }

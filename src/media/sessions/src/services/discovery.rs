@@ -29,7 +29,7 @@ struct WatcherClient<F> {
 
 impl<F: Future<Output = Result<()>> + Unpin> Future for WatcherClient<F> {
     type Output = Result<()>;
-    fn poll(mut self: Pin<&mut Self>, cx: &mut Context) -> Poll<Self::Output> {
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if Pin::new(&mut self.disconnect_signal).poll_next(cx).is_ready() {
             // The client has disconnected.
             return Poll::Ready(Ok(()));

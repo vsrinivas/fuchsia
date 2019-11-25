@@ -178,7 +178,7 @@ fn to_rust_type(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
 impl<'a, W: io::Write> RustBackend<'a, W> {
     // These aren't enums, although conceptually similiar, they get generated as pub const
     // since banjo might have same value output
-    fn codegen_enum_decl(&self, namespace: DeclIter, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_enum_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
         let mut accum = String::new();
         for decl in namespace {
             if let ast::Decl::Enum { ref name, ref ty, attributes: _, ref variants } = *decl {
@@ -212,7 +212,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum)
     }
 
-    fn codegen_const_decl(&self, namespace: DeclIter, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_const_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
         let mut accum = Vec::new();
         for decl in namespace {
             if let ast::Decl::Constant { ref name, ref ty, ref value, attributes: _ } = *decl {
@@ -228,7 +228,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum.join("\n"))
     }
 
-    fn codegen_struct_decl(&self, namespace: DeclIter, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_struct_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
         let mut accum = Vec::new();
         for decl in namespace {
             if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
@@ -267,7 +267,7 @@ impl<'a, W: io::Write> RustBackend<'a, W> {
         Ok(accum.join("\n"))
     }
 
-    fn codegen_union_decl(&self, namespace: DeclIter, ast: &BanjoAst) -> Result<String, Error> {
+    fn codegen_union_decl(&self, namespace: DeclIter<'_>, ast: &BanjoAst) -> Result<String, Error> {
         let mut accum = Vec::new();
         for decl in namespace {
             if let ast::Decl::Union { ref name, ref fields, ref attributes } = *decl {

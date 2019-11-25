@@ -39,7 +39,7 @@ pub struct ServedRepositoryBuilder {
 /// Useful for injecting failures.
 pub trait UriPathHandler: 'static + Send + Sync {
     /// `response` is what the server would have responded with.
-    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>>;
+    fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>>;
 }
 
 impl ServedRepositoryBuilder {
@@ -209,7 +209,7 @@ pub mod handler {
     pub struct StaticResponseCode(StatusCode);
 
     impl UriPathHandler for StaticResponseCode {
-        fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, _uri_path: &Path, _response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             ready(Response::builder().status(self.0).body(Body::empty()).unwrap()).boxed()
         }
     }
@@ -248,7 +248,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for Toggleable<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             if self.enabled.load(Ordering::SeqCst) {
                 self.handler.handle(uri_path, response)
             } else {
@@ -271,7 +271,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForRequestCount<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             let mut remaining = self.remaining.lock();
             if *remaining > 0 {
                 *remaining -= 1;
@@ -297,7 +297,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForPath<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             if self.path == uri_path {
                 self.handler.handle(uri_path, response)
             } else {
@@ -321,7 +321,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for ForPathPrefix<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             if uri_path.starts_with(&self.prefix) {
                 self.handler.handle(uri_path, response)
             } else {
@@ -345,7 +345,7 @@ pub mod handler {
     }
 
     impl<H: UriPathHandler> UriPathHandler for OncePerPath<H> {
-        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<Response<Body>> {
+        fn handle(&self, uri_path: &Path, response: Response<Body>) -> BoxFuture<'_, Response<Body>> {
             if self.failed_paths.lock().insert(uri_path.to_owned()) {
                 self.handler.handle(uri_path, response)
             } else {

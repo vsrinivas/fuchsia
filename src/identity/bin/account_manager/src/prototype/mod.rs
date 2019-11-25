@@ -27,7 +27,7 @@ use std::sync::Arc;
 
 /// Publishes the `PrototypeAccountTransferControl` protocol to the debug
 /// output directory.
-pub fn publish_account_transfer_control(fs: &mut ServiceFs<ServiceObj<()>>) {
+pub fn publish_account_transfer_control(fs: &mut ServiceFs<ServiceObj<'_, ()>>) {
     let transfer_control = Arc::new(AccountTransferControl::new());
     fs.dir("svc").dir("debug").add_fidl_service(move |stream| {
         let transfer_control_clone = Arc::clone(&transfer_control);

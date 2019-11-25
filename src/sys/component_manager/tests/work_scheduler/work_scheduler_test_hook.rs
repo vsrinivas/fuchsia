@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+// TODO Follow 2018 idioms
+#![allow(elided_lifetimes_in_paths)]
+
 use {
     component_manager_lib::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
@@ -43,7 +46,7 @@ pub struct DispatchedEvent {
 }
 
 impl Display for Timeout {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(f, "Operation timed out (timeout={})", self.0.as_nanos())
     }
 }

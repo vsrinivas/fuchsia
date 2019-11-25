@@ -409,7 +409,7 @@ fn spawn_with_actions(
     options: SpawnOptions,
     argv: &[&CStr],
     environ: Option<&[&CStr]>,
-    actions: &mut [SpawnAction],
+    actions: &mut [SpawnAction<'_>],
     spawn_fn: impl FnOnce(
         zx_handle_t,                                                          // job
         u32,                                                                  // flags
@@ -438,7 +438,7 @@ fn spawn_with_actions(
     }
     // Safety: actions are repr(transparent) wrappers around fdio_spawn_action_t
     let action_count = actions.len();
-    let actions_ptr: *const SpawnAction = actions.as_ptr();
+    let actions_ptr: *const SpawnAction<'_> = actions.as_ptr();
     let actions_ptr = actions_ptr as *const fdio_sys::fdio_spawn_action_t;
 
     let mut process_out = 0;
@@ -474,7 +474,7 @@ pub fn spawn_etc(
     path: &CStr,
     argv: &[&CStr],
     environ: Option<&[&CStr]>,
-    actions: &mut [SpawnAction],
+    actions: &mut [SpawnAction<'_>],
 ) -> Result<zx::Process, (zx::Status, String)> {
     let path = path.as_ptr();
     spawn_with_actions(
@@ -506,7 +506,7 @@ pub fn spawn_vmo(
     executable_vmo: zx::Vmo,
     argv: &[&CStr],
     environ: Option<&[&CStr]>,
-    actions: &mut [SpawnAction],
+    actions: &mut [SpawnAction<'_>],
 ) -> Result<zx::Process, (zx::Status, String)> {
     let executable_vmo = executable_vmo.into_raw();
     spawn_with_actions(

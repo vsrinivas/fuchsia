@@ -66,7 +66,7 @@ impl CharSetRange {
         }
     }
 
-    fn iter(&self) -> CharSetRangeIterator {
+    fn iter(&self) -> CharSetRangeIterator<'_> {
         CharSetRangeIterator { char_set_range: &self, position: self.start.clone() }
     }
 }

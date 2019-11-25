@@ -324,12 +324,12 @@ where
 }
 
 trait Launcher {
-    fn launch_process(args: &[&CStr], actions: Vec<SpawnAction>) -> Result<zx::Process, Error>;
+    fn launch_process(args: &[&CStr], actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error>;
 }
 
 struct ProcLauncher;
 impl Launcher for ProcLauncher {
-    fn launch_process(args: &[&CStr], mut actions: Vec<SpawnAction>) -> Result<zx::Process, Error> {
+    fn launch_process(args: &[&CStr], mut actions: Vec<SpawnAction<'_>>) -> Result<zx::Process, Error> {
         let options = SpawnOptions::CLONE_ALL;
 
         let process = match spawn_etc(
@@ -401,7 +401,7 @@ where
     pub fn run_command(
         &self,
         command: &'static CStr,
-        actions: Vec<SpawnAction>,
+        actions: Vec<SpawnAction<'_>>,
     ) -> Result<zx::Process, Error> {
         let mut args = vec![FSType::path()];
         if self.options.journal {
@@ -453,7 +453,7 @@ mod tests {
         impl Launcher for TestLauncherNoArgs {
             fn launch_process(
                 args: &[&CStr],
-                _actions: Vec<SpawnAction>,
+                _actions: Vec<SpawnAction<'_>>,
             ) -> Result<zx::Process, Error> {
                 assert_eq!(args, &[cstr!("/pkg/bin/blobfs"), cstr!("mount")]);
                 Err(ExpectedError.into())
@@ -479,7 +479,7 @@ mod tests {
         impl Launcher for TestLauncherAllArgs {
             fn launch_process(
                 args: &[&CStr],
-                _actions: Vec<SpawnAction>,
+                _actions: Vec<SpawnAction<'_>>,
             ) -> Result<zx::Process, Error> {
                 assert_eq!(
                     args,

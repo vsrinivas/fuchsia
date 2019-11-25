@@ -63,7 +63,7 @@ impl EmulatorHarness for PeripheralHarness {
         self.aux().emulator().clone()
     }
 
-    fn state(&self) -> MappedRwLockWriteGuard<PeripheralState> {
+    fn state(&self) -> MappedRwLockWriteGuard<'_, PeripheralState> {
         self.write_state()
     }
 }

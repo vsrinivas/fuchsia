@@ -75,7 +75,7 @@ impl CobaltSender {
 
     /// Accesses the sidecar struct `CobaltSenderWithComponent` to allow logging to cobalt with
     /// component strings.
-    pub fn with_component(&mut self) -> CobaltSenderWithComponent {
+    pub fn with_component(&mut self) -> CobaltSenderWithComponent<'_> {
         CobaltSenderWithComponent(self)
     }
 

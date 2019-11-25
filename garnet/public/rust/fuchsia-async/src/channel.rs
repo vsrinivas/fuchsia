@@ -23,7 +23,7 @@ impl AsRef<zx::Channel> for Channel {
 }
 
 impl AsHandleRef for Channel {
-    fn as_handle_ref(&self) -> zx::HandleRef {
+    fn as_handle_ref(&self) -> zx::HandleRef<'_> {
         self.0.get_ref().as_handle_ref()
     }
 }
@@ -94,7 +94,7 @@ impl Channel {
 }
 
 impl fmt::Debug for Channel {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.get_ref().fmt(f)
     }
 }

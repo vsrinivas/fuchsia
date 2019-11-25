@@ -334,7 +334,7 @@ impl Player {
         Ok(())
     }
 
-    pub fn next_event<'a>(&'a mut self) -> stream::Next<PlayerEventStream> {
+    pub fn next_event<'a>(&'a mut self) -> stream::Next<'_, PlayerEventStream> {
         self.events.next()
     }
 }

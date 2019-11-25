@@ -380,7 +380,7 @@ impl From<RepositoryKey> for fidl::RepositoryKeyConfig {
 }
 
 impl fmt::Debug for RepositoryKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let RepositoryKey::Ed25519(ref value) = self;
         f.debug_tuple("Ed25519").field(&hex::encode(value)).finish()
     }
@@ -405,7 +405,7 @@ impl From<RepositoryBlobKey> for fidl::RepositoryBlobKey {
 }
 
 impl fmt::Debug for RepositoryBlobKey {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let RepositoryBlobKey::Aes(ref value) = self;
         f.debug_tuple("Aes").field(&hex::encode(value)).finish()
     }

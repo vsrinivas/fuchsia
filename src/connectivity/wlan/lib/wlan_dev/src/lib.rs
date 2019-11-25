@@ -51,7 +51,7 @@ pub fn connect_wlan_iface(dev: &Device) -> Result<mlme::MlmeProxy, failure::Erro
 }
 
 impl fmt::Debug for Device {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> Result<(), fmt::Error> {
         f.debug_struct("Device").field("path", &self.path).finish()
     }
 }

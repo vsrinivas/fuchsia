@@ -63,7 +63,7 @@ impl PubSubHub {
 
     /// Watches the value stored in this hub, resolving when the
     /// stored value differs from `last_value`.
-    pub fn watch_for_change<S>(&self, last_value: Option<S>) -> PubSubFuture
+    pub fn watch_for_change<S>(&self, last_value: Option<S>) -> PubSubFuture<'_>
     where
         S: Into<String>,
     {

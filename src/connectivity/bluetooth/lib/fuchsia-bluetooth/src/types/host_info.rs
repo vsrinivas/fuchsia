@@ -107,7 +107,7 @@ impl From<HostInfo> for fctrl::AdapterInfo {
 }
 
 impl fmt::Display for HostInfo {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "HostInfo:")?;
         writeln!(fmt, "\tidentifier:\t{}", self.id.value)?;
         writeln!(fmt, "\taddress:\t{}", self.address)?;

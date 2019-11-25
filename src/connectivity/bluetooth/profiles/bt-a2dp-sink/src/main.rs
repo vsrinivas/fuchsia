@@ -368,7 +368,7 @@ impl Streams {
         self.0.len()
     }
 
-    fn iter_mut(&mut self) -> hash_map::IterMut<avdtp::StreamEndpointId, Stream> {
+    fn iter_mut(&mut self) -> hash_map::IterMut<'_, avdtp::StreamEndpointId, Stream> {
         self.0.iter_mut()
     }
 }

@@ -8,7 +8,7 @@ use fuchsia_inspect_contrib::{inspect_insert, log::WriteInspect, nodes::NodeWrit
 pub struct InspectWlanChan<'a>(pub &'a fidl_common::WlanChan);
 
 impl<'a> WriteInspect for InspectWlanChan<'a> {
-    fn write_inspect(&self, writer: &mut NodeWriter, key: &str) {
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
         inspect_insert!(writer, var key: {
             primary: self.0.primary,
             cbw: format!("{:?}", self.0.cbw),

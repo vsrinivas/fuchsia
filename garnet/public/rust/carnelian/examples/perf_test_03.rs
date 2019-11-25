@@ -44,7 +44,7 @@ struct ClockViewAssistant {
 
 impl ClockViewAssistant {
     fn position_hand(
-        context: &ViewAssistantContext,
+        context: &ViewAssistantContext<'_>,
         node: &ShapeNode,
         hand_width: f32,
         hand_height: f32,
@@ -70,7 +70,7 @@ impl ClockViewAssistant {
 }
 
 impl ViewAssistant for ClockViewAssistant {
-    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn setup(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         context.root_node().add_child(&self.background_node);
         set_node_color(
             context.session(),
@@ -91,7 +91,7 @@ impl ViewAssistant for ClockViewAssistant {
         Ok(())
     }
 
-    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+    fn update(&mut self, context: &ViewAssistantContext<'_>) -> Result<(), Error> {
         let local: DateTime<Local> = Local::now();
 
         let nanos = local.nanosecond() as f32 / 1_000_000_000.0;

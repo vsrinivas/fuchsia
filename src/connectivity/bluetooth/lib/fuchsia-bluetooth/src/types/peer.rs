@@ -69,7 +69,7 @@ impl Peer {
 }
 
 impl fmt::Display for Peer {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         writeln!(fmt, "Peer:")?;
         writeln!(fmt, "\tIdentifier:\t{}", self.identifier)?;
         writeln!(fmt, "\tAddress:\t{}", self.address)?;

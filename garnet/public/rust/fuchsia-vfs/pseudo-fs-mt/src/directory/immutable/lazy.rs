@@ -186,7 +186,7 @@ enum WatcherCommand {
 }
 
 impl Debug for WatcherCommand {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         match self {
             WatcherCommand::RegisterWatcher { scope: _, mask, channel } => f
                 .debug_struct("WatcherCommand::RegisterWatcher")

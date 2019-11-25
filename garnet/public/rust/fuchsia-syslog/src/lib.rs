@@ -201,7 +201,7 @@ lazy_static! {
 }
 
 /// macro helper function to convert strings and call log
-pub fn log_helper(args: Arguments, lvl: i32, tag: &str) {
+pub fn log_helper(args: Arguments<'_>, lvl: i32, tag: &str) {
     let s = std::fmt::format(args);
     let c_msg = CString::new(s).unwrap();
     let c_tag = CString::new(tag).unwrap();
@@ -220,11 +220,11 @@ unsafe impl Send for Logger {}
 unsafe impl Sync for Logger {}
 
 impl log::Log for Logger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         self.is_enabled(get_fx_logger_severity(metadata.level()))
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record<'_>) {
         if record.level() == Level::Error {
             fx_log!(tag:record.target(),
                 get_fx_logger_severity(record.level()), "{}({}): {}", 

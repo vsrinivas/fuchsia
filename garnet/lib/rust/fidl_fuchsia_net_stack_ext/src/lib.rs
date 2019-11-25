@@ -21,7 +21,7 @@ impl From<fidl::InterfaceAddress> for InterfaceAddress {
 }
 
 impl std::fmt::Display for InterfaceAddress {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let Self { ip_address, prefix_len } = self;
         write!(f, "{}/{}", ip_address, prefix_len)
     }
@@ -44,7 +44,7 @@ impl From<fidl::ForwardingDestination> for ForwardingDestination {
 }
 
 impl std::fmt::Display for ForwardingDestination {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             ForwardingDestination::DeviceId(id) => write!(f, "device id {}", id),
             ForwardingDestination::NextHop(nh) => write!(f, "next hop {}", nh),
@@ -67,7 +67,7 @@ impl From<fidl::ForwardingEntry> for ForwardingEntry {
 }
 
 impl std::fmt::Display for ForwardingEntry {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let Self { subnet, destination } = self;
         write!(f, "{} {}", subnet, destination)?;
         Ok(())
@@ -89,7 +89,7 @@ impl From<fidl::AdministrativeStatus> for AdministrativeStatus {
 }
 
 impl std::fmt::Display for AdministrativeStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             AdministrativeStatus::DISABLED => write!(f, "DISABLED"),
             AdministrativeStatus::ENABLED => write!(f, "ENABLED"),
@@ -112,7 +112,7 @@ impl From<fidl::PhysicalStatus> for PhysicalStatus {
 }
 
 impl std::fmt::Display for PhysicalStatus {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match self {
             PhysicalStatus::DOWN => write!(f, "LINK_DOWN"),
             PhysicalStatus::UP => write!(f, "LINK_UP"),
@@ -167,7 +167,7 @@ impl From<fidl::InterfaceProperties> for InterfaceProperties {
 }
 
 impl std::fmt::Display for InterfaceProperties {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let InterfaceProperties {
             name,
             topopath,
@@ -212,7 +212,7 @@ impl From<fidl::InterfaceInfo> for InterfaceInfo {
 }
 
 impl std::fmt::Display for InterfaceInfo {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         let InterfaceInfo { id, properties } = self;
         write!(f, "Network interface ID {}\n", id)?;
         write!(f, "{}", properties)?;

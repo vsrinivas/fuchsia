@@ -82,7 +82,7 @@ pub struct StreamEndpoint {
 }
 
 impl fmt::Debug for StreamEndpoint {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         f.debug_struct("StreamEndpoint")
             .field("id", &self.id.to_string())
             .field("endpoint_type", &self.endpoint_type)
@@ -407,7 +407,7 @@ impl MediaStream {
 impl io::AsyncWrite for MediaStream {
     fn poll_write(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut Context<'_>,
         buf: &[u8],
     ) -> Poll<std::result::Result<usize, io::Error>> {
         match self.try_upgrade() {
@@ -418,7 +418,7 @@ impl io::AsyncWrite for MediaStream {
 
     fn poll_flush(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut Context<'_>,
     ) -> Poll<std::result::Result<(), io::Error>> {
         match self.try_upgrade() {
             Err(e) => return Poll::Ready(Err(e)),
@@ -428,7 +428,7 @@ impl io::AsyncWrite for MediaStream {
 
     fn poll_close(
         self: Pin<&mut Self>,
-        cx: &mut Context,
+        cx: &mut Context<'_>,
     ) -> Poll<std::result::Result<(), io::Error>> {
         match self.try_upgrade() {
             Err(e) => return Poll::Ready(Err(e)),

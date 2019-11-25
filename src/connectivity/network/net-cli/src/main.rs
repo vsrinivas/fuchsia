@@ -41,11 +41,11 @@ struct Logger;
 const LOG_LEVEL: Level = Level::Info;
 
 impl Log for Logger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         metadata.level() <= LOG_LEVEL
     }
 
-    fn log(&self, record: &Record) {
+    fn log(&self, record: &Record<'_>) {
         if self.enabled(record.metadata()) {
             match record.metadata().level() {
                 Level::Trace | Level::Debug | Level::Info => println!("{}", record.args()),

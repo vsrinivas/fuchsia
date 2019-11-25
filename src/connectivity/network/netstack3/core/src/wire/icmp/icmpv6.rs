@@ -39,7 +39,7 @@ pub(crate) enum Icmpv6Packet<B: ByteSlice> {
 }
 
 impl<B: ByteSlice + fmt::Debug> fmt::Debug for Icmpv6Packet<B> {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         use self::Icmpv6Packet::*;
         use mld::MldPacket::*;
         use ndp::NdpPacket::*;

@@ -240,7 +240,7 @@ impl<A: SpecifiedAddress> Deref for SpecifiedAddr<A> {
 
 impl<A: SpecifiedAddress + Display> Display for SpecifiedAddr<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -308,7 +308,7 @@ impl<A: UnicastAddress> Deref for UnicastAddr<A> {
 
 impl<A: UnicastAddress + Display> Display for UnicastAddr<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -382,7 +382,7 @@ impl<A: MulticastAddress> Deref for MulticastAddr<A> {
 
 impl<A: MulticastAddress + Display> Display for MulticastAddr<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
@@ -456,7 +456,7 @@ impl<A: LinkLocalAddress> Deref for LinkLocalAddr<A> {
 
 impl<A: LinkLocalAddress + Display> Display for LinkLocalAddr<A> {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }

@@ -226,7 +226,7 @@ impl<'a, A: IpAddress> From<&'a MulticastAddr<A>> for MulticastAddr<Mac> {
 
 impl Display for Mac {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         write!(
             f,
             "{:X}:{:X}:{:X}:{:X}:{:X}:{:X}",
@@ -237,7 +237,7 @@ impl Display for Mac {
 
 impl Debug for Mac {
     #[inline]
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
         Display::fmt(self, f)
     }
 }

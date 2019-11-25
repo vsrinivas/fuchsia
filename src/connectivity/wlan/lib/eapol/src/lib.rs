@@ -399,7 +399,6 @@ mod tests {
     #[cfg(feature = "benchmarks")]
     mod benches {
         use super::*;
-        extern crate test;
         use test::{black_box, Bencher};
 
         #[bench]

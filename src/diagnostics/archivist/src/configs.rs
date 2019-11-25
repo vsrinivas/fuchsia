@@ -42,7 +42,6 @@ mod tests {
     use super::*;
     use std::io::Write;
     use std::path::Path;
-    extern crate tempfile;
 
     fn write_test_config_to_file<T: AsRef<Path>>(path: T, test_config: &str) {
         let mut file = fs::File::create(path).expect("failed to create file");

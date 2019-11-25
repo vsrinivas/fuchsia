@@ -78,7 +78,7 @@ macro_rules! wrapper_type {
         impl Eq for $name {}
 
         impl Debug for $name {
-            fn fmt(&self, f: &mut Formatter) -> std::fmt::Result {
+            fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
                 write!(f, "{} {{ id: {:?} }}", stringify!($name), self.inner)
             }
         }

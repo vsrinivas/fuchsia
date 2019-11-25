@@ -49,7 +49,7 @@ impl EntryInfo {
 }
 
 impl fmt::Debug for EntryInfo {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let new_type_str;
         let type_str = match self.type_() {
             DIRENT_TYPE_UNKNOWN => "Unknown",

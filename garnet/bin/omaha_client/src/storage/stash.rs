@@ -117,7 +117,7 @@ impl Storage for Stash {
             .boxed()
     }
 
-    fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<Option<bool>> {
+    fn get_bool<'a>(&'a self, key: &'a str) -> BoxFuture<'_, Option<bool>> {
         async move {
             if let Some(v) = self.get_value(key).await {
                 if let Value::Boolval(s) = *v {
@@ -130,19 +130,19 @@ impl Storage for Stash {
             .boxed()
     }
 
-    fn set_string<'a>(&'a mut self, key: &'a str, value: &'a str) -> BoxFuture<Result<()>> {
+    fn set_string<'a>(&'a mut self, key: &'a str, value: &'a str) -> BoxFuture<'_, Result<()>> {
         future::ready(self.set_value(key, Value::Stringval(value.to_string()))).boxed()
     }
 
-    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<Result<()>> {
+    fn set_int<'a>(&'a mut self, key: &'a str, value: i64) -> BoxFuture<'_, Result<()>> {
         future::ready(self.set_value(key, Value::Intval(value))).boxed()
     }
 
-    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<Result<()>> {
+    fn set_bool<'a>(&'a mut self, key: &'a str, value: bool) -> BoxFuture<'_, Result<()>> {
         future::ready(self.set_value(key, Value::Boolval(value))).boxed()
     }
 
-    fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<Result<()>> {
+    fn remove<'a>(&'a mut self, key: &'a str) -> BoxFuture<'_, Result<()>> {
         future::ready(match self.proxy.delete_value(key) {
             Ok(_) => Ok(()),
             Err(e) => {
@@ -153,7 +153,7 @@ impl Storage for Stash {
         .boxed()
     }
 
-    fn commit(&mut self) -> BoxFuture<Result<()>> {
+    fn commit(&mut self) -> BoxFuture<'_, Result<()>> {
         future::ready(match self.proxy.commit() {
             Ok(_) => Ok(()),
             Err(e) => {

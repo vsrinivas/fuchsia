@@ -122,7 +122,7 @@ impl MulAssign for ByteFraction {
 }
 
 impl fmt::Debug for ByteFraction {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{:.3} ({}/255)", self.value as f32 / 255.0, self.value)
     }
 }

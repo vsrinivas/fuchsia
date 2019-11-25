@@ -13,7 +13,7 @@ pub mod sys {
 macro_rules! impl_handle_based {
     ($type_name:path) => {
         impl AsHandleRef for $type_name {
-            fn as_handle_ref(&self) -> HandleRef {
+            fn as_handle_ref(&self) -> HandleRef<'_> {
                 self.0.as_handle_ref()
             }
         }
@@ -124,7 +124,7 @@ macro_rules! assoc_values {
         }
 
         impl ::std::fmt::Debug for $typename {
-            fn fmt(&self, f: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {
+            fn fmt(&self, f: &mut ::std::fmt::Formatter<'_>) -> ::std::fmt::Result {
                 f.write_str(concat!(stringify!($typename), "("))?;
                 match self.assoc_const_name() {
                     Some(name) => f.write_str(&name)?,
@@ -233,7 +233,7 @@ pub enum ClockId {
 /// Wraps the
 /// [zx_object_wait_many](https://fuchsia.dev/fuchsia-src/reference/syscalls/object_wait_many.md)
 /// syscall.
-pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, Status> {
+pub fn object_wait_many(items: &mut [WaitItem<'_>], deadline: Time) -> Result<bool, Status> {
     let items_ptr = items.as_mut_ptr() as *mut sys::zx_wait_item_t;
     let status = unsafe { sys::zx_object_wait_many(items_ptr, items.len(), deadline.into_nanos()) };
     if status == sys::ZX_ERR_CANCELED {
@@ -245,7 +245,7 @@ pub fn object_wait_many(items: &mut [WaitItem], deadline: Time) -> Result<bool, 
 /// Query information about a zircon object.
 /// Returns `(num_returned, num_remaining)` on success.
 pub fn object_get_info<Q: ObjectQuery>(
-    handle: HandleRef,
+    handle: HandleRef<'_>,
     out: &mut [Q::InfoTy],
 ) -> Result<(usize, usize), Status> {
     let mut actual = 0;
@@ -264,7 +264,7 @@ pub fn object_get_info<Q: ObjectQuery>(
 }
 
 /// Get a property on a zircon object
-pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::PropTy, Status> {
+pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef<'_>) -> Result<P::PropTy, Status> {
     // this is safe due to the contract on the P::PropTy type in the ObjectProperty trait.
     let mut out = ::std::mem::MaybeUninit::<P::PropTy>::uninit();
     let status = unsafe {
@@ -280,7 +280,7 @@ pub fn object_get_property<P: PropertyQueryGet>(handle: HandleRef) -> Result<P::
 
 /// Set a property on a zircon object
 pub fn object_set_property<P: PropertyQuerySet>(
-    handle: HandleRef,
+    handle: HandleRef<'_>,
     val: &P::PropTy,
 ) -> Result<(), Status> {
     let status = unsafe {

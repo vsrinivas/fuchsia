@@ -72,7 +72,7 @@ use crate::zerocopy;
 macro_rules! impl_fmt_trait {
     ($name:ident, $native:ident, $trait:ident) => {
         impl<O: ByteOrder> $trait for $name<O> {
-            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 $trait::fmt(&self.get(), f)
             }
         }
@@ -239,7 +239,7 @@ example of how it can be used for parsing UDP packets.
         impl_fmt_trait!($name, $native, Binary);
 
         impl<O: ByteOrder> Debug for $name<O> {
-            fn fmt(&self, f: &mut Formatter) -> fmt::Result {
+            fn fmt(&self, f: &mut Formatter<'_>) -> fmt::Result {
                 // This results in a format like "U16(42)"
                 write!(f, concat!(stringify!($name), "({})"), self.get())
             }

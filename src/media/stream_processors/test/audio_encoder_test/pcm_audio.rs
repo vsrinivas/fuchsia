@@ -115,7 +115,7 @@ where
         false
     }
 
-    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk> + 'a> {
+    fn stream<'a>(&'a self) -> Box<dyn Iterator<Item = ElementaryStreamChunk<'_>> + 'a> {
         let data = self.pcm_audio.buffer.as_slice();
         let frame_size = self.pcm_audio.frame_size();
         let mut offset = 0;

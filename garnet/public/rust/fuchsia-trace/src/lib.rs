@@ -139,7 +139,7 @@ macro_rules! instant {
 
 /// Writes an instant event representing a single moment in time.
 /// The number of `args` must not be greater than 15.
-pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args: &[Arg]) {
+pub fn instant(category: &'static CStr, name: &'static CStr, scope: Scope, args: &[Arg<'_>]) {
     assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
 
     // trace_context_write_xxx functions require that:
@@ -199,7 +199,7 @@ macro_rules! counter {
 ///
 /// 1 to 15 numeric arguments can be associated with an event, each of which is
 /// interpreted as a distinct time series.
-pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, args: &[Arg]) {
+pub fn counter(category: &'static CStr, name: &'static CStr, counter_id: u64, args: &[Arg<'_>]) {
     assert!(args.len() >= 1, "trace counter args must include at least one numeric argument");
     assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
 
@@ -239,7 +239,7 @@ pub struct DurationScope<'a> {
 impl<'a> DurationScope<'a> {
     /// Starts a new duration scope that starts now and will be end'ed when
     /// this object is dropped.
-    pub fn begin(category: &'static CStr, name: &'static CStr, args: &'a [Arg]) -> Self {
+    pub fn begin(category: &'static CStr, name: &'static CStr, args: &'a [Arg<'_>]) -> Self {
         let start_time = zx::ticks_get();
         Self { category, name, args, start_time }
     }
@@ -317,7 +317,7 @@ macro_rules! duration {
 pub fn duration<'a>(
     category: &'static CStr,
     name: &'static CStr,
-    args: &'a [Arg],
+    args: &'a [Arg<'_>],
 ) -> DurationScope<'a> {
     assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
     DurationScope::begin(category, name, args)
@@ -370,7 +370,7 @@ macro_rules! duration_end {
 macro_rules! duration_event {
     ($( #[$docs:meta] )* $name:ident, $sys_method:path $(,)*) => {
         $( #[$docs] )*
-        pub fn $name(category: &'static CStr, name: &'static CStr, args: &[Arg]) {
+        pub fn $name(category: &'static CStr, name: &'static CStr, args: &[Arg<'_>]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {
@@ -496,7 +496,7 @@ macro_rules! flow_end {
 macro_rules! flow_event {
     ($( #[$docs:meta] )* $name:ident, $sys_method:path$(,)*) => {
         $( #[$docs] )*
-        pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: u64, args: &[Arg]) {
+        pub fn $name(category: &'static CStr, name: &'static CStr, flow_id: u64, args: &[Arg<'_>]) {
             assert!(args.len() <= 15, "no more than 15 trace arguments are supported");
             // See justification in `instant`
             unsafe {

@@ -170,7 +170,7 @@ fn main() -> Result<(), Error> {
         }
     }
 
-    let mut backend: Box<dyn Backend<_>> = match opt.backend {
+    let mut backend: Box<dyn Backend<'_, _>> = match opt.backend {
         BackendName::C => Box::new(CBackend::new(&mut output)),
         BackendName::Cpp(subtype) => Box::new(CppBackend::new(&mut output, subtype)),
         BackendName::Ast => Box::new(AstBackend::new(&mut output)),

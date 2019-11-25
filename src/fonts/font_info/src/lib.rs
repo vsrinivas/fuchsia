@@ -79,7 +79,7 @@ impl FontInfoLoaderImpl {
         let mut codepoints: Vec<u32> = Vec::new();
 
         let source: FontAssetSource = source.try_into().map_err(|e| e.into())?;
-        let open_args: FTOpenArgs = (&source).try_into()?;
+        let open_args: FTOpenArgs<'_> = (&source).try_into()?;
 
         // Unsafe to call freetype FFI. Call FT_Open_Face() to load a typeface.
         // If it succeeds then enumerate character map with FT_Get_First_Char()

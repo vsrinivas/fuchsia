@@ -933,13 +933,13 @@ fn get_error_stack_trace() -> Vec<String> {
 }
 
 impl Display for BoringError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         write!(f, "{}", self.stack_trace[0])
     }
 }
 
 impl Debug for BoringError {
-    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+    fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
         for elem in &self.stack_trace {
             writeln!(f, "{}", elem)?;
         }

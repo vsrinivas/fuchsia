@@ -16,7 +16,7 @@ pub trait WriteInspect {
     ///
     /// If the same key is used to write values multiple times, then there will be multiple
     /// values with the same name in the underlying VMO.
-    fn write_inspect(&self, writer: &mut NodeWriter, key: &str);
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str);
 }
 
 /// Macro to log a new entry to a bounded list node with the specified key-value pairs. Each value

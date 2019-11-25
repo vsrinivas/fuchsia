@@ -45,7 +45,7 @@ impl ConsoleLogger {
 }
 
 impl log::Log for ConsoleLogger {
-    fn enabled(&self, metadata: &Metadata) -> bool {
+    fn enabled(&self, metadata: &Metadata<'_>) -> bool {
         metadata.level() <= self.level
     }
 

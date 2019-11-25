@@ -118,7 +118,7 @@ impl Decorator {
         match &self.re_color {
             None => line,
             Some(regex) => regex
-                .replace_all(line.as_str(), |caps: &Captures| {
+                .replace_all(line.as_str(), |caps: &Captures<'_>| {
                     for g in &self.regex_grp_color {
                         let grp_match = caps.name(&g.grp);
                         match grp_match {

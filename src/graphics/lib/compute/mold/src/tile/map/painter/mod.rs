@@ -285,7 +285,7 @@ impl Painter {
 
     fn process_layer<'a, 'b, B: ColorBuffer>(
         &'a mut self,
-        context: &'b Context<B>,
+        context: &'b Context<'_, B>,
     ) -> Option<(TileSegments<'b>, &'b [Op])> {
         let tile = context.tile;
 
@@ -341,7 +341,7 @@ impl Painter {
         }
     }
 
-    pub(crate) fn execute<B: ColorBuffer>(&mut self, mut context: Context<B>) {
+    pub(crate) fn execute<B: ColorBuffer>(&mut self, mut context: Context<'_, B>) {
         #[cfg(feature = "tracing")]
         duration!(
             "gfx",

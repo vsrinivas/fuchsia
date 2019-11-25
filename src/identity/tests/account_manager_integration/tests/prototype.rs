@@ -74,7 +74,7 @@ impl Deref for NestedAccountTransferControlProxy {
 /// serves connection requests to account manager when polled.
 fn create_account_manager_transfer(
 ) -> Result<(NestedAccountTransferControlProxy, impl Future<Output = Vec<()>>), Error> {
-    let mut service_fs = ServiceFs::<ServiceObj<()>>::new();
+    let mut service_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
 
     let nested_environment = service_fs.create_salted_nested_environment("account_test_env")?;
 
@@ -104,7 +104,7 @@ fn create_account_manager_transfer(
 /// prototype interface.
 #[fasync::run_singlethreaded(test)]
 async fn test_prototype_interface_not_exposed() -> Result<(), Error> {
-    let mut service_fs = ServiceFs::<ServiceObj<()>>::new();
+    let mut service_fs = ServiceFs::<ServiceObj<'_, ()>>::new();
     let nested_environment = service_fs.create_salted_nested_environment("account_test_env")?;
     let app = launch(
         nested_environment.launcher(),

@@ -452,7 +452,7 @@ impl TryFrom<u8> for StreamEndpointId {
 }
 
 impl fmt::Display for StreamEndpointId {
-    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}", self.0)
     }
 }
@@ -480,7 +480,7 @@ impl MediaCodecType {
 }
 
 impl fmt::Debug for MediaCodecType {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match self {
             &Self::AUDIO_SBC => write!(f, "MediaCodecType::AUDIO_SBC"),
             &Self::AUDIO_MPEG12 => write!(f, "MediaCodecType::AUDIO_MPEG12"),

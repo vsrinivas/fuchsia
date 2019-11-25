@@ -83,7 +83,7 @@ fn convert_string_to_property_selector(
 /// in order to avoid processing characters being escaped by the selector.
 fn handle_escaped_char(
     token_builder: &mut String,
-    selection_iter: &mut std::str::CharIndices,
+    selection_iter: &mut std::str::CharIndices<'_>,
 ) -> Result<(), Error> {
     token_builder.push(ESCAPE_CHARACTER);
     let escaped_char_option: Option<(usize, char)> = selection_iter.next();

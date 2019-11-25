@@ -14,7 +14,7 @@ use crate::nodes::NodeWriter;
 pub struct InspectBytes<'a>(pub &'a [u8]);
 
 impl<'a> WriteInspect for InspectBytes<'a> {
-    fn write_inspect(&self, writer: &mut NodeWriter, key: &str) {
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
         writer.create_bytes(key, self.0);
     }
 }
@@ -41,7 +41,7 @@ impl<'a, T> WriteInspect for InspectList<'a, T>
 where
     T: WriteInspect,
 {
-    fn write_inspect(&self, writer: &mut NodeWriter, key: &str) {
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
         let mut child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
             val.write_inspect(&mut child, &i.to_string());
@@ -71,13 +71,13 @@ where
 /// ```
 pub struct InspectListClosure<'a, T, F>(pub &'a [T], pub F)
 where
-    F: Fn(&mut NodeWriter, &str, &T);
+    F: Fn(&mut NodeWriter<'_>, &str, &T);
 
 impl<'a, T, F> WriteInspect for InspectListClosure<'a, T, F>
 where
-    F: Fn(&mut NodeWriter, &str, &T),
+    F: Fn(&mut NodeWriter<'_>, &str, &T),
 {
-    fn write_inspect(&self, writer: &mut NodeWriter, key: &str) {
+    fn write_inspect(&self, writer: &mut NodeWriter<'_>, key: &str) {
         let mut child = writer.create_child(key);
         for (i, val) in self.0.iter().enumerate() {
             self.1(&mut child, &i.to_string(), val);

@@ -600,7 +600,7 @@ impl BuilderInner {
     /// Returns a vector of processargs message handles created by this library which are common to
     /// both the linker and main messages, duplicating handles as needed.
     fn common_message_handles(&self) -> Result<Vec<StartupHandle>, ProcessBuilderError> {
-        let handles: &[(zx::HandleRef, &str, HandleType)] = &[
+        let handles: &[(zx::HandleRef<'_>, &str, HandleType)] = &[
             (self.process.as_handle_ref(), "Failed to dup process handle", HandleType::ProcessSelf),
             (self.root_vmar.as_handle_ref(), "Failed to dup VMAR handle", HandleType::RootVmar),
             (self.thread.as_handle_ref(), "Failed to dup thread handle", HandleType::ThreadSelf),

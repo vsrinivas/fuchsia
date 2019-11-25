@@ -41,7 +41,7 @@ impl<T: ?Sized> AsMut<T> for Never {
 }
 
 impl Display for Never {
-    fn fmt(&self, _: &mut Formatter) -> fmt::Result {
+    fn fmt(&self, _: &mut Formatter<'_>) -> fmt::Result {
         match *self {}
     }
 }

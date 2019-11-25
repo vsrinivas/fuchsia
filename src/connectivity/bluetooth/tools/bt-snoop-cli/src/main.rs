@@ -24,7 +24,7 @@ enum Format {
 }
 
 impl fmt::Display for Format {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         let format = match self {
             Format::Pcap => "pcap",
             Format::Pretty => "pretty",

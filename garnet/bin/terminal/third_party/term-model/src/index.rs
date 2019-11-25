@@ -59,7 +59,7 @@ impl Ord for Point {
 pub struct Line(pub usize);
 
 impl fmt::Display for Line {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -71,7 +71,7 @@ impl fmt::Display for Line {
 pub struct Column(pub usize);
 
 impl fmt::Display for Column {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)
     }
 }
@@ -83,7 +83,7 @@ impl fmt::Display for Column {
 pub struct Linear(pub usize);
 
 impl fmt::Display for Linear {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "Linear({})", self.0)
     }
 }

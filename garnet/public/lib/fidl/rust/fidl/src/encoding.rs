@@ -254,7 +254,7 @@ impl<'a> Encoder<'a> {
     /// erroring if the maximum recursion limit has been reached.
     pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
     where
-        F: FnOnce(&mut Encoder) -> Result<R>,
+        F: FnOnce(&mut Encoder<'_>) -> Result<R>,
     {
         if self.remaining_depth == 0 {
             return Err(Error::MaxRecursionDepth);
@@ -313,7 +313,7 @@ impl<'a> Encoder<'a> {
     /// to where it was at the beginning of the call.
     pub fn write_out_of_line<F>(&mut self, len: usize, f: F) -> Result<()>
     where
-        F: FnOnce(&mut Encoder) -> Result<()>,
+        F: FnOnce(&mut Encoder<'_>) -> Result<()>,
     {
         let old_offset = self.offset;
         self.offset = self.buf.len();
@@ -404,7 +404,7 @@ impl<'a> Decoder<'a> {
     /// erroring if the maximum recursion limit has been reached.
     pub fn recurse<F, R>(&mut self, f: F) -> Result<R>
     where
-        F: FnOnce(&mut Decoder) -> Result<R>,
+        F: FnOnce(&mut Decoder<'_>) -> Result<R>,
     {
         if self.remaining_depth == 0 {
             return Err(Error::MaxRecursionDepth);
@@ -423,7 +423,7 @@ impl<'a> Decoder<'a> {
     /// relative to the original start of the buffer.
     pub fn read_out_of_line<F, R>(&mut self, len: usize, f: F) -> Result<R>
     where
-        F: FnOnce(&mut Decoder) -> Result<R>,
+        F: FnOnce(&mut Decoder<'_>) -> Result<R>,
     {
         let (old_buf, old_initial_buf_len) = self.before_read_out_of_line(len)?;
         let res = f(self);
@@ -614,7 +614,7 @@ pub trait Encodable: LayoutObject {
     /// Any handles stored in the object are swapped for `Handle::INVALID`.
     /// Calls to this function should ensure that `encoder.offset` is a multiple of `Layout::inline_size`.
     /// Successful calls to this function should increase `encoder.offset` by `Layout::inline_size`.
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()>;
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()>;
 }
 
 /// A type which can be FIDL2-decoded from a buffer.
@@ -627,7 +627,7 @@ pub trait Decodable: Layout {
 
     /// Decodes an object of this type from the provided buffer and list of handles.
     /// On success, returns `Self`, as well as the yet-unused tails of the data and handle buffers.
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()>;
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()>;
 }
 
 macro_rules! impl_layout {
@@ -663,7 +663,7 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
     }
 
     impl Encodable for $prim_ty {
-        fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
             let slot = encoder.next_slice(mem::size_of::<Self>())?;
             LittleEndian::$writer(slot, *self);
             Ok(())
@@ -672,7 +672,7 @@ macro_rules! impl_codable_num { ($($prim_ty:ty => $reader:ident + $writer:ident,
 
     impl Decodable for $prim_ty {
         fn new_empty() -> Self { 0 as $prim_ty }
-        fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
             let end = mem::size_of::<Self>();
             let range = split_off_front(&mut decoder.buf, end)?;
             *self = LittleEndian::$reader(range);
@@ -695,7 +695,7 @@ impl_codable_num!(
 impl_layout!(bool, align: 1, size: 1);
 
 impl Encodable for bool {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = if *self { 1 } else { 0 };
         Ok(())
@@ -706,7 +706,7 @@ impl Decodable for bool {
     fn new_empty() -> Self {
         false
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let num = *split_off_first(&mut decoder.buf)?;
         *self = match num {
             0 => false,
@@ -720,7 +720,7 @@ impl Decodable for bool {
 impl_layout!(u8, align: 1, size: 1);
 
 impl Encodable for u8 {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self;
         Ok(())
@@ -731,7 +731,7 @@ impl Decodable for u8 {
     fn new_empty() -> Self {
         0
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)?;
         Ok(())
     }
@@ -740,7 +740,7 @@ impl Decodable for u8 {
 impl_layout!(i8, align: 1, size: 1);
 
 impl Encodable for i8 {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         let slot = encoder.next_slice(1)?;
         slot[0] = *self as u8;
         Ok(())
@@ -751,13 +751,13 @@ impl Decodable for i8 {
     fn new_empty() -> Self {
         0
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         *self = *split_off_first(&mut decoder.buf)? as i8;
         Ok(())
     }
 }
 
-fn encode_array<T: Encodable>(encoder: &mut Encoder, slice: &mut [T]) -> Result<()> {
+fn encode_array<T: Encodable>(encoder: &mut Encoder<'_>, slice: &mut [T]) -> Result<()> {
     encoder.recurse(|encoder| {
         for item in slice {
             item.encode(encoder)?;
@@ -766,7 +766,7 @@ fn encode_array<T: Encodable>(encoder: &mut Encoder, slice: &mut [T]) -> Result<
     })
 }
 
-fn decode_array<T: Decodable>(decoder: &mut Decoder, slice: &mut [T]) -> Result<()> {
+fn decode_array<T: Decodable>(decoder: &mut Decoder<'_>, slice: &mut [T]) -> Result<()> {
     decoder.recurse(|decoder| {
         for item in slice {
             item.decode(decoder)?;
@@ -782,7 +782,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
     }
 
     impl<T: Encodable> Encodable for [T; $len] {
-        fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+        fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
             encode_array(encoder, self)
         }
     }
@@ -799,7 +799,7 @@ macro_rules! impl_codable_for_fixed_array { ($($len:expr,)*) => { $(
             }
         }
 
-        fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+        fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
             decode_array(decoder, self)
         }
     }
@@ -820,7 +820,7 @@ impl_codable_for_fixed_array!(64,);
 // Hack for FIDL library fuchsia.net
 impl_codable_for_fixed_array!(256,);
 
-fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<()> {
+fn encode_byte_slice(encoder: &mut Encoder<'_>, slice_opt: Option<&[u8]>) -> Result<()> {
     match slice_opt {
         None => encode_absent_vector(encoder),
         Some(slice) => {
@@ -837,13 +837,13 @@ fn encode_byte_slice(encoder: &mut Encoder, slice_opt: Option<&[u8]>) -> Result<
 }
 
 /// Encode an missing vector-like component.
-pub fn encode_absent_vector(encoder: &mut Encoder) -> Result<()> {
+pub fn encode_absent_vector(encoder: &mut Encoder<'_>) -> Result<()> {
     0u64.encode(encoder)?;
     ALLOC_ABSENT_U64.encode(encoder)
 }
 
 /// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
-pub fn encode_encodable_iter<Iter, T>(encoder: &mut Encoder, iter_opt: Option<Iter>) -> Result<()>
+pub fn encode_encodable_iter<Iter, T>(encoder: &mut Encoder<'_>, iter_opt: Option<Iter>) -> Result<()>
 where
     Iter: ExactSizeIterator<Item = T>,
     T: Encodable,
@@ -872,7 +872,7 @@ where
 
 /// Attempts to decode a string into `string`, returning a `bool`
 /// indicating whether or not a string was present.
-fn decode_string(decoder: &mut Decoder, string: &mut String) -> Result<bool> {
+fn decode_string(decoder: &mut Decoder<'_>, string: &mut String) -> Result<bool> {
     let mut len: u64 = 0;
     len.decode(decoder)?;
 
@@ -896,7 +896,7 @@ fn decode_string(decoder: &mut Decoder, string: &mut String) -> Result<bool> {
 
 /// Attempts to decode a vec into `vec`, returning a `bool`
 /// indicating whether or not a vec was present.
-fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<bool> {
+fn decode_vec<T: Decodable>(decoder: &mut Decoder<'_>, vec: &mut Vec<T>) -> Result<bool> {
     let mut len: u64 = 0;
     len.decode(decoder)?;
 
@@ -929,7 +929,7 @@ fn decode_vec<T: Decodable>(decoder: &mut Decoder, vec: &mut Vec<T>) -> Result<b
 impl_layout!(&str, align: 8, size: 16);
 
 impl Encodable for &str {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
     }
 }
@@ -937,7 +937,7 @@ impl Encodable for &str {
 impl_layout!(String, align: 8, size: 16);
 
 impl Encodable for String {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_byte_slice(encoder, Some(self.as_bytes()))
     }
 }
@@ -947,7 +947,7 @@ impl Decodable for String {
         String::new()
     }
 
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         if decode_string(decoder, self)? {
             Ok(())
         } else {
@@ -959,7 +959,7 @@ impl Decodable for String {
 impl_layout!(Option<&str>, align: 8, size: 16);
 
 impl Encodable for Option<&str> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
     }
 }
@@ -967,7 +967,7 @@ impl Encodable for Option<&str> {
 impl_layout!(Option<String>, align: 8, size: 16);
 
 impl Encodable for Option<String> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_byte_slice(encoder, self.as_ref().map(|x| x.as_bytes()))
     }
 }
@@ -977,7 +977,7 @@ impl Decodable for Option<String> {
         None
     }
 
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let was_some;
         {
             let string = self.get_or_insert(String::new());
@@ -993,7 +993,7 @@ impl Decodable for Option<String> {
 impl_layout_forall_T!(&mut dyn ExactSizeIterator<Item = T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, Some(self))
     }
 }
@@ -1001,7 +1001,7 @@ impl<T: Encodable> Encodable for &mut dyn ExactSizeIterator<Item = T> {
 impl_layout_forall_T!(&mut [T], align: 8, size: 16);
 
 impl<T: Encodable> Encodable for &mut [T] {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
     }
 }
@@ -1009,7 +1009,7 @@ impl<T: Encodable> Encodable for &mut [T] {
 impl_layout_forall_T!(Vec<T>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Vec<T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, Some(self.iter_mut()))
     }
 }
@@ -1019,7 +1019,7 @@ impl<T: Decodable> Decodable for Vec<T> {
         Vec::new()
     }
 
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         if decode_vec(decoder, self)? {
             Ok(())
         } else {
@@ -1031,7 +1031,7 @@ impl<T: Decodable> Decodable for Vec<T> {
 impl_layout_forall_T!(Option<&mut dyn ExactSizeIterator<Item = T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| &mut **x))
     }
 }
@@ -1039,7 +1039,7 @@ impl<T: Encodable> Encodable for Option<&mut dyn ExactSizeIterator<Item = T>> {
 impl_layout_forall_T!(Option<&mut [T]>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<&mut [T]> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
 }
@@ -1047,7 +1047,7 @@ impl<T: Encodable> Encodable for Option<&mut [T]> {
 impl_layout_forall_T!(Option<Vec<T>>, align: 8, size: 16);
 
 impl<T: Encodable> Encodable for Option<Vec<T>> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         encode_encodable_iter(encoder, self.as_mut().map(|x| x.iter_mut()))
     }
 }
@@ -1057,7 +1057,7 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
         None
     }
 
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let was_some;
         {
             let vec = self.get_or_insert(Vec::new());
@@ -1138,7 +1138,7 @@ macro_rules! fidl_bits {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
                 -> ::std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut self.bits, encoder)
@@ -1150,7 +1150,7 @@ macro_rules! fidl_bits {
                 Self::empty()
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>)
                 -> ::std::result::Result<(), $crate::Error>
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
@@ -1223,7 +1223,7 @@ macro_rules! fidl_enum {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
                 -> ::std::result::Result<(), $crate::Error>
             {
                 $crate::fidl_encode!(&mut (*self as $prim_ty), encoder)
@@ -1240,7 +1240,7 @@ macro_rules! fidl_enum {
                 panic!("new_empty called on enum with no variants")
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>)
                 -> ::std::result::Result<(), $crate::Error>
             {
                 let mut prim = $crate::fidl_new_empty!($prim_ty);
@@ -1255,7 +1255,7 @@ macro_rules! fidl_enum {
 impl_layout!(Handle, align: 4, size: 4);
 
 impl Encodable for Handle {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         ALLOC_PRESENT_U32.encode(encoder)?;
         let handle = take_handle(self);
         encoder.handles.push(handle);
@@ -1267,7 +1267,7 @@ impl Decodable for Handle {
     fn new_empty() -> Self {
         Handle::invalid()
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let mut present: u32 = 0;
         present.decode(decoder)?;
         match present {
@@ -1283,7 +1283,7 @@ impl Decodable for Handle {
 impl_layout!(Option<Handle>, align: 4, size: 4);
 
 impl Encodable for Option<Handle> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         match self {
             Some(handle) => handle.encode(encoder),
             None => ALLOC_ABSENT_U32.encode(encoder),
@@ -1295,7 +1295,7 @@ impl Decodable for Option<Handle> {
     fn new_empty() -> Self {
         None
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let mut present: u32 = 0;
         present.decode(decoder)?;
         match present {
@@ -1324,7 +1324,7 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for $ty<$($($generic,)*)*> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
                 -> $crate::Result<()>
             {
                 let mut handle = $crate::encoding::take_handle(self);
@@ -1336,7 +1336,7 @@ macro_rules! handle_based_codable {
             fn new_empty() -> Self {
                 <$ty<$($($generic,)*)*> as $crate::handle::HandleBased>::from_handle($crate::handle::Handle::invalid())
             }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder)
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>)
                 -> $crate::Result<()>
             {
                 let mut handle = $crate::handle::Handle::invalid();
@@ -1352,7 +1352,7 @@ macro_rules! handle_based_codable {
         }
 
         impl<$($($generic,)*)*> $crate::encoding::Encodable for Option<$ty<$($($generic,)*)*>> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder)
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>)
                 -> $crate::Result<()>
             {
                 match self {
@@ -1364,7 +1364,7 @@ macro_rules! handle_based_codable {
 
         impl<$($($generic,)*)*> $crate::encoding::Decodable for Option<$ty<$($($generic,)*)*>> {
             fn new_empty() -> Self { None }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 let mut handle: Option<$crate::handle::Handle> = None;
                 $crate::fidl_decode!(&mut handle, decoder)?;
                 *self = handle.map(Into::into);
@@ -1384,7 +1384,7 @@ impl Layout for zx_status::Status {
 }
 
 impl Encodable for zx_status::Status {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         let slot = encoder.next_slice(mem::size_of::<zx_status::zx_status_t>())?;
         LittleEndian::write_i32(slot, self.into_raw());
         Ok(())
@@ -1395,7 +1395,7 @@ impl Decodable for zx_status::Status {
     fn new_empty() -> Self {
         Self::from_raw(0)
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let end = mem::size_of::<zx_status::zx_status_t>();
         let range = split_off_front(&mut decoder.buf, end)?;
         *self = Self::from_raw(LittleEndian::read_i32(range));
@@ -1420,7 +1420,7 @@ impl Layout for EpitaphBody {
 }
 
 impl Encodable for EpitaphBody {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         self.error.encode(encoder)
     }
 }
@@ -1429,7 +1429,7 @@ impl Decodable for EpitaphBody {
     fn new_empty() -> Self {
         Self { error: zx_status::Status::new_empty() }
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         self.error.decode(decoder)
     }
 }
@@ -1494,7 +1494,7 @@ mod fidl_handle_encoding {
     impl_layout!(FidlDebugLog, align: 1, size: 1);
 
     impl Encodable for FidlDebugLog {
-        fn encode(&mut self, _: &mut Encoder) -> Result<()> {
+        fn encode(&mut self, _: &mut Encoder<'_>) -> Result<()> {
             Err(Error::InvalidHostHandle)
         }
     }
@@ -1504,7 +1504,7 @@ mod fidl_handle_encoding {
             FidlDebugLog::from(Handle::invalid())
         }
 
-        fn decode(&mut self, _: &mut Decoder) -> Result<()> {
+        fn decode(&mut self, _: &mut Decoder<'_>) -> Result<()> {
             Err(Error::InvalidHostHandle)
         }
     }
@@ -1533,7 +1533,7 @@ pub trait Autonull: Encodable + Decodable {}
 
 /// A wrapper for FIDL types that will cause them to be encoded
 /// or decoded from the out-of-line buffer rather than inline.
-pub struct OutOfLine<'a, T: 'a>(pub &'a mut T);
+pub struct OutOfLine<'a, T>(pub &'a mut T);
 
 impl<T: AutonullContainer> Layout for Option<T> {
     fn inline_align(context: &Context) -> usize {
@@ -1545,7 +1545,7 @@ impl<T: AutonullContainer> Layout for Option<T> {
 }
 
 impl<T: AutonullContainer + Encodable> Encodable for Option<T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         match self {
             Some(x) => x.encode(encoder),
             None => {
@@ -1571,7 +1571,7 @@ impl<T: AutonullContainer + Decodable> Decodable for Option<T> {
     fn new_empty() -> Self {
         None
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let inline_size = decoder.inline_size_of::<T>();
         let present = check_for_presence(decoder, inline_size)?;
         if present {
@@ -1600,7 +1600,7 @@ impl<T: Autonull> Layout for OutOfLine<'_, T> {
 }
 
 impl<T: Autonull> Encodable for OutOfLine<'_, T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
         encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| self.0.encode(encoder))
     }
@@ -1618,7 +1618,7 @@ impl<T: Autonull> Layout for Box<T> {
 }
 
 impl<T: Autonull> Encodable for Box<T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         ALLOC_PRESENT_U64.encode(encoder)?;
         encoder.write_out_of_line(encoder.inline_size_of::<T>(), |encoder| {
             (&mut **self).encode(encoder)
@@ -1630,7 +1630,7 @@ impl<T: Autonull> Decodable for Box<T> {
     fn new_empty() -> Self {
         Box::new(T::new_empty())
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         let mut present: u64 = 0;
         fidl_decode!(&mut present, decoder)?;
         if present != ALLOC_PRESENT_U64 {
@@ -1679,7 +1679,7 @@ macro_rules! fidl_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 encoder.recurse(|encoder| {
                     let mut cur_offset = 0;
                     $(
@@ -1710,7 +1710,7 @@ macro_rules! fidl_struct {
                 }
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 decoder.recurse(|decoder| {
                     let mut cur_offset = 0;
                     $(
@@ -1753,14 +1753,14 @@ macro_rules! fidl_empty_struct {
         }
 
         impl $crate::encoding::Encodable for $name {
-          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+          fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
               $crate::fidl_encode!(&mut 0u8, encoder)
           }
         }
 
         impl $crate::encoding::Decodable for $name {
           fn new_empty() -> Self { $name }
-          fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+          fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
             let mut x = 0u8;
              $crate::fidl_decode!(&mut x, decoder)?;
             if x == 0 {
@@ -1778,7 +1778,7 @@ macro_rules! fidl_empty_struct {
 /// Encode the provided value behind a FIDL "envelope".
 pub fn encode_in_envelope(
     val: &mut Option<&mut dyn Encodable>,
-    encoder: &mut Encoder,
+    encoder: &mut Encoder<'_>,
 ) -> Result<()> {
     // u32 num_bytes
     // u32 num_handles
@@ -1812,7 +1812,7 @@ pub fn encode_in_envelope(
 }
 
 /// Decodes a reserved field in a table (an empty envelope).
-pub fn decode_reserved_table_field(decoder: &mut Decoder) -> Result<()> {
+pub fn decode_reserved_table_field(decoder: &mut Decoder<'_>) -> Result<()> {
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder)?;
     let mut num_handles: u32 = 0;
@@ -1856,7 +1856,7 @@ macro_rules! fidl_table {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 let members: &mut [(u64, Option<&mut dyn $crate::encoding::Encodable>)] = &mut [$(
                     ($ordinal, self.$member_name.as_mut().map(|x| x as &mut dyn $crate::encoding::Encodable)),
                 )*];
@@ -1901,7 +1901,7 @@ macro_rules! fidl_table {
             fn new_empty() -> Self {
                 Self::empty()
             }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 // Decode envelope vector header
                 let mut len: u64 = 0;
                 $crate::fidl_decode!(&mut len, decoder)?;
@@ -2015,7 +2015,7 @@ fn union_result_inline_size<O: Layout>(context: &Context) -> usize {
 }
 
 /// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
-pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u32, u32, u32)> {
+pub fn decode_xunion_inline_portion(decoder: &mut Decoder<'_>) -> Result<(u32, u32, u32)> {
     let mut ordinal: u32 = 0;
     ordinal.decode(decoder)?;
 
@@ -2041,7 +2041,7 @@ pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u32, u32, 
 /// Assumes Ok and Err use ordinals 1 and 2, respectively.
 fn decode_result_from_xunion<O, E>(
     result: &mut std::result::Result<O, E>,
-    decoder: &mut Decoder,
+    decoder: &mut Decoder<'_>,
 ) -> Result<()>
 where
     O: Decodable,
@@ -2122,7 +2122,7 @@ where
     O: Decodable + Encodable,
     E: Decodable + Encodable,
 {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         if encoder.context.unions_use_xunion_format {
             match self {
                 Ok(val) => {
@@ -2197,7 +2197,7 @@ where
         Ok(<O as Decodable>::new_empty())
     }
 
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         if decoder.context().unions_use_xunion_format {
             return decode_result_from_xunion(self, decoder);
         }
@@ -2296,7 +2296,7 @@ macro_rules! fidl_union {
                 }
             }
 
-            fn decode_from_xunion(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode_from_xunion(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 #![allow(irrefutable_let_patterns)]
                 let (ordinal, _, _) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
                 let member_inline_size = match ordinal {
@@ -2352,7 +2352,7 @@ macro_rules! fidl_union {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 if encoder.context().unions_use_xunion_format {
                     let mut ordinal = self.ordinal();
                     // Encode tag
@@ -2401,7 +2401,7 @@ macro_rules! fidl_union {
                 panic!("called new_empty on empty fidl union")
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 #![allow(unused)]
                 if decoder.context().unions_use_xunion_format {
                     return self.decode_from_xunion(decoder);
@@ -2469,7 +2469,7 @@ macro_rules! fidl_union {
         }
 
         impl $crate::encoding::Encodable for $out_of_line_ty<'_, $name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 if encoder.context().unions_use_xunion_format {
                     $crate::fidl_encode!(&mut self.0, encoder)
                 } else {
@@ -2481,7 +2481,7 @@ macro_rules! fidl_union {
             }
         }
         impl $crate::encoding::Encodable for Box<$name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 $crate::fidl_encode!(&mut $out_of_line_ty(&mut **self), encoder)
             }
         }
@@ -2490,7 +2490,7 @@ macro_rules! fidl_union {
             fn new_empty() -> Self {
                 Box::new($crate::fidl_new_empty!($name))
             }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 if decoder.context().unions_use_xunion_format {
                     (**self).decode(decoder)
                 } else {
@@ -2560,7 +2560,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Encodable for $name {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
                 // Encode tag
                 $crate::fidl_encode!(&mut ordinal, encoder)?;
@@ -2602,7 +2602,7 @@ macro_rules! fidl_xunion {
                 )?
             }
 
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 #![allow(irrefutable_let_patterns, unused)]
                 let (ordinal, num_bytes, num_handles) = $crate::encoding::decode_xunion_inline_portion(decoder)?;
                 let member_inline_size = match ordinal {
@@ -2677,14 +2677,14 @@ macro_rules! fidl_xunion {
         }
 
         impl $crate::encoding::Encodable for Box<$name> {
-            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 (**self).encode(encoder)
             }
         }
 
         impl $crate::encoding::Decodable for Box<$name> {
             fn new_empty() -> Self { Box::new($name::new_empty()) }
-            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder<'_>) -> $crate::Result<()> {
                 (**self).decode(decoder)
             }
         }
@@ -2804,7 +2804,7 @@ impl TransactionHeader {
 }
 
 /// Transactional FIDL message
-pub struct TransactionMessage<'a, T: 'a> {
+pub struct TransactionMessage<'a, T> {
     /// Header of the message
     pub header: TransactionHeader,
     /// Body of the message
@@ -2821,7 +2821,7 @@ impl<T: Layout> Layout for TransactionMessage<'_, T> {
 }
 
 impl<T: Encodable> Encodable for TransactionMessage<'_, T> {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         self.header.encode(encoder)?;
         (*self.body).encode(encoder)?;
         Ok(())
@@ -2832,7 +2832,7 @@ impl<T: Decodable> Decodable for TransactionMessage<'_, T> {
     fn new_empty() -> Self {
         panic!("cannot create an empty transaction message")
     }
-    fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
         self.header.decode(decoder)?;
         decoder.context = self.header.decoding_context();
         (*self.body).decode(decoder)?;
@@ -2912,7 +2912,7 @@ macro_rules! tuple_impls {
             where $typ: Encodable,
                   $( $ntyp: Encodable,)*
         {
-            fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+            fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
                 encoder.recurse(|encoder| {
                     let mut cur_offset = 0;
                     self.$idx.encode(encoder)?;
@@ -2946,7 +2946,7 @@ macro_rules! tuple_impls {
                 )
             }
 
-            fn decode(&mut self, decoder: &mut Decoder) -> Result<()> {
+            fn decode(&mut self, decoder: &mut Decoder<'_>) -> Result<()> {
                 decoder.recurse(|decoder| {
                     let mut cur_offset = 0;
                     self.$idx.decode(decoder)?;
@@ -3000,7 +3000,7 @@ tuple_impls!(
 impl_layout!((), align: 0, size: 0);
 
 impl Encodable for () {
-    fn encode(&mut self, _: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, _: &mut Encoder<'_>) -> Result<()> {
         Ok(())
     }
 }
@@ -3009,7 +3009,7 @@ impl Decodable for () {
     fn new_empty() -> Self {
         ()
     }
-    fn decode(&mut self, _: &mut Decoder) -> Result<()> {
+    fn decode(&mut self, _: &mut Decoder<'_>) -> Result<()> {
         Ok(())
     }
 }
@@ -3024,7 +3024,7 @@ impl<T: Layout> Layout for &mut T {
 }
 
 impl<T: Encodable> Encodable for &mut T {
-    fn encode(&mut self, encoder: &mut Encoder) -> Result<()> {
+    fn encode(&mut self, encoder: &mut Encoder<'_>) -> Result<()> {
         (&mut **self).encode(encoder)
     }
 }

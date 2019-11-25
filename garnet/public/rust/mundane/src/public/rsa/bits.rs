@@ -59,7 +59,7 @@ macro_rules! impl_bits {
         }
 
         impl Display for $name {
-            fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+            fn fmt(&self, f: &mut Formatter<'_>) -> Result<(), fmt::Error> {
                 write!(f, "{} bits", $bits)
             }
         }
