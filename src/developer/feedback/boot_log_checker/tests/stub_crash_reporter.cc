@@ -5,7 +5,10 @@
 #include "src/developer/feedback/boot_log_checker/tests/stub_crash_reporter.h"
 
 #include <lib/fit/result.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
+
+#include <optional>
 
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -24,9 +27,16 @@ void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback
   if (!fsl::StringFromVmo(report.attachments()[0].value, &reboot_log_)) {
     FX_LOGS(ERROR) << "error parsing feedback log VMO as string";
     callback(fit::error(ZX_ERR_INTERNAL));
-  } else {
-    callback(fit::ok());
+    return;
   }
+
+  if (report.has_program_uptime()) {
+    uptime_ = zx::duration(report.program_uptime());
+  } else {
+    uptime_ = std::nullopt;
+  }
+
+  callback(fit::ok());
 }
 
 void StubCrashReporterAlwaysReturnsError::File(fuchsia::feedback::CrashReport report,

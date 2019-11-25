@@ -6,10 +6,12 @@
 
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/result.h>
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include <cstdint>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
@@ -39,6 +41,7 @@ struct TestParam {
   std::string test_name;
   std::string input_reboot_log;
   std::string output_crash_signature;
+  std::optional<zx::duration> output_uptime;
   uint32_t output_cobalt_event_code;
 };
 
@@ -69,7 +72,8 @@ class RebootLogHandlerTest : public UnitTestFixture, public testing::WithParamIn
     }
   }
 
-  void WriteRebootLogContents(const std::string& contents = "ZIRCON KERNEL PANIC") {
+  void WriteRebootLogContents(
+      const std::string& contents = "ZIRCON KERNEL PANIC\n\nUPTIME (ms)\n74715002") {
     ASSERT_TRUE(tmp_dir_.NewTempFileWithData(contents, &reboot_log_path_));
   }
 
@@ -113,20 +117,44 @@ INSTANTIATE_TEST_SUITE_P(WithVariousRebootLogs, RebootLogHandlerTest,
                          ::testing::ValuesIn(std::vector<TestParam>({
                              {
                                  "KernelPanicCrashLog",
+                                 "ZIRCON KERNEL PANIC\n\nUPTIME (ms)\n74715002",
+                                 "fuchsia-kernel-panic",
+                                 zx::msec(74715002),
+                                 kKernelPanic,
+                             },
+                             {
+                                 "KernelPanicCrashLogNoUptime",
                                  "ZIRCON KERNEL PANIC",
                                  "fuchsia-kernel-panic",
+                                 std::nullopt,
+                                 kKernelPanic,
+                             },
+                             {
+                                 "KernelPanicCrashLogWrongUptime",
+                                 "ZIRCON KERNEL PANIC\n\nUNRECOGNIZED",
+                                 "fuchsia-kernel-panic",
+                                 std::nullopt,
                                  kKernelPanic,
                              },
                              {
                                  "OutOfMemoryLog",
+                                 "ZIRCON OOM\n\nUPTIME (ms)\n65487494",
+                                 "fuchsia-oom",
+                                 zx::msec(65487494),
+                                 kOom,
+                             },
+                             {
+                                 "OutOfMemoryLogNoUptime",
                                  "ZIRCON OOM",
                                  "fuchsia-oom",
+                                 std::nullopt,
                                  kOom,
                              },
                              {
                                  "UnrecognizedCrashTypeInRebootLog",
                                  "UNRECOGNIZED CRASH TYPE",
                                  "fuchsia-kernel-panic",
+                                 std::nullopt,
                                  kKernelPanic,
                              },
                          })),
@@ -146,6 +174,7 @@ TEST_P(RebootLogHandlerTest, Succeed) {
   EXPECT_EQ(result.state(), kOk);
   EXPECT_STREQ(crash_reporter_->crash_signature().c_str(), param.output_crash_signature.c_str());
   EXPECT_STREQ(crash_reporter_->reboot_log().c_str(), param.input_reboot_log.c_str());
+  EXPECT_EQ(crash_reporter_->uptime(), param.output_uptime);
 
   EXPECT_EQ(logger_factory_->LastMetricId(), cobalt_registry::kRebootMetricId);
   EXPECT_EQ(logger_factory_->LastEventCode(), param.output_cobalt_event_code);

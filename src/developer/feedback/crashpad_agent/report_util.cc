@@ -4,6 +4,7 @@
 
 #include "src/developer/feedback/crashpad_agent/report_util.h"
 
+#include <lib/zx/time.h>
 #include <zircon/errors.h>
 
 #include <string>
@@ -39,6 +40,9 @@ bool AddAttachment(const std::string& filename, const fuchsia::mem::Buffer& cont
 
 namespace {
 
+// The crash server expects a specific key for client-provided program uptimes.
+const char kProgramUptimeMillisKey[] = "ptime";
+
 // The crash server expects a specific key for client-provided event keys.
 const char kEventIdKey[] = "comments";
 
@@ -62,6 +66,11 @@ void ExtractAnnotationsAndAttachments(fuchsia::feedback::CrashReport report,
     for (const auto& annotation : report.annotations()) {
       (*annotations)[annotation.key] = annotation.value;
     }
+  }
+
+  if (report.has_program_uptime()) {
+    (*annotations)[kProgramUptimeMillisKey] =
+        std::to_string(zx::duration(report.program_uptime()).to_msecs());
   }
 
   if (report.has_event_id()) {

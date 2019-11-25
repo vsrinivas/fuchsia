@@ -8,6 +8,9 @@
 #include <fuchsia/feedback/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
+#include <lib/zx/time.h>
+
+#include <optional>
 
 namespace feedback {
 
@@ -22,6 +25,7 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
 
   const std::string& crash_signature() { return crash_signature_; };
   const std::string& reboot_log() { return reboot_log_; };
+  const std::optional<zx::duration>& uptime() { return uptime_; };
 
  protected:
   void CloseAllConnections() { bindings_.CloseAll(); }
@@ -30,6 +34,7 @@ class StubCrashReporter : public fuchsia::feedback::CrashReporter {
   fidl::BindingSet<fuchsia::feedback::CrashReporter> bindings_;
   std::string crash_signature_;
   std::string reboot_log_;
+  std::optional<zx::duration> uptime_;
 };
 
 class StubCrashReporterClosesConnection : public StubCrashReporter {

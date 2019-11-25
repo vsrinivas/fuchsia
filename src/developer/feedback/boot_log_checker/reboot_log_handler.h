@@ -11,6 +11,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <lib/sys/cpp/service_directory.h>
+#include <lib/zx/time.h>
 #include <sys/stat.h>
 
 #include <memory>
@@ -31,8 +32,14 @@ fit::promise<void> HandleRebootLog(const std::string& filepath,
 
 namespace internal {
 
-// The type of crashes we expect in the reboot log and want file crash reports for.
+// The type of crashes we expect in the crash reboot log and want to report on.
 enum class CrashType { KERNEL_PANIC, OOM };
+
+// The information extracted from the crash reboot log.
+struct CrashInfo {
+  CrashType crash_type;
+  std::optional<zx::duration> uptime;
+};
 
 // Wraps around fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter, fuchsia.cobalt.Logger and
 // fuchsia.cobalt.LoggerFactory to handle establishing the connection, losing the connection,
@@ -47,7 +54,7 @@ class RebootLogHandler {
 
  private:
   fit::promise<void> WaitForNetworkToBeReachable();
-  fit::promise<void> FileCrashReport(CrashType crash_type);
+  fit::promise<void> FileCrashReport(CrashInfo info);
   fit::promise<void> SendCobaltMetrics(CrashType crash_type);
 
   const std::shared_ptr<sys::ServiceDirectory> services_;

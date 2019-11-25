@@ -461,6 +461,23 @@ TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithEventId) {
   CheckAttachmentsOnServer();
 }
 
+TEST_F(CrashpadAgentTest, Succeed_OnInputCrashReportWithProgramUptime) {
+  SetUpAgentDefaultConfig({kUploadSuccessful});
+  SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());
+  CrashReport report;
+  report.set_program_name(kProgramName);
+  const zx::duration uptime =
+      zx::hour(3) * 24 + zx::hour(15) + zx::min(33) + zx::sec(17) + zx::msec(54);
+  report.set_program_uptime(uptime.get());
+
+  ASSERT_TRUE(FileOneCrashReport(std::move(report)).is_ok());
+  CheckAttachmentsInDatabase();
+  CheckAnnotationsOnServer({
+      {"ptime", std::to_string(uptime.to_msecs())},
+  });
+  CheckAttachmentsOnServer();
+}
+
 TEST_F(CrashpadAgentTest, Succeed_OnGenericInputCrashReport) {
   SetUpAgentDefaultConfig({kUploadSuccessful});
   SetUpFeedbackDataProvider(std::make_unique<StubFeedbackDataProvider>());

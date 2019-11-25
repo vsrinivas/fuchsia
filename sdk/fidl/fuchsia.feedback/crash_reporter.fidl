@@ -22,6 +22,9 @@ table CrashReport {
     /// The name of the program that crashed, e.g., the process or component's name.
     1: string:1024 program_name;
 
+    /// How long the program was running before it crashed.
+    6: zx.duration program_uptime;
+
     /// The specific report that depends on the type of crashes.
     2: SpecificCrashReport specific_report;
 
