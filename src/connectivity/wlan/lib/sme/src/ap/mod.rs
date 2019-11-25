@@ -190,6 +190,10 @@ impl ApSme {
                 State::Idle { ctx }
             }
             State::Started { bss } => {
+                // TODO(37891): IEEE Std 802.11-2016, 6.3.12.2.3: The SME should notify associated
+                // non-AP STAs of imminent infrastructure BSS termination before issuing the
+                // MLME-STOP.request primitive. This can be done with the BSS transition management
+                // procedure, using the Termination information.
                 let req = fidl_mlme::StopRequest { ssid: bss.ssid.clone() };
                 bss.ctx.mlme_sink.send(MlmeRequest::Stop(req));
                 // Currently, MLME doesn't send any response back. We simply assume
@@ -415,7 +419,13 @@ impl InfraBss {
             Some(client) => client,
         };
 
-        client.handle_assoc_ind(&mut self.ctx, &mut self.aid_map, &self.rsn_cfg, ind.rsne);
+        client.handle_assoc_ind(
+            &mut self.ctx,
+            &mut self.aid_map,
+            &ind.rates,
+            &self.rsn_cfg,
+            ind.rsne,
+        );
         if !client.authenticated() {
             warn!("client {:02X?} failed to associate and was deauthenticated", peer_addr);
             self.remove_client(&peer_addr);
@@ -961,6 +971,7 @@ mod tests {
                     listen_interval: 100,
                     ssid: Some(SSID.to_vec()),
                     rsne,
+                    rates: vec![1, 2, 3],
                 },
             }
         }

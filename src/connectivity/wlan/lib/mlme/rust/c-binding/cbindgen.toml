@@ -32,6 +32,7 @@ include = ["Ap", "BufferProvider", "Device", "InBuf", "OutBuf", "Client",
 
 exclude = [
     # Banjo types.
+    "WlanAssocCtx",
     "WlanChannel",
     "WlanBssConfig",
 
@@ -56,6 +57,7 @@ exclude = [
 "ClientConfig" = "wlan_client_mlme_config_t"
 
 # Banjo types.
+"WlanAssocCtx" = "wlan_assoc_ctx_t"
 "WlanChannel" = "wlan_channel_t"
 "WlanBssConfig" = "wlan_bss_config_t"
 

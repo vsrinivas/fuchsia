@@ -89,6 +89,12 @@ Station::Station(DeviceInterface* device, wlan_client_mlme_config_t* mlme_config
         // The client never needs to disable beaconing.
         return ZX_ERR_NOT_SUPPORTED;
       },
+      .configure_assoc = [](void* sta, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
+        return STA(sta)->device_->ConfigureAssoc(assoc_ctx);
+      },
+      .clear_assoc = [](void* sta, const uint8_t (*addr)[6]) -> zx_status_t {
+        return STA(sta)->device_->ClearAssoc(common::MacAddr(*addr));
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = static_cast<void*>(this),

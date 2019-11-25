@@ -85,6 +85,29 @@ enum WlanBssType : uint8 {
     ANY_BSS = 5;
 };
 
+enum WlanPhyType : uint8 {
+    /// IEEE 802.11 for 1, 2 Mbps.
+    DSSS = 0x01;
+
+    /// IEEE 802.11 for 5.5, 11 Mbps. ERP-CCK.
+    CCK = 0x02;
+
+    /// IEEE 802.11g, 1, 2, 5,5, 11, 12, 24 Mbps + [6, 54] Mbps.
+    ERP = 0x04;
+
+    /// IEEE 802.11a/g.
+    OFDM = 0x4;
+
+    /// IEEE 802.11n.
+    HT = 0x08;
+
+    /// IEEE 802.11ac.
+    VHT = 0x10;
+
+    /// IEEE 802.11ax.
+    HEW = 0x20;
+};
+
 struct WlanBssConfig {
     array<uint8>:6 bssid;
     /// Whether this BSS is an infrastructure or independent BSS.
@@ -107,8 +130,7 @@ struct WlanAssocCtx {
     array<uint8>:6 bssid;
     uint16 aid;
     uint16 listen_interval;
-    /// a single enumerator from enum PHY.
-    uint8 phy;
+    WlanPhyType phy;
     WlanChannel chan;
     bool qos;
 

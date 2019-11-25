@@ -111,24 +111,32 @@ struct AssociationError {
     result_code: fidl_mlme::AssociateResultCodes,
 }
 
+/// Contains information from a successful association.
+struct Association {
+    aid: Aid,
+    rates: Vec<u8>,
+    rsna_link_state: Option<RsnaLinkState>,
+}
+
 impl Authenticated {
     /// Handles an association indication.
     ///
     /// It will:
     /// - assign an association ID from the provided indication map.
+    /// - find common rates between the client and the AP.
     /// - if the AP has an RSN configuration, and the client has provided a supplicant RSNE,
     ///   negotiate an EAPoL controlled port.
     ///
-    /// If successful, it will return a tuple of association ID and an RSNA link state, if any.
     /// If unsuccessful, the resulting error will indicate the MLME result code.
     fn handle_assoc_ind(
         &self,
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
-    ) -> Result<(Aid, Option<RsnaLinkState>), AssociationError> {
+    ) -> Result<Association, AssociationError> {
         let rsna_link_state = match (s_rsne.as_ref(), rsn_cfg) {
             (Some(s_rsne_bytes), Some(a_rsn)) => {
                 let authenticator = new_authenticator_from_rsne(
@@ -158,7 +166,10 @@ impl Authenticated {
             result_code: fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
         })?;
 
-        Ok((aid, rsna_link_state))
+        // TODO(37891): Intersect rates.
+        let rates = rates.to_vec();
+
+        Ok(Association { aid, rates, rsna_link_state })
     }
 
     /// Handles incoming association timeout events.
@@ -507,17 +518,19 @@ impl States {
         r_sta: &mut RemoteClient,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) -> States {
         match self {
             States::Authenticated(state) => {
-                match state.handle_assoc_ind(r_sta, ctx, aid_map, rsn_cfg, s_rsne) {
-                    Ok((aid, mut rsna_link_state)) => {
+                match state.handle_assoc_ind(r_sta, ctx, aid_map, rates, rsn_cfg, s_rsne) {
+                    Ok(Association { aid, rates, mut rsna_link_state }) => {
                         r_sta.send_associate_resp(
                             ctx,
                             fidl_mlme::AssociateResultCodes::Success,
                             aid,
+                            rates,
                         );
 
                         // RSNA authentication needs to be handled after association.
@@ -539,7 +552,7 @@ impl States {
                     }
                     Err(AssociationError { error, result_code }) => {
                         error!("client {:02X?} MLME-ASSOCIATE.indication: {}", r_sta.addr, error);
-                        r_sta.send_associate_resp(ctx, result_code, 0);
+                        r_sta.send_associate_resp(ctx, result_code, 0, vec![]);
                         r_sta.send_deauthenticate_req(
                             ctx,
                             match result_code {
@@ -558,6 +571,7 @@ impl States {
                     ctx,
                     fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified,
                     0,
+                    vec![],
                 );
                 self
             }
@@ -811,7 +825,8 @@ mod tests {
         let state = States::from(State::new(Authenticating));
 
         let mut aid_map = aid::Map::default();
-        let state = state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &None, None);
+        let state =
+            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
 
         let (_, Authenticating) = match state {
             States::Authenticating(state) => state.release_data(),
@@ -823,10 +838,12 @@ mod tests {
             peer_sta_address,
             association_id,
             result_code,
+            rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(association_id, 0);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
+            assert_eq!(rates, vec![]);
         });
     }
 
@@ -905,7 +922,8 @@ mod tests {
             State::new(Authenticating).transition_to(Authenticated { timeout_event_id: 1 }).into();
 
         let mut aid_map = aid::Map::default();
-        let state = state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &None, None);
+        let state =
+            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
 
         let (_, Associated { rsna_link_state, aid }) = match state {
             States::Associated(state) => state.release_data(),
@@ -939,7 +957,8 @@ mod tests {
             // Keep assigning AIDs until we run out of them.
         }
 
-        let state = state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &None, None);
+        let state =
+            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &[][..], &None, None);
 
         let (_, Authenticating) = match state {
             States::Authenticating(state) => state.release_data(),
@@ -980,8 +999,14 @@ mod tests {
         s_rsne.write_into(&mut s_rsne_vec).expect("error writing RSNE");
 
         let mut aid_map = aid::Map::default();
-        let state =
-            state.handle_assoc_ind(&mut r_sta, &mut ctx, &mut aid_map, &None, Some(s_rsne_vec));
+        let state = state.handle_assoc_ind(
+            &mut r_sta,
+            &mut ctx,
+            &mut aid_map,
+            &[][..],
+            &None,
+            Some(s_rsne_vec),
+        );
 
         let (_, Authenticating) = match state {
             States::Authenticating(state) => state.release_data(),
@@ -1029,6 +1054,7 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            &[][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );
@@ -1077,6 +1103,7 @@ mod tests {
             &mut r_sta,
             &mut ctx,
             &mut aid_map,
+            &[][..],
             &Some(rsn_cfg),
             Some(s_rsne_vec),
         );

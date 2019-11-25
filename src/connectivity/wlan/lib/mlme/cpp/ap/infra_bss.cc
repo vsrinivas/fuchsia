@@ -83,6 +83,12 @@ InfraBss::InfraBss(DeviceInterface* device, std::unique_ptr<BeaconSender> bcn_se
       .disable_beaconing = [](void* bss) -> zx_status_t {
         return BSS(bss)->device_->EnableBeaconing(nullptr);
       },
+      .configure_assoc = [](void* bss, wlan_assoc_ctx_t* assoc_ctx) -> zx_status_t {
+        return BSS(bss)->device_->ConfigureAssoc(assoc_ctx);
+      },
+      .clear_assoc = [](void* bss, const uint8_t (*addr)[6]) -> zx_status_t {
+        return BSS(bss)->device_->ClearAssoc(common::MacAddr(*addr));
+      },
   };
   wlan_scheduler_ops_t scheduler = {
       .cookie = this,

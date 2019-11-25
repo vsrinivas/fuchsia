@@ -271,7 +271,7 @@ mod tests {
     fn state_transition_self_transition() {
         let state = State::new(A);
 
-        let state = state.transition_to(B(SharedStateData {foo: 5 }));
+        let state = state.transition_to(B(SharedStateData { foo: 5 }));
         let (transition, data) = state.release_data();
         assert_eq!(data.0.foo, 5);
 

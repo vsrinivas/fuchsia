@@ -22,7 +22,9 @@ rustc_library("wlan-mlme") {
     "//src/connectivity/wlan/lib/statemachine:wlan-statemachine",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:log",
+    "//zircon/system/banjo/ddk.hw.wlan.ieee80211:ddk.hw.wlan.ieee80211-rustc",
     "//zircon/system/banjo/ddk.protocol.wlan.info:ddk.protocol.wlan.info-rustc",
+    "//zircon/system/banjo/wlan.protocol.info:wlan.protocol.info-rustc",
   ]
 }
 

@@ -8,7 +8,7 @@ use {
     failure::format_err,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     std::ffi::c_void,
-    wlan_common::TimeUnit,
+    wlan_common::{mac::MacAddr, TimeUnit},
 };
 
 #[derive(Debug, PartialEq)]
@@ -62,6 +62,11 @@ pub struct Device {
     disable_beaconing: extern "C" fn(device: *mut c_void) -> i32,
     /// Sets the link status to be UP or DOWN.
     set_link_status: extern "C" fn(device: *mut c_void, status: u8) -> i32,
+    /// Configure the association context.
+    /// |assoc_ctx| is mutable because the underlying API does not take a const wlan_assoc_ctx_t.
+    configure_assoc: extern "C" fn(device: *mut c_void, assoc_ctx: *mut WlanAssocCtx) -> i32,
+    /// Clear the association context.
+    clear_assoc: extern "C" fn(device: *mut c_void, addr: &[u8; 6]) -> i32,
 }
 
 impl Device {
@@ -139,6 +144,16 @@ impl Device {
         let status = (self.set_link_status)(self.device, status.0);
         zx::ok(status)
     }
+
+    pub fn configure_assoc(&self, mut assoc_ctx: WlanAssocCtx) -> Result<(), zx::Status> {
+        let status = (self.configure_assoc)(self.device, &mut assoc_ctx as *mut WlanAssocCtx);
+        zx::ok(status)
+    }
+
+    pub fn clear_assoc(&self, addr: &MacAddr) -> Result<(), zx::Status> {
+        let status = (self.clear_assoc)(self.device, addr);
+        zx::ok(status)
+    }
 }
 
 #[cfg(test)]
@@ -151,6 +166,7 @@ pub struct FakeDevice {
     pub bss_cfg: Option<WlanBssConfig>,
     pub bcn_cfg: Option<(Vec<u8>, usize, TimeUnit)>,
     pub link_status: LinkStatus,
+    pub assocs: std::collections::HashMap<MacAddr, WlanAssocCtx>,
 }
 
 #[cfg(test)]
@@ -170,6 +186,7 @@ impl FakeDevice {
             bss_cfg: None,
             bcn_cfg: None,
             link_status: LinkStatus::DOWN,
+            assocs: std::collections::HashMap::new(),
         }
     }
 
@@ -263,6 +280,20 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
+    pub extern "C" fn configure_assoc(device: *mut c_void, cfg: *mut WlanAssocCtx) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).assocs.insert((*cfg).bssid, (*cfg).clone());
+        }
+        zx::sys::ZX_OK
+    }
+
+    pub extern "C" fn clear_assoc(device: *mut c_void, addr: &MacAddr) -> i32 {
+        unsafe {
+            (*(device as *mut Self)).assocs.remove(addr);
+        }
+        zx::sys::ZX_OK
+    }
+
     pub fn next_mlme_msg<T: fidl::encoding::Decodable>(&mut self) -> Result<T, Error> {
         use fidl::encoding::{decode_transaction_header, Decodable, Decoder};
 
@@ -297,30 +328,26 @@ impl FakeDevice {
             enable_beaconing: Self::enable_beaconing,
             disable_beaconing: Self::disable_beaconing,
             set_link_status: Self::set_link_status,
+            configure_assoc: Self::configure_assoc,
+            clear_assoc: Self::clear_assoc,
         }
     }
 
     pub fn as_device_fail_wlan_tx(&mut self) -> Device {
-        Device {
-            device: self as *mut Self as *mut c_void,
-            deliver_eth_frame: Self::deliver_eth_frame,
-            send_wlan_frame: Self::send_wlan_frame_with_failure,
-            get_sme_channel: Self::get_sme_channel,
-            set_wlan_channel: Self::set_wlan_channel,
-            get_wlan_channel: Self::get_wlan_channel,
-            set_key: Self::set_key,
-            configure_bss: Self::configure_bss,
-            enable_beaconing: Self::enable_beaconing,
-            disable_beaconing: Self::disable_beaconing,
-            set_link_status: Self::set_link_status,
-        }
+        let mut dev = self.as_device();
+        dev.send_wlan_frame = Self::send_wlan_frame_with_failure;
+        dev
     }
 }
 
 #[cfg(test)]
 mod tests {
-    use super::*;
-    use wlan_common::assert_variant;
+    use {
+        super::*,
+        banjo_ddk_hw_wlan_ieee80211::*,
+        banjo_wlan_protocol_info::*,
+        wlan_common::assert_variant,
+    };
 
     fn make_auth_confirm_msg() -> fidl_mlme::AuthenticateConfirm {
         fidl_mlme::AuthenticateConfirm {
@@ -351,19 +378,9 @@ mod tests {
             return zx::sys::ZX_HANDLE_INVALID;
         }
 
-        let dev = Device {
-            device: std::ptr::null_mut(),
-            deliver_eth_frame: FakeDevice::deliver_eth_frame,
-            send_wlan_frame: FakeDevice::send_wlan_frame,
-            get_sme_channel,
-            get_wlan_channel: FakeDevice::get_wlan_channel,
-            set_wlan_channel: FakeDevice::set_wlan_channel,
-            set_key: FakeDevice::set_key,
-            configure_bss: FakeDevice::configure_bss,
-            enable_beaconing: FakeDevice::enable_beaconing,
-            disable_beaconing: FakeDevice::disable_beaconing,
-            set_link_status: FakeDevice::set_link_status,
-        };
+        let mut fake_device = FakeDevice::new();
+        let mut dev = fake_device.as_device();
+        dev.get_sme_channel = get_sme_channel;
 
         let result = dev.access_sme_sender(|sender| {
             sender.send_authenticate_conf(&mut make_auth_confirm_msg())
@@ -449,7 +466,7 @@ mod tests {
             bss_type: WlanBssType::PERSONAL,
             remote: true,
         })
-        .expect("error setting key");
+        .expect("error configuring bss");
         assert!(fake_device.bss_cfg.is_some());
     }
 
@@ -473,5 +490,38 @@ mod tests {
 
         dev.set_link_status(LinkStatus::DOWN).expect("failed setting status");
         assert_eq!(fake_device.link_status, LinkStatus::DOWN);
+    }
+
+    #[test]
+    fn configure_assoc() {
+        let mut fake_device = FakeDevice::new();
+        let dev = fake_device.as_device();
+        dev.configure_assoc(WlanAssocCtx {
+            bssid: [1, 2, 3, 4, 5, 6],
+            aid: 1,
+            listen_interval: 2,
+            phy: WlanPhyType::ERP,
+            chan: WlanChannel { primary: 3, cbw: WlanChannelBandwidth::_20, secondary80: 0 },
+            qos: false,
+            rates_cnt: 4,
+            rates: [0; WLAN_MAC_MAX_RATES as usize],
+            cap_info: [1, 2],
+
+            has_ht_cap: false,
+            // Safe: This is not read by the driver.
+            ht_cap: unsafe { std::mem::zeroed::<Ieee80211HtCapabilities>() },
+            has_ht_op: false,
+            // Safe: This is not read by the driver.
+            ht_op: unsafe { std::mem::zeroed::<WlanHtOp>() },
+
+            has_vht_cap: false,
+            // Safe: This is not read by the driver.
+            vht_cap: unsafe { std::mem::zeroed::<Ieee80211VhtCapabilities>() },
+            has_vht_op: false,
+            // Safe: This is not read by the driver.
+            vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },
+        })
+        .expect("error configuring assoc");
+        assert!(fake_device.assocs.contains_key(&[1, 2, 3, 4, 5, 6]));
     }
 }

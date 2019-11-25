@@ -8,13 +8,19 @@ use {
         error::Error,
         timer::EventId,
     },
+    banjo_ddk_hw_wlan_ieee80211::*,
+    banjo_ddk_protocol_wlan_info::*,
+    banjo_wlan_protocol_info::*,
     fidl_fuchsia_wlan_mlme as fidl_mlme, fuchsia_zircon as zx,
     wlan_common::{
+        appendable::Appendable,
+        buffer_writer::BufferWriter,
+        ie,
         mac::{self, Aid, AuthAlgorithmNumber, FrameClass, MacAddr, ReasonCode, StatusCode},
         TimeUnit,
     },
     wlan_statemachine::StateMachine,
-    zerocopy::ByteSlice,
+    zerocopy::{AsBytes, ByteSlice},
 };
 
 /// dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13 and Annex C.3): This attribute indicates
@@ -99,6 +105,9 @@ pub enum ClientRejection {
 
     /// A request could not be sent to the netstack.
     EthSendError(Error),
+
+    /// An error occurred on the device.
+    DeviceError(Error),
 }
 
 impl ClientRejection {
@@ -136,16 +145,18 @@ impl RemoteClient {
         }
     }
 
-    fn change_state(&mut self, ctx: &mut Context, next_state: State) {
-        self.state.replace_state(|state| {
-            match state {
-                State::Associated { active_timeout_event_id: Some(event_id), .. } => {
-                    ctx.cancel_event(event_id);
-                }
-                _ => (),
+    fn change_state(&mut self, ctx: &mut Context, next_state: State) -> Result<(), Error> {
+        match self.state.as_ref() {
+            State::Associated { active_timeout_event_id: Some(event_id), .. } => {
+                ctx.cancel_event(*event_id);
+                ctx.device
+                    .clear_assoc(&self.addr)
+                    .map_err(|s| Error::Status(format!("failed to clear association"), s))?;
             }
-            next_state
-        });
+            _ => (),
+        }
+        self.state.replace_state_with(next_state);
+        Ok(())
     }
 
     fn schedule_after(
@@ -187,7 +198,7 @@ impl RemoteClient {
             }
         }
 
-        self.change_state(ctx, State::Authenticated);
+        self.change_state(ctx, State::Authenticated).map_err(ClientRejection::DeviceError)?;
 
         // On BSS idle timeout, we need to tell the client that they've been disassociated, and the
         // SME to transition the client to Authenticated.
@@ -259,7 +270,7 @@ impl RemoteClient {
             } else {
                 State::Deauthenticated
             },
-        );
+        )?;
 
         // We only support open system auth in the SME.
         // IEEE Std 802.11-2016, 12.3.3.2.3 & Table 9-36: Sequence number 2 indicates the response
@@ -297,7 +308,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: fidl_mlme::ReasonCode,
     ) -> Result<(), Error> {
-        self.change_state(ctx, State::Deauthenticated);
+        self.change_state(ctx, State::Deauthenticated)?;
 
         // IEEE Std 802.11-2016, 6.3.6.3.3 states that we should send MLME-DEAUTHENTICATE.confirm
         // to the SME on success. However, our SME only sends MLME-DEAUTHENTICATE.request when it
@@ -317,10 +328,11 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         is_rsn: bool,
+        channel: u8,
         capabilities: mac::CapabilityInfo,
         result_code: fidl_mlme::AssociateResultCodes,
         aid: Aid,
-        ies: &[u8],
+        rates: &[u8],
     ) -> Result<(), Error> {
         self.change_state(
             ctx,
@@ -336,45 +348,94 @@ impl RemoteClient {
             } else {
                 State::Authenticated
             },
-        );
+        )?;
 
-        // Reset the client's activeness as soon as it is associated, kicking off the BSS max idle
-        // timer.
-        self.reset_bss_max_idle_timeout(ctx);
+        let mut rates_arr = [0; WLAN_MAC_MAX_RATES as usize];
+        rates_arr[..rates.len()].copy_from_slice(rates);
 
-        ctx.send_assoc_resp_frame(
-            self.addr.clone(),
-            capabilities,
-            match result_code {
-                fidl_mlme::AssociateResultCodes::Success => StatusCode::SUCCESS,
-                fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified => {
-                    StatusCode::DENIED_OTHER_REASON
-                }
-                fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated => {
-                    StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED
-                }
-                fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch => {
-                    StatusCode::REFUSED_CAPABILITIES_MISMATCH
-                }
-                fidl_mlme::AssociateResultCodes::RefusedExternalReason => {
-                    StatusCode::REFUSED_EXTERNAL_REASON
-                }
-                fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory => {
-                    StatusCode::REFUSED_AP_OUT_OF_MEMORY
-                }
-                fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch => {
-                    StatusCode::REFUSED_BASIC_RATES_MISMATCH
-                }
-                fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported => {
-                    StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED
-                }
-                fidl_mlme::AssociateResultCodes::RefusedTemporarily => {
-                    StatusCode::REFUSED_TEMPORARILY
-                }
-            },
-            aid,
-            ies,
-        )
+        let mut cap_info = [0; 2];
+        cap_info.copy_from_slice(capabilities.as_bytes());
+
+        if let State::Associated { .. } = self.state.as_ref() {
+            // Reset the client's activeness as soon as it is associated, kicking off the BSS max
+            // idle timer.
+            self.reset_bss_max_idle_timeout(ctx);
+            ctx.device
+                .configure_assoc(WlanAssocCtx {
+                    bssid: self.addr,
+                    aid: aid,
+                    listen_interval: 0, // This field is not used for AP.
+                    phy: WlanPhyType::ERP,
+                    chan: WlanChannel {
+                        primary: channel,
+                        // TODO(40917): Correctly support this.
+                        cbw: WlanChannelBandwidth::_20,
+                        secondary80: 0,
+                    },
+                    qos: false,
+                    rates_cnt: rates.len() as u16,
+                    rates: rates_arr,
+                    cap_info,
+
+                    // TODO(40917): Correctly support all of this.
+                    has_ht_cap: false,
+                    // Safe: This is not read by the driver.
+                    ht_cap: unsafe { std::mem::zeroed::<Ieee80211HtCapabilities>() },
+                    has_ht_op: false,
+                    // Safe: This is not read by the driver.
+                    ht_op: unsafe { std::mem::zeroed::<WlanHtOp>() },
+
+                    has_vht_cap: false,
+                    // Safe: This is not read by the driver.
+                    vht_cap: unsafe { std::mem::zeroed::<Ieee80211VhtCapabilities>() },
+                    has_vht_op: false,
+                    // Safe: This is not read by the driver.
+                    vht_op: unsafe { std::mem::zeroed::<WlanVhtOp>() },
+                })
+                .map_err(|s| Error::Status(format!("falied to configure association"), s))?;
+        }
+
+        match result_code {
+            fidl_mlme::AssociateResultCodes::Success => ctx.send_assoc_resp_frame(
+                self.addr,
+                capabilities,
+                aid,
+                rates,
+            ),
+            _ => ctx.send_assoc_resp_frame_error(
+                self.addr,
+                capabilities,
+                match result_code {
+                    fidl_mlme::AssociateResultCodes::Success => {
+                        panic!("Success should have already been handled");
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified => {
+                        StatusCode::DENIED_OTHER_REASON
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedNotAuthenticated => {
+                        StatusCode::REFUSED_UNAUTHENTICATED_ACCESS_NOT_SUPPORTED
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedCapabilitiesMismatch => {
+                        StatusCode::REFUSED_CAPABILITIES_MISMATCH
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedExternalReason => {
+                        StatusCode::REFUSED_EXTERNAL_REASON
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory => {
+                        StatusCode::REFUSED_AP_OUT_OF_MEMORY
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedBasicRatesMismatch => {
+                        StatusCode::REFUSED_BASIC_RATES_MISMATCH
+                    }
+                    fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported => {
+                        StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED
+                    }
+                    fidl_mlme::AssociateResultCodes::RefusedTemporarily => {
+                        StatusCode::REFUSED_TEMPORARILY
+                    }
+                },
+            ),
+        }
     }
 
     /// Handles MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1) from the SME.
@@ -388,7 +449,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: u16,
     ) -> Result<(), Error> {
-        self.change_state(ctx, State::Authenticated);
+        self.change_state(ctx, State::Authenticated)?;
 
         // IEEE Std 802.11-2016, 6.3.9.2.3 states that we should send MLME-DISASSOCIATE.confirm
         // to the SME on success. Like MLME-DEAUTHENTICATE.confirm, our SME has already forgotten
@@ -443,7 +504,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
-        self.change_state(ctx, State::Authenticated);
+        self.change_state(ctx, State::Authenticated).map_err(ClientRejection::DeviceError)?;
         ctx.send_mlme_disassoc_ind(self.addr.clone(), reason_code.0)
             .map_err(ClientRejection::SmeSendError)
     }
@@ -452,11 +513,12 @@ impl RemoteClient {
     fn handle_assoc_req_frame(
         &self,
         ctx: &mut Context,
-        ssid: Option<Vec<u8>>,
         listen_interval: u16,
-        rsn: Option<Vec<u8>>,
+        ssid: Option<Vec<u8>>,
+        rates: Vec<u8>,
+        rsne: Option<Vec<u8>>,
     ) -> Result<(), ClientRejection> {
-        ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, rsn)
+        ctx.send_mlme_assoc_ind(self.addr.clone(), listen_interval, ssid, rates, rsne)
             .map_err(ClientRejection::SmeSendError)
     }
 
@@ -479,7 +541,8 @@ impl RemoteClient {
                 }
                 AuthAlgorithmNumber::SAE => fidl_mlme::AuthenticationTypes::Sae,
                 _ => {
-                    self.change_state(ctx, State::Deauthenticated);
+                    self.change_state(ctx, State::Deauthenticated)
+                        .map_err(ClientRejection::DeviceError)?;
 
                     // Don't even bother sending this to the SME if we don't understand the auth
                     // algorithm.
@@ -505,7 +568,7 @@ impl RemoteClient {
         ctx: &mut Context,
         reason_code: ReasonCode,
     ) -> Result<(), ClientRejection> {
-        self.change_state(ctx, State::Deauthenticated);
+        self.change_state(ctx, State::Deauthenticated).map_err(ClientRejection::DeviceError)?;
         ctx.send_mlme_deauth_ind(
             self.addr.clone(),
             fidl_mlme::ReasonCode::from_primitive(reason_code.0)
@@ -616,9 +679,41 @@ impl RemoteClient {
             mac::MgmtBody::Authentication { auth_hdr, .. } => {
                 self.handle_auth_frame(ctx, auth_hdr.auth_alg_num)
             }
-            mac::MgmtBody::AssociationReq { assoc_req_hdr, .. } => {
-                // TODO(tonyy): Support RSN from elements here.
-                self.handle_assoc_req_frame(ctx, ssid, assoc_req_hdr.listen_interval, None)
+            mac::MgmtBody::AssociationReq { assoc_req_hdr, elements } => {
+                let mut rates = vec![];
+                let mut rsne = None;
+
+                for (id, ie_body) in ie::Reader::new(&elements[..]) {
+                    match id {
+                        ie::Id::SUPPORTED_RATES | ie::Id::EXT_SUPPORTED_RATES => {
+                            // We don't try too hard to verify if supported rates are supplied
+                            // before extended rates: extended rates are only present when supported
+                            // rates run out of space, so they can always be extracted from this
+                            // combined vector by slicing the first 8 elements out, if required
+                            // (that is, as long as if client is doing something sensible).
+                            rates.extend(ie_body.to_vec());
+                        }
+                        ie::Id::RSNE => {
+                            rsne = Some({
+                                // TODO(41109): Stop passing RSNEs around like this.
+                                let mut buf =
+                                    vec![0; std::mem::size_of::<ie::Header>() + ie_body.len()];
+                                let mut w = BufferWriter::new(&mut buf[..]);
+                                w.append_value(&ie::Header {
+                                    id: ie::Id::RSNE,
+                                    body_len: ie_body.len() as u8,
+                                })
+                                .expect("expected enough room in buffer for IE header");
+                                w.append_bytes(ie_body)
+                                    .expect("expected enough room in buffer for IE body");
+                                buf
+                            });
+                        }
+                        _ => {}
+                    }
+                }
+
+                self.handle_assoc_req_frame(ctx, assoc_req_hdr.listen_interval, ssid, rates, rsne)
             }
             mac::MgmtBody::Deauthentication { deauth_hdr, .. } => {
                 self.handle_deauth_frame(ctx, deauth_hdr.reason_code)
@@ -843,10 +938,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 true,
+                1,
                 CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[0, 4, 1, 2, 3, 4][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
 
@@ -876,13 +972,72 @@ mod tests {
             0, 0, // Capabilities
             0, 0, // status code
             1, 0, // AID
-            0, 4, 1, 2, 3, 4 // SSID
+            // IEs
+            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+            50, 2, 9, 10, // Extended rates
         ][..]);
         assert_eq!(
             *fake_scheduler.deadlines.get(active_timeout_event_id).unwrap(),
             1000 /* TUs */ * 1024 /* us per TU */ * 1000 /* ns per us */ *
             (BSS_MAX_IDLE_PERIOD as i64),
         );
+
+        assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
+    }
+
+    #[test]
+    fn handle_mlme_assoc_resp_then_handle_mlme_disassoc_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        r_sta
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                true,
+                1,
+                CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
+
+        r_sta
+            .handle_mlme_disassoc_req(
+                &mut ctx,
+                fidl_mlme::ReasonCode::LeavingNetworkDisassoc as u16,
+            )
+            .expect("expected OK");
+        assert!(!fake_device.assocs.contains_key(&CLIENT_ADDR));
+    }
+
+    #[test]
+    fn handle_mlme_assoc_resp_then_handle_mlme_deauth_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        r_sta
+            .handle_mlme_assoc_resp(
+                &mut ctx,
+                true,
+                1,
+                CapabilityInfo(0),
+                fidl_mlme::AssociateResultCodes::Success,
+                1,
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+            )
+            .expect("expected OK");
+        assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
+
+        r_sta
+            .handle_mlme_deauth_req(&mut ctx, fidl_mlme::ReasonCode::LeavingNetworkDeauth)
+            .expect("expected OK");
+        assert!(!fake_device.assocs.contains_key(&CLIENT_ADDR));
     }
 
     #[test]
@@ -895,10 +1050,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 false,
+                1,
                 CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[0, 4, 1, 2, 3, 4][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Associated {
@@ -918,10 +1074,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 false,
+                1,
                 CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::RejectedEmergencyServicesNotSupported,
-                1,
-                &[0, 4, 1, 2, 3, 4][..],
+                1, // This AID is ignored in the case of an error.
+                &[][..],
             )
             .expect("expected OK");
         assert_variant!(r_sta.state.as_ref(), State::Authenticated);
@@ -938,8 +1095,7 @@ mod tests {
             // Association response header:
             0, 0, // Capabilities
             94, 0, // status code
-            1, 0, // AID
-            0, 4, 1, 2, 3, 4 // SSID
+            0, 0, // AID
         ][..]);
     }
 
@@ -1101,7 +1257,13 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
         r_sta
-            .handle_assoc_req_frame(&mut ctx, Some(b"coolnet".to_vec()), 1, None)
+            .handle_assoc_req_frame(
+                &mut ctx,
+                1,
+                Some(b"coolnet".to_vec()),
+                vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                None,
+            )
             .expect("expected OK");
 
         let msg = fake_device
@@ -1113,6 +1275,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
                 rsne: None,
             },
         );
@@ -1603,6 +1766,52 @@ mod tests {
                 ][..],
             )
             .expect("expected OK");
+    }
+
+    #[test]
+    fn handle_mgmt_frame_assoc_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut r_sta = make_remote_client();
+        r_sta.state = StateMachine::new(State::Authenticated);
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+
+        r_sta
+            .handle_mgmt_frame(
+                &mut ctx,
+                Some(b"coolnet".to_vec()),
+                mac::MgmtHdr {
+                    frame_ctrl: mac::FrameControl(0b00000000_00000000), // Assoc req frame
+                    duration: 0,
+                    addr1: [1; 6],
+                    addr2: [2; 6],
+                    addr3: [3; 6],
+                    seq_ctrl: mac::SequenceControl(10),
+                },
+                &[
+                    0, 0, // Capability info
+                    10, 0, // Listen interval
+                    // IEs
+                    1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                    50, 2, 9, 10, // Extended rates
+                    48, 2, 77, 88, // RSNE
+                ][..],
+            )
+            .expect("expected OK");
+
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::AssociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                listen_interval: 10,
+                ssid: Some(b"coolnet".to_vec()),
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                rsne: Some(vec![48, 2, 77, 88]),
+            },
+        );
     }
 
     #[test]

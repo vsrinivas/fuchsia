@@ -58,12 +58,14 @@ impl RemoteClient {
         &mut self,
         ctx: &mut Context,
         aid_map: &mut aid::Map,
+        rates: &[u8],
         rsn_cfg: &Option<RsnCfg>,
         s_rsne: Option<Vec<u8>>,
     ) {
         // Safe: |state| is never None and always replaced with Some(..).
-        self.state =
-            Some(self.state.take().unwrap().handle_assoc_ind(self, ctx, aid_map, rsn_cfg, s_rsne));
+        self.state = Some(
+            self.state.take().unwrap().handle_assoc_ind(self, ctx, aid_map, rates, rsn_cfg, s_rsne),
+        );
     }
 
     pub fn handle_disassoc_ind(&mut self, ctx: &mut Context, aid_map: &mut aid::Map) {
@@ -111,11 +113,13 @@ impl RemoteClient {
         ctx: &mut Context,
         result_code: fidl_mlme::AssociateResultCodes,
         aid: Aid,
+        rates: Vec<u8>,
     ) {
         ctx.mlme_sink.send(MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address: self.addr.clone(),
             result_code,
             association_id: aid,
+            rates,
         }))
     }
 
@@ -230,7 +234,7 @@ mod tests {
         let (mut ctx, _, _) = make_env();
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &None, None);
+        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
         assert_eq!(r_sta.authenticated(), true);
     }
 
@@ -240,7 +244,7 @@ mod tests {
         let (mut ctx, _, _) = make_env();
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &None, None);
+        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
         assert_eq!(r_sta.aid(), Some(1));
     }
 
@@ -251,7 +255,7 @@ mod tests {
         r_sta.handle_auth_ind(&mut ctx, fidl_mlme::AuthenticationTypes::OpenSystem);
         assert_eq!(r_sta.authenticated(), true);
         let mut aid_map = aid::Map::default();
-        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &None, None);
+        r_sta.handle_assoc_ind(&mut ctx, &mut aid_map, &[][..], &None, None);
         assert_variant!(r_sta.aid(), Some(_));
         r_sta.handle_disassoc_ind(&mut ctx, &mut aid_map);
         assert_eq!(r_sta.aid(), None);
@@ -303,16 +307,19 @@ mod tests {
             &mut ctx,
             fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory,
             1,
+            vec![1, 2, 3],
         );
         let mlme_event = mlme_stream.try_next().unwrap().expect("expected mlme event");
         assert_variant!(mlme_event, MlmeRequest::AssocResponse(fidl_mlme::AssociateResponse {
             peer_sta_address,
             result_code,
             association_id,
+            rates,
         }) => {
             assert_eq!(peer_sta_address, CLIENT_ADDR);
             assert_eq!(result_code, fidl_mlme::AssociateResultCodes::RefusedApOutOfMemory);
             assert_eq!(association_id, 1);
+            assert_eq!(rates, vec![1, 2, 3]);
         });
     }
 

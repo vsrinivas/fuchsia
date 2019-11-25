@@ -102,6 +102,15 @@ typedef struct {
    * Disable beaconing on the device.
    */
   int32_t (*disable_beaconing)(void *device);
+  /**
+   * Configure the association context.
+   * |assoc_ctx| is mutable because the underlying API does not take a const wlan_assoc_ctx_t.
+   */
+  int32_t (*configure_assoc)(void *device, wlan_assoc_ctx_t *assoc_ctx);
+  /**
+   * Clear the association context.
+   */
+  int32_t (*clear_assoc)(void *device, const uint8_t (*addr)[6]);
 } mlme_device_ops_t;
 
 /**

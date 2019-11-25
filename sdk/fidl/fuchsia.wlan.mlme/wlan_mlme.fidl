@@ -367,7 +367,7 @@ struct AssociateIndication {
     // CapabilityInformation
     uint16 listen_interval;
     bytes? ssid;
-    // OperationalRateSet
+    bytes:RATES_MAX_LEN rates;
     // BSSMembershipSelectorSet
     bytes? rsne;
 
@@ -380,6 +380,10 @@ struct AssociateResponse {
     array<uint8>:6 peer_sta_address;
     AssociateResultCodes result_code;
     uint16 association_id;
+
+    // This combines both the BSSBasicRateSet and the OperationalRateSet, as the MLME will split
+    // them up.
+    bytes:RATES_MAX_LEN rates;
 
     // etc
 };

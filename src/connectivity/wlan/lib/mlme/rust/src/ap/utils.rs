@@ -43,9 +43,8 @@ pub fn write_assoc_resp_frame<B: Appendable>(
     bssid: Bssid,
     seq_mgr: &mut SequenceManager,
     capabilities: mac::CapabilityInfo,
-    status_code: StatusCode,
     aid: Aid,
-    ies: &[u8],
+    rates: &[u8],
 ) -> Result<(), Error> {
     let frame_ctrl = mac::FrameControl(0)
         .with_frame_type(mac::FrameType::MGMT)
@@ -56,8 +55,41 @@ pub fn write_assoc_resp_frame<B: Appendable>(
         mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
         None,
     )?;
-    buf.append_value(&mac::AssocRespHdr { capabilities, status_code, aid })?;
-    buf.append_value(ies)?;
+
+    buf.append_value(&mac::AssocRespHdr { capabilities, status_code: StatusCode::SUCCESS, aid })?;
+
+    // Order of association response frame body IEs is according to IEEE Std 802.11-2016,
+    // Table 9-30, numbered below.
+
+    let rates_writer = RatesWriter::try_new(&rates[..])?;
+
+    // 4: Supported Rates and BSS Membership Selectors
+    rates_writer.write_supported_rates(buf);
+
+    // 5: Extended Supported Rates and BSS Membership Selectors
+    rates_writer.write_ext_supported_rates(buf);
+
+    Ok(())
+}
+
+pub fn write_assoc_resp_frame_error<B: Appendable>(
+    buf: &mut B,
+    client_addr: MacAddr,
+    bssid: Bssid,
+    seq_mgr: &mut SequenceManager,
+    capabilities: mac::CapabilityInfo,
+    status_code: StatusCode,
+) -> Result<(), Error> {
+    let frame_ctrl = mac::FrameControl(0)
+        .with_frame_type(mac::FrameType::MGMT)
+        .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_RESP);
+    let seq_ctrl = mac::SequenceControl(0).with_seq_num(seq_mgr.next_sns1(&client_addr) as u16);
+    mgmt_writer::write_mgmt_hdr(
+        buf,
+        mgmt_writer::mgmt_hdr_from_ap(frame_ctrl, client_addr, bssid, seq_ctrl),
+        None,
+    )?;
+    buf.append_value(&mac::AssocRespHdr { capabilities, status_code, aid: 0 })?;
     Ok(())
 }
 
@@ -250,9 +282,41 @@ mod tests {
             Bssid([2; 6]),
             &mut seq_mgr,
             mac::CapabilityInfo(0),
-            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
             1,
-            &[0, 4, 1, 2, 3, 4],
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+        )
+        .expect("failed writing frame");
+        assert_eq!(
+            &[
+                // Mgmt header
+                0b00010000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                2, 2, 2, 2, 2, 2, // addr3
+                0x10, 0, // Sequence Control
+                // Association response header:
+                0, 0, // Capabilities
+                0, 0, // status code
+                1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+            ][..],
+            &buf[..]
+        );
+    }
+    #[test]
+    fn assoc_resp_frame_error() {
+        let mut buf = vec![];
+        let mut seq_mgr = SequenceManager::new();
+        write_assoc_resp_frame_error(
+            &mut buf,
+            [1; 6],
+            Bssid([2; 6]),
+            &mut seq_mgr,
+            mac::CapabilityInfo(0),
+            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
         )
         .expect("failed writing frame");
         assert_eq!(
@@ -267,8 +331,7 @@ mod tests {
                 // Association response header:
                 0, 0, // Capabilities
                 94, 0, // status code
-                1, 0, // AID
-                0, 4, 1, 2, 3, 4, // SSID
+                0, 0, // AID
             ][..],
             &buf[..]
         );

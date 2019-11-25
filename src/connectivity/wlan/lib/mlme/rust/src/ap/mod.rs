@@ -22,6 +22,7 @@ use {
         appendable::Appendable,
         buffer_writer::BufferWriter,
         frame_len,
+        ie::{IE_PREFIX_LEN, SUPPORTED_RATES_MAX_LEN},
         mac::{
             self, Aid, AuthAlgorithmNumber, Bssid, CapabilityInfo, MacAddr, OptionalField,
             Presence, StatusCode,
@@ -194,12 +195,17 @@ impl InfraBss {
             .handle_mlme_assoc_resp(
                 ctx,
                 self.rsne.is_some(),
-                // TODO(37891): Actually implement capability negotiation.
-                mac::CapabilityInfo(0),
+                self.channel,
+                // We don't set the ESS bit here: IEEE Std 802.11-2016, 9.4.1.4 only specifies it
+                // for Beacon and Probe Response frames, and NOT Association Response frames.
+                CapabilityInfo(0)
+                    // IEEE Std 802.11-2016, 9.4.1.4: An AP sets the Privacy subfield to 1 within
+                    // transmitted Beacon, Probe Response, (Re)Association Response frames if data
+                    // confidentiality is required for all Data frames exchanged within the BSS.
+                    .with_privacy(self.rsne.is_some()),
                 resp.result_code,
                 resp.association_id,
-                // TODO(37891): Actually implement negotiation for various IEs.
-                &[][..],
+                &resp.rates,
             )
             .map_err(|e| make_client_error(client.addr, e))
     }
@@ -473,6 +479,7 @@ impl Context {
         peer_sta_address: MacAddr,
         listen_interval: u16,
         ssid: Option<Vec<u8>>,
+        rates: Vec<u8>,
         rsne: Option<Vec<u8>>,
     ) -> Result<(), Error> {
         self.device.access_sme_sender(|sender| {
@@ -480,6 +487,7 @@ impl Context {
                 peer_sta_address,
                 listen_interval,
                 ssid,
+                rates,
                 rsne,
                 // TODO(37891): Send everything else (e.g. HT capabilities).
             })
@@ -550,12 +558,21 @@ impl Context {
         &mut self,
         addr: MacAddr,
         capabilities: mac::CapabilityInfo,
-        status_code: StatusCode,
         aid: Aid,
-        ies: &[u8],
+        rates: &[u8],
     ) -> Result<(), Error> {
-        let mut buf =
-            self.buf_provider.get_buffer(frame_len!(mac::MgmtHdr, mac::AuthHdr) + ies.len())?;
+        let frame_len = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
+        let rates_len = IE_PREFIX_LEN
+            + rates.len()
+            // If there are too many rates, they will be split into two IEs.
+            // In this case, the total length would be the sum of:
+            // 1) 1st IE: IE_PREFIX_LEN + SUPPORTED_RATES_MAX_LEN
+            // 2) 2nd IE: IE_PREFIX_LEN + rates().len - SUPPORTED_RATES_MAX_LEN
+            // The total length is IE_PREFIX_LEN + rates.len() + IE_PREFIX_LEN.
+            + if rates.len() > SUPPORTED_RATES_MAX_LEN { IE_PREFIX_LEN } else { 0 };
+        let frame_len = frame_len + rates_len;
+
+        let mut buf = self.buf_provider.get_buffer(frame_len)?;
         let mut w = BufferWriter::new(&mut buf[..]);
         write_assoc_resp_frame(
             &mut w,
@@ -563,15 +580,40 @@ impl Context {
             self.bssid.clone(),
             &mut self.seq_mgr,
             capabilities,
-            status_code,
             aid,
-            ies,
+            rates,
         )?;
         let bytes_written = w.bytes_written();
         let out_buf = OutBuf::from(buf, bytes_written);
         self.device
             .send_wlan_frame(out_buf, TxFlags::NONE)
-            .map_err(|s| Error::Status(format!("error sending open auth frame"), s))
+            .map_err(|s| Error::Status(format!("error sending assoc resp frame"), s))
+    }
+
+    /// Sends a WLAN association response frame (IEEE Std 802.11-2016, 9.3.3.7) to the PHY, but only
+    /// with the status code.
+    fn send_assoc_resp_frame_error(
+        &mut self,
+        addr: MacAddr,
+        capabilities: mac::CapabilityInfo,
+        status_code: StatusCode,
+    ) -> Result<(), Error> {
+        const FRAME_LEN: usize = frame_len!(mac::MgmtHdr, mac::AssocRespHdr);
+        let mut buf = self.buf_provider.get_buffer(FRAME_LEN)?;
+        let mut w = BufferWriter::new(&mut buf[..]);
+        write_assoc_resp_frame_error(
+            &mut w,
+            addr,
+            self.bssid.clone(),
+            &mut self.seq_mgr,
+            capabilities,
+            status_code,
+        )?;
+        let bytes_written = w.bytes_written();
+        let out_buf = OutBuf::from(buf, bytes_written);
+        self.device
+            .send_wlan_frame(out_buf, TxFlags::NONE)
+            .map_err(|s| Error::Status(format!("error sending assoc resp error frame"), s))
     }
 
     /// Sends a WLAN deauthentication frame (IEEE Std 802.11-2016, 9.3.3.1) to the PHY.
@@ -953,7 +995,7 @@ mod tests {
         let mut fake_device = FakeDevice::new();
         let mut fake_scheduler = FakeScheduler::new();
         let ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
-        ctx.send_mlme_assoc_ind(CLIENT_ADDR, 1, Some(b"coolnet".to_vec()), None)
+        ctx.send_mlme_assoc_ind(CLIENT_ADDR, 1, Some(b"coolnet".to_vec()), vec![1, 2, 3], None)
             .expect("expected OK");
         let msg = fake_device
             .next_mlme_msg::<fidl_mlme::AssociateIndication>()
@@ -964,6 +1006,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 listen_interval: 1,
                 ssid: Some(b"coolnet".to_vec()),
+                rates: vec![1, 2, 3],
                 rsne: None,
             },
         );
@@ -1077,9 +1120,39 @@ mod tests {
         ctx.send_assoc_resp_frame(
             CLIENT_ADDR,
             mac::CapabilityInfo(0),
-            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
             1,
-            &[0, 4, 1, 2, 3, 4],
+            &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
+        )
+        .expect("error delivering WLAN frame");
+        assert_eq!(fake_device.wlan_queue.len(), 1);
+        #[rustfmt::skip]
+        assert_eq!(&fake_device.wlan_queue[0].0[..], &[
+            // Mgmt header
+            0b00010000, 0, // Frame Control
+            0, 0, // Duration
+            1, 1, 1, 1, 1, 1, // addr1
+            2, 2, 2, 2, 2, 2, // addr2
+            2, 2, 2, 2, 2, 2, // addr3
+            0x10, 0, // Sequence Control
+            // Association response header:
+            0, 0, // Capabilities
+            0, 0, // status code
+            1, 0, // AID
+            // IEs
+            1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+            50, 2, 9, 10, // Extended rates
+        ][..]);
+    }
+
+    #[test]
+    fn ctx_send_assoc_resp_frame_error() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        ctx.send_assoc_resp_frame_error(
+            CLIENT_ADDR,
+            mac::CapabilityInfo(0),
+            StatusCode::REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED,
         )
         .expect("error delivering WLAN frame");
         assert_eq!(fake_device.wlan_queue.len(), 1);
@@ -1095,8 +1168,7 @@ mod tests {
             // Association response header:
             0, 0, // Capabilities
             94, 0, // status code
-            1, 0, // AID
-            0, 4, 1, 2, 3, 4, // SSID
+            0, 0, // AID
         ][..]);
     }
 
@@ -1394,6 +1466,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         )
         .expect("expected InfraBss::handle_mlme_assoc_resp ok");
@@ -1412,8 +1485,12 @@ mod tests {
                 0, 0, // Capabilities
                 0, 0, // status code
                 1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
             ][..]
         );
+        assert!(fake_device.assocs.contains_key(&CLIENT_ADDR));
     }
 
     #[test]
@@ -1481,6 +1558,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                rates: vec![1, 2, 3],
             },
         )
         .expect("expected InfraBss::handle_mlme_assoc_resp ok");
@@ -1584,6 +1662,68 @@ mod tests {
             fidl_mlme::AuthenticateIndication {
                 peer_sta_address: CLIENT_ADDR,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
+            },
+        );
+    }
+
+    #[test]
+    fn bss_handle_mgmt_frame_assoc_req() {
+        let mut fake_device = FakeDevice::new();
+        let mut fake_scheduler = FakeScheduler::new();
+        let mut ctx = make_context(fake_device.as_device(), fake_scheduler.as_scheduler());
+        let mut bss = InfraBss::new(
+            &mut ctx,
+            b"coolnet".to_vec(),
+            TimeUnit::DEFAULT_BEACON_INTERVAL,
+            vec![0b11111000],
+            1,
+            None,
+        )
+        .expect("expected InfraBss::new ok");
+
+        bss.clients.insert(CLIENT_ADDR, RemoteClient::new(CLIENT_ADDR));
+        let client = bss.clients.get_mut(&CLIENT_ADDR).unwrap();
+        client
+            .handle_mlme_auth_resp(&mut ctx, fidl_mlme::AuthenticateResultCodes::Success)
+            .expect("expected OK");
+
+        bss.handle_mgmt_frame(
+            &mut ctx,
+            mac::MgmtHdr {
+                frame_ctrl: mac::FrameControl(0)
+                    .with_frame_type(mac::FrameType::MGMT)
+                    .with_mgmt_subtype(mac::MgmtSubtype::ASSOC_REQ),
+                duration: 0,
+                addr1: BSSID.0,
+                addr2: CLIENT_ADDR,
+                addr3: BSSID.0,
+                seq_ctrl: mac::SequenceControl(10),
+            },
+            &[
+                // Assoc req body
+                0, 0, // Capability info
+                10, 0, // Listen interval
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
+                48, 2, 77, 88, // RSNE
+            ][..],
+        )
+        .expect("expected OK");
+
+        assert_eq!(bss.clients.contains_key(&CLIENT_ADDR), true);
+
+        let msg = fake_device
+            .next_mlme_msg::<fidl_mlme::AssociateIndication>()
+            .expect("expected MLME message");
+        assert_eq!(
+            msg,
+            fidl_mlme::AssociateIndication {
+                peer_sta_address: CLIENT_ADDR,
+                listen_interval: 10,
+                ssid: Some(b"coolnet".to_vec()),
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+                rsne: Some(vec![48, 2, 77, 88]),
             },
         );
     }
@@ -1779,10 +1919,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 false,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
 
@@ -1894,10 +2035,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 false,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
 
@@ -2094,10 +2236,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 false,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
         fake_device.wlan_queue.clear();
@@ -2173,10 +2316,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 true,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
         fake_device.wlan_queue.clear();
@@ -2212,10 +2356,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ctx,
                 true,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
         fake_device.wlan_queue.clear();
@@ -2278,10 +2423,11 @@ mod tests {
             .handle_mlme_assoc_resp(
                 &mut ap.ctx,
                 false,
+                1,
                 mac::CapabilityInfo(0),
                 fidl_mlme::AssociateResultCodes::Success,
                 1,
-                &[][..],
+                &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10][..],
             )
             .expect("expected OK");
         fake_device.wlan_queue.clear();
@@ -2800,6 +2946,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                rates: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
             },
         })
         .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
@@ -2818,6 +2965,9 @@ mod tests {
                 0, 0, // Capabilities
                 0, 0, // status code
                 1, 0, // AID
+                // IEs
+                1, 8, 1, 2, 3, 4, 5, 6, 7, 8, // Rates
+                50, 2, 9, 10, // Extended rates
             ][..]
         );
     }
@@ -2899,6 +3049,7 @@ mod tests {
                 peer_sta_address: CLIENT_ADDR,
                 result_code: fidl_mlme::AssociateResultCodes::Success,
                 association_id: 1,
+                rates: vec![1, 2, 3],
             },
         })
         .expect("expected Ap::handle_mlme_msg(fidl_mlme::MlmeRequestMessage::AssociateResp) ok");
