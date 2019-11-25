@@ -105,6 +105,11 @@ void AudioAdminTest::SetUp() {
     ASSERT_NE(token, virtual_audio_output_token_) << "Audio device removed while test was running";
   });
 
+  audio_dev_enum_.events().OnDefaultDeviceChanged =
+      CompletionCallback([](uint64_t old_default_token, uint64_t new_default_token) {
+        FAIL() << "Default route changed while test was running.";
+      });
+
   environment()->ConnectToService(audio_core_sync_.NewRequest());
   audio_core_sync_->SetSystemGain(0.0f);
   audio_core_sync_->SetSystemMute(false);
@@ -126,6 +131,7 @@ void AudioAdminTest::TearDown() {
         }
       });
   audio_dev_enum_.events().OnDeviceAdded = nullptr;
+  audio_dev_enum_.events().OnDefaultDeviceChanged = nullptr;
 
   // Remove our virtual audio output device
   if (virtual_audio_output_sync_.is_bound()) {
@@ -160,10 +166,16 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
     }
   };
 
+  uint64_t default_dev = 0;
+  audio_dev_enum_.events().OnDefaultDeviceChanged = [&default_dev](uint64_t old_default_token,
+                                                                   uint64_t new_default_token) {
+    default_dev = new_default_token;
+  };
+
   // Ensure that that our connection to the device enumerator has completed
   // enumerating the audio devices if any exist before we add ours.  This serves
   // as a synchronization point to make sure audio_core has our OnDeviceAdded
-  // callback registered before we trigger the
+  // and OnDefaultDeviceChanged callbacks registered before we trigger the
   // device add.  Without this call, the add for the virtual output may be
   // picked up and processed in the device_manager in audio_core before it's
   // added our listener for events.
@@ -193,9 +205,15 @@ void AudioAdminTest::SetUpVirtualAudioOutput() {
   status = virtual_audio_output_sync_->Add();
   ASSERT_EQ(status, ZX_OK) << "Failed to add virtual audio output";
 
-  // Wait for OnDeviceAdded callback.  These will
+  // Wait for OnDeviceAdded and OnDefaultDeviceChanged callback.  These will
   // both need to have happened for the new device to be used for the test.
-  RunLoopUntil([this]() { return virtual_audio_output_token_ != 0; });
+  RunLoopUntil([this, &default_dev]() {
+    return virtual_audio_output_token_ != 0 && default_dev == virtual_audio_output_token_;
+  });
+
+  ASSERT_EQ(virtual_audio_output_token_, default_dev)
+      << "Timed out waiting for audio_core to make the virtual audio output "
+         "the default.";
 }
 
 // SetUpRenderer
