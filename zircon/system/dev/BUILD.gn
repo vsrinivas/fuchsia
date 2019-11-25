@@ -17,6 +17,7 @@ group("dev") {
     "bus",
     "clk",
     "codec",
+    "cpu",
     "display",
     "ethernet",
     "fw",

@@ -93,6 +93,10 @@ int Astro::Thread() {
     zxlogf(ERROR, "I2cInit failed: %d\n", status);
   }
 
+  if ((status = CpuInit()) != ZX_OK) {
+    zxlogf(ERROR, "CpuInit failed: %d\n", status);
+  }
+
   if ((status = MaliInit()) != ZX_OK) {
     zxlogf(ERROR, "MaliInit failed: %d\n", status);
   }

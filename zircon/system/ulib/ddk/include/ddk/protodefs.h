@@ -149,6 +149,7 @@ DDK_PROTOCOL_DEF(SERIAL_IMPL_ASYNC,       125, "serial-impl-async", 0)
 DDK_PROTOCOL_DEF(AT_TRANSPORT,            126, "at-transport", 0)
 DDK_PROTOCOL_DEF(PWM,                     127, "pwm", 0)
 DDK_PROTOCOL_DEF(PWM_IMPL,                128, "pwm-impl", 0)
+DDK_PROTOCOL_DEF(CPU_CTRL,                129, "cpu-ctrl", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif

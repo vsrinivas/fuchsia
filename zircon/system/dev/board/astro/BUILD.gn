@@ -10,6 +10,7 @@ zx_driver("astro") {
     "astro-buttons.cc",
     "astro-canvas.cc",
     "astro-clk.cc",
+    "astro-cpu.cc",
     "astro-display.cc",
     "astro-gpio.cc",
     "astro-i2c.cc",

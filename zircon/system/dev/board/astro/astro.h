@@ -118,6 +118,7 @@ class Astro : public AstroType {
   zx_status_t UsbInit();
   zx_status_t VideoInit();
   zx_status_t BacklightInit();
+  zx_status_t CpuInit();
   int Thread();
 
   uint32_t GetBoardRev(void);

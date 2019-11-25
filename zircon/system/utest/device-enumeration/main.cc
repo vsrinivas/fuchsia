@@ -144,6 +144,7 @@ TEST_F(DeviceEnumerationTest, AstroTest) {
       "sys/platform/astro", "sys/platform/05:03:1/aml-axg-gpio", "astro-buttons/hid-buttons",
       "sys/platform/05:00:2/aml-i2c", "sys/platform/05:03:17/aml-gpu",
       "sys/platform/05:00:18/aml-usb-phy-v2",
+      "sys/platform/05:03:1e/cpu",
 
       // XHCI driver will not be loaded if we are in USB peripheral mode.
       // "xhci/xhci/usb-bus",

@@ -130,6 +130,7 @@ aggregate_manifest("legacy-image") {
     ":driver.alc5663",
     ":driver.aml-axg-gpio",
     ":driver.aml-canvas",
+    ":driver.aml-cpu",
     ":driver.aml-ethernet-s912",
     ":driver.aml-gpu",
     ":driver.aml-gxl-gpio",
