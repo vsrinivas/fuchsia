@@ -90,6 +90,27 @@ class RouteGraphTest : public testing::ThreadingModelFixture {
     under_test_.SetThrottleOutput(&threading_model(), throttle_output_);
   }
 
+  struct FakeOutputAndDriver {
+    fbl::RefPtr<FakeAudioOutput> output;
+    std::unique_ptr<testing::FakeAudioDriver> fake_driver;
+  };
+
+  FakeOutputAndDriver OutputWithDeviceId(const audio_stream_unique_id_t& device_id) {
+    auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+    zx::channel c1, c2;
+    ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
+    auto fake_driver = std::make_unique<testing::FakeAudioDriver>(
+        std::move(c1), threading_model().FidlDomain().dispatcher());
+    fake_driver->set_stream_unique_id(device_id);
+    ZX_ASSERT(ZX_OK == output->driver()->Init(std::move(c2)));
+
+    fake_driver->Start();
+    output->driver()->GetDriverInfo();
+    RunLoopUntilIdle();
+
+    return {output, std::move(fake_driver)};
+  }
+
   testing::StubDeviceRegistry device_registry_;
   RouteGraph under_test_;
   fbl::RefPtr<AudioOutput> throttle_output_;
@@ -560,28 +581,6 @@ static const RoutingConfig kConfigWithMediaExternalRoutingPolicy = RoutingConfig
 class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
  public:
   RouteGraphWithMediaExternalPolicyTest() : RouteGraphTest(kConfigWithMediaExternalRoutingPolicy) {}
-
- protected:
-  struct FakeOutputAndDriver {
-    fbl::RefPtr<FakeAudioOutput> output;
-    std::unique_ptr<testing::FakeAudioDriver> fake_driver;
-  };
-
-  FakeOutputAndDriver OutputWithDeviceId(const audio_stream_unique_id_t& device_id) {
-    auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
-    zx::channel c1, c2;
-    ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
-    auto fake_driver = std::make_unique<testing::FakeAudioDriver>(
-        std::move(c1), threading_model().FidlDomain().dispatcher());
-    fake_driver->set_stream_unique_id(device_id);
-    ZX_ASSERT(ZX_OK == output->driver()->Init(std::move(c2)));
-
-    fake_driver->Start();
-    output->driver()->GetDriverInfo();
-    RunLoopUntilIdle();
-
-    return {output, std::move(fake_driver)};
-  }
 };
 
 TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedDevice) {
@@ -618,6 +617,73 @@ TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsuppor
   auto unconfigured_output = unconfigured_output_and_driver.output.get();
   under_test_.AddOutput(unconfigured_output);
   EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output}));
+}
+
+const audio_stream_unique_id_t kSupportsLoopbackDeviceId = audio_stream_unique_id_t{.data = {0x7a}};
+
+static const RoutingConfig kConfigWithExternNonLoopbackDevicePolicy = RoutingConfig(
+    /*profiles=*/{{kSupportsAllDeviceId,
+                   RoutingConfig::DeviceProfile(
+                       /*eligible_for_loopback=*/true,
+                       /*output_usage_support_set=*/
+                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})},
+                  {kSupportsLoopbackDeviceId,
+                   RoutingConfig::DeviceProfile(
+                       /*eligible_for_loopback=*/true,
+                       /*output_usage_support_set=*/
+                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND)})}},
+    /*default=*/{RoutingConfig::DeviceProfile(
+        /*eligible_for_loopback=*/false, /*output_usage_support_set=*/{
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})});
+
+class RouteGraphWithExternalNonLoopbackDeviceTest : public RouteGraphTest {
+ public:
+  RouteGraphWithExternalNonLoopbackDeviceTest()
+      : RouteGraphTest(kConfigWithExternNonLoopbackDevicePolicy) {}
+};
+
+TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackRoutesToLastPluggedSupported) {
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  auto output = output_and_driver.output.get();
+  under_test_.AddOutput(output);
+
+  auto capturer = FakeAudioObject::FakeCapturer();
+  under_test_.AddLoopbackCapturer(capturer);
+  under_test_.SetLoopbackCapturerRoutingProfile(
+      capturer.get(),
+      {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({output}));
+
+  auto second_output_and_driver = OutputWithDeviceId(kSupportsLoopbackDeviceId);
+  auto second_output = second_output_and_driver.output.get();
+  under_test_.AddOutput(second_output);
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({second_output}));
+}
+
+TEST_F(RouteGraphWithExternalNonLoopbackDeviceTest, LoopbackDoesNotRouteToUnsupportedDevice) {
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  auto output = output_and_driver.output.get();
+  under_test_.AddOutput(output);
+
+  auto capturer = FakeAudioObject::FakeCapturer();
+  under_test_.AddLoopbackCapturer(capturer);
+  under_test_.SetLoopbackCapturerRoutingProfile(
+      capturer.get(),
+      {.routable = true, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({output}));
+
+  auto second_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
+  auto second_output = second_output_and_driver.output.get();
+  under_test_.AddOutput(second_output);
+  EXPECT_THAT(capturer->SourceLinks(), UnorderedElementsAreArray({output}));
 }
 
 }  // namespace

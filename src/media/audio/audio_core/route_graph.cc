@@ -315,11 +315,18 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
   }
 
   auto new_loopback_target = [this]() {
-    auto it = std::find_if(outputs_.begin(), outputs_.end(),
-                           [this](auto output) { return output != throttle_output_.get(); });
+    auto it = std::find_if(outputs_.begin(), outputs_.end(), [this](auto output) {
+      if (output == throttle_output_.get()) {
+        return false;
+      }
+      const auto& device_id = output->driver()->persistent_unique_id();
+      auto device_profile = routing_config_.device_profile(device_id);
+      return device_profile.eligible_for_loopback();
+    });
 
     return it == outputs_.end() ? nullptr : *it;
   }();
+
   auto new_capture_target = inputs_.empty() ? nullptr : inputs_.front();
 
   return {Targets{.render = new_render_targets,
