@@ -361,11 +361,14 @@ bool vmo_mapper_move_test() {
 }  // namespace
 
 BEGIN_TEST_CASE(vmo_mapper_vmar_manager_tests)
-RUN_NAMED_TEST("vmo_create_and_map_root", vmo_create_and_map_root_test)
+// TODO(fxb/41331): reenable once flake is removed
+//RUN_NAMED_TEST("vmo_create_and_map_root", vmo_create_and_map_root_test)
 RUN_NAMED_TEST("vmo_create_and_map_sub_vmar", vmo_create_and_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_create_and_map_sub_sub_vmar", vmo_create_and_map_sub_sub_vmar_test)
-RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
+// TODO(fxb/41331): reenable once flake is removed
+//RUN_NAMED_TEST("vmo_map_root", vmo_map_root_test)
 RUN_NAMED_TEST("vmo_map_sub_vmar", vmo_map_sub_vmar_test)
 RUN_NAMED_TEST("vmo_map_sub_sub_vmar", vmo_map_sub_sub_vmar_test)
-RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
+// TODO(fxb/41331): reenable once flake is removed
+//RUN_NAMED_TEST("vmo_mapper_move_test", vmo_mapper_move_test)
 END_TEST_CASE(vmo_mapper_vmar_manager_tests)
