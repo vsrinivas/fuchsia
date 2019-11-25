@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/input"
+        ],
         "services": [
             "fuchsia.logger.LogSink"
         ]
