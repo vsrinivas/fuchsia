@@ -375,7 +375,7 @@ zx_status_t VmMapping::UnmapVmoRangeLocked(uint64_t offset, uint64_t len) const 
   // The specific path we're avoiding is if the VMO calls back into us during vmo->GetPageLocked()
   // via UnmapVmoRangeLocked(). If we set this flag we're short circuiting the unmap operation
   // so that we don't do extra work.
-  if (likely(currently_faulting_)) {
+  if (unlikely(currently_faulting_)) {
     LTRACEF("recursing to ourself, abort\n");
     return ZX_OK;
   }
