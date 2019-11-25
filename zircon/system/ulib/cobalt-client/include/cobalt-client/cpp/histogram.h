@@ -92,6 +92,13 @@ class Histogram {
     return remote_histogram_->GetCount(bucket);
   }
 
+  // Returns the set of |HistogramOptions| used to construc this histogram.
+  const HistogramOptions& GetOptions() const {
+    ZX_DEBUG_ASSERT_MSG(remote_histogram_.has_value(),
+                        "Must initialize histogram before calling |GetOptions|.");
+    return remote_histogram_->metric_options();
+  }
+
  private:
   // Two extra buckets for overflow and underflow buckets.
   std::optional<internal::RemoteHistogram<num_buckets + 2>> remote_histogram_;

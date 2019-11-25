@@ -46,6 +46,13 @@ class Counter {
   // sent to the remote service(cobalt).
   Count GetCount() const;
 
+  // Returns the set of |MetricOptions| used to construc this histogram.
+  const MetricOptions& GetOptions() const {
+    ZX_DEBUG_ASSERT_MSG(remote_counter_.has_value(),
+                        "Must initialize counter before calling |GetOptions|.");
+    return remote_counter_->metric_options();
+  }
+
  private:
   std::optional<internal::RemoteCounter> remote_counter_ = std::nullopt;
   Collector* collector_ = nullptr;
