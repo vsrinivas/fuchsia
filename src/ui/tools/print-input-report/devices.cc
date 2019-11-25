@@ -28,6 +28,9 @@ zx_status_t PrintInputDescriptor(Printer* printer, llcpp_report::InputDevice::Sy
   if (result->descriptor.has_touch()) {
     PrintTouchDesc(printer, result->descriptor.touch());
   }
+  if (result->descriptor.has_keyboard()) {
+    PrintKeyboardDesc(printer, result->descriptor.keyboard());
+  }
   return ZX_OK;
 }
 
@@ -110,6 +113,17 @@ void PrintTouchDesc(Printer* printer, const llcpp_report::TouchDescriptor& touch
   printer->DecreaseIndent();
 }
 
+void PrintKeyboardDesc(Printer* printer, const llcpp_report::KeyboardDescriptor& keyboard_desc) {
+  printer->Print("Keyboard Descriptor:\n");
+  printer->IncreaseIndent();
+  if (keyboard_desc.has_keys()) {
+    for (size_t i = 0; i < keyboard_desc.keys().count(); i++) {
+      printer->Print("Key: %8ld\n", keyboard_desc.keys()[i]);
+    }
+  }
+  printer->DecreaseIndent();
+}
+
 int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* client,
                      size_t num_reads) {
   // Get the reports event.
@@ -152,6 +166,9 @@ int PrintInputReport(Printer* printer, llcpp_report::InputDevice::SyncClient* cl
       }
       if (report.has_touch()) {
         PrintTouchReport(printer, report.touch());
+      }
+      if (report.has_keyboard()) {
+        PrintKeyboardReport(printer, report.keyboard());
       }
       printer->Print("\n");
     }
@@ -214,6 +231,20 @@ void PrintTouchReport(Printer* printer, const llcpp_report::TouchReport& touch_r
       printer->DecreaseIndent();
     }
   }
+}
+
+void PrintKeyboardReport(Printer* printer, const llcpp_report::KeyboardReport& keyboard_report) {
+  printer->Print("Keyboard Report\n");
+  printer->IncreaseIndent();
+  if (keyboard_report.has_pressed_keys()) {
+    for (size_t i = 0; i < keyboard_report.pressed_keys().count(); i++) {
+      printer->Print("Key: %8ld\n", keyboard_report.pressed_keys()[i]);
+    }
+    if (keyboard_report.pressed_keys().count() == 0) {
+      printer->Print("No keys pressed\n");
+    }
+  }
+  printer->DecreaseIndent();
 }
 
 }  // namespace print_input_report

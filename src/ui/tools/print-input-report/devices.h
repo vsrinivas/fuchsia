@@ -23,6 +23,10 @@ void PrintSensorReport(Printer* printer, const llcpp_report::SensorReport& senso
 
 void PrintTouchDesc(Printer* printer, const llcpp_report::TouchDescriptor& touch_desc);
 void PrintTouchReport(Printer* printer, const llcpp_report::TouchReport& touch_report);
+
+void PrintKeyboardDesc(Printer* printer, const llcpp_report::KeyboardDescriptor& keyboard_desc);
+void PrintKeyboardReport(Printer* printer, const llcpp_report::KeyboardReport& keyboard_report);
+
 }  // namespace print_input_report
 
 #endif  // SRC_UI_TOOLS_PRINT_INPUT_REPORT_DEVICES_H_

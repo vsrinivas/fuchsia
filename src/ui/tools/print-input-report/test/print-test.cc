@@ -15,6 +15,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <gtest/gtest.h>
+#include <hid/usages.h>
 
 #include "src/ui/lib/hid-input-report/fidl.h"
 #include "src/ui/tools/print-input-report/devices.h"
@@ -38,14 +39,12 @@ class FakePrinter : public print_input_report::Printer {
     ASSERT_GT(expected.size(), indent_);
     int cmp = strcmp(buf, expected.c_str());
     if (cmp != 0) {
-      printf("Wanted string: '%s'\n", expected.c_str() + indent_);
+      printf("Wanted string: '%s'\n", expected.c_str());
       printf("Saw string:    '%s'\n", buf);
       ASSERT_TRUE(false);
     }
 
     // Print the string for easy debugging.
-    std::string spaces(indent_, ' ');
-    printf("%s", spaces.c_str());
     vprintf(format, argptr);
 
     va_end(argptr);
@@ -365,6 +364,75 @@ TEST_F(PrintInputReport, PrintTouchReport) {
       "  Pressure:       00000345\n",
       "  Contact Width:  00000678\n",
       "  Contact Height: 00000789\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+}
+
+TEST_F(PrintInputReport, PrintKeyboardDescriptor) {
+  hid_input_report::KeyboardDescriptor keyboard_desc = {};
+
+  keyboard_desc.num_keys = 3;
+  keyboard_desc.keys[0] = HID_USAGE_KEY_A;
+  keyboard_desc.keys[1] = HID_USAGE_KEY_UP;
+  keyboard_desc.keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+
+  hid_input_report::ReportDescriptor desc;
+  desc.descriptor = keyboard_desc;
+
+  fake_device_->SetDescriptor(desc);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Keyboard Descriptor:\n",
+      "  Key:        1\n",
+      "  Key:       79\n",
+      "  Key:       82\n",
+  });
+
+  print_input_report::PrintInputDescriptor(&printer, &client_.value());
+}
+
+TEST_F(PrintInputReport, PrintKeyboardReport) {
+  hid_input_report::KeyboardReport keyboard_report = {};
+
+  keyboard_report.num_pressed_keys = 3;
+  keyboard_report.pressed_keys[0] = HID_USAGE_KEY_A;
+  keyboard_report.pressed_keys[1] = HID_USAGE_KEY_UP;
+  keyboard_report.pressed_keys[2] = HID_USAGE_KEY_LEFT_SHIFT;
+
+  hid_input_report::Report report;
+  report.report = keyboard_report;
+
+  fake_device_->SetReport(report);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Keyboard Report\n",
+      "  Key:        1\n",
+      "  Key:       79\n",
+      "  Key:       82\n",
+      "\n",
+  });
+
+  print_input_report::PrintInputReport(&printer, &client_.value(), 1);
+}
+
+TEST_F(PrintInputReport, PrintKeyboardReportNoKeys) {
+  hid_input_report::KeyboardReport keyboard_report = {};
+
+  keyboard_report.num_pressed_keys = 0;
+
+  hid_input_report::Report report;
+  report.report = keyboard_report;
+
+  fake_device_->SetReport(report);
+
+  FakePrinter printer;
+  printer.SetExpectedStrings(std::vector<std::string>{
+      "Keyboard Report\n",
+      "  No keys pressed\n",
       "\n",
   });
 
