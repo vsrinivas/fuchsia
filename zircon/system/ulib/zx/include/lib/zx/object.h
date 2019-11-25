@@ -84,6 +84,10 @@ class object_base {
   zx_handle_t value_;
 };
 
+// Forward declaration for borrow method.
+template <typename T>
+class unowned;
+
 // Provides type-safe access to operations on a handle.
 template <typename T>
 class object : public object_base {
@@ -170,6 +174,9 @@ class object : public object_base {
                   "Object must support scheduling profiles.");
     return zx_object_set_profile(get(), profile.get(), options);
   }
+
+  // Returns a type-safe wrapper of the underlying handle that does not claim ownership.
+  unowned<T> borrow() const { return unowned<T>(get()); }
 
  private:
   template <typename A, typename B>

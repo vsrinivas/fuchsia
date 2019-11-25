@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-
-#include <lib/zx/event.h>
 #include <lib/zx/object.h>
-#include <zxtest/zxtest.h>
+
+#include <assert.h>
+#include <lib/zx/event.h>
 
 #include <set>
+
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -19,6 +20,14 @@ TEST(ZxUnowned, UsableInContainers) {
   set.emplace(event);
   EXPECT_EQ(set.size(), 1u);
   EXPECT_EQ(*set.begin(), event.get());
+}
+
+TEST(ZxObject, BorrowReturnsUnownedObjectOfSameHandle) {
+  zx::event event;
+  ASSERT_OK(zx::event::create(0u, &event));
+
+  ASSERT_EQ(event.get(), event.borrow());
+  ASSERT_EQ(zx::unowned_event(event), event.borrow());
 }
 
 }  // namespace
