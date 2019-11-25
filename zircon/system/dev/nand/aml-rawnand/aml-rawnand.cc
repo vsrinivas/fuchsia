@@ -394,10 +394,7 @@ uint8_t AmlRawNand::AmlReadByte() {
   AmlCmdIdle(0);
   AmlCmdIdle(0);
   AmlWaitCmdFinish(zx::msec(CMD_FINISH_TIMEOUT_MS), zx::usec(10), zx::usec(10));
-  // There is no mmio interface to read a byte (?), so get the
-  // underlying reg and do this manually.
-  auto reg = reinterpret_cast<volatile uint8_t*>(mmio_nandreg_.get());
-  return readb(reg + P_NAND_BUF);
+  return mmio_nandreg_.Read<uint8_t>(P_NAND_BUF);
 }
 
 void AmlRawNand::AmlSetClockRate(uint32_t clk_freq) {

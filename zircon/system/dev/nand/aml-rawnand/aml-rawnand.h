@@ -88,8 +88,8 @@ class AmlRawNand : public DeviceType, public ddk::RawNandProtocol<AmlRawNand, dd
   sync_completion_t req_completion_;
 
   AmlController controller_params_;
-  uint32_t chip_select_;
-  int chip_delay_;
+  uint32_t chip_select_ = 0; // Default to 0.
+  int chip_delay_ = 100; // Conservative default before we query chip to find better value.
   uint32_t writesize_; /* NAND pagesize - bytes */
   uint32_t erasesize_; /* size of erase block - bytes */
   uint32_t erasesize_pages_;
