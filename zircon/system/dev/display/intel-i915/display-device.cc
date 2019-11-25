@@ -299,14 +299,11 @@ void DisplayDevice::SetStateNormalized(FidlBacklight::State state,
     status = ZX_ERR_BAD_STATE;
   }
 
-  FidlBacklight::Device_SetStateNormalized_Result result;
-  if (status == ZX_OK) {
-    FidlBacklight::Device_SetStateNormalized_Response response;
-    result.set_response(&response);
-  } else {
-    result.set_err(&status);
+  if (status != ZX_OK) {
+    completer.ReplyError(status);
+    return;
   }
-  completer.Reply(std::move(result));
+  completer.ReplySuccess();
 }
 
 void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) {
@@ -319,16 +316,12 @@ void DisplayDevice::GetStateAbsolute(GetStateAbsoluteCompleter::Sync completer) 
 void DisplayDevice::SetStateAbsolute(FidlBacklight::State state,
                                      SetStateAbsoluteCompleter::Sync completer) {
   FidlBacklight::Device_SetStateAbsolute_Result result;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(&status);
-  completer.Reply(std::move(result));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 void DisplayDevice::GetMaxAbsoluteBrightness(GetMaxAbsoluteBrightnessCompleter::Sync completer) {
   FidlBacklight::Device_GetMaxAbsoluteBrightness_Result result;
-  zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-  result.set_err(&status);
-  completer.Reply(std::move(result));
+  completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
 }
 
 }  // namespace i915

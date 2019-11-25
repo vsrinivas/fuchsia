@@ -764,15 +764,11 @@ void Paver::QueryActiveConfiguration(QueryActiveConfigurationCompleter::Sync com
   }
 
   std::optional<Configuration> config = GetActiveConfiguration(*abr_client_);
-  if (config) {
-    ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
-    response.configuration = *config;
-    result.set_response(&response);
-  } else {
-    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
-    result.set_err(&status);
+  if (!config) {
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
+    return;
   }
-  completer.Reply(std::move(result));
+  completer.ReplySuccess(config.value());
 }
 
 void Paver::QueryConfigurationStatus(Configuration configuration,
