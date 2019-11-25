@@ -26,10 +26,7 @@ namespace {
 constexpr uint32_t kIspStreamMinBufferForCamping = 5;
 constexpr uint32_t kIspStreamWidth = 2176;
 constexpr uint32_t kIspStreamHeight = 2720;
-constexpr uint32_t kIspStreamStride = 2176;
-constexpr uint32_t kIspStreamLayers = 1;
 constexpr uint32_t kIspStreamBytesPerRowDivisor = 128;
-constexpr uint32_t kIspStreamColorSpaceCount = 1;
 constexpr uint32_t kIspStreamFrameRate = 30;
 constexpr ::fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
@@ -44,16 +41,9 @@ constexpr ::fuchsia::sysmem::ColorSpaceType kIspStreamColorSpaceType =
  */
 
 static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() {
+  StreamConstraints image_formats;
   return {
-      {
-          .pixel_format = {fuchsia::sysmem::PixelFormatType::NV12},
-          .coded_width = kIspStreamWidth,
-          .coded_height = kIspStreamHeight,
-          .bytes_per_row = kIspStreamStride,
-          .display_width = kIspStreamWidth,
-          .display_height = kIspStreamHeight,
-          .color_space.type = kIspStreamColorSpaceType,
-      },
+      image_formats.MakeImageFormat(kIspStreamWidth, kIspStreamHeight, kIspStreamPixelFormat),
   };
 }
 
