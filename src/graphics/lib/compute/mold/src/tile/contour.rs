@@ -157,6 +157,13 @@ pub(crate) enum Contour {
 }
 
 impl Contour {
+    pub fn is_empty(&self) -> bool {
+        match self {
+            Self::Tiles(tiles) => tiles.is_empty(),
+            Self::Maxed => true,
+        }
+    }
+
     pub fn for_each_tile(&self, tiles: &mut Tiles, mut f: impl FnMut(&mut Tile)) {
         match self {
             Self::Tiles(inner_tiles) => {

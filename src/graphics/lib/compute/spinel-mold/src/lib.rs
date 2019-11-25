@@ -914,7 +914,7 @@ pub unsafe extern "C" fn spn_render(context: ContextPtr, submit: *const RenderSu
     let mut map = context
         .map
         .take()
-        .filter(|map| map.width() != width || map.height() != height)
+        .filter(|map| map.width() == width && map.height() == height)
         .unwrap_or_else(|| Map::new(width, height));
 
     let mut styling = (*submit.styling).borrow_mut();
@@ -1059,19 +1059,6 @@ mod tests {
 
             spn_render(context, &submit);
 
-            spn_styling_release(styling);
-            spn_composition_release(composition);
-
-            spn_raster_release(context, rasters.as_ptr(), rasters.len() as u32);
-
-            spn_raster_builder_release(raster_builder);
-
-            let paths = [band_top, band_bottom];
-            spn_path_release(context, paths.as_ptr(), paths.len() as u32);
-
-            spn_path_builder_release(path_builder);
-            spn_context_release(context);
-
             buffer.set_len(buffer_size);
             assert_eq!(
                 buffer,
@@ -1087,6 +1074,29 @@ mod tests {
                     0xffff_0000,
                 ]
             );
+
+            for i in 0..buffer_size {
+                buffer[i] = 0;
+            }
+
+            spn_render(context, &submit);
+
+            // No writing to the buffer when rendering the same thing.
+            assert_eq!(buffer, vec![0; buffer_size]);
+
+
+            spn_styling_release(styling);
+            spn_composition_release(composition);
+
+            spn_raster_release(context, rasters.as_ptr(), rasters.len() as u32);
+
+            spn_raster_builder_release(raster_builder);
+
+            let paths = [band_top, band_bottom];
+            spn_path_release(context, paths.as_ptr(), paths.len() as u32);
+
+            spn_path_builder_release(path_builder);
+            spn_context_release(context);
         }
     }
 }

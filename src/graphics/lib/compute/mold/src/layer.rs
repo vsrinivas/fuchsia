@@ -46,7 +46,7 @@ impl Content {
 }
 
 /// A layer containing a raster and [`Op`]s related to it.
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Clone, Debug)]
 pub struct Layer {
     pub(crate) content: Content,
     pub(crate) ops: Vec<Op>,
@@ -81,5 +81,13 @@ impl Layer {
             needs_render: Cell::new(true),
             is_partial: Cell::new(false),
         }
+    }
+}
+
+impl Eq for Layer {}
+
+impl PartialEq for Layer {
+    fn eq(&self, other: &Self) -> bool {
+        self.content == other.content && self.ops == other.ops
     }
 }

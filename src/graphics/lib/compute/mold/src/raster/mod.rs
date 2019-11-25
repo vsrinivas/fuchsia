@@ -27,6 +27,10 @@ pub struct RasterInner {
 }
 
 impl RasterInner {
+    fn is_empty(&self) -> bool {
+        self.segments.is_empty() && self.contour.is_empty()
+    }
+
     // Used in spinel-mold.
     #[doc(hidden)]
     pub fn translated(inner: &Rc<RasterInner>, translation: Point<i32>) -> Raster {
@@ -246,7 +250,8 @@ impl Eq for Raster {}
 
 impl PartialEq for Raster {
     fn eq(&self, other: &Self) -> bool {
-        Rc::ptr_eq(&self.inner, &other.inner) && self.translation == other.translation
+        (Rc::ptr_eq(&self.inner, &other.inner) || self.inner.is_empty() && other.inner.is_empty())
+            && self.translation == other.translation
     }
 }
 

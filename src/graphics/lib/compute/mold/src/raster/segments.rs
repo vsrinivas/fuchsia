@@ -73,6 +73,10 @@ impl RasterSegments {
         Self { commands: Vec::new() }
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.commands.is_empty()
+    }
+
     pub fn iter(&self) -> RasterSegmentsIter {
         RasterSegmentsIter { commands: &self.commands, index: 0, previous_point: None }
     }

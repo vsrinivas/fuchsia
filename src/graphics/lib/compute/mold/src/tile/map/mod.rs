@@ -112,6 +112,7 @@ impl Tiles {
     ) {
         self.tiles
             .par_iter()
+            .filter(|tile| tile.needs_render)
             .map(|tile| Context {
                 tile,
                 index: tile.i + tile.j * tile_width,
