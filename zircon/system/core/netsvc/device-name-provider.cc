@@ -48,14 +48,12 @@ void device_id_get(unsigned char mac[6], char out[HOST_NAME_MAX]) {
 }
 
 class DeviceNameProviderServer final : public llcpp::fuchsia::device::NameProvider::Interface {
-  llcpp::fuchsia::device::NameProvider_GetDeviceName_Response response;
+  fidl::StringView name;
 
  public:
-  DeviceNameProviderServer(const fidl::StringView device_name) { response.name = device_name; }
+  DeviceNameProviderServer(const fidl::StringView device_name) { name = device_name; }
   void GetDeviceName(GetDeviceNameCompleter::Sync completer) override {
-    llcpp::fuchsia::device::NameProvider_GetDeviceName_Result result;
-    result.set_response(response);
-    completer.Reply(std::move(result));
+    completer.ReplySuccess(name);
   }
 };
 

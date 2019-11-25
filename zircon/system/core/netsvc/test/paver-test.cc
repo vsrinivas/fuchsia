@@ -87,11 +87,11 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     if (abr_supported_ && abr_initialized_) {
       ::llcpp::fuchsia::paver::Paver_QueryActiveConfiguration_Response response;
       response.configuration = ::llcpp::fuchsia::paver::Configuration::A;
-      result.set_response(response);
+      result.set_response(&response);
+      completer.Reply(std::move(result));
     } else {
-      result.set_err(ZX_ERR_NOT_SUPPORTED);
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     }
-    completer.Reply(std::move(result));
   }
 
   void QueryConfigurationStatus(::llcpp::fuchsia::paver::Configuration configuration,
@@ -101,10 +101,10 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
     if (abr_supported_ && abr_initialized_) {
       ::llcpp::fuchsia::paver::Paver_QueryConfigurationStatus_Response response;
       response.status = ::llcpp::fuchsia::paver::ConfigurationStatus::HEALTHY;
+      completer.Reply(std::move(result));
     } else {
-      result.set_err(ZX_ERR_NOT_SUPPORTED);
+      completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
     }
-    completer.Reply(std::move(result));
   }
 
   void SetConfigurationActive(::llcpp::fuchsia::paver::Configuration configuration,
@@ -145,8 +145,7 @@ class FakePaver : public ::llcpp::fuchsia::paver::Paver::Interface {
                  ::llcpp::fuchsia::paver::Asset asset, ReadAssetCompleter::Sync completer) {
     last_command_ = Command::kReadAsset;
     ::llcpp::fuchsia::paver::Paver_ReadAsset_Result result;
-    result.set_err(ZX_ERR_NOT_SUPPORTED);
-    completer.Reply(std::move(result));
+    completer.ReplyError(ZX_ERR_NOT_SUPPORTED);
   }
 
   void WriteAsset(::llcpp::fuchsia::paver::Configuration configuration,

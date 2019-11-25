@@ -29,12 +29,13 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   using ::llcpp::fuchsia::paver::ReadResult;
   ReadResult result;
   if (!vmo_) {
-    result.set_err(ZX_ERR_BAD_STATE);
+    zx_status_t status = ZX_ERR_BAD_STATE;
+    result.set_err(&status);
     completer.Reply(std::move(result));
     return;
   }
   if (eof_reached_) {
-    result.set_eof(true);
+    result.set_eof(&eof_reached_);
     completer.Reply(std::move(result));
     return;
   }
@@ -42,10 +43,10 @@ void PayloadStreamer::ReadData(ReadDataCompleter::Sync completer) {
   size_t actual;
   auto status = read_(mapper_.start(), read_offset_, mapper_.size(), &actual);
   if (status != ZX_OK) {
-    result.set_err(status);
+    result.set_err(&status);
   } else if (actual == 0) {
     eof_reached_ = true;
-    result.set_eof(true);
+    result.set_eof(&eof_reached_);
   } else {
     result.mutable_info().offset = 0;
     result.mutable_info().size = actual;
