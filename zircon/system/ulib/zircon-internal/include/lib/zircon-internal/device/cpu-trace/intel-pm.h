@@ -331,6 +331,8 @@ namespace perfmon {
 struct X86PmuProperties {
   PmuCommonProperties common;
 
+  uint8_t padding1[2];
+
   // The PERF_CAPABILITIES MSR.
   uint64_t perf_capabilities;
   // The size of the LBR (Last Branch Record) stack.
@@ -338,6 +340,8 @@ struct X86PmuProperties {
   // LBR is supported by the chip because the device is not recognized as
   // supporting it.
   uint32_t lbr_stack_size;
+
+  uint8_t padding2[4];
 };
 
 // PMU configuration.
@@ -377,6 +381,8 @@ struct X86PmuConfig {
   uint32_t fixed_flags[IPM_MAX_FIXED_COUNTERS];
   uint32_t programmable_flags[IPM_MAX_PROGRAMMABLE_COUNTERS];
   uint32_t misc_flags[IPM_MAX_MISC_EVENTS];
+
+  uint8_t padding1[4];
 
   // IA32_PERFEVTSEL_*
   uint64_t programmable_hw_events[IPM_MAX_PROGRAMMABLE_COUNTERS];

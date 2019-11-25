@@ -22,15 +22,19 @@ __BEGIN_CDECLS
 typedef struct zx_system_powerctl_arg {
   union {
     struct {
-      uint8_t target_s_state;  // Value between 1 and 5 indicating which S-state
-      uint8_t sleep_type_a;    // Value from ACPI VM (SLP_TYPa)
-      uint8_t sleep_type_b;    // Value from ACPI VM (SLP_TYPb)
-    } acpi_transition_s_state;
+      struct {
+        uint8_t target_s_state;  // Value between 1 and 5 indicating which S-state
+        uint8_t sleep_type_a;    // Value from ACPI VM (SLP_TYPa)
+        uint8_t sleep_type_b;    // Value from ACPI VM (SLP_TYPb)
+      } acpi_transition_s_state;
+      uint8_t padding1[9];
+    };
     struct {
       uint32_t power_limit;  // PL1 value in milliwatts
       uint32_t time_window;  // PL1 time window in microseconds
       uint8_t clamp;         // PL1 clamping enable
       uint8_t enable;        // PL1 enable
+      uint8_t padding2[2];
     } x86_power_limit;
   };
 } zx_system_powerctl_arg_t;

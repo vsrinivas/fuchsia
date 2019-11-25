@@ -77,6 +77,8 @@ typedef struct zx_info_handle_basic {
     // Set to ZX_OBJ_PROP_WAITABLE if the object referenced by the
     // handle can be waited on; zero otherwise.
     zx_obj_props_t props;
+
+    uint8_t padding1[4];
 } zx_info_handle_basic_t;
 
 typedef struct zx_info_handle_count {
@@ -103,6 +105,8 @@ typedef struct zx_info_process {
 
     // True if a debugger is attached to the process.
     bool debugger_attached;
+
+    uint8_t padding1[5];
 } zx_info_process_t;
 
 typedef struct zx_info_job {
@@ -118,11 +122,15 @@ typedef struct zx_info_job {
 
     // True if a debugger is attached to the job.
     bool debugger_attached;
+
+    uint8_t padding1[5];
 } zx_info_job_t;
 
 typedef struct zx_info_timer {
     // The options passed to zx_timer_create().
     uint32_t options;
+
+    uint8_t padding1[4];
 
     // The deadline with respect to ZX_CLOCK_MONOTONIC at which the timer will
     // fire next.
@@ -177,6 +185,8 @@ typedef struct zx_info_thread_stats {
     // returns, the thread may have been scheduled elsewhere, so this
     // information should only be used as a hint or for statistics.
     uint32_t last_scheduled_cpu;
+
+    uint8_t padding1[4];
 } zx_info_thread_stats_t;
 
 // Statistics about resources (e.g., memory) used by a task. Can be relatively
@@ -230,6 +240,8 @@ typedef struct zx_info_socket {
     // The options passed to zx_socket_create().
     uint32_t options;
 
+    uint8_t padding1[4];
+
     // The maximum size of the receive buffer of a socket, in bytes.
     //
     // The receive buffer may become full at a capacity less than the maximum
@@ -268,6 +280,7 @@ typedef struct zx_info_maps_mapping {
     // MMU flags for the mapping.
     // Bitwise OR of ZX_VM_PERM_{READ,WRITE,EXECUTE} values.
     zx_vm_option_t mmu_flags;
+    uint8_t padding1[4];
     // koid of the mapped VMO.
     zx_koid_t vmo_koid;
     // Offset into the above VMO.
@@ -301,6 +314,7 @@ typedef struct zx_info_maps {
     size_t depth;
     // The type of this entry; indicates which union entry is valid.
     zx_info_maps_type_t type;
+    uint8_t padding1[4];
     union {
         zx_info_maps_mapping_t mapping;
         // No additional fields for other types.
@@ -380,6 +394,8 @@ typedef struct zx_info_vmo {
 
     // Bitwise OR of ZX_INFO_VMO_* values.
     uint32_t flags;
+
+    uint8_t padding1[4];
 
     // If |ZX_INFO_VMO_TYPE(flags) == ZX_INFO_VMO_TYPE_PAGED|, the amount of
     // memory currently allocated to this VMO; i.e., the amount of physical

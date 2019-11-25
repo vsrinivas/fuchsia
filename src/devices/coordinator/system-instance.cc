@@ -139,7 +139,7 @@ zx_status_t SystemInstance::CreateFuchsiaJob(const zx::job& root_job) {
   // Why LATE and not CENTER or EARLY? Timers firing a little later than requested is not uncommon
   // in non-realtime systems. Programs are generally tolerant of some delays. However, timers
   // firing before their dealine can be unexpected and lead to bugs.
-  const zx_policy_timer_slack_t timer_slack_policy{ZX_USEC(500), ZX_TIMER_SLACK_LATE};
+  const zx_policy_timer_slack_t timer_slack_policy{ZX_USEC(500), ZX_TIMER_SLACK_LATE, {}};
 
   status =
       fuchsia_job_.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &timer_slack_policy, 1);

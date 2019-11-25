@@ -130,7 +130,17 @@ static constexpr zx_smc_parameters_t CreatePilSmcParams(PilCmd cmd, uint64_t arg
                                                         uint64_t arg5 = 0, uint64_t arg6 = 0,
                                                         uint16_t client_id = 0,
                                                         uint16_t secure_os_id = 0) {
-  return {CreatePilFunctionId(cmd), args, pas_id, arg3, arg4, arg5, arg6, client_id, secure_os_id};
+  return {CreatePilFunctionId(cmd),
+          {},
+          args,
+          pas_id,
+          arg3,
+          arg4,
+          arg5,
+          arg6,
+          client_id,
+          secure_os_id,
+          {}};
 }
 
 class PilDevice;

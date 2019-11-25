@@ -296,6 +296,7 @@ static bool vcpu_read_write_state() {
     // clang-format on
     .sp = 64u,
     .cpsr = 0,
+    .padding1 = {},
 #elif __x86_64__
     .rax = 1u,
     .rcx = 2u,

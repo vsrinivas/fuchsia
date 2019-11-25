@@ -91,6 +91,7 @@ typedef struct zx_packet_guest_mem {
   bool sign_extend;
   uint8_t xt;
   bool read;
+  uint8_t padding1[4];
   uint64_t data;
   uint64_t reserved;
 #elif __x86_64__
@@ -112,8 +113,14 @@ typedef struct zx_packet_guest_io {
   uint8_t access_size;
   bool input;
   union {
-    uint8_t u8;
-    uint16_t u16;
+    struct {
+      uint8_t u8;
+      uint8_t padding1[3];
+    };
+    struct {
+      uint16_t u16;
+      uint8_t padding2[2];
+    };
     uint32_t u32;
     uint8_t data[4];
   };
@@ -127,6 +134,7 @@ typedef struct zx_packet_guest_vcpu {
     struct {
       uint64_t mask;
       uint8_t vector;
+      uint8_t padding1[7];
     } interrupt;
     struct {
       uint64_t id;
@@ -134,6 +142,7 @@ typedef struct zx_packet_guest_vcpu {
     } startup;
   };
   uint8_t type;
+  uint8_t padding1[7];
   uint64_t reserved;
 } zx_packet_guest_vcpu_t;
 

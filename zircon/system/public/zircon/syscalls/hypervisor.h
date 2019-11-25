@@ -32,6 +32,7 @@ typedef struct zx_vcpu_state {
   uint64_t sp;
   // Contains only the user-controllable upper 4-bits (NZCV).
   uint32_t cpsr;
+  uint8_t padding1[4];
 #elif __x86_64__
   uint64_t rax;
   uint64_t rcx;
@@ -57,9 +58,16 @@ typedef struct zx_vcpu_state {
 // Structure to read and write VCPU state for IO ports.
 typedef struct zx_vcpu_io {
   uint8_t access_size;
+  uint8_t padding1[3];
   union {
-    uint8_t u8;
-    uint16_t u16;
+    struct {
+      uint8_t u8;
+      uint8_t padding2[3];
+    };
+    struct {
+      uint16_t u16;
+      uint8_t padding3[2];
+    };
     uint32_t u32;
     uint8_t data[4];
   };

@@ -81,6 +81,7 @@ typedef struct zx_policy_basic_v1 zx_policy_basic_t;
 typedef struct zx_policy_timer_slack {
     zx_duration_t min_slack;
     uint32_t default_mode;
+    uint8_t padding1[4];
 } zx_policy_timer_slack_t;
 
 __END_CDECLS

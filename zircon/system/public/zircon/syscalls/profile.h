@@ -25,9 +25,15 @@ typedef struct zx_profile_info {
   // below have been specified. Other fields are considered unset.
   uint32_t flags;
 
+  uint8_t padding1[4];
+
   union {
-    // Scheduling priority. |flags| must have ZX_PROFILE_INFO_FLAG_PRIORITY set.
-    int32_t priority;
+    struct {
+      // Scheduling priority. |flags| must have ZX_PROFILE_INFO_FLAG_PRIORITY set.
+      int32_t priority;
+
+      uint8_t padding2[20];
+    };
 
     // Scheduling deadline. |flags| must have ZX_PROFILE_INFO_FLAG_DEADLINE set.
     zx_sched_deadline_params_t deadline_params;

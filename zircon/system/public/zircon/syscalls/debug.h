@@ -46,6 +46,8 @@ typedef struct zx_thread_state_fp_regs {
   uint64_t fip;  // Instruction pointer.
   uint64_t fdp;  // Data pointer.
 
+  uint8_t padding1[8];
+
   // The x87/MMX state. For x87 the each "st" entry has the low 80 bits used for the register
   // contents. For MMX, the low 64 bits are used. The higher bits are unused.
   __ALIGNED(16)
@@ -71,6 +73,8 @@ typedef struct zx_thread_state_vector_regs {
 
   // SIMD control and status register.
   uint32_t mxcsr;
+
+  uint8_t padding1[4];
 } zx_thread_state_vector_regs_t;
 
 // Value for ZX_THREAD_STATE_DEBUG_REGS on x64 platforms.
@@ -121,18 +125,25 @@ typedef struct zx_thread_state_vector_regs {
 typedef struct zx_thread_state_debug_regs {
   struct {
     uint32_t dbgbcr;  //  HW Breakpoint Control register.
+    uint8_t padding1[4];
     uint64_t dbgbvr;  //  HW Breakpoint Value register.
   } hw_bps[AARCH64_MAX_HW_BREAKPOINTS];
   // Number of HW Breakpoints in the platform.
   // Will be set on read and ignored on write.
   uint8_t hw_bps_count;
+
+  uint8_t padding1[7];
+
   struct {
     uint32_t dbgwcr;  // HW Watchpoint Control register.
+    uint8_t padding1[4];
     uint64_t dbgwvr;  // HW Watchpoint Value register.
   } hw_wps[AARCH64_MAX_HW_WATCHPOINTS];
   // Number of HW Watchpoints in the platform.
   // Will be set on read and ignored on write.
   uint8_t hw_wps_count;
+
+  uint8_t padding2[3];
 
   // The esr value since the last exception.
   uint32_t esr;

@@ -306,6 +306,7 @@ void SocketDispatcher::GetInfo(zx_info_socket_t* info) const {
   Guard<fbl::Mutex> guard{get_lock()};
   *info = zx_info_socket_t{
       .options = flags_,
+      .padding1 = {},
       .rx_buf_max = data_.max_size(),
       .rx_buf_size = data_.size(),
       .rx_buf_available = data_.size(flags_ & ZX_SOCKET_DATAGRAM),

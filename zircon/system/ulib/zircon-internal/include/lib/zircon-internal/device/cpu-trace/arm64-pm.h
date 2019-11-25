@@ -295,6 +295,8 @@ struct Arm64PmuConfig {
   // There is only one fixed event, the cycle counter, so we don't need to
   // record its event number here.
   uint32_t programmable_hw_events[ARM64_PMU_MAX_PROGRAMMABLE_COUNTERS];
+
+  uint8_t padding1[4];
 };
 
 }  // namespace perfmon

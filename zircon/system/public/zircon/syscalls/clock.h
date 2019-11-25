@@ -75,10 +75,12 @@ typedef struct zx_clock_details_v1 {
   zx_ticks_t last_rate_adjust_update_ticks;
   zx_ticks_t last_error_bounds_update_ticks;
   uint32_t generation_counter;
+  uint8_t padding1[4];
 } zx_clock_details_v1_t;
 
 typedef struct zx_clock_update_args_v1 {
   int32_t rate_adjust;
+  uint8_t padding1[4];
   int64_t value;
   uint64_t error_bound;
 } zx_clock_update_args_v1_t;

@@ -33,7 +33,10 @@ typedef struct zx_pci_bar {
     size_t size;
     union {
         uintptr_t addr;
-        zx_handle_t handle;
+        struct {
+            zx_handle_t handle;
+            uint8_t padding1[4];
+        };
     };
 } zx_pci_bar_t;
 
@@ -51,6 +54,8 @@ typedef struct zx_pcie_device_info {
     uint8_t  bus_id;
     uint8_t  dev_id;
     uint8_t  func_id;
+
+    uint8_t  padding1;
 } zx_pcie_device_info_t;
 
 #define ZX_PCI_MAX_BUSSES (256u)
@@ -97,6 +102,7 @@ typedef struct zx_pci_init_arg {
         uint32_t global_irq;
         bool level_triggered;
         bool active_high;
+        uint8_t padding1[2];
     } irqs[ZX_PCI_MAX_IRQS];
 
     uint32_t addr_window_count;
@@ -107,6 +113,7 @@ typedef struct zx_pci_init_arg {
         uint8_t bus_end;
         uint8_t cfg_space_type;
         bool has_ecam;
+        uint8_t padding1[4];
     } addr_windows[];
 } zx_pci_init_arg_t;
 

@@ -22,6 +22,7 @@ __BEGIN_CDECLS
 
 typedef struct zx_smc_parameters {
   uint32_t func_id;
+  uint8_t padding1[4];
   uint64_t arg1;
   uint64_t arg2;
   uint64_t arg3;
@@ -30,6 +31,7 @@ typedef struct zx_smc_parameters {
   uint64_t arg6;
   uint16_t client_id;
   uint16_t secure_os_id;
+  uint8_t padding2[4];
 } zx_smc_parameters_t;
 
 typedef struct zx_smc_result {

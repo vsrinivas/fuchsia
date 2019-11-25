@@ -80,6 +80,7 @@ typedef struct zx_x86_64_exc_data {
 
 typedef struct zx_arm64_exc_data {
     uint32_t esr;
+    uint8_t padding1[4];
     uint64_t far;
 } zx_arm64_exc_data_t;
 
@@ -90,7 +91,10 @@ typedef struct zx_exception_context {
     struct {
         union {
             zx_x86_64_exc_data_t x86_64;
-            zx_arm64_exc_data_t  arm_64;
+            struct {
+                zx_arm64_exc_data_t  arm_64;
+                uint8_t padding1[8];
+            };
         } u;
     } arch;
 } zx_exception_context_t;
@@ -115,6 +119,7 @@ typedef struct zx_exception_info {
     zx_koid_t pid;
     zx_koid_t tid;
     zx_excp_type_t type;
+    uint8_t padding1[4];
 } zx_exception_info_t;
 
 // Options for zx_create_exception_channel.

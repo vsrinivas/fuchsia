@@ -110,7 +110,7 @@ TEST(JobTest, PolicyTimerSlackInvalidOptionsTest) {
   zx::job job_child;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
-  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
 
   // Invalid.
   uint32_t options = ZX_JOB_POL_ABSOLUTE;
@@ -126,8 +126,8 @@ TEST(JobTest, PolicyTimerSlackInvalidCountTest) {
   zx::job job_child;
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
-  zx_policy_timer_slack policy[2] = {{ZX_MSEC(10), ZX_TIMER_SLACK_LATE},
-                                     {ZX_MSEC(10), ZX_TIMER_SLACK_LATE}};
+  zx_policy_timer_slack policy[2] = {{ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}},
+                                     {ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}}};
 
   // Too few.
   ASSERT_STATUS(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 0),
@@ -150,17 +150,17 @@ TEST(JobTest, PolicyTimerSlackInvalidPolicyTest) {
             ZX_ERR_INVALID_ARGS);
 
   // Negative amount.
-  zx_policy_timer_slack policy = {-ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+  zx_policy_timer_slack policy = {-ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
   ASSERT_STATUS(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
                 ZX_ERR_INVALID_ARGS);
 
   // Invalid mode.
-  policy = {ZX_MSEC(10), 3};
+  policy = {ZX_MSEC(10), 3, {}};
   ASSERT_STATUS(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
                 ZX_ERR_INVALID_ARGS);
 
   // OK.
-  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
 }
 
@@ -170,7 +170,7 @@ TEST(JobTest, PolicyTimerSlackNonEmptyTest) {
   zx::job job_grandchild;
   ASSERT_OK(zx::job::create(job_child, 0u, &job_grandchild));
 
-  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
 
   // The job isn't empty.
   ASSERT_STATUS(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
@@ -190,19 +190,19 @@ TEST(JobTest, PolicyTimerSlackValid) {
   ASSERT_OK(zx::job::create(*zx::job::default_job(), 0u, &job_child));
 
   // All modes.
-  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_CENTER};
+  zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_CENTER, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
-  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_EARLY};
+  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_EARLY, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
-  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+  policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
 
   // Raise the minimum.
-  policy = {ZX_SEC(10), ZX_TIMER_SLACK_LATE};
+  policy = {ZX_SEC(10), ZX_TIMER_SLACK_LATE, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
 
   // Try to lower the minimum, no error.
-  policy = {ZX_USEC(5), ZX_TIMER_SLACK_CENTER};
+  policy = {ZX_USEC(5), ZX_TIMER_SLACK_CENTER, {}};
   ASSERT_OK(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1));
 }
 

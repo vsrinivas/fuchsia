@@ -158,6 +158,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic, user_out_ptr
           .type = dispatcher->get_type(),
           .related_koid = dispatcher->get_related_koid(),
           .props = dispatcher->is_waitable() ? ZX_OBJ_PROP_WAITABLE : ZX_OBJ_PROP_NONE,
+          .padding1 = {},
       };
 
       return single_record_result(_buffer, buffer_size, _actual, _avail, info);
