@@ -377,6 +377,7 @@ func md5Checksum(file string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
+	defer fd.Close()
 	h := md5.New()
 	if _, err := io.Copy(h, fd); err != nil {
 		return nil, err
