@@ -51,7 +51,7 @@
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {
 
@@ -482,7 +482,7 @@ class PageStorageTest : public StorageTest {
     std::unique_ptr<Journal> journal = storage_->StartCommit(GetFirstHead());
 
     for (int i = 0; i < keys; ++i) {
-      auto key = fxl::StringPrintf("key%05d", i);
+      auto key = absl::StrFormat("key%05d", i);
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
@@ -500,7 +500,7 @@ class PageStorageTest : public StorageTest {
     std::vector<Entry> entries = GetCommitContents(*commit);
     EXPECT_EQ(entries.size(), static_cast<size_t>(keys));
     for (int i = 0; i < keys; ++i) {
-      auto key = fxl::StringPrintf("key%05d", i);
+      auto key = absl::StrFormat("key%05d", i);
       if (key.size() < min_key_size) {
         key.resize(min_key_size);
       }
@@ -3077,7 +3077,7 @@ TEST_F(PageStorageTest, GetEntryFromCommit) {
   ASSERT_EQ(status, Status::KEY_NOT_FOUND);
 
   for (int i = 0; i < size; ++i) {
-    std::string expected_key = fxl::StringPrintf("key%05d", i);
+    std::string expected_key = absl::StrFormat("key%05d", i);
     storage_->GetEntryFromCommit(
         *commit, expected_key,
         callback::Capture(callback::SetWhenCalled(&called), &status, &entry));

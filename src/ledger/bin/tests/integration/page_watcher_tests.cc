@@ -23,7 +23,7 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
 namespace {
@@ -182,7 +182,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeSize) {
                                       fidl_serialization::kMaxInlineDataSize / entry_size) +
                              1;
   const auto key_generator = [](size_t i) {
-    std::string prefix = fxl::StringPrintf("key%03" PRIuMAX, i);
+    std::string prefix = absl::StrFormat("key%03" PRIuMAX, i);
     std::string filler(key_size - prefix.size(), 'k');
     return prefix + filler;
   };
@@ -241,7 +241,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   page->GetSnapshot(snapshot.NewRequest(), {}, std::move(watcher_ptr));
   page->StartTransaction();
   for (size_t i = 0; i < entry_count; ++i) {
-    page->Put(convert::ToArray(fxl::StringPrintf("key%02" PRIuMAX, i)), convert::ToArray("value"));
+    page->Put(convert::ToArray(absl::StrFormat("key%02" PRIuMAX, i)), convert::ToArray("value"));
   }
 
   RunLoopFor(zx::msec(100));
@@ -257,7 +257,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   size_t initial_size = change->changed_entries.size();
   for (size_t i = 0; i < initial_size; ++i) {
     EXPECT_EQ(convert::ToString(change->changed_entries.at(i).key),
-              fxl::StringPrintf("key%02" PRIuMAX, i));
+              absl::StrFormat("key%02" PRIuMAX, i));
     EXPECT_EQ(ToString(change->changed_entries.at(i).value), "value");
     EXPECT_EQ(change->changed_entries.at(i).priority, Priority::EAGER);
   }
@@ -270,7 +270,7 @@ TEST_P(PageWatcherIntegrationTest, PageWatcherBigChangeHandles) {
   ASSERT_EQ(initial_size + change->changed_entries.size(), entry_count);
   for (size_t i = 0; i < change->changed_entries.size(); ++i) {
     EXPECT_EQ(convert::ToString(change->changed_entries.at(i).key),
-              fxl::StringPrintf("key%02" PRIuMAX, i + initial_size));
+              absl::StrFormat("key%02" PRIuMAX, i + initial_size));
     EXPECT_EQ(ToString(change->changed_entries.at(i).value), "value");
     EXPECT_EQ(change->changed_entries.at(i).priority, Priority::EAGER);
   }

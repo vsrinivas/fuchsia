@@ -16,19 +16,19 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
 namespace fidl_serialization {
 namespace {
 std::vector<uint8_t> GetKey(size_t index, size_t min_key_size = 0u) {
-  std::string result = fxl::StringPrintf("key %04" PRIuMAX, index);
+  std::string result = absl::StrFormat("key %04" PRIuMAX, index);
   result.resize(std::max(result.size(), min_key_size));
   return convert::ToArray(result);
 }
 
 std::string GetValue(size_t index, size_t min_value_size = 0u) {
-  std::string result = fxl::StringPrintf("val %zu", index);
+  std::string result = absl::StrFormat("val %zu", index);
   result.resize(std::max(result.size(), min_value_size));
   return result;
 }

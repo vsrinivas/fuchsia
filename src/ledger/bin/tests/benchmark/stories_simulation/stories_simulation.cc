@@ -32,8 +32,8 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/numbers.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
 namespace {
@@ -62,20 +62,20 @@ constexpr size_t kModuleValueSize = 7366;
 // Returns the PageId for the i-th story created.
 std::vector<uint8_t> GetStoryName(int i) {
   return convert::ToArray(
-      fxl::StringPrintf("Story/Data/OpalStory28c2c54c-b35a-4edc-b012-1f%010d", i));
+      absl::StrFormat("Story/Data/OpalStory28c2c54c-b35a-4edc-b012-1f%010d", i));
 }
 
 // Returns the DB key for the link created for the i-th story.
 std::vector<uint8_t> GetLinkKey(int i) {
   return convert::ToArray(
-      fxl::StringPrintf("fuchsia::modular::Link|3/OpalMod564ffe1c-3136-4103-a5a3-a2%010d/"
-                        "card_data",
-                        i));
+      absl::StrFormat("fuchsia::modular::Link|3/OpalMod564ffe1c-3136-4103-a5a3-a2%010d/"
+                      "card_data",
+                      i));
 }
 
 // Returns the DB key for the module created for the i-th story.
 std::vector<uint8_t> GetModuleKey(int i) {
-  return convert::ToArray(fxl::StringPrintf("Module/OpalMod564ffe1c-3136-4103-a5a3-a2%010d", i));
+  return convert::ToArray(absl::StrFormat("Module/OpalMod564ffe1c-3136-4103-a5a3-a2%010d", i));
 }
 
 std::unique_ptr<PageId> MakePageId(fxl::StringView id) {
@@ -447,7 +447,7 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView f
   std::string value_str;
   int found_value;
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !fxl::StringToNumberWithError(value_str, &found_value) || found_value <= 0) {
+      !absl::SimpleAtoi(value_str, &found_value) || found_value <= 0) {
     return false;
   }
   *value = found_value;

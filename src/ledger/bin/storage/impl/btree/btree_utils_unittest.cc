@@ -24,7 +24,7 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 using testing::UnorderedElementsAre;
 
@@ -317,7 +317,7 @@ TEST_F(BTreeUtilsTest, UpdateValue) {
   std::vector<EntryChange> update_changes;
   for (size_t i = 0; i < entries_to_update.size(); ++i) {
     std::unique_ptr<const Object> object;
-    ASSERT_TRUE(AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
+    ASSERT_TRUE(AddObject(absl::StrFormat("new_object%02" PRIuMAX, i), &object));
     entries_to_update[i].object_identifier = object->GetIdentifier();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
@@ -368,7 +368,7 @@ TEST_F(BTreeUtilsTest, UpdateValueLevel1) {
   std::vector<EntryChange> update_changes;
   for (size_t i = 0; i < entries_to_update.size(); ++i) {
     std::unique_ptr<const Object> object;
-    ASSERT_TRUE(AddObject(fxl::StringPrintf("new_object%02" PRIuMAX, i), &object));
+    ASSERT_TRUE(AddObject(absl::StrFormat("new_object%02" PRIuMAX, i), &object));
     entries_to_update[i].object_identifier = object->GetIdentifier();
     update_changes.push_back(EntryChange{entries_to_update[i], false});
   }
@@ -1259,7 +1259,7 @@ TEST_F(BTreeUtilsTest, ForEachAllEntries) {
 
   int current_key = 0;
   auto on_next = [&current_key](Entry e) {
-    EXPECT_EQ(e.key, fxl::StringPrintf("key%02d", current_key));
+    EXPECT_EQ(e.key, absl::StrFormat("key%02d", current_key));
     current_key++;
     return true;
   };
@@ -1285,7 +1285,7 @@ TEST_F(BTreeUtilsTest, ForEachEntryPrefix) {
     if (e.key.substr(0, prefix.length()) != prefix) {
       return false;
     }
-    EXPECT_EQ(e.key, fxl::StringPrintf("key%02d", current_key++));
+    EXPECT_EQ(e.key, absl::StrFormat("key%02d", current_key++));
     return true;
   };
   auto on_done = [this, &current_key](Status status) {

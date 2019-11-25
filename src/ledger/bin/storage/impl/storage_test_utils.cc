@@ -24,7 +24,7 @@
 #include "src/ledger/lib/coroutine/coroutine_manager.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {
 
@@ -232,13 +232,13 @@ StorageTest::~StorageTest() = default;
   for (auto i : values) {
     std::unique_ptr<const Object> object;
     ::testing::AssertionResult assertion_result =
-        AddObject(fxl::StringPrintf("object%0*" PRIuMAX, length, i), &object);
+        AddObject(absl::StrFormat("object%0*" PRIuMAX, length, i), &object);
     if (!assertion_result) {
       return assertion_result;
     }
-    result.push_back(Entry{fxl::StringPrintf("key%0*" PRIuMAX, length, i), object->GetIdentifier(),
+    result.push_back(Entry{absl::StrFormat("key%0*" PRIuMAX, length, i), object->GetIdentifier(),
                            KeyPriority::EAGER,
-                           EntryId(fxl::StringPrintf("id_%0*" PRIuMAX, length, i))});
+                           EntryId(absl::StrFormat("id_%0*" PRIuMAX, length, i))});
   }
   entries->swap(result);
   return ::testing::AssertionSuccess();

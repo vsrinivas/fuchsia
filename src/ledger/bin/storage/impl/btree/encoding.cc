@@ -16,7 +16,7 @@
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
 namespace btree {
@@ -72,8 +72,8 @@ void SetEntryIdIfMissing(Entry* entry) {
   const ObjectIdentifier& object_id = entry->object_identifier;
 
   entry->entry_id = encryption::SHA256WithLengthHash(SafeConcatenation(
-      {entry->key, fxl::NumberToString(object_id.key_index()),
-       object_id.object_digest().Serialize(), entry->priority == KeyPriority::EAGER ? "E" : "L"}));
+      {entry->key, absl::StrCat(object_id.key_index()), object_id.object_digest().Serialize(),
+       entry->priority == KeyPriority::EAGER ? "E" : "L"}));
 }
 
 bool CheckValidTreeNodeSerialization(fxl::StringView data) {

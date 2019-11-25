@@ -11,7 +11,8 @@
 #include "src/ledger/bin/app/constants.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/escaping.h"
+#include "third_party/abseil-cpp/absl/strings/string_view.h"
 
 namespace ledger {
 namespace {
@@ -21,22 +22,25 @@ namespace {
 bool IsStringPrintable(const fxl::StringView& input) {
   // Just ASCII for the time being. Sorry unicode!
   return std::all_of(input.begin(), input.end(),
-                     [](unsigned char c) { return c >= 32 and c < 128; });
+                     [](unsigned char c) { return c >= 32 && c < 128; });
+}
+
+// TODO(https://github.com/abseil/abseil-cpp/issues/141): This shouldn't be
+// necessary; eliminate  it.
+bool IsHex(absl::string_view input) {
+  return (input.size() % 2 == 0) && std::all_of(input.begin(), input.end(), [](unsigned char c) {
+           return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+         });
 }
 
 // Modifies |page_id| to be the hex-decoding of |data|. (Preconditions: |data|
 // must be the hex-encoding of some PageId and |page_id| must be empty.)
-bool FromHex(fxl::StringView data, storage::PageId* page_id) {
+bool FromHex(absl::string_view data, storage::PageId* page_id) {
   FXL_DCHECK(page_id->empty());
-  page_id->reserve(data.size() / 2);
-  while (!data.empty()) {
-    uint8_t value;
-    if (!fxl::StringToNumberWithError(data.substr(0, 2), &value, fxl::Base::k16)) {
-      return false;
-    }
-    page_id->push_back(value);
-    data = data.substr(2);
+  if (!IsHex(data)) {
+    return false;
   }
+  *page_id = absl::HexStringToBytes(data);
   return true;
 }
 
@@ -54,7 +58,7 @@ bool PageDisplayNameToPageId(const std::string& page_display_name, storage::Page
   if (page_display_name.size() < fuchsia::ledger::PAGE_ID_SIZE * 2) {
     return false;
   }
-  return FromHex(fxl::StringView(page_display_name).substr(0, fuchsia::ledger::PAGE_ID_SIZE * 2),
+  return FromHex(absl::string_view(page_display_name).substr(0, fuchsia::ledger::PAGE_ID_SIZE * 2),
                  page_id);
 }
 
@@ -83,7 +87,7 @@ std::string KeyToDisplayName(const std::string& key) {
 }
 
 bool KeyDisplayNameToKey(const std::string& key_display_name, std::string* key) {
-  fxl::StringView hex_portion = key_display_name;
+  absl::string_view hex_portion = key_display_name;
   if (key_display_name.size() >= 5) {
     size_t key_length = (key_display_name.size() - 5) / 3;
     if (key_display_name[key_length + 4] == ' ') {

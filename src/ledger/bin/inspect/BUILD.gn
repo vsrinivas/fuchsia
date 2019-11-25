@@ -18,6 +18,7 @@ source_set("inspect") {
     "//sdk/fidl/fuchsia.ledger",
     "//src/ledger/bin/app:constants",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
   ]
 }
 

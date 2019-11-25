@@ -21,7 +21,7 @@
 #include "src/lib/fsl/vmo/sized_vmo.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace ledger {
 namespace {
@@ -790,14 +790,14 @@ TEST_P(MergingIntegrationTest, CustomConflictResolutionGetDiffMultiPart) {
   int N = 50;
   std::vector<std::string> page1_keys;
   for (int i = 0; i < N; ++i) {
-    page1_keys.push_back(fxl::StringPrintf("page1_key_%02d", i));
+    page1_keys.push_back(absl::StrFormat("page1_key_%02d", i));
     page1->Put(convert::ToArray(page1_keys.back()), convert::ToArray("value"));
   }
 
   page2->StartTransaction();
   std::vector<std::string> page2_keys;
   for (int i = 0; i < N; ++i) {
-    page2_keys.push_back(fxl::StringPrintf("page2_key_%02d", i));
+    page2_keys.push_back(absl::StrFormat("page2_key_%02d", i));
     page2->Put(convert::ToArray(page2_keys.back()), convert::ToArray("value"));
   }
 

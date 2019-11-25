@@ -29,7 +29,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/numbers.h"
 
 namespace ledger {
 namespace {
@@ -215,15 +215,15 @@ int Main(int argc, const char** argv) {
   std::string value_size_str;
   size_t value_size;
   if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &page_count_str) ||
-      !fxl::StringToNumberWithError(page_count_str, &page_count) ||
+      !absl::SimpleAtoi(page_count_str, &page_count) ||
       !command_line.GetOptionValue(kUniqueKeyCountFlag.ToString(), &unique_key_count_str) ||
-      !fxl::StringToNumberWithError(unique_key_count_str, &unique_key_count) ||
+      !absl::SimpleAtoi(unique_key_count_str, &unique_key_count) ||
       !command_line.GetOptionValue(kCommitCountFlag.ToString(), &commit_count_str) ||
-      !fxl::StringToNumberWithError(commit_count_str, &commit_count) ||
+      !absl::SimpleAtoi(commit_count_str, &commit_count) ||
       !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
-      !fxl::StringToNumberWithError(key_size_str, &key_size) || key_size == 0 ||
+      !absl::SimpleAtoi(key_size_str, &key_size) || key_size == 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size == 0) {
+      !absl::SimpleAtoi(value_size_str, &value_size) || value_size == 0) {
     PrintUsage();
     return -1;
   }

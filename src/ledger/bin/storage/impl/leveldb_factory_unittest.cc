@@ -18,7 +18,7 @@
 #include "src/lib/files/directory.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/str_cat.h"
 
 namespace storage {
 namespace {
@@ -138,7 +138,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
   // Create N LevelDb instances, one after the other. All of them will use the
   // existing cached instance and then, initialize the creation of a new one.
   for (int i = 0; i < N; ++i) {
-    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    ledger::DetachedPath path = db_path_.SubPath(absl::StrCat(i));
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
     db_factory_->GetOrCreateDb(path, DbFactory::OnDbNotFound::CREATE,
@@ -163,17 +163,17 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
   // initialized, and all the others will be created directly at the destination
   // directory.
   for (int i = 0; i < N; ++i) {
-    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    ledger::DetachedPath path = db_path_.SubPath(absl::StrCat(i));
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
     db_factory_->GetOrCreateDb(
-        db_path_.SubPath(fxl::NumberToString(i)), DbFactory::OnDbNotFound::CREATE,
+        db_path_.SubPath(absl::StrCat(i)), DbFactory::OnDbNotFound::CREATE,
         callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i], &dbs[i]));
   }
   RunLoopUntilIdle();
 
   for (int i = 0; i < N; ++i) {
-    ledger::DetachedPath path = db_path_.SubPath(fxl::NumberToString(i));
+    ledger::DetachedPath path = db_path_.SubPath(absl::StrCat(i));
     EXPECT_TRUE(called[i]);
     EXPECT_EQ(statuses[i], Status::OK);
     EXPECT_NE(nullptr, dbs[i]);
@@ -255,7 +255,7 @@ TEST_F(LevelDbFactoryTest, QuitWhenBusy) {
 
   // Post the initialization code to the I/O loop.
   (*db_factory_ptr)
-      ->GetOrCreateDb(db_path_.SubPath(fxl::NumberToString(0)), DbFactory::OnDbNotFound::CREATE,
+      ->GetOrCreateDb(db_path_.SubPath(absl::StrCat(0)), DbFactory::OnDbNotFound::CREATE,
                       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
 
   // Delete the factory before any code is run on the I/O loop. The destructor

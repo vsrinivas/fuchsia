@@ -35,7 +35,7 @@
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 using testing::Contains;
 using testing::ElementsAre;
@@ -129,13 +129,13 @@ class PageImplTest : public TestWithEnvironment {
   }
 
   std::string GetKey(size_t index, size_t min_key_size = 0u) {
-    std::string result = fxl::StringPrintf("key %04" PRIuMAX, index);
+    std::string result = absl::StrFormat("key %04" PRIuMAX, index);
     result.resize(std::max(result.size(), min_key_size));
     return result;
   }
 
   std::string GetValue(size_t index, size_t min_value_size = 0u) {
-    std::string result = fxl::StringPrintf("val %zu", index);
+    std::string result = absl::StrFormat("val %zu", index);
     result.resize(std::max(result.size(), min_value_size));
     return result;
   }

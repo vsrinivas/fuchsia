@@ -278,6 +278,7 @@ source_set("unittests") {
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated:reader",
     "//src/lib/inspect_deprecated/testing:testing",
+    "//third_party/abseil-cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

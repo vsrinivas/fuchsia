@@ -13,7 +13,6 @@
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/fxl/macros.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace ledger {
 namespace {

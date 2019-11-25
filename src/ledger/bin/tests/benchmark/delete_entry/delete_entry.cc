@@ -31,7 +31,7 @@
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/numbers.h"
 
 namespace ledger {
 namespace {
@@ -225,13 +225,13 @@ int Main(int argc, const char** argv) {
   std::string value_size_str;
   size_t value_size;
   if (!command_line.GetOptionValue(kEntryCountFlag.ToString(), &entry_count_str) ||
-      !fxl::StringToNumberWithError(entry_count_str, &entry_count) || entry_count == 0 ||
+      !absl::SimpleAtoi(entry_count_str, &entry_count) || entry_count == 0 ||
       !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
-      !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
+      !absl::SimpleAtoi(transaction_size_str, &transaction_size) ||
       !command_line.GetOptionValue(kKeySizeFlag.ToString(), &key_size_str) ||
-      !fxl::StringToNumberWithError(key_size_str, &key_size) || key_size == 0 ||
+      !absl::SimpleAtoi(key_size_str, &key_size) || key_size == 0 ||
       !command_line.GetOptionValue(kValueSizeFlag.ToString(), &value_size_str) ||
-      !fxl::StringToNumberWithError(value_size_str, &value_size) || value_size == 0) {
+      !absl::SimpleAtoi(value_size_str, &value_size) || value_size == 0) {
     PrintUsage();
     return -1;
   }

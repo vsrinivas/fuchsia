@@ -31,7 +31,7 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
 #include "src/lib/fxl/strings/concatenate.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/numbers.h"
 
 namespace ledger {
 namespace {
@@ -350,7 +350,7 @@ bool GetPositiveIntValue(const fxl::CommandLine& command_line, fxl::StringView f
   std::string value_str;
   int found_value;
   if (!command_line.GetOptionValue(flag.ToString(), &value_str) ||
-      !fxl::StringToNumberWithError(value_str, &found_value) || found_value <= 0) {
+      !absl::SimpleAtoi(value_str, &found_value) || found_value <= 0) {
     return false;
   }
   *value = found_value;
@@ -370,8 +370,8 @@ int Main(int argc, const char** argv) {
   bool update = command_line.HasOption(kUpdateFlag.ToString());
   if (!GetPositiveIntValue(command_line, kEntryCountFlag, &entry_count) ||
       !command_line.GetOptionValue(kTransactionSizeFlag.ToString(), &transaction_size_str) ||
-      !fxl::StringToNumberWithError(transaction_size_str, &transaction_size) ||
-      transaction_size < 0 || !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
+      !absl::SimpleAtoi(transaction_size_str, &transaction_size) || transaction_size < 0 ||
+      !GetPositiveIntValue(command_line, kKeySizeFlag, &key_size) ||
       !GetPositiveIntValue(command_line, kValueSizeFlag, &value_size)) {
     PrintUsage();
     return -1;
@@ -397,7 +397,7 @@ int Main(int argc, const char** argv) {
   int seed;
   std::string seed_str;
   if (command_line.GetOptionValue(kSeedFlag.ToString(), &seed_str)) {
-    if (!fxl::StringToNumberWithError(seed_str, &seed)) {
+    if (!absl::SimpleAtoi(seed_str, &seed)) {
       PrintUsage();
       return -1;
     }

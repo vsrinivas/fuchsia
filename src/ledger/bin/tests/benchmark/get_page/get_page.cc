@@ -29,7 +29,7 @@
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_number_conversions.h"
+#include "third_party/abseil-cpp/absl/strings/numbers.h"
 
 namespace ledger {
 namespace {
@@ -198,7 +198,7 @@ int Main(int argc, const char** argv) {
   std::string requests_count_str;
   size_t requests_count;
   if (!command_line.GetOptionValue(kPageCountFlag.ToString(), &requests_count_str) ||
-      !fxl::StringToNumberWithError(requests_count_str, &requests_count) || requests_count == 0) {
+      !absl::SimpleAtoi(requests_count_str, &requests_count) || requests_count == 0) {
     PrintUsage();
     return EXIT_FAILURE;
   }

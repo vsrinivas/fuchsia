@@ -19,7 +19,6 @@
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/memory/ref_counted.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {

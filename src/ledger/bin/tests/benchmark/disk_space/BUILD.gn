@@ -24,6 +24,7 @@ executable("ledger_benchmark_disk_space") {
     "//src/lib/callback",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//third_party/abseil-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fit",

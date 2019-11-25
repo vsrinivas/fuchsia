@@ -13,7 +13,7 @@
 #include "src/ledger/bin/storage/impl/storage_test_utils.h"
 #include "src/ledger/bin/storage/public/constants.h"
 #include "src/ledger/bin/storage/public/types.h"
-#include "src/lib/fxl/strings/string_printf.h"
+#include "third_party/abseil-cpp/absl/strings/str_format.h"
 
 namespace storage {
 namespace btree {
@@ -197,7 +197,7 @@ TEST(EncodingTest, Errors) {
     for (size_t i = 0; i < size; ++i) {
       children.push_back(CreateChildStorage(
           builder, 1,
-          ToObjectIdentifierStorage(&builder, MakeObjectIdentifier(fxl::StringPrintf("c%lu", i)))));
+          ToObjectIdentifierStorage(&builder, MakeObjectIdentifier(absl::StrFormat("c%lu", i)))));
     }
     return builder.CreateVector(children);
   };

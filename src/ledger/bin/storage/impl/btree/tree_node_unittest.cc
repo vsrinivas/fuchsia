@@ -14,7 +14,6 @@
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/strings/string_printf.h"
 
 namespace storage {
 namespace btree {
