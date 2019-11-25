@@ -171,17 +171,13 @@ group("overnet") {
 group("mediaplayer") {
   testonly = true
   public_deps = [
-    "//examples/media/playback",
+    "//src/media/playback/examples",
   ]
 }
 
 group("media") {
   testonly = true
   public_deps = [
-    "//examples/media/audio/fx",
-    "//examples/media/audio/simple_sine",
-    "//examples/media/audio/sync_sine",
-    "//examples/media/audio/tones",
     "//garnet/examples/media:use_h264_decoder_secure_input_output_test",
     "//garnet/examples/media:use_h264_decoder_secure_output_test",
     "//garnet/examples/media:use_h264_decoder_test",

@@ -17,7 +17,7 @@ audio output streams -- useful when debugging audio-related code.
 
 ### Using WavWriter ###
 
-See `wav_recorder` in 'examples/media' for a focused, easy-to-follow example
+See `wav_recorder` in 'audio/tools' for a focused, easy-to-follow example
 of using this library.
 
 After creating a WavWriter object (with template parameter 'true' or blank),

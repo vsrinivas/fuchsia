@@ -19,9 +19,7 @@ group("audio") {
 }
 
 fuzzers_package("audio_fuzzers") {
-  fuzzers = [
-    "audio_core:audio_core_fuzzer",
-  ]
+  fuzzers = [ "audio_core:audio_core_fuzzer" ]
 }
 
 group("tests") {
@@ -34,5 +32,12 @@ group("tests") {
     "drivers:tests",
     "lib:tests",
     "lib/audio_test_devmgr",
+  ]
+}
+
+group("examples") {
+  testonly = true
+  deps = [
+    "//src/media/audio/examples",
   ]
 }

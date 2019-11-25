@@ -1,0 +1,27 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# We have a separate package for each example to clarify the dependencies of
+# each example.
+
+# TODO(perley): Take the wav_recorder utility and strip
+#               it down to a minimal simple_cap example
+
+group("examples") {
+  testonly = true
+  deps = [
+    "effects",
+    "fx",
+    "simple_sine",
+    "sync_sine",
+    "tones",
+  ]
+}
+
+group("tests") {
+  testonly = true
+  deps = [
+    "effects:tests",
+  ]
+}

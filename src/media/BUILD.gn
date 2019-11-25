@@ -28,6 +28,8 @@ group("tests") {
 group("examples") {
   testonly = true
   deps = [
+    "audio:examples",
+    "playback:examples",
     "sessions:examples",
   ]
 }
