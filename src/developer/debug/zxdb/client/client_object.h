@@ -11,8 +11,8 @@ class Session;
 
 // Base class for debugger client objects.
 //
-// Currently this doesn't do much. It's anticipated that this will provide
-// bindings and such when scripting support is added.
+// Currently this doesn't do much. It's anticipated that this will provide bindings and such when
+// scripting support is added.
 class ClientObject {
  public:
   explicit ClientObject(Session* session);

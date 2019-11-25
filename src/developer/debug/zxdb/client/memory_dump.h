@@ -13,8 +13,8 @@
 
 namespace zxdb {
 
-// Memory in a debugged process can be mapped or not mapped. This dump object
-// represents a view into memory consisting of a sequence of these blocks.
+// Memory in a debugged process can be mapped or not mapped. This dump object represents a view into
+// memory consisting of a sequence of these blocks.
 class MemoryDump {
  public:
   MemoryDump();
@@ -38,13 +38,12 @@ class MemoryDump {
   // Returns true if every block in this memory dump is valid.
   bool AllValid() const;
 
-  // The blocks in the memory dump will be contiguous. Anything not mapped will
-  // be represented by a block marked not valid.
+  // The blocks in the memory dump will be contiguous. Anything not mapped will be represented by a
+  // block marked not valid.
   const std::vector<debug_ipc::MemoryBlock>& blocks() const { return blocks_; }
 
-  // Helper function to read out of the memory. If the given address is outside
-  // the range or is not mapped, returns false. Otherwise fills it into the
-  // given output.
+  // Helper function to read out of the memory. If the given address is outside the range or is not
+  // mapped, returns false. Otherwise fills it into the given output.
   bool GetByte(uint64_t address, uint8_t* byte) const;
 
  private:

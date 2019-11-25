@@ -13,14 +13,13 @@
 
 namespace zxdb {
 
-// Stores the setting information for a particular context. These are meant
-// to be used for validation of settings for particular objects (thread,
-// process, etc.).
+// Stores the setting information for a particular context. These are meant to be used for
+// validation of settings for particular objects (thread, process, etc.).
 class SettingSchema : public fxl::RefCountedThreadSafe<SettingSchema> {
  public:
-  // The SchemaSetting holds the actual setting (the value that is stored and
-  // overridden by SettingStore) + some metadata useful for implementing more
-  // complex settings such as enums, by using the |options| field.
+  // The SchemaSetting holds the actual setting (the value that is stored and overridden by
+  // SettingStore) + some metadata useful for implementing more complex settings such as enums, by
+  // using the |options| field.
   struct SchemaSetting {
     Setting setting;
     std::vector<std::string> options;  // Used only for string lists.

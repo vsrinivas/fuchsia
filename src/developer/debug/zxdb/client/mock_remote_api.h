@@ -13,18 +13,17 @@ namespace zxdb {
 
 // A mock for RemoteAPI that saves messages and sends replies.
 //
-// Not all of the messages are handled here. Only the ones that are needed by
-// the tests that use this mock are necessary. The default implementation of
-// RemoteAPI will assert for calls that aren't overridden, so if you get one
-// you should implement it here.
+// Not all of the messages are handled here. Only the ones that are needed by the tests that use
+// this mock are necessary. The default implementation of RemoteAPI will assert for calls that
+// aren't overridden, so if you get one you should implement it here.
 class MockRemoteAPI : public RemoteAPI {
  public:
   MockRemoteAPI();
   ~MockRemoteAPI();
 
-  // Resume. By default Resume() counts the number of calls, but many tests
-  // also want to opt-in to an implicit MessageLoop exit when this happens so
-  // they can continue testing from after the IPC message is sent.
+  // Resume. By default Resume() counts the number of calls, but many tests also want to opt-in to
+  // an implicit MessageLoop exit when this happens so they can continue testing from after the IPC
+  // message is sent.
   void set_resume_quits_loop(bool quit) { resume_quits_loop_ = true; }
   int GetAndResetResumeCount();  // Zeroes out internal value.
 

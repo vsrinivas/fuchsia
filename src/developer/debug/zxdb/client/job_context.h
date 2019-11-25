@@ -19,27 +19,25 @@ namespace zxdb {
 class Err;
 class Job;
 
-// A JobContext represents the abstract idea of a job that can be debugged.
-// This is as opposed to a Job which corresponds to one running job.
+// A JobContext represents the abstract idea of a job that can be debugged. This is as opposed to a
+// Job which corresponds to one running job.
 //
-// Generally upon startup there would be a JobContext but no Job. This
-// JobContext would receive the job name, koid, and other state from the user.
-// Running this job_context would create the associated Job object. When the job
-// exits, the JobContext can be re-used to launch the Job again with the same
-// configuration.
+// Generally upon startup there would be a JobContext but no Job. This JobContext would receive the
+// job name, koid, and other state from the user. Running this job_context would create the
+// associated Job object. When the job exits, the JobContext can be re-used to launch the Job again
+// with the same configuration.
 class JobContext : public ClientObject {
  public:
-  // Note that the callback will be issued in all cases which may be after the
-  // job_context is destroyed. In this case the weak pointer will be null.
+  // Note that the callback will be issued in all cases which may be after the job_context is
+  // destroyed. In this case the weak pointer will be null.
   using Callback = fit::callback<void(fxl::WeakPtr<JobContext> job_context, const Err&)>;
 
   enum class State {
-    // There is no job currently running. From here, it can only transition
-    // to starting.
+    // There is no job currently running. From here, it can only transition to starting.
     kNone,
 
-    // A pending state during the time we requested to be attached and when the
-    // reply from the debug_agent comes back.
+    // A pending state during the time we requested to be attached and when the reply from the
+    // debug_agent comes back.
     kAttaching,
 
     // The job is attached. From here, it can only transition to none.
@@ -53,22 +51,21 @@ class JobContext : public ClientObject {
   // Returns the current job state.
   virtual State GetState() const = 0;
 
-  // Returns the job object if it is currently running (see GetState()).
-  // Returns null otherwise.
+  // Returns the job object if it is currently running (see GetState()). Returns null otherwise.
   virtual Job* GetJob() const = 0;
 
-  // Attaches to the job with the given koid. The callback will be
-  // executed when the attach is complete (or fails).
+  // Attaches to the job with the given koid. The callback will be executed when the attach is
+  // complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
-  // Attaches to the given special job. The root job is the system root, and
-  // the component job is the one in which all the components are created. The
-  // callback will be executed when the attach is complete (or fails).
+  // Attaches to the given special job. The root job is the system root, and the component job is
+  // the one in which all the components are created. The callback will be executed when the attach
+  // is complete (or fails).
   virtual void AttachToSystemRoot(Callback callback) = 0;
   virtual void AttachToComponentRoot(Callback callback) = 0;
 
-  // Detaches from the job with the given koid. The callback will be
-  // executed when the detach is complete (or fails).
+  // Detaches from the job with the given koid. The callback will be executed when the detach is
+  // complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
   // Provides the setting schema for this object.

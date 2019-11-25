@@ -61,8 +61,8 @@ class Process : public ClientObject {
   // The Process koid is guaranteed non-null.
   virtual uint64_t GetKoid() const = 0;
 
-  // Returns the "name" of the process. This is the process object name which
-  // is normally based on the file name, but isn't the same as the file name.
+  // Returns the "name" of the process. This is the process object name which is normally based on
+  // the file name, but isn't the same as the file name.
   virtual const std::string& GetName() const = 0;
 
   // Returns the interface for querying symbols for this process.
@@ -72,19 +72,18 @@ class Process : public ClientObject {
   // recomputes the list).
   virtual void GetModules(fit::callback<void(const Err&, std::vector<debug_ipc::Module>)>) = 0;
 
-  // Queries the process for its address map if |address| is zero the entire
-  // map is requested. If |address| is non-zero only the containing region
-  // if exists will be retrieved.
+  // Queries the process for its address map if |address| is zero the entire map is requested. If
+  // |address| is non-zero only the containing region if exists will be retrieved.
   virtual void GetAspace(
       uint64_t address,
       fit::callback<void(const Err&, std::vector<debug_ipc::AddressRegion>)>) const = 0;
 
-  // Returns all threads in the process. This is as of the last update from
-  // the system. If the program is currently running, the actual threads may be
-  // different since it can be asynchronously creating and destroying them.
+  // Returns all threads in the process. This is as of the last update from the system. If the
+  // program is currently running, the actual threads may be different since it can be
+  // asynchronously creating and destroying them.
   //
-  // Some programs also change thread names dynamically, so the names may be
-  // stale. Call SyncThreads() to update the thread list with the debuggee.
+  // Some programs also change thread names dynamically, so the names may be stale. Call
+  // SyncThreads() to update the thread list with the debuggee.
   //
   // The pointers will only be valid until you return to the message loop.
   virtual std::vector<Thread*> GetThreads() const = 0;
@@ -92,47 +91,43 @@ class Process : public ClientObject {
   // Returns the thread in this process associated with the given koid.
   virtual Thread* GetThreadFromKoid(uint64_t koid) = 0;
 
-  // Returns a pointer to the backtrace cache associated with this koid.
-  // Returns null if there is no cache present (mostly in tests).
+  // Returns a pointer to the backtrace cache associated with this koid. Returns null if there is no
+  // cache present (mostly in tests).
   virtual BacktraceCache* GetBacktraceCacheFromKoid(uint64_t koid);
 
-  // Asynchronously refreshes the thread list from the debugged process. This
-  // will ensure the thread names are up-to-date, and is also used after
-  // attaching when there are no thread notifications for existing threads.
+  // Asynchronously refreshes the thread list from the debugged process. This will ensure the thread
+  // names are up-to-date, and is also used after attaching when there are no thread notifications
+  // for existing threads.
   //
-  // If the Process is destroyed before the call completes, the callback will
-  // not be issued. If this poses a problem in the future, we can add an
-  // error code to the callback, but will need to be careful to make clear the
-  // Process object is not valid at that point (callers may want to use it to
-  // format error messages).
+  // If the Process is destroyed before the call completes, the callback will not be issued. If this
+  // poses a problem in the future, we can add an error code to the callback, but will need to be
+  // careful to make clear the Process object is not valid at that point (callers may want to use it
+  // to format error messages).
   //
   // To get the computed threads, call GetThreads() once the callback runs.
   virtual void SyncThreads(fit::callback<void()> callback) = 0;
 
-  // Pauses (suspends in Zircon terms) all threads in the process, it does not
-  // affect other processes.
+  // Pauses (suspends in Zircon terms) all threads in the process, it does not affect other
+  // processes.
   //
-  // The backend will try to ensure the threads are actually paused before
-  // issuing the on_paused callback. But this is best effort and not
-  // guaranteed: both because there's a timeout for the synchronous suspending
-  // and because a different continue message could race with the reply.
+  // The backend will try to ensure the threads are actually paused before issuing the on_paused
+  // callback. But this is best effort and not guaranteed: both because there's a timeout for the
+  // synchronous suspending and because a different continue message could race with the reply.
   virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Applies to all threads in the process.
   virtual void Continue() = 0;
 
-  // The callback does NOT mean the step has completed, but rather the setup
-  // for the function was successful. Symbols and breakpoint setup can cause
-  // asynchronous failures.
+  // The callback does NOT mean the step has completed, but rather the setup for the function was
+  // successful. Symbols and breakpoint setup can cause asynchronous failures.
   virtual void ContinueUntil(std::vector<InputLocation> locations,
                              fit::callback<void(const Err&)> cb) = 0;
 
-  // Returns the SymbolDataProvider that can be used to evaluate symbols
-  // in the context of this process. This will not have any frame information
-  // so the available operations will be limited.
+  // Returns the SymbolDataProvider that can be used to evaluate symbols in the context of this
+  // process. This will not have any frame information so the available operations will be limited.
   //
-  // If the caller has a Frame, prefer Frame::GetSymbolDataProvider() which
-  // does have access to registers and other frame data.
+  // If the caller has a Frame, prefer Frame::GetSymbolDataProvider() which does have access to
+  // registers and other frame data.
   virtual fxl::RefPtr<SymbolDataProvider> GetSymbolDataProvider() const = 0;
 
   // Reads memory from the debugged process.

@@ -14,8 +14,8 @@ class MockTarget : public Target {
   MockTarget(Session* session) : Target(session) {}
   ~MockTarget() override {}
 
-  // Sets the state to running and saves the process pointer. Does not take
-  // ownership of the pointer.
+  // Sets the state to running and saves the process pointer. Does not take ownership of the
+  // pointer.
   void SetRunningProcess(Process* process);
 
   // Sets the value returned by GetSymbols(). Does not take ownership.

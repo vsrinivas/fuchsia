@@ -18,14 +18,14 @@ namespace zxdb {
 class Target;
 class Thread;
 
-// The defaults for the settings should be chosen to be appropriate for new
-// breakpoints if that setting is not specified.
+// The defaults for the settings should be chosen to be appropriate for new breakpoints if that
+// setting is not specified.
 struct BreakpointSettings {
   // The scope is what this breakpoint applies to.
   enum class Scope {
-    // For session scopes, all processes attempt to resolve this breakpoint if
-    // a symbol matches. You can't have an address breakpoint applying to all
-    // processes (since addresses typically won't match between processes).
+    // For session scopes, all processes attempt to resolve this breakpoint if a symbol matches. You
+    // can't have an address breakpoint applying to all processes (since addresses typically won't
+    // match between processes).
     kSystem,
     kTarget,
     kThread

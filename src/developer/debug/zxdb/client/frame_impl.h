@@ -55,11 +55,10 @@ class FrameImpl final : public Frame {
 
   void EnsureSymbolized() const;
 
-  // Ensures that the base pointer evaluation has at least started. If this
-  // returns true the computed_base_pointer_ is valid and can be used. If this
-  // returns false, the computation of the base pointer will be pending.
-  // Callers can add a callback to base_pointer_requests_ to be notified when
-  // computation is done.
+  // Ensures that the base pointer evaluation has at least started. If this returns true the
+  // computed_base_pointer_ is valid and can be used. If this returns false, the computation of the
+  // base pointer will be pending. Callers can add a callback to base_pointer_requests_ to be
+  // notified when computation is done.
   bool EnsureBasePointer();
 
   // Updates the given cached registers. If a register category is represented here, the array will
@@ -79,15 +78,14 @@ class FrameImpl final : public Frame {
   mutable fxl::RefPtr<FrameSymbolDataProvider> symbol_data_provider_;  // Lazy.
   mutable fxl::RefPtr<EvalContextImpl> symbol_eval_context_;           // Lazy.
 
-  // The lazily computed frame base. This will be from DW_AT_frame_base on the
-  // function if there is one.
+  // The lazily computed frame base. This will be from DW_AT_frame_base on the function if there is
+  // one.
   std::optional<uint64_t> computed_base_pointer_;
 
   // Non-null when evaluating a frame base pointer expression.
   std::unique_ptr<DwarfExprEval> base_pointer_eval_;
 
-  // When an async base pointer request is pending, this maintains all
-  // pending callbacks.
+  // When an async base pointer request is pending, this maintains all pending callbacks.
   std::vector<fit::callback<void(uint64_t)>> base_pointer_requests_;
 
   fxl::WeakPtrFactory<FrameImpl> weak_factory_;

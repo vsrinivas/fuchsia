@@ -19,9 +19,9 @@ class Thread;
 
 // This test harness automatically makes a process and a thread
 //
-// Many tests can be written using this setup entirely. When symbols are needed they can be
-// injected into the MockModuleSymbols. If more elaborate symbol mocking is desired, a derived
-// class can override MakeModuleSymbols() and provide a custom implementation.
+// Many tests can be written using this setup entirely. When symbols are needed they can be injected
+// into the MockModuleSymbols. If more elaborate symbol mocking is desired, a derived class can
+// override MakeModuleSymbols() and provide a custom implementation.
 class ThreadControllerTest : public RemoteAPITest {
  public:
   ThreadControllerTest();

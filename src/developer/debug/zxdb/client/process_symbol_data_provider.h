@@ -11,17 +11,16 @@ namespace zxdb {
 
 class Process;
 
-// Implementation of SymbolDataProvider that links it to a process. It
-// provides access to process memory but reports errors for all attempts to
-// access frame-related information such as registers. For that, see
-// FrameSymbolDataProvider.
+// Implementation of SymbolDataProvider that links it to a process. It provides access to process
+// memory but reports errors for all attempts to access frame-related information such as registers.
+// For that, see FrameSymbolDataProvider.
 class ProcessSymbolDataProvider : public SymbolDataProvider {
  public:
-  // Called by the process when it's being destroyed. This will remove the
-  // back-pointer to the process and all future requests for data will fail.
+  // Called by the process when it's being destroyed. This will remove the back-pointer to the
+  // process and all future requests for data will fail.
   //
-  // This is necessary because this class is reference counted and may outlive
-  // the process due to in-progress operations.
+  // This is necessary because this class is reference counted and may outlive the process due to
+  // in-progress operations.
   virtual void Disown();
 
   // SymbolDataProvider overrides:

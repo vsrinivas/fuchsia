@@ -27,27 +27,25 @@ class TargetImpl : public Target, public SettingStoreObserver {
   ProcessImpl* process() { return process_.get(); }
   TargetSymbols* symbols() { return &symbols_; }
 
-  // Allocates a new target with the same settings as this one. This isn't
-  // a real copy, because any process information is not cloned.
+  // Allocates a new target with the same settings as this one. This isn't a real copy, because any
+  // process information is not cloned.
   std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
 
-  // Notification that a new process was created from a job filter. The process
-  // will not have started running yet.
+  // Notification that a new process was created from a job filter. The process will not have
+  // started running yet.
   void ProcessCreatedInJob(uint64_t koid, const std::string& process_name);
 
-  // Notification that a new process was created as a new component.
-  // We need the distinction because they look identical as a process caught
-  // by a job filter.
+  // Notification that a new process was created as a new component. We need the distinction because
+  // they look identical as a process caught by a job filter.
   void ProcessCreatedAsComponent(uint64_t koid, const std::string& process_name);
 
-  // Tests can use this to create a target for mocking purposes without making
-  // any IPC. To destroy call ImplicitlyDetach().
+  // Tests can use this to create a target for mocking purposes without making any IPC. To destroy
+  // call ImplicitlyDetach().
   void CreateProcessForTesting(uint64_t koid, const std::string& process_name);
 
-  // Removes the process from this target without making any IPC calls. This
-  // can be used to clean up after a CreateProcessForTesting(), and during
-  // final shutdown. In final shutdown, we assume anything still left running
-  // will continue running as-is and just clean up local references.
+  // Removes the process from this target without making any IPC calls. This can be used to clean up
+  // after a CreateProcessForTesting(), and during final shutdown. In final shutdown, we assume
+  // anything still left running will continue running as-is and just clean up local references.
   //
   // If the process is not running, this will do nothing.
   void ImplicitlyDetach();

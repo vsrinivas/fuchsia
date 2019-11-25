@@ -19,8 +19,8 @@ namespace zxdb {
 
 struct StoredSetting;
 
-// SettingStore is in charge of maintaining a structured group of settings.
-// settings are indexed by a unique key.
+// SettingStore is in charge of maintaining a structured group of settings. settings are indexed by
+// a unique key.
 class SettingStore {
  public:
   SettingStore(fxl::RefPtr<SettingSchema> schema, SettingStore* fallback);
@@ -68,8 +68,8 @@ class SettingStore {
   // Should always exist. All settings are validated against this.
   fxl::RefPtr<SettingSchema> schema_;
 
-  // SettingStore this store lookup settings when it cannot find them locally.
-  // Can be null. If set, must outlive |this|.
+  // SettingStore this store lookup settings when it cannot find them locally. Can be null. If set,
+  // must outlive |this|.
   SettingStore* fallback_;
   std::map<std::string, SettingValue> values_;
 

@@ -11,9 +11,8 @@ namespace zxdb {
 
 class Frame;
 
-// Implementation of SymbolDataProvider that links it to a frame. On top of the
-// process' general memory read/write, this adds stack information and the
-// instruction pointer.
+// Implementation of SymbolDataProvider that links it to a frame. On top of the process' general
+// memory read/write, this adds stack information and the instruction pointer.
 class FrameSymbolDataProvider : public ProcessSymbolDataProvider {
  public:
   // ProcessSymbolDataProvider overrides:

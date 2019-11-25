@@ -34,12 +34,12 @@ class ArchInfo {
   // Returns true of the instruction length is fixed.
   bool is_fixed_instr() const { return is_fixed_instr_; }
 
-  // Minimum instruction alignment. Prefer instead of
-  // llvm::AsmInfo::MinInstAlignment which isn't correct for ARM (reports 1).
+  // Minimum instruction alignment. Prefer instead of llvm::AsmInfo::MinInstAlignment which isn't
+  // correct for ARM (reports 1).
   size_t instr_align() const { return instr_align_; }
 
-  // Longest possible instruction in bytes. Prefer instead of
-  // llvm::AsmInfo::MaxInstLength which isn't correct for x86 (reports 1).
+  // Longest possible instruction in bytes. Prefer instead of llvm::AsmInfo::MaxInstLength which
+  // isn't correct for x86 (reports 1).
   size_t max_instr_len() const { return max_instr_len_; }
 
   // In LLVM a configuration name is called a "triple" even though it contains

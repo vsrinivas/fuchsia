@@ -37,17 +37,16 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   const Stack& GetStack() const override;
   Stack& GetStack() override;
 
-  // Updates the thread metadata with new state from the agent. Does not issue
-  // any notifications. When an exception is hit for example, everything needs
-  // to be updated first to a consistent state and then we issue notifications.
+  // Updates the thread metadata with new state from the agent. Does not issue any notifications.
+  // When an exception is hit for example, everything needs to be updated first to a consistent
+  // state and then we issue notifications.
   void SetMetadata(const debug_ipc::ThreadRecord& record);
 
-  // Notification of an exception. Call after SetMetadata() in cases where a
-  // stop may be required. This function will check controllers and will either
-  // stop (dispatching notifications) or transparently continue accordingly.
+  // Notification of an exception. Call after SetMetadata() in cases where a stop may be required.
+  // This function will check controllers and will either stop (dispatching notifications) or
+  // transparently continue accordingly.
   //
-  // The his breakpoints should include all breakpoints, including internal
-  // ones.
+  // The his breakpoints should include all breakpoints, including internal ones.
   void OnException(debug_ipc::ExceptionType type,
                    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
@@ -70,8 +69,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   debug_ipc::ThreadRecord::State state_;
   debug_ipc::ThreadRecord::BlockedReason blocked_reason_;
 
-  // Ordered list of ThreadControllers that apply to this thread. This is
-  // a stack where back() is the topmost controller that applies first.
+  // Ordered list of ThreadControllers that apply to this thread. This is a stack where back() is
+  // the topmost controller that applies first.
   std::vector<std::unique_ptr<ThreadController>> controllers_;
 
   fxl::WeakPtrFactory<ThreadImpl> weak_factory_;

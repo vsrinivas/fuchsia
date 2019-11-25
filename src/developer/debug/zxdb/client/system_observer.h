@@ -28,9 +28,9 @@ class SystemObserver {
   // Called immediately after createion of a symbol server.
   virtual void DidCreateSymbolServer(SymbolServer* server) {}
 
-  // It can be common to want to watch for all Process creation and destruction
-  // events. For convenience, these allow that without having to track each
-  // Target and register as an observer on them individually.
+  // It can be common to want to watch for all Process creation and destruction events. For
+  // convenience, these allow that without having to track each Target and register as an observer
+  // on them individually.
   virtual void GlobalDidCreateProcess(Process* process) {}
   virtual void GlobalWillDestroyProcess(Process* process) {}
 
@@ -42,8 +42,8 @@ class SystemObserver {
   virtual void DidCreateFilter(Filter* filter) {}
   virtual void WillDestroyFilter(Filter* filter) {}
 
-  // Indicates an informational message from the symbol indexing system.
-  // This will be things like "X" symbols loaded from "Y".
+  // Indicates an informational message from the symbol indexing system. This will be things like
+  // "X" symbols loaded from "Y".
   virtual void OnSymbolIndexingInformation(const std::string& msg) {}
 };
 

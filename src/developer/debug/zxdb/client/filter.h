@@ -29,11 +29,10 @@ class Filter : public ClientObject {
   std::string pattern_;
 
   // This exists in one of 3 states:
-  //   1) Optional contains non-null pointer. That points to the job this
-  //      applies to.
+  //   1) Optional contains non-null pointer. That points to the job this applies to.
   //   2) Optional is a nullopt. This filter applies to all jobs.
-  //   3) Optional contains a null pointer. This filter was meant to apply to a
-  //      job that disappeared.
+  //   3) Optional contains a null pointer. This filter was meant to apply to a job that
+  //      disappeared.
   std::optional<fxl::WeakPtr<JobContext>> job_;
 };
 

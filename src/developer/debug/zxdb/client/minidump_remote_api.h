@@ -92,8 +92,7 @@ class MinidumpRemoteAPI : public RemoteAPI, public DownloadObserver {
   };
 
  private:
-  // Initialization routine. Iterates minidump structures and finds all the
-  // readable memory.
+  // Initialization routine. Iterates minidump structures and finds all the readable memory.
   void CollectMemory();
 
   // Get all the modules out of the dump in debug ipc form.

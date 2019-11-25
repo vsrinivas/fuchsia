@@ -12,28 +12,25 @@ namespace zxdb {
 
 class Process;
 
-// One breakpoint can expand to multiple locations due to inlining and template
-// instantiations. This class represents one physical address of a breakpoint.
+// One breakpoint can expand to multiple locations due to inlining and template instantiations. This
+// class represents one physical address of a breakpoint.
 class BreakpointLocation {
  public:
   BreakpointLocation();
   virtual ~BreakpointLocation();
 
-  // Returns the process this breakpoint location is associated with. One
-  // Breakpoint object can apply to multiple processes, but a location applies
-  // to only one.
+  // Returns the process this breakpoint location is associated with. One Breakpoint object can
+  // apply to multiple processes, but a location applies to only one.
   virtual Process* GetProcess() const = 0;
 
   // Returns the symbolized location of the breakpoint.
   virtual Location GetLocation() const = 0;
 
-  // Locations can be enabled or disabled independently. If the breakpoint is
-  // disabled, all breakpoint locations will be disabled, but the enable state
-  // of each will be retained (to facilitate toggling on and off a set of
-  // locations).
+  // Locations can be enabled or disabled independently. If the breakpoint is disabled, all
+  // breakpoint locations will be disabled, but the enable state of each will be retained (to
+  // facilitate toggling on and off a set of locations).
   //
-  // This means the actual enabled state is this combined with the Breakpoint
-  // enabled flag.
+  // This means the actual enabled state is this combined with the Breakpoint enabled flag.
   virtual bool IsEnabled() const = 0;
   virtual void SetEnabled(bool enabled) = 0;
 

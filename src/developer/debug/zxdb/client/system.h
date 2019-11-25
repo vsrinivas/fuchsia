@@ -46,59 +46,51 @@ class System : public ClientObject {
 
   virtual SystemSymbols* GetSymbols() = 0;
 
-  // Returns all targets currently in this System instance. The returned
-  // pointers are managed by the System object and should not be cached once you
-  // return to the message loop.  There is a single default Target, which is not
-  // initially attached to anything.
+  // Returns all targets currently in this System instance. The returned pointers are managed by the
+  // System object and should not be cached once you return to the message loop.  There is a single
+  // default Target, which is not initially attached to anything.
   virtual std::vector<Target*> GetTargets() const = 0;
 
-  // Returns all job contexts currently in this System instance. The returned
-  // pointers are managed by the System object and should not be cached once you
-  // return to the message loop.
+  // Returns all job contexts currently in this System instance. The returned pointers are managed
+  // by the System object and should not be cached once you return to the message loop.
   virtual std::vector<JobContext*> GetJobContexts() const = 0;
 
-  // Returns all non-internal breakpoints currently in this System instance. The
-  // returned pointers are managed by the System object and should not be cached
-  // once you return to the message loop.
+  // Returns all non-internal breakpoints currently in this System instance. The returned pointers
+  // are managed by the System object and should not be cached once you return to the message loop.
   virtual std::vector<Breakpoint*> GetBreakpoints() const = 0;
 
-  // Returns all filters currently in this System instance. The returned
-  // pointers are managed by the System object and should not be cached once
-  // you return to the message loop.
+  // Returns all filters currently in this System instance. The returned pointers are managed by the
+  // System object and should not be cached once you return to the message loop.
   virtual std::vector<Filter*> GetFilters() const = 0;
 
-  // Returns all symbol servers registered with this symbol instance. The
-  // returned pointers are managed by the System object and should not be
-  // cached once you return to the message loop.
+  // Returns all symbol servers registered with this symbol instance. The returned pointers are
+  // managed by the System object and should not be cached once you return to the message loop.
   virtual std::vector<SymbolServer*> GetSymbolServers() const = 0;
 
-  // Returns the process (and hence Target) associated with the given live
-  // koid. Returns 0 if not found.
+  // Returns the process (and hence Target) associated with the given live koid. Returns 0 if not
+  // found.
   virtual Process* ProcessFromKoid(uint64_t koid) const = 0;
 
   // Schedules a request for the system process tree.
   virtual void GetProcessTree(ProcessTreeCallback callback) = 0;
 
-  // Creates a new target in this System instance. If "clone" is given, the
-  // settings from that target will be cloned into the new one. If clone is
-  // null, an empty Target will be allocated.
+  // Creates a new target in this System instance. If "clone" is given, the settings from that
+  // target will be cloned into the new one. If clone is null, an empty Target will be allocated.
   virtual Target* CreateNewTarget(Target* clone) = 0;
 
-  // Creates a new job context in this System instance. If "clone" is given, the
-  // settings from that target will be cloned into the new one. If clone is
-  // null, an empty Target will be allocated.
+  // Creates a new job context in this System instance. If "clone" is given, the settings from that
+  // target will be cloned into the new one. If clone is null, an empty Target will be allocated.
   virtual JobContext* CreateNewJobContext(JobContext* clone) = 0;
 
-  // Creates a new breakpoint. It will have no associated process or location
-  // and will be disabled.
+  // Creates a new breakpoint. It will have no associated process or location and will be disabled.
   virtual Breakpoint* CreateNewBreakpoint() = 0;
 
-  // Creates an internal breakpoint. Internal breakpoints are not reported by
-  // GetBreakpoints() and are used to implement internal stepping functions.
+  // Creates an internal breakpoint. Internal breakpoints are not reported by GetBreakpoints() and
+  // are used to implement internal stepping functions.
   virtual Breakpoint* CreateNewInternalBreakpoint() = 0;
 
-  // Deletes the given breakpoint. The passed-in pointer will be invalid after
-  // this call. Used for both internal and external breakpoints.
+  // Deletes the given breakpoint. The passed-in pointer will be invalid after this call. Used for
+  // both internal and external breakpoints.
   virtual void DeleteBreakpoint(Breakpoint* breakpoint) = 0;
 
   // Creates a new filter. It will have no associated pattern.
@@ -109,10 +101,9 @@ class System : public ClientObject {
 
   // Pauses (suspends in Zircon terms) all threads of all attached processes.
   //
-  // The backend will try to ensure the threads are actually paused before
-  // issuing the on_paused callback. But this is best effort and not
-  // guaranteed: both because there's a timeout for the synchronous suspending
-  // and because a different continue message could race with the reply.
+  // The backend will try to ensure the threads are actually paused before issuing the on_paused
+  // callback. But this is best effort and not guaranteed: both because there's a timeout for the
+  // synchronous suspending and because a different continue message could race with the reply.
   virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Applies to all threads of all debugged processes.

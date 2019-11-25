@@ -94,9 +94,8 @@ class Curl {
   void FreeSList();
   void PrepareToPerform();
 
-  // Effectively a count of the number of Curl objects outstanding. When it
-  // first becomes nonzero we run curl_global_init() and when it becomes zero
-  // again we run curl_global_cleanup().
+  // Effectively a count of the number of Curl objects outstanding. When it first becomes nonzero we
+  // run curl_global_init() and when it becomes zero again we run curl_global_cleanup().
   static size_t global_init;
 
   CURL* curl_ = nullptr;

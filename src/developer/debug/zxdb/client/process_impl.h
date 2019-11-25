@@ -69,8 +69,8 @@ class ProcessImpl : public Process, public ProcessSymbols::Notifications {
 
   BacktraceCache* GetBacktraceCacheFromKoid(uint64_t thread_koid) override;
 
-  // Whether this process should store backtraces for all important exceptions.
-  // See backtrace_cache.h for more details.
+  // Whether this process should store backtraces for all important exceptions. See
+  // backtrace_cache.h for more details.
   void ShouldStoreBacktraces(bool);
 
  private:

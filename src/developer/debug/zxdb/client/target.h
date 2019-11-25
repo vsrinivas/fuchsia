@@ -25,35 +25,33 @@ class System;
 class TargetObserver;
 class TargetSymbols;
 
-// A Target represents the abstract idea of a process that can be debugged.
-// This is as opposed to a Process which corresponds to one running process.
+// A Target represents the abstract idea of a process that can be debugged. This is as opposed to a
+// Process which corresponds to one running process.
 //
-// Targets are not initially attached to Processes on the debugged device.
-// There are multiple ways of associating a Target with a Process.
+// Targets are not initially attached to Processes on the debugged device. There are multiple ways
+// of associating a Target with a Process.
 //
-// If users want to start a new process on the debugged device, they set the
-// breakpoints, process name, command line switches, and other state in the
-// Target.  The user then runs the target, which creates the associated Process
-// object. When the process exits, the Target can be re-used to launch the
-// process again with the same configuration.
+// If users want to start a new process on the debugged device, they set the breakpoints, process
+// name, command line switches, and other state in the Target.  The user then runs the target, which
+// creates the associated Process object. When the process exits, the Target can be re-used to
+// launch the process again with the same configuration.
 //
-// If users want to associate a Target with a process on the debugged device,
-// they create a new Target (possibly using System::CreateNewTarget), and then
-// call Attach() to perform the association.
+// If users want to associate a Target with a process on the debugged device, they create a new
+// Target (possibly using System::CreateNewTarget), and then call Attach() to perform the
+// association.
 class Target : public ClientObject {
  public:
-  // Note that the callback will be issued in all cases which may be after the
-  // target is destroyed. In this case the weak pointer will be null.
+  // Note that the callback will be issued in all cases which may be after the target is destroyed.
+  // In this case the weak pointer will be null.
   using Callback = fit::callback<void(fxl::WeakPtr<Target> target, const Err&)>;
 
   enum State {
-    // There is no process currently running. From here, it can only transition
-    // to starting.
+    // There is no process currently running. From here, it can only transition to starting.
     kNone,
 
-    // A pending state when the process has been requested to be started but
-    // there is no reply from the debug agent yet. From here, it can transition
-    // to running (success) or stopped (if launching or attaching failed).
+    // A pending state when the process has been requested to be started but there is no reply from
+    // the debug agent yet. From here, it can transition to running (success) or stopped (if
+    // launching or attaching failed).
     kStarting,
 
     // A pending state like starting but when we're waiting to attach.
@@ -73,33 +71,31 @@ class Target : public ClientObject {
   // Returns the current process state.
   virtual State GetState() const = 0;
 
-  // Returns the process object if it is currently running (see GetState()).
-  // Returns null otherwise.
+  // Returns the process object if it is currently running (see GetState()). Returns null otherwise.
   virtual Process* GetProcess() const = 0;
 
-  // Returns the process-independent symbol interface. See also
-  // Process:GetSymbols().
+  // Returns the process-independent symbol interface. See also Process:GetSymbols().
   virtual const TargetSymbols* GetSymbols() const = 0;
 
-  // Sets and retrieves the arguments passed to the program. args[0] is the
-  // program name, the rest of the array are the command-line.
+  // Sets and retrieves the arguments passed to the program. args[0] is the program name, the rest
+  // of the array are the command-line.
   virtual const std::vector<std::string>& GetArgs() const = 0;
   virtual void SetArgs(std::vector<std::string> args) = 0;
 
-  // Launches the program. The program must be in a kStopped state and the
-  // program name configured via SetArgs().
+  // Launches the program. The program must be in a kStopped state and the program name configured
+  // via SetArgs().
   virtual void Launch(Callback callback) = 0;
 
-  // Kills the process with the given koid. The callback will be
-  // executed when the kill is complete (or fails).
+  // Kills the process with the given koid. The callback will be executed when the kill is complete
+  // (or fails).
   virtual void Kill(Callback callback) = 0;
 
-  // Attaches to the process with the given koid. The callback will be
-  // executed when the attach is complete (or fails).
+  // Attaches to the process with the given koid. The callback will be executed when the attach is
+  // complete (or fails).
   virtual void Attach(uint64_t koid, Callback callback) = 0;
 
-  // Detaches from the process with the given koid. The callback will be
-  // executed when the detach is complete (or fails).
+  // Detaches from the process with the given koid. The callback will be executed when the detach is
+  // complete (or fails).
   virtual void Detach(Callback callback) = 0;
 
   // Notification from the agent that a process has exited.

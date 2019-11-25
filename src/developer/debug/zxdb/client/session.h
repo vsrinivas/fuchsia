@@ -37,16 +37,16 @@ class ThreadImpl;
 // The session object manages the connection with the remote debug agent.
 class Session : public SettingStoreObserver {
  public:
-  // Creates a session with no connection. All sending will fail until
-  // the callback associated with a Connect() call is issued.
+  // Creates a session with no connection. All sending will fail until the callback associated with
+  // a Connect() call is issued.
   Session();
 
-  // Creates a session using a custom RemoteAPI implementation. Use for tests
-  // to mock out sending IPC messages.
+  // Creates a session using a custom RemoteAPI implementation. Use for tests to mock out sending
+  // IPC messages.
   Session(std::unique_ptr<RemoteAPI> remote_api, debug_ipc::Arch arch);
 
-  // Creates with a previously-allocated connection. The pointer must outlive
-  // this class. In this mode, the stream can not be disconnected.
+  // Creates with a previously-allocated connection. The pointer must outlive this class. In this
+  // mode, the stream can not be disconnected.
   explicit Session(debug_ipc::StreamBuffer* stream);
   virtual ~Session();
 
@@ -67,8 +67,8 @@ class Session : public SettingStoreObserver {
   void AddDownloadObserver(DownloadObserver* observer);
   void RemoveDownloadObserver(DownloadObserver* observer);
 
-  // Returns information about whether this session is connected to a minidump
-  // instead of a live system.
+  // Returns information about whether this session is connected to a minidump instead of a live
+  // system.
   bool is_minidump() const { return is_minidump_; }
 
   // Notification about the stream.
@@ -83,47 +83,40 @@ class Session : public SettingStoreObserver {
   const std::string connected_host() const { return connected_host_; }
   uint16_t connected_port() const { return connected_port_; }
 
-  // Call with an empty host and 0 port to reconnect to the last attempted
-  // connection destination. If there is no previous destination, this will be
-  // issue an error.
+  // Call with an empty host and 0 port to reconnect to the last attempted connection destination.
+  // If there is no previous destination, this will be issue an error.
   void Connect(const std::string& host, uint16_t port, fit::callback<void(const Err&)> cb);
 
-  // Disconnects from the remote system. Calling when there is no connection
-  // connection will issue the callback with an error.
+  // Disconnects from the remote system. Calling when there is no connection connection will issue
+  // the callback with an error.
   //
-  // This can also be called when a connection is pending (Connect() has been
-  // called but the callback has not been issued yet) which will cancel the
-  // pending connection. The Connect() callback will still be issued but
-  // will indicate failure.
+  // This can also be called when a connection is pending (Connect() has been called but the
+  // callback has not been issued yet) which will cancel the pending connection. The Connect()
+  // callback will still be issued but will indicate failure.
   void Disconnect(fit::callback<void(const Err&)> callback);
 
-  // Open a minidump instead of connecting to a running system. The callback
-  // will be issued with an error if the file cannot be opened or if there is
-  // already a connection.
+  // Open a minidump instead of connecting to a running system. The callback will be issued with an
+  // error if the file cannot be opened or if there is already a connection.
   void OpenMinidump(const std::string& path, fit::callback<void(const Err&)> callback);
 
-  // Frees all connection-related data. A helper for different modes of
-  // cleanup. Returns true if there was a connection to clear.
+  // Frees all connection-related data. A helper for different modes of cleanup. Returns true if
+  // there was a connection to clear.
   bool ClearConnectionData();
 
   // Access to the singleton corresponding to the debugged system.
   System& system() { return system_; }
 
-  // Provide access to the underlying system implementation. This is needed
-  // for some client tests, but should not be used outside of the client
-  // directory.
+  // Provide access to the underlying system implementation. This is needed for some client tests,
+  // but should not be used outside of the client directory.
   //
-  // TODO(brettw) probably this class needs to be separated into Session and
-  // SessionImpl and which one of those you have controls which System object
-  // you can get.
+  // TODO(brettw) probably this class needs to be separated into Session and SessionImpl and which
+  // one of those you have controls which System object you can get.
   SystemImpl& system_impl() { return system_; }
 
-  // Architecture of the attached system. Will be "kUnknown" when not
-  // connected.
+  // Architecture of the attached system. Will be "kUnknown" when not connected.
   debug_ipc::Arch arch() const { return arch_; }
 
-  // Architecture information of the attached system. Will be null when not
-  // connected.
+  // Architecture information of the attached system. Will be null when not connected.
   const ArchInfo* arch_info() const { return arch_info_.get(); }
 
   // Observer list getters.
@@ -131,19 +124,18 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<FilterObserver>& filter_observers() { return filter_observers_; }
   fxl::ObserverList<DownloadObserver>& download_observers() { return download_observers_; }
 
-  // When the client tells the agent to launch a component, it will return an
-  // unique id identifying that launch. Later, when the component effectively
-  // starts, the session will use that ID to know which component it is.
+  // When the client tells the agent to launch a component, it will return an unique id identifying
+  // that launch. Later, when the component effectively starts, the session will use that ID to know
+  // which component it is.
   void ExpectComponent(uint32_t component_id);
 
-  // Dispatches these particular notification types from the agent. These are
-  // public since tests will commonly want to synthesize these events.
+  // Dispatches these particular notification types from the agent. These are public since tests
+  // will commonly want to synthesize these events.
   //
-  // Note on DispatchNotifyException: Test code can skip setting the metadata
-  // by clearing the set_metadata flag. This allows them to set up the thread's
-  // state manually before issuing an exception. Production code should always
-  // set the set_metadata flag to populate the thread's state from the data
-  // in the exception.
+  // Note on DispatchNotifyException: Test code can skip setting the metadata by clearing the
+  // set_metadata flag. This allows them to set up the thread's state manually before issuing an
+  // exception. Production code should always set the set_metadata flag to populate the thread's
+  // state from the data in the exception.
   void DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify);
   void DispatchNotifyThreadExiting(const debug_ipc::NotifyThread& notify);
   void DispatchNotifyException(const debug_ipc::NotifyException& notify, bool set_metadata = true);
@@ -169,19 +161,17 @@ class Session : public SettingStoreObserver {
   friend RemoteAPIImpl;
   friend RemoteAPITest;
 
-  // Nonspecific callback type. Implemented by SessionDispatchCallback (with
-  // the type-specific parameter pre-bound). The uint32_t is the transaction
-  // ID. If the error is set, the data will be invalid and the callback should
-  // be issued with the error instead of trying to deserialize.
+  // Nonspecific callback type. Implemented by SessionDispatchCallback (with the type-specific
+  // parameter pre-bound). The uint32_t is the transaction ID. If the error is set, the data will be
+  // invalid and the callback should be issued with the error instead of trying to deserialize.
   using Callback = fit::callback<void(const Err&, std::vector<char>)>;
 
   // Set the arch_ and arch_info_ fields.
   Err SetArch(debug_ipc::Arch arch);
 
-  // Checks whether it's safe to begin establishing a connection. If not, the
-  // callback is invoked with details. The opening_dump argument indicates
-  // whether we are trying to open a dump file rather than connect to a debug
-  // agent.
+  // Checks whether it's safe to begin establishing a connection. If not, the callback is invoked
+  // with details. The opening_dump argument indicates whether we are trying to open a dump file
+  // rather than connect to a debug agent.
   bool ConnectCanProceed(fit::callback<void(const Err&)>& callback, bool opening_dump);
 
   // Dispatches unsolicited notifications sent from the agent.
@@ -204,17 +194,16 @@ class Session : public SettingStoreObserver {
   SessionObserver::NotificationType HandleProcessIO(ProcessImpl*, const debug_ipc::NotifyIO&);
   void ListenForSystemSettings();
 
-  // Configurations ------------------------------------------------------------
+  // Configurations --------------------------------------------------------------------------------
 
-  // Upon connection, the sessino will tell the agent of all the configurations
-  // it should know about.
+  // Upon connection, the sessino will tell the agent of all the configurations it should know
+  // about.
   void SendAgentConfiguration();
 
   // Pushes the quit agent config action into |actions|.
   void ConfigQuitAgent(bool quit, std::vector<debug_ipc::ConfigAction>* actions);
 
-  // Whether we have opened a core dump. Makes much of the connection-related
-  // stuff obsolete.
+  // Whether we have opened a core dump. Makes much of the connection-related stuff obsolete.
   bool is_minidump_ = false;
 
   // Observers.
@@ -222,19 +211,17 @@ class Session : public SettingStoreObserver {
   fxl::ObserverList<FilterObserver> filter_observers_;
   fxl::ObserverList<DownloadObserver> download_observers_;
 
-  // Non-owning pointer to the connected stream. If this is non-null and
-  // connection_storage_ is null, the connection is persistent (made via the
-  // constructor) and can't be disconnected.
+  // Non-owning pointer to the connected stream. If this is non-null and connection_storage_ is
+  // null, the connection is persistent (made via the constructor) and can't be disconnected.
   //
-  // This could be null when the connection_storage_ isn't when we're waiting
-  // for the initial connection.
+  // This could be null when the connection_storage_ isn't when we're waiting for the initial
+  // connection.
   debug_ipc::StreamBuffer* stream_ = nullptr;
 
   std::unique_ptr<RemoteAPI> remote_api_;
 
-  // When using non-persistent connections (no connection passed in via the
-  // constructor), this will hold the underlying OS connection that is used
-  // to back stream_ as well as the
+  // When using non-persistent connections (no connection passed in via the constructor), this will
+  // hold the underlying OS connection that is used to back stream_ as well as the
   //
   // Code should use stream_ for sending and receiving.
   std::unique_ptr<debug_ipc::BufferedFD> connection_storage_;
@@ -244,15 +231,15 @@ class Session : public SettingStoreObserver {
   std::string connected_host_;
   uint16_t connected_port_ = 0;
 
-  // When a connection has been requested but is being connected on the
-  // background thread, this will hold the pointer.
+  // When a connection has been requested but is being connected on the background thread, this will
+  // hold the pointer.
   fxl::RefPtr<PendingConnection> pending_connection_;
 
   std::map<uint32_t, Callback> pending_;
   uint32_t next_transaction_id_ = 1;  // Reserve 0 for notifications.
 
-  // Component ids that the session is currently waiting on.
-  // See ExpectComponent comments for more information on these ids.
+  // Component ids that the session is currently waiting on. See ExpectComponent comments for more
+  // information on these ids.
   std::set<uint32_t> expected_components_;
 
   SystemImpl system_;
@@ -260,12 +247,11 @@ class Session : public SettingStoreObserver {
   debug_ipc::Arch arch_ = debug_ipc::Arch::kUnknown;
   std::unique_ptr<ArchInfo> arch_info_;
 
-  // The last host:port that a connection was made to. Will be empty/0 if there
-  // has never been a connection or if using an internal connection.
+  // The last host:port that a connection was made to. Will be empty/0 if there has never been a
+  // connection or if using an internal connection.
   //
-  // Note: if we support more types in the future, there should probably be a
-  // ConnectionDest struct that contains all the different parameters so this
-  // can be passed to Connect() and stored here.
+  // Note: if we support more types in the future, there should probably be a ConnectionDest struct
+  // that contains all the different parameters so this can be passed to Connect() and stored here.
   std::string last_host_;
   uint64_t last_port_ = 0;
 

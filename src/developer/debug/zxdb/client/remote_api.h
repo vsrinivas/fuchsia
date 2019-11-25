@@ -13,13 +13,12 @@ namespace zxdb {
 
 class Err;
 
-// Abstracts the IPC layer for sending messages to the debug agent. This allows
-// mocking of the interface without dealing with the innards of the
-// serialization.
+// Abstracts the IPC layer for sending messages to the debug agent. This allows mocking of the
+// interface without dealing with the innards of the serialization.
 //
-// The default implementations of each of these functions asserts. The Session
-// implements overrides that actually send and receive messages. Tests should
-// derive from this and implement the messages they expect.
+// The default implementations of each of these functions asserts. The Session implements overrides
+// that actually send and receive messages. Tests should derive from this and implement the messages
+// they expect.
 class RemoteAPI {
  public:
   RemoteAPI() = default;

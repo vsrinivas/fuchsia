@@ -15,8 +15,7 @@ class Err;
 
 // If successful, |socket| will contain a valid socket fd.
 //
-// This function will take care for differences each OS has when connecting
-// through a socket.
+// This function will take care for differences each OS has when connecting through a socket.
 Err ConnectToHost(const std::string& host, uint16_t port, fbl::unique_fd* socket);
 
 }  // namespace zxdb

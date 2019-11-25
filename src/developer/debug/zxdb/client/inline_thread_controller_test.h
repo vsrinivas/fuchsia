@@ -20,16 +20,14 @@ class MockFrame;
 
 // Helper class used for testing thread controllers that need inline stacks.
 //
-// Note on code locations: The source location for inline calls and physical
-// calls is different. The current instruction for a non-topmost physical frame
-// is always the return address of the function call (typically the next line)
-// because the debuggers knows the return address but don't necessarily know
-// the exact call location. For inline calls, however, we show the inline call
-// location because we do have that information, but don't know exactly where
-// the inline call will "return" to since there's no clear return address.
+// Note on code locations: The source location for inline calls and physical calls is different. The
+// current instruction for a non-topmost physical frame is always the return address of the function
+// call (typically the next line) because the debuggers knows the return address but don't
+// necessarily know the exact call location. For inline calls, however, we show the inline call
+// location because we do have that information, but don't know exactly where the inline call will
+// "return" to since there's no clear return address.
 //
-// The code looks like this, with line numbers and the code locations (see
-// note above):
+// The code looks like this, with line numbers and the code locations (see note above):
 //
 //   10  inline void TopInline() {
 //   11    ...                          <- kTopInlineFileLine
@@ -137,16 +135,14 @@ class InlineThreadControllerTest : public ThreadControllerTest {
   static std::unique_ptr<MockFrame> GetMiddleInline2Frame(uint64_t address, MockFrame* middle);
   static std::unique_ptr<MockFrame> GetBottomFrame(uint64_t address);
 
-  // Constructs a fake stack. Even frame will have the address at the beginning
-  // of its range.
+  // Constructs a fake stack. Even frame will have the address at the beginning of its range.
   //
-  // This function returns a vector of MockFrames so the caller can modify the
-  // locations. It can then call MockFrameVectorToFrameVector() below to
-  // convert to the frame vector other code expects.
+  // This function returns a vector of MockFrames so the caller can modify the locations. It can
+  // then call MockFrameVectorToFrameVector() below to convert to the frame vector other code
+  // expects.
   static std::vector<std::unique_ptr<MockFrame>> GetStack();
 
-  // Downcasts a vector of owning MockFrame pointers to the corresponding Frame
-  // pointers.
+  // Downcasts a vector of owning MockFrame pointers to the corresponding Frame pointers.
   static std::vector<std::unique_ptr<Frame>> MockFrameVectorToFrameVector(
       std::vector<std::unique_ptr<MockFrame>> mock_frames);
 };

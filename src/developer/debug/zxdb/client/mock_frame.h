@@ -15,17 +15,15 @@ namespace zxdb {
 class EvalContextImpl;
 class MockSymbolDataProvider;
 
-// Provides a MockFrame implementation that just returns constant values for
-// everything. Tests can override this to implement the subset of functionality
-// they need.
+// Provides a MockFrame implementation that just returns constant values for everything. Tests can
+// override this to implement the subset of functionality they need.
 class MockFrame : public Frame {
  public:
-  // Session and Thread can be null as long as no code that uses this object
-  // needs it.
+  // Session and Thread can be null as long as no code that uses this object needs it.
   //
-  // The physical frame is the non-inlined call frame associated with this one.
-  // The pointer must outlive this class (normally both are owned by the
-  // Stack). A null physical frame indicates that this is not inline.
+  // The physical frame is the non-inlined call frame associated with this one. The pointer must
+  // outlive this class (normally both are owned by the Stack). A null physical frame indicates that
+  // this is not inline.
   MockFrame(Session* session, Thread* thread, const Location& location, uint64_t sp,
             uint64_t cfa = 0, std::vector<debug_ipc::Register> regs = {}, uint64_t frame_base = 0,
             const Frame* physical_frame = nullptr, bool is_ambiguous_inline = false);
@@ -35,12 +33,11 @@ class MockFrame : public Frame {
   // Use GetLocation() to retrieve the location.
   void set_location(Location l) { location_ = std::move(l); }
 
-  // Overrides all IPs with a new address, but doesn't change anything else
-  // about the location including the stack or symbols.
+  // Overrides all IPs with a new address, but doesn't change anything else about the location
+  // including the stack or symbols.
   void SetAddress(uint64_t address);
 
-  // Overrides the location's file_line with the new value, leaving everything
-  // else as-is.
+  // Overrides the location's file_line with the new value, leaving everything else as-is.
   void SetFileLine(const FileLine& file_line);
 
   void set_is_ambiguous_inline(bool ambiguous) { is_ambiguous_inline_ = ambiguous; }

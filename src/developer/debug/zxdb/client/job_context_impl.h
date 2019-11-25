@@ -26,22 +26,20 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
   SystemImpl* system() { return system_; }
   JobImpl* job() { return job_.get(); }
 
-  // The implicit root job is one created automatically on startup that's
-  // implicitly attached. This job will be automatically reconnected if the
-  // connect is reconnected.
+  // The implicit root job is one created automatically on startup that's implicitly attached. This
+  // job will be automatically reconnected if the connect is reconnected.
   //
-  // If the job is explicitly detached, this flag will be cleared (because the
-  // user is taking responsibility for where it's attached).
+  // If the job is explicitly detached, this flag will be cleared (because the user is taking
+  // responsibility for where it's attached).
   bool is_implicit_root() const { return is_implicit_root_; }
 
-  // Allocates a new job_context with the same settings as this one. This isn't
-  // a real copy, because any job information is not cloned.
+  // Allocates a new job_context with the same settings as this one. This isn't a real copy, because
+  // any job information is not cloned.
   std::unique_ptr<JobContextImpl> Clone(SystemImpl* system);
 
-  // Removes the job from this job_context without making any IPC calls. This
-  // can be used to clean up after a CreateJobForTesting(), and during
-  // final shutdown. In final shutdown, we assume anything still left running
-  // will continue running as-is and just clean up local references.
+  // Removes the job from this job_context without making any IPC calls. This can be used to clean
+  // up after a CreateJobForTesting(), and during final shutdown. In final shutdown, we assume
+  // anything still left running will continue running as-is and just clean up local references.
   //
   // If the job is not running, this will do nothing.
   void ImplicitlyDetach();
@@ -92,8 +90,8 @@ class JobContextImpl : public JobContext, public SettingStoreObserver, public Fi
                      const std::string& job_name);
   void OnDetachReply(const Err& err, uint32_t status, Callback callback);
 
-  // If job is running this will update |filters_| only after getting OK from
-  // agent else it will set |filters_| and return.
+  // If job is running this will update |filters_| only after getting OK from agent else it will set
+  // |filters_| and return.
   void SendAndUpdateFilters(std::vector<std::string> filters, bool force_send);
 
   FXL_DISALLOW_COPY_AND_ASSIGN(JobContextImpl);

@@ -7,8 +7,8 @@
 
 namespace zxdb {
 
-// Several thread controllers manage different types of stepping. This enum
-// defines the possibilities.
+// Several thread controllers manage different types of stepping. This enum defines the
+// possibilities.
 enum class StepMode {
   kAddressRange,  // Steps in an address range.
   kSourceLine,    // Steps in the current source line.

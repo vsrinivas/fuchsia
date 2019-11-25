@@ -11,8 +11,8 @@ namespace zxdb {
 
 class Session;
 
-// An implementation of RemoteAPI for Session. This class is logically part of
-// the Session class (it's a friend) but is separated out for clarity.
+// An implementation of RemoteAPI for Session. This class is logically part of the Session class
+// (it's a friend) but is separated out for clarity.
 class RemoteAPIImpl : public RemoteAPI {
  public:
   // The session must outlive this object.

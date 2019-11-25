@@ -9,9 +9,8 @@
 
 namespace zxdb {
 
-// Provides a Process implementation that just returns empty values for
-// everything. Tests can override this to implement the subset of functionality
-// they need.
+// Provides a Process implementation that just returns empty values for everything. Tests can
+// override this to implement the subset of functionality they need.
 class MockProcess : public Process {
  public:
   explicit MockProcess(Session* session);

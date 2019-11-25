@@ -151,15 +151,14 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
 
   TargetImpl* target = session().system_impl().GetTargetImpls()[0];
 
-  // Create a process for it. Since the process doesn't resolve the symbol
-  // yet, no messages should be sent.
+  // Create a process for it. Since the process doesn't resolve the symbol yet, no messages should
+  // be sent.
   const uint64_t koid = 5678;
   target->CreateProcessForTesting(koid, "test");
   ASSERT_TRUE(sink().adds.empty());
 
-  // Make two fake modules. The first will resolve the function to two
-  // locations, the second will resolve nothing. They must be larger than the
-  // module base.
+  // Make two fake modules. The first will resolve the function to two locations, the second will
+  // resolve nothing. They must be larger than the module base.
   const uint64_t kModule1Base = 0x1000000;
   const uint64_t kAddress1 = 0x78456345;
   const uint64_t kAddress2 = 0x12345678;
@@ -167,8 +166,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
                                       {Location(Location::State::kSymbolized, kAddress1),
                                        Location(Location::State::kSymbolized, kAddress2)});
 
-  // Cause the process to load the module. We have to keep the module_ref
-  // alive for this to stay cached in the SystemSymbols.
+  // Cause the process to load the module. We have to keep the module_ref alive for this to stay
+  // cached in the SystemSymbols.
   const std::string kBuildID1 = "abcd";
   const std::string kBuildID2 = "zyxw";
   session().system().GetSymbols()->InjectModuleForTesting(kBuildID1, module_symbols1.get());
@@ -189,8 +188,8 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   // After adding modules, the client should have asked for threads.
   EXPECT_TRUE(sink().thread_request_made);
 
-  // That should have notified the breakpoint which should have added the two
-  // addresses to the backend.
+  // That should have notified the breakpoint which should have added the two addresses to the
+  // backend.
   ASSERT_FALSE(sink().adds.empty());
   debug_ipc::AddOrChangeBreakpointRequest out = sink().adds[0];
   EXPECT_FALSE(out.breakpoint.one_shot);
@@ -236,8 +235,7 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   EXPECT_EQ(out.breakpoint.id, sink().removes[0].breakpoint_id);
 }
 
-// Tests that address breakpoints are enabled immediately even when no symbols
-// are available.
+// Tests that address breakpoints are enabled immediately even when no symbols are available.
 TEST_F(BreakpointImplTest, Address) {
   // TargetImpl target(&session().system_impl());
   auto target_impls = session().system_impl().GetTargetImpls();

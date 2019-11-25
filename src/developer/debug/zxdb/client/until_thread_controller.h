@@ -23,9 +23,8 @@ class Target;
 class UntilThreadController : public ThreadController {
  public:
   enum FrameComparison {
-    // The program will run until the current frame is older than the given
-    // one. In this case if the frame fingerprints compare equal, the
-    // program will continue to run. Anything older will stop.
+    // The program will run until the current frame is older than the given one. In this case if the
+    // frame fingerprints compare equal, the program will continue to run. Anything older will stop.
     kRunUntilOlderFrame,
 
     // Stops when the current frame is the same as or older than the given one.
@@ -57,14 +56,14 @@ class UntilThreadController : public ThreadController {
   System* GetSystem();
   Target* GetTarget();
 
-  // Callback for when the breakpoint is set. The parameter is the continue
-  // callback from thread initialization.
+  // Callback for when the breakpoint is set. The parameter is the continue callback from thread
+  // initialization.
   void OnBreakpointSet(const Err& err, fit::callback<void(const Err&)> cb);
 
   std::vector<InputLocation> locations_;
 
-  // Indicates the frame. This frame is compared to the current one according
-  // to the comparison_ function.
+  // Indicates the frame. This frame is compared to the current one according to the comparison_
+  // function.
   //
   // When no frame checking is needed, the threshold frame will be !is_valid().
   FrameFingerprint threshold_frame_;

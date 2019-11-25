@@ -28,9 +28,8 @@ class Frame;
 class Process;
 class ThreadController;
 
-// The flow control commands on this object (Pause, Continue, Step...) apply
-// only to this thread (other threads will continue to run or not run
-// as they were previously).
+// The flow control commands on this object (Pause, Continue, Step...) apply only to this thread
+// (other threads will continue to run or not run as they were previously).
 class Thread : public ClientObject {
  public:
   explicit Thread(Session* session);
@@ -47,57 +46,52 @@ class Thread : public ClientObject {
   virtual uint64_t GetKoid() const = 0;
   virtual const std::string& GetName() const = 0;
 
-  // The state of the thread isn't necessarily up-to-date. There are no
-  // system messages for a thread transitioning to suspended, for example.
-  // To make sure this is up-to-date, call Process::SyncThreads() or
-  // Thread::SyncFrames().
+  // The state of the thread isn't necessarily up-to-date. There are no system messages for a thread
+  // transitioning to suspended, for example. To make sure this is up-to-date, call
+  // Process::SyncThreads() or Thread::SyncFrames().
   virtual debug_ipc::ThreadRecord::State GetState() const = 0;
   virtual debug_ipc::ThreadRecord::BlockedReason GetBlockedReason() const = 0;
 
-  // Pauses (suspends in Zircon terms) the thread, it does not affect other
-  // threads or processes.
+  // Pauses (suspends in Zircon terms) the thread, it does not affect other threads or processes.
   //
-  // The backend will try to ensure the thread is actually paused before
-  // issuing the on_paused callback. But this is best effort and not
-  // guaranteed: both because there's a timeout for the synchronous suspending
-  // and because a different continue message could race with the reply.
+  // The backend will try to ensure the thread is actually paused before issuing the on_paused
+  // callback. But this is best effort and not guaranteed: both because there's a timeout for the
+  // synchronous suspending and because a different continue message could race with the reply.
   virtual void Pause(fit::callback<void()> on_paused) = 0;
 
   // Resumes only this thread.
   virtual void Continue() = 0;
 
-  // Continues the thread using the given ThreadController. This is used
-  // to implement the more complex forms of stepping.
+  // Continues the thread using the given ThreadController. This is used to implement the more
+  // complex forms of stepping.
   //
-  // The on_continue callback does NOT indicate that the thread stopped again.
-  // It indicates the thread controller has completed setup properly (some
-  // may fail if they depend on some thread state to start). When the step is
-  // complete an exception will be delivered via the thread observer (it's
-  // not always possible to correlate a given thread suspension with a given
-  // step operation).
+  // The on_continue callback does NOT indicate that the thread stopped again. It indicates the
+  // thread controller has completed setup properly (some may fail if they depend on some thread
+  // state to start). When the step is complete an exception will be delivered via the thread
+  // observer (it's not always possible to correlate a given thread suspension with a given step
+  // operation).
   //
-  // The on_continue callback may be issued reentrantly from within the stack
-  // of the ContinueWith call if the controller was ready synchronously.
+  // The on_continue callback may be issued reentrantly from within the stack of the ContinueWith
+  // call if the controller was ready synchronously.
   //
-  // On failure the ThreadController will be removed and the thread will not
-  // be continued.
+  // On failure the ThreadController will be removed and the thread will not be continued.
   virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
                             fit::callback<void(const Err&)> on_continue) = 0;
 
-  // Sets the thread's IP to the given location. This requires that the thread
-  // be stopped. It will not resume the thread.
+  // Sets the thread's IP to the given location. This requires that the thread be stopped. It will
+  // not resume the thread.
   //
-  // Setting the location is asynchronous. At the time of the callback being
-  // issued, the frames of the thread will be updated to the latest state.
+  // Setting the location is asynchronous. At the time of the callback being issued, the frames of
+  // the thread will be updated to the latest state.
   //
-  // Resuming the thread after issuing but before the callback is executed will
-  // pick up the new location (if any) because the requests will be ordered.
-  // But because the jump request may fail, the caller isn't guaranteed what
-  // location will be resumed from unless it waits for the callback.
+  // Resuming the thread after issuing but before the callback is executed will pick up the new
+  // location (if any) because the requests will be ordered. But because the jump request may fail,
+  // the caller isn't guaranteed what location will be resumed from unless it waits for the
+  // callback.
   virtual void JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb) = 0;
 
-  // Notification from a ThreadController that it has completed its job. The
-  // thread controller should be removed from this thread and deleted.
+  // Notification from a ThreadController that it has completed its job. The thread controller
+  // should be removed from this thread and deleted.
   virtual void NotifyControllerDone(ThreadController* controller) = 0;
 
   virtual void StepInstruction() = 0;

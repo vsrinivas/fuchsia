@@ -23,8 +23,8 @@ class ProcessObserver {
 
   // Notification that a module with symbols is ready to use.
   //
-  // Note: There is currently no notification for module loads absent symbol
-  // information. If that's necessary, this will need refactoring.
+  // Note: There is currently no notification for module loads absent symbol information. If that's
+  // necessary, this will need refactoring.
   virtual void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {}
 
   // Notification that the given module with symbols is about to be removed.

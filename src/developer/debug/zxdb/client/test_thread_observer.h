@@ -5,9 +5,8 @@
 #ifndef SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TEST_THREAD_OBSERVER_H_
 #define SRC_DEVELOPER_DEBUG_ZXDB_CLIENT_TEST_THREAD_OBSERVER_H_
 
-// This file contains a test harness and helper classes for writing tests
-// involving lower-level thread control such as ThreadImpl itself, and
-// ThreadControllers.
+// This file contains a test harness and helper classes for writing tests involving lower-level
+// thread control such as ThreadImpl itself, and ThreadControllers.
 
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
 #include "src/developer/debug/zxdb/client/remote_api_test.h"

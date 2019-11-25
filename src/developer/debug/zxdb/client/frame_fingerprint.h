@@ -12,18 +12,17 @@
 
 namespace zxdb {
 
-// A FrameFingerprint is a way to compare stack frames across pause/resumes of
-// the same thread. The Frame pointers themselves are owned by the Thread and
-// will be destroyed when the thread is resumed. By saving a FrameFingerprint
-// code can compare whether a future stop is the same or a subframe of the
-// previous one.
+// A FrameFingerprint is a way to compare stack frames across pause/resumes of the same thread. The
+// Frame pointers themselves are owned by the Thread and will be destroyed when the thread is
+// resumed. By saving a FrameFingerprint code can compare whether a future stop is the same or a
+// subframe of the previous one.
 //
 // With stack frame pointers, an x64 prologue looks like this:
 //   push rbp
 //   mov rbp, rsp
 //
-// The stack grows to smaller addresses as stuff is pushed (in this diagram,
-// down). Before the call say it looks like this:
+// The stack grows to smaller addresses as stuff is pushed (in this diagram, down). Before the call
+// say it looks like this:
 //   0x1010 [data]      <= BP
 //   0x1008 [data]
 //   0x1000 [data]      <= SP
@@ -43,32 +42,29 @@ namespace zxdb {
 //   0x0ff0 [old BP]    <= BP, SP (both new)
 //   ...... [function locals will be appended starting here]
 //
-// Ideally we want a consistent way to refer to this stack frame that doesn't
-// change across the function prologue. GDB and LLDB use a "frame_id" (GDB) /
-// "FrameID" (LLDB) which is a combination of the "stack_addr" and "code_addr".
-// Together these uniquely identify a stack frame.
+// Ideally we want a consistent way to refer to this stack frame that doesn't change across the
+// function prologue. GDB and LLDB use a "frame_id" (GDB) / "FrameID" (LLDB) which is a combination
+// of the "stack_addr" and "code_addr". Together these uniquely identify a stack frame.
 //
-// Their "code_addr" is the address of the beginning of the function it's
-// currently in (the destination of the call above). This is easy enough to get
-// from Location.function().
+// Their "code_addr" is the address of the beginning of the function it's currently in (the
+// destination of the call above). This is easy enough to get from Location.function().
 //
-// Their "stack_addr" for the function being called in this example will be
-// 0x1000 which is the SP from right before the call instruction. This is
-// called the frame's "canonical frame address" in DWARF. We can get this by
-// looking at the previous frame's SP.
+// Their "stack_addr" for the function being called in this example will be 0x1000 which is the SP
+// from right before the call instruction. This is called the frame's "canonical frame address" in
+// DWARF. We can get this by looking at the previous frame's SP.
 //
-// Because the inline count depends on other frames, the getter for this object
-// is on the Stack (Stack::GetFrameFingerprint).
+// Because the inline count depends on other frames, the getter for this object is on the Stack
+// (Stack::GetFrameFingerprint).
 //
 // INLINE FUNCTIONS
 // ----------------
 //
-// The above description deals with physical stack frames. Inline frames
-// share the same physical stack frame.
+// The above description deals with physical stack frames. Inline frames share the same physical
+// stack frame.
 //
-// To differentiate the depth when inside inline frames of the same functions,
-// the fingerprint also keeps a depth of inline function calls. The frame
-// address comes from the stack pointer before the current physical frame.
+// To differentiate the depth when inside inline frames of the same functions, the fingerprint also
+// keeps a depth of inline function calls. The frame address comes from the stack pointer before the
+// current physical frame.
 class FrameFingerprint {
  public:
   FrameFingerprint() = default;
@@ -80,27 +76,26 @@ class FrameFingerprint {
 
   bool is_valid() const { return frame_address_ != 0; }
 
-  // Returns true if the input refers to the same frame as this one. This
-  // will assert if either frame is !is_valid().
+  // Returns true if the input refers to the same frame as this one. This will assert if either
+  // frame is !is_valid().
   bool operator==(const FrameFingerprint& other) const;
 
   // For debugging.
   std::string ToString() const;
 
-  // Computes "left Newer than right". This doesn't use operator < or > because
-  // it's ambiguous whether a newer frame is "less" or "greater".
+  // Computes "left Newer than right". This doesn't use operator < or > because it's ambiguous
+  // whether a newer frame is "less" or "greater".
   static bool Newer(const FrameFingerprint& left, const FrameFingerprint& right);
 
   static bool NewerOrEqual(const FrameFingerprint& left, const FrameFingerprint& right);
 
  private:
-  // The address of the stack immediately before the function call (i.e. the
-  // stack pointer of the previous frame). See the class documentation above.
+  // The address of the stack immediately before the function call (i.e. the stack pointer of the
+  // previous frame). See the class documentation above.
   uint64_t frame_address_ = 0;
 
-  // When this frame is a physical frame, the inline count will be 0. Higher
-  // counts indicate the nesting depth of inline function calls at the current
-  // location.
+  // When this frame is a physical frame, the inline count will be 0. Higher counts indicate the
+  // nesting depth of inline function calls at the current location.
   size_t inline_count_ = 0;
 };
 

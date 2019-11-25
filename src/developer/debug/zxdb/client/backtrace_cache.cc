@@ -64,10 +64,9 @@ void BacktraceCache::OnThreadStopped(Thread* thread, debug_ipc::ExceptionType ty
     return;
   }
 
-  // If the stack is not complete, we attempt to get it. In most cases, this
-  // requirement should be posted before a resume call (we're in the middle of
-  // a thread exception notification), so we should get the frames reliably for
-  // normal cases.
+  // If the stack is not complete, we attempt to get it. In most cases, this requirement should be
+  // posted before a resume call (we're in the middle of a thread exception notification), so we
+  // should get the frames reliably for normal cases.
   stack.SyncFrames([stack = stack.GetWeakPtr(), cache = GetWeakPtr()](const Err& err) {
     if (err.has_error() || !stack)
       return;

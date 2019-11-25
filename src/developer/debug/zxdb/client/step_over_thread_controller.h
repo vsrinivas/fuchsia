@@ -20,9 +20,9 @@ class FinishThreadController;
 class Frame;
 class StepThreadController;
 
-// This controller causes the thread to single-step as long as the CPU is in
-// a given address range or any stack frame called from it. Contrast with
-// the StepThreadController which does not do the sub-frames.
+// This controller causes the thread to single-step as long as the CPU is in a given address range
+// or any stack frame called from it. Contrast with the StepThreadController which does not do the
+// sub-frames.
 //
 // This class works by:
 //   1. Single-stepping in the range.
@@ -31,24 +31,22 @@ class StepThreadController;
 //   4. Repeat.
 class StepOverThreadController : public ThreadController {
  public:
-  // Constructor for kSourceLine and kInstruction modes. It will initialize
-  // itself to the thread's current position when the thread is attached.
+  // Constructor for kSourceLine and kInstruction modes. It will initialize itself to the thread's
+  // current position when the thread is attached.
   explicit StepOverThreadController(StepMode mode);
 
-  // Constructor for a kAddressRange mode (the mode is implicit). Continues
-  // execution as long as the IP is in range.
+  // Constructor for a kAddressRange mode (the mode is implicit). Continues execution as long as the
+  // IP is in range.
   explicit StepOverThreadController(AddressRanges range);
 
   ~StepOverThreadController() override;
 
-  // Sets a callback that the caller can use to control whether excecution
-  // stops in a given subframe. The subframe will be one called directly from
-  // the code range being stopped over.
+  // Sets a callback that the caller can use to control whether excecution stops in a given
+  // subframe. The subframe will be one called directly from the code range being stopped over.
   //
-  // This allows implementation of operations like
-  // "step until you get to a function". When the callback returns true, the
-  // "step over" operation will complete at the current location (this will
-  // then destroy the controller and indirectly the callback object).
+  // This allows implementation of operations like "step until you get to a function". When the
+  // callback returns true, the "step over" operation will complete at the current location (this
+  // will then destroy the controller and indirectly the callback object).
   //
   // When empty (the default), all subframes will be continued.
   void set_subframe_should_stop_callback(fit::function<bool(const Frame*)> cb) {
@@ -65,21 +63,19 @@ class StepOverThreadController : public ThreadController {
  private:
   StepMode step_mode_;
 
-  // When non-null indicates callback to check for stopping in subframes. See
-  // the setter above.
+  // When non-null indicates callback to check for stopping in subframes. See the setter above.
   fit::function<bool(const Frame*)> subframe_should_stop_callback_;
 
-  // When construction_mode_ == kSourceLine, this represents the line
-  // information of the line we're stepping over.
+  // When construction_mode_ == kSourceLine, this represents the line information of the line we're
+  // stepping over.
   //
-  // IMPORTANT: This class should not perform logic or comparisons on this
-  // value. Reasoning about the file/line in the current stack frame should be
-  // delegated to the StepThreadController.
+  // IMPORTANT: This class should not perform logic or comparisons on this value. Reasoning about
+  // the file/line in the current stack frame should be delegated to the StepThreadController.
   FileLine file_line_;
 
-  // The fingerprint of the frame we're stepping in. Anything newer than this
-  // is a child frame we should step through, and anything older than this
-  // means we exited the function and should stop stepping.
+  // The fingerprint of the frame we're stepping in. Anything newer than this is a child frame we
+  // should step through, and anything older than this means we exited the function and should stop
+  // stepping.
   FrameFingerprint frame_fingerprint_;
 
   // Always non-null, manages stepping in the original function.

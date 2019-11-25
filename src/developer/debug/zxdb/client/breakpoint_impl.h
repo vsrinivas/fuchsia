@@ -25,19 +25,17 @@ class BreakpointLocationImpl;
 
 class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemObserver {
  public:
-  // The controller can be null in which case it will perform the default
-  // behavior. The controller must outlive the breakpoint.
+  // The controller can be null in which case it will perform the default behavior. The controller
+  // must outlive the breakpoint.
   BreakpointImpl(Session* session, bool is_internal);
   ~BreakpointImpl() override;
 
-  // This flag doesn't control anything in the breakpoint but is stored here
-  // for the use of external consumers. Internal breakpoints are set by the
-  // debugger internally as part of implementing other features such as
-  // stepping. They should not be shown to the user.
+  // This flag doesn't control anything in the breakpoint but is stored here for the use of external
+  // consumers. Internal breakpoints are set by the debugger internally as part of implementing
+  // other features such as stepping. They should not be shown to the user.
   bool is_internal() const { return is_internal_; }
 
-  // Identifies this breakpoint to the backend in IPC messages. This will not
-  // change.
+  // Identifies this breakpoint to the backend in IPC messages. This will not change.
   uint32_t backend_id() const { return backend_id_; }
 
   // Breakpoint implementation:
@@ -73,20 +71,20 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   void SendBackendAddOrChange(fit::callback<void(const Err&)> callback);
   void SendBackendRemove(fit::callback<void(const Err&)> callback);
 
-  // Notification from BreakpointLocationImpl that the enabled state has
-  // changed and the breakpoint state needs to be synced.
+  // Notification from BreakpointLocationImpl that the enabled state has changed and the breakpoint
+  // state needs to be synced.
   void DidChangeLocation();
 
-  // Returns true if the breakpoint could possibly apply to the given process
-  // (if things like symbols aren't found, it still may not necessarily apply).
+  // Returns true if the breakpoint could possibly apply to the given process (if things like
+  // symbols aren't found, it still may not necessarily apply).
   bool CouldApplyToProcess(Process* process) const;
 
-  // Returns true if there are any enabled breakpoint locations that the
-  // backend needs to know about.
+  // Returns true if there are any enabled breakpoint locations that the backend needs to know
+  // about.
   bool HasEnabledLocation() const;
 
-  // Given a process which is new or might apply to us for the first time,
-  // Returns true if any addresses were resolved.
+  // Given a process which is new or might apply to us for the first time, Returns true if any
+  // addresses were resolved.
   bool RegisterProcess(Process* process);
 
   // Returns the options for converting this breakpoint's input location to addresses,
@@ -107,8 +105,8 @@ class BreakpointImpl : public Breakpoint, public ProcessObserver, public SystemO
   // Indicates if the backend knows about this breakpoint.
   bool backend_installed_ = false;
 
-  // Every process which this breakpoint can apply to is in this map, even if
-  // there are no addresses associated with it.
+  // Every process which this breakpoint can apply to is in this map, even if there are no addresses
+  // associated with it.
   std::map<Process*, ProcessRecord> procs_;
 
   fxl::WeakPtrFactory<BreakpointImpl> impl_weak_factory_;
