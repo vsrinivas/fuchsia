@@ -48,8 +48,7 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
     return;
   }
 
-  // Mistakes may make extremely large memory requests which can OOM the
-  // system. Prevent those.
+  // Mistakes may make extremely large memory requests which can OOM the system. Prevent those.
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE, [address, size, cb = std::move(callback)]() mutable {
@@ -71,17 +70,16 @@ void ProcessSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
         FXL_DCHECK(size == 0 || dump.address() == address);
         FXL_DCHECK(dump.size() == size);
         if (dump.blocks().size() == 1 || (dump.blocks().size() > 1 && !dump.blocks()[1].valid)) {
-          // Common case: came back as one block OR it read until an invalid
-          // memory boundary and the second block is invalid.
+          // Common case: came back as one block OR it read until an invalid memory boundary and the
+          // second block is invalid.
           //
-          // In both these cases we can directly return the first data block.
-          // We don't have to check the first block's valid flag since if it's
-          // not valid it will be empty, which is what our API specifies.
+          // In both these cases we can directly return the first data block. We don't have to check
+          // the first block's valid flag since if it's not valid it will be empty, which is what
+          // our API specifies.
           cb(Err(), std::move(dump.blocks()[0].data));
         } else {
-          // The debug agent doesn't guarantee that a memory dump will exist in
-          // only one block even if the memory is all valid. Flatten all
-          // contiguous valid regions to a single buffer.
+          // The debug agent doesn't guarantee that a memory dump will exist in only one block even
+          // if the memory is all valid. Flatten all contiguous valid regions to a single buffer.
           std::vector<uint8_t> flat;
           flat.reserve(dump.size());
           for (const auto block : dump.blocks()) {

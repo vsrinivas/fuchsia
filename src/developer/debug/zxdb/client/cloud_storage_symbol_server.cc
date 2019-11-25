@@ -367,9 +367,8 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
     auto path_obj = std::filesystem::path(cache_path) / ".build-id";
 
     if (std::filesystem::is_directory(path_obj, ec)) {
-      // Download to a temporary file, so if we get cancelled (or we get sent
-      // a 404 page instead of the real symbols) we don't pollute the build ID
-      // folder.
+      // Download to a temporary file, so if we get cancelled (or we get sent a 404 page instead of
+      // the real symbols) we don't pollute the build ID folder.
       std::string name = ToDebugFileName(build_id, file_type) + ".part";
 
       path = path_obj / name;
@@ -378,8 +377,8 @@ void CloudStorageSymbolServerImpl::FetchWithCurl(const std::string& build_id,
 
   FILE* file = nullptr;
 
-  // We don't have a folder specified where downloaded symbols go. We'll just
-  // drop it in tmp and at least you'll be able to use them for this session.
+  // We don't have a folder specified where downloaded symbols go. We'll just drop it in tmp and at
+  // least you'll be able to use them for this session.
   if (path.empty()) {
     path = "/tmp/zxdb_downloaded_symbolsXXXXXX\0";
     int fd = mkstemp(path.data());

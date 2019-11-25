@@ -19,8 +19,8 @@ BreakpointLocationImpl::~BreakpointLocationImpl() = default;
 Process* BreakpointLocationImpl::GetProcess() const { return process_; }
 
 Location BreakpointLocationImpl::GetLocation() const {
-  // This isn't cached because it isn't needed so often and it will take extra
-  // work to handle module loads and unloads for the cache.
+  // This isn't cached because it isn't needed so often and it will take extra work to handle module
+  // loads and unloads for the cache.
   auto vect = process_->GetSymbols()->ResolveInputLocation(InputLocation(address_));
   // Resolving an address should always produce one result.
   FXL_DCHECK(vect.size() == 1u);

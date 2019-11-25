@@ -30,8 +30,7 @@ bool MemoryDump::GetByte(uint64_t address, uint8_t* byte) const {
     return false;
   }
 
-  // It's expected the set of blocks will be in the 1-3 block making a
-  // brute-force search for the
+  // It's expected the set of blocks will be in the 1-3 block making a brute-force search for the
   // block containing the address more efficient than a binary search.
   for (const auto& block : blocks_) {
     uint64_t last_addr = block.address + (block.size - 1);  // Watch out for overflow.

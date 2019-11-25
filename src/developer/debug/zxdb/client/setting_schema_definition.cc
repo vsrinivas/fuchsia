@@ -19,8 +19,7 @@ void InitializeSchemas() {
     return;
   initialized = true;
 
-  // Simply getting the schemas will create them, so we need to make sure we
-  // get all of them.
+  // Simply getting the schemas will create them, so we need to make sure we get all of them.
   System::GetSchema();
   JobContext::GetSchema();
   Target::GetSchema();

@@ -144,8 +144,8 @@ void FrameImpl::WriteRegister(debug_ipc::RegisterID id, std::vector<uint8_t> dat
 }
 
 std::optional<uint64_t> FrameImpl::GetBasePointer() const {
-  // This function is logically const even though EnsureBasePointer does some
-  // potentially mutating things underneath (calling callbacks and such).
+  // This function is logically const even though EnsureBasePointer does some potentially mutating
+  // things underneath (calling callbacks and such).
   if (const_cast<FrameImpl*>(this)->EnsureBasePointer()) {
     FXL_DCHECK(computed_base_pointer_);
     return computed_base_pointer_;
@@ -244,22 +244,22 @@ bool FrameImpl::EnsureBasePointer() {
   // Try to evaluate the location.
   base_pointer_eval_ = std::make_unique<DwarfExprEval>();
 
-  // Callback when the expression is done. Will normally get called reentrantly
-  // by DwarfExpreval::Eval().
+  // Callback when the expression is done. Will normally get called reentrantly by
+  // DwarfExpreval::Eval().
   //
-  // Binding |this| here is OK because the DwarfExprEval is owned by us and
-  // won't give callbacks after it's destroyed.
+  // Binding |this| here is OK because the DwarfExprEval is owned by us and won't give callbacks
+  // after it's destroyed.
   auto save_result = [this](DwarfExprEval* eval, const Err&) {
     if (eval->is_success()) {
       computed_base_pointer_ = eval->GetResult();
     } else {
-      // We don't currently report errors for frame base requests, but instead
-      // just fall back on what was computed by the backend.
+      // We don't currently report errors for frame base requests, but instead just fall back on
+      // what was computed by the backend.
       computed_base_pointer_ = 0;
     }
 
-    // Issue callbacks for everybody waiting. Moving to a local here prevents
-    // weirdness if a callback calls back into us, and also clears the vector.
+    // Issue callbacks for everybody waiting. Moving to a local here prevents weirdness if a
+    // callback calls back into us, and also clears the vector.
     std::vector<fit::callback<void(uint64_t)>> callbacks = std::move(base_pointer_requests_);
     for (auto& cb : callbacks)
       cb(*computed_base_pointer_);
@@ -268,9 +268,8 @@ bool FrameImpl::EnsureBasePointer() {
   auto eval_result = base_pointer_eval_->Eval(GetSymbolDataProvider(), loc.symbol_context(),
                                               location_entry->expression, std::move(save_result));
 
-  // In the common case this will complete synchronously and the above callback
-  // will have put the result into base_pointer_requests_ before this code is
-  // executed.
+  // In the common case this will complete synchronously and the above callback will have put the
+  // result into base_pointer_requests_ before this code is executed.
   return eval_result == DwarfExprEval::Completion::kSync;
 }
 

@@ -15,8 +15,8 @@ namespace zxdb {
 
 namespace {
 
-// Provide an implementation of the ThreadController's pure virtual functions
-// so we can instantiate it.
+// Provide an implementation of the ThreadController's pure virtual functions so we can instantiate
+// it.
 class DummyThreadController : public ThreadController {
  public:
   DummyThreadController() = default;
@@ -39,36 +39,34 @@ class DummyThreadController : public ThreadController {
   using ThreadController::SetInlineFrameIfAmbiguous;
 };
 
-// Can't be called "ThreadControllerTest" because that's the base class for
-// all thread-controller-related tests. We need the inline harness since
-// we want to test the inline frame handling.
+// Can't be called "ThreadControllerTest" because that's the base class for all
+// thread-controller-related tests. We need the inline harness since we want to test the inline
+// frame handling.
 class ThreadControllerUnitTest : public InlineThreadControllerTest {};
 
 }  // namespace
 
 TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
-  // The mock stack has 6 entries, we want to test ambiguous inline frames
-  // so lop off the top two. This will leave the "middle" function with its
-  // two nested inlines starting at the same address as being the top.
+  // The mock stack has 6 entries, we want to test ambiguous inline frames so lop off the top two.
+  // This will leave the "middle" function with its two nested inlines starting at the same address
+  // as being the top.
   auto mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
 
   SymbolContext symbol_context = mock_frames[0]->GetLocation().symbol_context();
 
-  // Make the now-exposed top two frames have an ambiguous location (address at
-  // the beginning of their code range). This isn't the case in the default
-  // test data (inline frames not at the top of the stack can't be ambiguous
-  // because the physical call requires some instructions).
+  // Make the now-exposed top two frames have an ambiguous location (address at the beginning of
+  // their code range). This isn't the case in the default test data (inline frames not at the top
+  // of the stack can't be ambiguous because the physical call requires some instructions).
   uint64_t address = kMiddleInline2FunctionRange.begin();
   mock_frames[0]->SetAddress(address);
   mock_frames[0]->set_is_ambiguous_inline(true);
   mock_frames[1]->SetAddress(address);
   mock_frames[1]->set_is_ambiguous_inline(true);
 
-  // The top two frames should have the same start address of the function
-  // range, and the same code address (this is testing that the harness has set
-  // things up the way we need). The physical frame below them (index 2) should
-  // also have the same code address.
+  // The top two frames should have the same start address of the function range, and the same code
+  // address (this is testing that the harness has set things up the way we need). The physical
+  // frame below them (index 2) should also have the same code address.
   ASSERT_EQ(
       kMiddleInline2FunctionRange,
       mock_frames[0]->GetLocation().symbol().Get()->AsFunction()->GetFullRange(symbol_context));
@@ -83,9 +81,8 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
-  // Check the initial state of the inline frames on the stack. This is also
-  // pre-test validation. There should be two inline frames and neither should
-  // be hidden.
+  // Check the initial state of the inline frames on the stack. This is also pre-test validation.
+  // There should be two inline frames and neither should be hidden.
   Stack& stack = thread()->GetStack();
   ASSERT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   ASSERT_EQ(0u, stack.hide_ambiguous_inline_frame_count());
@@ -94,8 +91,7 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   FrameFingerprint inline_1_fingerprint = stack.GetFrameFingerprint(1);
   FrameFingerprint physical_fingerprint = stack.GetFrameFingerprint(2);
 
-  // Supply a frame fingerprint that's not in the stack. This should be
-  // ignored.
+  // Supply a frame fingerprint that's not in the stack. This should be ignored.
   DummyThreadController controller;
   controller.InitWithThread(thread(), [](const Err&) {});
   controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
@@ -132,21 +128,19 @@ TEST_F(ThreadControllerUnitTest, SetInlineFrameIfAmbiguous) {
   EXPECT_EQ(2u, stack.GetAmbiguousInlineFrameCount());
   EXPECT_EQ(2u, stack.hide_ambiguous_inline_frame_count());
 
-  // Go back to the frame 1 fingerprint. This should work even though its
-  // currently hidden.
+  // Go back to the frame 1 fingerprint. This should work even though its currently hidden.
   controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kEqual,
                                        inline_1_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
-  // Set previous to the top physical frame should be invalid because it's
-  // not ambiguous (there's a physical frame in the way). As a result, the
-  // hide count should be unchanged from before.
+  // Set previous to the top physical frame should be invalid because it's not ambiguous (there's a
+  // physical frame in the way). As a result, the hide count should be unchanged from before.
   controller.SetInlineFrameIfAmbiguous(DummyThreadController::InlineFrameIs::kOneBefore,
                                        physical_fingerprint);
   EXPECT_EQ(1u, stack.hide_ambiguous_inline_frame_count());
 
-  // Make a case that's not ambiguous because the current location isn't at the
-  // top of the beginning of an inline function range.
+  // Make a case that's not ambiguous because the current location isn't at the top of the beginning
+  // of an inline function range.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 2);
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);

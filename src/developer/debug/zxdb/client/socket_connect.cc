@@ -9,17 +9,15 @@
 
 #if defined(__APPLE__)
 
-// NOTE(donosoc): In the MacOS case, getaddrinfo (the approach used for Linux)
-// would result almost always in an "Address family not supported by protocol
-// family" error when trying to connect. A lot of debugging got nowhere and
-// finally decided to go the inet_pton way.
+// NOTE(donosoc): In the MacOS case, getaddrinfo (the approach used for Linux) would result almost
+// always in an "Address family not supported by protocol family" error when trying to connect. A
+// lot of debugging got nowhere and finally decided to go the inet_pton way.
 //
-// Ironically, we cannot (easily) use this approach for linux too because turns
-// out that MacOS's inet_pton has extended functionality that enables it to
-// support link-local IPv6 addresses that specify the interface (which is needed
-// to correctly connect to link-local addresses). In linux is a more contrived
-// dance that requires to iterate over all the interfaces, so it's simpler to
-// go the normal getaddrinfo route.
+// Ironically, we cannot (easily) use this approach for linux too because turns out that MacOS's
+// inet_pton has extended functionality that enables it to support link-local IPv6 addresses that
+// specify the interface (which is needed to correctly connect to link-local addresses). In linux is
+// a more contrived dance that requires to iterate over all the interfaces, so it's simpler to go
+// the normal getaddrinfo route.
 //
 // Some background info that lead me to discard getaddrinfo altogether:
 //

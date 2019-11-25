@@ -27,22 +27,19 @@
 
 namespace zxdb {
 
-// When we want to download symbols for a build ID, we create a Download
-// object. We then fire off requests to all symbol servers we know about asking
-// whether they have the symbols we need. These requests are async, and the
-// callbacks each own a shared_ptr to the Download object. If all the callbacks
-// run and none of them are informed the request was successful, all of the
-// shared_ptrs are dropped and the Download object is freed. The destructor of
-// the Download object calls a callback that handles notifying the rest of the
-// system of those results.
+// When we want to download symbols for a build ID, we create a Download object. We then fire off
+// requests to all symbol servers we know about asking whether they have the symbols we need. These
+// requests are async, and the callbacks each own a shared_ptr to the Download object. If all the
+// callbacks run and none of them are informed the request was successful, all of the shared_ptrs
+// are dropped and the Download object is freed. The destructor of the Download object calls a
+// callback that handles notifying the rest of the system of those results.
 //
-// If one of the callbacks does report that the symbols were found, a
-// transaction to actually start the download is initiated, and its reply
-// callback is again given a shared_ptr to the download. If we receive more
-// notifications that other servers also have the symbol in the meantime, they
-// are queued and will be tried as a fallback if the download fails. Again,
-// once the download callback runs the shared_ptr is dropped, and when the
-// Download object dies the destructor handles notifying the system.
+// If one of the callbacks does report that the symbols were found, a transaction to actually start
+// the download is initiated, and its reply callback is again given a shared_ptr to the download. If
+// we receive more notifications that other servers also have the symbol in the meantime, they are
+// queued and will be tried as a fallback if the download fails. Again, once the download callback
+// runs the shared_ptr is dropped, and when the Download object dies the destructor handles
+// notifying the system.
 class Download {
  public:
   explicit Download(const std::string& build_id, DebugSymbolFileType file_type,
@@ -53,12 +50,10 @@ class Download {
 
   bool active() { return !!result_cb_; }
 
-  // Notify this download object that we have gotten the symbols if we're going
-  // to get them.
+  // Notify this download object that we have gotten the symbols if we're going to get them.
   void Finish();
 
-  // Notify this Download object that one of the servers has the symbols
-  // available.
+  // Notify this Download object that one of the servers has the symbols available.
   void Found(std::shared_ptr<Download> self, fit::callback<void(SymbolServer::FetchCallback)>);
 
   // Notify this Download object that a transaction failed.
@@ -163,18 +158,17 @@ SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak
 
   settings_.set_name("system");
 
-  // Forward all messages from the symbol index to our observers. It's OK to
-  // bind |this| because the symbol index is owned by |this|.
+  // Forward all messages from the symbol index to our observers. It's OK to bind |this| because the
+  // symbol index is owned by |this|.
   symbols_.build_id_index().set_information_callback([this](const std::string& msg) {
     for (auto& observer : observers())
       observer.OnSymbolIndexingInformation(msg);
   });
 
-  // The system is the one holding the system symbols and is the one who
-  // will be updating the symbols once we get a symbol change, so the
-  // System will be listening to its own options.
-  // We don't use SystemSymbols because they live in the symbols library
-  // and we don't want it to have a client dependency.
+  // The system is the one holding the system symbols and is the one who will be updating the
+  // symbols once we get a symbol change, so the System will be listening to its own options. We
+  // don't use SystemSymbols because they live in the symbols library and we don't want it to have a
+  // client dependency.
   settings_.AddObserver(ClientSettings::System::kDebugMode, this);
   settings_.AddObserver(ClientSettings::System::kSymbolCache, this);
   settings_.AddObserver(ClientSettings::System::kSymbolPaths, this);
@@ -187,13 +181,11 @@ SystemImpl::SystemImpl(Session* session) : System(session), symbols_(this), weak
 }
 
 SystemImpl::~SystemImpl() {
-  // Target destruction may depend on the symbol system. Ensure the targets
-  // get cleaned up first.
+  // Target destruction may depend on the symbol system. Ensure the targets get cleaned up first.
   for (auto& target : targets_) {
-    // It's better if process destruction notifications are sent before target
-    // ones because the target owns the process. Because this class sends the
-    // target notifications, force the process destruction before doing
-    // anything.
+    // It's better if process destruction notifications are sent before target ones because the
+    // target owns the process. Because this class sends the target notifications, force the process
+    // destruction before doing anything.
     target->ImplicitlyDetach();
     for (auto& observer : observers())
       observer.WillDestroyTarget(target.get());
@@ -304,8 +296,8 @@ std::shared_ptr<Download> SystemImpl::GetDownload(std::string build_id,
         if (!path.empty()) {
           weak_this->download_success_count_++;
           if (err.has_error()) {
-            // If we got a path but still had an error, something went wrong
-            // with the cache repo. Add the path manually.
+            // If we got a path but still had an error, something went wrong with the cache repo.
+            // Add the path manually.
             weak_this->symbols_.build_id_index().AddOneFile(path);
           }
 
@@ -372,8 +364,8 @@ void SystemImpl::RequestDownload(const std::string& build_id, DebugSymbolFileTyp
 void SystemImpl::NotifyFailedToFindDebugSymbols(const Err& err, const std::string& build_id,
                                                 DebugSymbolFileType file_type) {
   for (const auto& target : targets_) {
-    // Notify only those targets which are processes and which have attempted
-    // and failed to load symbols for this build ID previously.
+    // Notify only those targets which are processes and which have attempted and failed to load
+    // symbols for this build ID previously.
     auto process = target->process();
     if (!process)
       continue;
@@ -566,14 +558,14 @@ std::shared_ptr<Download> SystemImpl::InjectDownloadForTesting(const std::string
 }
 
 void SystemImpl::DidConnect() {
-  // Force reload the symbol mappings after connection. This needs to be done
-  // for every connection since a new image could have been compiled and
-  // launched which will have a different build ID file.
+  // Force reload the symbol mappings after connection. This needs to be done for every connection
+  // since a new image could have been compiled and launched which will have a different build ID
+  // file.
   symbols_.build_id_index().ClearCache();
 
-  // Implicitly attach a job to the root. If there was already an implicit job
-  // created (from a previous connection) re-use it since there will be
-  // settings on it about what processes to attach to that we want to preserve.
+  // Implicitly attach a job to the root. If there was already an implicit job created (from a
+  // previous connection) re-use it since there will be settings on it about what processes to
+  // attach to that we want to preserve.
   JobContextImpl* implicit_job = nullptr;
   for (auto& job : job_contexts_) {
     if (job->is_implicit_root()) {

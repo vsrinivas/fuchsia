@@ -15,8 +15,7 @@ TEST(FrameFingerprint, Newer) {
   EXPECT_TRUE(FrameFingerprint::Newer(newer_physical, older_physical));
   EXPECT_FALSE(FrameFingerprint::Newer(older_physical, newer_physical));
 
-  // Identical stack pointers should check the inline counts. Higher counts
-  // are newer.
+  // Identical stack pointers should check the inline counts. Higher counts are newer.
   FrameFingerprint newer_inline(0x1000, 2);
   FrameFingerprint older_inline(0x1000, 1);
   EXPECT_TRUE(FrameFingerprint::Newer(newer_inline, older_inline));

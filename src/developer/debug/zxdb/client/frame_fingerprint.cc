@@ -21,8 +21,7 @@ std::string FrameFingerprint::ToString() const {
 // static
 bool FrameFingerprint::Newer(const FrameFingerprint& left, const FrameFingerprint& right) {
   if (left.frame_address_ == right.frame_address_) {
-    // Inline functions (in the same physical frame) are newer if the inline
-    // stack depth is higher.
+    // Inline functions (in the same physical frame) are newer if the inline stack depth is higher.
     return left.inline_count_ > right.inline_count_;
   }
 

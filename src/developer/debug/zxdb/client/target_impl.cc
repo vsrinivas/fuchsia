@@ -32,8 +32,8 @@ TargetImpl::TargetImpl(SystemImpl* system)
 }
 
 TargetImpl::~TargetImpl() {
-  // If the process is still running, make sure we broadcast terminated
-  // notifications before deleting everything.
+  // If the process is still running, make sure we broadcast terminated notifications before
+  // deleting everything.
   ImplicitlyDetach();
 }
 
@@ -137,8 +137,8 @@ void TargetImpl::Kill(Callback callback) {
           weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kKill, err, reply.status,
                                            std::move(callback));
         } else {
-          // The reply that the process was launched came after the local
-          // objects were destroyed. We're still OK to dispatch either way.
+          // The reply that the process was launched came after the local objects were destroyed.
+          // We're still OK to dispatch either way.
           callback(weak_target, err);
         }
       });
@@ -185,8 +185,8 @@ void TargetImpl::Detach(Callback callback) {
           weak_target->OnKillOrDetachReply(TargetObserver::DestroyReason::kDetach, err,
                                            reply.status, std::move(callback));
         } else {
-          // The reply that the process was launched came after the local
-          // objects were destroyed. We're still OK to dispatch either way.
+          // The reply that the process was launched came after the local objects were destroyed.
+          // We're still OK to dispatch either way.
           callback(weak_target, err);
         }
       });
@@ -213,8 +213,7 @@ void TargetImpl::OnLaunchOrAttachReplyThunk(fxl::WeakPtr<TargetImpl> target, Cal
   if (target) {
     target->OnLaunchOrAttachReply(std::move(callback), err, koid, status, process_name);
   } else {
-    // The reply that the process was launched came after the local
-    // objects were destroyed.
+    // The reply that the process was launched came after the local objects were destroyed.
     if (err.has_error()) {
       // Process not launched, forward the error.
       callback(target, err);
@@ -321,8 +320,7 @@ void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const
     issue_err = err;
   } else if (status != 0) {
     // Error from detaching.
-    // TODO(davemoore): Not sure what state the target should be if we error
-    // upon detach.
+    // TODO(davemoore): Not sure what state the target should be if we error upon detach.
     issue_err = Err(fxl::StringPrintf("Error %sing, status = %s.",
                                       TargetObserver::DestroyReasonToString(reason),
                                       debug_ipc::ZxStatusToString(status)));
@@ -331,8 +329,8 @@ void TargetImpl::OnKillOrDetachReply(TargetObserver::DestroyReason reason, const
     state_ = State::kNone;
     system_->NotifyWillDestroyProcess(process_.get());
 
-    // Keep the process alive for the observer call, but remove it from the
-    // target as per the observer specification.
+    // Keep the process alive for the observer call, but remove it from the target as per the
+    // observer specification.
     std::unique_ptr<ProcessImpl> doomed_process = std::move(process_);
     for (auto& observer : observers())
       observer.WillDestroyProcess(this, doomed_process.get(), reason, 0);

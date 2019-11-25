@@ -52,8 +52,8 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
     int _ignore;
     while (auto info = curl_multi_info_read(Curl::multi_handle, &_ignore)) {
       if (info->msg != CURLMSG_DONE) {
-        // CURLMSG_DONE is the only value for msg, documented or otherwise,
-        // so this is mostly future-proofing at writing.
+        // CURLMSG_DONE is the only value for msg, documented or otherwise, so this is mostly
+        // future-proofing at writing.
         continue;
       }
 
@@ -75,8 +75,8 @@ void CurlFDWatcher::OnFDReady(int fd, bool read, bool write, bool err) {
   });
 }
 
-// Callback given to CURL which it uses to inform us it would like to do IO on
-// a socket and that we should add it to our polling in the event loop.
+// Callback given to CURL which it uses to inform us it would like to do IO on a socket and that we
+// should add it to our polling in the event loop.
 int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
   if (what == CURL_POLL_REMOVE || what == CURL_POLL_NONE) {
     CurlFDWatcher::watches.erase(s);
@@ -105,11 +105,10 @@ int SocketCallback(CURL* easy, curl_socket_t s, int what, void*, void*) {
   return 0;
 }
 
-// Callback given to CURL which it uses to inform us it would like to receive a
-// timer notification at a given time in the future. If the callback is called
-// twice before the timer expires it is expected to re-schedule the existing
-// timer, not make a second timer. A timeout of -1 means to cancel the
-// outstanding timer.
+// Callback given to CURL which it uses to inform us it would like to receive a timer notification
+// at a given time in the future. If the callback is called twice before the timer expires it is
+// expected to re-schedule the existing timer, not make a second timer. A timeout of -1 means to
+// cancel the outstanding timer.
 int TimerCallback(CURLM* multi, long timeout_ms, void*) {
   static std::shared_ptr<bool> last_timer = std::make_shared<bool>();
 
@@ -165,9 +164,8 @@ Curl::Curl() {
   curl_ = curl_easy_init();
   FXL_DCHECK(curl_);
 
-  // The curl handle has a private pointer which we can stash the address of
-  // our wrapper class in. Then anywhere the curl handle appears in the API we
-  // can grab our wrapper.
+  // The curl handle has a private pointer which we can stash the address of our wrapper class in.
+  // Then anywhere the curl handle appears in the API we can grab our wrapper.
   curl_easy_setopt_CHECK(curl_, CURLOPT_PRIVATE, this);
 }
 
@@ -228,8 +226,8 @@ void Curl::PrepareToPerform() {
   curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEFUNCTION, DoDataCallback);
   curl_easy_setopt_CHECK(curl_, CURLOPT_WRITEDATA, this);
 
-  // API documentation specifies "A long value of 1" enables this option, so we
-  // convert very specifically. Why take chances on sensible behavior?
+  // API documentation specifies "A long value of 1" enables this option, so we convert very
+  // specifically. Why take chances on sensible behavior?
   curl_easy_setopt_CHECK(curl_, CURLOPT_NOBODY, get_body_ ? 0L : 1L);
 
   if (post_data_.empty()) {

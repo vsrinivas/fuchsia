@@ -27,7 +27,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
   return schema;
 }
 
-// Thread Implementation -------------------------------------------------------
+// Thread Implementation ---------------------------------------------------------------------------
 
 Thread::Thread(Session* session)
     : ClientObject(session),

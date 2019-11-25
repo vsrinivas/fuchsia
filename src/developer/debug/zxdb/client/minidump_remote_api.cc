@@ -279,10 +279,9 @@ class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
  public:
   // Construct a delegate object for reading minidump memory regions.
   //
-  // Minidump will always give us a pointer to the whole region and its size.
-  // We give an offset and size of a portion of that region to read. Then when
-  // the MemorySnapshotDelegateRead function is called, just that section will
-  // be copied out into the ptr we give here.
+  // Minidump will always give us a pointer to the whole region and its size. We give an offset and
+  // size of a portion of that region to read. Then when the MemorySnapshotDelegateRead function is
+  // called, just that section will be copied out into the ptr we give here.
   explicit MinidumpReadDelegate(uint64_t offset, size_t size, uint8_t* ptr)
       : offset_(offset), size_(size), ptr_(ptr) {}
 
@@ -306,9 +305,8 @@ class MinidumpReadDelegate : public crashpad::MemorySnapshot::Delegate {
 
 class SnapshotMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
  public:
-  // Construct a memory region from a crashpad MemorySnapshot. The pointer
-  // should always be derived from the minidump_ object, and will thus always
-  // share its lifetime.
+  // Construct a memory region from a crashpad MemorySnapshot. The pointer should always be derived
+  // from the minidump_ object, and will thus always share its lifetime.
   explicit SnapshotMemoryRegion(const crashpad::MemorySnapshot* snapshot)
       : MinidumpRemoteAPI::MemoryRegion(snapshot->Address(), snapshot->Size()),
         snapshot_(snapshot) {}
@@ -335,9 +333,8 @@ std::optional<std::vector<uint8_t>> SnapshotMemoryRegion::Read(uint64_t offset, 
 
 class ElfMemoryRegion : public MinidumpRemoteAPI::MemoryRegion {
  public:
-  // Construct a memory region from a crashpad MemorySnapshot. The pointer
-  // should always be derived from the minidump_ object, and will thus always
-  // share its lifetime.
+  // Construct a memory region from a crashpad MemorySnapshot. The pointer should always be derived
+  // from the minidump_ object, and will thus always share its lifetime.
   explicit ElfMemoryRegion(std::shared_ptr<elflib::ElfLib>& elf, uint64_t start_in, size_t size_in,
                            size_t idx)
       : MinidumpRemoteAPI::MemoryRegion(start_in, size_in), idx_(idx), elf_(elf) {}
@@ -365,8 +362,7 @@ std::optional<std::vector<uint8_t>> ElfMemoryRegion::Read(uint64_t offset, size_
   std::vector<uint8_t> data;
   std::copy(got.ptr + offset, got.ptr + read_end, std::back_inserter(data));
 
-  // If the mapped size is larger than the file data, we pad with zeros per
-  // spec.
+  // If the mapped size is larger than the file data, we pad with zeros per spec.
   data.resize(size, 0);
   return std::move(data);
 }
@@ -378,8 +374,8 @@ std::string MinidumpGetUUID(const crashpad::ModuleSnapshot& mod) {
     return std::string();
   }
 
-  // 2 hex characters per 1 byte, so the string size is twice the data size.
-  // Hopefully we'll be overwriting the zeros we're filling with.
+  // 2 hex characters per 1 byte, so the string size is twice the data size. Hopefully we'll be
+  // overwriting the zeros we're filling with.
   std::string ret(build_id.size() * 2, '\0');
   char* pos = &ret[0];
 
@@ -568,8 +564,8 @@ void MinidumpRemoteAPI::CollectMemory() {
       }
 
       if (segment.p_flags & PF_W) {
-        // Writable segment. Data in the ELF file might not match what was
-        // present at the time of the crash.
+        // Writable segment. Data in the ELF file might not match what was present at the time of
+        // the crash.
         continue;
       }
 

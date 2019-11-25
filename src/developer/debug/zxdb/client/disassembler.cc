@@ -23,8 +23,8 @@ namespace zxdb {
 
 namespace {
 
-// In-place replaces instances of ANY of the characters in "search_for" with the
-// given replacement in the given string.
+// In-place replaces instances of ANY of the characters in "search_for" with the given replacement
+// in the given string.
 void ReplaceAllInstancesOf(const char* search_for, char replace_with, std::string* str) {
   size_t found_pos = 0;
   while ((found_pos = str->find_first_of(search_for, found_pos)) != std::string::npos) {
@@ -44,10 +44,9 @@ void GetInvalidInstructionStrs(const uint8_t* data, size_t len, std::string* ins
   *comment = "Invalid instruction.";
 }
 
-// LLVM generates a instructions like "\tmov\ta,b". Given a string like this
-// with two tabs in the instruction input, separates the parameters ("a,b")
-// off into the given params string, and strips tabs leaving only the
-// instruction ("mov") in the input string.
+// LLVM generates a instructions like "\tmov\ta,b". Given a string like this with two tabs in the
+// instruction input, separates the parameters ("a,b") off into the given params string, and strips
+// tabs leaving only the instruction ("mov") in the input string.
 void SplitInstruction(std::string* instruction, std::string* params) {
   params->clear();
 
@@ -119,8 +118,8 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
   auto status = disasm_->getInstruction(inst, consumed, llvm::ArrayRef<uint8_t>(data, data_len),
                                         address, llvm::nulls(), llvm::nulls());
   if (status == llvm::MCDisassembler::Success) {
-    // Print the instruction. Note that LLVM appends to the strings so we need
-    // to make sure they're empty before using.
+    // Print the instruction. Note that LLVM appends to the strings so we need to make sure they're
+    // empty before using.
     out->op.clear();
     out->comment.clear();
     llvm::raw_string_ostream inst_stream(out->op);
@@ -145,8 +144,8 @@ size_t Disassembler::DisassembleOne(const uint8_t* data, size_t data_len, uint64
 
   // Comments.
   if (!out->comment.empty()) {
-    // Canonicalize the comments, they'll end in a newline (which is added
-    // manually later) and may contain embedded newlines.
+    // Canonicalize the comments, they'll end in a newline (which is added manually later) and may
+    // contain embedded newlines.
     out->comment = fxl::TrimString(out->comment, "\r\n ").ToString();
     ReplaceAllInstancesOf("\r\n", ' ', &out->comment);
 
@@ -163,8 +162,7 @@ size_t Disassembler::DisassembleMany(const uint8_t* data, size_t data_len, uint6
   if (max_instructions == 0)
     max_instructions = std::numeric_limits<size_t>::max();
 
-  // Force emit_undecodable to true or we can never advance past undecodable
-  // instructions.
+  // Force emit_undecodable to true or we can never advance past undecodable instructions.
   Options options = in_options;
   options.emit_undecodable = true;
 
@@ -199,10 +197,9 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump, uint64_t start_addr
       std::string comment = arch_->asm_info()->getCommentString().str() + " Invalid memory @ ";
 
       if (block_i == dump.blocks().size() - 1) {
-        // If the last block, just show the starting address because the size
-        // will normally be irrelevant (say disassembling at the current IP
-        // which might be invalid -- the user doesn't care how big the
-        // invalid memory region is, or how much was requested).
+        // If the last block, just show the starting address because the size will normally be
+        // irrelevant (say disassembling at the current IP which might be invalid -- the user
+        // doesn't care how big the invalid memory region is, or how much was requested).
         comment += fxl::StringPrintf("0x%" PRIx64, block.address);
       } else {
         // Invalid range.
@@ -228,8 +225,7 @@ size_t Disassembler::DisassembleDump(const MemoryDump& dump, uint64_t start_addr
           DisassembleMany(&block.data[block_offset], block.data.size(),
                           block.address + block_offset, options, max_instructions, out);
       if (out->size() >= max_instructions) {
-        // Return the number of bytes from the beginning of the memory dump
-        // that were consumed.
+        // Return the number of bytes from the beginning of the memory dump that were consumed.
         return static_cast<size_t>(block.address + block_bytes_consumed - dump.blocks()[0].address);
       }
     }

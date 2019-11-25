@@ -22,8 +22,8 @@ class ThreadImplTest : public RemoteAPITest {};
 // This ThreadController always responds with "continue".
 class ContinueThreadController : public ThreadController {
  public:
-  // The parameter is a variable to set when the OnThreadStop() function is
-  // called. It must outlive this class.
+  // The parameter is a variable to set when the OnThreadStop() function is called. It must outlive
+  // this class.
   explicit ContinueThreadController(bool* got_stop) : got_stop_(got_stop) {}
   ~ContinueThreadController() override = default;
 
@@ -97,8 +97,8 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kAddress1, stack[0]->GetAddress());
   EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
 
-  // Construct what the full stack will be returned to the thread. The top
-  // element should match the one already there.
+  // Construct what the full stack will be returned to the thread. The top element should match the
+  // one already there.
   debug_ipc::ThreadStatusReply expected_reply;
   expected_reply.record = break_notification.thread;  // Copies existing frame.
   expected_reply.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
@@ -124,19 +124,16 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_FALSE(thread->GetStack().has_all_frames());
   loop().Run();
 
-  // After resuming we don't actually know what state the thread is in so
-  // nothing should change. If we have better thread state notifications in
-  // the future, it would be nice if the thread reported itself as running
-  // and the stack was cleared at this point.
+  // After resuming we don't actually know what state the thread is in so nothing should change. If
+  // we have better thread state notifications in the future, it would be nice if the thread
+  // reported itself as running and the stack was cleared at this point.
 }
 
-// Tests that general exceptions still run thread controllers. If the exception
-// is at an address where the thread controller says "stop", that thread
-// controller should be notified so it can be deleted. It doesn't matter what
-// caused the stop if the thread controller thinks its done.
+// Tests that general exceptions still run thread controllers. If the exception is at an address
+// where the thread controller says "stop", that thread controller should be notified so it can be
+// deleted. It doesn't matter what caused the stop if the thread controller thinks its done.
 //
-// For this exception case, the thread should always stop, even if the
-// controllers say "continue."
+// For this exception case, the thread should always stop, even if the controllers say "continue."
 TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   constexpr uint64_t kProcessKoid = 1234;
   InjectProcess(kProcessKoid);
@@ -163,13 +160,12 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   // Start watching for thread events starting now.
   TestThreadObserver thread_observer(thread);
 
-  // Notify on thread stop again (this is the same address as above but it
-  // doesn't matter).
+  // Notify on thread stop again (this is the same address as above but it doesn't matter).
   notification.type = debug_ipc::ExceptionType::kGeneral;
   InjectException(notification);
 
-  // The controller should have been notified and the thread should have issued
-  // a stop notification even though the controller said to continue.
+  // The controller should have been notified and the thread should have issued a stop notification
+  // even though the controller said to continue.
   EXPECT_TRUE(got_stop);
   EXPECT_TRUE(thread_observer.got_stopped());
 }
@@ -201,8 +197,7 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   // Add the controller that always reports unexpected.
   thread->ContinueWith(std::make_unique<UnexpectedThreadController>(), [](const Err& err) {});
 
-  // Notify on thread stop again (this is the same address as above but it
-  // doesn't matter).
+  // Notify on thread stop again (this is the same address as above but it doesn't matter).
   notification.type = debug_ipc::ExceptionType::kSingleStep;
   InjectException(notification);
 
@@ -210,9 +205,8 @@ TEST_F(ThreadImplTest, ControllersUnexpected) {
   EXPECT_TRUE(thread_observer.got_stopped());
   thread_observer.set_got_stopped(false);
 
-  // Add a continue controller and throw the exception. There should be one
-  // controller voting "continue" and one voting "unexpected" which should
-  // continue the thread.
+  // Add a continue controller and throw the exception. There should be one controller voting
+  // "continue" and one voting "unexpected" which should continue the thread.
   bool continue_got_stop = false;
   thread->ContinueWith(std::make_unique<ContinueThreadController>(&continue_got_stop),
                        [](const Err& err) {});
@@ -255,8 +249,8 @@ TEST_F(ThreadImplTest, JumpTo) {
   });
   EXPECT_FALSE(called);
 
-  // The command should have sent a request to write to the IP. There should
-  // be a single register with a value of the new address.
+  // The command should have sent a request to write to the IP. There should be a single register
+  // with a value of the new address.
   const auto& written = mock_remote_api()->last_write_registers().registers;
   ASSERT_EQ(1u, written.size());
   ASSERT_EQ(sizeof(uint64_t), written[0].data.size());

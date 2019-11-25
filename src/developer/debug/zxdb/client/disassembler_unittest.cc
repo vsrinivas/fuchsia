@@ -147,8 +147,8 @@ TEST(Disassembler, Dump) {
   };
   block_with_data.size = static_cast<uint32_t>(block_with_data.data.size());
 
-  // Two valid memory regions that just follow on each other. This sets a
-  // limit on the total instructions.
+  // Two valid memory regions that just follow on each other. This sets a limit on the total
+  // instructions.
   std::vector<debug_ipc::MemoryBlock> vect;
   vect.push_back(block_with_data);
   vect.push_back(block_with_data);

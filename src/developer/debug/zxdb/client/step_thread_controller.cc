@@ -40,23 +40,21 @@ void StepThreadController::InitWithThread(Thread* thread, fit::callback<void(con
 
   if (step_mode_ == StepMode::kSourceLine) {
     if (!file_line_) {
-      // Always take the file/line from the stack rather than the line table.
-      // The stack will have been fixed up and may reference the calling line
-      // for an inline routine, while the line table will reference the inlined
-      // source that generated the instructions.
+      // Always take the file/line from the stack rather than the line table. The stack will have
+      // been fixed up and may reference the calling line for an inline routine, while the line
+      // table will reference the inlined source that generated the instructions.
       file_line_ = top_frame->GetLocation().file_line();
     }
 
     LineDetails line_details = thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
     if (line_details.file_line() == *file_line_) {
-      // When the stack and the line details match up, the range from the line
-      // table is usable.
+      // When the stack and the line details match up, the range from the line table is usable.
       current_ranges_ = AddressRanges(line_details.GetExtent());
       Log("Stepping in %s:%d %s", file_line_->file().c_str(), file_line_->line(),
           current_ranges_.ToString().c_str());
     } else {
-      // Otherwise keep the current range empty to cause a step into inline
-      // routine or potentially a single step.
+      // Otherwise keep the current range empty to cause a step into inline routine or potentially a
+      // single step.
       current_ranges_ = AddressRanges();
       Log("Stepping in empty range.");
     }
@@ -74,19 +72,18 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
   if (finish_unsymolized_function_)
     return finish_unsymolized_function_->GetContinueOp();
 
-  // The stack shouldn't be empty when stepping in a range, but in case it is,
-  // fall back to single-step.
+  // The stack shouldn't be empty when stepping in a range, but in case it is, fall back to
+  // single-step.
   const auto& stack = thread()->GetStack();
   if (stack.empty())
     return ContinueOp::StepInstruction();
 
-  // Check for inlines. This case will likely have an empty address range so
-  // the inline check needs to be done before checking for empty ranges below.
+  // Check for inlines. This case will likely have an empty address range so the inline check needs
+  // to be done before checking for empty ranges below.
   //
-  // GetContinueOp() should not modify thread state, so we need to return
-  // whether we want to modify the inline stack. Returning SyntheticStop here
-  // will schedule a call OnThreadStop with a synthetic exception. The inline
-  // stack should actually be modified at that point.
+  // GetContinueOp() should not modify thread state, so we need to return whether we want to modify
+  // the inline stack. Returning SyntheticStop here will schedule a call OnThreadStop with a
+  // synthetic exception. The inline stack should actually be modified at that point.
   if (TrySteppingIntoInline(StepIntoInline::kQuery))
     return ContinueOp::SyntheticStop();
 
@@ -94,14 +91,14 @@ ThreadController::ContinueOp StepThreadController::GetContinueOp() {
   if (current_ranges_.empty())
     return ContinueOp::StepInstruction();
 
-  // Use the IP from the top of the stack to figure out which range to send
-  // to the agent (it only accepts one, while we can have a set).
+  // Use the IP from the top of the stack to figure out which range to send to the agent (it only
+  // accepts one, while we can have a set).
   if (auto inside = current_ranges_.GetRangeContaining(stack[0]->GetAddress()))
     return ContinueOp::StepInRange(*inside);
 
-  // Don't generally expect to be continuing in a range that we're not
-  // currently inside of. But it could be the caller is expecting the next
-  // instruction to be in that range, so fall back to single-step mode.
+  // Don't generally expect to be continuing in a range that we're not currently inside of. But it
+  // could be the caller is expecting the next instruction to be in that range, so fall back to
+  // single-step mode.
   return ContinueOp::StepInstruction();
 }
 
@@ -118,17 +115,16 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
     finish_unsymolized_function_->Log("Reported stop, continuing with step.");
     finish_unsymolized_function_.reset();
   } else {
-    // The only real exception type we care about (as opposed to synthetic and
-    // "none" -- see below) are the single step exceptions. We wouldn't want to
-    // try to resume from a crash just because it's in our range, or if there
-    // was a hardcoded debug instruction in the range, for example.
+    // The only real exception type we care about (as opposed to synthetic and "none" -- see below)
+    // are the single step exceptions. We wouldn't want to try to resume from a crash just because
+    // it's in our range, or if there was a hardcoded debug instruction in the range, for example.
     //
-    // This must happen only when there's no "finish" controller since a
-    // successful "finish" hit will have a software breakpoint.
+    // This must happen only when there's no "finish" controller since a successful "finish" hit
+    // will have a software breakpoint.
     //
-    // A "none" type means to ignore the exception type and evaluate the
-    // current code location. It is used when this controller is nested. A
-    // synthetic exception is used to step into inline functions.
+    // A "none" type means to ignore the exception type and evaluate the current code location. It
+    // is used when this controller is nested. A synthetic exception is used to step into inline
+    // functions.
     if ((stop_type != debug_ipc::ExceptionType::kNone &&
          stop_type != debug_ipc::ExceptionType::kSynthetic &&
          stop_type != debug_ipc::ExceptionType::kSingleStep) ||
@@ -165,29 +161,26 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
       return OnThreadStopOnUnsymbolizedCode();
     }
 
-    // When stepping by source line the current_ranges_ will be the entry for
-    // the current line in the line table. But we could have a line table
-    // like this:
+    // When stepping by source line the current_ranges_ will be the entry for the current line in
+    // the line table. But we could have a line table like this:
     //    line 10  <= current_ranges_
     //    line 11
     //    line 10
-    // Initially we were stepping in the range of the first "line 10" entry.
-    // But when we leave that, we could have skipped over the "line 11" entry
-    // (say for a short-circuited if statement) and could still be on line 10!
+    // Initially we were stepping in the range of the first "line 10" entry. But when we leave that,
+    // we could have skipped over the "line 11" entry (say for a short-circuited if statement) and
+    // could still be on line 10!
     //
-    // We could also have "line 0" entries which represent code without any
-    // corresponding source line (usually bookkeeping by the compiler).
+    // We could also have "line 0" entries which represent code without any corresponding source
+    // line (usually bookkeeping by the compiler).
     //
-    // This checks if we're in another entry representing the same source line
-    // or line 0, and continues stepping in that range.
+    // This checks if we're in another entry representing the same source line or line 0, and
+    // continues stepping in that range.
     //
-    // Note: don't check the original file_line_ variable for line 0 since if
-    // the source of the step was in one of these weird locations, all
-    // subsequent lines will compare for equality and we'll never stop
-    // stepping!
+    // Note: don't check the original file_line_ variable for line 0 since if the source of the step
+    // was in one of these weird locations, all subsequent lines will compare for equality and we'll
+    // never stop stepping!
     //
-    // As in InitWithThread(), always use the stack's file/line over the result
-    // from the line table.
+    // As in InitWithThread(), always use the stack's file/line over the result from the line table.
     const Location& top_location = top_frame->GetLocation();
     if (top_location.file_line().line() == 0 || top_location.file_line() == *file_line_) {
       // Still on the same line.
@@ -197,9 +190,8 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
         Log("Got new range for line: %s", current_ranges_.ToString().c_str());
         return kContinue;
       } else {
-        // Line table and stack don't match due to inlined calls. Clearing the
-        // range will make the next operation will either single-step or step
-        // into an inline function.
+        // Line table and stack don't match due to inlined calls. Clearing the range will make the
+        // next operation will either single-step or step into an inline function.
         current_ranges_ = AddressRanges();
         // Fall-through to trying to fixup inline frames or stopping.
       }
@@ -208,16 +200,16 @@ ThreadController::StopOp StepThreadController::OnThreadStop(
 
   if (stop_type == debug_ipc::ExceptionType::kSynthetic ||
       stop_type == debug_ipc::ExceptionType::kNone) {
-    // Handle virtually stepping into inline functions by modifying the hidden
-    // ambiguous inline frame count.
+    // Handle virtually stepping into inline functions by modifying the hidden ambiguous inline
+    // frame count.
     //
-    // This should only happen for synthetic stops because modifying the hide
-    // count is an alternative to actually stepping the CPU. Doing this after a
-    // real step will modify the stack for the *next* instruction (like doing
-    // "step into" twice in the case of ambiguous inline frames).
+    // This should only happen for synthetic stops because modifying the hide count is an
+    // alternative to actually stepping the CPU. Doing this after a real step will modify the stack
+    // for the *next* instruction (like doing "step into" twice in the case of ambiguous inline
+    // frames).
     //
-    // On the other hand, this check should happen after the other types of
-    // range checking in case the thread is still in range.
+    // On the other hand, this check should happen after the other types of range checking in case
+    // the thread is still in range.
     if (TrySteppingIntoInline(StepIntoInline::kCommit))
       return kStopDone;
   } else {
@@ -238,11 +230,10 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
   if (step_mode_ != StepMode::kSourceLine) {
     // Only do inline frame handling when stepping by line.
     //
-    // When the user is doing a single-instruction step, ignore special inline
-    // frames and always do a real step. The other mode is "address range"
-    // which isn't exposed to the user directly so we probably won't encounter
-    // it here, but assume that it's also a low-level operation that doesn't
-    // need inline handling.
+    // When the user is doing a single-instruction step, ignore special inline frames and always do
+    // a real step. The other mode is "address range" which isn't exposed to the user directly so we
+    // probably won't encounter it here, but assume that it's also a low-level operation that
+    // doesn't need inline handling.
     return false;
   }
 
@@ -250,10 +241,9 @@ bool StepThreadController::TrySteppingIntoInline(StepIntoInline command) {
 
   size_t hidden_frame_count = stack.hide_ambiguous_inline_frame_count();
   if (hidden_frame_count == 0) {
-    // The Stack object always contains all inline functions nested at the
-    // current address. When it's not logically in one or more of them, they
-    // will be hidden. Not having any hidden inline frames means there's
-    // nothing to a synthetic inline step into.
+    // The Stack object always contains all inline functions nested at the current address. When
+    // it's not logically in one or more of them, they will be hidden. Not having any hidden inline
+    // frames means there's nothing to a synthetic inline step into.
     return false;
   }
 
@@ -311,37 +301,31 @@ ThreadController::StopOp StepThreadController::OnThreadStopOnUnsymbolizedCode() 
 
   ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
   if (process_symbols->HaveSymbolsLoadedForModuleAt(top_frame->GetAddress())) {
-    // We ended up in code with no symbols inside a module where we expect
-    // to have symbols. The common cause of this is a shared library thunk:
-    // When there is an imported symbol, all code in a module will jump to
-    // some generated code (no symbols) that in turn does an indirect jump
-    // to the destination. The destination of the indirect jump is what's
-    // filled in by the dynamic loader when imports are resolved.
+    // We ended up in code with no symbols inside a module where we expect to have symbols. The
+    // common cause of this is a shared library thunk: When there is an imported symbol, all code in
+    // a module will jump to some generated code (no symbols) that in turn does an indirect jump to
+    // the destination. The destination of the indirect jump is what's filled in by the dynamic
+    // loader when imports are resolved.
     //
-    // LLDB indexes ELF imports in the symbol database (type
-    // eSymbolTypeTrampoline) and can then compare to see if the current
-    // code is a trampoline. See
+    // LLDB indexes ELF imports in the symbol database (type eSymbolTypeTrampoline) and can then
+    // compare to see if the current code is a trampoline. See
     // DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan.
     //
-    // We should do something similar which will be less prone to errors.
-    // GDB does something similar but also checks that the instruction is
-    // the right type of jump. This involves two memory lookups which make
-    // it difficult for us to implement since they require async calls.
-    // We might be able to just check that the address is inside the
-    // procedure linkage table (see below).
+    // We should do something similar which will be less prone to errors. GDB does something similar
+    // but also checks that the instruction is the right type of jump. This involves two memory
+    // lookups which make it difficult for us to implement since they require async calls. We might
+    // be able to just check that the address is inside the procedure linkage table (see below).
     //
     // ELF imports
     // -----------
-    // ELF imports go through the "procedure linkage table" (see the ELF
-    // spec) which allows lazy resolution. These trampolines have a default
-    // jump address is to the next instruction which then pushes the item
-    // index on the stack and does a dance to jump to the dynamic linker to
-    // resolve this import. Once resolved, the first jump takes the code
-    // directly to the destination.
+    // ELF imports go through the "procedure linkage table" (see the ELF spec) which allows lazy
+    // resolution. These trampolines have a default jump address is to the next instruction which
+    // then pushes the item index on the stack and does a dance to jump to the dynamic linker to
+    // resolve this import. Once resolved, the first jump takes the code directly to the
+    // destination.
     //
-    // Our loader seems to resolve these up-front. In the future we might
-    // need to add logic to step over the dynamic loader when its resolving
-    // the import.
+    // Our loader seems to resolve these up-front. In the future we might need to add logic to step
+    // over the dynamic loader when its resolving the import.
     Log("In function with no symbols, single-stepping.");
     current_ranges_ = AddressRanges();  // No range: step by instruction.
     return kContinue;
@@ -349,9 +333,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopOnUnsymbolizedCode() 
 
   if (FrameFingerprint::Newer(thread()->GetStack().GetFrameFingerprint(0),
                               original_frame_fingerprint_)) {
-    // Called a new stack frame that has no symbols. We need to "finish" to
-    // step over the unsymbolized code to automatically step over the
-    // unsymbolized code.
+    // Called a new stack frame that has no symbols. We need to "finish" to step over the
+    // unsymbolized code to automatically step over the unsymbolized code.
     Log("Called unsymbolized function, stepping out.");
     FXL_DCHECK(original_frame_fingerprint_.is_valid());
     finish_unsymolized_function_ =
@@ -360,8 +343,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopOnUnsymbolizedCode() 
     return kContinue;
   }
 
-  // Here we jumped (not called, we checked the frames above) to some
-  // unsymbolized code. Don't know what this is so stop.
+  // Here we jumped (not called, we checked the frames above) to some unsymbolized code. Don't know
+  // what this is so stop.
   Log("Jumped to unsymbolized code, giving up and stopping.");
   return kStopDone;
 }

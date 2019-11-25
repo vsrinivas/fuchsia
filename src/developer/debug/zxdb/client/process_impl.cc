@@ -118,8 +118,8 @@ void ProcessImpl::Pause(fit::callback<void()> on_paused) {
       request, [weak_process = weak_factory_.GetWeakPtr(), on_paused = std::move(on_paused)](
                    const Err& err, debug_ipc::PauseReply reply) mutable {
         if (weak_process) {
-          // Save any new thread metadata (will be empty for errors so don't
-          // need to check explicitly for errors).
+          // Save any new thread metadata (will be empty for errors so don't need to check
+          // explicitly for errors).
           for (const auto& record : reply.threads) {
             FXL_DCHECK(record.process_koid == weak_process->koid_);
             if (ThreadImpl* thread = weak_process->GetThreadImplFromKoid(record.thread_koid))
@@ -223,8 +223,8 @@ void ProcessImpl::OnThreadStarting(const debug_ipc::ThreadRecord& record, bool r
 void ProcessImpl::OnThreadExiting(const debug_ipc::ThreadRecord& record) {
   auto found = threads_.find(record.thread_koid);
   if (found == threads_.end()) {
-    // Duplicate exit thread notification. Some legitimate cases could cause
-    // this as in OnThreadStarting().
+    // Duplicate exit thread notification. Some legitimate cases could cause this as in
+    // OnThreadStarting().
     return;
   }
 
@@ -247,9 +247,8 @@ void ProcessImpl::OnModules(const std::vector<debug_ipc::Module>& modules,
     }
   }
 
-  // The threads loading the library will be stopped so we have time to load
-  // symbols and enable any pending breakpoints. Now that the notification is
-  // complete, the thread(s) can continue.
+  // The threads loading the library will be stopped so we have time to load symbols and enable any
+  // pending breakpoints. Now that the notification is complete, the thread(s) can continue.
   //
   // Note that this is a "blind" resume, as the |this| does not yet know about any threads that are
   // currently running. It will issue a sync call shortly.
@@ -285,14 +284,14 @@ void ProcessImpl::UpdateThreads(const std::vector<debug_ipc::ThreadRecord>& new_
       // New thread added.
       OnThreadStarting(record, false);
     } else {
-      // Existing one, update everything. Thread list updates don't include
-      // full stack frames for performance reasons.
+      // Existing one, update everything. Thread list updates don't include full stack frames for
+      // performance reasons.
       found_existing->second->SetMetadata(record);
     }
   }
 
-  // Do the reverse lookup to check for threads not in the new list. Be careful
-  // not to mutate the threads_ list while iterating over it.
+  // Do the reverse lookup to check for threads not in the new list. Be careful not to mutate the
+  // threads_ list while iterating over it.
   std::vector<uint64_t> existing_koids;
   for (const auto& pair : threads_)
     existing_koids.push_back(pair.first);

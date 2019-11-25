@@ -31,7 +31,7 @@ void SettingStore::NotifySettingChanged(const std::string& setting_name) const {
   }
 }
 
-// Getters ---------------------------------------------------------------------
+// Getters -----------------------------------------------------------------------------------------
 
 bool SettingStore::GetBool(const std::string& key) const {
   auto value = GetValue(key);
@@ -87,7 +87,7 @@ Setting SettingStore::GetSetting(const std::string& key) const {
 
 bool SettingStore::HasSetting(const std::string& key) const { return schema_->HasSetting(key); }
 
-// Setters ---------------------------------------------------------------------
+// Setters -----------------------------------------------------------------------------------------
 
 Err SettingStore::SetBool(const std::string& key, bool val) { return SetSetting(key, val); }
 

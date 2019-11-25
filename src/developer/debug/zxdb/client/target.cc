@@ -85,7 +85,7 @@ fxl::RefPtr<SettingSchema> CreateSchema() {
 
 }  // namespace
 
-// Target Implementation -------------------------------------------------------
+// Target Implementation ---------------------------------------------------------------------------
 
 Target::Target(Session* session)
     : ClientObject(session),

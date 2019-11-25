@@ -49,10 +49,9 @@ debug_ipc::ThreadRecord::BlockedReason ThreadImpl::GetBlockedReason() const {
 }
 
 void ThreadImpl::Pause(fit::callback<void()> on_paused) {
-  // The frames may have been requested when the thread was running which
-  // will have marked them "empty but complete." When a pause happens the
-  // frames will become available so we want subsequent requests to request
-  // them.
+  // The frames may have been requested when the thread was running which will have marked them
+  // "empty but complete." When a pause happens the frames will become available so we want
+  // subsequent requests to request them.
   ClearFrames();
 
   debug_ipc::PauseRequest request;
@@ -66,9 +65,9 @@ void ThreadImpl::Pause(fit::callback<void()> on_paused) {
           if (reply.threads.size() == 1 && reply.threads[0].thread_koid == weak_thread->koid_) {
             weak_thread->SetMetadata(reply.threads[0]);
           } else {
-            // If the client thread still exists, the agent's record of that
-            // thread should have existed at the time the message was sent so
-            // there should be no reason the update doesn't match.
+            // If the client thread still exists, the agent's record of that thread should have
+            // existed at the time the message was sent so there should be no reason the update
+            // doesn't match.
             FXL_NOTREACHED();
           }
         }
@@ -84,34 +83,30 @@ void ThreadImpl::Continue() {
   if (controllers_.empty()) {
     request.how = debug_ipc::ResumeRequest::How::kContinue;
   } else {
-    // When there are thread controllers, ask the most recent one for how to
-    // continue.
+    // When there are thread controllers, ask the most recent one for how to continue.
     //
-    // Theoretically we're running with all controllers at once and we want to
-    // stop at the first one that triggers, which means we want to compute the
-    // most restrictive intersection of all of them.
+    // Theoretically we're running with all controllers at once and we want to stop at the first one
+    // that triggers, which means we want to compute the most restrictive intersection of all of
+    // them.
     //
-    // This is annoying to implement and it's difficult to construct a
-    // situation where this would be required. The controller that doesn't
-    // involve breakpoints is "step in range" and generally ranges refer to
-    // code lines that will align. Things like "until" are implemented with
-    // breakpoints so can overlap arbitrarily with other operations with no
-    // problem.
+    // This is annoying to implement and it's difficult to construct a situation where this would be
+    // required. The controller that doesn't involve breakpoints is "step in range" and generally
+    // ranges refer to code lines that will align. Things like "until" are implemented with
+    // breakpoints so can overlap arbitrarily with other operations with no problem.
     //
     // A case where this might show up:
     //  1. Do "step into" which steps through a range of instructions.
     //  2. In the middle of that range is a breakpoint that's hit.
-    //  3. The user does "finish." We'll ask the finish controller what to do
-    //     and it will say "continue" and the range from step 1 is lost.
-    // However, in this case probably does want to end up one stack frame
-    // back rather than several instructions after the breakpoint due to the
-    // original "step into" command, so even when "wrong" this current behavior
-    // isn't necessarily bad.
+    //  3. The user does "finish." We'll ask the finish controller what to do and it will say
+    //     "continue" and the range from step 1 is lost.
+    // However, in this case probably does want to end up one stack frame back rather than several
+    // instructions after the breakpoint due to the original "step into" command, so even when
+    // "wrong" this current behavior isn't necessarily bad.
     controllers_.back()->Log("Continuing with this controller as primary.");
     ThreadController::ContinueOp op = controllers_.back()->GetContinueOp();
     if (op.synthetic_stop_) {
-      // Synthetic stop. Skip notifying the backend and broadcast a stop
-      // notification for the current state.
+      // Synthetic stop. Skip notifying the backend and broadcast a stop notification for the
+      // current state.
       controllers_.back()->Log("Synthetic stop.");
       debug_ipc::MessageLoop::Current()->PostTask(
           FROM_HERE, [thread = weak_factory_.GetWeakPtr()]() {
@@ -136,8 +131,7 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
                               fit::callback<void(const Err&)> on_continue) {
   ThreadController* controller_ptr = controller.get();
 
-  // Add it first so that its presence will be noted by anything its
-  // initialization function does.
+  // Add it first so that its presence will be noted by anything its initialization function does.
   controllers_.push_back(std::move(controller));
 
   controller_ptr->InitWithThread(
@@ -161,17 +155,15 @@ void ThreadImpl::JumpTo(uint64_t new_address, fit::callback<void(const Err&)> cb
   request.registers.emplace_back(
       GetSpecialRegisterID(session()->arch(), debug_ipc::SpecialRegisterType::kIP), new_address);
 
-  // The "jump" command updates the thread's location so we need to recompute
-  // the stack. So once the jump is complete we re-request the thread's
-  // status.
+  // The "jump" command updates the thread's location so we need to recompute the stack. So once the
+  // jump is complete we re-request the thread's status.
   //
-  // This could be made faster by requesting status immediately after sending
-  // the update so we don't have to wait for two round-trips, but that
-  // complicates the callback logic and this feature is not performance-
-  // sensitive.
+  // This could be made faster by requesting status immediately after sending the update so we don't
+  // have to wait for two round-trips, but that complicates the callback logic and this feature is
+  // not performance- sensitive.
   //
-  // Another approach is to make the register request message able to
-  // optionally request a stack backtrace and include that in the reply.
+  // Another approach is to make the register request message able to optionally request a stack
+  // backtrace and include that in the reply.
   session()->remote_api()->WriteRegisters(
       request, [thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)](
                    const Err& err, debug_ipc::WriteRegistersReply reply) mutable {
@@ -232,15 +224,14 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
            ThreadController::FrameFunctionNameForLog(stack_[0]).c_str());
   }
 
-  // When any controller says "stop" it takes precendence and the thread will
-  // stop no matter what any other controllers say.
+  // When any controller says "stop" it takes precendence and the thread will stop no matter what
+  // any other controllers say.
   bool should_stop = false;
 
-  // Set when any controller says "continue". If no controller says "stop" we
-  // need to differentiate the case where there are no controllers or all
-  // controllers say "unexpected" (thread should stop), from where one or more
-  // said "continue" (thread should continue, any "unexpected" votes are
-  // ignored).
+  // Set when any controller says "continue". If no controller says "stop" we need to differentiate
+  // the case where there are no controllers or all controllers say "unexpected" (thread should
+  // stop), from where one or more said "continue" (thread should continue, any "unexpected" votes
+  // are ignored).
   bool have_continue = false;
 
   auto controller_iter = controllers_.begin();
@@ -254,23 +245,21 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
         controller_iter++;
         break;
       case ThreadController::kStopDone:
-        // Once a controller tells us to stop, we assume the controller no
-        // longer applies and delete it.
+        // Once a controller tells us to stop, we assume the controller no longer applies and delete
+        // it.
         //
-        // Need to continue with checking all controllers even though we know
-        // we should stop at this point. Multiple controllers should say
-        // "stop" at the same time and we need to be able to delete all that
-        // no longer apply (say you did "finish", hit a breakpoint, and then
-        // "finish" again, both finish commands would be active and you would
-        // want them both to be completed when the current frame actually
-        // finishes).
+        // Need to continue with checking all controllers even though we know we should stop at this
+        // point. Multiple controllers should say "stop" at the same time and we need to be able to
+        // delete all that no longer apply (say you did "finish", hit a breakpoint, and then
+        // "finish" again, both finish commands would be active and you would want them both to be
+        // completed when the current frame actually finishes).
         controller->Log("Reported stop on exception, stopping and removing it.");
         controller_iter = controllers_.erase(controller_iter);
         should_stop = true;
         break;
       case ThreadController::kUnexpected:
-        // An unexpected exception means the controller is still active but
-        // doesn't know what to do with this exception.
+        // An unexpected exception means the controller is still active but doesn't know what to do
+        // with this exception.
         controller->Log("Reported unexpected exception.");
         controller_iter++;
         break;
@@ -278,19 +267,17 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
   }
 
   if (!have_continue) {
-    // No controller voted to continue (maybe all active controllers reported
-    // "unexpected") or there was no controller. Such cases should stop.
+    // No controller voted to continue (maybe all active controllers reported "unexpected") or there
+    // was no controller. Such cases should stop.
     should_stop = true;
   }
 
-  // The existence of any non-internal breakpoints being hit means the thread
-  // should always stop. This check happens after notifying the controllers so
-  // if a controller triggers, it's counted as a "hit" (otherwise, doing
-  // "run until" to a line with a normal breakpoint on it would keep the "run
-  // until" operation active even after it was hit).
+  // The existence of any non-internal breakpoints being hit means the thread should always stop.
+  // This check happens after notifying the controllers so if a controller triggers, it's counted as
+  // a "hit" (otherwise, doing "run until" to a line with a normal breakpoint on it would keep the
+  // "run until" operation active even after it was hit).
   //
-  // Also, filter out internal breakpoints in the notification sent to the
-  // observers.
+  // Also, filter out internal breakpoints in the notification sent to the observers.
   std::vector<fxl::WeakPtr<Breakpoint>> external_breakpoints;
   for (auto& hit : hit_breakpoints) {
     if (!hit)
@@ -303,9 +290,8 @@ void ThreadImpl::OnException(debug_ipc::ExceptionType type,
     }
   }
 
-  // Non-debug exceptions also mean the thread should always stop (check this
-  // after running the controllers for the same reason as the breakpoint check
-  // above).
+  // Non-debug exceptions also mean the thread should always stop (check this after running the
+  // controllers for the same reason as the breakpoint check above).
   if (!debug_ipc::IsDebug(type))
     should_stop = true;
 

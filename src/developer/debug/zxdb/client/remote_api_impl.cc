@@ -164,8 +164,8 @@ void RemoteAPIImpl::Send(const SendMsgType& send_msg,
   debug_ipc::WriteRequest(send_msg, transaction_id, &writer);
   std::vector<char> serialized = writer.MessageComplete();
   session_->stream_->Write(std::move(serialized));
-  // This is the reply callback that unpacks the data in a vector, converts it
-  // to the requested RecvMsgType struct, and issues the callback.
+  // This is the reply callback that unpacks the data in a vector, converts it to the requested
+  // RecvMsgType struct, and issues the callback.
   Session::Callback dispatch_callback = [callback = std::move(callback)](
                                             const Err& err, std::vector<char> data) mutable {
     RecvMsgType reply;

@@ -31,8 +31,8 @@ JobContextImpl::JobContextImpl(SystemImpl* system, bool is_implicit_root)
 }
 
 JobContextImpl::~JobContextImpl() {
-  // If the job is still running, make sure we broadcast terminated
-  // notifications before deleting everything.
+  // If the job is still running, make sure we broadcast terminated notifications before deleting
+  // everything.
   ImplicitlyDetach();
   session()->RemoveFilterObserver(this);
 }
@@ -60,8 +60,7 @@ void JobContextImpl::OnAttachReplyThunk(fxl::WeakPtr<JobContextImpl> job_context
       job_context->SendAndUpdateFilters(job_context->filters_, true);
     }
   } else {
-    // The reply that the job was launched came after the local
-    // objects were destroyed.
+    // The reply that the job was launched came after the local objects were destroyed.
     if (err.has_error()) {
       // Process not launched, forward the error.
       callback(job_context, err);
@@ -142,9 +141,9 @@ void JobContextImpl::Detach(Callback callback) {
     return;
   }
 
-  // This job could have been the one automatically created. If the user
-  // explicitly detaches it, the user is taking control over what job it's
-  // attached to so we don't want to track it implicitly any more.
+  // This job could have been the one automatically created. If the user explicitly detaches it, the
+  // user is taking control over what job it's attached to so we don't want to track it implicitly
+  // any more.
   is_implicit_root_ = false;
 
   debug_ipc::DetachRequest request;
@@ -156,8 +155,8 @@ void JobContextImpl::Detach(Callback callback) {
         if (weak_job_context) {
           weak_job_context->OnDetachReply(err, reply.status, std::move(callback));
         } else {
-          // The reply that the process was launched came after the local
-          // objects were destroyed. We're still OK to dispatch either way.
+          // The reply that the process was launched came after the local objects were destroyed.
+          // We're still OK to dispatch either way.
           callback(weak_job_context, err);
         }
       });

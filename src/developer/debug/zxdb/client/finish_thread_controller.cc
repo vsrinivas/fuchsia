@@ -24,8 +24,7 @@ FinishThreadController::FinishThreadController(Stack& stack, size_t frame_to_fin
   FXL_DCHECK(frame_to_finish < stack.size());
 
   if (!stack[frame_to_finish]->IsInline()) {
-    // Finishing a physical frame, don't need to do anything except forward
-    // to the physical version.
+    // Finishing a physical frame, don't need to do anything except forward to the physical version.
     finish_physical_controller_ =
         std::make_unique<FinishPhysicalFrameThreadController>(stack, frame_to_finish);
     return;
@@ -43,8 +42,8 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
   SetThread(thread);
 
   if (finish_physical_controller_) {
-    // Simple case where only a physical frame is being finished. The physical
-    // frame controller can do everything.
+    // Simple case where only a physical frame is being finished. The physical frame controller can
+    // do everything.
     finish_physical_controller_->InitWithThread(thread, std::move(cb));
     return;
   }
@@ -74,16 +73,16 @@ void FinishThreadController::InitWithThread(Thread* thread, fit::callback<void(c
     }
   }
   if (found_physical_index) {
-    // There is a physical frame above the one being stepped out of. Set up
-    // the physical frame stepper to get out of it.
+    // There is a physical frame above the one being stepped out of. Set up the physical frame
+    // stepper to get out of it.
     finish_physical_controller_ =
         std::make_unique<FinishPhysicalFrameThreadController>(stack, *found_physical_index);
     finish_physical_controller_->InitWithThread(thread, std::move(cb));
     return;
   }
 
-  // There is no physical frame above the one being stepped out of, go to
-  // inline stepping to get out of it.
+  // There is no physical frame above the one being stepped out of, go to inline stepping to get out
+  // of it.
   CreateInlineStepOverController(std::move(cb));
 }
 
@@ -177,10 +176,9 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStopFrameStepping
     return kStopDone;
   }
 
-  // The top frame is newer than the desired destination so we need to
-  // step out of it. If the stack hasn't changed in a surprising way all
-  // frames above the desired destination will be inline ones that we can
-  // step out of with the "step over" controller.
+  // The top frame is newer than the desired destination so we need to step out of it. If the stack
+  // hasn't changed in a surprising way all frames above the desired destination will be inline ones
+  // that we can step out of with the "step over" controller.
   Log("Newer stack frame needs stepping out of.");
   if (!CreateInlineStepOverController([](const Err&) {}))
     return kStopDone;  // Something unexpected happened.
@@ -190,11 +188,10 @@ FinishThreadController::StopOp FinishThreadController::OnThreadStopFrameStepping
 bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(const Err&)> cb) {
   Stack& stack = thread()->GetStack();
   if (!stack[0]->IsInline()) {
-    // The stack changed in an unexpected way and a newer physical frame
-    // appeared that we weren't expecting. For now, report stop since
-    // something weird is going on. If this happens in practice, the best
-    // thing to do is restart the step-out process with the physical frame
-    // step out, followed by any inline ones.
+    // The stack changed in an unexpected way and a newer physical frame appeared that we weren't
+    // expecting. For now, report stop since something weird is going on. If this happens in
+    // practice, the best thing to do is restart the step-out process with the physical frame step
+    // out, followed by any inline ones.
     const char kMsg[] = "Unexpected non-inline frame when stepping out, giving up.";
     Log(kMsg);
     cb(Err(kMsg));
@@ -210,8 +207,7 @@ bool FinishThreadController::CreateInlineStepOverController(fit::callback<void(c
     return false;
   }
 
-  // Make a step over controller with the range of the inline function at
-  // the top of the stack.
+  // Make a step over controller with the range of the inline function at the top of the stack.
   Log("Creating a new step over controller to get out of inline frame %s.",
       FrameFunctionNameForLog(stack[0]).c_str());
   step_over_inline_controller_ = std::make_unique<StepOverThreadController>(

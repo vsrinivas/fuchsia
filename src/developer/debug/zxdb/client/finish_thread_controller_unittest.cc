@@ -22,9 +22,8 @@ class FinishThreadControllerTest : public InlineThreadControllerTest {};
 
 // See also the FinishPhysicalFrameThreadController tests.
 
-// Tests finishing a single inline frame. This finishes the top frame of the
-// stack which is an inline function (see InlineThreadControllerTest for what
-// the returned stack layout is).
+// Tests finishing a single inline frame. This finishes the top frame of the stack which is an
+// inline function (see InlineThreadControllerTest for what the returned stack layout is).
 TEST_F(FinishThreadControllerTest, FinishInline) {
   auto mock_frames = GetStack();
   InjectExceptionWithStack(process()->GetKoid(), thread()->GetKoid(),
@@ -68,10 +67,9 @@ TEST_F(FinishThreadControllerTest, FinishInline) {
   EXPECT_EQ(debug_ipc::ThreadRecord::State::kBlocked, thread()->GetState());
 }
 
-// Finishes multiple frames, consisting of one physical frame finish followed
-// by two inline frame finishes. This finishes to frame 4 (see
-// InlineThreadControllerTest) which is the "middle" physical frame. It
-// requires doing a "finish" of the top physical frame, then stepping through
+// Finishes multiple frames, consisting of one physical frame finish followed by two inline frame
+// finishes. This finishes to frame 4 (see InlineThreadControllerTest) which is the "middle"
+// physical frame. It requires doing a "finish" of the top physical frame, then stepping through
 // both middle inline frames.
 TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   auto mock_frames = GetStack();
@@ -88,15 +86,13 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
       continued = true;
   });
 
-  // That should have sent a resume + a breakpoint set at the frame 2 IP (this
-  // breakpoint is implementing the "finish" to step out of the frame 1
-  // physical frame).
+  // That should have sent a resume + a breakpoint set at the frame 2 IP (this breakpoint is
+  // implementing the "finish" to step out of the frame 1 physical frame).
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(0, mock_remote_api()->breakpoint_remove_count());
   EXPECT_EQ(frame_2_ip, mock_remote_api()->last_breakpoint_address());
 
-  // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are
-  // "software").
+  // Simulate a breakpoint hit of that breakpoint (breakpoint exceptions are "software").
   debug_ipc::NotifyException exception;
   exception.type = debug_ipc::ExceptionType::kSoftware;
   exception.thread.process_koid = process()->GetKoid();
@@ -115,8 +111,7 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
 
-  // Do another stop 4 bytes later in the inline frame 2 which should get
-  // continued.
+  // Do another stop 4 bytes later in the inline frame 2 which should get continued.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 3);
   mock_frames[0]->SetAddress(mock_frames[0]->GetAddress() + 4);
@@ -125,9 +120,8 @@ TEST_F(FinishThreadControllerTest, FinishPhysicalAndInline) {
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
   EXPECT_EQ(1, mock_remote_api()->GetAndResetResumeCount());
 
-  // Stop in inline frame 1. This leaves inline frame 2 (right after its
-  // address range) but should still continue since we haven't reached the
-  // target.
+  // Stop in inline frame 1. This leaves inline frame 2 (right after its address range) but should
+  // still continue since we haven't reached the target.
   mock_frames = GetStack();
   mock_frames.erase(mock_frames.begin(), mock_frames.begin() + 4);
   mock_frames[0]->SetAddress(kMiddleInline2FunctionRange.end());

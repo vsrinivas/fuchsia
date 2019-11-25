@@ -44,10 +44,9 @@ class SessionSink : public RemoteAPI {
 
   void AppendProcessRecord(const debug_ipc::ProcessRecord& record) { records_.push_back(record); }
 
-  // Adds all current system breakpoints to the exception notification. The
-  // calling code doesn't have easy access to the backend IDs so this is where
-  // they come from. We assume the breakpoints will all be hit at the same time
-  // (the tests will set them at the same address).
+  // Adds all current system breakpoints to the exception notification. The calling code doesn't
+  // have easy access to the backend IDs so this is where they come from. We assume the breakpoints
+  // will all be hit at the same time (the tests will set them at the same address).
   void PopulateNotificationWithBreakpoints(debug_ipc::NotifyException* notify) {
     notify->hit_breakpoints.clear();
     for (uint32_t id : set_breakpoint_ids_) {
@@ -190,9 +189,8 @@ void SessionSink::Status(const debug_ipc::StatusRequest& request,
 }  // namespace
 
 // This is a larger test that covers exception notifications in the Session
-// object as well as breakpoint controllers and auto continuation. It sets up
-// two breakpoints at the same address and reports them hit with various
-// combinations of responses from each breakpoint.
+// object as well as breakpoint controllers and auto continuation. It sets up two breakpoints at the
+// same address and reports them hit with various combinations of responses from each breakpoint.
 TEST_F(SessionTest, MultiBreakpointStop) {
   constexpr uint64_t kProcessKoid = 1234;
   Process* process = InjectProcess(kProcessKoid);
@@ -235,9 +233,9 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   sink()->PopulateNotificationWithBreakpoints(&notify);
   InjectException(notify);
 
-  // The thread observer should be triggered since there is a regular user
-  // breakpoint responsible for this address. It should be the only one in the
-  // notification (internal ones don't get listed as a stop reason).
+  // The thread observer should be triggered since there is a regular user breakpoint responsible
+  // for this address. It should be the only one in the notification (internal ones don't get listed
+  // as a stop reason).
   ASSERT_EQ(1u, thread_observer.breakpoints().size());
   EXPECT_EQ(bp_user, thread_observer.breakpoints()[0]);
 
@@ -250,8 +248,8 @@ TEST_F(SessionTest, MultiBreakpointStop) {
   thread->RemoveObserver(&thread_observer);
 }
 
-// Tests that one shot breakpoints get deleted when the agent notifies us that
-// the breakpoint was hit and deleted.
+// Tests that one shot breakpoints get deleted when the agent notifies us that the breakpoint was
+// hit and deleted.
 TEST_F(SessionTest, OneShotBreakpointDelete) {
   // Make a process and thread for notifying about.
   constexpr uint64_t kProcessKoid = 1234;

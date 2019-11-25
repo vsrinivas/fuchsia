@@ -97,7 +97,7 @@ TEST_F(StepOverThreadControllerTest, Inline) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
-  // -----------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------------------------
   // Done with setup, actual test following.
   //
   // Current stack is:
@@ -259,7 +259,7 @@ TEST_F(StepOverThreadControllerTest, OutToZeroLine) {
                            debug_ipc::ExceptionType::kSingleStep,
                            MockFrameVectorToFrameVector(std::move(mock_frames)), true);
 
-  // -----------------------------------------------------------------------------
+  // -----------------------------------------------------------------------------------------------
   // Done with setup, actual test following.
   //
   // Current stack is:

@@ -32,8 +32,7 @@ void ThreadControllerTest::SetUp() {
   module_symbols_ = MakeModuleSymbols();
   session().system().GetSymbols()->InjectModuleForTesting(build_id, module_symbols_.get());
 
-  // Make the process load the mocked module symbols and the other one with no
-  // symbols.
+  // Make the process load the mocked module symbols and the other one with no symbols.
   std::vector<debug_ipc::Module> modules;
   debug_ipc::Module unsym_load;
   unsym_load.name = "nosym";

@@ -44,20 +44,20 @@ namespace zxdb {
 
 namespace {
 
-// Max message size before considering it corrupt. This is very large so we can
-// send nontrivial memory dumps over the channel, but ensures we won't crash
-// trying to allocate an unreasonable buffer size if the stream is corrupt.
+// Max message size before considering it corrupt. This is very large so we can send nontrivial
+// memory dumps over the channel, but ensures we won't crash trying to allocate an unreasonable
+// buffer size if the stream is corrupt.
 constexpr uint32_t kMaxMessageSize = 16777216;
 
 }  // namespace
 
 // PendingConnection -----------------------------------------------------------
 
-// Storage for connection information when connecting dynamically. Making a
-// connection has three asynchronous steps:
+// Storage for connection information when connecting dynamically. Making a connection has three
+// asynchronous steps:
 //
-//  1. Resolving the host and connecting the socket. Since this is blocking,
-//     it happens on a background thread.
+//  1. Resolving the host and connecting the socket. Since this is blocking, it happens on a
+//     background thread.
 //  2. Sending the hello message. Happens on the main thread.
 //  3. Waiting for the reply and deserializing, then notifying the Session.
 //
@@ -65,15 +65,13 @@ constexpr uint32_t kMaxMessageSize = 16777216;
 //
 //  - Any step can fail.
 //  - The Session object can be destroyed (weak pointer checks).
-//  - The connection could be canceled by the user (the session callback
-//    checks for this).
+//  - The connection could be canceled by the user (the session callback checks for this).
 class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConnection> {
  public:
   void Initiate(fxl::WeakPtr<Session> session, fit::callback<void(const Err&)> callback);
 
-  // There are no other functions since this will be running on a background
-  // thread and the class state can't be safely retrieved. It reports all of
-  // the output state via ConnectionResolved.
+  // There are no other functions since this will be running on a background thread and the class
+  // state can't be safely retrieved. It reports all of the output state via ConnectionResolved.
 
  private:
   FRIEND_REF_COUNTED_THREAD_SAFE(PendingConnection);
@@ -82,16 +80,15 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
   PendingConnection(const std::string& host, uint16_t port) : host_(host), port_(port) {}
   ~PendingConnection() {}
 
-  // These are the steps of connection, in order. They each take a RefPtr
-  // to |this| to ensure the class is in scope for the full flow.
+  // These are the steps of connection, in order. They each take a RefPtr to |this| to ensure the
+  // class is in scope for the full flow.
   void ConnectBackgroundThread(fxl::RefPtr<PendingConnection> owner);
   void ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner, const Err& err);
   void DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner);
   void HelloCompleteMainThread(fxl::RefPtr<PendingConnection> owner, const Err& err,
                                const debug_ipc::HelloReply& reply);
 
-  // Creates the connection (called on the background thread). On success
-  // the socket_ is populated.
+  // Creates the connection (called on the background thread). On success the socket_ is populated.
   Err DoConnectBackgroundThread();
 
   std::string host_;
@@ -107,15 +104,13 @@ class Session::PendingConnection : public fxl::RefCountedThreadSafe<PendingConne
 
   // The constructed socket and buffer.
   //
-  // The socket is created by ConnectBackgroundThread and read by
-  // HelloCompleteMainThread to create the buffer so needs no synchronization.
-  // It would be cleaner to pass this in the lambdas to avoid threading
-  // confusion, but move-only types can't be bound.
+  // The socket is created by ConnectBackgroundThread and read by HelloCompleteMainThread to create
+  // the buffer so needs no synchronization. It would be cleaner to pass this in the lambdas to
+  // avoid threading confusion, but move-only types can't be bound.
   fbl::unique_fd socket_;
   std::unique_ptr<debug_ipc::BufferedFD> buffer_;
 
-  // Callback when the connection is complete (or fails). Access only on the
-  // main thread.
+  // Callback when the connection is complete (or fails). Access only on the main thread.
   fit::callback<void(const Err&)> callback_;
 };
 
@@ -127,8 +122,8 @@ void Session::PendingConnection::Initiate(fxl::WeakPtr<Session> session,
   session_ = std::move(session);
   callback_ = std::move(callback);
 
-  // Create the background thread, and run the background function. The
-  // context will keep a ref to this class.
+  // Create the background thread, and run the background function. The context will keep a ref to
+  // this class.
   thread_ = std::make_unique<std::thread>(
       [owner = fxl::RefPtr<PendingConnection>(this)]() { owner->ConnectBackgroundThread(owner); });
 }
@@ -142,11 +137,10 @@ void Session::PendingConnection::ConnectBackgroundThread(fxl::RefPtr<PendingConn
 
 void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingConnection> owner,
                                                            const Err& err) {
-  // The background thread function has now completed so the thread can be
-  // destroyed. We do want to join with the thread here to ensure there are no
-  // references to the PendingConnection on the background thread, which might
-  // in turn cause the PendingConnection to be destroyed on the background
-  // thread.
+  // The background thread function has now completed so the thread can be destroyed. We do want to
+  // join with the thread here to ensure there are no references to the PendingConnection on the
+  // background thread, which might in turn cause the PendingConnection to be destroyed on the
+  // background thread.
   thread_->join();
   thread_.reset();
 
@@ -160,26 +154,25 @@ void Session::PendingConnection::ConnectCompleteMainThread(fxl::RefPtr<PendingCo
   buffer_ = std::make_unique<debug_ipc::BufferedFD>();
   buffer_->Init(std::move(socket_));
 
-  // The connection is now established, so we set up the handlers before we send
-  // the first request over to the agent. Even though we're in a message loop
-  // and these handlers won't be called within this stack frame, it's a good
-  // mental model to set up handlers before actually sending the first piece
-  // of data.
+  // The connection is now established, so we set up the handlers before we send the first request
+  // over to the agent. Even though we're in a message loop and these handlers won't be called
+  // within this stack frame, it's a good mental model to set up handlers before actually sending
+  // the first piece of data.
   buffer_->set_data_available_callback([owner]() { owner->DataAvailableMainThread(owner); });
   buffer_->set_error_callback([owner]() {
     owner->HelloCompleteMainThread(owner, Err("Connection error."), debug_ipc::HelloReply());
   });
 
-  // Send "Hello" message. We can't use the Session::Send infrastructure
-  // since the connection hasn't technically been established yet.
+  // Send "Hello" message. We can't use the Session::Send infrastructure since the connection hasn't
+  // technically been established yet.
   debug_ipc::MessageWriter writer;
   debug_ipc::WriteRequest(debug_ipc::HelloRequest(), 1, &writer);
   buffer_->stream().Write(writer.MessageComplete());
 }
 
 void Session::PendingConnection::DataAvailableMainThread(fxl::RefPtr<PendingConnection> owner) {
-  // This function needs to manually deserialize the hello message since
-  // the Session stuff isn't connected yet.
+  // This function needs to manually deserialize the hello message since the Session stuff isn't
+  // connected yet.
   constexpr size_t kHelloMessageSize =
       debug_ipc::MsgHeader::kSerializedHeaderSize + sizeof(debug_ipc::HelloReply);
 
@@ -215,16 +208,16 @@ void Session::PendingConnection::HelloCompleteMainThread(fxl::RefPtr<PendingConn
   }
 
   if (session_) {
-    // The buffer must be created here on the main thread since it will
-    // register with the message loop to watch the FD.
+    // The buffer must be created here on the main thread since it will register with the message
+    // loop to watch the FD.
 
-    // If the session exists, always tell it about the completion, whether
-    // the connection was successful or not. It will issue the callback.
+    // If the session exists, always tell it about the completion, whether the connection was
+    // successful or not. It will issue the callback.
     session_->ConnectionResolved(std::move(owner), err, reply, std::move(buffer_),
                                  std::move(callback_));
   } else if (callback_) {
-    // Session was destroyed. Issue the callback with an error (not clobbering
-    // an existing one if there was one).
+    // Session was destroyed. Issue the callback with an error (not clobbering an existing one if
+    // there was one).
     if (err.has_error())
       callback_(err);
     else
@@ -276,8 +269,8 @@ void Session::OnStreamReadable() {
     debug_ipc::MessageReader reader(std::move(serialized_header));
     debug_ipc::MsgHeader header;
     if (!reader.ReadHeader(&header)) {
-      // Since we already validated there is enough data for the header, the
-      // header read should not fail (it's just a memcpy).
+      // Since we already validated there is enough data for the header, the header read should not
+      // fail (it's just a memcpy).
       FXL_NOTREACHED();
       return;
     }
@@ -297,9 +290,8 @@ void Session::OnStreamReadable() {
     if (!stream_->IsAvailable(header.size))
       return;  // Wait for more data.
 
-    // Consume the message now that we know the size. Do this before doing
-    // anything else so the data is consumed if the size is right, even if the
-    // transaction ID is wrong.
+    // Consume the message now that we know the size. Do this before doing anything else so the data
+    // is consumed if the size is right, even if the transaction ID is wrong.
     std::vector<char> serialized;
     serialized.resize(header.size);
     stream_->Read(&serialized[0], header.size);
@@ -494,16 +486,16 @@ void Session::DispatchNotifyThreadStarting(const debug_ipc::NotifyThread& notify
     return;
   }
 
-  // If this is the initial thread, we need to check if we need to resume it
-  // depending on the user defined setting for new processes.
+  // If this is the initial thread, we need to check if we need to resume it depending on the user
+  // defined setting for new processes.
   auto threads = process->GetThreads();
 
   bool resume_thread = false;
   if (!threads.empty()) {
     resume_thread = true;
   } else {
-    // Depending on how the process was started, we need to see what setting
-    // is the one that determines the behaviour.
+    // Depending on how the process was started, we need to see what setting is the one that
+    // determines the behaviour.
     switch (process->start_type()) {
       case Process::StartType::kComponent:
       case Process::StartType::kLaunch:
@@ -540,8 +532,8 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
     return;
   }
 
-  // First update the thread state so the breakpoint code can query it.
-  // This should not issue any notifications.
+  // First update the thread state so the breakpoint code can query it. This should not issue any
+  // notifications.
   if (set_metadata)
     thread->SetMetadata(notify.thread);
 
@@ -549,8 +541,8 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints;
 
   if (!notify.hit_breakpoints.empty()) {
-    // Update breakpoints' hit counts and stats. This is done before any
-    // notifications are sent so that all breakpoint state is consistent.
+    // Update breakpoints' hit counts and stats. This is done before any notifications are sent so
+    // that all breakpoint state is consistent.
     for (const debug_ipc::BreakpointStats& stats : notify.hit_breakpoints) {
       BreakpointImpl* impl = system_.BreakpointImplForId(stats.id);
       if (impl) {
@@ -563,8 +555,8 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
   // This is the main notification of an exception.
   thread->OnException(notify.type, hit_breakpoints);
 
-  // Delete all one-shot breakpoints the backend deleted. This happens after
-  // the thread notifications so observers can tell why the thread stopped.
+  // Delete all one-shot breakpoints the backend deleted. This happens after the thread
+  // notifications so observers can tell why the thread stopped.
   for (const auto& stats : notify.hit_breakpoints) {
     if (!stats.should_delete)
       continue;
@@ -572,8 +564,8 @@ void Session::DispatchNotifyException(const debug_ipc::NotifyException& notify, 
     // Breakpoint needs deleting.
     BreakpointImpl* impl = system_.BreakpointImplForId(stats.id);
     if (impl) {
-      // Need to tell the breakpoint it was removed in the backend before
-      // deleting it or it will try to uninstall itself.
+      // Need to tell the breakpoint it was removed in the backend before deleting it or it will try
+      // to uninstall itself.
       impl->BackendBreakpointRemoved();
       system_.DeleteBreakpoint(impl);
     }
@@ -593,9 +585,9 @@ void Session::DispatchNotifyModules(const debug_ipc::NotifyModules& notify) {
 }
 
 void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& notify) {
-  // Search the targets to see if there is a non-attached empty one.
-  // Normally this would be the initial one. Assume that targets that have
-  // a name have been set up by the user which we don't want to overwrite.
+  // Search the targets to see if there is a non-attached empty one. Normally this would be the
+  // initial one. Assume that targets that have a name have been set up by the user which we don't
+  // want to overwrite.
   TargetImpl* found_target = nullptr;
   for (TargetImpl* target : system_.GetTargetImpls()) {
     if (target->GetState() == Target::State::kNone && target->GetArgs().empty()) {
@@ -617,8 +609,7 @@ void Session::DispatchProcessStarting(const debug_ipc::NotifyProcessStarting& no
   FXL_DCHECK(it != expected_components_.end());
   found_target->ProcessCreatedAsComponent(notify.koid, notify.name);
 
-  // Now that the target is created, we can resume the process and make the
-  // first thread to execute.
+  // Now that the target is created, we can resume the process and make the first thread to execute.
   found_target->process()->Continue();
 }
 
@@ -714,9 +705,8 @@ void Session::ConnectionResolved(fxl::RefPtr<PendingConnection> pending, const E
                                  std::unique_ptr<debug_ipc::BufferedFD> buffer,
                                  fit::callback<void(const Err&)> callback) {
   if (pending.get() != pending_connection_.get()) {
-    // When the connection doesn't match the pending one, that means the
-    // pending connection was cancelled and we should drop the one we just
-    // got.
+    // When the connection doesn't match the pending one, that means the pending connection was
+    // cancelled and we should drop the one we just got.
     if (callback)
       callback(Err(ErrType::kCanceled, "Connect operation cancelled."));
     return;
@@ -857,8 +847,8 @@ fxl::WeakPtr<Session> Session::GetWeakPtr() { return weak_factory_.GetWeakPtr();
 void Session::QuitAgent(fit::callback<void(const Err&)> cb) {
   bool is_connected = IsConnected();
 
-  // We call disconnect even when is_connected is false, just in case there is a
-  // pending connection going on.
+  // We call disconnect even when is_connected is false, just in case there is a pending connection
+  // going on.
   if (!is_connected) {
     Disconnect(nullptr);
     if (cb) {
@@ -872,8 +862,8 @@ void Session::QuitAgent(fit::callback<void(const Err&)> cb) {
   debug_ipc::QuitAgentRequest request;
   remote_api()->QuitAgent(request, [session = GetWeakPtr(), cb = std::move(cb)](
                                        const Err& err, debug_ipc::QuitAgentReply) mutable {
-    // If we received a response, there is a connection
-    // to receive it, so the session should be around.
+    // If we received a response, there is a connection to receive it, so the session should be
+    // around.
     FXL_DCHECK(session && session->stream_);
     session->Disconnect(nullptr);
     if (cb)

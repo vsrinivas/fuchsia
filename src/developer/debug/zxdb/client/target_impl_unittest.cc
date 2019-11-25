@@ -174,9 +174,8 @@ TEST_F(TargetImplTest, LaunchKill) {
     MessageLoop::Current()->QuitNow();
   });
 
-  // We should have two tasks posted the first pending attach and the second
-  // pending launch (that we expect to fail). They will both quit so the loop
-  // need to be run twice.
+  // We should have two tasks posted the first pending attach and the second pending launch (that we
+  // expect to fail). They will both quit so the loop need to be run twice.
   loop().Run();
   loop().Run();
 
@@ -189,8 +188,7 @@ TEST_F(TargetImplTest, LaunchKill) {
   // The second launch should have failed.
   EXPECT_TRUE(second_launch_err.has_error());
 
-  // Should not be able to launch another one. It should error out before
-  // trying to send IPC.
+  // Should not be able to launch another one. It should error out before trying to send IPC.
   target->Launch([&out_err](fxl::WeakPtr<Target> target, const Err& err) {
     out_err = err;
     MessageLoop::Current()->QuitNow();
@@ -246,9 +244,8 @@ TEST_F(TargetImplTest, AttachDetach) {
     MessageLoop::Current()->QuitNow();
   });
 
-  // We should have two tasks posted the first pending attach and the second
-  // pending launch (that we expect to fail). They will both quit so the loop
-  // need to be run twice.
+  // We should have two tasks posted the first pending attach and the second pending launch (that we
+  // expect to fail). They will both quit so the loop need to be run twice.
   loop().Run();
   loop().Run();
 
