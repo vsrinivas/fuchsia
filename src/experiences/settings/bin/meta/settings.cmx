@@ -9,7 +9,6 @@
             "fuchsia.deprecatedtimezone.Timezone",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
-            "fuchsia.modular.Clipboard",
             "fuchsia.modular.ModuleContext",
             "fuchsia.sys.Environment",
             "fuchsia.timezone.Timezone",

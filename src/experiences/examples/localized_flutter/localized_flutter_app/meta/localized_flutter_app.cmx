@@ -6,7 +6,6 @@
         "services": [
             "fuchsia.accessibility.ToggleBroadcaster",
             "fuchsia.fonts.Provider",
-            "fuchsia.modular.Clipboard",
             "fuchsia.sys.Environment",
             "fuchsia.ui.scenic.Scenic"
         ]

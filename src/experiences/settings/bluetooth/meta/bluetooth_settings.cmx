@@ -7,7 +7,6 @@
             "fuchsia.bluetooth.control.Control",
             "fuchsia.fonts.Provider",
             "fuchsia.logger.LogSink",
-            "fuchsia.modular.Clipboard",
             "fuchsia.sys.Environment",
             "fuchsia.ui.scenic.Scenic"
         ]

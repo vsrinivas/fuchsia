@@ -23,7 +23,6 @@
             "fuchsia.media.Audio",
             "fuchsia.media.AudioCore",
             "fuchsia.memory.Monitor",
-            "fuchsia.modular.Clipboard",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.PuppetMaster",
