@@ -5,6 +5,7 @@
 #include "sdio-function-device.h"
 
 #include <ddk/debug.h>
+#include <fbl/alloc_checker.h>
 #include <zircon/driver/binding.h>
 
 #include "sdio-controller-device.h"
@@ -12,30 +13,15 @@
 namespace sdmmc {
 
 zx_status_t SdioFunctionDevice::Create(zx_device_t* parent, SdioControllerDevice* sdio_parent,
-                                       fbl::RefPtr<SdioFunctionDevice>* out_dev) {
+                                       std::unique_ptr<SdioFunctionDevice>* out_dev) {
   fbl::AllocChecker ac;
-  auto dev = fbl::MakeRefCountedChecked<SdioFunctionDevice>(&ac, parent, sdio_parent);
+  out_dev->reset(new (&ac) SdioFunctionDevice(parent, sdio_parent));
   if (!ac.check()) {
     zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  *out_dev = dev;
   return ZX_OK;
-}
-
-void SdioFunctionDevice::DdkUnbindDeprecated() {
-  if (dead_) {
-    return;
-  }
-
-  dead_ = true;
-  DdkRemoveDeprecated();
-}
-
-void SdioFunctionDevice::DdkRelease() {
-  dead_ = true;
-  __UNUSED bool dummy = Release();
 }
 
 zx_status_t SdioFunctionDevice::AddDevice(const sdio_func_hw_info_t& hw_info, uint32_t func) {

@@ -5,31 +5,28 @@
 #pragma once
 
 #include <atomic>
+#include <memory>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/sdio.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 
 namespace sdmmc {
 
 class SdioControllerDevice;
 
 class SdioFunctionDevice;
-using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice, ddk::UnbindableDeprecated>;
+using SdioFunctionDeviceType = ddk::Device<SdioFunctionDevice>;
 
 class SdioFunctionDevice : public SdioFunctionDeviceType,
-                           public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol>,
-                           public fbl::RefCounted<SdioFunctionDevice> {
+                           public ddk::SdioProtocol<SdioFunctionDevice, ddk::base_protocol> {
  public:
   SdioFunctionDevice(zx_device_t* parent, SdioControllerDevice* sdio_parent)
       : SdioFunctionDeviceType(parent), sdio_parent_(sdio_parent) {}
 
   static zx_status_t Create(zx_device_t* parent, SdioControllerDevice* sdio_parent,
-                            fbl::RefPtr<SdioFunctionDevice>* out_dev);
+                            std::unique_ptr<SdioFunctionDevice>* out_dev);
 
-  void DdkUnbindDeprecated();
-  void DdkRelease();
+  void DdkRelease() { delete this; }
 
   zx_status_t AddDevice(const sdio_func_hw_info_t& hw_info, uint32_t func);
 
@@ -50,7 +47,6 @@ class SdioFunctionDevice : public SdioFunctionDeviceType,
 
  private:
   uint8_t function_ = SDIO_MAX_FUNCS;
-  std::atomic<bool> dead_;
   SdioControllerDevice* sdio_parent_;
 };
 

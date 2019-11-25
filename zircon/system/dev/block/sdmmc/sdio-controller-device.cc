@@ -13,6 +13,7 @@
 #include <ddk/protocol/sdio.h>
 #include <ddk/protocol/sdmmc.h>
 #include <fbl/algorithm.h>
+#include <fbl/auto_call.h>
 #include <hw/sdio.h>
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/clock.h>
@@ -55,15 +56,14 @@ inline uint8_t GetBitsU8(uint8_t x, uint8_t mask, uint8_t loc) {
 namespace sdmmc {
 
 zx_status_t SdioControllerDevice::Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
-                                         fbl::RefPtr<SdioControllerDevice>* out_dev) {
+                                         std::unique_ptr<SdioControllerDevice>* out_dev) {
   fbl::AllocChecker ac;
-  auto dev = fbl::MakeRefCountedChecked<SdioControllerDevice>(&ac, parent, sdmmc);
+  out_dev->reset(new (&ac) SdioControllerDevice(parent, sdmmc));
   if (!ac.check()) {
     zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
     return ZX_ERR_NO_MEMORY;
   }
 
-  *out_dev = dev;
   return ZX_OK;
 }
 
@@ -182,57 +182,30 @@ zx_status_t SdioControllerDevice::AddDevice() {
     return st;
   }
 
-  fbl::AllocChecker ac;
-  devices_.reset(new (&ac) fbl::RefPtr<SdioFunctionDevice>[hw_info_.num_funcs - 1],
-                 hw_info_.num_funcs - 1);
-  if (!ac.check()) {
-    zxlogf(ERROR, "sdmmc: failed to allocate device memory\n");
-    return ZX_ERR_NO_MEMORY;
-  }
-
   st = DdkAdd("sdmmc-sdio", DEVICE_ADD_NON_BINDABLE);
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to add sdio device, retcode = %d\n", st);
     return st;
   }
 
-  for (uint32_t i = 0; i < devices_.size(); i++) {
-    if ((st = SdioFunctionDevice::Create(zxdev(), this, &devices_[i])) != ZX_OK) {
-      if (!dead_) {
-        DdkRemoveDeprecated();
-      }
+  fbl::AutoCall remove_device_on_error([&]() { DdkAsyncRemove(); });
 
-      break;
+  std::array<std::unique_ptr<SdioFunctionDevice>, SDIO_MAX_FUNCS> devices = {};
+  for (uint32_t i = 0; i < hw_info_.num_funcs - 1; i++) {
+    if ((st = SdioFunctionDevice::Create(zxdev(), this, &devices[i])) != ZX_OK) {
+      return st;
     }
   }
 
-  for (uint32_t i = 0; i < devices_.size(); i++) {
-    if ((st = devices_[i]->AddDevice(funcs_[0].hw_info, i + 1)) != ZX_OK) {
-      if (!dead_) {
-        DdkRemoveDeprecated();
-      }
-
-      break;
+  for (uint32_t i = 0; i < hw_info_.num_funcs - 1; i++) {
+    if ((st = devices[i]->AddDevice(funcs_[0].hw_info, i + 1)) != ZX_OK) {
+      return st;
     }
+    devices[i].release();
   }
 
-  return st;
-}
-
-void SdioControllerDevice::DdkUnbindDeprecated() {
-  if (dead_) {
-    return;
-  }
-
-  for (auto device : devices_) {
-    if (device) {
-      device->DdkRemoveDeprecated();
-    }
-  }
-  devices_.reset();
-
-  dead_ = true;
-  DdkRemoveDeprecated();
+  remove_device_on_error.cancel();
+  return ZX_OK;
 }
 
 void SdioControllerDevice::StopSdioIrqThread() {
@@ -246,7 +219,7 @@ void SdioControllerDevice::StopSdioIrqThread() {
 
 void SdioControllerDevice::DdkRelease() {
   StopSdioIrqThread();
-  __UNUSED bool dummy = Release();
+  delete this;
 }
 
 zx_status_t SdioControllerDevice::SdioGetDevHwInfo(sdio_hw_info_t* out_hw_info) {

@@ -11,6 +11,7 @@
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <fbl/auto_call.h>
 
 namespace sdmmc {
 
@@ -41,24 +42,20 @@ zx_status_t SdmmcRootDevice::Init() {
       [](void* ctx) -> int { return reinterpret_cast<SdmmcRootDevice*>(ctx)->WorkerThread(); },
       this, "sdmmc-worker");
   if (rc != thrd_success) {
-    zx_status_t st = thrd_status_to_zx_status(rc);
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
-    return st;
+    DdkAsyncRemove();
+    return thrd_status_to_zx_status(rc);
   }
 
   return ZX_OK;
 }
 
 int SdmmcRootDevice::WorkerThread() {
+  fbl::AutoCall remove_device_on_error([&]() { DdkAsyncRemove(); });
+
   SdmmcDevice sdmmc(host_);
   zx_status_t st = sdmmc.Init();
   if (st != ZX_OK) {
     zxlogf(ERROR, "sdmmc: failed to get host info\n");
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
   }
 
@@ -69,19 +66,15 @@ int SdmmcRootDevice::WorkerThread() {
   // Reset the card.
   sdmmc.host().HwReset();
 
-  if ((st = SdmmcBlockDevice::Create(zxdev(), sdmmc, &block_dev_)) != ZX_OK) {
+  std::unique_ptr<SdmmcBlockDevice> block_dev;
+  if ((st = SdmmcBlockDevice::Create(zxdev(), sdmmc, &block_dev)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
   }
 
-  if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev_)) != ZX_OK) {
+  std::unique_ptr<SdioControllerDevice> sdio_dev;
+  if ((st = SdioControllerDevice::Create(zxdev(), sdmmc, &sdio_dev)) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: Failed to create block device, retcode = %d\n", st);
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
   }
 
@@ -89,61 +82,33 @@ int SdmmcRootDevice::WorkerThread() {
   // put the card into the idle state.
   if ((st = sdmmc.SdmmcGoIdle()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: SDMMC_GO_IDLE_STATE failed, retcode = %d\n", st);
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
   }
 
   // Probe for SDIO, SD and then MMC
-  if ((st = sdio_dev_->ProbeSdio()) == ZX_OK) {
-    if ((st = sdio_dev_->AddDevice()) == ZX_OK) {
+  if ((st = sdio_dev->ProbeSdio()) == ZX_OK) {
+    if ((st = sdio_dev->AddDevice()) == ZX_OK) {
+      __UNUSED auto* dummy = sdio_dev.release();
+      remove_device_on_error.cancel();
       return thrd_success;
     }
 
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
-  } else if ((st = block_dev_->ProbeSd()) != ZX_OK && (st = block_dev_->ProbeMmc()) != ZX_OK) {
+  } else if ((st = block_dev->ProbeSd()) != ZX_OK && (st = block_dev->ProbeMmc()) != ZX_OK) {
     zxlogf(ERROR, "sdmmc: failed to probe\n");
-    if (!dead_) {
-      DdkRemoveDeprecated();
-    }
     return thrd_error;
   }
 
-  if ((st = block_dev_->AddDevice()) == ZX_OK) {
-    return thrd_success;
+  if ((st = block_dev->AddDevice()) != ZX_OK) {
+    return thrd_error;
   }
 
-  if (!dead_) {
-    DdkRemoveDeprecated();
-  }
-  return thrd_error;
-}
-
-void SdmmcRootDevice::DdkUnbindDeprecated() {
-  if (dead_) {
-    // Already in middle of release.
-    return;
-  }
-
-  dead_ = true;
-
-  if (block_dev_) {
-    block_dev_->DdkRemoveDeprecated();
-  }
-  if (sdio_dev_) {
-    sdio_dev_->DdkRemoveDeprecated();
-  }
-
-  DdkRemoveDeprecated();
+  __UNUSED auto* dummy = block_dev.release();
+  remove_device_on_error.cancel();
+  return thrd_success;
 }
 
 void SdmmcRootDevice::DdkRelease() {
-  dead_ = true;
-
   if (worker_thread_) {
     // Wait until the probe is done.
     thrd_join(worker_thread_, nullptr);

@@ -13,12 +13,15 @@ namespace sdmmc {
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                             zx_device_t** out) {
   if (parent == fake_ddk::kFakeParent) {
+    unbind_ctx_ = args->ctx;
+    unbind_op_ = args->ops->unbind;
     *out = fake_ddk::kFakeDevice;
     add_called_ = true;
   } else if (parent == fake_ddk::kFakeDevice) {
     *out = kFakeChild;
     children_++;
     total_children_++;
+    children_get_proto_.push_back({args->ctx, args->ops->get_protocol});
   } else {
     *out = kUnknownDevice;
     bad_parent_ = true;
@@ -30,9 +33,13 @@ zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_ar
 zx_status_t Bind::DeviceRemove(zx_device_t* device) {
   if (device == fake_ddk::kFakeDevice) {
     remove_called_ = true;
+    const int current_children = children_;
+    for (int i = 0; i < current_children; i++) {
+      device_async_remove(kFakeChild);
+    }
   } else if (device == kFakeChild) {
-    // Check that all children are removed before the parent is removed.
-    if (!remove_called_) {
+    // Check that all children are removed after the parent's unbind hook finishes.
+    if (remove_called_) {
       children_--;
     }
   } else {
@@ -40,6 +47,18 @@ zx_status_t Bind::DeviceRemove(zx_device_t* device) {
   }
 
   return ZX_OK;
+}
+
+void Bind::DeviceAsyncRemove(zx_device_t* device) {
+  if (device == fake_ddk::kFakeDevice && !remove_called_) {
+    if (unbind_op_ == nullptr) {
+      device_unbind_reply(device);
+    } else {
+      unbind_op_(unbind_ctx_);
+    }
+  } else if (device == kFakeChild && children_ > 0) {
+    device_unbind_reply(device);
+  }
 }
 
 void Bind::Ok() {

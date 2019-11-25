@@ -10,7 +10,6 @@
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/sdmmc.h>
-#include <fbl/ref_ptr.h>
 
 #include "sdio-controller-device.h"
 #include "sdmmc-block-device.h"
@@ -18,13 +17,12 @@
 namespace sdmmc {
 
 class SdmmcRootDevice;
-using SdmmcRootDeviceType = ddk::Device<SdmmcRootDevice, ddk::UnbindableDeprecated>;
+using SdmmcRootDeviceType = ddk::Device<SdmmcRootDevice>;
 
 class SdmmcRootDevice : public SdmmcRootDeviceType {
  public:
   static zx_status_t Bind(void* ctx, zx_device_t* parent);
 
-  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t Init();
@@ -38,11 +36,6 @@ class SdmmcRootDevice : public SdmmcRootDeviceType {
   const ddk::SdmmcProtocolClient host_;
 
   thrd_t worker_thread_ = 0;
-
-  std::atomic<bool> dead_ = false;
-
-  fbl::RefPtr<SdmmcBlockDevice> block_dev_;
-  fbl::RefPtr<SdioControllerDevice> sdio_dev_;
 };
 
 }  // namespace sdmmc

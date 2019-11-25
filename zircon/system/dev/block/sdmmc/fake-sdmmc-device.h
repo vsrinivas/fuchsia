@@ -22,9 +22,22 @@ class Bind : public fake_ddk::Bind {
   zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent, device_add_args_t* args,
                         zx_device_t** out) override;
   zx_status_t DeviceRemove(zx_device_t* device) override;
+  void DeviceAsyncRemove(zx_device_t* device) override;
   void Ok();
 
+  zx_status_t GetChildProtocol(size_t index, uint32_t proto_id, void* proto) {
+    if (index >= children_get_proto_.size()) {
+      return ZX_ERR_OUT_OF_RANGE;
+    }
+    return children_get_proto_[index].op(children_get_proto_[index].ctx, proto_id, proto);
+  }
+
  private:
+  struct GetProtocolOp {
+    void* ctx;
+    zx_status_t (*op)(void* ctx, uint32_t proto_id, void* protocol);
+  };
+
   zx_device_t* kFakeChild = reinterpret_cast<zx_device_t*>(0x1234);
   zx_device_t* kUnknownDevice = reinterpret_cast<zx_device_t*>(0x5678);
 
@@ -35,6 +48,11 @@ class Bind : public fake_ddk::Bind {
   bool bad_device_ = false;
   bool add_called_ = false;
   bool remove_called_ = false;
+
+  void* unbind_ctx_ = nullptr;
+  void (*unbind_op_)(void* ctx) = nullptr;
+
+  std::vector<GetProtocolOp> children_get_proto_;
 };
 
 class FakeSdmmcDevice : public ddk::SdmmcProtocol<FakeSdmmcDevice> {

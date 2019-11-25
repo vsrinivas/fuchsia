@@ -8,6 +8,7 @@
 
 #include <array>
 #include <atomic>
+#include <memory>
 
 #include <ddk/trace/event.h>
 #include <ddktl/device.h>
@@ -15,8 +16,6 @@
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/auto_lock.h>
 #include <fbl/condition_variable.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <lib/operation/block.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -32,18 +31,21 @@ enum EmmcPartition : uint8_t {
   PARTITION_COUNT,
 };
 
-using BlockOperation = block::BorrowedOperation<EmmcPartition>;
+struct PartitionInfo {
+  enum EmmcPartition partition;
+  uint64_t block_count;
+};
+
+using BlockOperation = block::BorrowedOperation<PartitionInfo>;
 
 class SdmmcBlockDevice;
 class PartitionDevice;
 
-using PartitionDeviceType =
-    ddk::Device<PartitionDevice, ddk::GetSizable, ddk::GetProtocolable, ddk::UnbindableDeprecated>;
+using PartitionDeviceType = ddk::Device<PartitionDevice, ddk::GetSizable, ddk::GetProtocolable>;
 
 class PartitionDevice : public PartitionDeviceType,
                         public ddk::BlockImplProtocol<PartitionDevice, ddk::base_protocol>,
-                        public ddk::BlockPartitionProtocol<PartitionDevice>,
-                        public fbl::RefCounted<PartitionDevice> {
+                        public ddk::BlockPartitionProtocol<PartitionDevice> {
  public:
   PartitionDevice(zx_device_t* parent, SdmmcBlockDevice* sdmmc_parent,
                   const block_info_t& block_info, EmmcPartition partition)
@@ -54,8 +56,7 @@ class PartitionDevice : public PartitionDeviceType,
 
   zx_status_t AddDevice();
 
-  void DdkUnbindDeprecated();
-  void DdkRelease();
+  void DdkRelease() { delete this; }
 
   zx_off_t DdkGetSize();
   zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
@@ -70,13 +71,12 @@ class PartitionDevice : public PartitionDeviceType,
   SdmmcBlockDevice* const sdmmc_parent_;
   const block_info_t block_info_;
   const EmmcPartition partition_;
-  std::atomic<bool> dead_ = false;
 };
 
 class SdmmcBlockDevice;
-using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableDeprecated>;
+using SdmmcBlockDeviceType = ddk::Device<SdmmcBlockDevice, ddk::UnbindableNew>;
 
-class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<SdmmcBlockDevice> {
+class SdmmcBlockDevice : public SdmmcBlockDeviceType {
  public:
   SdmmcBlockDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
       : SdmmcBlockDeviceType(parent), sdmmc_(sdmmc) {
@@ -85,15 +85,15 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<Sdm
   ~SdmmcBlockDevice() { txn_list_.CompleteAll(ZX_ERR_INTERNAL); }
 
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
-                            fbl::RefPtr<SdmmcBlockDevice>* out_dev);
+                            std::unique_ptr<SdmmcBlockDevice>* out_dev);
 
   zx_status_t ProbeSd();
   zx_status_t ProbeMmc();
 
   zx_status_t AddDevice();
 
-  void DdkUnbindDeprecated();
-  void DdkRelease();
+  void DdkUnbindNew(ddk::UnbindTxn txn);
+  void DdkRelease() { delete this; }
 
   // Called by children of this device.
   void Queue(BlockOperation txn);
@@ -102,15 +102,6 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<Sdm
   zx_status_t Init() { return sdmmc_.Init(); }
   zx_status_t StartWorkerThread();
   void StopWorkerThread();
-
-  ddk::BlockImplProtocolClient GetBlockClient(size_t index) {
-    block_impl_protocol_t proto = {};
-    if (partitions_[index] &&
-        partitions_[index]->DdkGetProtocol(ZX_PROTOCOL_BLOCK_IMPL, &proto) == ZX_OK) {
-      return ddk::BlockImplProtocolClient(&proto);
-    }
-    return ddk::BlockImplProtocolClient();
-  }
 
  private:
   void BlockComplete(BlockOperation* txn, zx_status_t status, trace_async_id_t async_id);
@@ -148,7 +139,7 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<Sdm
   fbl::ConditionVariable worker_event_ TA_GUARDED(lock_);
 
   // blockio requests
-  block::BorrowedOperationQueue<EmmcPartition> txn_list_ TA_GUARDED(lock_);
+  block::BorrowedOperationQueue<PartitionInfo> txn_list_ TA_GUARDED(lock_);
 
   // outstanding request (1 right now)
   sdmmc_req_t req_;
@@ -161,8 +152,6 @@ class SdmmcBlockDevice : public SdmmcBlockDeviceType, public fbl::RefCounted<Sdm
 
   bool is_sd_ = false;
 
-  uint64_t boot_partition_block_count_ = 0;
-  std::array<fbl::RefPtr<PartitionDevice>, PARTITION_COUNT> partitions_;
   EmmcPartition current_partition_ = EmmcPartition::USER_DATA_PARTITION;
 };
 

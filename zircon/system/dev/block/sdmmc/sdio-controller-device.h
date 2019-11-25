@@ -6,6 +6,7 @@
 
 #include <array>
 #include <atomic>
+#include <memory>
 
 #include <ddk/protocol/sdio.h>
 #include <ddktl/device.h>
@@ -13,8 +14,6 @@
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-#include <fbl/ref_counted.h>
-#include <fbl/ref_ptr.h>
 #include <lib/sync/completion.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
@@ -24,10 +23,9 @@
 namespace sdmmc {
 
 class SdioControllerDevice;
-using SdioControllerDeviceType = ddk::Device<SdioControllerDevice, ddk::UnbindableDeprecated>;
+using SdioControllerDeviceType = ddk::Device<SdioControllerDevice>;
 
 class SdioControllerDevice : public SdioControllerDeviceType,
-                             public fbl::RefCounted<SdioControllerDevice>,
                              public ddk::InBandInterruptProtocol<SdioControllerDevice> {
  public:
   SdioControllerDevice(zx_device_t* parent, const SdmmcDevice& sdmmc)
@@ -38,9 +36,8 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   }
 
   static zx_status_t Create(zx_device_t* parent, const SdmmcDevice& sdmmc,
-                            fbl::RefPtr<SdioControllerDevice>* out_dev);
+                            std::unique_ptr<SdioControllerDevice>* out_dev);
 
-  void DdkUnbindDeprecated();
   void DdkRelease();
 
   zx_status_t ProbeSdio();
@@ -129,7 +126,6 @@ class SdioControllerDevice : public SdioControllerDeviceType,
   fbl::Mutex lock_;
   SdmmcDevice sdmmc_ TA_GUARDED(lock_);
   std::atomic<bool> dead_ = false;
-  fbl::Array<fbl::RefPtr<SdioFunctionDevice>> devices_;
   std::array<zx::interrupt, SDIO_MAX_FUNCS> sdio_irqs_;
   std::array<SdioFunction, SDIO_MAX_FUNCS> funcs_ TA_GUARDED(lock_);
   sdio_device_hw_info_t hw_info_ TA_GUARDED(lock_);
