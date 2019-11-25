@@ -232,14 +232,18 @@ class AudioCapturerImpl : public AudioObject,
   }
 
   // Removes the capturer from its owner, the route graph, triggering shutdown and drop.
-  void RemoveFromRouteGraph();
+  void BeginShutdown();
+
+  // TODO(39624): Remove
+  friend class fbl::Recyclable<AudioCapturerImpl>;
+  void fbl_recycle() { RecycleObject(this); }
+
+  virtual void RecycleObject(AudioObject* object) final;
 
   void RecomputeMinFenceTime();
 
-  friend class fbl::Recyclable<AudioCapturerImpl>;
-  void fbl_recycle();
-
-  void Shutdown(std::unique_ptr<AudioCapturerImpl> self) FXL_LOCKS_EXCLUDED(mix_domain_->token());
+  void Shutdown(std::unique_ptr<AudioCapturerImpl> self)
+      FXL_LOCKS_EXCLUDED(threading_model_.FidlDomain().token());
 
   fidl::Binding<fuchsia::media::AudioCapturer> binding_;
   fidl::BindingSet<fuchsia::media::audio::GainControl> gain_control_bindings_;

@@ -17,6 +17,7 @@
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
 #include "src/media/audio/audio_core/throttle_output.h"
 #include "src/media/audio/audio_core/usage_gain_adjustment.h"
+#include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 namespace {
@@ -46,6 +47,7 @@ class AudioCapturerImplTest : public testing::ThreadingModelFixture {
 
  protected:
   void SetUp() override {
+    Logging::Init(-media::audio::SPEW, {"route_graph_test"});
     testing::ThreadingModelFixture::SetUp();
 
     auto default_curve = VolumeCurve::DefaultForMinGain(-33.0);

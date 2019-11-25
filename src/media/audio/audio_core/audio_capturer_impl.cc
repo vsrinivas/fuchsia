@@ -102,7 +102,7 @@ AudioCapturerImpl::AudioCapturerImpl(
 
   volume_manager_.AddStream(this);
 
-  binding_.set_error_handler([this](zx_status_t status) { RemoveFromRouteGraph(); });
+  binding_.set_error_handler([this](zx_status_t status) { BeginShutdown(); });
   source_link_refs_.reserve(16u);
 
   // Ideally, initialize this to the native configuration of our initially-bound source.
@@ -117,6 +117,7 @@ AudioCapturerImpl::~AudioCapturerImpl() {
 
   FX_DCHECK(!payload_buf_vmo_.is_valid());
   FX_DCHECK(payload_buf_virt_ == nullptr);
+  FX_DCHECK(payload_buf_size_ == 0);
 }
 
 void AudioCapturerImpl::ReportStart() { admin_.UpdateCapturerState(usage_, true, this); }
@@ -163,25 +164,22 @@ void AudioCapturerImpl::Shutdown(std::unique_ptr<AudioCapturerImpl> self) {
   TRACE_DURATION("audio", "AudioCapturerImpl::Shutdown");
   ReportStop();
 
-  threading_model_.FidlDomain().ScheduleTask(
-      Cleanup().then([self = std::move(self)](fit::result<>&) {
-        // Release our buffer resources.
-        //
-        // It's important that we don't release the buffer until the mix thread cleanup has run as
-        // the mixer could still be accessing the memory backing the buffer.
-        //
-        // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
-        if (self->payload_buf_virt_ != nullptr) {
-          FX_DCHECK(self->payload_buf_size_ != 0);
-          zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
-                                       self->payload_buf_size_);
-          self->payload_buf_virt_ = nullptr;
-          self->payload_buf_size_ = 0;
-          self->payload_buf_frames_ = 0;
-        }
+  // Release our buffer resources.
+  //
+  // It's important that we don't release the buffer until the mix thread cleanup has run as
+  // the mixer could still be accessing the memory backing the buffer.
+  //
+  // TODO(mpuryear): Change AudioCapturer to use the RingBuffer utility class.
+  if (self->payload_buf_virt_ != nullptr) {
+    FX_DCHECK(self->payload_buf_size_ != 0);
+    zx::vmar::root_self()->unmap(reinterpret_cast<uintptr_t>(self->payload_buf_virt_),
+                                 self->payload_buf_size_);
+    self->payload_buf_virt_ = nullptr;
+  }
 
-        self->payload_buf_vmo_.reset();
-      }));
+  self->payload_buf_size_ = 0;
+  self->payload_buf_frames_ = 0;
+  self->payload_buf_vmo_.reset();
 }
 
 fit::promise<> AudioCapturerImpl::Cleanup() {
@@ -211,15 +209,17 @@ void AudioCapturerImpl::CleanupFromMixThread() {
   state_.store(State::Shutdown);
 }
 
-void AudioCapturerImpl::RemoveFromRouteGraph() {
-  if (loopback_) {
-    route_graph_.RemoveLoopbackCapturer(this);
-  } else {
-    route_graph_.RemoveCapturer(this);
-  }
+void AudioCapturerImpl::BeginShutdown() {
+  threading_model_.FidlDomain().ScheduleTask(Cleanup().then([this](fit::result<>&) {
+    if (loopback_) {
+      route_graph_.RemoveLoopbackCapturer(this);
+    } else {
+      route_graph_.RemoveCapturer(this);
+    }
+  }));
 }
 
-void AudioCapturerImpl::fbl_recycle() {
+void AudioCapturerImpl::RecycleObject(AudioObject* self) {
   // recycle gives us `this` to free ourselves. At this point, there are no other references to us.
   //
   // It is therefore safe for us to take ownership of ourselves until all our shared resources are
@@ -261,7 +261,7 @@ void AudioCapturerImpl::GetStreamType(GetStreamTypeCallback cbk) {
 void AudioCapturerImpl::SetPcmStreamType(fuchsia::media::AudioStreamType stream_type) {
   TRACE_DURATION("audio", "AudioCapturerImpl::SetPcmStreamType");
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
+  auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   // If our shared buffer has been assigned, we are operating and our mode can no longer be changed.
   State state = state_.load();
@@ -313,14 +313,14 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
   TRACE_DURATION("audio", "AudioCapturerImpl::AddPayloadBuffer");
   if (id != 0) {
     FX_LOGS(ERROR) << "Only buffer ID 0 is currently supported.";
-    RemoveFromRouteGraph();
+    BeginShutdown();
     return;
   }
 
   FX_DCHECK(payload_buf_vmo.is_valid());
 
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
+  auto cleanup = fit::defer([this]() { BeginShutdown(); });
   zx_status_t res;
 
   State state = state_.load();
@@ -426,7 +426,7 @@ void AudioCapturerImpl::AddPayloadBuffer(uint32_t id, zx::vmo payload_buf_vmo) {
 void AudioCapturerImpl::RemovePayloadBuffer(uint32_t id) {
   TRACE_DURATION("audio", "AudioCapturerImpl::RemovePayloadBuffer");
   FX_LOGS(ERROR) << "RemovePayloadBuffer is not currently supported.";
-  RemoveFromRouteGraph();
+  BeginShutdown();
 }
 
 void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_frames,
@@ -438,7 +438,7 @@ void AudioCapturerImpl::CaptureAt(uint32_t payload_buffer_id, uint32_t offset_fr
   }
 
   // If something goes wrong, hang up the phone and shutdown.
-  auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
+  auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   // It is illegal to call CaptureAt unless we are currently operating in
   // synchronous mode.
@@ -488,7 +488,7 @@ void AudioCapturerImpl::ReleasePacket(fuchsia::media::StreamPacket packet) {
   TRACE_DURATION("audio", "AudioCapturerImpl::ReleasePacket");
   // TODO(mpuryear): Implement.
   FX_LOGS(ERROR) << "ReleasePacket not implemented yet.";
-  RemoveFromRouteGraph();
+  BeginShutdown();
 }
 
 void AudioCapturerImpl::DiscardAllPacketsNoReply() {
@@ -504,7 +504,7 @@ void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
   if (state != State::OperatingSync) {
     FX_LOGS(ERROR) << "Flush called while not operating in sync mode "
                    << "(state = " << static_cast<uint32_t>(state) << ")";
-    RemoveFromRouteGraph();
+    BeginShutdown();
     return;
   }
 
@@ -535,7 +535,7 @@ void AudioCapturerImpl::DiscardAllPackets(DiscardAllPacketsCallback cbk) {
 
 void AudioCapturerImpl::StartAsyncCapture(uint32_t frames_per_packet) {
   TRACE_DURATION("audio", "AudioCapturerImpl::StartAsyncCapture");
-  auto cleanup = fit::defer([this]() { RemoveFromRouteGraph(); });
+  auto cleanup = fit::defer([this]() { BeginShutdown(); });
 
   // To enter Async mode, we must be in Synchronous mode and not have pending buffers in flight.
   State state = state_.load();
@@ -605,7 +605,7 @@ void AudioCapturerImpl::StopAsyncCapture(StopAsyncCaptureCallback cbk) {
   if (state != State::OperatingAsync) {
     FX_LOGS(ERROR) << "Bad state while attempting to stop async capture mode "
                    << "(state = " << static_cast<uint32_t>(state) << ")";
-    RemoveFromRouteGraph();
+    BeginShutdown();
     return;
   }
 
@@ -940,7 +940,7 @@ void AudioCapturerImpl::SetUsage(fuchsia::media::AudioCaptureUsage usage) {
     }
   }
   FX_LOGS(ERROR) << "Disallowed or unknown usage - terminating the stream";
-  RemoveFromRouteGraph();
+  BeginShutdown();
 }
 
 void AudioCapturerImpl::OverflowOccurred(int64_t frac_source_start, int64_t frac_source_mix_point,
@@ -1627,7 +1627,7 @@ void AudioCapturerImpl::SetGain(float gain_db) {
   if ((gain_db < fuchsia::media::audio::MUTED_GAIN_DB) ||
       (gain_db > fuchsia::media::audio::MAX_GAIN_DB) || isnan(gain_db)) {
     FX_LOGS(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
-    RemoveFromRouteGraph();
+    BeginShutdown();
     return;
   }
 

@@ -20,7 +20,7 @@ namespace media::audio {
 // The simple base class for 4 major types of audio objects in the mixer: Outputs, Inputs,
 // AudioRenderers and AudioCapturers. It ensures that each is intrusively ref-counted, and remembers
 // its type so that it may be safely downcast from generic object to something more specific.
-class AudioObject : public fbl::RefCounted<AudioObject> {
+class AudioObject : public fbl::RefCounted<AudioObject>, public fbl::Recyclable<AudioObject> {
  public:
   // Disallow copy, assign, and move.
   AudioObject& operator=(AudioObject) = delete;
@@ -90,6 +90,11 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
   friend class fbl::RefPtr<AudioObject>;
   explicit AudioObject(Type type) : type_(type) {}
   virtual ~AudioObject() {}
+
+  // This method is called when the refcount transitions from 1 to 0. It is this method's
+  // responsibility to free or otherwise manage the object; it cannot be refcounted anymore.
+  // TODO(39624): Remove
+  virtual void RecycleObject(AudioObject* object) { delete object; }
 
   // Initialize(Source|Dest)Link
   //
@@ -176,6 +181,9 @@ class AudioObject : public fbl::RefCounted<AudioObject> {
  private:
   template <typename TagType>
   void UnlinkCleanup(typename AudioLink::Set<TagType>* links);
+
+  friend class fbl::Recyclable<AudioObject>;
+  void fbl_recycle() { RecycleObject(this); }
 
   const Type type_;
 };
