@@ -225,15 +225,20 @@ load along with environmental factors like temperature.
 
     This code sample was adapted from [task-test.cc](https://fuchsia-review.googlesource.com/c/fuchsia/+/326106/7/src/camera/drivers/hw_accel/ge2d/test/task-test.cc#48).
 
+## Recently removed exemptions
+
+*   **Engprod scripts** (e.g. `fx` commands) and associated configuration files**
+    no longer have an exemption from testability. `fx` must have integration
+    tests before further changes land. Exceptions may be granted by the fx team
+    after consulting with a testability reviewer.
+
 ## Temporary testability exemptions
 
 The following are currently exempt from Testability, while ongoing work aims to
 change that.
 
-*   **Engprod scripts (e.g. `fx` commands) and associated configuration files**
-    have an exemption from testability in the near term. We would like to test
-    these scripts in the long term, but we’ve decided not to block engineering
-    productivity improvements on creating such tests.
+*   **Engprod scripts** in the tools/devshell/contrib and associated
+    configuration are exempt.
 *   **GN templates** are not easily testable. We are working on a test framework
     for GN templates. Until then, it's permitted for build template changes to
     be manually tested only.
