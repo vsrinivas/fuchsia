@@ -59,7 +59,7 @@ enum {
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
 
 // Astro Display dimension
-constexpr uint32_t ASTRO_DISPLAY_WIDTH = 608;
+constexpr uint32_t ASTRO_DISPLAY_WIDTH = 600;
 constexpr uint32_t ASTRO_DISPLAY_HEIGHT = 1024;
 
 // Sherlock Display dimension

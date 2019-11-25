@@ -547,7 +547,7 @@ void Osd::HwInit() {
 
   DefaultSetup();
 
-  EnableScaling(true);
+  EnableScaling(false);
 
   // Apply scale coefficients
   SET_BIT32(VPU, VPU_VPP_OSD_SCALE_COEF_IDX, 0x0000, 0, 9);

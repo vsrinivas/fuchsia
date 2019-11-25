@@ -19,7 +19,7 @@ class MockBufferCollection : public mock_sysmem::MockBufferCollection {
                       SetConstraintsCompleter::Sync _completer) override {
     EXPECT_TRUE(constraints.buffer_memory_constraints.inaccessible_domain_supported);
     EXPECT_FALSE(constraints.buffer_memory_constraints.cpu_domain_supported);
-    EXPECT_EQ(32u, constraints.image_format_constraints[0].bytes_per_row_divisor);
+    EXPECT_EQ(64u, constraints.image_format_constraints[0].bytes_per_row_divisor);
     set_constraints_called_ = true;
   }
 

@@ -567,8 +567,8 @@ zx_status_t AstroDisplay::DisplayControllerImplSetBufferCollectionConstraints(
   image_constraints.pixel_format.format_modifier.value = sysmem::FORMAT_MODIFIER_LINEAR;
   image_constraints.color_spaces_count = 1;
   image_constraints.color_space[0].type = sysmem::ColorSpaceType::SRGB;
-  image_constraints.bytes_per_row_divisor = 32;
-  image_constraints.start_offset_divisor = 32;
+  image_constraints.bytes_per_row_divisor = 64;
+  image_constraints.start_offset_divisor = 64;
 
   auto res = sysmem::BufferCollection::Call::SetConstraints(zx::unowned_channel(collection), true,
                                                             constraints);
