@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <soc/aml-s905d2/s905d2-hiu.h>
 #include <soc/aml-meson/aml-clk-common.h>
+#include <soc/aml-s905d2/s905d2-hiu.h>
 
 namespace g12a_clk {
 

@@ -8,6 +8,7 @@ zx_driver("amlogic-clk") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",
@@ -35,6 +36,7 @@ zx_test("amlogic-clk-test") {
   ]
   deps = [
     "$zx/system/banjo/ddk.protocol.clockimpl",
+    "$zx/system/banjo/ddk.protocol.platform.bus",
     "$zx/system/banjo/ddk.protocol.platform.device",
     "$zx/system/dev/lib/amlogic",
     "$zx/system/dev/lib/device-protocol-pdev",

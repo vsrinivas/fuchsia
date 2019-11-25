@@ -7,20 +7,22 @@
 #include "aml-clk-blocks.h"
 #include <ddk/device.h>
 #include <ddk/io-buffer.h>
-#include <lib/device-protocol/platform-device.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/clockimpl.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
-#include <hwreg/mmio.h>
-#include <lib/mmio/mmio.h>
 #include <fuchsia/hardware/clock/c/fidl.h>
+#include <hwreg/mmio.h>
+#include <lib/device-protocol/platform-device.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zircon-internal/thread_annotations.h>
 
 #include <soc/aml-s905d2/s905d2-hiu.h>
 
 #include <optional>
+
+namespace ddk { class PBusProtocolClient; }
 
 namespace amlogic_clock {
 
@@ -59,6 +61,8 @@ class AmlClock : public DeviceType, public ddk::ClockImplProtocol<AmlClock, ddk:
   void DdkRelease();
 
   void ShutDown();
+
+  void Register(const ddk::PBusProtocolClient& pbus);
 
  private:
   // Toggle clocks enable bit.
