@@ -8,6 +8,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/fit/bridge.h>
 
+#include <array>
 #include <deque>
 #include <unordered_map>
 
@@ -30,6 +31,12 @@ struct RoutingProfile {
 // |RouteGraph| is responsible for managing connections between inputs and outputs of the mixer.
 //
 // |RouteGraph| owns user-level inputs and outputs (|AudioRenderer|s and |AudioCapturer|s).
+//
+// Renderers are routed by Usage to the most recently plugged output that supports their Usage.
+//
+// Capturers are routed to the most recently plugged input.
+//
+// Loopback capturers are routed to the most recently plugged output which supports loopback.
 class RouteGraph {
  public:
   RouteGraph(const RoutingConfig& routing_config);
@@ -94,22 +101,22 @@ class RouteGraph {
 
   // Cached targets for linking renderers and capturers.
   struct Targets {
-    AudioDevice* render = nullptr;
+    std::array<AudioDevice*, fuchsia::media::RENDER_USAGE_COUNT> render = {};
     AudioDevice* loopback = nullptr;
     AudioDevice* capture = nullptr;
   };
 
   // A command to unlink components of the graph.
   struct UnlinkCommand {
-    // Iff true, renderers should be unlinked.
-    bool renderers = false;
+    // Iff renderers[usage] is true, renderers of that usage should be unlinked.
+    std::array<bool, fuchsia::media::RENDER_USAGE_COUNT> renderers = {};
     // Iff true, loopback capturers should be unlinked.
     bool loopback_capturers = false;
     /// Iff true, capturers, should be unlinked.
     bool capturers = false;
   };
 
-  void UpdateGraphForDevicesChange();
+  void UpdateGraphForDeviceChange();
 
   // Calculate the new targets based on our routing policy and available devices.
   // Returns the new targets and an unlink command to unlink any out of date
@@ -118,11 +125,9 @@ class RouteGraph {
 
   void Unlink(UnlinkCommand unlink_command);
 
-  void LinkRenderersTo(AudioDevice* output);
-  void LinkCapturersTo(AudioDevice* input);
-  void LinkLoopbackCapturersTo(AudioDevice* output);
+  AudioDevice* OutputForUsage(const fuchsia::media::Usage& usage) const;
 
-  [[maybe_unused]] const RoutingConfig& routing_config_;
+  const RoutingConfig& routing_config_;
 
   Targets targets_;
 

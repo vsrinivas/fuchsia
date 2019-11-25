@@ -6,7 +6,9 @@
 
 #include <gmock/gmock.h>
 
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/audio_core/format.h"
+#include "src/media/audio/audio_core/testing/fake_audio_driver.h"
 #include "src/media/audio/audio_core/testing/fake_audio_renderer.h"
 #include "src/media/audio/audio_core/testing/stub_device_registry.h"
 #include "src/media/audio/audio_core/testing/threading_model_fixture.h"
@@ -75,17 +77,20 @@ class FakeAudioOutput : public AudioOutput {
       : AudioOutput(threading_model, device_registry) {}
 };
 
+static const RoutingConfig kConfigNoPolicy = RoutingConfig();
+
 class RouteGraphTest : public testing::ThreadingModelFixture {
  public:
-  RouteGraphTest()
-      : under_test_(routing_config_),
+  RouteGraphTest() : RouteGraphTest(kConfigNoPolicy) {}
+
+  RouteGraphTest(const RoutingConfig& routing_config)
+      : under_test_(routing_config),
         throttle_output_(ThrottleOutput::Create(&threading_model(), &device_registry_)) {
     Logging::Init(-media::audio::SPEW, {"route_graph_test"});
     under_test_.SetThrottleOutput(&threading_model(), throttle_output_);
   }
 
   testing::StubDeviceRegistry device_registry_;
-  RoutingConfig routing_config_;
   RouteGraph under_test_;
   fbl::RefPtr<AudioOutput> throttle_output_;
 };
@@ -533,6 +538,86 @@ TEST_F(RouteGraphTest, UnroutesNewlyUnRoutableLoopbackCapturer) {
       loopback_capturer.get(),
       {.routable = false, .usage = UsageFrom(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT)});
   EXPECT_THAT(loopback_capturer->SourceLinks(), IsEmpty());
+}
+
+const audio_stream_unique_id_t kSupportsAllDeviceId = audio_stream_unique_id_t{.data = {0x33}};
+const audio_stream_unique_id_t kUnconfiguredDeviceId = audio_stream_unique_id_t{.data = {0x45}};
+
+static const RoutingConfig kConfigWithMediaExternalRoutingPolicy = RoutingConfig(
+    /*profiles=*/{{kSupportsAllDeviceId,
+                   RoutingConfig::DeviceProfile(
+                       /*eligible_for_loopback=*/true,
+                       /*output_usage_support_set=*/
+                       {fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT),
+                        fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION)})}},
+    /*default=*/{RoutingConfig::DeviceProfile(
+        /*eligible_for_loopback=*/true, /*output_usage_support_set=*/{
+            fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA)})});
+
+class RouteGraphWithMediaExternalPolicyTest : public RouteGraphTest {
+ public:
+  RouteGraphWithMediaExternalPolicyTest() : RouteGraphTest(kConfigWithMediaExternalRoutingPolicy) {}
+
+ protected:
+  struct FakeOutputAndDriver {
+    fbl::RefPtr<FakeAudioOutput> output;
+    std::unique_ptr<testing::FakeAudioDriver> fake_driver;
+  };
+
+  FakeOutputAndDriver OutputWithDeviceId(const audio_stream_unique_id_t& device_id) {
+    auto output = FakeAudioOutput::Create(&threading_model(), &device_registry_);
+    zx::channel c1, c2;
+    ZX_ASSERT(ZX_OK == zx::channel::create(0, &c1, &c2));
+    auto fake_driver = std::make_unique<testing::FakeAudioDriver>(
+        std::move(c1), threading_model().FidlDomain().dispatcher());
+    fake_driver->set_stream_unique_id(device_id);
+    ZX_ASSERT(ZX_OK == output->driver()->Init(std::move(c2)));
+
+    fake_driver->Start();
+    output->driver()->GetDriverInfo();
+    RunLoopUntilIdle();
+
+    return {output, std::move(fake_driver)};
+  }
+};
+
+TEST_F(RouteGraphWithMediaExternalPolicyTest, MediaRoutesToLastPluggedSupportedDevice) {
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  auto output = output_and_driver.output.get();
+  under_test_.AddOutput(output);
+
+  auto renderer = FakeAudioObject::FakeRenderer();
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(
+      renderer.get(),
+      {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::MEDIA)});
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output}));
+
+  auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
+  auto unconfigured_output = unconfigured_output_and_driver.output.get();
+  under_test_.AddOutput(unconfigured_output);
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({unconfigured_output}));
+}
+
+TEST_F(RouteGraphWithMediaExternalPolicyTest, InterruptionDoesNotRouteToUnsupportedDevice) {
+  auto output_and_driver = OutputWithDeviceId(kSupportsAllDeviceId);
+  auto output = output_and_driver.output.get();
+  under_test_.AddOutput(output);
+
+  auto renderer = FakeAudioObject::FakeRenderer();
+  under_test_.AddRenderer(renderer);
+  under_test_.SetRendererRoutingProfile(
+      renderer.get(),
+      {.routable = true, .usage = UsageFrom(fuchsia::media::AudioRenderUsage::INTERRUPTION)});
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output}));
+
+  auto unconfigured_output_and_driver = OutputWithDeviceId(kUnconfiguredDeviceId);
+  auto unconfigured_output = unconfigured_output_and_driver.output.get();
+  under_test_.AddOutput(unconfigured_output);
+  EXPECT_THAT(renderer->DestLinks(), UnorderedElementsAreArray({output}));
 }
 
 }  // namespace

@@ -6,11 +6,34 @@
 
 #include <algorithm>
 
+#include "src/media/audio/audio_core/audio_driver.h"
 #include "src/media/audio/lib/logging/logging.h"
 
 namespace media::audio {
 
-RouteGraph::RouteGraph(const RoutingConfig& routing_config) : routing_config_(routing_config) {}
+namespace {
+
+std::array<fuchsia::media::AudioRenderUsage, fuchsia::media::RENDER_USAGE_COUNT> kRenderUsages = {
+    fuchsia::media::AudioRenderUsage::BACKGROUND, fuchsia::media::AudioRenderUsage::MEDIA,
+    fuchsia::media::AudioRenderUsage::INTERRUPTION, fuchsia::media::AudioRenderUsage::SYSTEM_AGENT,
+    fuchsia::media::AudioRenderUsage::COMMUNICATION};
+
+}  // namespace
+
+RouteGraph::RouteGraph(const RoutingConfig& routing_config) : routing_config_(routing_config) {
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::BACKGROUND) == 0);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::MEDIA) == 1);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::INTERRUPTION) == 2);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::SYSTEM_AGENT) == 3);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioRenderUsage::COMMUNICATION) == 4);
+  static_assert(fuchsia::media::RENDER_USAGE_COUNT == 5);
+
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::BACKGROUND) == 0);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::FOREGROUND) == 1);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::SYSTEM_AGENT) == 2);
+  static_assert(fidl::ToUnderlying(fuchsia::media::AudioCaptureUsage::COMMUNICATION) == 3);
+  static_assert(fuchsia::media::CAPTURE_USAGE_COUNT == 4);
+}
 
 RouteGraph::~RouteGraph() {
   if (throttle_release_fence_) {
@@ -39,7 +62,7 @@ void RouteGraph::AddOutput(AudioDevice* output) {
   AUD_VLOG(TRACE) << "Added output device to route graph: " << output;
 
   outputs_.push_front(output);
-  UpdateGraphForDevicesChange();
+  UpdateGraphForDeviceChange();
 }
 
 void RouteGraph::RemoveOutput(AudioDevice* output) {
@@ -52,14 +75,14 @@ void RouteGraph::RemoveOutput(AudioDevice* output) {
   }
 
   outputs_.erase(it);
-  UpdateGraphForDevicesChange();
+  UpdateGraphForDeviceChange();
 }
 
 void RouteGraph::AddInput(AudioDevice* input) {
   AUD_VLOG(TRACE) << "Added input device to route graph: " << input;
 
   inputs_.push_front(input);
-  UpdateGraphForDevicesChange();
+  UpdateGraphForDeviceChange();
 }
 
 void RouteGraph::RemoveInput(AudioDevice* input) {
@@ -72,7 +95,7 @@ void RouteGraph::RemoveInput(AudioDevice* input) {
   }
 
   inputs_.erase(it);
-  UpdateGraphForDevicesChange();
+  UpdateGraphForDeviceChange();
 }
 
 void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
@@ -85,7 +108,7 @@ void RouteGraph::AddRenderer(fbl::RefPtr<AudioObject> renderer) {
 
 void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile profile) {
   FX_DCHECK(renderer->is_audio_renderer());
-  FX_CHECK(renderer->format_valid() || !profile.routable)
+  FX_DCHECK(renderer->format_valid() || !profile.routable)
       << "AudioRenderer without PCM format was added to route graph";
   AUD_VLOG(TRACE) << "Setting renderer route profile: " << renderer;
 
@@ -101,18 +124,19 @@ void RouteGraph::SetRendererRoutingProfile(AudioObject* renderer, RoutingProfile
     return;
   }
 
-  if (it->second.ref->has_link_to(targets_.render)) {
+  AudioDevice* output = OutputForUsage(it->second.profile.usage);
+  if (it->second.ref->has_link_to(output)) {
     return;
   }
 
   it->second.ref->Unlink();
 
-  if (!targets_.render) {
+  if (!output) {
     FX_LOGS(WARNING) << "Tried to route AudioRenderer, but no output for the given usage exist.";
     return;
   }
 
-  AudioObject::LinkObjects(it->second.ref, fbl::RefPtr(targets_.render));
+  AudioObject::LinkObjects(it->second.ref, fbl::RefPtr(output));
 }
 
 void RouteGraph::RemoveRenderer(AudioObject* renderer) {
@@ -217,64 +241,79 @@ void RouteGraph::RemoveLoopbackCapturer(AudioObject* loopback_capturer) {
   loopback_capturers_.erase(loopback_capturer);
 }
 
-void RouteGraph::LinkRenderersTo(AudioDevice* output) {
-  std::for_each(renderers_.begin(), renderers_.end(), [output](auto& renderer_pair) {
-    auto& [_, renderer] = renderer_pair;
-    if (!renderer.profile.routable || !renderer.profile.usage.is_render_usage()) {
-      return;
-    }
-
-    FX_CHECK(renderer.ref->dest_link_count() == 0);
-    AudioObject::LinkObjects(renderer.ref, fbl::RefPtr(output));
-  });
-}
-
-void RouteGraph::LinkCapturersTo(AudioDevice* input) {
-  std::for_each(capturers_.begin(), capturers_.end(), [input](auto& capturer_pair) {
-    auto& [_, capturer] = capturer_pair;
-    if (!capturer.profile.routable || !capturer.profile.usage.is_capture_usage()) {
-      return;
-    }
-
-    FX_CHECK(capturer.ref->source_link_count() == 0);
-    AudioObject::LinkObjects(fbl::RefPtr(input), capturer.ref);
-  });
-}
-
-void RouteGraph::LinkLoopbackCapturersTo(AudioDevice* output) {
-  std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
-                [output](auto& loopback_capturer_pair) {
-                  auto& [_, loopback_capturer] = loopback_capturer_pair;
-                  if (!loopback_capturer.profile.routable ||
-                      !loopback_capturer.profile.usage.is_capture_usage()) {
-                    return;
-                  }
-
-                  FX_CHECK(loopback_capturer.ref->source_link_count() == 0);
-                  AudioObject::LinkObjects(fbl::RefPtr(output), loopback_capturer.ref);
-                });
-}
-
-void RouteGraph::UpdateGraphForDevicesChange() {
+void RouteGraph::UpdateGraphForDeviceChange() {
   auto [targets, unlink_command] = CalculateTargets();
   targets_ = targets;
   Unlink(unlink_command);
 
-  if (unlink_command.renderers && targets_.render) {
-    LinkRenderersTo(targets_.render);
+  if (std::any_of(unlink_command.renderers.begin(), unlink_command.renderers.end(),
+                  [](auto unlink) { return unlink; })) {
+    std::for_each(renderers_.begin(), renderers_.end(), [this](auto& renderer) {
+      AudioDevice* output;
+      if (!renderer.second.profile.routable ||
+          !(output = OutputForUsage(renderer.second.profile.usage)) ||
+          renderer.second.ref->dest_link_count() > 0) {
+        return;
+      }
+
+      AudioObject::LinkObjects(renderer.second.ref, fbl::RefPtr(output));
+    });
   }
 
   if (unlink_command.loopback_capturers && targets_.loopback) {
-    LinkLoopbackCapturersTo(targets_.loopback);
+    std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
+                  [target = targets_.loopback](auto& loopback_capturer) {
+                    if (!loopback_capturer.second.profile.routable ||
+                        !loopback_capturer.second.profile.usage.is_capture_usage()) {
+                      return;
+                    }
+
+                    FX_DCHECK(loopback_capturer.second.ref->source_link_count() == 0);
+                    AudioObject::LinkObjects(fbl::RefPtr(target), loopback_capturer.second.ref);
+                  });
   }
 
   if (unlink_command.capturers && targets_.capture) {
-    LinkCapturersTo(targets_.capture);
+    std::for_each(capturers_.begin(), capturers_.end(),
+                  [target = targets_.capture](auto& capturer) {
+                    if (!capturer.second.profile.routable ||
+                        !capturer.second.profile.usage.is_capture_usage()) {
+                      return;
+                    }
+
+                    FX_DCHECK(capturer.second.ref->source_link_count() == 0);
+                    AudioObject::LinkObjects(fbl::RefPtr(target), capturer.second.ref);
+                  });
   }
 }
 
 std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateTargets() const {
-  auto new_render_target = outputs_.empty() ? nullptr : outputs_.front();
+  // We generate a new set of targets.
+  // We generate an unlink command to unlink anything linked to a target which has changed.
+
+  std::array<AudioDevice*, fuchsia::media::RENDER_USAGE_COUNT> new_render_targets = {};
+  std::array<bool, fuchsia::media::RENDER_USAGE_COUNT> unlink_renderers = {};
+  for (const auto& usage : kRenderUsages) {
+    const auto idx = fidl::ToUnderlying(usage);
+
+    auto it = std::find_if(outputs_.begin(), outputs_.end(), [&usage, this](auto output) {
+      if (output == throttle_output_.get()) {
+        return false;
+      }
+
+      const auto& device_id = output->driver()->persistent_unique_id();
+      auto device_profile = routing_config_.device_profile(device_id);
+      return device_profile.supports_usage(usage);
+    });
+    if (it != outputs_.end()) {
+      new_render_targets[idx] = *it;
+    } else {
+      new_render_targets[idx] = throttle_output_.get();
+    }
+
+    unlink_renderers[idx] = new_render_targets[idx];
+  }
+
   auto new_loopback_target = [this]() {
     auto it = std::find_if(outputs_.begin(), outputs_.end(),
                            [this](auto output) { return output != throttle_output_.get(); });
@@ -283,29 +322,41 @@ std::pair<RouteGraph::Targets, RouteGraph::UnlinkCommand> RouteGraph::CalculateT
   }();
   auto new_capture_target = inputs_.empty() ? nullptr : inputs_.front();
 
-  return {Targets{.render = new_render_target,
+  return {Targets{.render = new_render_targets,
                   .loopback = new_loopback_target,
                   .capture = new_capture_target},
-          UnlinkCommand{.renderers = new_render_target != targets_.render,
+          UnlinkCommand{.renderers = unlink_renderers,
                         .loopback_capturers = new_loopback_target != targets_.loopback,
                         .capturers = new_capture_target != targets_.capture}};
 }
 
 void RouteGraph::Unlink(UnlinkCommand unlink_command) {
+  std::for_each(renderers_.begin(), renderers_.end(), [&unlink_command](auto& renderer) {
+    if (renderer.second.profile.usage.is_render_usage() &&
+        unlink_command
+            .renderers[fidl::ToUnderlying(renderer.second.profile.usage.render_usage())]) {
+      renderer.second.ref->Unlink();
+    }
+  });
+
   if (unlink_command.loopback_capturers) {
     std::for_each(loopback_capturers_.begin(), loopback_capturers_.end(),
                   [](auto& loopback_capturer) { loopback_capturer.second.ref->Unlink(); });
-  }
-
-  if (unlink_command.renderers) {
-    std::for_each(renderers_.begin(), renderers_.end(),
-                  [](auto& renderer) { renderer.second.ref->Unlink(); });
   }
 
   if (unlink_command.capturers) {
     std::for_each(capturers_.begin(), capturers_.end(),
                   [](auto& capturer) { capturer.second.ref->Unlink(); });
   }
+}
+
+AudioDevice* RouteGraph::OutputForUsage(const fuchsia::media::Usage& usage) const {
+  if (!usage.is_render_usage()) {
+    return nullptr;
+  }
+
+  auto idx = fidl::ToUnderlying(usage.render_usage());
+  return targets_.render[idx];
 }
 
 }  // namespace media::audio
