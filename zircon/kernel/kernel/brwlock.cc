@@ -174,15 +174,17 @@ template <BrwLockEnablePi PI>
 void BrwLock<PI>::WriteRelease() {
   canary_.Assert();
 
-#if LK_DEBUG_LEVEL > 0
-  thread_t* holder = state_.writer_.load(ktl::memory_order_relaxed);
-  thread_t* ct = get_current_thread();
-  if (unlikely(ct != holder)) {
-    panic(
-        "BrwLock<PI>::WriteRelease: thread %p (%s) tried to release brwlock %p it "
-        "doesn't "
-        "own. Ownedby %p (%s)\n",
-        ct, ct->name, this, holder, holder ? holder->name : "none");
+#if LK_DEBUGLEVEL > 0
+  if constexpr (PI == BrwLockEnablePi::Yes) {
+    thread_t* holder = state_.writer_.load(ktl::memory_order_relaxed);
+    thread_t* ct = get_current_thread();
+    if (unlikely(ct != holder)) {
+      panic(
+          "BrwLock<PI>::WriteRelease: thread %p (%s) tried to release brwlock %p it "
+          "doesn't "
+          "own. Ownedby %p (%s)\n",
+          ct, ct->name, this, holder, holder ? holder->name : "none");
+    }
   }
 #endif
 
