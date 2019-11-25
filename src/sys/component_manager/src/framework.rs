@@ -318,14 +318,14 @@ impl RealmCapabilityHostInner {
 impl Hook for RealmCapabilityHostInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
-            if let Event::RouteFrameworkCapability { realm, capability, capability_provider } =
-                event
+            if let EventPayload::RouteFrameworkCapability { capability, capability_provider } =
+                &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
                     .on_route_framework_capability_async(
-                        realm.clone(),
-                        capability,
+                        event.target_realm.clone(),
+                        &capability,
                         capability_provider.take(),
                     )
                     .await?;

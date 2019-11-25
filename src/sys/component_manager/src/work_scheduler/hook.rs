@@ -5,7 +5,9 @@
 use {
     crate::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
-        model::{Event, EventType, Hook, HooksRegistration, Model, ModelError, Realm},
+        model::{
+            Event, EventPayload, EventType, Hook, HooksRegistration, Model, ModelError, Realm,
+        },
         work_scheduler::work_scheduler::{
             WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
@@ -91,19 +93,19 @@ impl WorkScheduler {
 impl Hook for WorkScheduler {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
-            match event {
-                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
+            match &event.payload {
+                EventPayload::RouteBuiltinCapability { capability, capability_provider } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
-                        .on_route_builtin_capability_async(capability, capability_provider.take())
+                        .on_route_builtin_capability_async(&capability, capability_provider.take())
                         .await?;
                 }
-                Event::RouteFrameworkCapability { realm, capability, capability_provider } => {
+                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
                         .on_route_framework_capability_async(
-                            realm.clone(),
-                            capability,
+                            event.target_realm.clone(),
+                            &capability,
                             capability_provider.take(),
                         )
                         .await?;

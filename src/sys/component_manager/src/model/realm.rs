@@ -84,7 +84,10 @@ impl Realm {
                 }
             }
             if realm.abs_moniker.is_root() {
-                let event = Event::RootComponentResolved { realm: realm.clone() };
+                let event = Event {
+                    target_realm: realm.clone(),
+                    payload: EventPayload::RootComponentResolved,
+                };
                 realm.hooks.dispatch(&event).await?;
             }
         }
@@ -254,7 +257,8 @@ impl Realm {
             }
         };
         // Call hooks outside of lock
-        let event = Event::AddDynamicChild { realm: child_realm.clone() };
+        let event =
+            Event { target_realm: child_realm.clone(), payload: EventPayload::AddDynamicChild };
         realm.hooks.dispatch(&event).await?;
         Ok(())
     }

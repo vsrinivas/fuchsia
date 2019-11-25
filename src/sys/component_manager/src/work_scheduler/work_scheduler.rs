@@ -158,7 +158,7 @@ mod time_tests {
     use {
         super::WorkScheduler,
         crate::{
-            model::{AbsoluteMoniker, testing::mocks::FakeOutgoingBinder, OutgoingBinder},
+            model::{testing::mocks::FakeOutgoingBinder, AbsoluteMoniker, OutgoingBinder},
             work_scheduler::work_item::WorkItem,
         },
         fidl_fuchsia_sys2 as fsys,
@@ -581,7 +581,10 @@ mod connect_tests {
         super::{WorkScheduler, WORK_SCHEDULER_CONTROL_CAPABILITY_PATH},
         crate::{
             capability::ComponentManagerCapability,
-            model::{Event, testing::mocks::FakeOutgoingBinder, Hooks, Realm, ResolverRegistry},
+            model::{
+                testing::mocks::FakeOutgoingBinder, Event, EventPayload, Hooks, Realm,
+                ResolverRegistry,
+            },
         },
         failure::Error,
         fidl::endpoints::ClientEnd,
@@ -612,10 +615,12 @@ mod connect_tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event::RouteBuiltinCapability {
-            realm: realm.clone(),
-            capability: capability.clone(),
-            capability_provider: capability_provider.clone(),
+        let event = Event {
+            target_realm: realm.clone(),
+            payload: EventPayload::RouteBuiltinCapability {
+                capability: capability.clone(),
+                capability_provider: capability_provider.clone(),
+            },
         };
         hooks.dispatch(&event).await?;
 

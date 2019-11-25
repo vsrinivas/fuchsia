@@ -274,11 +274,11 @@ impl ProcessLauncherInner {
 impl Hook for ProcessLauncherInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
-            match event {
-                Event::RouteBuiltinCapability { realm: _, capability, capability_provider } => {
+            match &event.payload {
+                EventPayload::RouteBuiltinCapability { capability, capability_provider } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
-                        .on_route_builtin_capability_async(capability, capability_provider.take())
+                        .on_route_builtin_capability_async(&capability, capability_provider.take())
                         .await?;
                 }
                 _ => {}
@@ -387,10 +387,12 @@ mod tests {
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
 
-        let event = Event::RouteBuiltinCapability {
-            realm: realm.clone(),
-            capability: capability.clone(),
-            capability_provider: capability_provider.clone(),
+        let event = Event {
+            target_realm: realm.clone(),
+            payload: EventPayload::RouteBuiltinCapability {
+                capability: capability.clone(),
+                capability_provider: capability_provider.clone(),
+            },
         };
         hooks.dispatch(&event).await?;
 

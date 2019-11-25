@@ -49,12 +49,12 @@ impl BreakpointCapabilityHook {
 impl Hook for BreakpointCapabilityHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
-            if let Event::RouteFrameworkCapability { realm: _, capability, capability_provider } =
-                event
+            if let EventPayload::RouteFrameworkCapability { capability, capability_provider } =
+                &event.payload
             {
                 let mut capability_provider = capability_provider.lock().await;
                 *capability_provider = self
-                    .on_route_framework_capability_async(capability, capability_provider.take())
+                    .on_route_framework_capability_async(&capability, capability_provider.take())
                     .await?;
             }
             Ok(())
@@ -233,9 +233,9 @@ async fn wait_until_use_capability(
         let invocation = receiver.receive().await;
 
         // Correct EventType?
-        if let Event::UseCapability { realm, use_ } = &invocation.event {
+        if let EventPayload::UseCapability { use_ } = &invocation.event.payload {
             // Correct component?
-            if realm.abs_moniker == component {
+            if invocation.event.target_realm.abs_moniker == component {
                 // TODO(xbhatnag): Currently only service uses are sent as events
                 // Hence, the UseDecl must always have a CapabilityPath.
                 let actual_capability_path = use_
@@ -292,7 +292,7 @@ fn create_moniker(component: Vec<String>) -> AbsoluteMoniker {
 
 fn verify_moniker(invocation: &Invocation, expected_component: Vec<String>) {
     let expected_moniker = create_moniker(expected_component);
-    let actual_moniker = invocation.event.target_realm().abs_moniker.clone();
+    let actual_moniker = invocation.event.target_realm.abs_moniker.clone();
     assert_eq!(actual_moniker, expected_moniker);
 }
 

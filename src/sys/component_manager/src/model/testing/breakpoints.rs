@@ -86,7 +86,7 @@ impl InvocationReceiver {
         loop {
             let invocation = self.receive().await;
             let actual_event_type = invocation.event.type_();
-            let actual_moniker = invocation.event.target_realm().abs_moniker.clone();
+            let actual_moniker = invocation.event.target_realm.abs_moniker.clone();
             if expected_moniker == actual_moniker && expected_event_type == actual_event_type {
                 return invocation;
             }

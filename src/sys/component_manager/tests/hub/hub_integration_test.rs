@@ -110,7 +110,7 @@ impl TestRunner {
         let invocation = self.invocation_receiver.receive().await;
         let expected_moniker = AbsoluteMoniker::from(components);
         assert_eq!(invocation.event.type_(), expected_event);
-        let moniker = invocation.event.target_realm().abs_moniker.clone();
+        let moniker = invocation.event.target_realm.abs_moniker.clone();
         assert_eq!(moniker, expected_moniker);
         invocation
     }

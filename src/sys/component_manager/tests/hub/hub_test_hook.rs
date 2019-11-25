@@ -98,11 +98,14 @@ impl HubTestHook {
 impl Hook for HubTestHook {
     fn on(self: Arc<Self>, event: &Event) -> BoxFuture<'_, Result<(), ModelError>> {
         Box::pin(async move {
-            match event {
-                Event::RouteFrameworkCapability { realm: _, capability, capability_provider } => {
+            match &event.payload {
+                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
-                        .on_route_framework_capability_async(capability, capability_provider.take())
+                        .on_route_framework_capability_async(
+                            &capability,
+                            capability_provider.take(),
+                        )
                         .await?;
                 }
                 _ => {}

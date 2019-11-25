@@ -69,23 +69,19 @@ pub struct HooksRegistration {
 }
 
 #[derive(Clone)]
-pub enum Event {
+pub struct Event {
+    pub target_realm: Arc<Realm>,
+    pub payload: EventPayload,
+}
+
+#[derive(Clone)]
+pub enum EventPayload {
     // Keep the events listed below in alphabetical order!
-    AddDynamicChild {
-        realm: Arc<Realm>,
-    },
-    PostDestroyInstance {
-        realm: Arc<Realm>,
-    },
-    PreDestroyInstance {
-        realm: Arc<Realm>,
-    },
-    RootComponentResolved {
-        realm: Arc<Realm>,
-    },
+    AddDynamicChild,
+    PostDestroyInstance,
+    PreDestroyInstance,
+    RootComponentResolved,
     RouteBuiltinCapability {
-        // This is always the root realm.
-        realm: Arc<Realm>,
         capability: ComponentManagerCapability,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
@@ -93,7 +89,6 @@ pub enum Event {
         capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
     },
     RouteFrameworkCapability {
-        realm: Arc<Realm>,
         capability: ComponentManagerCapability,
         // Events are passed to hooks as immutable borrows. In order to mutate,
         // a field within an Event, interior mutability is employed here with
@@ -101,46 +96,28 @@ pub enum Event {
         capability_provider: Arc<Mutex<Option<Box<dyn ComponentManagerCapabilityProvider>>>>,
     },
     StartInstance {
-        realm: Arc<Realm>,
         component_decl: ComponentDecl,
         live_child_realms: Vec<Arc<Realm>>,
         routing_facade: RoutingFacade,
     },
-    StopInstance {
-        realm: Arc<Realm>,
-    },
+    StopInstance,
     UseCapability {
-        realm: Arc<Realm>,
         use_: UseDecl,
     },
 }
 
 impl Event {
-    pub fn target_realm(&self) -> Arc<Realm> {
-        match self {
-            Event::AddDynamicChild { realm } => realm.clone(),
-            Event::PostDestroyInstance { realm } => realm.clone(),
-            Event::PreDestroyInstance { realm } => realm.clone(),
-            Event::RootComponentResolved { realm } => realm.clone(),
-            Event::RouteBuiltinCapability { realm, .. } => realm.clone(),
-            Event::RouteFrameworkCapability { realm, .. } => realm.clone(),
-            Event::StartInstance { realm, .. } => realm.clone(),
-            Event::StopInstance { realm } => realm.clone(),
-            Event::UseCapability { realm, .. } => realm.clone(),
-        }
-    }
-
     pub fn type_(&self) -> EventType {
-        match self {
-            Event::AddDynamicChild { .. } => EventType::AddDynamicChild,
-            Event::RootComponentResolved { .. } => EventType::RootComponentResolved,
-            Event::PostDestroyInstance { .. } => EventType::PostDestroyInstance,
-            Event::PreDestroyInstance { .. } => EventType::PreDestroyInstance,
-            Event::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
-            Event::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
-            Event::StartInstance { .. } => EventType::StartInstance,
-            Event::StopInstance { .. } => EventType::StopInstance,
-            Event::UseCapability { .. } => EventType::UseCapability,
+        match self.payload {
+            EventPayload::AddDynamicChild => EventType::AddDynamicChild,
+            EventPayload::PostDestroyInstance => EventType::PostDestroyInstance,
+            EventPayload::PreDestroyInstance => EventType::PreDestroyInstance,
+            EventPayload::RootComponentResolved => EventType::RootComponentResolved,
+            EventPayload::RouteBuiltinCapability { .. } => EventType::RouteBuiltinCapability,
+            EventPayload::RouteFrameworkCapability { .. } => EventType::RouteFrameworkCapability,
+            EventPayload::StartInstance { .. } => EventType::StartInstance,
+            EventPayload::StopInstance => EventType::StopInstance,
+            EventPayload::UseCapability { .. } => EventType::UseCapability,
         }
     }
 }
@@ -275,7 +252,7 @@ mod tests {
     impl Hook for CallCounter {
         fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
             Box::pin(async move {
-                if let Event::AddDynamicChild { .. } = event {
+                if let EventPayload::AddDynamicChild = event.payload {
                     self.on_add_dynamic_child_async().await?;
                 }
                 Ok(())
@@ -314,7 +291,7 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event::AddDynamicChild { realm: realm.clone() };
+        let event = Event { target_realm: realm.clone(), payload: EventPayload::AddDynamicChild };
         hooks.dispatch(&event).await.expect("Unable to call hooks.");
         assert_eq!(1, call_counter.count().await);
     }
@@ -350,7 +327,7 @@ mod tests {
             let root_component_url = "test:///root".to_string();
             Arc::new(Realm::new_root_realm(resolver, root_component_url))
         };
-        let event = Event::AddDynamicChild { realm: realm.clone() };
+        let event = Event { target_realm: realm.clone(), payload: EventPayload::AddDynamicChild };
         child_hooks.dispatch(&event).await.expect("Unable to call hooks.");
         // parent_call_counter gets informed of the event on child_hooks even though it has
         // been installed on parent_hooks.

@@ -172,10 +172,12 @@ async fn open_builtin_capability<'a>(
 ) -> Result<(), ModelError> {
     let capability_provider = Arc::new(Mutex::new(None));
 
-    let event = Event::RouteBuiltinCapability {
-        realm: model.root_realm.clone(),
-        capability: capability.clone(),
-        capability_provider: capability_provider.clone(),
+    let event = Event {
+        target_realm: model.root_realm.clone(),
+        payload: EventPayload::RouteBuiltinCapability {
+            capability: capability.clone(),
+            capability_provider: capability_provider.clone(),
+        },
     };
     model.root_realm.hooks.dispatch(&event).await?;
 
@@ -201,10 +203,12 @@ async fn open_framework_capability<'a>(
 ) -> Result<(), ModelError> {
     let capability_provider = Arc::new(Mutex::new(None));
 
-    let event = Event::RouteFrameworkCapability {
-        realm: realm.clone(),
-        capability: capability.clone(),
-        capability_provider: capability_provider.clone(),
+    let event = Event {
+        target_realm: realm.clone(),
+        payload: EventPayload::RouteFrameworkCapability {
+            capability: capability.clone(),
+            capability_provider: capability_provider.clone(),
+        },
     };
     realm.hooks.dispatch(&event).await?;
 

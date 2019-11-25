@@ -6,7 +6,7 @@ use {
     crate::model::{
         error::ModelError,
         realm::{Realm, RealmState},
-        Action, ChildMoniker, Event, Model, PartialMoniker,
+        Action, ChildMoniker, Event, EventPayload, Model, PartialMoniker,
     },
     cm_rust::{
         ComponentDecl, OfferDecl, OfferDirectorySource, OfferRunnerSource, OfferServiceSource,
@@ -245,7 +245,7 @@ pub async fn do_shutdown(model: Arc<Model>, realm: Arc<Realm>) -> Result<(), Mod
         };
         join_all(nfs).await.into_iter().fold(Ok(()), |acc, r| acc.and_then(|_| r))?;
         if was_running {
-            let event = Event::StopInstance { realm: realm.clone() };
+            let event = Event { target_realm: realm.clone(), payload: EventPayload::StopInstance };
             realm.hooks.dispatch(&event).await?;
         }
     } else {

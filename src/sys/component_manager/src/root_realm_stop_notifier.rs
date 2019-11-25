@@ -45,7 +45,7 @@ impl Hook for RootRealmStopNotifierInner {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         let inner = self.clone();
         Box::pin(async move {
-            if event.target_realm().abs_moniker == AbsoluteMoniker::root() {
+            if event.target_realm.abs_moniker == AbsoluteMoniker::root() {
                 let tx = inner.tx.lock().await.take();
                 tx.expect("Root instance can only be stopped once.")
                     .send(())

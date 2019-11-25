@@ -192,7 +192,9 @@ async fn do_delete_child(
 
     // The child may not exist or may already be deleted by a previous DeleteChild action.
     if let Some(child_realm) = child_realm {
-        let event = Event::PreDestroyInstance { realm: child_realm.clone() };
+        let event =
+            Event { target_realm: child_realm.clone(), payload: EventPayload::PreDestroyInstance };
+
         child_realm.hooks.dispatch(&event).await?;
 
         let nf =
@@ -204,7 +206,8 @@ async fn do_delete_child(
             state.as_mut().expect("do_delete_child: not resolved").remove_child_realm(&moniker);
         }
 
-        let event = Event::PostDestroyInstance { realm: child_realm.clone() };
+        let event =
+            Event { target_realm: child_realm.clone(), payload: EventPayload::PostDestroyInstance };
         child_realm.hooks.dispatch(&event).await?;
     }
 
@@ -1683,8 +1686,8 @@ mod tests {
         impl Hook for StopErrorHookInner {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
-                    if let Event::StopInstance { realm } = event {
-                        self.on_shutdown_instance_async(realm.clone()).await?;
+                    if let EventPayload::StopInstance = event.payload {
+                        self.on_shutdown_instance_async(event.target_realm.clone()).await?;
                     }
                     Ok(())
                 })
@@ -2378,8 +2381,8 @@ mod tests {
         impl Hook for DestroyErrorHookInner {
             fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
                 Box::pin(async move {
-                    if let Event::PostDestroyInstance { realm } = event {
-                        self.on_destroy_instance_async(realm.clone()).await?;
+                    if let EventPayload::PostDestroyInstance = event.payload {
+                        self.on_destroy_instance_async(event.target_realm.clone()).await?;
                     }
                     Ok(())
                 })

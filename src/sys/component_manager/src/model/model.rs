@@ -6,9 +6,9 @@ use {
     crate::{
         framework::RealmCapabilityHost,
         model::{
-            testing::breakpoints::BreakpointSystem, AbsoluteMoniker, Event, EventType, ExposedDir,
-            Hub, IncomingNamespace, ModelError, Realm, RealmState, Resolver, ResolverRegistry,
-            RoutingFacade, Runner, Runtime,
+            testing::breakpoints::BreakpointSystem, AbsoluteMoniker, Event, EventPayload,
+            EventType, ExposedDir, Hub, IncomingNamespace, ModelError, Realm, RealmState, Resolver,
+            ResolverRegistry, RoutingFacade, Runner, Runtime,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
         startup::BuiltinRootCapabilities,
@@ -468,11 +468,13 @@ impl Model {
                 })
                 .collect();
             let live_child_realms = state.live_child_realms().map(|(_, r)| r.clone()).collect();
-            let event = Event::StartInstance {
-                realm: realm.clone(),
-                component_decl: state.decl().clone(),
-                live_child_realms,
-                routing_facade,
+            let event = Event {
+                target_realm: realm.clone(),
+                payload: EventPayload::StartInstance {
+                    component_decl: state.decl().clone(),
+                    live_child_realms,
+                    routing_facade,
+                },
             };
             (event, eager_child_realms)
         };

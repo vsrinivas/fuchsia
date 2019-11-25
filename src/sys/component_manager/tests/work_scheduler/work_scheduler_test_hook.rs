@@ -130,13 +130,13 @@ impl WorkSchedulerTestHook {
 impl Hook for WorkSchedulerTestHook {
     fn on<'a>(self: Arc<Self>, event: &'a Event) -> BoxFuture<'a, Result<(), ModelError>> {
         Box::pin(async move {
-            match event {
-                Event::RouteFrameworkCapability { realm, capability, capability_provider } => {
+            match &event.payload {
+                EventPayload::RouteFrameworkCapability { capability, capability_provider } => {
                     let mut capability_provider = capability_provider.lock().await;
                     *capability_provider = self
                         .on_route_framework_capability_async(
-                            realm.clone(),
-                            capability,
+                            event.target_realm.clone(),
+                            &capability,
                             capability_provider.take(),
                         )
                         .await?;
