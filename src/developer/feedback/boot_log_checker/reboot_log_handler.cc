@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "src/developer/feedback/boot_log_checker/metrics_registry.cb.h"
+#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/files/file.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -22,12 +23,16 @@ namespace feedback {
 
 fit::promise<void> HandleRebootLog(const std::string& filepath,
                                    std::shared_ptr<sys::ServiceDirectory> services) {
-  std::unique_ptr<RebootLogHandler> handler = std::make_unique<RebootLogHandler>(services);
+  auto handler = std::make_unique<internal::RebootLogHandler>(services);
 
-  // We move |handler| in a subsequent chained promise to guarantee its lifetime.
-  return handler->Handle(filepath).then(
-      [handler = std::move(handler)](fit::result<void>& result) { return std::move(result); });
+  // We must store the promise in a variable due to the fact that the order of evaluation of
+  // function parameters is undefined.
+  auto promise = handler->Handle(filepath);
+  return ExtendArgsLifetimeBeyondPromise(/*promise=*/std::move(promise),
+                                         /*args=*/std::move(handler));
 }
+
+namespace internal {
 
 RebootLogHandler::RebootLogHandler(std::shared_ptr<sys::ServiceDirectory> services)
     : services_(services) {}
@@ -38,7 +43,7 @@ bool ExtractCrashType(const std::string& reboot_log, CrashType* crash_type) {
   std::istringstream iss(reboot_log);
   std::string first_line;
   if (!std::getline(iss, first_line)) {
-    FX_LOGS(ERROR) << "failed to read first line of reboot log";
+    FX_LOGS(ERROR) << "Failed to read first line of reboot log";
     return false;
   }
 
@@ -50,7 +55,7 @@ bool ExtractCrashType(const std::string& reboot_log, CrashType* crash_type) {
     *crash_type = CrashType::OOM;
     return true;
   }
-  FX_LOGS(ERROR) << "failed to extract a crash type from first line of reboot log - defaulting to "
+  FX_LOGS(ERROR) << "Failed to extract a crash type from first line of reboot log - defaulting to "
                     "kernel panic";
   *crash_type = CrashType::KERNEL_PANIC;
   return true;
@@ -97,21 +102,21 @@ fit::promise<void> RebootLogHandler::Handle(const std::string& filepath) {
 
   // We first check for the existence of the reboot log and attempt to parse it.
   if (!files::IsFile(filepath)) {
-    FX_LOGS(INFO) << "no reboot log found";
+    FX_LOGS(INFO) << "No reboot log found";
     return fit::make_ok_promise();
   }
 
   if (!fsl::VmoFromFilename(filepath, &reboot_log_)) {
-    FX_LOGS(ERROR) << "error loading reboot log into VMO";
+    FX_LOGS(ERROR) << "Error loading reboot log into VMO";
     return fit::make_result_promise<void>(fit::error());
   }
 
   std::string reboot_log_str;
   if (!fsl::StringFromVmo(reboot_log_, &reboot_log_str)) {
-    FX_LOGS(ERROR) << "error parsing reboot log VMO as string";
+    FX_LOGS(ERROR) << "Error parsing reboot log VMO as string";
     return fit::make_result_promise<void>(fit::error());
   }
-  FX_LOGS(INFO) << "found reboot log:\n" << reboot_log_str;
+  FX_LOGS(INFO) << "Found reboot log:\n" << reboot_log_str;
 
   CrashType crash_type;
   if (!ExtractCrashType(reboot_log_str, &crash_type)) {
@@ -138,7 +143,7 @@ fit::promise<void> RebootLogHandler::WaitForNetworkToBeReachable() {
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "lost connection to fuchsia.net.Connectivity";
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.net.Connectivity";
     network_reachable_.completer.complete_error();
   });
   connectivity_.events().OnNetworkReachable = [this](bool reachable) {
@@ -163,15 +168,15 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashType crash_type)
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "lost connection to fuchsia.feedback.CrashReporter";
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.feedback.CrashReporter";
     crash_reporting_done_.completer.complete_error();
   });
 
-  // Build the crash report attachment.
+  // Build the crash report attachments.
+  std::vector<fuchsia::feedback::Attachment> attachments;
   fuchsia::feedback::Attachment attachment;
   attachment.key = "reboot_crash_log";
   attachment.value = std::move(reboot_log_).ToTransport();
-  std::vector<fuchsia::feedback::Attachment> attachments;
   attachments.push_back(std::move(attachment));
 
   // Build the crash report.
@@ -191,7 +196,7 @@ fit::promise<void> RebootLogHandler::FileCrashReport(const CrashType crash_type)
 
     if (result.is_error()) {
       FX_PLOGS(ERROR, result.error())
-          << "failed to file a crash report for crash extracted from reboot log";
+          << "Failed to file a crash report for crash extracted from reboot log";
       crash_reporting_done_.completer.complete_error();
     } else {
       crash_reporting_done_.completer.complete_ok();
@@ -209,7 +214,7 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
       return;
     }
 
-    FX_PLOGS(ERROR, status) << "lost connection to Cobalt metrics logger factory";
+    FX_PLOGS(ERROR, status) << "Lost connection to fuchsia.cobalt.LoggerFactory";
     cobalt_logging_done_.completer.complete_error();
   });
   // Create a Cobalt Logger. The project name is the one we specified in the
@@ -221,7 +226,7 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
       kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD, cobalt_logger_.NewRequest(),
       [this, crash_type](fuchsia::cobalt::Status status) {
         if (status != fuchsia::cobalt::Status::OK) {
-          FX_LOGS(ERROR) << "error getting feedback metrics logger: " << CobaltStatus(status);
+          FX_LOGS(ERROR) << "Error getting feedback metrics logger: " << CobaltStatus(status);
           cobalt_logging_done_.completer.complete_error();
           return;
         }
@@ -230,7 +235,7 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
             return;
           }
 
-          FX_PLOGS(ERROR, status) << "lost connection to feedback metrics logger";
+          FX_PLOGS(ERROR, status) << "Lost connection to feedback fuchsia.cobalt.Logger";
           cobalt_logging_done_.completer.complete_error();
         });
         cobalt_registry::RebootMetricDimensionReason reboot_reason =
@@ -243,7 +248,7 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
                                      return;
                                    }
                                    if (status != fuchsia::cobalt::Status::OK) {
-                                     FX_LOGS(ERROR) << "error sending feedback metrics: "
+                                     FX_LOGS(ERROR) << "Error sending feedback metrics: "
                                                     << CobaltStatus(status);
                                      cobalt_logging_done_.completer.complete_error();
                                      return;
@@ -255,4 +260,5 @@ fit::promise<void> RebootLogHandler::SendCobaltMetrics(CrashType crash_type) {
   return cobalt_logging_done_.consumer.promise_or(fit::error());
 }
 
+}  // namespace internal
 }  // namespace feedback

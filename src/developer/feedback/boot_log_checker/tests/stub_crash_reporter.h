@@ -9,8 +9,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_handle.h>
 
-#include "src/lib/fxl/logging.h"
-
 namespace feedback {
 
 class StubCrashReporter : public fuchsia::feedback::CrashReporter {

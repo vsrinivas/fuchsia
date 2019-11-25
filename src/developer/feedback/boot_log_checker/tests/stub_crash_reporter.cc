@@ -8,17 +8,16 @@
 #include <zircon/errors.h>
 
 #include "src/lib/fsl/vmo/strings.h"
-#include "src/lib/fxl/logging.h"
 #include "src/lib/syslog/cpp/logger.h"
 
 namespace feedback {
 
 void StubCrashReporter::File(fuchsia::feedback::CrashReport report, FileCallback callback) {
-  FXL_CHECK(report.has_specific_report());
-  FXL_CHECK(report.specific_report().is_generic());
-  FXL_CHECK(report.specific_report().generic().has_crash_signature());
-  FXL_CHECK(report.has_attachments());
-  FXL_CHECK(report.attachments().size() == 1u);
+  FX_CHECK(report.has_specific_report());
+  FX_CHECK(report.specific_report().is_generic());
+  FX_CHECK(report.specific_report().generic().has_crash_signature());
+  FX_CHECK(report.has_attachments());
+  FX_CHECK(report.attachments().size() == 1u);
 
   crash_signature_ = report.specific_report().generic().crash_signature();
 

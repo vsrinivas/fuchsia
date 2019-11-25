@@ -59,6 +59,7 @@ source_set("src") {
 
   deps = [
     ":metrics_registry",
+    "//src/developer/feedback/utils:promise",
     "//src/lib/files",
     "//src/lib/fsl",
     "//src/lib/fxl",

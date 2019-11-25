@@ -42,7 +42,6 @@ executable("reboot_log_handler_unittest") {
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/lib/files",
-    "//src/lib/fxl",
     "//src/lib/fxl/test:test_settings",
     "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",

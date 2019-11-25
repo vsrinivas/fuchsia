@@ -24,9 +24,12 @@ namespace feedback {
 // reachable and hands it off to the crash analyzer as today we only stow something in the reboot
 // log in case of OOM or kernel panic.
 //
-// fuchsia.net.Connectivity and fuchsia.feedback.CrashReporter are expected to be in |services|.
+// fuchsia.net.Connectivity, fuchsia.feedback.CrashReporter and fuchsia.cobalt.LoggerFactory are
+// expected to be in |services|.
 fit::promise<void> HandleRebootLog(const std::string& filepath,
                                    std::shared_ptr<sys::ServiceDirectory> services);
+
+namespace internal {
 
 // The type of crashes we expect in the reboot log and want file crash reports for.
 enum class CrashType { KERNEL_PANIC, OOM };
@@ -62,6 +65,7 @@ class RebootLogHandler {
   fit::bridge<void> cobalt_logging_done_;
 };
 
+}  // namespace internal
 }  // namespace feedback
 
 #endif  // SRC_DEVELOPER_FEEDBACK_BOOT_LOG_CHECKER_REBOOT_LOG_HANDLER_H_
