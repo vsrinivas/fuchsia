@@ -3,6 +3,7 @@
   "$schema": "http://json-schema.org/draft-04/schema#",
   "$id": "https://fuchsia.dev/network_manager",
   "title": "Network Manager Device Schema for configuration data.",
+  "additionalProperties": false,
   "definitions": {
     "admin_states": {
       "type": "string",
@@ -42,13 +43,6 @@
       "title": "Enables a DHCP client on the interface in order to request an address",
       "default": false
     },
-    "interface_index": {
-      "type": "integer",
-      "title": "The id of this interface.",
-      "examples": [
-        0
-      ]
-    },
     "ip": {
       "type": "string",
       "title": "An IP address.",
@@ -76,14 +70,16 @@
       ],
       "properties": {
         "addresses": {
-          "type": "object",
+          "type": "array",
           "descrption": "Describes the IP address configuration.",
-          "properties": {
+          "additionalItems": false,
+          "items": {
             "dhcp_client": {
               "$ref": "#/definitions/dhcp_client"
             },
             "address": {
               "type": "object",
+              "additionalProperties": false,
               "required": [ "address_family", "ip", "prefix_length" ],
               "properties": {
                 "address_family": {
@@ -100,25 +96,34 @@
           }
         }
       }
+    },
+    "vlan_id": {
+      "type": "integer",
+      "title": "Describes a VLAN ID.",
+      "minimum": 0,
+      "maximum": 4096,
+      "example": [
+        101
+      ]
+    },
+    "port_speed": {
+      "type": "string",
+      "description": "When auto-negotiate is true, this optionally sets the port-speed that will be advertised to the peer for negotiation. If unspecified, it is expected that the interface will select the highest speed available based on negotiation. When auto-negotiate is set to false, sets the link speed to a fixed value.",
+      "enum": [
+        "SPEED_10MB",
+        "SPEED_100MB",
+        "SPEED_1GB",
+        "SPEED_2500MB",
+        "SPEED_5GB",
+        "SPEED_10GB",
+        "SPEED_25GB",
+        "SPEED_40GB",
+        "SPEED_50GB",
+        "SPEED_100GB",
+        "SPEED_UNKNOWN"
+      ],
+      "default": "SPEED_UNKNOWN"
     }
-  },
-  "port_speed": {
-    "type": "string",
-    "description": "When auto-negotiate is true, this optionally sets the port-speed that will be advertised to the peer for negotiation. If unspecified, it is expected that the interface will select the highest speed available based on negotiation. When auto-negotiate is set to false, sets the link speed to a fixed value.",
-    "enum": [
-      "SPEED_10MB",
-      "SPEED_100MB",
-      "SPEED_1GB",
-      "SPEED_2500MB",
-      "SPEED_5GB",
-      "SPEED_10GB",
-      "SPEED_25GB",
-      "SPEED_40GB",
-      "SPEED_50GB",
-      "SPEED_100GB",
-      "SPEED_UNKNOWN"
-    ],
-    "default": "SPEED_UNKNOWN"
   },
 
   "required": [
@@ -134,33 +139,28 @@
       "additionalProperties": false,
       "properties": {
         "interfaces": {
-          "$id": "/properties/device/interfaces",
-          "type": "object",
           "description": "Describes all interfaces on this device.",
-          "additionalProperties": false,
-          "required": [
-            "interface"
-          ],
-          "properties": {
+          "type": "array",
+          "additionalItems": false,
+          "items": {
+            "additionalItems": false,
+            "required": [ "interface" ],
             "interface": {
-              "$id": "/properties/device/interfaces/interface",
-              "description": "Describes an interface configuration",
+              "type": "object",
+              "additionalProperties": false,
               "properties": {
                 "config": {
-                  "$id": "/properties/device/interfaces/interface/config",
-                  "description": "Describes the configuration of this interface.",
                   "additionalProperties": false,
                   "properties": {
                     "enabled": {
-                      "$id": "/properties/interfaces/interface/config/enabled",
-                      "type": "boolean"
+                      "type": "boolean",
+                      "description": "The desired state of this interface."
                     },
                     "name": {
-                      "$id": "/properties/interfaces/interface/config/name",
                       "type": "string",
                       "title": "Configures the name of this interface.",
                       "examples": [
-                        "eth0"
+                        "eth0", "wan"
                       ]
                     },
                     "type": {
@@ -175,14 +175,15 @@
                 },
                 "subinterfaces": {
                   "$id": "/properties/interfaces/interface/subinterfaces",
-                  "type": "object",
-                  "maxProperties": 1,
+                  "type": "array",
+                  "additionalItems": false,
                   "required": [ "subinterface" ],
-                  "properties": {
+                  "items": {
                     "subinterface": {
                       "type": "object",
                       "description": "Subinterface describes a Logical Interface (LIF)",
                       "additionalProperties": false,
+                      "required": [ "config" ],
                       "properties": {
                         "config": {
                           "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config",
@@ -191,15 +192,12 @@
                           "properties": {
                             "enabled": {
                               "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config/enabled",
-                              "type": "boolean"
+                              "type": "boolean",
+                              "default": false
                             },
                             "admin_state": {
                               "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config/admin_state",
                               "$ref": "#/definitions/admin_states"
-                            },
-                            "index": {
-                              "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config/index",
-                              "$ref": "#/definitions/interface_index"
                             }
                           }
                         },
@@ -214,62 +212,185 @@
                       }
                     }
                   }
-                }
-              },
-              "ethernet": {
-                "type": "object",
-                "additionalProperties": false,
-                "properties": {
-                  "config": {
-                    "properties": {
-                      "auto_negotiate": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/auto_negotiate",
-                        "description": "Set to true to request the interface to auto-negotiate transmission parameters with its peer interface.",
-                        "type": "boolean",
-                        "default": true
-                      },
-                      "duplex_mode": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/duplex_mode",
-                        "description": "When auto-negotiate is true, this optionally sets the duplex mode that will be advertised to the peer.",
-                        "type": "string",
-                        "enum": [ "FULL", "HALF" ]
-                      },
-                      "enable_flow_control": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/enable_flow_control",
-                        "type": "boolean",
-                        "examples": [ false ]
-                      },
-                      "mac_address": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/mac_address",
-                        "type": "string",
-                        "examples": [
-                          "de:ad:be:ef:ca:fe"
-                        ]
-                      },
-                      "mtu": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/mtu",
-                        "type": "integer"
-                      },
-                      "port_speed": {
-                        "$id": "/properties/interfaces/interface/ethernet/config/port_speed",
-                        "$ref": "#/definitions/port_speed"
+                },
+                "switched_vlan": {
+                  "$id": "/properties/interfaces/interface/switched_vlan",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [ "interface_mode" ],
+                  "properties": {
+                    "interface_mode": {
+                      "$id": "/properties/interfaces/interface/switched_vlan/interface_mode",
+                      "type": "string",
+                      "enum": [ "ACCESS", "TRUNK" ]
+                    },
+                    "access_vlan": {
+                      "$id": "/properties/interfaces/interface/switched_vlan/access_vlan",
+                      "$ref": "#/definitions/vlan_id"
+                    },
+                    "trunk_vlans": {
+                      "$id": "/properties/interfaces/interface/switched_vlan/trunk_vlans",
+                      "type": "array",
+                      "additionalItems": false,
+                      "items": {
+                        "$ref": "#/definitions/vlan_id"
                       }
                     }
                   }
                 },
-                "tcp_offload": {
-                  "$id": "/properties/interfaces/interface/tcp_offload",
-                  "type": "boolean",
-                  "default": false
+                "ethernet": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "properties": {
+                    "config": {
+                      "properties": {
+                        "auto_negotiate": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/auto_negotiate",
+                          "description": "Set to true to request the interface to auto-negotiate transmission parameters with its peer interface.",
+                          "type": "boolean",
+                          "default": true
+                        },
+                        "duplex_mode": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/duplex_mode",
+                          "description": "When auto-negotiate is true, this optionally sets the duplex mode that will be advertised to the peer.",
+                          "type": "string",
+                          "enum": [ "FULL", "HALF" ]
+                        },
+                        "enable_flow_control": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/enable_flow_control",
+                          "type": "boolean",
+                          "examples": [ false ]
+                        },
+                        "mac_address": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/mac_address",
+                          "type": "string",
+                          "examples": [
+                            "de:ad:be:ef:ca:fe"
+                          ]
+                        },
+                        "mtu": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/mtu",
+                          "type": "integer"
+                        },
+                        "port_speed": {
+                          "$id": "/properties/interfaces/interface/ethernet/config/port_speed",
+                          "$ref": "#/definitions/port_speed"
+                        }
+                      }
+                    }
+                  },
+                  "tcp_offload": {
+                    "$id": "/properties/interfaces/interface/tcp_offload",
+                    "type": "boolean",
+                    "default": false
+                  }
+                },
+                "routed_vlan": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [ "vlan_id" ],
+                  "properties": {
+                    "vlan_id": {
+                      "$ref": "#/definitions/vlan_id"
+                    },
+                    "ipv4": {
+                      "$ref": "#/definitions/ip_address_config"
+                    },
+                    "ipv6": {
+                      "$ref": "#/definitions/ip_address_config"
+                    }
+                  }
                 }
               }
             }
           }
         },
         "acls": {
-            "$id": "/properties/acls",
-            "type": "object",
-            "description": "TODO(cgibson): Implement me."
+          "$id": "/properties/acls",
+          "type": "object",
+          "additionalProperties": false,
+          "description": "TODO(cgibson): Implement me."
+        },
+        "services": {
+          "type": "object",
+          "description": "Configuration for additional system services",
+          "additionalProperties": false,
+          "properties": {
+            "dhcp_server": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "enabled": {
+                  "default": false,
+                  "description": "Is the DHCP server enabled?",
+                  "type": "boolean"
+                },
+                "dhcp_pool": {
+                  "additionalProperties": false,
+                  "description": "Configure the DHCP server address pool",
+                  "type": "object",
+                  "properties": {
+                    "start": {
+                      "type": "string",
+                      "description": "The first IP address of the pool",
+                      "examples": [
+                        "192.168.0.10"
+                      ]
+                    },
+                    "end": {
+                      "type": "string",
+                      "description": "The last IP address of the pool",
+                      "examples": [
+                        "192.168.0.254"
+                      ]
+                    },
+                    "lease_time": {
+                      "type": "string",
+                      "description": "The time in seconds after which leases will be renewed. Can also be defined in minutes ('m'), hours ('h'), or days ('d').",
+                      "examples": [
+                        "1440",
+                        "24m",
+                        "12h",
+                        "1d"
+                      ]
+                    }
+                  }
+                },
+                "interfaces": {
+                  "type": "string",
+                  "description": "A comma-separated list of interface names to bind the DHCP server to. Defaults to all interfaces if none are provided.",
+                  "examples": [
+                    "eth0,lan1,lan2"
+                  ]
+                },
+                "static_ip_allocations": {
+                  "type": "array",
+                  "additionalItems": false,
+                  "required": [ "name", "mac-address", "ip" ],
+                  "items": {
+                    "device_name": {
+                      "type": "string",
+                      "description": "A human-readable device name."
+                    },
+                    "mac_address": {
+                      "type": "string",
+                      "description": "The MAC address of this host.",
+                      "examples": [
+                        "00:1f:3c:e3:c9:73"
+                      ]
+                    },
+                    "ip_address": {
+                      "type": "string",
+                      "description": "An IP to statically assign to this host.",
+                      "examples": [
+                        "192.168.1.2"
+                      ]
+                    }
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }

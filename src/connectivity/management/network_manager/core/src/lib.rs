@@ -138,7 +138,7 @@ impl DeviceState {
     /// Loads the device configuration.
     pub async fn load_config(&mut self) -> error::Result<()> {
         if let Err(e) = self.config.load_config().await {
-            error!("Failed to load new config: {}", e);
+            error!("Failed to validate config from both user and factory files: {}", e);
             Err(e)
         } else {
             info!("Successfully loaded configuration!");

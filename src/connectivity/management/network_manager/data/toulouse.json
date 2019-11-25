@@ -1,28 +1,150 @@
 {
     "device": {
-        "interfaces": {
-            "interface": [
-                {
+        "interfaces": [
+            {
+                "interface": {
+                    "config": {
+                        "enabled": true,
+                        "name": "lan",
+                        "type": "IF_ROUTED_VLAN"
+                    },
+                    "oper_state": "UP",
+                    "routed_vlan": {
+                        "vlan_id": 1,
+                        "ipv4": {
+                            "addresses": [
+                                {
+                                    "address_family": "V4",
+                                    "ip": "192.168.0.1",
+                                    "prefix_length": 32
+                                }
+                            ]
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
+                    "config": {
+                        "enabled": true,
+                        "name": "wan",
+                        "type": "IF_ETHERNET"
+                    },
+                    "oper_state": "UP",
+                    "subinterfaces": [
+                        {
+                            "subinterface": {
+                                "config": {
+                                    "enabled": true,
+                                    "admin_state": "UP"
+                                },
+                                "ipv4": {
+                                    "addresses": [
+                                        {
+                                            "dhcp_client": true
+                                        }
+                                    ]
+                                }
+                            }
+                        }
+                    ],
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
+                    "config": {
+                        "enabled": true,
+                        "name": "eth1",
+                        "type": "IF_ETHERNET"
+                    },
+                    "oper_state": "UP",
+                    "switched_vlan" : {
+                        "interface_mode" : "ACCESS",
+                        "access_vlan": 1
+                    },
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
+                    "config": {
+                        "enabled": true,
+                        "name": "eth2",
+                        "type": "IF_ETHERNET"
+                    },
+                    "oper_state": "UP",
+                    "switched_vlan": {
+                        "interface_mode": "ACCESS",
+                        "access_vlan": 1
+                    },
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
+                    "config": {
+                        "enabled": true,
+                        "name": "eth3",
+                        "type": "IF_ETHERNET"
+                    },
+                    "oper_state": "UP",
+                    "switched_vlan": {
+                        "interface_mode": "ACCESS",
+                        "access_vlan": 1
+                    },
+                    "ethernet": {
+                        "config": {
+                            "auto_negotiate": true,
+                            "duplex_mode": "FULL",
+                            "enable_flow_control": true,
+                            "port_speed": "SPEED_1G"
+                        }
+                    }
+                }
+            },
+            {
+                "interface": {
                     "config": {
                         "enabled": true,
                         "name": "lo0",
                         "type": "IF_LOOPBACK"
                     },
                     "oper_state": "UP",
-                    "subinterfaces": {
-                        "subinterface": [
-                            {
+                    "subinterfaces": [
+                        {
+                            "subinterface": {
                                 "config": {
                                     "enabled": true,
-                                    "admin_state": "UP",
-                                    "index": 0
+                                    "admin_state": "UP"
                                 },
                                 "ipv4": {
                                     "addresses": [
                                         {
                                             "address_family": "V4",
                                             "ip": "127.0.0.1",
-                                            "prefix_length": 32
+                                            "prefix_length": 8
                                         }
                                     ]
                                 },
@@ -36,45 +158,21 @@
                                     ]
                                 }
                             }
-                        ]
-                    }
-                },
-                {
-                    "config": {
-                        "enabled": true,
-                        "name": "eth0",
-                        "type": "IF_ETHERNET"
-                    },
-                    "oper_state": "UP",
-                    "subinterfaces": {
-                        "subinterface": [
-                            {
-                                "config": {
-                                    "enabled": true,
-                                    "admin_state": "UP",
-                                    "index": 0
-                                },
-                                "ipv4": {
-                                    "addresses": [
-                                        {
-                                            "dhcp_client": true
-                                        }
-                                    ]
-                                }
-                            }
-                        ]
-                    },
-                    "ethernet": {
-                        "config": {
-                            "auto_negotiate": true,
-                            "duplex_mode": "FULL",
-                            "enable_flow_control": true,
-                            "port_speed": "SPEED_1G"
                         }
-                    }
+                    ]
                 }
-            ]
-        },
-        "acls": {}
+            }
+        ],
+        "services": {
+            "dhcp_server": {
+                "enabled": true,
+                "dhcp_pool": {
+                    "start": "192.168.0.10",
+                    "end": "192.168.0.254",
+                    "lease_time": "1440"
+                },
+                "interfaces": "lan"
+            }
+        }
     }
 }

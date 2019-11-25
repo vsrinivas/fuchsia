@@ -62,6 +62,14 @@ pub enum DuplexMode {
     Half,
 }
 
+/// Defines VLAN interface types.
+#[derive(Serialize, Deserialize, Debug, PartialEq, Eq, Hash, Clone)]
+#[serde(deny_unknown_fields, rename_all = "SCREAMING_SNAKE_CASE")]
+pub enum InterfaceMode {
+    Access,
+    Trunk,
+}
+
 /// When `auto-negotiate` is true, this optionally sets the port-speed mode that will be advertised
 /// to the peer for negotiation. If unspecified, it is expected that the interface will select the
 /// highest speed available based on negotiation. When auto-negotiate is set to false, sets the
@@ -100,16 +108,18 @@ pub struct DeviceConfig {
 #[serde(deny_unknown_fields)]
 pub struct Device {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interfaces: Option<Interfaces>,
+    pub interfaces: Option<Vec<Interfaces>>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub acls: Option<Acls>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub services: Option<Services>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
 #[serde(deny_unknown_fields)]
 pub struct Interfaces {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub interface: Option<Vec<Interface>>,
+    pub interface: Option<Interface>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -120,7 +130,11 @@ pub struct Interface {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub oper_state: Option<OperState>,
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subinterfaces: Option<Subinterfaces>,
+    pub subinterfaces: Option<Vec<Subinterfaces>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub switched_vlan: Option<SwitchedVlan>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub routed_vlan: Option<RoutedVlan>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ethernet: Option<Ethernet>,
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -142,7 +156,7 @@ pub struct InterfaceConfig {
 #[serde(deny_unknown_fields)]
 pub struct Subinterfaces {
     #[serde(skip_serializing_if = "Option::is_none")]
-    pub subinterface: Option<Vec<Subinterface>>,
+    pub subinterface: Option<Subinterface>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -163,8 +177,6 @@ pub struct SubinterfaceConfig {
     pub enabled: Option<bool>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub admin_state: Option<AdminState>,
-    #[serde(skip_serializing_if = "Option::is_none")]
-    pub index: Option<u32>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -184,6 +196,28 @@ pub struct IpAddress {
     pub ip: Option<std::net::IpAddr>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub prefix_length: Option<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct SwitchedVlan {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interface_mode: Option<InterfaceMode>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub access_vlan: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub trunk_vlans: Option<Vec<u32>>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct RoutedVlan {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub vlan_id: Option<u32>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv4: Option<IpAddressConfig>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ipv6: Option<IpAddressConfig>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
@@ -214,6 +248,48 @@ pub struct EthernetConfig {
 #[serde(deny_unknown_fields)]
 pub struct Acls {}
 
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct Services {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dhcp_server: Option<DhcpServer>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DhcpServer {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub enabled: Option<bool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub dhcp_pool: Option<DhcpPool>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub static_ip_allocations: Option<Vec<StaticIpAllocations>>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub interfaces: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct DhcpPool {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub start: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub end: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub lease_time: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Default, PartialEq)]
+#[serde(deny_unknown_fields)]
+pub struct StaticIpAllocations {
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub device_name: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub mac_address: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub ip_address: Option<String>,
+}
+
 #[derive(Debug, PartialEq)]
 struct DeviceConfigPaths {
     user_config_path: PathBuf,
@@ -238,6 +314,7 @@ fn schema_error(error: schema::SchemaError) -> String {
 #[derive(Debug, PartialEq)]
 pub struct Config {
     config: Option<DeviceConfig>,
+    startup_path: Option<PathBuf>,
     paths: DeviceConfigPaths,
 }
 
@@ -246,6 +323,7 @@ impl Config {
     pub fn new<P: Into<PathBuf>>(user_path: P, factory_path: P, device_schema: P) -> Config {
         Config {
             config: None,
+            startup_path: None,
             paths: DeviceConfigPaths {
                 user_config_path: user_path.into(),
                 factory_config_path: factory_path.into(),
@@ -269,6 +347,16 @@ impl Config {
         self.paths.device_schema_path.as_path()
     }
 
+    /// Returns the path of the config that was read at startup
+    ///
+    /// If a configuration has not been read yet then returns None.
+    pub fn startup_path(&self) -> Option<&Path> {
+        if let Some(p) = &self.startup_path {
+            return Some(p.as_path());
+        }
+        None
+    }
+
     /// Loads the relevant configuration file.
     ///
     /// This method tries to load the user configuration file. If the user config file does not
@@ -279,29 +367,39 @@ impl Config {
     /// available.
     pub async fn load_config(&mut self) -> error::Result<()> {
         let loaded_config;
+        let loaded_path;
         match self.try_load_config(&self.user_config_path()) {
             Ok(c) => {
                 loaded_config = c;
+                loaded_path = self.paths.user_config_path.to_path_buf();
             }
             Err(e) => {
                 warn!("Failed to load user config: {}", e);
                 loaded_config = self.try_load_config(&self.factory_config_path())?;
+                loaded_path = self.paths.factory_config_path.to_path_buf();
             }
         }
-
         match self.is_valid_config(&loaded_config) {
             Ok(_) => {
-                let valid_config = serde_json::from_value(loaded_config)?;
-                info!("Successfully validated new config!");
-                self.config = Some(valid_config);
+                self.config = Some(serde_json::from_value(loaded_config).map_err(|e| {
+                    error::NetworkManager::CONFIG(error::Config::FailedToDeserializeConfig {
+                        path: String::from(loaded_path.to_string_lossy()),
+                        error: e.to_string(),
+                    })
+                })?);
+                self.startup_path = Some(loaded_path);
                 Ok(())
             }
-            Err(e) => Err(e),
+            Err(e) => {
+                error!("Config validation failed: {}", e);
+                Err(e)
+            }
         }
     }
 
     /// Tries to load the given configuration file.
     fn try_load_config(&self, config_path: &Path) -> error::Result<Value> {
+        info!("Trying to load from: {}", String::from(config_path.to_string_lossy()));
         if config_path.is_file() {
             let mut contents = String::new();
             let mut f = File::open(config_path).map_err(|e| {
@@ -334,6 +432,7 @@ impl Config {
 
     /// Validates an in-memory deserialized configuration.
     fn is_valid_config(&self, config: &Value) -> error::Result<()> {
+        info!("Validating config against the device schema");
         let device_schema = self.try_load_config(&self.device_schema_path())?;
         let mut scope = json_schema::Scope::new();
         let compiled_device_schema =
@@ -395,6 +494,7 @@ mod tests {
         assert_eq!(test_config.user_config_path(), Path::new(user_cfg));
         assert_eq!(test_config.factory_config_path(), Path::new(factory_cfg));
         assert_eq!(test_config.device_schema_path(), Path::new(device_schema));
+        assert_eq!(test_config.startup_path(), None);
     }
 
     #[test]
