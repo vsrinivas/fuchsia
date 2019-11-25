@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("network_manager_e2e_nat") {
+  edition = "2018"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.net.stack:fuchsia.net.stack-rustc",
+    "//sdk/fidl/fuchsia.router.config:fuchsia.router.config-rustc",
+    "//src/connectivity/network/testing/netemul/lib/fidl:sync-rustc",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//third_party/rust_crates:log",
+    "//third_party/rust_crates:structopt",
+    "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
+  ]
+}

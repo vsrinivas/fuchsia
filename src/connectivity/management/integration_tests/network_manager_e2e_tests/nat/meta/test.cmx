@@ -1,0 +1,127 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "capture": true,
+            "default_url": "fuchsia-pkg://fuchsia.com/network_manager_e2e_tests#meta/network_manager_e2e_nat.cmx",
+            "environment": {
+                "children": [
+                    {
+                        "name": "lan_device",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "lan_device_ep",
+                                    "-i",
+                                    "192.168.1.2/24",
+                                    "-g",
+                                    "192.168.1.1"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "lan"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "name": "router_device",
+                        "setup": [
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "router_device_lan_ep",
+                                    "-i",
+                                    "192.168.1.1/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "-e",
+                                    "router_device_wan_ep",
+                                    "-i",
+                                    "192.168.0.21/24"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                            },
+                            {
+                                "arguments": [
+                                    "set",
+                                    "security-config",
+                                    "nat",
+                                    "enable"
+                                ],
+                                "url": "fuchsia-pkg://fuchsia.com/network_manager_cli#meta/network_manager_cli.cmx"
+                            }
+                        ],
+                        "test": [
+                            {
+                                "arguments": [
+                                    "router"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name": "wan_device",
+                "services": {
+                    "fuchsia.net.stack.Stack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.netstack.Netstack": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.posix.socket.Provider": "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx",
+                    "fuchsia.router.config.RouterAdmin": "fuchsia-pkg://fuchsia.com/network_manager#meta/network_manager.cmx"
+                },
+                "setup": [
+                    {
+                        "arguments": [
+                            "-e",
+                            "wan_device_ep",
+                            "-i",
+                            "192.168.0.22/24"
+                        ],
+                        "url": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/helper_netstack_cfg.cmx"
+                    }
+                ],
+                "test": [
+                    {
+                        "arguments": [
+                            "wan"
+                        ]
+                    }
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "wan_device_ep"
+                        },
+                        {
+                            "name": "router_device_wan_ep"
+                        }
+                    ],
+                    "name": "wan_net"
+                },
+                {
+                    "endpoints": [
+                        {
+                            "name": "lan_device_ep"
+                        },
+                        {
+                            "name": "router_device_lan_ep"
+                        }
+                    ],
+                    "name": "lan_net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "bin/nat"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

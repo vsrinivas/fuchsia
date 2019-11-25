@@ -1,0 +1,36 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+import("//build/testing/environments.gni")
+
+group("netemul_empty_binaries") {
+  write_file("$root_out_dir/network_manager_e2e_nat_test", "")
+}
+
+test_package("network_manager_e2e_tests") {
+  deps = [
+    "nat:network_manager_e2e_nat",
+  ]
+  meta = [
+    {
+      path = rebase_path("nat/meta/bin.cmx")
+      dest = "network_manager_e2e_nat.cmx"
+    },
+  ]
+  binaries = [
+    {
+      name = "network_manager_e2e_nat"
+    },
+  ]
+  tests = [
+    {
+      name = "network_manager_e2e_nat_test"
+      manifest = "nat/meta/test.cmx"
+      environments = basic_envs
+    },
+  ]
+}

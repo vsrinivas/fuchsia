@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/network_manager_e2e_nat"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.NameLookup",
+            "fuchsia.posix.socket.Provider",
+            "fuchsia.net.stack.Stack",
+            "fuchsia.router.config.RouterAdmin",
+            "fuchsia.router.config.RouterState",
+            "fuchsia.netemul.sync.SyncManager"
+        ]
+    }
+}
