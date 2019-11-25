@@ -32,7 +32,6 @@ class SessionUserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
 
   // Called after SessionUserProviderImpl successfully logs in a user.
   using OnLoginCallback = fit::function<void(fuchsia::modular::auth::AccountPtr account,
-                                             fuchsia::auth::TokenManagerPtr ledger_token_manager,
                                              fuchsia::auth::TokenManagerPtr agent_token_manager)>;
 
   // |account_manager| Used to register SessionUserProviderImpl as an

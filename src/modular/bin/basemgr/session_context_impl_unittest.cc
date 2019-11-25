@@ -33,16 +33,15 @@ TEST_F(SessionContextImplTest, StartSessionmgrWithTokenManagers) {
         callback_called = true;
       });
 
-  fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
 
   modular::SessionContextImpl impl(
       &launcher, kSessionId, modular::CloneStruct(app_config) /* sessionmgr_config */,
       modular::CloneStruct(app_config) /* session_shell_config */,
       modular::CloneStruct(app_config) /* story_shell_config */,
-      false /* use_session_shell_for_story_shell_factory */, std::move(ledger_token_manager),
-      std::move(agent_token_manager), nullptr /* account */, fuchsia::ui::views::ViewToken(),
-      nullptr /* additional_services */, zx::channel() /* overridden_config_handle */,
+      false /* use_session_shell_for_story_shell_factory */, std::move(agent_token_manager),
+      nullptr /* account */, fuchsia::ui::views::ViewToken(), nullptr /* additional_services */,
+      zx::channel() /* overridden_config_handle */,
       [](fidl::InterfaceRequest<fuchsia::ui::policy::Presentation>) {} /* get_presentation */,
       [](modular::SessionContextImpl::ShutDownReason, bool) {} /* done_callback */);
 
@@ -62,7 +61,6 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       url, [](fuchsia::sys::LaunchInfo launch_info,
               fidl::InterfaceRequest<fuchsia::sys::ComponentController> ctrl) { return; });
 
-  fuchsia::auth::TokenManagerPtr ledger_token_manager;
   fuchsia::auth::TokenManagerPtr agent_token_manager;
 
   bool done_callback_called = false;
@@ -70,8 +68,7 @@ TEST_F(SessionContextImplTest, SessionmgrCrashInvokesDoneCallback) {
       &launcher, kSessionId, /* sessionmgr_config= */ modular::CloneStruct(app_config),
       /* session_shell_config= */ modular::CloneStruct(app_config),
       /* story_shell_config= */ modular::CloneStruct(app_config),
-      /* use_session_shell_for_story_shell_factory= */ false, std::move(ledger_token_manager),
-      std::move(agent_token_manager),
+      /* use_session_shell_for_story_shell_factory= */ false, std::move(agent_token_manager),
       /* account= */ nullptr, fuchsia::ui::views::ViewToken(),
       /* additional_services */ nullptr, zx::channel() /* overridden_config_handle */,
       /* get_presentation= */

@@ -28,7 +28,6 @@ protocol Sessionmgr {
                fuchsia.modular.AppConfig session_shell,
                fuchsia.modular.AppConfig story_shell,
                bool use_session_shell_for_story_shell_factory,
-               fuchsia.auth.TokenManager? ledger_token_manager,
                fuchsia.auth.TokenManager? agent_token_manager,
                SessionContext session_context,
                fuchsia.ui.views.ViewToken view_token);

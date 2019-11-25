@@ -231,10 +231,8 @@ void BasemgrImpl::InitializeUserProvider() {
       [this] { ShowSetupOrLogin(); },
       /* on_login= */
       [this](fuchsia::modular::auth::AccountPtr account,
-             fuchsia::auth::TokenManagerPtr ledger_token_manager,
              fuchsia::auth::TokenManagerPtr agent_token_manager) {
-        OnLogin(std::move(account), std::move(ledger_token_manager),
-                std::move(agent_token_manager));
+        OnLogin(std::move(account), std::move(agent_token_manager));
       });
 }
 
@@ -280,12 +278,10 @@ void BasemgrImpl::GetAuthenticationUIContext(
 }
 
 void BasemgrImpl::OnLogin(fuchsia::modular::auth::AccountPtr account,
-                          fuchsia::auth::TokenManagerPtr ledger_token_manager,
                           fuchsia::auth::TokenManagerPtr agent_token_manager) {
   auto [view_token, view_holder_token] = scenic::ViewTokenPair::New();
   auto did_start_session = session_provider_->StartSession(
-      std::move(view_token), std::move(account), std::move(ledger_token_manager),
-      std::move(agent_token_manager));
+      std::move(view_token), std::move(account), std::move(agent_token_manager));
   if (!did_start_session) {
     FXL_LOG(WARNING) << "Session was already started and the logged in user "
                         "could not join the session.";

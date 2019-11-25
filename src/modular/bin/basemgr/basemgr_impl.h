@@ -110,7 +110,6 @@ class BasemgrImpl : public fuchsia::modular::Lifecycle,
   // Invoked when a user has been logged in. Starts a new session for the given
   // |account|.
   void OnLogin(fuchsia::modular::auth::AccountPtr account,
-               fuchsia::auth::TokenManagerPtr ledger_token_manager,
                fuchsia::auth::TokenManagerPtr agent_token_manager);
 
   // Returns the session shell config of the active session shell, or returns

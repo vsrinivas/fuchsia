@@ -20,7 +20,6 @@ SessionContextImpl::SessionContextImpl(
     fuchsia::sys::Launcher* const launcher, std::string session_id,
     fuchsia::modular::AppConfig sessionmgr_config, fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fuchsia::modular::auth::AccountPtr account, fuchsia::ui::views::ViewToken view_token,
     fuchsia::sys::ServiceListPtr additional_services, zx::channel config_handle,
@@ -51,8 +50,8 @@ SessionContextImpl::SessionContextImpl(
   sessionmgr_app_->services().ConnectToService(sessionmgr_.NewRequest());
   sessionmgr_->Initialize(session_id, std::move(account), std::move(session_shell_config),
                           std::move(story_shell_config), use_session_shell_for_story_shell_factory,
-                          std::move(ledger_token_manager), std::move(agent_token_manager),
-                          session_context_binding_.NewBinding(), std::move(view_token));
+                          std::move(agent_token_manager), session_context_binding_.NewBinding(),
+                          std::move(view_token));
 
   sessionmgr_app_->SetAppErrorHandler([weak_this = weak_factory_.GetWeakPtr()] {
     FXL_LOG(ERROR) << "Sessionmgr seems to have crashed unexpectedly. "

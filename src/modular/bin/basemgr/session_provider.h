@@ -55,7 +55,6 @@ class SessionProvider {
   // session. Returns true if a new session was started successfully.
   bool StartSession(fuchsia::ui::views::ViewToken view_token,
                     fuchsia::modular::auth::AccountPtr account,
-                    fuchsia::auth::TokenManagerPtr ledger_token_manager,
                     fuchsia::auth::TokenManagerPtr agent_token_manager);
 
   // Asynchronously tears down the sessionmgr process. |callback| is invoked

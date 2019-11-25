@@ -7,7 +7,6 @@
 
 #include <fuchsia/app/discover/cpp/fidl.h>
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
-#include <fuchsia/ledger/cloud/firestore/cpp/fidl.h>
 #include <fuchsia/ledger/cpp/fidl.h>
 #include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/auth/cpp/fidl.h>
@@ -68,7 +67,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
                   fuchsia::modular::AppConfig session_shell_config,
                   fuchsia::modular::AppConfig story_shell_config,
                   bool use_session_shell_for_story_shell_factory,
-                  fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
                   fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
                   fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
                   fuchsia::ui::views::ViewToken view_token) override;
@@ -83,10 +81,7 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void InitializeSessionEnvironment(std::string session_id);
   void InitializeUser(fuchsia::modular::auth::AccountPtr account,
                       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager);
-  void InitializeLedger(fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
-  void InitializeLedgerWithSyncConfig(
-      fuchsia::ledger::cloud::CloudProviderPtr cloud_provider, std::string ledger_user_id,
-      fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request);
+  void InitializeLedger();
   void InitializeIntlPropertyProvider();
   void InitializeDeviceMap();
   void InitializeModular(const fidl::StringPtr& session_shell_url,
@@ -129,10 +124,6 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   void ConnectToStoryEntityProvider(
       const std::string& story_id,
       fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) override;
-
-  fuchsia::ledger::cloud::CloudProviderPtr LaunchCloudProvider(
-      const std::string& user_profile_id,
-      fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager);
 
   // Called during initialization. Schedules the given action to be executed
   // during termination. This allows to create something like an asynchronous
@@ -193,10 +184,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   fidl::BindingSet<fuchsia::modular::SessionShellContext> session_shell_context_bindings_;
 
   fuchsia::auth::TokenManagerPtr agent_token_manager_;
-  fuchsia::auth::TokenManagerPtr ledger_token_manager_;
   fuchsia::modular::internal::SessionContextPtr session_context_;
   std::unique_ptr<AppClient<fuchsia::modular::Lifecycle>> cloud_provider_app_;
-  fuchsia::ledger::cloud::firestore::FactoryPtr cloud_provider_factory_;
   std::unique_ptr<AppClient<fuchsia::ledger::internal::LedgerController>> ledger_app_;
   fuchsia::ledger::internal::LedgerRepositoryFactoryPtr ledger_repository_factory_;
   fuchsia::ledger::internal::LedgerRepositoryPtr ledger_repository_;

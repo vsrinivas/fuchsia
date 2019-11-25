@@ -59,15 +59,6 @@ constexpr char kLedgerRepositoryDirectory[] = "/data/LEDGER";
 // services.
 constexpr char kSessionCtlDir[] = "sessionctl";
 
-fuchsia::ledger::cloud::firestore::Config GetLedgerFirestoreConfig(
-    const std::string& user_profile_id) {
-  fuchsia::ledger::cloud::firestore::Config config;
-  config.server_id = kFirebaseProjectId;
-  config.api_key = kFirebaseApiKey;
-  config.user_profile_id = user_profile_id;
-  return config;
-}
-
 // Creates a function that can be used as termination action passed to AtEnd(),
 // which when called invokes the reset() method on the object pointed to by the
 // argument. Used to reset() fidl pointers and std::unique_ptr<>s fields.
@@ -173,7 +164,6 @@ void SessionmgrImpl::Initialize(
     std::string session_id, fuchsia::modular::auth::AccountPtr account,
     fuchsia::modular::AppConfig session_shell_config,
     fuchsia::modular::AppConfig story_shell_config, bool use_session_shell_for_story_shell_factory,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
     fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
     fidl::InterfaceHandle<fuchsia::modular::internal::SessionContext> session_context,
     fuchsia::ui::views::ViewToken view_token) {
@@ -184,7 +174,6 @@ void SessionmgrImpl::Initialize(
   // lazily initialize the following services only once they are requested
   // for the first time.
   finish_initialization_ = [this, called = false, session_shell_url = session_shell_config.url,
-                            ledger_token_manager = std::move(ledger_token_manager),
                             story_shell_config = std::move(story_shell_config),
                             use_session_shell_for_story_shell_factory]() mutable {
     if (called) {
@@ -193,7 +182,7 @@ void SessionmgrImpl::Initialize(
     FXL_LOG(INFO) << "SessionmgrImpl::Initialize() finishing initialization.";
     called = true;
 
-    InitializeLedger(std::move(ledger_token_manager));
+    InitializeLedger();
     InitializeIntlPropertyProvider();
     InitializeDiscovermgr();
     InitializeModular(std::move(session_shell_url), std::move(story_shell_config),
@@ -293,8 +282,7 @@ zx::channel SessionmgrImpl::GetLedgerRepositoryDirectory() {
   return fsl::CloneChannelFromFileDescriptor(dir.get());
 }
 
-void SessionmgrImpl::InitializeLedger(
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
+void SessionmgrImpl::InitializeLedger() {
   fuchsia::modular::AppConfig ledger_config;
   ledger_config.url = kLedgerAppUrl;
 
@@ -314,51 +302,6 @@ void SessionmgrImpl::InitializeLedger(
         Shutdown();
       });
 
-  fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  if (!account_ || config_.cloud_provider() == fuchsia::modular::session::CloudProvider::NONE) {
-    // We are running in Guest mode.
-    InitializeLedgerWithSyncConfig(nullptr, "", std::move(repository_request));
-    return;
-  }
-  // If not running in Guest mode, configure the cloud provider for Ledger to
-  // use for syncing.
-  ledger_token_manager_ = ledger_token_manager.Bind();
-  fuchsia::auth::AppConfig oauth_config;
-  oauth_config.auth_provider_type = "google";
-  // |ListProfileIds| do not require an internet connection to work.
-  ledger_token_manager_->ListProfileIds(
-      std::move(oauth_config),
-      [this, repository_request = std::move(repository_request)](
-          fuchsia::auth::Status status, std::vector<std::string> user_profile_ids) mutable {
-        if (status != fuchsia::auth::Status::OK) {
-          FXL_LOG(ERROR) << "Error while retrieving user profile IDs, shutting down.";
-          Shutdown();
-          return;
-        }
-
-        if (user_profile_ids.size() != 1) {
-          FXL_LOG(ERROR) << "There is no unique user profile ID (" << user_profile_ids.size()
-                         << " found), shutting down.";
-          Shutdown();
-          return;
-        }
-        std::string ledger_user_id = user_profile_ids[0];
-        fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-        if ((config_.cloud_provider()) ==
-            fuchsia::modular::session::CloudProvider::FROM_ENVIRONMENT) {
-          sessionmgr_context_->svc()->Connect(cloud_provider.NewRequest());
-        } else if (config_.cloud_provider() ==
-                   fuchsia::modular::session::CloudProvider::LET_LEDGER_DECIDE) {
-          cloud_provider = LaunchCloudProvider(ledger_user_id, ledger_token_manager_.Unbind());
-        }
-        InitializeLedgerWithSyncConfig(std::move(cloud_provider), std::move(ledger_user_id),
-                                       std::move(repository_request));
-      });
-}
-
-void SessionmgrImpl::InitializeLedgerWithSyncConfig(
-    fuchsia::ledger::cloud::CloudProviderPtr cloud_provider, std::string ledger_user_id,
-    fidl::InterfaceRequest<fuchsia::ledger::internal::LedgerRepository> repository_request) {
   ledger_repository_factory_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(ERROR) << "LedgerRepositoryFactory.GetRepository() failed: "
                    << zx_status_get_string(status) << std::endl
@@ -370,8 +313,7 @@ void SessionmgrImpl::InitializeLedgerWithSyncConfig(
 
   // The directory "/data" is the data root "/data/LEDGER" that the ledger app
   // client is configured to.
-  ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(),
-                                            std::move(cloud_provider), std::move(ledger_user_id),
+  ledger_repository_factory_->GetRepository(GetLedgerRepositoryDirectory(), nullptr, "",
                                             std::move(repository_request));
 
   // If ledger state is erased from underneath us (happens when the cloud store
@@ -802,31 +744,6 @@ void SessionmgrImpl::ConnectToStoryEntityProvider(
     const std::string& story_id,
     fidl::InterfaceRequest<fuchsia::modular::EntityProvider> entity_provider_request) {
   story_provider_impl_->ConnectToStoryEntityProvider(story_id, std::move(entity_provider_request));
-}
-
-fuchsia::ledger::cloud::CloudProviderPtr SessionmgrImpl::LaunchCloudProvider(
-    const std::string& user_profile_id,
-    fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager) {
-  FXL_CHECK(ledger_token_manager);
-
-  fuchsia::modular::AppConfig cloud_provider_app_config;
-  cloud_provider_app_config.url = kCloudProviderFirestoreAppUrl;
-  cloud_provider_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
-      sessionmgr_context_launcher_.get(), std::move(cloud_provider_app_config));
-  cloud_provider_app_->services().ConnectToService(cloud_provider_factory_.NewRequest());
-  // TODO(mesch): Teardown cloud_provider_app_ ?
-
-  fuchsia::ledger::cloud::CloudProviderPtr cloud_provider;
-  auto cloud_provider_config = GetLedgerFirestoreConfig(user_profile_id);
-
-  cloud_provider_factory_->GetCloudProvider(
-      std::move(cloud_provider_config), std::move(ledger_token_manager),
-      cloud_provider.NewRequest(), [](fuchsia::ledger::cloud::Status status) {
-        if (status != fuchsia::ledger::cloud::Status::OK) {
-          FXL_LOG(ERROR) << "Failed to create a cloud provider: " << fidl::ToUnderlying(status);
-        }
-      });
-  return cloud_provider;
 }
 
 void SessionmgrImpl::AtEnd(fit::function<void(fit::function<void()>)> action) {

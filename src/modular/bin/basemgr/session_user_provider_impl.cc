@@ -166,14 +166,12 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     auto account_id = GetRandomId();
 
     // Instead of passing token_manager_factory all the way to agents and
-    // runners with all auth provider configurations, send two
-    // |fuchsia::auth::TokenManager| handles, one for ledger and one for
-    // agents for the given user account |account_id|.
-    fuchsia::auth::TokenManagerPtr ledger_token_manager = CreateTokenManager(account_id);
+    // runners with all auth provider configurations, send a
+    // |fuchsia::auth::TokenManager| handle for agents for the given user
+    // account |account_id|.
     fuchsia::auth::TokenManagerPtr agent_token_manager = CreateTokenManager(account_id);
 
-    on_login_(/* account= */ nullptr, std::move(ledger_token_manager),
-              std::move(agent_token_manager));
+    on_login_(/* account= */ nullptr, std::move(agent_token_manager));
   } else {
     FXL_LOG(INFO) << "fuchsia::modular::UserProvider::Login() Login as "
                      "authenticated user";
@@ -188,12 +186,6 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     account->GetDefaultPersona(persona.NewRequest(), [](auto result) {
       FXL_LOG(INFO) << "Got default persona with error: " << (uint32_t)result.err();
     });
-
-    fuchsia::auth::TokenManagerPtr ledger_token_manager;
-    persona->GetTokenManager(
-        kSessionUserProviderAppUrl, ledger_token_manager.NewRequest(), [](auto result) {
-          FXL_LOG(INFO) << "Got token manager with error: " << (uint32_t)result.err();
-        });
 
     fuchsia::auth::TokenManagerPtr agent_token_manager;
     persona->GetTokenManager(
@@ -210,8 +202,7 @@ void SessionUserProviderImpl::Login2(fuchsia::modular::UserLoginParams2 params) 
     };
     joined_personas_.emplace_back(std::move(joined_persona));
 
-    on_login_(std::move(account_deprecated), std::move(ledger_token_manager),
-              std::move(agent_token_manager));
+    on_login_(std::move(account_deprecated), std::move(agent_token_manager));
   }
 }
 
