@@ -47,6 +47,22 @@ param_spinel_vk_render const params_tests[] = {
     "</svg>",  //
     .checksum = 0xFBF00400,
   },
+  {
+    .name    = "rasters_prefix_fix",
+    .surface = { 1024, 300 },
+    .svg     =  //
+    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+    "  <g fill=\"black\"\n"
+    "     transform=\"translate(-900,-950)\n"
+    "                 scale(0.03125)\n"
+    "                 matrix(-63986.14, -1331.7272, 1331.7272, -63986.14, 48960.0, 33920.0)\">\n"
+    "    <polyline points =\n"
+    "              \"-0.08,-0.02 0.28,-0.02 0.28,-0.02 0.28,0.02\n"
+    "               0.28,0.02 -0.08,0.02 -0.08,0.02 -0.08,-0.02\"/>\n"
+    "  </g>\n"
+    "</svg>\n",  //
+    .checksum = 0xFD0B4012,
+  },
 };
 
 //

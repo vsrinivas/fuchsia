@@ -624,7 +624,6 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   // DS: RASTER_IDS
   //
-
   spn_vk_ds_acquire_raster_ids(instance, device, &payload_2->ds.i);
 
   // dbi: raster_ids

@@ -53,7 +53,7 @@ SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_LINE();
 #define SPN_RASTERIZE_SUBGROUP_SIZE           (1 << SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
 #define SPN_RASTERIZE_SUBGROUP_MASK           SPN_BITS_TO_MASK(SPN_DEVICE_RASTERIZE_SUBGROUP_SIZE_LOG2)
 
-#define SPN_RASTERIZE_SMEM_CACHE_YX_INVALID   SPN_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_XY + 1)
+#define SPN_RASTERIZE_SMEM_CACHE_YX_INVALID   SPN_BITS_TO_MASK(SPN_TTRK_HI_BITS_XY + 1)
 
 #define SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2  2
 #define SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2  2
@@ -351,8 +351,7 @@ spn_append(SPN_SUBGROUP_UNIFORM inout uvec2 key_ring,
     const uvec2 h0m_min = uvec2(min(h0u, hmu) + SPN_TTXK_XY_BIAS);
     const uint  h0m_x   = h0m_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
     const uint  h0m_y   = h0m_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
-    const uint  h0m_yx =
-      SPN_BITFIELD_INSERT(h0m_x, h0m_y, SPN_TTRK_LO_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
+    const uint  h0m_yx  = SPN_BITFIELD_INSERT(h0m_x, h0m_y, SPN_TTRK_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
 
     // save yx
     if (h0m_is_nez)
@@ -413,7 +412,7 @@ spn_append(SPN_SUBGROUP_UNIFORM inout uvec2 key_ring,
         const uint  hm1_x   = hm1_min.x >> SPN_TILE_SUBPIXEL_X_BITS_LOG2;
         const uint  hm1_y   = hm1_min.y >> SPN_TILE_SUBPIXEL_Y_BITS_LOG2;
         const uint  hm1_yx =
-          SPN_BITFIELD_INSERT(hm1_x, hm1_y, SPN_TTRK_LO_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
+          SPN_BITFIELD_INSERT(hm1_x, hm1_y, SPN_TTRK_HI_BITS_X, SPN_TTRK_HI_BITS_Y);
 
         // save yx
         if (hm1_is_nez)
@@ -657,11 +656,16 @@ uint
 spn_hash(const uint yx)
 {
   //
+  //          0     31
   // Given  : [x:y:na]
   // Return : ([x] | ([y]<<2)) & MASK(4)
   //
+
+  //
+  // FIXME(allanmac): evaluate other bit-twiddling schemes
+  //
   return SPN_BITFIELD_INSERT(yx,
-                             yx >> SPN_TTRK_LO_HI_BITS_X,
+                             yx >> SPN_TTRK_HI_BITS_X,
                              SPN_RASTERIZE_SMEM_CACHE_BITS_X_LOG2,
                              SPN_RASTERIZE_SMEM_CACHE_BITS_Y_LOG2) &
          SPN_BITS_TO_MASK(SPN_RASTERIZE_SMEM_CACHE_BITS_LOG2);
@@ -717,14 +721,9 @@ spn_flush_ttrks(SPN_SUBGROUP_UNIFORM inout uint ttrk_count)
 
   for (uint ii = gl_SubgroupInvocationID; ii < ttrk_count; ii += SPN_RASTERIZE_SUBGROUP_SIZE)
     {
-      const uint  ttsb = SPN_RASTERIZE_SMEM().flush.ttsb[ii];
-      const uint  yx   = SPN_RASTERIZE_SMEM().flush.yx[ii];
-      const uvec2 ttrk = { SPN_BITFIELD_INSERT(ttsb, yx, SPN_TTRK_LO_OFFSET_X, SPN_TTRK_LO_BITS_X),
-                           SPN_BITFIELD_INSERT(
-                             SPN_BITFIELD_EXTRACT(yx, SPN_TTRK_LO_BITS_X, SPN_TTRK_HI_BITS_XY),
-                             cohort,
-                             SPN_TTRK_HI_OFFSET_COHORT,
-                             SPN_TTRK_HI_BITS_COHORT) };
+      uvec2 ttrk = { SPN_RASTERIZE_SMEM().flush.ttsb[ii], SPN_RASTERIZE_SMEM().flush.yx[ii] };
+
+      SPN_TTRK_SET_COHORT(ttrk, cohort);
 
       ttrks_keys[ttrks_base + ii] = ttrk;
 
@@ -1165,24 +1164,6 @@ spn_bin(const bool is_valid, const uint yx, const uint tts, inout uint block_ids
         }
     }
 
-    //
-    // DEBUG
-    //
-#if 0
-  if (gl_WorkGroupID.x == 1)
-    {
-      uint debug_base = 0;
-
-      if (gl_SubgroupInvocationID == 0)
-        debug_base = atomicAdd(bp_debug_count[0], SPN_RASTERIZE_SUBGROUP_SIZE * 2);
-
-      debug_base = subgroupBroadcast(debug_base, 0) + gl_SubgroupInvocationID;
-
-      bp_debug[debug_base + 0 * SPN_RASTERIZE_SUBGROUP_SIZE] = is_valid ? 1 : 0;
-      bp_debug[debug_base + 1 * SPN_RASTERIZE_SUBGROUP_SIZE] = tts;
-    }
-#endif
-
   subgroupBarrier();
 
   if (is_valid)
@@ -1192,6 +1173,9 @@ spn_bin(const bool is_valid, const uint yx, const uint tts, inout uint block_ids
       // write tts to TTSB
       bp_blocks[bp_idx] = tts;
 
+      //
+      // DEBUG
+      //
 #if 0
       {
         uint debug_base = atomicAdd(bp_debug_count[0], 2);

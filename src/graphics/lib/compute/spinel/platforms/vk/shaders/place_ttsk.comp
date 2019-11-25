@@ -112,14 +112,15 @@ SPN_VK_GLSL_DECL_KERNEL_PLACE_TTSK();
 //
 // Translate and clip the TTSK key and massage it into a TTIK key.
 //
-// Note that all TTSK keys have a span of -1 so clipping is simplified.
+// Note that all TTSK keys are considered to have a negative span that
+// is implicitly 1 so clipping is simplified.
 //
 // TTSK v1 ( DEFAULT )
 //
 //  0                            63
 //  | TTSB_ID |   SPAN  |  X |  Y |
 //  +---------+---------+----+----+
-//  |    27   | 13 [-1] | 12 | 12 |
+//  |    27   | 13 [<0] | 12 | 12 |
 //
 //  vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv
 //

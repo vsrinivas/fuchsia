@@ -113,8 +113,8 @@ main()
   // first perform a prefix sum on the subgroup to reduce atomic
   // operation traffic
   //
-  // note this idiom can be pushed further to operate across a workgroup
-  // or operated on vectors.
+  // this idiom can be pushed further to operate across a workgroup or
+  // operated on vectors.
   //
   const uint inc          = subgroupInclusiveAdd(extra);
   uint       bp_ids_reads = 0;
@@ -126,8 +126,9 @@ main()
     }
 
   // broadcast block pool base to all lanes
-  SPN_SUBGROUP_UNIFORM const uint bp_ids_base =
-    subgroupBroadcast(bp_ids_reads, SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1);
+  SPN_SUBGROUP_UNIFORM
+  const uint bp_ids_base = subgroupBroadcast(bp_ids_reads,  //
+                                             SPN_RASTERS_ALLOC_SUBGROUP_SIZE - 1);
 
   //
   // store meta header
@@ -147,26 +148,6 @@ main()
       bp_host_map[raster_h] = head_block_id;
 
       //
-      // DEBUG
-      //
-#if 0
-      {
-        const uint debug_base =
-          atomicAdd(bp_debug_count[0], SPN_RASTERS_ALLOC_SUBGROUP_SIZE);
-
-        bp_debug[debug_base + 0] = raster_h;
-        bp_debug[debug_base + 1] = bp_ids_base;
-        bp_debug[debug_base + 2] = exc;
-        bp_debug[debug_base + 3] = reads;
-        bp_debug[debug_base + 4] = bp_mask;
-        bp_debug[debug_base + 5] = head_block_id;
-
-        for (uint ii = 6; ii < SPN_RASTERS_ALLOC_SUBGROUP_SIZE; ii++)
-          bp_debug[debug_base + ii] = 0xDEADBEEF;
-      }
-#endif
-
-      //
       // The layout of allocated blocks is as follows:
       //
       //   ... | HEAD(1) | NODES(0+) | TTPB(0+) | ...
@@ -175,20 +156,42 @@ main()
       // follow TTSK keys.  The starting index of the TTPK keys in the
       // head or nodes is recorded in the raster header.
       //
-      const uint pk_hn_pad  = SPN_RASTER_HEAD_QWORDS + header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS];
-      const uint pk_hn_node = pk_hn_pad / (SPN_RASTER_NODE_QWORDS - 1);
-      const uint pk_hn_base = pk_hn_node * (SPN_RASTER_NODE_QWORDS - 1);
-      const uint pk_hn_off  = pk_hn_pad - pk_hn_base;
+      const uint pk0_pad = SPN_RASTER_HEAD_QWORDS +  //
+                           header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS];
 
-      const uint pk_hn_node_reads    = reads + pk_hn_node;
-      const uint pk_hn_node_block_id = bp_ids[pk_hn_node_reads & bp_mask];
-      const uint pk_hn_node_base     = pk_hn_node_block_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+      uint       pk0_node = pk0_pad / (SPN_RASTER_NODE_QWORDS - 1);
+      const uint pk0_base = pk0_node * (SPN_RASTER_NODE_QWORDS - 1);
+      uint       pk0_off  = pk0_pad - pk0_base;
 
-      // absolute block pool index of starting TTPK key in raster
-      header_lo[SPN_RASTER_HEAD_LO_OFFSET_PKIDX] = pk_hn_node_base + pk_hn_off;
+      //
+      // NOTE(allanmac): If there are any TTSK keys and if there are
+      // zero TTPK keys then adjust for the special case where there
+      // are (SPN_RASTER_NODE_QWORDS - 1) TTSK keys in the final
+      // node.
+      //
+      if ((pk0_off == 0) &&  //
+          (header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTPKS] == 0) &&
+          (header_lo[SPN_RASTER_HEAD_LO_OFFSET_TTSKS] != 0))
+        {
+          pk0_node -= 1;
+          pk0_off = SPN_RASTER_NODE_QWORDS - 1;
+        }
 
-      // save the head and pknode reads
-      ttrks_meta.alloc[gl_GlobalInvocationID.x] = uvec2(reads, pk_hn_node_reads);
+      const uint pk0_reads     = reads + pk0_node;
+      const uint pk0_block_id  = bp_ids[pk0_reads & bp_mask];
+      const uint pk0_node_base = pk0_block_id * SPN_BLOCK_POOL_SUBBLOCK_DWORDS;
+
+      //
+      // save the ttrk and ttpk reads
+      //
+      ttrks_meta.alloc[gl_GlobalInvocationID.x] = uvec2(reads, pk0_reads);
+
+      //
+      // save the absolute block pool index of the first TTPK
+      //
+      // NOTE(allanmac): if there were zero TTPK keys then
+      //
+      header_lo[SPN_RASTER_HEAD_LO_OFFSET_PKIDX] = pk0_node_base + pk0_off;
 
       //
       // Write out uvec4 and uint to header resulting in this:
@@ -214,7 +217,9 @@ main()
       // spirv-opt or glslangValidator error.  Once buffer references
       // are available, we can write this the correct way.
       //
-      bp_blocks_uvec4[head_block_id * SPN_BLOCK_POOL_SUBBLOCK_OWORDS + 0] = header_lo;
+      const uint raster_head_base = head_block_id * SPN_BLOCK_POOL_SUBBLOCK_OWORDS;
+
+      bp_blocks_uvec4[raster_head_base] = header_lo;
 
       //
       // a smart compiler will reduce this to a dword store
@@ -223,7 +228,7 @@ main()
 
       header_dword5[0] = blocks;
 
-      bp_blocks_uvec4[head_block_id * SPN_BLOCK_POOL_SUBBLOCK_OWORDS + 1] = header_dword5;
+      bp_blocks_uvec4[raster_head_base + 1] = header_dword5;
 
       //
       // DEBUG
@@ -235,14 +240,14 @@ main()
 
         const uint debug_base = atomicAdd(bp_debug_count[0], debug_words);
 
-        bp_debug[debug_base + 0] = raster_idx;
-        bp_debug[debug_base + 1] = header_lo[0];
-        bp_debug[debug_base + 2] = header_lo[1];
-        bp_debug[debug_base + 3] = header_lo[2];
-        bp_debug[debug_base + 4] = header_lo[3];
-        bp_debug[debug_base + 5] = blocks;
-        bp_debug[debug_base + 6] = alloc[SPN_RASTER_COHORT_META_ALLOC_OFFSET_READS];
-        bp_debug[debug_base + 7] = alloc[SPN_RASTER_COHORT_META_ALLOC_OFFSET_PKNODE];
+        bp_debug[debug_base + 0] = header_lo[0];
+        bp_debug[debug_base + 1] = header_lo[1];
+        bp_debug[debug_base + 2] = header_lo[2];
+        bp_debug[debug_base + 3] = header_lo[3];
+        bp_debug[debug_base + 4] = header_dword5[0];
+        bp_debug[debug_base + 5] = reads;      // SPN_RASTER_COHORT_META_ALLOC_OFFSET_SK_READS
+        bp_debug[debug_base + 6] = pk0_reads;  // SPN_RASTER_COHORT_META_ALLOC_OFFSET_PK_READS
+        bp_debug[debug_base + 7] = raster_idx;
 
         for (uint ii = 8; ii < debug_words; ii++)
           bp_debug[debug_base + ii] = 0xFEEDFACE;

@@ -11,6 +11,10 @@
 // sophisticated but let's see how this performs.  Optimize this later
 // using CUDA & OpenCL techniques.
 //
+// FIXME(allanmac): Transition to a split lo/hi sort.
+//
+// FIXME(allanmac): Add a "SKIP" bit to the TTRK.
+//
 
 #extension GL_GOOGLE_include_directive : require
 #extension GL_KHR_shader_subgroup_shuffle_relative : require
@@ -22,20 +26,20 @@
 //
 // IF THE TTRK KEY IS ALTERED THEN THIS KERNEL WILL NEED TO BE UPDATED
 //
-// TTRK (64-bit COMPARE)
-//
-//  0                                         63
-//  | TTSB ID |   X  |   Y  | RASTER COHORT ID |
-//  +---------+------+------+------------------+
-//  |    27   |  12  |  12  |        13        |
-//
-//
 // TTRK (32-BIT COMPARE)
 //
-//  0                                               63
-//  | TTSB ID | N/A |   X  |   Y  | RASTER COHORT ID |
-//  +---------+-----+------+------+------------------+
-//  |    27   |  5  |  12  |  12  |        8         |
+//  0                                                               63
+//  | TTSB_ID | NEW_X | NEW_Y | N/A |   X  |   Y  | RASTER COHORT ID |
+//  +---------+-------+-------+-----+------+------+------------------+
+//  |    27   |   1   |   1   |  3  |  12  |  12  |        8         |
+//
+//
+// TTRK (64-bit COMPARE) (DEFAULT)
+//
+//  0                                                         63
+//  | TTSB_ID | NEW_X | NEW_Y |   X  |   Y  | RASTER COHORT ID |
+//  +---------+-------+-------+------+------+------------------+
+//  |    27   |   1   |   1   |  12  |  12  |        11        |
 //
 
 //
@@ -94,17 +98,14 @@ SPN_VK_GLSL_DEBUG(0);
 //
 
 #if SPN_HS_ENABLE_COMPARE_64
-#define SPN_HS_IS_NOT_MAX(kv_) (pack64(kv_) != HS_KEY_VAL_MAX)
+#define SPN_HS_IS_NOT_MAX(row_) (pack64(r##row_) != HS_KEY_VAL_MAX)
 #else
-#define SPN_HS_IS_NOT_MAX(kv_) ((kv_[0] != HS_KEY_VAL_MAX[0]) || (kv_[1] != HS_KEY_VAL_MAX[1]))
+#define SPN_HS_IS_NOT_MAX(row_) ((r##row_[0] & r##row_[1]) != HS_KEY_VAL_MAX[0])
 #endif
 
 //
 //
 //
-
-#define SPN_HS_TTRK_GET_COHORT_ID(row_)                                                            \
-  SPN_BITFIELD_EXTRACT(r##row_[1], SPN_TTRK_HI_OFFSET_COHORT, SPN_TTRK_HI_BITS_COHORT)
 
 #define SPN_HS_TTRK_IS_BLOCK(row_) SPN_BLOCK_ID_IS_BLOCK(r##row_[0])
 
@@ -113,11 +114,11 @@ SPN_VK_GLSL_DEBUG(0);
 // operations.
 //
 
-#define SPN_HS_TTRK_XY_XOR(row_, prev_) SPN_TTRK_GET_XY(r##row_ ^ r##prev_)
+#define SPN_HS_TTRK_XY_XOR(row_, prev_) SPN_TTRK_HI_GET_XY(r##row_[1] ^ r##prev_[1])
 
 #define SPN_HS_TTRK_IS_NEW_XY(xy_xor_) (xy_xor_ != 0)
 
-#define SPN_HS_TTRK_IS_NEW_X(xy_xor_) ((xy_xor_ - 1) < SPN_GLSL_BITS_TO_MASK(SPN_TTRK_LO_HI_BITS_X))
+#define SPN_HS_TTRK_IS_NEW_X(xy_xor_) ((xy_xor_ - 1) < SPN_GLSL_BITS_TO_MASK(SPN_TTRK_HI_BITS_X))
 
 //
 //
@@ -177,12 +178,12 @@ main()
           // This is the first slab and first lane so we want to force
           // recording of a diff and a new y.
           //
-          const uint c = SPN_HS_TTRK_GET_COHORT_ID(1);
+          const uint c = SPN_TTRK_GET_COHORT(r1);
 
           ttrks_meta.rk_off[c] = 0;
 
           r0[0] = r1[0];
-          r0[1] = r1[1] ^ SPN_TTRK_HI_MASK_Y;  // twiddle y
+          r0[1] = r1[1] ^ SPN_TTRK_HI_MASK_Y;  // forces a NEW_Y
         }
     }
 
@@ -190,7 +191,7 @@ main()
   // FOR ALL VALID KEYS IN SLAB... GATHER META STATS
   //
   uint c      = SPN_UINT_MAX;  // start with impossible value for cohort id
-  uint c_prev = SPN_HS_TTRK_GET_COHORT_ID(0);
+  uint c_prev = SPN_TTRK_GET_COHORT(r0);
   uint blocks = 0;
   uint pk     = 0;
   uint rk     = 0;
@@ -201,15 +202,15 @@ main()
   //
 #undef HS_SLAB_ROW
 #define HS_SLAB_ROW(row, prev)                                                                     \
-  if (SPN_HS_IS_NOT_MAX(r##row))                                                                   \
+  if (SPN_HS_IS_NOT_MAX(row))                                                                      \
     {                                                                                              \
-      c = SPN_HS_TTRK_GET_COHORT_ID(row);                                                          \
+      c = SPN_TTRK_GET_COHORT(r##row);                                                             \
                                                                                                    \
       if (c != c_prev)                                                                             \
         {                                                                                          \
           ttrks_meta.rk_off[c] = linear_idx + prev;                                                \
                                                                                                    \
-          SPN_TTRK_SET_NEW_XY(r##row, SPN_TTRK_NEW_Y);                                             \
+          SPN_TTRK_SET_NEW_XY_EXTRA(r##row, SPN_TTRK_NEW_Y_EXTRA);                                 \
                                                                                                    \
           if (blocks > 0)                                                                          \
             {                                                                                      \
@@ -233,13 +234,13 @@ main()
         }                                                                                          \
       else                                                                                         \
         {                                                                                          \
-          const uint xy_xor       = SPN_HS_TTRK_XY_XOR(row, prev);                                 \
-          const bool is_new_xy    = SPN_HS_TTRK_IS_NEW_XY(xy_xor);                                 \
-          const bool is_new_x     = SPN_HS_TTRK_IS_NEW_X(xy_xor);                                  \
-          const uint new_xy_mask  = is_new_x ? SPN_TTRK_NEW_X : SPN_TTRK_NEW_Y;                    \
-          const uint new_xyz_mask = is_new_xy ? new_xy_mask : 0;                                   \
+          const uint xy_xor             = SPN_HS_TTRK_XY_XOR(row, prev);                           \
+          const bool is_new_xy          = SPN_HS_TTRK_IS_NEW_XY(xy_xor);                           \
+          const bool is_new_x           = SPN_HS_TTRK_IS_NEW_X(xy_xor);                            \
+          const uint new_xy_extra_mask1 = is_new_x ? SPN_TTRK_NEW_X_EXTRA : SPN_TTRK_NEW_Y_EXTRA;  \
+          const uint new_xy_extra_mask2 = is_new_xy ? new_xy_extra_mask1 : SPN_TTRK_EXTRA;         \
                                                                                                    \
-          SPN_TTRK_SET_NEW_XY(r##row, new_xyz_mask);                                               \
+          SPN_TTRK_SET_NEW_XY_EXTRA(r##row, new_xy_extra_mask2);                                   \
                                                                                                    \
           pk += is_new_x ? 1 : 0;                                                                  \
         }                                                                                          \

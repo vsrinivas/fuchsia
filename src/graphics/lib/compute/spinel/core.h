@@ -21,14 +21,6 @@
 #define SPN_SUBGROUP_ALIGN_LIMIT                256
 
 //
-// DEVICE SUBGROUP SIZE
-//
-// FIXME(allanmac) -- stop using this once we propagage the subblock size
-//
-
-// #define SPN_DEVICE_SUBGROUP_SIZE                (1<<SPN_DEVICE_SUBGROUP_SIZE_LOG2)
-
-//
 // TILE SIZE
 //
 // Width is a power-of-2 of height
@@ -243,7 +235,7 @@
 //    struct spn_cmd_fill {
 //      uint32_t path_h;          // host id
 //      uint32_t na         : 16; // unused
-//      uint32_t cohort     : 16; // cohort is limited to 13 bits
+//      uint32_t cohort     : 16; // cohort is 8-11 bits
 //      uint32_t transform;       // index of transform
 //      uint32_t clip;            // index of clip
 //    } fill;
@@ -251,7 +243,7 @@
 //    struct spn_cmd_rast {
 //      uint32_t node_id;         // device block id
 //      uint32_t node_dword : 16; // block dword offset
-//      uint32_t cohort     : 16; // cohort is limited to 13 bits
+//      uint32_t cohort     : 16; // cohort is 8-11 bits
 //      uint32_t transform;       // index of transform
 //      uint32_t clip;            // index of clip
 //    } rasterize;
@@ -484,62 +476,74 @@
 //
 
 //
-// TTRK (32-BIT COMPARE)
+// The size of the cohort determines the max number of rasters in a
+// workgroup.
 //
-//  0                                                               63
-//  | TTSB_ID | NEW_X | NEW_Y | N/A |   X  |   Y  | RASTER COHORT ID |
-//  +---------+-------+-------+-----+------+------+------------------+
-//  |    27   |   1   |   1   |  3  |  12  |  12  |        8         |
+// An 8-bit cohort results in *at least* 256 subgroups being dispatched.
+//
+// Each raster launches a subgroup per block of common path geometry.
+//
+// NOTE(allanmac): we only need bit 31 lit up but for now light up all [29-31].
 //
 //
-// TTRK (64-bit COMPARE) (DEFAULT)
+// TTRK (32-BIT COMPARE) (DEFAULT)
 //
-//  0                                                         63
-//  | TTSB_ID | NEW_X | NEW_Y |   X  |   Y  | RASTER COHORT ID |
-//  +---------+-------+-------+------+------+------------------+
-//  |    27   |   1   |   1   |  12  |  12  |        11        |
+//  0                                                                   63
+//  | TTSB_ID | NEW_X | NEW_Y |  EXTRA  |   X  |   Y  | RASTER COHORT ID |
+//  +---------+-------+-------+---------+------+------+------------------+
+//  |    27   |   1   |   1   | 3 [0x7] |  12  |  12  |        8         |
 //
 
 #define SPN_TTRK_LO_BITS_TTSB_ID                 SPN_TAGGED_BLOCK_ID_BITS_ID
 #define SPN_TTRK_LO_BITS_NEW_X                   1
 #define SPN_TTRK_LO_BITS_NEW_Y                   1
-#define SPN_TTRK_LO_BITS_NEW_XY                  2
-#define SPN_TTRK_LO_BITS_X                       3  // X straddles the dword boundary
-#define SPN_TTRK_LO_HI_BITS_X                    12
-#define SPN_TTRK_HI_BITS_X                       (SPN_TTRK_LO_HI_BITS_X - SPN_TTRK_LO_BITS_X)
+#define SPN_TTRK_LO_BITS_EXTRA                   3
+#define SPN_TTRK_HI_BITS_X                       12
 #define SPN_TTRK_HI_BITS_Y                       12
-#define SPN_TTRK_HI_BITS_COHORT                  11
+#define SPN_TTRK_HI_BITS_COHORT                  8
 
-#define SPN_TTRK_LO_HI_BITS_XY                   (SPN_TTRK_LO_HI_BITS_X + SPN_TTRK_HI_BITS_Y)
+#define SPN_TTRK_LO_BITS_NEW_XY                  2
+#define SPN_TTRK_LO_BITS_NEW_XY_EXTRA            (SPN_TTRK_LO_BITS_NEW_XY + SPN_TTRK_LO_BITS_EXTRA)
 #define SPN_TTRK_HI_BITS_XY                      (SPN_TTRK_HI_BITS_X + SPN_TTRK_HI_BITS_Y)
 
 #define SPN_TTRK_LO_OFFSET_NEW_X                 SPN_TTRK_LO_BITS_TTSB_ID
 #define SPN_TTRK_LO_OFFSET_NEW_XY                SPN_TTRK_LO_OFFSET_NEW_X
 #define SPN_TTRK_LO_OFFSET_NEW_Y                 (SPN_TTRK_LO_OFFSET_NEW_X + SPN_TTRK_LO_BITS_NEW_X)
+#define SPN_TTRK_LO_OFFSET_NEW_XY_EXTRA          SPN_TTRK_LO_OFFSET_NEW_XY
 
-#define SPN_TTRK_LO_OFFSET_X                     (SPN_TTRK_LO_OFFSET_NEW_Y + SPN_TTRK_LO_BITS_NEW_Y)
-#define SPN_TTRK_LO_OFFSET_XY                    SPN_TTRK_LO_OFFSET_X
+#define SPN_TTRK_HI_OFFSET_X                     0
+#define SPN_TTRK_HI_OFFSET_XY                    0
 #define SPN_TTRK_HI_OFFSET_Y                     SPN_TTRK_HI_BITS_X
 #define SPN_TTRK_HI_OFFSET_COHORT                (32 - SPN_TTRK_HI_BITS_COHORT)
 
 #define SPN_TTRK_LO_MASK_TTSB_ID                 SPN_BITS_TO_MASK(SPN_TTRK_LO_BITS_TTSB_ID)
 #define SPN_TTRK_LO_MASK_NEW_X                   SPN_BITS_TO_MASK_AT(SPN_TTRK_LO_OFFSET_NEW_X,SPN_TTRK_LO_BITS_NEW_X)
 #define SPN_TTRK_LO_MASK_NEW_Y                   SPN_BITS_TO_MASK_AT(SPN_TTRK_LO_OFFSET_NEW_Y,SPN_TTRK_LO_BITS_NEW_Y)
+#define SPN_TTRK_LO_MASK_EXTRA                   SPN_BITS_TO_MASK_AT(SPN_TTRK_LO_OFFSET_EXTRA,SPN_TTRK_LO_BITS_EXTRA)
 #define SPN_TTRK_HI_MASK_Y                       SPN_BITS_TO_MASK_AT(SPN_TTRK_HI_OFFSET_Y,SPN_TTRK_HI_BITS_Y)
 
-#define SPN_TTRK_GET_X(t_)                       SPN_GLSL_EXTRACT_UVEC2_UINT(t_,SPN_TTRK_LO_OFFSET_X,SPN_TTRK_LO_HI_BITS_X)
-#define SPN_TTRK_GET_XY(t_)                      SPN_GLSL_EXTRACT_UVEC2_UINT(t_,SPN_TTRK_LO_OFFSET_XY,SPN_TTRK_LO_HI_BITS_XY)
+#define SPN_TTRK_GET_X(t_)                       SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTRK_HI_OFFSET_X, SPN_TTRK_HI_BITS_X)
+#define SPN_TTRK_GET_XY(t_)                      SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTRK_HI_OFFSET_XY,SPN_TTRK_HI_BITS_XY)
+#define SPN_TTRK_HI_GET_XY(t_hi_)                SPN_BITFIELD_EXTRACT(t_hi_,SPN_TTRK_HI_OFFSET_XY,SPN_TTRK_HI_BITS_XY)
+
+#define SPN_TTRK_GET_COHORT(t_)                  SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTRK_HI_OFFSET_COHORT,SPN_TTRK_HI_BITS_COHORT)
+#define SPN_TTRK_SET_COHORT(t_,c_)               (t_)[1] = SPN_BITFIELD_INSERT((t_)[1],c_,SPN_TTRK_HI_OFFSET_COHORT,SPN_TTRK_HI_BITS_COHORT)
 
 #define SPN_TTRK_LO_IS_NEW_X(t_lo_)              (((t_lo_) & SPN_TTRK_LO_MASK_NEW_X) != 0)
 #define SPN_TTRK_LO_IS_NEW_Y(t_lo_)              (((t_lo_) & SPN_TTRK_LO_MASK_NEW_Y) != 0)
 
-#define SPN_TTRK_IS_NEW_X(t_)                    SPN_TTRK_IS_LO_NEW_X((t_)[0])
-#define SPN_TTRK_IS_NEW_Y(t_)                    SPN_TTRK_IS_LO_NEW_Y((t_)[0])
+#define SPN_TTRK_IS_NEW_X(t_)                    SPN_TTRK_LO_IS_NEW_X((t_)[0])
+#define SPN_TTRK_IS_NEW_Y(t_)                    SPN_TTRK_LO_IS_NEW_Y((t_)[0])
 
 #define SPN_TTRK_NEW_X                           1
 #define SPN_TTRK_NEW_Y                           2
 
-#define SPN_TTRK_SET_NEW_XY(t_,v_)               (t_)[0] = SPN_BITFIELD_INSERT((t_)[0],v_,SPN_TTRK_LO_OFFSET_NEW_XY,SPN_TTRK_LO_BITS_NEW_XY)
+#define SPN_TTRK_EXTRA                           (0x7 << SPN_TTRK_LO_BITS_NEW_XY)
+
+#define SPN_TTRK_NEW_X_EXTRA                     (SPN_TTRK_NEW_X | SPN_TTRK_EXTRA)
+#define SPN_TTRK_NEW_Y_EXTRA                     (SPN_TTRK_NEW_Y | SPN_TTRK_EXTRA)
+
+#define SPN_TTRK_SET_NEW_XY_EXTRA(t_,v_)         (t_)[0] = SPN_BITFIELD_INSERT((t_)[0],v_,SPN_TTRK_LO_OFFSET_NEW_XY_EXTRA,SPN_TTRK_LO_BITS_NEW_XY_EXTRA)
 #define SPN_TTRK_GET_NEW_XY(t_)                  SPN_BITFIELD_EXTRACT((t_)[0],SPN_TTRK_LO_OFFSET_NEW_XY,SPN_TTRK_LO_BITS_NEW_XY)
 
 #define SPN_TTRK_LO_GET_TTSB_ID(t_lo_)           SPN_BITFIELD_EXTRACT(t_lo_,0,SPN_TTRK_LO_BITS_TTSB_ID)
@@ -550,7 +554,7 @@
 //  0                            63
 //  | TTSB_ID |   SPAN  |  X |  Y |
 //  +---------+---------+----+----+
-//  |    27   | 13 [-1] | 12 | 12 |
+//  |    27   | 13 [<0] | 12 | 12 |
 //
 //
 // TTPK v2 ( DEFAULT )
@@ -561,7 +565,7 @@
 //  |    27   | 13 [+1,+4095] | 12 | 12 |
 //
 //
-// A TTSK.SPAN is always -1
+// A TTSK.SPAN inherits the TTRK[0] dword unmodified (in flux).
 //
 // A TTPK.SPAN has a range of [+1,+4095].
 //
@@ -578,11 +582,14 @@
 // An invalid TTXK has a span of zero and a TTXB_ID of all 1's.
 //
 
+#define SPN_TTSK_IS_NEW_X(t_)                    SPN_TTRK_IS_NEW_X(t_)
+#define SPN_TTSK_IS_NEW_Y(t_)                    SPN_TTRK_IS_NEW_Y(t_)
+
 #define SPN_TTXK_LO_BITS_TTXB_ID                 SPN_TAGGED_BLOCK_ID_BITS_ID
 #define SPN_TTXK_LO_HI_BITS_SPAN                 13
 #define SPN_TTXK_LO_BITS_SPAN                    5  // straddles a
 #define SPN_TTXK_HI_BITS_SPAN                    8  // word boundary
-#define SPN_TTXK_HI_BITS_X                       SPN_TTRK_LO_HI_BITS_X
+#define SPN_TTXK_HI_BITS_X                       SPN_TTRK_HI_BITS_X
 #define SPN_TTXK_HI_BITS_Y                       SPN_TTRK_HI_BITS_Y
 #define SPN_TTXK_HI_BITS_YX                      (SPN_TTXK_HI_BITS_Y + SPN_TTXK_HI_BITS_X)
 
@@ -602,6 +609,7 @@
 #define SPN_TTXK_LO_GET_TTXB_ID(t_lo_)           SPN_BITFIELD_EXTRACT(t_lo_,0,SPN_TTXK_LO_BITS_TTXB_ID)
 #define SPN_TTXK_HI_GET_YX(t_hi_)                SPN_BITFIELD_EXTRACT(t_hi_,SPN_TTXK_HI_OFFSET_YX,SPN_TTXK_HI_BITS_YX)
 
+#define SPN_TTXK_GET_HI(t_)                      (t_)[1]
 #define SPN_TTXK_GET_TTXB_ID(t_)                 SPN_TTXK_LO_GET_TTXB_ID((t_)[0])
 #define SPN_TTXK_GET_SPAN(t_)                    SPN_GLSL_EXTRACT_UVEC2_INT((t_),SPN_TTXK_LO_OFFSET_SPAN,SPN_TTXK_LO_HI_BITS_SPAN)
 #define SPN_TTXK_GET_X(t_)                       SPN_BITFIELD_EXTRACT((t_)[1],SPN_TTXK_HI_OFFSET_X,SPN_TTXK_HI_BITS_X)
@@ -663,7 +671,7 @@ struct spn_cmd_place
 //  |          30          |    1   |    1   |   15  |  9  |  8  |
 //
 //
-// TTCK.Y and TTCK.X are unsigned
+// TTCK.X and TTCK.Y are unsigned
 //
 //  +-----------+-------------+
 //  | TILE SIZE | MAX SURFACE |
@@ -870,7 +878,7 @@ struct spn_cmd_place
 // (SPN_RASTER_COHORT_METAS_SIZE-1) rasters.
 //
 
-#define SPN_RASTER_COHORT_META_ALLOC_OFFSET_RK_READS  0 // alloc[0] - block holding first ttsk (head)
+#define SPN_RASTER_COHORT_META_ALLOC_OFFSET_SK_READS  0 // alloc[0] - block holding first ttsk (head)
 #define SPN_RASTER_COHORT_META_ALLOC_OFFSET_PK_READS  1 // alloc[1] - block holding first ttpk (head/node)
 
 //
@@ -879,11 +887,11 @@ struct spn_cmd_place
 
 struct spn_rc_meta
 {
-  SPN_TYPE_UVEC2 alloc [SPN_RASTER_COHORT_METAS_SIZE]; // doesn't need to be zeroed
-  SPN_TYPE_UINT  rk_off[SPN_RASTER_COHORT_METAS_SIZE]; // offset of rk keys
-  SPN_TYPE_UINT  blocks[SPN_RASTER_COHORT_METAS_SIZE]; // number of blocks
-  SPN_TYPE_UINT  ttpks [SPN_RASTER_COHORT_METAS_SIZE]; // number of TTPK keys
-  SPN_TYPE_UINT  ttrks [SPN_RASTER_COHORT_METAS_SIZE]; // number of TTRK keys
+  SPN_TYPE_UVEC2 alloc [SPN_RASTER_COHORT_METAS_SIZE]; // block pool reads    -- uninitialized
+  SPN_TYPE_UINT  rk_off[SPN_RASTER_COHORT_METAS_SIZE]; // offset of rk keys   -- uninitialized
+  SPN_TYPE_UINT  blocks[SPN_RASTER_COHORT_METAS_SIZE]; // number of blocks    -- zeroed
+  SPN_TYPE_UINT  ttpks [SPN_RASTER_COHORT_METAS_SIZE]; // number of TTPK keys -- zeroed
+  SPN_TYPE_UINT  ttrks [SPN_RASTER_COHORT_METAS_SIZE]; // number of TTRK keys -- zeroed
 
   //
   // FIXME(allanmac): the signed bounding box will be added to the meta

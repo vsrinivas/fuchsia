@@ -1462,19 +1462,25 @@ spn_tile_color_acc_over_background(SPN_SUBGROUP_UNIFORM const uint rg32,
 #endif
 
 //
+// FIXME(allanmac): use a specialization constant to steer codegen for
+// different color depths or multi-plane images.
 //
+// Multi-plane might be optimal because the R/G/B arrays can be
+// directly copied?
 //
 
+#ifndef SPN_RENDER_STORE_TO_SURFACE_REFLECTED
+//
+//        X
+//    +------->
+//    |
+//  Y |
+//    |
+//    v
+//
 void
 spn_tile_color_acc_store_to_surface()
 {
-  //
-  // FIXME(allanmac): use a specialization constant to steer codegen for
-  // different color depths or multi-plane images.
-  //
-  // Multi-plane might be optimal because the R/G/B arrays can be
-  // directly copied?
-  //
   SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
   SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
 
@@ -1488,6 +1494,34 @@ spn_tile_color_acc_store_to_surface()
 
   SPN_RENDER_SUBTILE_WIDTH_EXPAND()
 }
+
+#else
+//
+//        Y
+//    +------->
+//    |
+//  X | REFLECTED
+//    |
+//    v
+//
+void
+spn_tile_color_acc_store_to_surface()
+{
+  SPN_SUBGROUP_UNIFORM const uint x_uni = SPN_TTCK_GET_X(lgf_yxl) * SPN_TILE_WIDTH;
+  SPN_SUBGROUP_UNIFORM const uint y_uni = SPN_TTCK_GET_Y(lgf_yxl) * SPN_TILE_HEIGHT;
+
+  ivec2 xy = ivec2(y_uni + SPN_RENDER_SUBTILE_LANE_TO_Y(gl_SubgroupInvocationID),
+                   x_uni + SPN_RENDER_SUBTILE_LANE_TO_X(gl_SubgroupInvocationID));
+
+#undef SPN_EXPAND_X
+#define SPN_EXPAND_X(I, N, P, L)                                                                   \
+  imageStore(surface, xy, color_acc##I);                                                           \
+  xy.y += SPN_RENDER_SUBTILE_COUNT;
+
+  SPN_RENDER_SUBTILE_WIDTH_EXPAND()
+}
+
+#endif
 
 //
 // The default is to load up to subgroup size of TTCK keys in
