@@ -29,8 +29,8 @@ void MockEvalContext::AddLocation(uint64_t address, Location location) {
 
 // EvalContext implementation.
 void MockEvalContext::GetNamedValue(const ParsedIdentifier& ident, ValueCallback cb) const {
-  // Can ignore the symbol output for this test, it's not needed by the
-  // expression evaluation system.
+  // Can ignore the symbol output for this test, it's not needed by the expression evaluation
+  // system.
   auto found = values_by_name_.find(ident.GetFullName());
   if (found == values_by_name_.end()) {
     cb(Err("MockEvalContext::GetVariableValue '%s' not found.", ident.GetFullName().c_str()));

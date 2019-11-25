@@ -20,17 +20,16 @@ class ExprTokenizer {
  public:
   explicit ExprTokenizer(const std::string& input, ExprLanguage lang = ExprLanguage::kC);
 
-  // Returns true on successful tokenizing. In this case, the tokens can be
-  // read from tokens(). On failure, err() will contain the error message, and
-  // error_location() will contain the error location.
+  // Returns true on successful tokenizing. In this case, the tokens can be read from tokens(). On
+  // failure, err() will contain the error message, and error_location() will contain the error
+  // location.
   bool Tokenize();
 
   const std::string& input() const { return input_; }
 
   ExprLanguage language() const { return language_; }
 
-  // The result of parsing. This will be multiline and will indicate the
-  // location of the problem.
+  // The result of parsing. This will be multiline and will indicate the location of the problem.
   const Err& err() const { return err_; }
 
   // When err is set, this will be the index into the input() string where the
@@ -42,9 +41,8 @@ class ExprTokenizer {
 
   std::vector<ExprToken> TakeTokens() { return std::move(tokens_); }
 
-  // Returns two context lines for an error message. It will quote a relevant
-  // portion of the input showing the byte offset, and add a "^" on the next
-  // line to indicate where the error is.
+  // Returns two context lines for an error message. It will quote a relevant portion of the input
+  // showing the byte offset, and add a "^" on the next line to indicate where the error is.
   static std::string GetErrorContext(const std::string& input, size_t byte_offset);
 
  private:
@@ -55,9 +53,8 @@ class ExprTokenizer {
 
   bool IsCurrentWhitespace() const;
 
-  // Returns true if the next characters in the buffer match the static value
-  // of the given token record. If the token is alphanumeric, requires that
-  // the end of the token be nonalphanumeric.
+  // Returns true if the next characters in the buffer match the static value of the given token
+  // record. If the token is alphanumeric, requires that the end of the token be nonalphanumeric.
   bool CurrentMatchesTokenRecord(const ExprTokenRecord& record) const;
 
   const ExprTokenRecord& ClassifyCurrent();

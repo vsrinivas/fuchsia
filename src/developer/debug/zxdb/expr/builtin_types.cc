@@ -18,10 +18,9 @@ struct BuiltinTypeInfo {
   uint32_t byte_size;
 };
 
-// TODO(brettw) this needs to handle compound types like "unsigned short"
-// and "signed int". Note that the modifiers can appear in different orders
-// like "signed short int" vs. "short signed int", and can also have
-// interspersed CV-modifiers like "short volatile signed const int".
+// TODO(brettw) this needs to handle compound types like "unsigned short" and "signed int". Note
+// that the modifiers can appear in different orders like "signed short int" vs. "short signed int",
+// and can also have interspersed CV-modifiers like "short volatile signed const int".
 const BuiltinTypeInfo kCBuiltinInfo[] = {
     // clang-format off
 
@@ -88,12 +87,10 @@ const BuiltinTypeInfo kRustBuiltinInfo[] = {
     // clang-format on
 };
 
-// Note on zx_status_t: Normally this will be declared in the program as a
-// typedef for an int32. Adding it here allows casting to it even if the
-// typedef is not currently in scope, which in turn will trigger the
-// special-cased pretty-printing to decode status values. This fallback doesn't
-// define it as a typedef for simplicit, that could be added in the future if
-// desired.
+// Note on zx_status_t: Normally this will be declared in the program as a typedef for an int32.
+// Adding it here allows casting to it even if the typedef is not currently in scope, which in turn
+// will trigger the special-cased pretty-printing to decode status values. This fallback doesn't
+// define it as a typedef for simplicit, that could be added in the future if desired.
 
 using BuiltinTypeInfoMap = std::map<std::string_view, const BuiltinTypeInfo*>;
 

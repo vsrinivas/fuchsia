@@ -10,8 +10,8 @@
 namespace zxdb {
 
 TEST(TemplateTypeExtractor, Basic) {
-  // No template contents: "Foo<>". When extracting the type, we'll be given
-  // the first token after the template opening (the 2nd token, ">").
+  // No template contents: "Foo<>". When extracting the type, we'll be given the first token after
+  // the template opening (the 2nd token, ">").
   TemplateTypeResult result = ExtractTemplateType(
       {ExprToken(ExprTokenType::kName, "Foo", 0), ExprToken(ExprTokenType::kLess, "<", 3),
        ExprToken(ExprTokenType::kGreater, ">", 4)},
@@ -111,8 +111,8 @@ TEST(TemplateTypeExtractor, WeirdAngleBrackets) {
   EXPECT_EQ(2u, result.end_token);
   EXPECT_EQ("operator<", result.canonical_name);
 
-  // As in "std::map<int, int, operator> >". The > are non-adjacent so don't
-  // get treated as a single operator.
+  // As in "std::map<int, int, operator> >". The > are non-adjacent so don't get treated as a single
+  // operator.
   result = ExtractTemplateType(
       {ExprToken(ExprTokenType::kName, "operator", 0), ExprToken(ExprTokenType::kGreater, ">", 8),
        ExprToken(ExprTokenType::kGreater, ">", 10)},
@@ -142,9 +142,8 @@ TEST(TemplateTypeExtractor, OtherOperator) {
   EXPECT_EQ(3u, result.end_token);
   EXPECT_EQ("operator++", result.canonical_name);
 
-  // Malformed input with "operator" at end. Just returns the same thing since
-  // we're not trying to validate proper C++, only validate that we found the
-  // extent of the declaration.
+  // Malformed input with "operator" at end. Just returns the same thing since we're not trying to
+  // validate proper C++, only validate that we found the extent of the declaration.
   result = ExtractTemplateType({ExprToken(ExprTokenType::kName, "operator", 0)}, 0);
   EXPECT_TRUE(result.success);
   EXPECT_EQ(1u, result.end_token);

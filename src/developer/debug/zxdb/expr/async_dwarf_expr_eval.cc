@@ -18,9 +18,8 @@ void AsyncDwarfExprEval::Eval(const fxl::RefPtr<EvalContext>& context,
                    [this_ref = RefPtrTo(this), context](DwarfExprEval*, const Err& err) {
                      this_ref->OnEvalComplete(err, context);
 
-                     // Prevent the DwarfExprEval from getting reentrantly deleted from
-                     // within its own callback by posting a reference back to the message
-                     // loop.
+                     // Prevent the DwarfExprEval from getting reentrantly deleted from within its
+                     // own callback by posting a reference back to the message loop.
                      debug_ipc::MessageLoop::Current()->PostTask(
                          FROM_HERE, [this_ref = std::move(this_ref)]() {});
                    });
@@ -63,8 +62,8 @@ void AsyncDwarfExprEval::OnEvalComplete(const Err& err, const fxl::RefPtr<EvalCo
   } else if (dwarf_eval_.GetResultType() == DwarfExprEval::ResultType::kData) {
     // The DWARF result is a block of data.
     //
-    // Here we assume the data size is correct. If it doesn't match the type, that should be
-    // caught later when it's interpreted.
+    // Here we assume the data size is correct. If it doesn't match the type, that should be caught
+    // later when it's interpreted.
     //
     // TODO(bug 39630) we have no source locations for this case.
     callback_(ExprValue(type_, dwarf_eval_.result_data(),

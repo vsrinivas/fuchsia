@@ -11,8 +11,8 @@
 
 namespace zxdb {
 
-// Several casting tests test base/derived class conversions. This structure
-// contains the elaborate setup for these related cases. It declares:
+// Several casting tests test base/derived class conversions. This structure contains the elaborate
+// setup for these related cases. It declares:
 //
 //   struct Base1 {
 //     int16_t b = kB1Value;

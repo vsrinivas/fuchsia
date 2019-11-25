@@ -68,9 +68,8 @@ ExprValue::ExprValue(fxl::RefPtr<Type> type, std::vector<uint8_t> data,
 ExprValue::~ExprValue() = default;
 
 bool ExprValue::operator==(const ExprValue& other) const {
-  // Currently this does a comparison of the raw bytes of the value. This
-  // will be fine for most primitive values but will be incorrect for some
-  // composite structs.
+  // Currently this does a comparison of the raw bytes of the value. This will be fine for most
+  // primitive values but will be incorrect for some composite structs.
   return data_ == other.data_;
 }
 

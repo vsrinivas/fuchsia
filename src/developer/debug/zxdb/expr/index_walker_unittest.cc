@@ -95,16 +95,15 @@ TEST(IndexWalker, WalkInto) {
   auto foo_node = root.AddChild(IndexNode::Kind::kType, "Foo");
   root.AddChild(IndexNode::Kind::kType, "Foo<Bar>");
 
-  // These template names are non-canonical so we can verify the correct
-  // comparisons happen.
+  // These template names are non-canonical so we can verify the correct comparisons happen.
   foo_node->AddChild(IndexNode::Kind::kType, "Bar< int >");
   auto bar_int_char_node = foo_node->AddChild(IndexNode::Kind::kType, "Bar< int,char >");
 
   // There could also be a non-template somewhere with the same name.
   auto bar_node = foo_node->AddChild(IndexNode::Kind::kType, "Bar");
 
-  // These nodes start with the prefix "Bar" for when we're searching. We test
-  // things that will compare before and after "Bar<" ('9' before, 'f' after).
+  // These nodes start with the prefix "Bar" for when we're searching. We test things that will
+  // compare before and after "Bar<" ('9' before, 'f' after).
   auto barf_node = foo_node->AddChild(IndexNode::Kind::kType, "Barf<int>");
   auto bar9_node = foo_node->AddChild(IndexNode::Kind::kType, "Bar9<int>");
 
@@ -119,8 +118,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_TRUE(walker.WalkInto(ParsedIdentifierComponent("Foo")));
   EXPECT_TRUE(EqualsElements(walker.current(), {foo_node}));
 
-  // Walk to the "NotPresent" component. The current location should be
-  // unchanged.
+  // Walk to the "NotPresent" component. The current location should be unchanged.
   EXPECT_FALSE(walker.WalkInto(ParsedIdentifierComponent("NotFound")));
   EXPECT_TRUE(EqualsElements(walker.current(), {foo_node}));
 
@@ -139,8 +137,7 @@ TEST(IndexWalker, WalkInto) {
   EXPECT_TRUE(walker.WalkInto(ParsedIdentifierComponent("Bar")));
   EXPECT_TRUE(EqualsElements(walker.current(), {bar_node}));
 
-  // Parse the Barf identifier for the following two tests. This one has a
-  // toplevel scope.
+  // Parse the Barf identifier for the following two tests. This one has a toplevel scope.
   ParsedIdentifier barf;
   err = ExprParser::ParseIdentifier("::Foo::Barf<int>", &barf);
   EXPECT_FALSE(err.has_error()) << err.msg();

@@ -55,16 +55,15 @@ class ExprValue {
   explicit ExprValue(double value, fxl::RefPtr<Type> type = fxl::RefPtr<Type>(),
                      const ExprValueSource& source = ExprValueSource());
 
-  // Full constructor. This takes the type and stores it assuming the type
-  // is good. Prefer the other version when possible unless you're sure the
-  // type is not a declaration.
+  // Full constructor. This takes the type and stores it assuming the type is good. Prefer the other
+  // version when possible unless you're sure the type is not a declaration.
   ExprValue(fxl::RefPtr<Type> symbol_type, std::vector<uint8_t> data,
             const ExprValueSource& source = ExprValueSource());
 
   ~ExprValue();
 
-  // Used for tests. If a SymbolType is defined, the string representation is
-  // compared since the pointers may not match in practice.
+  // Used for tests. If a SymbolType is defined, the string representation is compared since the
+  // pointers may not match in practice.
   bool operator==(const ExprValue& other) const;
 
   // May be null if there's no symbol type.
@@ -84,20 +83,19 @@ class ExprValue {
 
   // Strips C-V qualifications and resolves forward declarations.
   //
-  // It is a convenience wrapper for EvalContext::GetConcreteType(), see
-  // that for more. The context can not be null.
+  // It is a convenience wrapper for EvalContext::GetConcreteType(), see that for more. The context
+  // can not be null.
   //
-  // This is the function to use (with the context provided) to properly
-  // resolve the type to something there the data of the ExprValue can be
-  // interpreted.
+  // This is the function to use (with the context provided) to properly resolve the type to
+  // something there the data of the ExprValue can be interpreted.
   fxl::RefPtr<Type> GetConcreteType(EvalContext* context) const;
 
   // Returns an error if the size of the data doesn't match the parameter.
   Err EnsureSizeIs(size_t size) const;
 
-  // These return the data casted to the corresponding value (specializations
-  // below class declaration). It will assert if the internal type and data
-  // size doesn't match the requested type.
+  // These return the data casted to the corresponding value (specializations below class
+  // declaration). It will assert if the internal type and data size doesn't match the requested
+  // type.
   template <typename T>
   T GetAs() const;
 

@@ -75,12 +75,12 @@ struct ExprTokenRecord {
 
   ExprTokenType type = ExprTokenType::kInvalid;
 
-  // Nonempty when this token type contains a known string, e.g. "&&" rather
-  // than some arbitrary name.
+  // Nonempty when this token type contains a known string, e.g. "&&" rather than some arbitrary
+  // name.
   std::string_view static_value;
 
-  // Set to true when the static value of this token is alphanumeric such that
-  // to separate it from another token requires a non-alphanumeric character.
+  // Set to true when the static value of this token is alphanumeric such that to separate it from
+  // another token requires a non-alphanumeric character.
   bool is_alphanum = false;
 
   // A bitfield consisting of a combination of ExprLanguage values.

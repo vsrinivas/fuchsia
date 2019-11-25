@@ -59,8 +59,8 @@ TEST(ParsedIdentifier, ToParsedIdentifier) {
   EXPECT_EQ(complex_parsed, complex_parsed2);
   EXPECT_EQ("::\"std\"; ::\"vector\",<\"int\">; ::\"iterator\"", complex_parsed2.GetDebugName());
 
-  // Round-trip an invalid C++ identifier. The "::" in one component should not
-  // be split, and the crazy characters should be preserved.
+  // Round-trip an invalid C++ identifier. The "::" in one component should not be split, and the
+  // crazy characters should be preserved.
   Identifier ident;
   ident.AppendComponent(IdentifierComponent("vector<int>"));
   ident.AppendComponent(IdentifierComponent("foo::bar"));

@@ -11,9 +11,8 @@
 
 namespace zxdb {
 
-// A parsed token. This token does not own the strings, it's intended to be
-// used only as an intermediate representation pointing into the string being
-// parsed.
+// A parsed token. This token does not own the strings, it's intended to be used only as an
+// intermediate representation pointing into the string being parsed.
 class ExprToken {
  public:
   ExprToken() = default;

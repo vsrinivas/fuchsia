@@ -56,47 +56,40 @@ class ExprNode : public fxl::RefCountedThreadSafe<ExprNode> {
   virtual const TypeExprNode* AsType() const { return nullptr; }
   virtual const UnaryOpExprNode* AsUnaryOp() const { return nullptr; }
 
-  // Evaluates the expression and calls the callback with the result. The
-  // callback may be called reentrantly (meaning from within the callstack
-  // of Eval itself).
+  // Evaluates the expression and calls the callback with the result. The callback may be called
+  // reentrantly (meaning from within the callstack of Eval itself).
   //
-  // Some eval operations are asynchronous because they require reading data
-  // from the remote system. Many are not. Since we expect relatively few
-  // evals (from user typing) and that they are quite simple (most are one
-  // value or a simple dereference), we opt for simplicity and make all
-  // evals require a callback.
+  // Some eval operations are asynchronous because they require reading data from the remote system.
+  // Many are not. Since we expect relatively few evals (from user typing) and that they are quite
+  // simple (most are one value or a simple dereference), we opt for simplicity and make all evals
+  // require a callback.
   //
-  // For larger expressions this can be quite heavyweight because not only
-  // will the expression be recursively executed, but returning the result
-  // will double the depth of the recursion (not to mention a heavyweight
-  // lambda bind for each).
+  // For larger expressions this can be quite heavyweight because not only will the expression be
+  // recursively executed, but returning the result will double the depth of the recursion (not to
+  // mention a heavyweight lambda bind for each).
   //
-  // One thing that might cause expression eval speed to be an issue is when
-  // they are automatically executed as in a conditional breakpoint. If we
-  // start using expressions in conditional breakpoints and find that
-  // performance is unacceptable, this should be optimized to support evals
-  // that do not require callbacks unless necessary.
+  // One thing that might cause expression eval speed to be an issue is when they are automatically
+  // executed as in a conditional breakpoint. If we start using expressions in conditional
+  // breakpoints and find that performance is unacceptable, this should be optimized to support
+  // evals that do not require callbacks unless necessary.
   //
-  // The caller is responsible for ensuring the tree of nodes is in scope for
-  // the duration of this call until the callback is executed. This would
-  // normally be done by having the tree be owned by the callback itself. If
-  // this is causing memory lifetime problems, we should switch nodes to be
+  // The caller is responsible for ensuring the tree of nodes is in scope for the duration of this
+  // call until the callback is executed. This would normally be done by having the tree be owned by
+  // the callback itself. If this is causing memory lifetime problems, we should switch nodes to be
   // reference counted.
   //
   // See also EvalFollowReferences below.
   virtual void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const = 0;
 
-  // Like "Eval" but expands all references to the values they point to. When
-  // evaluating a subexpression this is the variant you want because without
-  // it the ExprValue in the callback will be the reference, which just
-  // contains the address of the value you want.
+  // Like "Eval" but expands all references to the values they point to. When evaluating a
+  // subexpression this is the variant you want because without it the ExprValue in the callback
+  // will be the reference, which just contains the address of the value you want.
   //
-  // The time you wouldn't want this is when calling externally where the
-  // caller wants to know the actual type the expression evaluated to.
+  // The time you wouldn't want this is when calling externally where the caller wants to know the
+  // actual type the expression evaluated to.
   void EvalFollowReferences(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const;
 
-  // Dumps the tree to a stream with the given indent. Used for unit testing
-  // and debugging.
+  // Dumps the tree to a stream with the given indent. Used for unit testing and debugging.
   virtual void Print(std::ostream& out, int indent) const = 0;
 };
 
@@ -134,8 +127,8 @@ class ArrayAccessExprNode : public ExprNode {
       : left_(std::move(left)), inner_(std::move(inner)) {}
   ~ArrayAccessExprNode() override = default;
 
-  // Converts the given value which is the result of executing the "inner"
-  // expression and converts it to an integer if possible.
+  // Converts the given value which is the result of executing the "inner" expression and converts
+  // it to an integer if possible.
   static Err InnerValueToOffset(const fxl::RefPtr<EvalContext>& context, const ExprValue& inner,
                                 int64_t* offset);
 
@@ -255,10 +248,9 @@ class IdentifierExprNode : public ExprNode {
   ParsedIdentifier& ident() { return ident_; }
   const ParsedIdentifier& ident() const { return ident_; }
 
-  // Destructively moves the identifier out of this class. This unusual
-  // mutating getter is implemented because the expression parser is also used
-  // to parse identifiers, and this will hold the result which we would prefer
-  // not to copy to get out.
+  // Destructively moves the identifier out of this class. This unusual mutating getter is
+  // implemented because the expression parser is also used to parse identifiers, and this will hold
+  // the result which we would prefer not to copy to get out.
   ParsedIdentifier TakeIdentifier() { return std::move(ident_); }
 
  private:
@@ -283,9 +275,8 @@ class LiteralExprNode : public ExprNode {
   void Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback cb) const override;
   void Print(std::ostream& out, int indent) const override;
 
-  // The token's value won't have been checked that it's valid, only
-  // that it starts like the type of literal it is. This checking will be done
-  // at evaluation time.
+  // The token's value won't have been checked that it's valid, only that it starts like the type of
+  // literal it is. This checking will be done at evaluation time.
   const ExprToken& token() const { return token_; }
 
  private:
@@ -371,8 +362,7 @@ class TypeExprNode : public ExprNode {
   fxl::RefPtr<Type> type_;
 };
 
-// Implements unary mathematical operators (the operation depends on the
-// operator token).
+// Implements unary mathematical operators (the operation depends on the operator token).
 class UnaryOpExprNode : public ExprNode {
  public:
   const UnaryOpExprNode* AsUnaryOp() const override { return this; }

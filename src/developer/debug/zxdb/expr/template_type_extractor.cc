@@ -19,14 +19,12 @@ struct Nesting {
   ExprTokenType end = ExprTokenType::kInvalid;  // Expected closing bracket.
 };
 
-// A table of operators that need special handling. These are ones that can
-// interfere with the parsing. Things like "operator+" are skipped fine using
-// the normal code path of "word" + "punctuation" so don't need to be here for
-// the current limited use case.
+// A table of operators that need special handling. These are ones that can interfere with the
+// parsing. Things like "operator+" are skipped fine using the normal code path of "word" +
+// "punctuation" so don't need to be here for the current limited use case.
 //
-// This is in order we should evaluate it, so if one is a subset of another
-// (e.g. "operator+" is a subset of "operator++"), the more specific one should
-// be first.
+// This is in order we should evaluate it, so if one is a subset of another (e.g. "operator+" is a
+// subset of "operator++"), the more specific one should be first.
 struct OperatorRecord {
   ExprTokenType first;
   ExprTokenType second;
@@ -45,29 +43,27 @@ bool IsNamelikeToken(const ExprToken& token) {
          token.type() == ExprTokenType::kVolatile;
 }
 
-// Returns true if the token at the given index needs a space before it to
-// separate it from the previous token. The first_index is the index of the
-// first token being considered for type extraction (so we don't consider the
-// boundary before this).
+// Returns true if the token at the given index needs a space before it to separate it from the
+// previous token. The first_index is the index of the first token being considered for type
+// extraction (so we don't consider the boundary before this).
 bool NeedsSpaceBefore(const std::vector<ExprToken>& tokens, size_t first_index, size_t index) {
   FXL_DCHECK(first_index <= index);
   if (first_index == index)
     return false;  // Also catches index == 0.
 
-  // Names always need a space between then. A name here is any word, so
-  // "const Foo" would be an example.
+  // Names always need a space between then. A name here is any word, so "const Foo" would be an
+  // example.
   if (IsNamelikeToken(tokens[index - 1]) && IsNamelikeToken(tokens[index]))
     return true;
 
-  // Put a space after a comma. This is undesirable in the case of "operator,"
-  // appearing as in "template<CmpOp a = operator,>" but not a big deal.
+  // Put a space after a comma. This is undesirable in the case of "operator," appearing as in
+  // "template<CmpOp a = operator,>" but not a big deal.
   if (tokens[index - 1].type() == ExprTokenType::kComma)
     return true;
 
-  // Most other things can go next to each other as far as valid C++ goes.
-  // These are some cases that this does incorrectly, see the comment above
-  // ExtractTemplateType() for why this isn't so bad and how it could be
-  // improved.
+  // Most other things can go next to each other as far as valid C++ goes. These are some cases that
+  // this does incorrectly, see the comment above ExtractTemplateType() for why this isn't so bad
+  // and how it could be improved.
   return false;
 }
 
@@ -104,9 +100,8 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index, std::st
     }
   }
 
-  // Append any matched tokens. If no token is matched, it's probably an invalid
-  // operator specification (doesn't matter since we're just identifying and
-  // canonicalizing).
+  // Append any matched tokens. If no token is matched, it's probably an invalid operator
+  // specification (doesn't matter since we're just identifying and canonicalizing).
   if (matched_tokens >= 1) {
     result->append(tokens[*index + 1].value());
     if (matched_tokens == 2)
@@ -125,21 +120,19 @@ void HandleOperator(const std::vector<ExprToken>& tokens, size_t* index, std::st
 //
 //   auto foo = operator + + 1;
 //
-// Currently it assumes all operators can be put next to each other without
-// affecting meaning. When we're canonicalizing types for the purposes of
-// string comparisons, this is almost certainly the case. If we start using
-// the output from this function for more things, we'll want to handle
-// these cases better.
+// Currently it assumes all operators can be put next to each other without affecting meaning. When
+// we're canonicalizing types for the purposes of string comparisons, this is almost certainly the
+// case. If we start using the output from this function for more things, we'll want to handle these
+// cases better.
 //
-// To address this, I'm thinking we should look for the "operator" keyword.
-// Then look up the following tokens in a table of valid C++ operator function
-// names to consume those that are actually part of the operator name (this
-// needs some careful handling of spaces (ExprToken.byte_offset), since
-// "operator++" and "operator ++" are the same thing but "operator ++" and
-// "operator + +" are different).
+// To address this, I'm thinking we should look for the "operator" keyword. Then look up the
+// following tokens in a table of valid C++ operator function names to consume those that are
+// actually part of the operator name (this needs some careful handling of spaces
+// (ExprToken.byte_offset), since "operator++" and "operator ++" are the same thing but "operator
+// ++" and "operator + +" are different).
 //
-// When we have this lookahead for "operator>" we can remove the
-// "PreviousTokenIsOperatorKeyword" code.
+// When we have this lookahead for "operator>" we can remove the "PreviousTokenIsOperatorKeyword"
+// code.
 TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, size_t begin_token) {
   TemplateTypeResult result;
 
@@ -156,14 +149,14 @@ TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, siz
       // (
       nesting.emplace_back(i, ExprTokenType::kRightParen);
     } else if (type == ExprTokenType::kLess) {
-      // < (the sequences "operator<" and "operator<<" were handled when we
-      //    got the "operator" token).
+      // < (the sequences "operator<" and "operator<<" were handled when we got the "operator"
+      //    token).
       nesting.emplace_back(i, ExprTokenType::kGreater);
     } else if (nesting.empty() &&
                (type == ExprTokenType::kGreater || type == ExprTokenType::kRightParen ||
                 type == ExprTokenType::kComma)) {
-      // These tokens mark the end of a type when seen without nesting. Usually
-      // this marks the end of the enclosing cast or template.
+      // These tokens mark the end of a type when seen without nesting. Usually this marks the end
+      // of the enclosing cast or template.
       break;
     } else if (!nesting.empty() && type == nesting.back().end) {
       // Found the closing token for a previous opening one.
@@ -174,8 +167,7 @@ TemplateTypeResult ExtractTemplateType(const std::vector<ExprToken>& tokens, siz
         result.canonical_name.push_back(' ');
       HandleOperator(tokens, &i, &result.canonical_name);
 
-      // This prevents adding a space after the "," that would normally go
-      // there for a normal comma.
+      // This prevents adding a space after the "," that would normally go there for a normal comma.
       inhibit_next_space = true;
       continue;  // Skip the code at the bottom that appends the token.
     }

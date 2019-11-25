@@ -9,11 +9,10 @@
 
 namespace zxdb {
 
-// The enum values should be bits so we can store the language applicability
-// for each token in a bitfield.
+// The enum values should be bits so we can store the language applicability for each token in a
+// bitfield.
 enum class ExprLanguage {
-  // All C, C++, and Objective C variants. We may need to split out objective C
-  // in the future.
+  // All C, C++, and Objective C variants. We may need to split out objective C in the future.
   kC = 1,
 
   kRust = 2

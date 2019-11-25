@@ -382,8 +382,8 @@ void FormatFunctionPointer(FormatNode* node, const FormatOptions& options,
     return;
   }
 
-  // Allow overrides for the number format. Normally one would expect to
-  // provide a hex override to get the address rather than the resolved
+  // Allow overrides for the number format. Normally one would expect to provide a hex override to
+  // get the address rather than the resolved
   // function name.
   if (options.num_format != NumFormat::kDefault) {
     FormatNumericNode(node, options);

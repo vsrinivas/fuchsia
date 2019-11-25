@@ -15,8 +15,8 @@ class ExprValue;
 class Variant;
 class VariantPart;
 
-// Given the VariantPart stored in the given ExprValue, this computes the
-// currently active Variant and places it into *result.
+// Given the VariantPart stored in the given ExprValue, this computes the currently active Variant
+// and places it into *result.
 Err ResolveVariant(const fxl::RefPtr<EvalContext>& context, const ExprValue& value,
                    const VariantPart* variant_part, fxl::RefPtr<Variant>* result);
 

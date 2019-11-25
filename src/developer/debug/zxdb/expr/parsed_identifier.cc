@@ -48,8 +48,8 @@ Identifier ToIdentifier(const ParsedIdentifier& parsed) {
   return ret;
 }
 
-// We want to keep the same component structure regardless of what arbitrary
-// strings were contained in the original. So go one component at a time.
+// We want to keep the same component structure regardless of what arbitrary strings were contained
+// in the original. So go one component at a time.
 ParsedIdentifier ToParsedIdentifier(const Identifier& ident) {
   ParsedIdentifier ret(ident.qualification());
   ret.components().reserve(ident.components().size());

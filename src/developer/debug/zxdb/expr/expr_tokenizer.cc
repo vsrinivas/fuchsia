@@ -17,12 +17,10 @@ namespace {
 
 bool IsNameFirstChar(char c) {
   // Note that "@" is used to annotate some special things:
-  //  - "PLT" breakpoints which are breakpoints set on ELF imports rather than
-  //    DWARF symbols (for example, "__stack_chk_fail@plt"). So it needs to
-  //    count as a name character. This
-  //  - "@main" special location for the program entrypoint.
-  //    can be changed in the future if we have a better way of identifying
-  //    these.
+  //  - "PLT" breakpoints which are breakpoints set on ELF imports rather than DWARF symbols (for
+  //    example, "__stack_chk_fail@plt"). So it needs to count as a name character. This
+  //  - "@main" special location for the program entrypoint. can be changed in the future if we have
+  //    a better way of identifying these.
   //
   // "$" is used to disambiguate register names.
   return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || c == '_' || c == '~' || c == '@' ||
@@ -33,9 +31,8 @@ bool IsNameContinuingChar(char c) { return IsNameFirstChar(c) || (c >= '0' && c 
 
 bool IsIntegerFirstChar(char c) { return isdigit(c); }
 
-// This allows all alphanumeric characters for simplicity. Integer literals
-// aren't validated at the tokenizer level and will be checked later. Our job
-// is to find the extent of the literal.
+// This allows all alphanumeric characters for simplicity. Integer literals aren't validated at the
+// tokenizer level and will be checked later. Our job is to find the extent of the literal.
 bool IsIntegerContinuingChar(char c) { return isalnum(c); }
 
 // Returns a list of all tokens sharing the given first character.
@@ -96,10 +93,9 @@ std::string ExprTokenizer::GetErrorContext(const std::string& input, size_t byte
   FXL_DCHECK(byte_offset <= input.size());
 
   // Future enhancements:
-  // - If we allow multiline expressions in the, the returned context should
-  //   not cross newlines or it will be messed up.
-  // - Input longer than 80 chars should be clipped to guarantee it doesn't
-  //   wrap.
+  // - If we allow multiline expressions in the, the returned context should not cross newlines or
+  //   it will be messed up.
+  // - Input longer than 80 chars should be clipped to guarantee it doesn't wrap.
 
   std::string output;
   output = "  " + input + "\n  ";
@@ -119,8 +115,7 @@ void ExprTokenizer::AdvanceToNextToken() {
 
 void ExprTokenizer::AdvanceToEndOfToken(const ExprTokenRecord& record) {
   if (!record.static_value.empty()) {
-    // Known sizes. Because the token matched we should always have enough
-    // characters.
+    // Known sizes. Because the token matched we should always have enough characters.
     FXL_DCHECK(input_.size() >= cur_ + record.static_value.size());
     cur_ += record.static_value.size();
     return;

@@ -42,9 +42,9 @@ constexpr unsigned kLangAll =
 constexpr unsigned kLangC = static_cast<unsigned>(ExprLanguage::kC);
 constexpr unsigned kLangRust = static_cast<unsigned>(ExprLanguage::kRust);
 
-// Note that we allow a number of things like "sizeof" in Rust as well because
-// there are no good alternatives and these constructs can be useful. We may
-// consider replacing them with a more Rust-like construct in the future.
+// Note that we allow a number of things like "sizeof" in Rust as well because there are no good
+// alternatives and these constructs can be useful. We may consider replacing them with a more
+// Rust-like construct in the future.
 constexpr ExprTokenRecord kRecords[kNumExprTokenTypes] = {
     // clang-format off
     {ExprTokenType::kInvalid,         0},

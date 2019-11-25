@@ -160,9 +160,8 @@ TEST(ExprTokenizer, LessGreater) {
 }
 
 TEST(ExprTokenizer, Integers) {
-  // Note that the tokenizer doesn't validate numbers, so "7hello" is extracted
-  // as a number token. The complex rules for number validation and conversion
-  // will be done at a higher layer.
+  // Note that the tokenizer doesn't validate numbers, so "7hello" is extracted as a number token.
+  // The complex rules for number validation and conversion will be done at a higher layer.
 
   // Char offsets: 01234567890123456789012345678901
   // Token #'s:    0    12 34 5          6        7
@@ -323,8 +322,8 @@ TEST(ExprTokenizer, Language) {
   ASSERT_EQ(1u, tokens.size());
   EXPECT_EQ(ExprTokenType::kName, tokens[0].type());
 
-  // Currently we don't have any Rust-only tokens. When we add one we should
-  // test that it works only in Rust mode.
+  // Currently we don't have any Rust-only tokens. When we add one we should test that it works only
+  // in Rust mode.
 }
 
 }  // namespace zxdb

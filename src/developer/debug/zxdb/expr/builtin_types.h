@@ -12,9 +12,8 @@
 
 namespace zxdb {
 
-// Looks up the given type name. If it is a known builtin type name, a
-// symbol defining that type will be returned. Otherwise an empty refptr will
-// be returned.
+// Looks up the given type name. If it is a known builtin type name, a symbol defining that type
+// will be returned. Otherwise an empty refptr will be returned.
 fxl::RefPtr<BaseType> GetBuiltinType(ExprLanguage lang, std::string_view name);
 
 }  // namespace zxdb
