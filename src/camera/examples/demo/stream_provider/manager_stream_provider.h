@@ -17,9 +17,11 @@ class ManagerStreamProvider : public StreamProvider {
   ManagerStreamProvider() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {}
   ~ManagerStreamProvider();
   static std::unique_ptr<StreamProvider> Create();
-  virtual std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2,
-                     fuchsia::sysmem::BufferCollectionInfo_2, bool>
-  ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request) override;
+  fit::result<
+      std::tuple<fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2, bool>,
+      zx_status_t>
+  ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                  uint32_t index) override;
   virtual std::string GetName() override { return "fuchsia.camera2.Manager service"; }
 
   // |fuchsia::camera2::Manager|

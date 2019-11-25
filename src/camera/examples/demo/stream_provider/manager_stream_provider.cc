@@ -90,22 +90,28 @@ std::unique_ptr<StreamProvider> ManagerStreamProvider::Create() {
 }
 
 // Offer a stream as served through the tester interface.
-std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2,
-           bool>
-ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
+fit::result<
+    std::tuple<fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2, bool>,
+    zx_status_t>
+ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                       uint32_t index) {
+  if (index > 0) {
+    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
   constexpr uint32_t kDeviceId = 0;
   fuchsia::sysmem::BufferCollectionTokenSyncPtr token;
   zx_status_t status = allocator_->AllocateSharedCollection(token.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   fidl::InterfaceHandle<fuchsia::sysmem::BufferCollectionToken> manager_token;
   status = token->Duplicate(ZX_RIGHT_SAME_RIGHTS, manager_token.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   fuchsia::sysmem::BufferCollectionPtr collection;
@@ -113,7 +119,7 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
       allocator_->BindSharedCollection(std::move(token), collection.NewRequest(loop_.dispatcher()));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   constexpr uint32_t kCampingBufferCount = 2;
@@ -151,10 +157,10 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
   if (status == ZX_ERR_TIMED_OUT) {
     FX_PLOGS(ERROR, status) << "Manager failed to create the stream within "
                             << kWaitTimeForFormatMsec << "ms";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   } else if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   constexpr uint32_t kWaitTimeForSysmemMsec = 20000;
@@ -163,15 +169,15 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
   if (status == ZX_ERR_TIMED_OUT) {
     FX_PLOGS(ERROR, status) << "Sysmem failed to allocate buffers within " << kWaitTimeForSysmemMsec
                             << "ms";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   } else if (status != ZX_OK) {
     FX_PLOGS(ERROR, status);
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   // The stream from controller is currently unrotated.
   // TODO: once GDC is hooked up to do the rotation within the controller, set this to 'false'
-  return {ZX_OK, std::move(format_ret), std::move(buffers_ret), true};
+  return fit::ok(std::make_tuple(std::move(format_ret), std::move(buffers_ret), true));
 }
 
 void ManagerStreamProvider::OnDeviceAvailable(int device_id,

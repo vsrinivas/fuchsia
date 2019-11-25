@@ -90,8 +90,9 @@ TEST_P(StreamProviderTest, ValidateFrames) {
 
   // Connect to the stream.
   fuchsia::camera2::StreamPtr stream;
-  auto [status, format, buffers, should_rotate] = provider_->ConnectToStream(stream.NewRequest());
-  ASSERT_EQ(status, ZX_OK);
+  auto result = provider_->ConnectToStream(stream.NewRequest());
+  ASSERT_TRUE(result.is_ok());
+  auto [format, buffers, should_rotate] = result.take_value();
   const auto& buffer_size = buffers.settings.buffer_settings.size_bytes;
   SampledHasher hasher(buffer_size);
 

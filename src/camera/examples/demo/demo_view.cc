@@ -74,12 +74,13 @@ std::unique_ptr<DemoView> DemoView::Create(scenic::ViewContext context, async::L
     return nullptr;
   }
 
-  auto [status, format, buffers, should_rotate] =
+  auto result =
       view->stream_provider_->ConnectToStream(view->stream_.NewRequest(loop->dispatcher()));
-  if (status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to connect to stream";
+  if (result.is_error()) {
+    FX_PLOGS(ERROR, result.error()) << "Failed to connect to stream";
     return nullptr;
   }
+  auto [format, buffers, should_rotate] = result.take_value();
   view->should_rotate_ = should_rotate;
   view->stream_.set_error_handler([loop](zx_status_t status) {
     FX_PLOGS(ERROR, status) << "Stream disconnected";

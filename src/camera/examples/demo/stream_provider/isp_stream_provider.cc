@@ -8,6 +8,7 @@
 #include <fuchsia/camera/test/cpp/fidl.h>
 #include <fuchsia/camera2/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
+#include <zircon/errors.h>
 
 #include "src/lib/syslog/cpp/logger.h"
 
@@ -28,15 +29,21 @@ std::unique_ptr<StreamProvider> IspStreamProvider::Create() {
 }
 
 // Offer a stream as served through the tester interface.
-std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2,
-           bool>
-IspStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
+fit::result<
+    std::tuple<fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2, bool>,
+    zx_status_t>
+IspStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                   uint32_t index) {
+  if (index > 0) {
+    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
   // Get a channel to the tester device.
   zx::channel channel;
   zx_status_t status = fdio_get_service_handle(isp_fd_.get(), channel.reset_and_get_address());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to get service handle";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   // Bind the tester interface and create a stream.
@@ -47,9 +54,9 @@ IspStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stre
   status = tester->CreateStream(std::move(request), &buffers, &format);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create stream";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   // The stream coming directly from the ISP is not oriented properly.
-  return {ZX_OK, std::move(format), std::move(buffers), true};
+  return fit::ok(std::make_tuple(std::move(format), std::move(buffers), true));
 }

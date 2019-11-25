@@ -91,32 +91,37 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
 }
 
 // Offer a stream as served through the controller service provided by the driver.
-std::tuple<zx_status_t, fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2,
-           bool>
-ControllerStreamProvider::ConnectToStream(
-    fidl::InterfaceRequest<fuchsia::camera2::Stream> request) {
+fit::result<
+    std::tuple<fuchsia::sysmem::ImageFormat_2, fuchsia::sysmem::BufferCollectionInfo_2, bool>,
+    zx_status_t>
+ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
+                                          uint32_t index) {
+  if (index > 0) {
+    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  }
+
   static constexpr const uint32_t kConfigIndex = 1;
   static constexpr const uint32_t kStreamConfigIndex = 1;
   static constexpr const uint32_t kImageFormatIndex = 0;
 
   if (buffer_collection_.is_bound()) {
     FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
-    return MakeErrorReturn(ZX_ERR_ALREADY_BOUND);
+    return fit::error(ZX_ERR_ALREADY_BOUND);
   }
 
   if (kConfigIndex >= configs_->size()) {
     FX_LOGS(ERROR) << "Invalid config index " << kConfigIndex;
-    return MakeErrorReturn(ZX_ERR_BAD_STATE);
+    return fit::error(ZX_ERR_BAD_STATE);
   }
   auto& config = configs_->at(kConfigIndex);
   if (kStreamConfigIndex >= config.stream_configs.size()) {
     FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
-    return MakeErrorReturn(ZX_ERR_BAD_STATE);
+    return fit::error(ZX_ERR_BAD_STATE);
   }
   auto& stream_config = config.stream_configs[kStreamConfigIndex];
   if (kImageFormatIndex >= stream_config.image_formats.size()) {
     FX_LOGS(ERROR) << "Invalid image format index " << kImageFormatIndex;
-    return MakeErrorReturn(ZX_ERR_BAD_STATE);
+    return fit::error(ZX_ERR_BAD_STATE);
   }
   auto& image_format = stream_config.image_formats[kImageFormatIndex];
 
@@ -127,23 +132,23 @@ ControllerStreamProvider::ConnectToStream(
   zx_status_t status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate new collection";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
   status = buffer_collection_->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to set constraints to those reported by the controller";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
   zx_status_t status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
   status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to call WaitForBuffersAllocated";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
   if (status_return != ZX_OK) {
     FX_PLOGS(ERROR, status_return) << "Failed to allocate buffers";
-    return MakeErrorReturn(status_return);
+    return fit::error(status_return);
   }
 
   // TODO(fxb/37296): remove ISP workarounds
@@ -155,7 +160,7 @@ ControllerStreamProvider::ConnectToStream(
                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
       FX_PLOGS(ERROR, status) << "Error mapping vmo";
-      return MakeErrorReturn(status);
+      return fit::error(status);
     }
     memset(mapper.start(), 128, mapper.size());
     mapper.Unmap();
@@ -166,7 +171,7 @@ ControllerStreamProvider::ConnectToStream(
   status = buffers.Clone(&buffers_for_caller);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to clone buffer collection";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
   // Create the stream using the created buffer collection.
@@ -174,8 +179,8 @@ ControllerStreamProvider::ConnectToStream(
                                      std::move(buffers), std::move(request));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create stream";
-    return MakeErrorReturn(status);
+    return fit::error(status);
   }
 
-  return {ZX_OK, std::move(image_format), std::move(buffers_for_caller), false};
+  return fit::ok(std::make_tuple(std::move(image_format), std::move(buffers_for_caller), false));
 }
