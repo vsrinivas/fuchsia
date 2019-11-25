@@ -74,7 +74,9 @@ function main {
     fx-command-run wait
   else
     echo >&2 "Updating ${target} cache on device"
-    fx-command-run push-package "${target}"
+    if ! fx-command-run push-package "${target}"; then
+      return 2
+    fi
   fi
 
   # TODO: remove reliance on pkgfs/packages.
