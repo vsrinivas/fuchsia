@@ -252,12 +252,15 @@ TEST_F(AppUnitTest, ListenerForScreenReader) {
   MockPointerEventRegistry registry(&context_provider_);
   MockSetUIAccessibility setui(&context_provider_);
   a11y_manager::App app(context_provider_.TakeContext());
+  EXPECT_FALSE(app.state().screen_reader_enabled());
 
   fuchsia::settings::AccessibilitySettings settings;
   settings.set_screen_reader(true);
   setui.Set(std::move(settings), [](auto) {});
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(app.state().screen_reader_enabled());
+
   ASSERT_TRUE(registry.listener());
   EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::CONSUMED);
 }
@@ -325,6 +328,10 @@ TEST_F(AppUnitTest, ListenerRefCount) {
   setui.Set(std::move(settings), [](auto) {});
 
   RunLoopUntilIdle();
+
+  EXPECT_EQ(app.state().screen_reader_enabled(), false);
+  EXPECT_EQ(app.state().magnifier_enabled(), true);
+
   ASSERT_TRUE(registry.listener());
   EXPECT_EQ(SendUnrecognizedGesture(&registry.listener()), EventHandling::REJECTED);
 
@@ -352,16 +359,10 @@ TEST_F(AppUnitTest, WatchesSetUISettings) {
 
   // Verify that app settings are initialized appropriately.
   SettingsPtr settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_screen_reader_enabled());
-  EXPECT_FALSE(settings->screen_reader_enabled());
-  EXPECT_TRUE(settings->has_magnification_enabled());
-  EXPECT_FALSE(settings->magnification_enabled());
   EXPECT_TRUE(settings->has_color_inversion_enabled());
   EXPECT_FALSE(settings->color_inversion_enabled());
   EXPECT_TRUE(settings->has_color_correction());
   EXPECT_EQ(fuchsia::accessibility::ColorCorrection::DISABLED, settings->color_correction());
-  EXPECT_TRUE(settings->has_screen_reader_enabled());
-  EXPECT_FALSE(settings->screen_reader_enabled());
 
   // Change the settings values (everything on).
   fuchsia::settings::AccessibilitySettings newAccessibilitySettings;
@@ -375,10 +376,6 @@ TEST_F(AppUnitTest, WatchesSetUISettings) {
 
   // Verify that stuff changed
   settings = app.GetSettings();
-  EXPECT_TRUE(settings->has_screen_reader_enabled());
-  EXPECT_TRUE(settings->screen_reader_enabled());
-  EXPECT_TRUE(settings->has_magnification_enabled());
-  EXPECT_TRUE(settings->magnification_enabled());
   EXPECT_TRUE(settings->has_color_inversion_enabled());
   EXPECT_TRUE(settings->color_inversion_enabled());
   EXPECT_TRUE(settings->has_color_correction());

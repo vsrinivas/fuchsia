@@ -27,6 +27,54 @@
 
 namespace a11y_manager {
 
+// Internal representation of the current state of the accessibility manager features.
+// TODO(fxb/41768): Add in color correction and inversion
+class A11yManagerState {
+ public:
+  // Default state with all values as disabled
+  A11yManagerState() : screen_reader_enabled_(false), magnifier_enabled_(false) {}
+
+  // Copy constructor
+  A11yManagerState(const A11yManagerState& other) = default;
+  A11yManagerState& operator=(const A11yManagerState& other) = default;
+
+  bool screen_reader_enabled() const { return screen_reader_enabled_; }
+
+  bool magnifier_enabled() const { return magnifier_enabled_; }
+
+  A11yManagerState withScreenReaderEnabled(bool enabled) {
+    A11yManagerState state = *this;
+    state.screen_reader_enabled_ = enabled;
+    return state;
+  }
+
+  A11yManagerState withMagnifierEnabled(bool enabled) {
+    A11yManagerState state = *this;
+    state.magnifier_enabled_ = enabled;
+    return state;
+  }
+
+  // Creates a new instance of state that has any set values from the given AccessibilitySettings
+  // applied.
+  A11yManagerState withSettings(const fuchsia::settings::AccessibilitySettings& systemSettings) {
+    A11yManagerState state = *this;
+
+    if (systemSettings.has_screen_reader()) {
+      state.screen_reader_enabled_ = systemSettings.screen_reader();
+    }
+
+    if (systemSettings.has_enable_magnification()) {
+      state.magnifier_enabled_ = systemSettings.enable_magnification();
+    }
+
+    return state;
+  }
+
+ private:
+  bool screen_reader_enabled_;
+  bool magnifier_enabled_;
+};
+
 // A11y manager application entry point.
 class App {
  public:
@@ -36,6 +84,10 @@ class App {
   // Returns a copy of current set of settings owned by A11y Manager.
   fuchsia::accessibility::SettingsPtr GetSettings() const;
 
+  // Sets the a11y manager to the given configuration. Visible for testing.
+  void SetState(A11yManagerState newState);
+  A11yManagerState state() { return state_; };
+
  private:
   // Callback for Setui's Watch() method.
   void SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result result);
@@ -44,25 +96,13 @@ class App {
   // initial call, and afterwards uses a hanging get to return only when settings change.
   void WatchSetui();
 
-  // Changes screen reader status when settings change.
-  void ToggleScreenReaderSetting(bool enabled);
-
-  void ToggleMagnifierSetting(bool enabled);
+  void UpdateScreenReaderState();
+  void UpdateMagnifierState();
+  void UpdateGestureManagerState();
 
   // Converts setui color blindess type to the relevant accessibility color correction mode.
   fuchsia::accessibility::ColorCorrectionMode ConvertColorCorrection(
       fuchsia::settings::ColorBlindnessType color_blindness_type);
-
-  // Initializes Screen Reader pointer when screen reader is enabled, and destroys
-  // the pointer when Screen Reader is disabled.
-  void OnScreenReaderEnabled(bool enabled);
-
-  // Adds a client of accessibility pointer events. Connects the Accessibility Pointer Event
-  // Listener and gesture manager when the first client is added.
-  void AddPointerEventListener();
-  // Releases a client of accessibility pointer events. Disconnects the Accessibility Pointer Event
-  // Listener and gesture manager once the number of clients reaches zero.
-  void ReleasePointerEventListener();
 
   // Makes changes to internal settings based on new settings from SetUI. This is not particularly
   // efficient since the existing internal API forces a new call to watchers for each changed
@@ -70,6 +110,9 @@ class App {
   // TODO(17180): This should be removed when the internal settings API is replaced with smaller
   // configuration APIs.
   void UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings& systemSettings);
+
+  // Current state of the a11y manager
+  A11yManagerState state_;
 
   std::unique_ptr<sys::ComponentContext> startup_context_;
 
@@ -90,7 +133,6 @@ class App {
   fuchsia::accessibility::SettingsProviderPtr settings_provider_ptr_;
 
   fidl::BindingSet<fuchsia::ui::input::accessibility::PointerEventListener> listener_bindings_;
-  size_t pointer_event_clients_ = 0;
 
   fidl::BindingSet<fuchsia::accessibility::Magnifier> magnifier_bindings_;
 

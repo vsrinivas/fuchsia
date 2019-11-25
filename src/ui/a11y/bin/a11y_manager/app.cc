@@ -52,6 +52,65 @@ App::App(std::unique_ptr<sys::ComponentContext> context)
 
 App::~App() = default;
 
+void App::SetState(A11yManagerState state) {
+  state_ = state;
+
+  // Screen Reader and Magnifier depend on gesture manager state being correct.
+  UpdateGestureManagerState();
+
+  UpdateScreenReaderState();
+  UpdateMagnifierState();
+}
+
+void App::UpdateScreenReaderState() {
+  // If this is used elsewhere, it should be moved into its own function.
+  semantics_manager_.SetSemanticsManagerEnabled(state_.screen_reader_enabled());
+
+  if (state_.screen_reader_enabled()) {
+    if (!screen_reader_) {
+      // TODO:(fxb/41769) We should move more of the enable/disable logic outside of screen reader.
+      screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_,
+                                                            gesture_manager_.get());
+    }
+  } else {
+    screen_reader_.reset();
+  }
+}
+
+void App::UpdateMagnifierState() {
+  if (!state_.magnifier_enabled()) {
+    magnifier_.ZoomOutIfMagnified();
+  }
+}
+
+void App::UpdateGestureManagerState() {
+  bool no_active_users = !state_.magnifier_enabled() && !state_.screen_reader_enabled();
+
+  if (no_active_users) {
+    // Shut down and clean up if no users
+    gesture_manager_.reset();
+  } else {
+    // Initialize if not initialized
+    if (!gesture_manager_) {
+      gesture_manager_ = std::make_unique<a11y::GestureManager>();
+      pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
+      gesture_manager_->arena()->Add(&magnifier_);
+    }
+
+    // Current logic for event handling policy is as follows:
+    // Screen reader only: consume events
+    // Screen reader and magnifier enabled: consume events
+    // Just magnifier enabled: reject events
+    if (state_.screen_reader_enabled()) {
+      gesture_manager_->arena()->event_handling_policy(
+          a11y::GestureArena::EventHandlingPolicy::kConsumeEvents);
+    } else {
+      gesture_manager_->arena()->event_handling_policy(
+          a11y::GestureArena::EventHandlingPolicy::kRejectEvents);
+    }
+  }
+}
+
 void InternalSettingsCallback(fuchsia::accessibility::SettingsManagerStatus status) {
   if (status == fuchsia::accessibility::SettingsManagerStatus::ERROR) {
     FX_LOGS(ERROR) << "Error writing internal accessibility settings.";
@@ -70,22 +129,11 @@ void App::UpdateInternalSettings(const fuchsia::settings::AccessibilitySettings&
           : fuchsia::accessibility::ColorCorrectionMode::DISABLED;
   color_transform_manager_.ChangeColorTransform(color_inversion, color_blindness_type);
 
-  if (systemSettings.has_screen_reader()) {
-    settings_provider_ptr_->SetScreenReaderEnabled(systemSettings.screen_reader(),
-                                                   InternalSettingsCallback);
-    ToggleScreenReaderSetting(systemSettings.screen_reader());
-  }
-
   // Everything below here in this method is old code for  the legacy settings API.
   // TODO(17180): Remove this code when nothing else depends on it.
   if (systemSettings.has_color_inversion()) {
     settings_provider_ptr_->SetColorInversionEnabled(systemSettings.color_inversion(),
                                                      InternalSettingsCallback);
-  }
-  if (systemSettings.has_enable_magnification()) {
-    settings_provider_ptr_->SetMagnificationEnabled(systemSettings.enable_magnification(),
-                                                    InternalSettingsCallback);
-    ToggleMagnifierSetting(systemSettings.enable_magnification());
   }
   if (systemSettings.has_color_correction()) {
     switch (systemSettings.color_correction()) {
@@ -115,6 +163,7 @@ void App::SetuiWatchCallback(fuchsia::settings::Accessibility_Watch_Result resul
     FX_LOGS(ERROR) << "Error reading setui accessibility settings.";
   } else if (result.is_response()) {
     UpdateInternalSettings(result.response().settings);
+    SetState(state_.withSettings(result.response().settings));
   }
   WatchSetui();
 }
@@ -123,69 +172,6 @@ void App::WatchSetui() { setui_settings_->Watch(fit::bind_member(this, &App::Set
 
 fuchsia::accessibility::SettingsPtr App::GetSettings() const {
   return settings_manager_.GetSettings();
-}
-
-void App::OnScreenReaderEnabled(bool enabled) {
-  // Reset SemanticsTree and registered views in SemanticsManagerImpl.
-  semantics_manager_.SetSemanticsManagerEnabled(enabled);
-
-  // Reset ScreenReader.
-  if (enabled) {
-    screen_reader_ = std::make_unique<a11y::ScreenReader>(&semantics_manager_, &tts_manager_,
-                                                          gesture_manager_.get());
-  } else {
-    screen_reader_.reset();
-  }
-}
-
-void App::AddPointerEventListener() {
-  if (pointer_event_clients_++ == 0) {
-    gesture_manager_ = std::make_unique<a11y::GestureManager>();
-    pointer_event_registry_->Register(gesture_manager_->binding().NewBinding());
-    gesture_manager_->arena()->Add(&magnifier_);
-  }
-}
-
-void App::ReleasePointerEventListener() {
-  FX_DCHECK(pointer_event_clients_ > 0);
-
-  if (--pointer_event_clients_ == 0) {
-    gesture_manager_.reset();
-  }
-}
-
-void App::ToggleScreenReaderSetting(bool enabled) {
-  const auto settings = settings_manager_.GetSettings();
-  const bool old_enabled =
-      settings->has_screen_reader_enabled() && settings->screen_reader_enabled();
-
-  if (enabled != old_enabled) {
-    if (enabled) {
-      AddPointerEventListener();
-      gesture_manager_->arena()->event_handling_policy(
-          a11y::GestureArena::EventHandlingPolicy::kConsumeEvents);
-    } else {
-      gesture_manager_->arena()->event_handling_policy(
-          a11y::GestureArena::EventHandlingPolicy::kRejectEvents);
-      ReleasePointerEventListener();
-    }
-    OnScreenReaderEnabled(enabled);
-  }
-}
-
-void App::ToggleMagnifierSetting(bool enabled) {
-  const auto settings = settings_manager_.GetSettings();
-  const bool old_enabled =
-      settings->has_magnification_enabled() && settings->magnification_enabled();
-
-  if (enabled != old_enabled) {
-    if (enabled) {
-      AddPointerEventListener();
-    } else {
-      ReleasePointerEventListener();
-      magnifier_.ZoomOutIfMagnified();
-    }
-  }
 }
 
 fuchsia::accessibility::ColorCorrectionMode App::ConvertColorCorrection(
