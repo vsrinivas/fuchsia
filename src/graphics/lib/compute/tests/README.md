@@ -28,12 +28,6 @@ vk_transfer_test:
   as well as its position. Used to verify that the presentation support
   correctly handles image layout transitions.
 
-vk_skia_test:
-  A tiny test application that uses the SkiaTestApp C++ class from
-  tests/common/skia/skia_test_app.h. This class is only intended to help
-  write a few tests that use Skia instead of Spinel or Mold for performance
-  and correctness comparisons only.
-
 
 To build the tests:
 

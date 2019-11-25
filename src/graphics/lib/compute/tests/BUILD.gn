@@ -145,43 +145,10 @@ source_set("common_spinel") {
   ]
 }
 
-# Skia test application helper library.
-# This one is only used to write small tests to compare Spinel and Skia
-# performance and correctness.
-#
-# NOTE: One must set |skia_use_vulkan = true| in the args.gn file in order
-#       to build Skia's Vulkan backend on the host. Otherwise, any program
-#       linking to this library will fail to initialize properly at runtime
-#       when run on the host (device binaries should always work though).
-#
-config("common_skia_config") {
-  # Clients should include "tests/common/skia/skia_test_app.h"
-  include_dirs = [ graphics_compute_dir ]
-}
-
-source_set("common_skia") {
-  public = [
-    "common/skia/skia_test_app.h",
-  ]
-  sources = [
-    "common/skia/skia_test_app.cc",
-    "common/skia/skia_test_app.h",
-  ]
-  deps = [
-    ":common",
-    ":common_vk",
-  ]
-  public_deps = [
-    "//third_party/skia",
-  ]
-  public_configs = [ ":common_skia_config" ]
-}
-
 group("tests") {
   testonly = true
   deps = [
     "vk_app_state_test",
-    "vk_skia_test",
     "vk_swapchain_test",
     "vk_transfer_test",
     "vk_triangle_test",
