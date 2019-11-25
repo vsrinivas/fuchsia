@@ -61,6 +61,12 @@ static cursor_info_t cursor_infos[3] = {
     {.width = 128, .height = 128, .format = ZX_PIXEL_FORMAT_ARGB_8888},
     {.width = 256, .height = 256, .format = ZX_PIXEL_FORMAT_ARGB_8888},
 };
+static uint32_t image_types[4] = {
+    IMAGE_TYPE_SIMPLE,
+    IMAGE_TYPE_X_TILED,
+    IMAGE_TYPE_Y_LEGACY_TILED,
+    IMAGE_TYPE_YF_TILED,
+};
 
 static zx_status_t read_pci_config_16(void* ctx, uint16_t addr, uint16_t* value_out) {
   return static_cast<i915::Controller*>(ctx)->ReadPciConfig16(addr, value_out);
@@ -1744,68 +1750,69 @@ zx_status_t Controller::DisplayControllerImplSetBufferCollectionConstraints(
   buffer_constraints.cpu_domain_supported = false;
   buffer_constraints.heap_permitted_count = 1;
   buffer_constraints.heap_permitted[0] = fuchsia_sysmem_HeapType_SYSTEM_RAM;
-  constraints.image_format_constraints_count = 1;
-  fuchsia_sysmem_ImageFormatConstraints& image_constraints =
-      constraints.image_format_constraints[0];
-
-  switch (config->pixel_format) {
-    case ZX_PIXEL_FORMAT_ARGB_8888:
-    case ZX_PIXEL_FORMAT_RGB_x888:
-      image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
-      break;
-    case ZX_PIXEL_FORMAT_ABGR_8888:
-    case ZX_PIXEL_FORMAT_BGR_888x:
-      image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
-      break;
+  unsigned image_constraints_count = 0;
+  for (unsigned i = 0; i < countof(image_types); ++i) {
+    // Skip if image type was specified and different from current type. This
+    // makes it possible for a different participant to select preferred
+    // modifiers.
+    if (config->type && config->type != image_types[i]) {
+      continue;
+    }
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[image_constraints_count++];
+    switch (config->pixel_format) {
+      case ZX_PIXEL_FORMAT_ARGB_8888:
+      case ZX_PIXEL_FORMAT_RGB_x888:
+        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+        break;
+      case ZX_PIXEL_FORMAT_ABGR_8888:
+      case ZX_PIXEL_FORMAT_BGR_888x:
+        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_R8G8B8A8;
+        break;
+    }
+    image_constraints.pixel_format.has_format_modifier = true;
+    switch (image_types[i]) {
+      case IMAGE_TYPE_SIMPLE:
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
+        image_constraints.bytes_per_row_divisor = 64;
+        image_constraints.start_offset_divisor = 64;
+        break;
+      case IMAGE_TYPE_X_TILED:
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+        break;
+      case IMAGE_TYPE_Y_LEGACY_TILED:
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+        break;
+      case IMAGE_TYPE_YF_TILED:
+        image_constraints.pixel_format.format_modifier.value =
+            fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED;
+        image_constraints.start_offset_divisor = 4096;
+        image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
+        break;
+    }
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+    image_constraints.min_coded_width = 0;
+    image_constraints.max_coded_width = 0xffffffff;
+    image_constraints.min_coded_height = 0;
+    image_constraints.max_coded_height = 0xffffffff;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
   }
-  image_constraints.pixel_format.has_format_modifier = true;
-  switch (config->type) {
-    case IMAGE_TYPE_SIMPLE:
-      image_constraints.pixel_format.format_modifier.value = fuchsia_sysmem_FORMAT_MODIFIER_LINEAR;
-      image_constraints.bytes_per_row_divisor = 64;
-      image_constraints.start_offset_divisor = 64;
-      break;
-
-    case IMAGE_TYPE_X_TILED:
-      image_constraints.pixel_format.format_modifier.value =
-          fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED;
-      image_constraints.start_offset_divisor = 4096;
-      image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-      break;
-
-    case IMAGE_TYPE_Y_LEGACY_TILED:
-      image_constraints.pixel_format.format_modifier.value =
-          fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED;
-      image_constraints.start_offset_divisor = 4096;
-      image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-      break;
-
-    case IMAGE_TYPE_YF_TILED:
-      image_constraints.pixel_format.format_modifier.value =
-          fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED;
-      image_constraints.start_offset_divisor = 4096;
-      image_constraints.bytes_per_row_divisor = 1;  // Not meaningful
-      break;
-
-    default:
-      LOG_ERROR("Invalid image type: %d\n", config->type);
-      return ZX_ERR_INVALID_ARGS;
-  }
-
-  image_constraints.color_spaces_count = 1;
-  image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
-  image_constraints.min_coded_width = 0;
-  image_constraints.max_coded_width = 0xffffffff;
-  image_constraints.min_coded_height = 0;
-  image_constraints.max_coded_height = 0xffffffff;
-  image_constraints.min_bytes_per_row = 0;
-  image_constraints.max_bytes_per_row = 0xffffffff;
-  image_constraints.max_coded_width_times_coded_height = 0xffffffff;
-  image_constraints.layers = 1;
-  image_constraints.coded_width_divisor = 1;
-  image_constraints.coded_height_divisor = 1;
-  image_constraints.display_width_divisor = 1;
-  image_constraints.display_height_divisor = 1;
+  constraints.image_format_constraints_count = image_constraints_count;
 
   zx_status_t status =
       fuchsia_sysmem_BufferCollectionSetConstraints(collection, true, &constraints);

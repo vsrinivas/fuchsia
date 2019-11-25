@@ -97,7 +97,7 @@ Image* Image::Create(fhd::Controller::SyncClient* dc, uint32_t width, uint32_t h
   image_config.pixel_format = format;
   image_config.height = height;
   image_config.width = width;
-  image_config.type = use_intel_y_tiling ? 2 : IMAGE_TYPE_SIMPLE;
+  image_config.type = 0;  // 0 for any image type.
   auto set_constraints_result = dc->SetBufferCollectionConstraints(collection_id, image_config);
   if (!set_constraints_result.ok() || set_constraints_result->res != ZX_OK) {
     fprintf(stderr, "Failed to set constraints\n");
