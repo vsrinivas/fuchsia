@@ -68,6 +68,8 @@ class BreakpointStreamBackend : public LocalStreamBackend {
   bool thread_started() const { return thread_started_; }
   bool thread_exited() const { return thread_exited_; }
 
+  bool process_exited() const { return process_exited_; }
+
   zx_koid_t process_koid() const { return process_koid_; }
   zx_koid_t thread_koid() const { return thread_koid_; }
 
@@ -105,12 +107,21 @@ class BreakpointStreamBackend : public LocalStreamBackend {
     loop_->QuitNow();
   }
 
+  void HandleNotifyProcessExiting(debug_ipc::NotifyProcessExiting exit) override {
+    ASSERT_FALSE(process_exited_);
+    process_exited_ = true;
+
+    loop_->QuitNow();
+  }
+
  private:
   debug_ipc::MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
 
   bool thread_started_ = false;
   bool thread_exited_ = false;
+
+  bool process_exited_ = false;
 
   zx_koid_t process_koid_ = 0;
   zx_koid_t thread_koid_ = 0;
@@ -243,8 +254,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     remote_api->OnResume(resume_request, &resume_reply);
     loop->Run();
 
-    // We should've received a thread exited notification.
-    ASSERT_TRUE(mock_stream_backend.thread_exited());
+    // We verify that the thread exited or the process exited.
+    ASSERT_TRUE(mock_stream_backend.thread_exited() || mock_stream_backend.process_exited());
   }
 }
 
@@ -360,8 +371,8 @@ TEST(BreakpointIntegration, DISABLED_HWBreakpoint) {
 
     DEBUG_LOG(Test) << "Verifyint thread exited correctly.";
 
-    // We verify that the thread exited.
-    ASSERT_TRUE(mock_stream_backend.thread_exited());
+    // We verify that the thread exited or the process exited.
+    ASSERT_TRUE(mock_stream_backend.thread_exited() || mock_stream_backend.process_exited());
   }
 }
 
