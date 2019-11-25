@@ -308,8 +308,7 @@ mod tests {
                     tiles.push((tile.i, tile.j))
                 })
             }
-            None => contour
-                .for_each_tile(map.tiles_mut(), |tile| tiles.push((tile.i, tile.j))),
+            None => contour.for_each_tile(map.tiles_mut(), |tile| tiles.push((tile.i, tile.j))),
         }
 
         tiles

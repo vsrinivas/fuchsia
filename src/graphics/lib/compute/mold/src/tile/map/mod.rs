@@ -24,7 +24,10 @@ use crate::{
     PIXEL_WIDTH,
 };
 
-use painter::{buffer::{ColorBuffer, PixelFormat}, Context, Painter};
+use painter::{
+    buffer::{ColorBuffer, PixelFormat},
+    Context, Painter,
+};
 
 thread_local!(static PAINTER: RefCell<Painter> = RefCell::new(Painter::new()));
 
@@ -492,7 +495,7 @@ impl ColorBuffer for BitMap {
 pub(crate) mod tests {
     use super::*;
 
-    use crate::{Path, Point, Raster, tile::TILE_SIZE};
+    use crate::{tile::TILE_SIZE, Path, Point, Raster};
 
     const HALF: usize = TILE_SIZE / 2;
 

@@ -14,6 +14,9 @@ use std::{
 
 use super::FillRule;
 
+const LAST_BIT_MASK: i32 = 0b1;
+const LAST_BYTE_MASK: i32 = 0b1111_1111;
+
 #[repr(C)]
 #[derive(Clone, Copy, Default, Eq, Ord, PartialEq, PartialOrd)]
 pub struct ByteFraction {
@@ -47,16 +50,15 @@ impl ByteFraction {
                 }
             }
             FillRule::EvenOdd => {
-                let mut number = area >> 8;
+                let number = area >> 8;
 
-                if area < 0 {
+                if area < 0 && area & LAST_BYTE_MASK != 0 {
                     area -= 1;
-                    number -= 1;
                 }
 
-                let capped = area & 0b1111_1111;
+                let capped = area & LAST_BYTE_MASK;
 
-                if number & 0b1 == 0 {
+                if number & LAST_BIT_MASK == 0 {
                     capped as u8
                 } else {
                     u8::max_value() - capped as u8
@@ -144,5 +146,37 @@ mod tests {
     #[test]
     fn mul() {
         assert_eq!(HALF * HALF, ByteFraction::new(64));
+    }
+
+    #[test]
+    fn non_zero() {
+        assert_eq!(ByteFraction::from_area(257, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(256, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(255, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(254, FillRule::NonZero), ByteFraction::new(254));
+    }
+
+    #[test]
+    fn non_zero_negative() {
+        assert_eq!(ByteFraction::from_area(-257, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(-256, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(-255, FillRule::NonZero), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(-254, FillRule::NonZero), ByteFraction::new(254));
+    }
+
+    #[test]
+    fn even_odd() {
+        assert_eq!(ByteFraction::from_area(257, FillRule::EvenOdd), ByteFraction::new(254));
+        assert_eq!(ByteFraction::from_area(256, FillRule::EvenOdd), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(255, FillRule::EvenOdd), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(254, FillRule::EvenOdd), ByteFraction::new(254));
+    }
+
+    #[test]
+    fn even_odd_negative() {
+        assert_eq!(ByteFraction::from_area(-257, FillRule::EvenOdd), ByteFraction::new(254));
+        assert_eq!(ByteFraction::from_area(-256, FillRule::EvenOdd), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(-255, FillRule::EvenOdd), ByteFraction::new(255));
+        assert_eq!(ByteFraction::from_area(-254, FillRule::EvenOdd), ByteFraction::new(254));
     }
 }
