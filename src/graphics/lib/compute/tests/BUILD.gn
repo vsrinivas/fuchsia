@@ -128,6 +128,23 @@ graphics_compute_unittests("common_vk_unittests") {
   public_configs = [ "//build/config:Wno-reorder-init-list" ]
 }
 
+# Spinel related test utilities library.
+source_set("common_spinel") {
+  sources = [
+    "common/spinel/spinel_device_config_utils.c",
+    "common/spinel/spinel_device_config_utils.h",
+  ]
+  deps = [
+    ":common",
+    ":common_vk",
+  ]
+  public_deps = [
+    "${graphics_compute_dir}/hotsort/platforms/vk",
+    "${graphics_compute_dir}/spinel/platforms/vk:vk",
+    "${graphics_compute_dir}/spinel/platforms/vk:vk_find_target",
+  ]
+}
+
 # Skia test application helper library.
 # This one is only used to write small tests to compare Spinel and Skia
 # performance and correctness.

@@ -125,7 +125,7 @@ typedef struct
 // This can be useful when performing manual submits between
 // vk_swapchain_queue_acquire_next_image() and
 // vk_swapchain_queue_submit_and_present_image().
-// All entriesa re VK_NULL_HANDLE by default, unless
+// All entries are VK_NULL_HANDLE by default, unless
 // |vk_swapchain_queue_config_t::sync_semaphores_count| is > 0.
 //
 typedef struct
