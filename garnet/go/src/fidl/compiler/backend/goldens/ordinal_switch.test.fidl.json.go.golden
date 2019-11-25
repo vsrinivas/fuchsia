@@ -27,26 +27,26 @@ type SwitchingOrdinalsInterface _bindings.ChannelProxy
 
 func (p *SwitchingOrdinalsInterface) OrdinalFive() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveGenOrdinal, req_)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOrdinalFiveGenOrdinal, req_)
+	return err_
 }
 
 func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal, req_)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal, req_)
+	return err_
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOrdinalFifteen() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_, SwitchingOrdinalsEventOrdinalFifteenGenOrdinal)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, resp_, SwitchingOrdinalsEventOrdinalFifteenGenOrdinal)
+	return err_
 }
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOnlyGeneratedOrdinal() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_, SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal, resp_, SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal)
+	return err_
 }
 
 

@@ -118,31 +118,31 @@ type ParentInterface _bindings.ChannelProxy
 func (p *ParentInterface) GetChild() (ChildInterface, error) {
 	var req_ _bindings.Message
 	resp_ := &parentGetChildResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildGenOrdinal, req_, resp_, ParentGetChildOrdinal, ParentGetChildGenOrdinal)
-	return resp_.C, err
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildGenOrdinal, req_, resp_, ParentGetChildOrdinal, ParentGetChildGenOrdinal)
+	return resp_.C, err_
 }
 
 func (p *ParentInterface) GetChildRequest() (ChildInterfaceRequest, error) {
 	var req_ _bindings.Message
 	resp_ := &parentGetChildRequestResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestGenOrdinal, req_, resp_, ParentGetChildRequestOrdinal, ParentGetChildRequestGenOrdinal)
-	return resp_.R, err
+	err_ := ((*_bindings.ChannelProxy)(p)).Call(ParentGetChildRequestGenOrdinal, req_, resp_, ParentGetChildRequestOrdinal, ParentGetChildRequestGenOrdinal)
+	return resp_.R, err_
 }
 
 func (p *ParentInterface) TakeChild(c ChildInterface) error {
 	req_ := &parentTakeChildRequest{
 		C: c,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildGenOrdinal, req_)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildGenOrdinal, req_)
+	return err_
 }
 
 func (p *ParentInterface) TakeChildRequest(r ChildInterfaceRequest) error {
 	req_ := &parentTakeChildRequestRequest{
 		R: r,
 	}
-	err := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestGenOrdinal, req_)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(ParentTakeChildRequestGenOrdinal, req_)
+	return err_
 }
 
 

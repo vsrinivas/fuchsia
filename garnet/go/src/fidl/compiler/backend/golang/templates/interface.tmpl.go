@@ -73,14 +73,14 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .Ordinals.Write.Name }}, req_, resp_
 		{{- range $index, $ordinal := .Ordinals.Reads -}}, {{ $ordinal.Name }}{{- end -}})
 		{{- else }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .Ordinals.Write.Name }}, req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
+	err_ := ((*_bindings.{{ $.ProxyType }})(p)).Recv(
 		{{- with $first_ordinal := index .Ordinals.Reads 0 -}}
 			{{- $first_ordinal.Name -}}
 		{{- end -}}
@@ -90,13 +90,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 		{{- end -}}
 		)
 		{{- else }}
-	err := nil
+	err_ := nil
 		{{- end }}
 	{{- end }}
 	{{- if .Response }}
-	return {{ range .Response.Members }}resp_.{{ .Name }}, {{ end }}err
+	return {{ range .Response.Members }}resp_.{{ .Name }}, {{ end }}err_
 	{{- else }}
-	return err
+	return err_
 	{{- end }}
 }
 {{- end }}

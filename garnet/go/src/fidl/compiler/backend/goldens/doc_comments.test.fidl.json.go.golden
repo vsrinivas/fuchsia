@@ -118,8 +118,8 @@ type InterfaceInterface _bindings.ChannelProxy
 // method comment #3
 func (p *InterfaceInterface) Method() error {
 	var req_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodGenOrdinal, req_)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodGenOrdinal, req_)
+	return err_
 }
 
 // event comment #1
@@ -127,8 +127,8 @@ func (p *InterfaceInterface) Method() error {
 // event comment #3
 func (p *InterfaceInterface) ExpectOnEvent() error {
 	var resp_ _bindings.Message
-	err := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_, InterfaceOnEventGenOrdinal)
-	return err
+	err_ := ((*_bindings.ChannelProxy)(p)).Recv(InterfaceOnEventOrdinal, resp_, InterfaceOnEventGenOrdinal)
+	return err_
 }
 
 
