@@ -246,27 +246,11 @@ func doSystemOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Client, r
 	server := setupOTAServer(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 	defer server.Shutdown(context.Background())
 
-	if err := device.TriggerSystemOTA(); err != nil {
+	if err := device.TriggerSystemOTA(repo, rpcClient); err != nil {
 		t.Fatalf("OTA failed: %s", err)
 	}
 
 	log.Printf("OTA complete, validating device")
-	// FIXME: It would make sense to be able to close the rpcClient before
-	// the reboot, but for an unknown reason, closing this session will
-	// cause the entire ssh connection to disconnect and reconnect, causing
-	// the test to assume the device rebooted and start verifying that the
-	// OTA succeeded, when, in reality, it likely hasn't finished yet.
-	if *rpcClient != nil {
-		(*rpcClient).Close()
-		*rpcClient = nil
-	}
-	*rpcClient, err = device.StartRpcSession(repo)
-	if err != nil {
-		// FIXME(40913): every upgrade builder should at least build
-		// sl4f as a universe package.
-		log.Printf("unable to connect to sl4f after OTA: %s", err)
-		//t.Fatalf("unable to connect to sl4f after OTA: %s", err)
-	}
 	validateDevice(t, device, *rpcClient, repo, expectedSystemImageMerkle)
 }
 
@@ -317,7 +301,7 @@ func doSystemPrimeOTA(t *testing.T, device *device.Client, rpcClient **sl4f.Clie
 	device.WaitForDeviceToBeConnected()
 
 	log.Printf("OTA complete, validating device")
-	// FIXME: See comment in doSystemOTA(...)
+	// FIXME: See comment in device.TriggerSystemOTA()
 	if *rpcClient != nil {
 		(*rpcClient).Close()
 		*rpcClient = nil

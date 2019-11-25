@@ -7,6 +7,7 @@ package sl4f
 import (
 	"fmt"
 	"log"
+	"os"
 	"strings"
 )
 
@@ -38,4 +39,15 @@ func (c *Client) GetSystemImageMerkle() (string, error) {
 	}
 
 	return strings.TrimSpace(string(f)), nil
+}
+
+// PathExists determines if the path exists on the target.
+func (c *Client) PathExists(path string) (bool, error) {
+	_, err := c.PathStat(path)
+	if err == nil {
+		return true, nil
+	} else if os.IsNotExist(err) {
+		return false, nil
+	}
+	return false, err
 }

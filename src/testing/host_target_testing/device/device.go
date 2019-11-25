@@ -7,6 +7,7 @@ package device
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -122,9 +123,27 @@ func (c *Client) RebootToRecovery() error {
 	return nil
 }
 
-// TriggerSystemOTA gets the device to perform a system update.
-func (c *Client) TriggerSystemOTA() error {
+// TriggerSystemOTA gets the device to perform a system update, ensuring it
+// reboots as expected. rpcClient, if provided, will be used and re-connected
+func (c *Client) TriggerSystemOTA(repo *packages.Repository, rpcClient **sl4f.Client) error {
 	log.Printf("triggering OTA")
+
+	rebootCheckPath := "/tmp/ota_test_should_reboot"
+	if *rpcClient != nil {
+		// Write a file to /tmp that should be lost after a reboot, to
+		// ensure the device actually reboots instead of just
+		// disconnects from the network for a bit.
+		if err := (*rpcClient).FileWrite(rebootCheckPath, []byte("yes")); err != nil {
+			return fmt.Errorf("failed to write reboot check file: %s", err)
+		}
+		stat, err := (*rpcClient).PathStat(rebootCheckPath)
+		if err != nil {
+			return fmt.Errorf("failed to stat reboot check file: %s", err)
+		}
+		if expected := (sl4f.PathMetadata{Mode: 0, Size: 3}); stat != expected {
+			return fmt.Errorf("unexpected reboot check file metadata: expected %v, got %v", expected, stat)
+		}
+	}
 
 	var wg sync.WaitGroup
 	c.RegisterDisconnectListener(&wg)
@@ -137,6 +156,41 @@ func (c *Client) TriggerSystemOTA() error {
 	wg.Wait()
 
 	c.WaitForDeviceToBeConnected()
+
+	if *rpcClient != nil {
+		// FIXME: It would make sense to be able to close the rpcClient
+		// before the reboot, but for an unknown reason, closing this
+		// session will cause the entire ssh connection to disconnect
+		// and reconnect, causing the test to assume the device
+		// rebooted and start verifying that the OTA succeeded, when,
+		// in reality, it likely hasn't finished yet.
+		(*rpcClient).Close()
+		*rpcClient = nil
+
+		var err error
+		*rpcClient, err = c.StartRpcSession(repo)
+		if err != nil {
+			// FIXME(40913): every builder should at least build
+			// sl4f as a universe package.
+			log.Printf("unable to connect to sl4f after OTA: %s", err)
+			//return fmt.Errorf("unable to connect to sl4f after OTA: %s", err)
+		}
+
+		// Make sure the device actually rebooted by verifying the
+		// reboot check file no longer exists.
+		var exists bool
+		if *rpcClient == nil {
+			exists, err = c.RemoteFileExists(rebootCheckPath)
+		} else {
+			exists, err = (*rpcClient).PathExists(rebootCheckPath)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed to stat reboot check file: %s", err)
+		} else if exists {
+			return errors.New("reboot check file exists after an OTA, device did not reboot")
+		}
+	}
 
 	log.Printf("device rebooted")
 
