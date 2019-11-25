@@ -33,6 +33,7 @@ namespace devmgr {
 class Coordinator;
 class Devhost;
 struct Devnode;
+class InitTask;
 class RemoveTask;
 class SuspendContext;
 class SuspendTask;
@@ -274,7 +275,8 @@ class Device : public fbl::RefCounted<Device>,
                             fbl::String name, fbl::String driver_path, fbl::String args,
                             uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                             zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                            bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* device);
+                            bool invisible, bool do_init, zx::channel client_remote,
+                            fbl::RefPtr<Device>* device);
   static zx_status_t CreateComposite(Coordinator* coordinator, Devhost* devhost,
                                      const CompositeDevice& composite, zx::channel coordinator_rpc,
                                      zx::channel device_controller_rpc,
@@ -303,6 +305,11 @@ class Device : public fbl::RefCounted<Device>,
   // either immediately after the device is created, if it's created visible,
   // or after it becomes visible.
   zx_status_t SignalReadyForBind(zx::duration delay = zx::sec(0));
+
+  using InitCompletion = fit::callback<void(zx_status_t)>;
+  // Issue an Init request to this device.  When the response comes in, the
+  // given completion will be invoked.
+  zx_status_t SendInit(InitCompletion completion);
 
   using SuspendCompletion = fit::callback<void(zx_status_t)>;
   // Issue a Suspend request to this device.  When the response comes in, the
@@ -344,6 +351,8 @@ class Device : public fbl::RefCounted<Device>,
     return !(flags & (DEV_CTX_BOUND | DEV_CTX_INVISIBLE)) && (state_ != Device::State::kDead);
   }
 
+  bool is_visible() const { return !(flags & DEV_CTX_INVISIBLE); }
+
   bool is_composite_bindable() const {
     if (flags & (DEV_CTX_DEAD | DEV_CTX_INVISIBLE)) {
       return false;
@@ -380,6 +389,14 @@ class Device : public fbl::RefCounted<Device>,
     return metadata_;
   }
   void AddMetadata(std::unique_ptr<Metadata> md) { metadata_.push_front(std::move(md)); }
+
+  // Creates the init task for the device.
+  void CreateInitTask();
+  // Returns the in-progress init task if it exists, nullptr otherwise.
+  fbl::RefPtr<InitTask> GetActiveInit() { return active_init_; }
+
+  // Run the completion for the outstanding init, if any.
+  zx_status_t CompleteInit(zx_status_t status);
 
   // Returns the in-progress suspend task if it exists, nullptr otherwise.
   fbl::RefPtr<SuspendTask> GetActiveSuspend() { return active_suspend_; }
@@ -418,7 +435,8 @@ class Device : public fbl::RefCounted<Device>,
   zx_status_t CompleteRemove(zx_status_t status = ZX_OK);
 
   // Drops the reference to the task.
-  // This should be called if the device will not send an unbind or remove request.
+  // This should be called if the device will not send an init, unbind or remove request.
+  void DropInitTask() { active_init_ = nullptr; }
   void DropUnbindTask() { active_unbind_ = nullptr; }
   void DropRemoveTask() { active_remove_ = nullptr; }
 
@@ -443,7 +461,8 @@ class Device : public fbl::RefCounted<Device>,
   // TODO(teisenbe): We probably want more states.
   enum class State {
     kActive,
-    kSuspending,  // The devhost is in the process of suspending the device.
+    kInitializing,  // The devhost is in the process of running the device init hook.
+    kSuspending,    // The devhost is in the process of suspending the device.
     kSuspended,
     kResuming,   // The devhost is in the process of resuming the device.
     kResumed,    // Resume is complete. Will be marked active, after all children resume.
@@ -575,6 +594,12 @@ class Device : public fbl::RefCounted<Device>,
 
   // The current state of the device
   State state_ = State::kActive;
+
+  // If an init is in-progress, this task represents it.
+  fbl::RefPtr<InitTask> active_init_;
+  // If an init is in-progress, this completion will be invoked when it is
+  // completed.  It will likely mark |active_init_| as completed and clear it.
+  InitCompletion init_completion_;
 
   // If a suspend is in-progress, this task represents it.
   fbl::RefPtr<SuspendTask> active_suspend_;

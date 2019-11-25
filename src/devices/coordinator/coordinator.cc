@@ -498,7 +498,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
                                    zx::channel coordinator, const uint64_t* props_data,
                                    size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                                    fbl::StringPiece driver_path, fbl::StringPiece args,
-                                   bool invisible, zx::channel client_remote,
+                                   bool invisible, bool do_init, zx::channel client_remote,
                                    fbl::RefPtr<Device>* new_device) {
   // If this is true, then |name_data|'s size is properly bounded.
   static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
@@ -550,7 +550,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
   zx_status_t status =
       Device::Create(this, parent, std::move(name_str), std::move(driver_path_str),
                      std::move(args_str), protocol_id, std::move(props), std::move(coordinator),
-                     std::move(device_controller), invisible, std::move(client_remote), &dev);
+                     std::move(device_controller), invisible, do_init, std::move(client_remote),
+                     &dev);
   if (status != ZX_OK) {
     return status;
   }
@@ -578,7 +579,8 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
     }
   }
 
-  if (!invisible) {
+  // If a device has an init hook, it will be made visible once the hook completes.
+  if (!invisible && !do_init) {
     log(DEVLC, "devcoord: publish %p '%s' props=%zu args='%s' parent=%p\n", dev.get(),
         dev->name().data(), dev->props().size(), dev->args().data(), dev->parent().get());
     status = dev->SignalReadyForBind();
@@ -592,7 +594,7 @@ zx_status_t Coordinator::AddDevice(const fbl::RefPtr<Device>& parent, zx::channe
 }
 
 zx_status_t Coordinator::MakeVisible(const fbl::RefPtr<Device>& dev) {
-  if (dev->state() == Device::State::kDead) {
+  if ((dev->state() == Device::State::kDead) || (dev->state() == Device::State::kInitializing)) {
     return ZX_ERR_BAD_STATE;
   }
   if (dev->flags & DEV_CTX_INVISIBLE) {
@@ -654,6 +656,7 @@ zx_status_t Coordinator::RemoveDevice(const fbl::RefPtr<Device>& dev, bool force
   // removed it should be in its lowest state.
   // TODO(teisenbe): Should we mark it as failed if this is a forced removal?
   dev->CompleteSuspend(ZX_OK);
+  dev->CompleteInit(ZX_ERR_UNAVAILABLE);
 
   Devhost* dh = dev->host();
   bool devhost_dying = (dh != nullptr && (dh->flags() & Devhost::Flags::kDying));

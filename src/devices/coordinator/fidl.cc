@@ -97,6 +97,15 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
   return ZX_OK;
 }
 
+zx_status_t dh_send_init(Device* dev_ptr) {
+  auto dev = fbl::RefPtr(dev_ptr);
+  dev->device_controller()->Init([dev](zx_status_t status) {
+        log(ERROR, "devcoordinator: init done '%s'\n", dev->name().data());
+        dev->CompleteInit(status);
+      });
+  return ZX_OK;
+}
+
 zx_status_t dh_send_suspend(Device* dev_ptr, uint32_t flags) {
   auto dev = fbl::RefPtr(dev_ptr);
   dev->device_controller()->Suspend(flags, [dev](zx_status_t status) {

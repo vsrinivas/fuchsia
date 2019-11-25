@@ -1863,6 +1863,13 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxy
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kDeviceController_Init_Ordinal = 0x35ec4e6200000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDeviceController_Init_GenOrdinal = 0x4443bcf5eb580b37lu;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerInitRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerInitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerInitResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kDeviceController_Unbind_Ordinal = 0x72bdd28200000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDeviceController_Unbind_GenOrdinal = 0x2d3f793e42cc3fd0lu;
@@ -2029,6 +2036,67 @@ DeviceController::UnownedResultOf::ConnectProxy DeviceController::Call::ConnectP
   } else {
     return ::fidl::internal::StatusAndError(ZX_OK, nullptr);
   }
+}
+
+template <>
+DeviceController::ResultOf::Init_Impl<DeviceController::InitResponse>::Init_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, InitRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitRequest));
+  ::fidl::DecodedMessage<InitRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      DeviceController::InPlace::Init(std::move(_client_end), Super::response_buffer()));
+}
+
+DeviceController::ResultOf::Init DeviceController::SyncClient::Init() {
+  return ResultOf::Init(zx::unowned_channel(this->channel_));
+}
+
+DeviceController::ResultOf::Init DeviceController::Call::Init(zx::unowned_channel _client_end) {
+  return ResultOf::Init(std::move(_client_end));
+}
+
+template <>
+DeviceController::UnownedResultOf::Init_Impl<DeviceController::InitResponse>::Init_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(InitRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, InitRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(InitRequest));
+  ::fidl::DecodedMessage<InitRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      DeviceController::InPlace::Init(std::move(_client_end), std::move(_response_buffer)));
+}
+
+DeviceController::UnownedResultOf::Init DeviceController::SyncClient::Init(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Init(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+DeviceController::UnownedResultOf::Init DeviceController::Call::Init(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::Init(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<DeviceController::InitResponse> DeviceController::InPlace::Init(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(InitRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<InitRequest> params(std::move(_request_buffer));
+  DeviceController::SetTransactionHeaderFor::InitRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DeviceController::InitResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<InitRequest, InitResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<DeviceController::InitResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
 }
 
 template <>
@@ -2380,6 +2448,18 @@ bool DeviceController::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Tra
           Interface::ConnectProxyCompleter::Sync(txn));
       return true;
     }
+    case kDeviceController_Init_Ordinal:
+    case kDeviceController_Init_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<InitRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Init(
+          Interface::InitCompleter::Sync(txn));
+      return true;
+    }
     case kDeviceController_Unbind_Ordinal:
     case kDeviceController_Unbind_GenOrdinal:
     {
@@ -2493,6 +2573,42 @@ void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::BytePar
 
 void DeviceController::Interface::BindDriverCompleterBase::Reply(::fidl::DecodedMessage<BindDriverResponse> params) {
   DeviceController::SetTransactionHeaderFor::BindDriverResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void DeviceController::Interface::InitCompleterBase::Reply(int32_t status) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<InitResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<InitResponse*>(_write_bytes);
+  DeviceController::SetTransactionHeaderFor::InitResponse(
+      ::fidl::DecodedMessage<InitResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              InitResponse::PrimarySize,
+              InitResponse::PrimarySize)));
+  _response.status = std::move(status);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(InitResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<InitResponse>(std::move(_response_bytes)));
+}
+
+void DeviceController::Interface::InitCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status) {
+  if (_buffer.capacity() < InitResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<InitResponse*>(_buffer.data());
+  DeviceController::SetTransactionHeaderFor::InitResponse(
+      ::fidl::DecodedMessage<InitResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              InitResponse::PrimarySize,
+              InitResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _buffer.set_actual(sizeof(InitResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<InitResponse>(std::move(_buffer)));
+}
+
+void DeviceController::Interface::InitCompleterBase::Reply(::fidl::DecodedMessage<InitResponse> params) {
+  DeviceController::SetTransactionHeaderFor::InitResponse(params);
   CompleterBase::SendReply(std::move(params));
 }
 
@@ -2677,6 +2793,13 @@ void DeviceController::SetTransactionHeaderFor::BindDriverResponse(const ::fidl:
 
 void DeviceController::SetTransactionHeaderFor::ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_ConnectProxy_GenOrdinal);
+}
+
+void DeviceController::SetTransactionHeaderFor::InitRequest(const ::fidl::DecodedMessage<DeviceController::InitRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Init_GenOrdinal);
+}
+void DeviceController::SetTransactionHeaderFor::InitResponse(const ::fidl::DecodedMessage<DeviceController::InitResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDeviceController_Init_GenOrdinal);
 }
 
 void DeviceController::SetTransactionHeaderFor::UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg) {

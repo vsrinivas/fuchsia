@@ -118,6 +118,9 @@ protocol DeviceController {
     /// Give this device a channel to its shadow in another process.
     ConnectProxy(handle<channel> shadow);
 
+    /// Ask devhost to call the device init hook.
+    Init() -> (zx.status status);
+
     /// Ask devhost to unbind this device. On success, the remote end of this
     /// interface channel will close instead of returning a result.
     Unbind() -> () error zx.status;

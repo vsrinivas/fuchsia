@@ -19,6 +19,7 @@
 #include "devfs.h"
 #include "fidl.h"
 #include "fidl_txn.h"
+#include "init-task.h"
 #include "log.h"
 #include "resume-task.h"
 #include "suspend-task.h"
@@ -70,7 +71,8 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
                            fbl::String name, fbl::String driver_path, fbl::String args,
                            uint32_t protocol_id, fbl::Array<zx_device_prop_t> props,
                            zx::channel coordinator_rpc, zx::channel device_controller_rpc,
-                           bool invisible, zx::channel client_remote, fbl::RefPtr<Device>* device) {
+                           bool invisible, bool do_init, zx::channel client_remote,
+                           fbl::RefPtr<Device>* device) {
   fbl::RefPtr<Device> real_parent;
   // If our parent is a proxy, for the purpose of devfs, we need to work with
   // *its* parent which is the device that it is proxying.
@@ -104,7 +106,7 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
 
   // We must mark the device as invisible before publishing so
   // that we don't send "device added" notifications.
-  if (invisible) {
+  if (invisible || do_init) {
     dev->flags |= DEV_CTX_INVISIBLE;
   }
 
@@ -122,6 +124,10 @@ zx_status_t Device::Create(Coordinator* coordinator, const fbl::RefPtr<Device>& 
   }
   real_parent->children_.push_back(dev.get());
   log(DEVLC, "devcoord: dev %p name='%s' (child)\n", real_parent.get(), real_parent->name().data());
+
+  if (do_init) {
+    dev->CreateInitTask();
+  }
 
   *device = std::move(dev);
   return ZX_OK;
@@ -217,6 +223,13 @@ zx_status_t Device::SignalReadyForBind(zx::duration delay) {
   return publish_task_.PostDelayed(this->coordinator->dispatcher(), delay);
 }
 
+void Device::CreateInitTask() {
+  // We only ever create an init task when a device is initially added.
+  ZX_ASSERT(!active_init_);
+  state_ = Device::State::kInitializing;
+  active_init_ = InitTask::Create(fbl::RefPtr(this));
+}
+
 fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
   if (active_suspend_) {
     // We don't support different types of suspends concurrently, and
@@ -226,6 +239,30 @@ fbl::RefPtr<SuspendTask> Device::RequestSuspendTask(uint32_t suspend_flags) {
     active_suspend_ = SuspendTask::Create(fbl::RefPtr(this), suspend_flags);
   }
   return active_suspend_;
+}
+
+zx_status_t Device::SendInit(InitCompletion completion) {
+  ZX_ASSERT(!init_completion_);
+
+  log(DEVLC, "devcoordinator: init dev %p name='%s'\n", this, name_.data());
+  zx_status_t status = dh_send_init(this);
+  if (status != ZX_OK) {
+    return status;
+  }
+  init_completion_ = std::move(completion);
+  return ZX_OK;
+}
+
+zx_status_t Device::CompleteInit(zx_status_t status) {
+  if (!init_completion_ && status == ZX_OK) {
+    log(ERROR, "devcoordinator: rpc: unexpected init reply for '%s'\n", name_.data());
+    return ZX_ERR_IO;
+  }
+  if (init_completion_) {
+    init_completion_(status);
+  }
+  active_init_ = nullptr;
+  return ZX_OK;
 }
 
 fbl::RefPtr<ResumeTask> Device::RequestResumeTask(uint32_t target_system_state) {
@@ -739,10 +776,11 @@ void Device::AddDevice(::zx::channel coordinator, ::zx::channel device_controlle
   fbl::StringPiece args(args_view.data(), args_view.size());
 
   fbl::RefPtr<Device> device;
+  // TODO(jocelyndang): |do_init| should be supplied from devhost.
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, false, std::move(client_remote),
-      &device);
+      props.count(), name, protocol_id, driver_path, args, false /* invisible */,
+      false /* do_init */, std::move(client_remote), &device);
   if (device != nullptr &&
       (device_add_config &
        llcpp::fuchsia::device::manager::AddDeviceConfig::ALLOW_MULTI_COMPOSITE)) {
@@ -792,9 +830,11 @@ void Device::AddDeviceInvisible(::zx::channel coordinator, ::zx::channel device_
   fbl::StringPiece args(args_view.data(), args_view.size());
 
   fbl::RefPtr<Device> device;
+  // TODO(jocelyndang): |do_init| should be supplied from devhost.
   zx_status_t status = parent->coordinator->AddDevice(
       parent, std::move(device_controller_client), std::move(coordinator), props.data(),
-      props.count(), name, protocol_id, driver_path, args, true, std::move(client_remote), &device);
+      props.count(), name, protocol_id, driver_path, args, true /* invisible */,
+      false /* do_init */, std::move(client_remote), &device);
   uint64_t local_id = device != nullptr ? device->local_id() : 0;
   llcpp::fuchsia::device::manager::Coordinator_AddDeviceInvisible_Result response;
   if (status != ZX_OK) {

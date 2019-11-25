@@ -41,6 +41,8 @@ void UnbindTask::ScheduleUnbindChildren() {
       // no need to create a new one.
       case Device::State::kUnbinding:
         break;
+      // The created unbind task will wait for the init to complete.
+      case Device::State::kInitializing:
       case Device::State::kSuspended:
       // The created unbind task will wait for the suspend to complete.
       case Device::State::kSuspending:
@@ -83,6 +85,7 @@ void UnbindTask::ScheduleUnbindChildren() {
       case Device::State::kDead:
       case Device::State::kUnbinding:
         continue;
+      case Device::State::kInitializing:
       case Device::State::kSuspended:
       case Device::State::kSuspending:
       case Device::State::kResuming:
@@ -116,6 +119,14 @@ void UnbindTask::ScheduleUnbindChildren() {
 
 void UnbindTask::Run() {
   log(TRACE, "running unbind task for %s, do_unbind %d\n", device_->name().data(), do_unbind_);
+
+  if (device_->state() == Device::State::kInitializing) {
+    auto init_task = device_->GetActiveInit();
+    ZX_ASSERT(init_task != nullptr);
+    AddDependency(init_task);
+    return;
+  }
+
   // The device is currently suspending, wait for it to complete.
   if (device_->state() == Device::State::kSuspending) {
     auto suspend_task = device_->GetActiveSuspend();

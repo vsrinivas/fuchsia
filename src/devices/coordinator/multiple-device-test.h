@@ -40,6 +40,8 @@ class MultipleDeviceTestCase : public zxtest::Test {
   DeviceState* device(size_t index) const { return &devices_[index]; }
 
   void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
+                 fbl::String driver, bool invisible, bool do_init, size_t* device_index);
+  void AddDevice(const fbl::RefPtr<devmgr::Device>& parent, const char* name, uint32_t protocol_id,
                  fbl::String driver, size_t* device_index);
   void RemoveDevice(size_t device_index);
 
@@ -52,6 +54,10 @@ class MultipleDeviceTestCase : public zxtest::Test {
   void DoResume(
       SystemPowerState target_state, devmgr::ResumeCallback callback = [](zx_status_t) {});
   void DoResume(SystemPowerState target_state, fit::function<void(SystemPowerState)> resume_cb);
+
+  void CheckInitReceived(const zx::channel& remote, zx_txid_t* txid);
+  void SendInitReply(const zx::channel& remote, zx_txid_t txid, zx_status_t return_status = ZX_OK);
+  void CheckInitReceivedAndReply(const zx::channel& remote, zx_status_t return_status = ZX_OK);
 
   void CheckUnbindReceived(const zx::channel& remote, zx_txid_t* txid);
   void SendUnbindReply(const zx::channel& remote, zx_txid_t txid);

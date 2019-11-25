@@ -30,6 +30,7 @@ void SuspendTask::Run() {
       case Device::State::kDead:
       case Device::State::kSuspended:
         continue;
+      case Device::State::kInitializing:
       case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive:
@@ -54,6 +55,7 @@ void SuspendTask::Run() {
       case Device::State::kResuming:
       case Device::State::kResumed:
         break;
+      case Device::State::kInitializing:
       case Device::State::kUnbinding:
       case Device::State::kSuspending:
       case Device::State::kActive: {
@@ -61,6 +63,13 @@ void SuspendTask::Run() {
         return;
       }
     }
+  }
+
+  if (device_->state() == Device::State::kInitializing) {
+    auto init_task = device_->GetActiveInit();
+    ZX_ASSERT(init_task != nullptr);
+    AddDependency(init_task);
+    return;
   }
 
   // The device is about to be unbound, wait for it to complete.

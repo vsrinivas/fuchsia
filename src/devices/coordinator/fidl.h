@@ -23,6 +23,7 @@ zx_status_t dh_send_create_device_stub(Device* dev, Devhost* dh, zx::channel coo
 zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver,
                                 fit::function<void(zx_status_t, zx::channel)> cb);
 zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy);
+zx_status_t dh_send_init(Device* dev);
 zx_status_t dh_send_suspend(Device* dev, uint32_t flags);
 zx_status_t dh_send_resume(Device* dev, uint32_t target_system_state);
 zx_status_t dh_send_unbind(Device* dev);

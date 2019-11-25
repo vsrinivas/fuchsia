@@ -51,6 +51,10 @@ void DeviceControllerConnection::CompleteCompatibilityTests(
   }
 }
 
+void DeviceControllerConnection::Init(InitCompleter::Sync completer) {
+  // TODO(jocelyndang): implement this.
+}
+
 void DeviceControllerConnection::Suspend(uint32_t flags, SuspendCompleter::Sync completer) {
   zx_status_t r;
   {

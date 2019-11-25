@@ -41,6 +41,7 @@ bool ResumeTask::AddParentResumeTask() {
               Complete(ZX_ERR_NOT_CONNECTED);
               return false;
             case Device::State::kActive:
+            case Device::State::kInitializing:
               continue;
             case Device::State::kUnbinding:
             case Device::State::kSuspending:
@@ -65,6 +66,7 @@ bool ResumeTask::AddParentResumeTask() {
       // Complete this task.
       Complete(ZX_ERR_NOT_CONNECTED);
       return false;
+    case Device::State::kInitializing:
     case Device::State::kActive:
       return false;
     case Device::State::kUnbinding:
@@ -94,6 +96,7 @@ bool ResumeTask::AddProxyResumeTask() {
       // Complete this task.
       Complete(ZX_ERR_NOT_CONNECTED);
       return false;
+    case Device::State::kInitializing:
     case Device::State::kActive:
       return false;
     case Device::State::kUnbinding:
@@ -113,6 +116,13 @@ void ResumeTask::Run() {
       return Complete(ZX_ERR_NOT_CONNECTED);
     case Device::State::kActive:
       return Complete(ZX_OK);
+    case Device::State::kInitializing: {
+      // Currently resume tasks are not scheduled during suspend.
+      // Since a device cannot be suspended until init has completed,
+      // it does not make sense for a resume task to be running during init.
+      ZX_ASSERT(device_->state() != Device::State::kInitializing);
+      return;
+    }
     case Device::State::kSuspending:
     case Device::State::kUnbinding:
     case Device::State::kSuspended:

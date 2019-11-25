@@ -3789,6 +3789,10 @@ extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxy
 extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerConnectProxyRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerConnectProxyResponseTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerInitRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerInitRequestTable;
+extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerInitResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerInitResponseTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_device_manager_DeviceControllerUnbindRequestTable;
 extern "C" const fidl_type_t fuchsia_device_manager_DeviceControllerUnbindResponseTable;
@@ -3870,6 +3874,25 @@ class DeviceController final {
     static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
         ::fidl::internal::TransactionalMessageKind::kRequest;
   };
+
+  struct InitResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_device_manager_DeviceControllerInitResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_device_manager_DeviceControllerInitResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using InitRequest = ::fidl::AnyZeroArgMessage;
 
   struct UnbindResponse final {
     FIDL_ALIGNDECL
@@ -4032,6 +4055,22 @@ class DeviceController final {
       using Super::ok;
     };
     template <typename ResponseType>
+    class Init_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      Init_Impl(zx::unowned_channel _client_end);
+      ~Init_Impl() = default;
+      Init_Impl(Init_Impl&& other) = default;
+      Init_Impl& operator=(Init_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class Unbind_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -4110,6 +4149,7 @@ class DeviceController final {
    public:
     using BindDriver = BindDriver_Impl<BindDriverResponse>;
     using ConnectProxy = ConnectProxy_Impl;
+    using Init = Init_Impl<InitResponse>;
     using Unbind = Unbind_Impl<UnbindResponse>;
     using CompleteRemoval = CompleteRemoval_Impl<CompleteRemovalResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
@@ -4148,6 +4188,22 @@ class DeviceController final {
       using Super::status;
       using Super::error;
       using Super::ok;
+    };
+    template <typename ResponseType>
+    class Init_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      Init_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~Init_Impl() = default;
+      Init_Impl(Init_Impl&& other) = default;
+      Init_Impl& operator=(Init_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
     };
     template <typename ResponseType>
     class Unbind_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
@@ -4228,6 +4284,7 @@ class DeviceController final {
    public:
     using BindDriver = BindDriver_Impl<BindDriverResponse>;
     using ConnectProxy = ConnectProxy_Impl;
+    using Init = Init_Impl<InitResponse>;
     using Unbind = Unbind_Impl<UnbindResponse>;
     using CompleteRemoval = CompleteRemoval_Impl<CompleteRemovalResponse>;
     using Suspend = Suspend_Impl<SuspendResponse>;
@@ -4271,6 +4328,14 @@ class DeviceController final {
     // Give this device a channel to its shadow in another process.
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::ConnectProxy ConnectProxy(::fidl::BytePart _request_buffer, ::zx::channel shadow);
+
+    // Ask devhost to call the device init hook.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::Init Init();
+
+    // Ask devhost to call the device init hook.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::Init Init(::fidl::BytePart _response_buffer);
 
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
@@ -4357,6 +4422,14 @@ class DeviceController final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::ConnectProxy ConnectProxy(zx::unowned_channel _client_end, ::fidl::BytePart _request_buffer, ::zx::channel shadow);
 
+    // Ask devhost to call the device init hook.
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::Init Init(zx::unowned_channel _client_end);
+
+    // Ask devhost to call the device init hook.
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::Init Init(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
     // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
@@ -4426,6 +4499,9 @@ class DeviceController final {
     // Give this device a channel to its shadow in another process.
     static ::fidl::internal::StatusAndError ConnectProxy(zx::unowned_channel _client_end, ::fidl::DecodedMessage<ConnectProxyRequest> params);
 
+    // Ask devhost to call the device init hook.
+    static ::fidl::DecodeResult<InitResponse> Init(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
     // Ask devhost to unbind this device. On success, the remote end of this
     // interface channel will close instead of returning a result.
     static ::fidl::DecodeResult<UnbindResponse> Unbind(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
@@ -4473,6 +4549,20 @@ class DeviceController final {
     using ConnectProxyCompleter = ::fidl::Completer<>;
 
     virtual void ConnectProxy(::zx::channel shadow, ConnectProxyCompleter::Sync _completer) = 0;
+
+    class InitCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status);
+      void Reply(::fidl::BytePart _buffer, int32_t status);
+      void Reply(::fidl::DecodedMessage<InitResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using InitCompleter = ::fidl::Completer<InitCompleterBase>;
+
+    virtual void Init(InitCompleter::Sync _completer) = 0;
 
     class UnbindCompleterBase : public _Base {
      public:
@@ -4568,6 +4658,8 @@ class DeviceController final {
     static void BindDriverRequest(const ::fidl::DecodedMessage<DeviceController::BindDriverRequest>& _msg);
     static void BindDriverResponse(const ::fidl::DecodedMessage<DeviceController::BindDriverResponse>& _msg);
     static void ConnectProxyRequest(const ::fidl::DecodedMessage<DeviceController::ConnectProxyRequest>& _msg);
+    static void InitRequest(const ::fidl::DecodedMessage<DeviceController::InitRequest>& _msg);
+    static void InitResponse(const ::fidl::DecodedMessage<DeviceController::InitResponse>& _msg);
     static void UnbindRequest(const ::fidl::DecodedMessage<DeviceController::UnbindRequest>& _msg);
     static void UnbindResponse(const ::fidl::DecodedMessage<DeviceController::UnbindResponse>& _msg);
     static void CompleteRemovalRequest(const ::fidl::DecodedMessage<DeviceController::CompleteRemovalRequest>& _msg);
@@ -6739,6 +6831,14 @@ struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::Connec
 static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest)
     == ::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::ConnectProxyRequest, shadow) == 16);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::InitResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::device::manager::DeviceController::InitResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::device::manager::DeviceController::InitResponse)
+    == ::llcpp::fuchsia::device::manager::DeviceController::InitResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::device::manager::DeviceController::InitResponse, status) == 16);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::device::manager::DeviceController::UnbindResponse> : public std::true_type {};
