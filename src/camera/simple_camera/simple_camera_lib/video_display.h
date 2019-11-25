@@ -7,15 +7,15 @@
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <fuchsia/images/cpp/fidl.h>
+#include <lib/sys/cpp/component_context.h>
 #include <lib/zx/eventpair.h>
 
 #include <deque>
 #include <list>
 
-#include <src/camera/simple_camera/simple_camera_lib/buffer_fence.h>
-#include <src/camera/simple_camera/simple_camera_lib/frame_scheduler.h>
-
-#include "src/lib/component/cpp/startup_context.h"
+#include "src/camera/simple_camera/simple_camera_lib/buffer_fence.h"
+#include "src/camera/simple_camera/simple_camera_lib/frame_scheduler.h"
+#include "src/lib/fxl/macros.h"
 
 namespace simple_camera {
 
@@ -30,7 +30,7 @@ class VideoDisplay {
   // Returns an error if the initial part of setup fails.  If ZX_OK is
   // returned, termination of communication is signalled by calling |callback|,
   // which may be done on an arbitrary thread.
-  zx_status_t ConnectToCamera(component::StartupContext* context, uint32_t camera_id,
+  zx_status_t ConnectToCamera(sys::ComponentContext* context, uint32_t camera_id,
                               fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe,
                               OnShutdownCallback callback);
 

@@ -5,15 +5,17 @@
 #ifndef SRC_CAMERA_CAMERA_MANAGER_VIDEO_DEVICE_CLIENT_H_
 #define SRC_CAMERA_CAMERA_MANAGER_VIDEO_DEVICE_CLIENT_H_
 
+#include <fbl/function.h>
+#include <fbl/ref_counted.h>
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <list>
-
-#include "src/lib/component/cpp/startup_context.h"
 
 namespace camera {
 

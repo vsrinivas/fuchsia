@@ -4,12 +4,12 @@
 
 #include "simple_camera_server_app.h"
 
-#include "src/lib/component/cpp/startup_context.h"
+#include <lib/sys/cpp/component_context.h>
 
 namespace simple_camera {
 
-SimpleCameraApp::SimpleCameraApp() : context_(component::StartupContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+SimpleCameraApp::SimpleCameraApp() : context_(sys::ComponentContext::Create()) {
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void SimpleCameraApp::ConnectToCamera(

@@ -136,7 +136,7 @@ zx_status_t VideoDisplay::SetupBuffers(
 
 // TODO(CAM-9): Clean up this function after major changes land.
 zx_status_t VideoDisplay::ConnectToCamera(
-    component::StartupContext* context, uint32_t camera_id,
+    sys::ComponentContext* context, uint32_t camera_id,
     fidl::InterfaceHandle<fuchsia::images::ImagePipe> image_pipe, OnShutdownCallback callback) {
   if (!callback) {
     return ZX_ERR_INVALID_ARGS;
@@ -161,7 +161,7 @@ zx_status_t VideoDisplay::ConnectToCamera(
   });
 
   // Open a connection to the Camera Manager
-  context->ConnectToEnvironmentService(camera_client_->manager_.NewRequest());
+  context->svc()->Connect(camera_client_->manager_.NewRequest());
 
   zx_status_t status = ZX_OK;
 

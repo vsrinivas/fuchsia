@@ -13,8 +13,8 @@ source_set("lib") {
   public_deps = [
     "//sdk/fidl/fuchsia.simplecamera",
     "//sdk/lib/fidl/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/camera/simple_camera/simple_camera_lib",
-    "//src/lib/component/cpp",
   ]
 }
 

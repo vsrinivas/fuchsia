@@ -51,12 +51,12 @@ CameraManagerImpl::CameraManagerImpl(async::Loop* loop) {
   }
 
   // Now bind our context, and publish the public service:
-  // Note that CreateFromStartupInfo must be called after we do our looping
+  // Note that Create must be called after we do our looping
   // above, or the request for the CameraManager may fail.
   // TODO(CAM-18):  Change the interface to encourage dynamic detections by the
   // application, and we won't have to do this.
-  context_ = component::StartupContext::CreateFromStartupInfo();
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+  context_ = sys::ComponentContext::Create();
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 // The dispatcher loop should be shut down when this destructor is called.

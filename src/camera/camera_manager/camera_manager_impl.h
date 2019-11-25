@@ -7,13 +7,15 @@
 
 #include <fuchsia/camera/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fidl/cpp/binding_set.h>
 
 #include <list>
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <src/camera/camera_manager/video_device_client.h>
+#include <fbl/ref_counted.h>
 
+#include "src/camera/camera_manager/video_device_client.h"
 #include "src/lib/fsl/io/device_watcher.h"
 
 namespace camera {
@@ -69,7 +71,7 @@ class CameraManagerImpl : public fuchsia::camera::Manager {
 
   std::unique_ptr<fsl::DeviceWatcher> device_watcher_;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fidl::BindingSet<Manager> bindings_;
 };
 
