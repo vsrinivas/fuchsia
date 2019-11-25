@@ -175,6 +175,11 @@ gen_commands! {
         AvcCommand = ("key", ["command"], "send an AVC passthrough keypress event"),
         GetMediaAttributes = ("get-media", [], "gets currently playing media attributes"),
         GetPlayStatus = ("get-play-status", [], "gets the status of the currently playing media at the TG"),
+        GetPlayerApplicationSettings = ("get-player-application-settings",
+            ["Optional: id1 id2 ..."],
+            "Gets currently set attribute values if ids are specified. Otherwise, all possible attribute values on the TG."),
+        SetPlayerApplicationSettings = ("set-player-application-settings", [],
+            "Sets player application settings with a default Equalizer=Off setting."),
         SupportedEvents = ("get-supported-events", [], "gets the supported events of the target"),
         SendRawVendorCommand = ("send-raw-vendor-command", ["pdu_id", "payload"], "send a raw vendor AVC command"),
         IsConnected = ("connection-status", [], "checks if the current device is current connected"),
@@ -309,9 +314,19 @@ mod tests {
             .1
             .contains(&"get-supported-events".to_string()));
         assert!(cmdhelper
-            .complete("get-pl", 0)
+            .complete("get-play-", 0)
             .unwrap()
             .1
             .contains(&"get-play-status".to_string()));
+        assert!(cmdhelper
+            .complete("get-playe", 0)
+            .unwrap()
+            .1
+            .contains(&"get-player-application-settings".to_string()));
+        assert!(cmdhelper
+            .complete("set", 0)
+            .unwrap()
+            .1
+            .contains(&"set-player-application-settings".to_string()));
     }
 }

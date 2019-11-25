@@ -3,11 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    failure::{format_err, Error, ResultExt},
+    fidl::encoding::Decodable as FidlDecodable,
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avrcp::{
-        ControllerEvent, ControllerEventStream, ControllerMarker, ControllerProxy, Notifications,
-        PeerManagerMarker,
+        self as fidl_avrcp, ControllerEvent, ControllerEventStream, ControllerMarker,
+        ControllerProxy, Notifications, PeerManagerMarker, PlayerApplicationSettingAttributeId,
+        MAX_ATTRIBUTES,
     },
     fidl_fuchsia_bluetooth_avrcp_test::{
         ControllerExtMarker, ControllerExtProxy, PeerManagerExtMarker,
@@ -82,6 +84,55 @@ async fn get_play_status<'a>(
     match controller.get_play_status().await? {
         Ok(status) => Ok(format!("Play status {:#?}", status)),
         Err(e) => Ok(format!("Error fetching play status {:?}", e)),
+    }
+}
+
+fn parse_pas_ids(ids: Vec<&str>) -> Result<Vec<PlayerApplicationSettingAttributeId>, Error> {
+    let mut attribute_ids = vec![];
+    for attr_id in ids {
+        match attr_id {
+            "1" => attribute_ids.push(PlayerApplicationSettingAttributeId::Equalizer),
+            "2" => attribute_ids.push(PlayerApplicationSettingAttributeId::RepeatStatusMode),
+            "3" => attribute_ids.push(PlayerApplicationSettingAttributeId::ShuffleMode),
+            "4" => attribute_ids.push(PlayerApplicationSettingAttributeId::ScanMode),
+            _ => return Err(format_err!("Invalid attribute id.")),
+        }
+    }
+
+    Ok(attribute_ids)
+}
+
+async fn get_player_application_settings<'a>(
+    args: &'a [&'a str],
+    controller: &'a ControllerProxy,
+) -> Result<String, Error> {
+    if args.len() > MAX_ATTRIBUTES as usize {
+        return Ok(format!("usage: {}", Cmd::GetPlayerApplicationSettings.cmd_help()));
+    }
+
+    let ids = match parse_pas_ids(args.to_vec()) {
+        Ok(ids) => ids,
+        Err(_) => return Ok(format!("Invalid id in args {:?}", args)),
+    };
+    let get_pas_fut = controller.get_player_application_settings(&mut ids.into_iter());
+
+    match get_pas_fut.await? {
+        Ok(settings) => Ok(format!("Player application setting attribute value: {:#?}", settings)),
+        Err(e) => Ok(format!("Error fetching player application attributes: {:?}", e)),
+    }
+}
+
+async fn set_player_application_settings<'a>(
+    _args: &'a [&'a str],
+    controller: &'a ControllerProxy,
+) -> Result<String, Error> {
+    // Send canned response to AVRCP with Equalizer off.
+    let mut settings = fidl_avrcp::PlayerApplicationSettings::new_empty();
+    settings.equalizer = Some(fidl_avrcp::Equalizer::Off);
+
+    match controller.set_player_application_settings(settings).await? {
+        Ok(set_settings) => Ok(format!("Set settings with: {:?}", set_settings)),
+        Err(e) => Ok(format!("Error in set settings {:?}", e)),
     }
 }
 
@@ -188,6 +239,12 @@ async fn handle_cmd<'a>(
             Ok(Cmd::AvcCommand) => send_passthrough(args, &controller).await,
             Ok(Cmd::GetMediaAttributes) => get_media(args, &controller).await,
             Ok(Cmd::GetPlayStatus) => get_play_status(args, &controller).await,
+            Ok(Cmd::GetPlayerApplicationSettings) => {
+                get_player_application_settings(args, &controller).await
+            }
+            Ok(Cmd::SetPlayerApplicationSettings) => {
+                set_player_application_settings(args, &controller).await
+            }
             Ok(Cmd::SendRawVendorCommand) => send_raw_vendor(args, &test_controller).await,
             Ok(Cmd::SupportedEvents) => get_events_supported(args, &test_controller).await,
             Ok(Cmd::IsConnected) => is_connected(args, &test_controller).await,
@@ -444,5 +501,35 @@ mod tests {
             parse_raw_packet(&["40", "ab, 0xaa, 0xqqqq"]),
             Err("invalid hex string at 0xqqqq".to_string())
         );
+    }
+
+    #[test]
+    fn test_parse_pas_id_success() {
+        let ids = vec!["1", "2", "3"];
+        let result = parse_pas_ids(ids);
+        assert!(result.is_ok());
+        let result = result.unwrap();
+        assert_eq!(
+            result,
+            vec![
+                PlayerApplicationSettingAttributeId::Equalizer,
+                PlayerApplicationSettingAttributeId::RepeatStatusMode,
+                PlayerApplicationSettingAttributeId::ShuffleMode
+            ]
+        );
+    }
+
+    #[test]
+    fn test_parse_pas_id_error() {
+        let ids = vec!["fake", "id", "1"];
+        let result = parse_pas_ids(ids);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn test_parse_pas_id_invalid_id_error() {
+        let ids = vec!["1", "2", "5"];
+        let result = parse_pas_ids(ids);
+        assert!(result.is_err());
     }
 }
