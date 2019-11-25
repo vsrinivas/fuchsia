@@ -477,8 +477,9 @@ TEST_F(BusTest, EventWaitingEquality) {
   FillEventData(&publish, 1, "msg", {1, 2, 3});
   TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish), "all match");
 
-  EXPECT_EQ(evt_counter,
-            8);  // check that all events actually made into the event callback
+  // check that all events actually made into the event callback
+  ASSERT_TRUE(
+      RunLoopWithTimeoutOrUntil([&evt_counter]() { return evt_counter == 8; }, zx::msec(100)));
 }
 
 TEST_F(BusTest, OnClientAttachedFiresForPreviousClients) {

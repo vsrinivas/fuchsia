@@ -4,6 +4,7 @@
 
 #include <lib/fidl/cpp/internal/logging.h>
 #include <lib/fidl/cpp/internal/message_sender.h>
+#include <lib/fidl/cpp/internal/proxy_controller_util.h>
 #include <zircon/fidl.h>
 
 namespace fidl {
@@ -16,6 +17,12 @@ zx_status_t SendMessage(const zx::channel& channel, const fidl_type_t* type, Mes
   auto header = message.header();
   if (!fidl_should_decode_union_from_xunion(&header)) {
     zx_status_t status = message.Validate(type, &error_msg);
+    if (status != ZX_OK) {
+      FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
+      return status;
+    }
+  } else {
+    zx_status_t status = ValidateV1Bytes(type, message, error_msg);
     if (status != ZX_OK) {
       FIDL_REPORT_ENCODING_ERROR(message, type, error_msg);
       return status;

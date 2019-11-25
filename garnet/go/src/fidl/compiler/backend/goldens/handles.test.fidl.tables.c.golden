@@ -91,7 +91,7 @@ static const ::fidl::FidlStructField Fields17test_name_Handles[] = {
     ::fidl::FidlStructField(&HandlevmononnullableTable, 100u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_HandlesAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields17test_name_Handles, 26u, 104u, "test.name/Handles", test_name_HandlesAltTypePointerTable()));
+const fidl_type_t test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields17test_name_Handles, 26u, 104u, 0u, false, "test.name/Handles", test_name_HandlesAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -180,7 +180,7 @@ static const ::fidl::FidlStructField Fields20v1_test_name_Handles[] = {
     ::fidl::FidlStructField(&v1_HandlevmononnullableTable, 100u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_HandlesAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields20v1_test_name_Handles, 26u, 104u, "test.name/Handles", v1_test_name_HandlesAltTypePointerTable()));
+const fidl_type_t v1_test_name_HandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields20v1_test_name_Handles, 26u, 104u, 0u, false, "test.name/Handles", v1_test_name_HandlesAltTypePointerTable()));
 
 // Old <-> V1 map.
 

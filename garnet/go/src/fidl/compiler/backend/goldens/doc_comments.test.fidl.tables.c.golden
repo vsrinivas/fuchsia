@@ -14,12 +14,12 @@ extern const fidl_type_t test_name_StructTable;
 extern const fidl_type_t test_name_InterfaceMethodRequestTable;
 static const ::fidl::FidlStructField Fields32test_name_InterfaceMethodRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_InterfaceMethodRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_InterfaceMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32test_name_InterfaceMethodRequest, 0u, 16u, "test.name/InterfaceMethodRequest", test_name_InterfaceMethodRequestAltTypePointerTable()));
+const fidl_type_t test_name_InterfaceMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32test_name_InterfaceMethodRequest, 0u, 16u, 0u, false, "test.name/InterfaceMethodRequest", test_name_InterfaceMethodRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_InterfaceOnEventEventTable;
 static const ::fidl::FidlStructField Fields31test_name_InterfaceOnEventEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_InterfaceOnEventEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields31test_name_InterfaceOnEventEvent, 0u, 16u, "test.name/InterfaceOnEventEvent", test_name_InterfaceOnEventEventAltTypePointerTable()));
+const fidl_type_t test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields31test_name_InterfaceOnEventEvent, 0u, 16u, 0u, false, "test.name/InterfaceOnEventEvent", test_name_InterfaceOnEventEventAltTypePointerTable()));
 
 
 static const ::fidl::FidlUnionField Fields15test_name_Union[] = {
@@ -37,7 +37,7 @@ static const ::fidl::FidlStructField Fields16test_name_Struct[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_StructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields16test_name_Struct, 1u, 4u, "test.name/Struct", test_name_StructAltTypePointerTable()));
+const fidl_type_t test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields16test_name_Struct, 1u, 4u, 0u, false, "test.name/Struct", test_name_StructAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -49,12 +49,12 @@ extern const fidl_type_t v1_test_name_StructTable;
 extern const fidl_type_t v1_test_name_InterfaceMethodRequestTable;
 static const ::fidl::FidlStructField Fields35v1_test_name_InterfaceMethodRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_InterfaceMethodRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_InterfaceMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_test_name_InterfaceMethodRequest, 0u, 16u, "test.name/InterfaceMethodRequest", v1_test_name_InterfaceMethodRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_InterfaceMethodRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_test_name_InterfaceMethodRequest, 0u, 16u, 0u, false, "test.name/InterfaceMethodRequest", v1_test_name_InterfaceMethodRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_InterfaceOnEventEventTable;
 static const ::fidl::FidlStructField Fields34v1_test_name_InterfaceOnEventEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_InterfaceOnEventEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34v1_test_name_InterfaceOnEventEvent, 0u, 16u, "test.name/InterfaceOnEventEvent", v1_test_name_InterfaceOnEventEventAltTypePointerTable()));
+const fidl_type_t v1_test_name_InterfaceOnEventEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34v1_test_name_InterfaceOnEventEvent, 0u, 16u, 0u, false, "test.name/InterfaceOnEventEvent", v1_test_name_InterfaceOnEventEventAltTypePointerTable()));
 
 
 static const ::fidl::FidlUnionField Fields18v1_test_name_Union[] = {
@@ -72,7 +72,7 @@ static const ::fidl::FidlStructField Fields19v1_test_name_Struct[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_StructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields19v1_test_name_Struct, 1u, 4u, "test.name/Struct", v1_test_name_StructAltTypePointerTable()));
+const fidl_type_t v1_test_name_StructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields19v1_test_name_Struct, 1u, 4u, 0u, false, "test.name/Struct", v1_test_name_StructAltTypePointerTable()));
 
 // Old <-> V1 map.
 

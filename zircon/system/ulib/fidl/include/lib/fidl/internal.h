@@ -172,6 +172,10 @@ struct FidlCodedStruct {
   const FidlStructField* const fields;
   const uint32_t field_count;
   const uint32_t size;
+  // The max_out_of_line and contains_union fields are only used by the HLCPP bindings for
+  // optimizations when validating v1 bytes of a transactional message before sending.
+  const uint32_t max_out_of_line;
+  const bool contains_union;
   const char* name;  // may be nullptr if omitted at compile time
 
   // Pointer to the alternate ("alt") version of this FidlCodedStruct, which is the v1 version of
@@ -183,8 +187,28 @@ struct FidlCodedStruct {
   // the |alt_type| parameter forces the constructor caller to acknowledge it's for the old wire
   // format only.
   constexpr FidlCodedStruct(const FidlStructField* fields, uint32_t field_count, uint32_t size,
+                            uint32_t max_out_of_line, bool contains_union, const char* name,
+                            const FidlCodedStruct* const alt_type = nullptr)
+      : fields(fields),
+        field_count(field_count),
+        size(size),
+        max_out_of_line(max_out_of_line),
+        contains_union(contains_union),
+        name(name),
+        alt_type(alt_type) {}
+
+  // Since the max_out_of_line and contains_union fields are only used by the HLCPP bindings during
+  // the wire format migration, this constructor is added to avoid having to temporarily update
+  // hand written coding tables that are only used for testing non HLCPP bindings.
+  constexpr FidlCodedStruct(const FidlStructField* fields, uint32_t field_count, uint32_t size,
                             const char* name, const FidlCodedStruct* const alt_type = nullptr)
-      : fields(fields), field_count(field_count), size(size), name(name), alt_type(alt_type) {}
+      : fields(fields),
+        field_count(field_count),
+        size(size),
+        max_out_of_line(UINT32_MAX),
+        contains_union(true),
+        name(name),
+        alt_type(alt_type) {}
 };
 
 struct FidlCodedStructPointer {

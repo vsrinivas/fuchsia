@@ -30,7 +30,7 @@ static const ::fidl::FidlStructField Fields52test_fidl_unionsandwich_SandwichUni
     ::fidl::FidlStructField(nullptr, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, 3u, 16u, "test.fidl.unionsandwich/SandwichUnionSize8Alignment4", test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable()));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields52test_fidl_unionsandwich_SandwichUnionSize8Alignment4, 3u, 16u, 0u, true, "test.fidl.unionsandwich/SandwichUnionSize8Alignment4", test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize36Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u)
@@ -44,7 +44,7 @@ static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUni
     ::fidl::FidlStructField(nullptr, 44u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, 3u, 44u, "test.fidl.unionsandwich/SandwichUnionSize36Alignment4", test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable()));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize36Alignment4, 3u, 44u, 0u, true, "test.fidl.unionsandwich/SandwichUnionSize36Alignment4", test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize12Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 2u, 1u)
@@ -58,14 +58,14 @@ static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUni
     ::fidl::FidlStructField(nullptr, 20u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, 3u, 20u, "test.fidl.unionsandwich/SandwichUnionSize12Alignment4", test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable()));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize12Alignment4, 3u, 20u, 0u, true, "test.fidl.unionsandwich/SandwichUnionSize12Alignment4", test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields46test_fidl_unionsandwich_StructSize16Alignment8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u),
     ::fidl::FidlStructField(nullptr, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields46test_fidl_unionsandwich_StructSize16Alignment8, 2u, 16u, "test.fidl.unionsandwich/StructSize16Alignment8", test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable()));
+const fidl_type_t test_fidl_unionsandwich_StructSize16Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields46test_fidl_unionsandwich_StructSize16Alignment8, 2u, 16u, 0u, false, "test.fidl.unionsandwich/StructSize16Alignment8", test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields45test_fidl_unionsandwich_UnionSize24Alignment8[] = {
     ::fidl::FidlUnionField(&test_fidl_unionsandwich_StructSize16Alignment8Table, 0u, 1u)
@@ -79,7 +79,7 @@ static const ::fidl::FidlStructField Fields53test_fidl_unionsandwich_SandwichUni
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize24Alignment8", test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable()));
+const fidl_type_t test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields53test_fidl_unionsandwich_SandwichUnionSize24Alignment8, 3u, 40u, 0u, true, "test.fidl.unionsandwich/SandwichUnionSize24Alignment8", test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -107,7 +107,7 @@ static const ::fidl::FidlStructField Fields55v1_test_fidl_unionsandwich_Sandwich
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize8Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable()));
+const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4, 3u, 40u, 8u, true, "test.fidl.unionsandwich/SandwichUnionSize8Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize8Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields48v1_test_fidl_unionsandwich_UnionSize36Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u)
@@ -121,7 +121,7 @@ static const ::fidl::FidlStructField Fields56v1_test_fidl_unionsandwich_Sandwich
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize36Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable()));
+const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4, 3u, 40u, 32u, true, "test.fidl.unionsandwich/SandwichUnionSize36Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize36Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields48v1_test_fidl_unionsandwich_UnionSize12Alignment4[] = {
     ::fidl::FidlUnionField(nullptr, 2u, 1u)
@@ -135,14 +135,14 @@ static const ::fidl::FidlStructField Fields56v1_test_fidl_unionsandwich_Sandwich
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize12Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable()));
+const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4, 3u, 40u, 8u, true, "test.fidl.unionsandwich/SandwichUnionSize12Alignment4", v1_test_fidl_unionsandwich_SandwichUnionSize12Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields49v1_test_fidl_unionsandwich_StructSize16Alignment8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u),
     ::fidl::FidlStructField(nullptr, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields49v1_test_fidl_unionsandwich_StructSize16Alignment8, 2u, 16u, "test.fidl.unionsandwich/StructSize16Alignment8", v1_test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable()));
+const fidl_type_t v1_test_fidl_unionsandwich_StructSize16Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields49v1_test_fidl_unionsandwich_StructSize16Alignment8, 2u, 16u, 0u, false, "test.fidl.unionsandwich/StructSize16Alignment8", v1_test_fidl_unionsandwich_StructSize16Alignment8AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields48v1_test_fidl_unionsandwich_UnionSize24Alignment8[] = {
     ::fidl::FidlUnionField(&v1_test_fidl_unionsandwich_StructSize16Alignment8Table, 0u, 1u)
@@ -156,7 +156,7 @@ static const ::fidl::FidlStructField Fields56v1_test_fidl_unionsandwich_Sandwich
     ::fidl::FidlStructField(nullptr, 36u, 4u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8, 3u, 40u, "test.fidl.unionsandwich/SandwichUnionSize24Alignment8", v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable()));
+const fidl_type_t v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8Table = fidl_type_t(::fidl::FidlCodedStruct(Fields56v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8, 3u, 40u, 16u, true, "test.fidl.unionsandwich/SandwichUnionSize24Alignment8", v1_test_fidl_unionsandwich_SandwichUnionSize24Alignment8AltTypePointerTable()));
 
 // Old <-> V1 map.
 

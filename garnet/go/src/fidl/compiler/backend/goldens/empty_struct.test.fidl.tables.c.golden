@@ -12,7 +12,7 @@ extern const fidl_type_t test_name_EmptyTable;
 
 static const ::fidl::FidlStructField Fields15test_name_Empty[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_EmptyAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_EmptyTable = fidl_type_t(::fidl::FidlCodedStruct(Fields15test_name_Empty, 0u, 1u, "test.name/Empty", test_name_EmptyAltTypePointerTable()));
+const fidl_type_t test_name_EmptyTable = fidl_type_t(::fidl::FidlCodedStruct(Fields15test_name_Empty, 0u, 1u, 0u, false, "test.name/Empty", test_name_EmptyAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -22,7 +22,7 @@ extern const fidl_type_t v1_test_name_EmptyTable;
 
 static const ::fidl::FidlStructField Fields18v1_test_name_Empty[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_EmptyAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_EmptyTable = fidl_type_t(::fidl::FidlCodedStruct(Fields18v1_test_name_Empty, 0u, 1u, "test.name/Empty", v1_test_name_EmptyAltTypePointerTable()));
+const fidl_type_t v1_test_name_EmptyTable = fidl_type_t(::fidl::FidlCodedStruct(Fields18v1_test_name_Empty, 0u, 1u, 0u, false, "test.name/Empty", v1_test_name_EmptyAltTypePointerTable()));
 
 // Old <-> V1 map.
 

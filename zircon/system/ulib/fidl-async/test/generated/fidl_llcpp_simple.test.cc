@@ -279,17 +279,17 @@ void Simple::Interface::CloseCompleterBase::Reply(::fidl::DecodedMessage<CloseRe
 
 
 void Simple::SetTransactionHeaderFor::EchoRequest(const ::fidl::DecodedMessage<Simple::EchoRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_GenOrdinal);
 }
 void Simple::SetTransactionHeaderFor::EchoResponse(const ::fidl::DecodedMessage<Simple::EchoResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Echo_GenOrdinal);
 }
 
 void Simple::SetTransactionHeaderFor::CloseRequest(const ::fidl::DecodedMessage<Simple::CloseRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_GenOrdinal);
 }
 void Simple::SetTransactionHeaderFor::CloseResponse(const ::fidl::DecodedMessage<Simple::CloseResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kSimple_Close_GenOrdinal);
 }
 
 }  // namespace simple

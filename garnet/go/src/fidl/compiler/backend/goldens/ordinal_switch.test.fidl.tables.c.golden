@@ -11,22 +11,22 @@ extern "C" {
 extern const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 static const ::fidl::FidlStructField Fields45test_name_SwitchingOrdinalsOrdinalFiveRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_SwitchingOrdinalsOrdinalFiveRequest, 0u, 16u, "test.name/SwitchingOrdinalsOrdinalFiveRequest", test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable()));
+const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_SwitchingOrdinalsOrdinalFiveRequest, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsOrdinalFiveRequest", test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 static const ::fidl::FidlStructField Fields54test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest, 0u, 16u, "test.name/SwitchingOrdinalsOnlyGeneratedOrdinalRequest", test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable()));
+const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsOnlyGeneratedOrdinalRequest", test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 static const ::fidl::FidlStructField Fields51test_name_SwitchingOrdinalsEventOrdinalFifteenEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51test_name_SwitchingOrdinalsEventOrdinalFifteenEvent, 0u, 16u, "test.name/SwitchingOrdinalsEventOrdinalFifteenEvent", test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable()));
+const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields51test_name_SwitchingOrdinalsEventOrdinalFifteenEvent, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsEventOrdinalFifteenEvent", test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable()));
 
 extern const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 static const ::fidl::FidlStructField Fields57test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields57test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent, 0u, 16u, "test.name/SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent", test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable()));
+const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields57test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent", test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable()));
 
 
 // Coding tables for v1 wire format.
@@ -36,22 +36,22 @@ const fidl_type_t test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable
 extern const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 static const ::fidl::FidlStructField Fields48v1_test_name_SwitchingOrdinalsOrdinalFiveRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_SwitchingOrdinalsOrdinalFiveRequest, 0u, 16u, "test.name/SwitchingOrdinalsOrdinalFiveRequest", v1_test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_SwitchingOrdinalsOrdinalFiveRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_SwitchingOrdinalsOrdinalFiveRequest, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsOrdinalFiveRequest", v1_test_name_SwitchingOrdinalsOrdinalFiveRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 static const ::fidl::FidlStructField Fields57v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields57v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest, 0u, 16u, "test.name/SwitchingOrdinalsOnlyGeneratedOrdinalRequest", v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields57v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequest, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsOnlyGeneratedOrdinalRequest", v1_test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 static const ::fidl::FidlStructField Fields54v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEvent, 0u, 16u, "test.name/SwitchingOrdinalsEventOrdinalFifteenEvent", v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable()));
+const fidl_type_t v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields54v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEvent, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsEventOrdinalFifteenEvent", v1_test_name_SwitchingOrdinalsEventOrdinalFifteenEventAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable;
 static const ::fidl::FidlStructField Fields60v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields60v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent, 0u, 16u, "test.name/SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent", v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable()));
+const fidl_type_t v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventTable = fidl_type_t(::fidl::FidlCodedStruct(Fields60v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent, 0u, 16u, 0u, false, "test.name/SwitchingOrdinalsEventOnlyGeneratedOrdinalEvent", v1_test_name_SwitchingOrdinalsEventOnlyGeneratedOrdinalEventAltTypePointerTable()));
 
 
 // Old <-> V1 map.

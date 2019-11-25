@@ -39,7 +39,7 @@ static const ::fidl::FidlStructField Fields29test_name_NullableUnionStruct[] = {
     ::fidl::FidlStructField(&Pointer15test_name_UnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_NullableUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_NullableUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields29test_name_NullableUnionStruct, 1u, 8u, "test.name/NullableUnionStruct", test_name_NullableUnionStructAltTypePointerTable()));
+const fidl_type_t test_name_NullableUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields29test_name_NullableUnionStruct, 1u, 8u, 4294967295u, true, "test.name/NullableUnionStruct", test_name_NullableUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields24test_name_FieldCollision[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u)
@@ -89,7 +89,7 @@ static const ::fidl::FidlStructField Fields32v1_test_name_NullableUnionStruct[] 
     ::fidl::FidlStructField(&v1_Pointer18v1_test_name_UnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_NullableUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_NullableUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32v1_test_name_NullableUnionStruct, 1u, 24u, "test.name/NullableUnionStruct", v1_test_name_NullableUnionStructAltTypePointerTable()));
+const fidl_type_t v1_test_name_NullableUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32v1_test_name_NullableUnionStruct, 1u, 24u, 4294967295u, true, "test.name/NullableUnionStruct", v1_test_name_NullableUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields27v1_test_name_FieldCollision[] = {
     ::fidl::FidlUnionField(nullptr, 4u, 1u)

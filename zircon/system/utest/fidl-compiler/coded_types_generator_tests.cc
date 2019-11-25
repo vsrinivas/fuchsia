@@ -5,7 +5,7 @@
 #include <fidl/tables_generator.h>
 #include <unittest/unittest.h>
 
-#include "fidl/coded_ast.h"
+#include "fidl/coded_types_generator.h"
 #include "test_library.h"
 
 namespace {
@@ -89,6 +89,9 @@ struct Vectors {
   ASSERT_EQ(0, type_some_struct_struct->fields.size());
   ASSERT_STR_EQ("example/SomeStruct", type_some_struct_struct->qname.c_str());
   ASSERT_NULL(type_some_struct_struct->maybe_reference_type);
+  ASSERT_EQ(1, type_some_struct_struct->size);
+  ASSERT_EQ(0, type_some_struct_struct->max_out_of_line);
+  ASSERT_EQ(false, type_some_struct_struct->contains_union);
 
   ASSERT_EQ(2, gen.coded_types().size());
 
@@ -309,6 +312,37 @@ struct Wrapper2 {
   // int32-outside-of-envelope, int32-inside-of-envelope, MyStruct?, MyUnion?,
   // MyXUnion?}, which is all the coded types in the example.
   ASSERT_EQ(7, gen.coded_types().size());
+
+  END_TEST;
+}
+
+bool UnboundedOutOfLineContainsUnion() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+union Foo {
+  1: int32 bar;
+  2: int16 baz;
+};
+
+struct WithString {
+  Foo foo;
+  string bar;
+};
+
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+  fidl::CodedTypesGenerator gen(library.library());
+  gen.CompileCodedTypes(fidl::WireFormat::kV1NoEe);
+
+  auto name_with_string = fidl::flat::Name(library.library(), "WithString");
+  auto type_with_string = gen.CodedTypeFor(&name_with_string);
+  auto type_with_string_struct = static_cast<const fidl::coded::StructType*>(type_with_string);
+  ASSERT_EQ(40, type_with_string_struct->size);
+  ASSERT_EQ(0xFFFFFFFF, type_with_string_struct->max_out_of_line);
+  ASSERT_TRUE(type_with_string_struct->contains_union);
 
   END_TEST;
 }
@@ -776,5 +810,5 @@ RUN_TEST(CodedTypesOfEnum);
 RUN_TEST(CodedTypesOfUnionsWithReverseOrdinals);
 RUN_TEST(field_num_in_struct);
 RUN_TEST(field_num_in_message);
-
+RUN_TEST(UnboundedOutOfLineContainsUnion)
 END_TEST_CASE(coded_types_generator_tests)

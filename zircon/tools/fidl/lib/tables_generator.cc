@@ -60,6 +60,8 @@ constexpr auto kIndent = "    ";
 
 void Emit(std::ostream* file, std::string_view data) { *file << data; }
 
+void EmitBool(std::ostream* file, bool value) { *file << (value ? "true" : "false"); }
+
 void EmitNewlineAndIndent(std::ostream* file, size_t indent_level) {
   *file << "\n";
   while (indent_level--)
@@ -220,6 +222,10 @@ void TablesGenerator::Generate(const coded::StructType& struct_type) {
   Emit(&tables_file_, static_cast<uint32_t>(struct_type.fields.size()));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, struct_type.size);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, struct_type.max_out_of_line);
+  Emit(&tables_file_, ", ");
+  EmitBool(&tables_file_, struct_type.contains_union);
   Emit(&tables_file_, ", \"");
   Emit(&tables_file_, struct_type.qname);
   Emit(&tables_file_, "\", ");
@@ -330,6 +336,10 @@ void TablesGenerator::Generate(const coded::MessageType& message_type) {
   Emit(&tables_file_, static_cast<uint32_t>(message_type.fields.size()));
   Emit(&tables_file_, ", ");
   Emit(&tables_file_, message_type.size);
+  Emit(&tables_file_, ", ");
+  Emit(&tables_file_, message_type.max_out_of_line);
+  Emit(&tables_file_, ", ");
+  EmitBool(&tables_file_, message_type.contains_union);
   Emit(&tables_file_, ", \"");
   Emit(&tables_file_, message_type.qname);
   Emit(&tables_file_, "\", ");

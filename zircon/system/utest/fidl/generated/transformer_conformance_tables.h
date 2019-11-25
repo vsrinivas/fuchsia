@@ -425,8 +425,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich9[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich9AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich9Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich9, 3u, 40u, "conformance/Sandwich9",
-                            conformance_Sandwich9AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich9, 3u, 40u, 4294967295u, true,
+                            "conformance/Sandwich9", conformance_Sandwich9AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields32conformance_UnionWithBoundString[] = {
     ::fidl::FidlUnionField(&String5nonnullableTable, 0u, 1u)};
@@ -441,7 +441,7 @@ static const ::fidl::FidlStructField Fields38conformance_UnionWithBoundStringStr
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_UnionWithBoundStringStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_UnionWithBoundStringStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields38conformance_UnionWithBoundStringStruct, 1u, 24u,
+    ::fidl::FidlCodedStruct(Fields38conformance_UnionWithBoundStringStruct, 1u, 24u, 8u, true,
                             "conformance/UnionWithBoundStringStruct",
                             conformance_UnionWithBoundStringStructAltTypePointerTable()));
 
@@ -461,8 +461,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich1[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich1AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich1Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich1, 3u, 16u, "conformance/Sandwich1",
-                            conformance_Sandwich1AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich1, 3u, 16u, 0u, true,
+                            "conformance/Sandwich1", conformance_Sandwich1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields30conformance_OutOfLineSandwich1[] = {
     ::fidl::FidlStructField(&String4294967295nonnullableTable, 0u, 0u),
@@ -471,8 +471,8 @@ static const ::fidl::FidlStructField Fields30conformance_OutOfLineSandwich1[] = 
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_OutOfLineSandwich1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_OutOfLineSandwich1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30conformance_OutOfLineSandwich1, 3u, 48u, "conformance/OutOfLineSandwich1",
-    conformance_OutOfLineSandwich1AltTypePointerTable()));
+    Fields30conformance_OutOfLineSandwich1, 3u, 48u, 4294967295u, true,
+    "conformance/OutOfLineSandwich1", conformance_OutOfLineSandwich1AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields29conformance_UnionSize36Align4[] = {
     ::fidl::FidlUnionField(nullptr, 31u, 1u), ::fidl::FidlUnionField(nullptr, 31u, 2u),
@@ -490,8 +490,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich4[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich4AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich4Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich4, 3u, 44u, "conformance/Sandwich4",
-                            conformance_Sandwich4AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich4, 3u, 44u, 0u, true,
+                            "conformance/Sandwich4", conformance_Sandwich4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38conformance_Sandwich4Align8WithPointer[] = {
     ::fidl::FidlStructField(&conformance_Sandwich4Table, 0u, 4u),
@@ -499,7 +499,7 @@ static const ::fidl::FidlStructField Fields38conformance_Sandwich4Align8WithPoin
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Sandwich4Align8WithPointerAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Sandwich4Align8WithPointerTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields38conformance_Sandwich4Align8WithPointer, 2u, 56u,
+    ::fidl::FidlCodedStruct(Fields38conformance_Sandwich4Align8WithPointer, 2u, 56u, 8u, true,
                             "conformance/Sandwich4Align8WithPointer",
                             conformance_Sandwich4Align8WithPointerAltTypePointerTable()));
 
@@ -509,7 +509,7 @@ static const ::fidl::FidlStructField Fields27conformance_Sandwich4Align8[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Sandwich4Align8AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Sandwich4Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields27conformance_Sandwich4Align8, 2u, 56u, "conformance/Sandwich4Align8",
+    Fields27conformance_Sandwich4Align8, 2u, 56u, 0u, true, "conformance/Sandwich4Align8",
     conformance_Sandwich4Align8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34conformance_NoCodingTablesStressor[] = {
@@ -530,8 +530,8 @@ static const ::fidl::FidlStructField Fields34conformance_NoCodingTablesStressor[
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_NoCodingTablesStressorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_NoCodingTablesStressorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_NoCodingTablesStressor, 14u, 208u, "conformance/NoCodingTablesStressor",
-    conformance_NoCodingTablesStressorAltTypePointerTable()));
+    Fields34conformance_NoCodingTablesStressor, 14u, 208u, 16u, true,
+    "conformance/NoCodingTablesStressor", conformance_NoCodingTablesStressorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields29conformance_UnionSize12Align4[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u), ::fidl::FidlUnionField(nullptr, 7u, 2u),
@@ -563,26 +563,28 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich2[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich2AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich2Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich2, 3u, 20u, "conformance/Sandwich2",
-                            conformance_Sandwich2AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich2, 3u, 20u, 0u, true,
+                            "conformance/Sandwich2", conformance_Sandwich2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields35conformance_Uint8Uint16Uint32Uint64[] = {
     ::fidl::FidlStructField(nullptr, 1u, 1u), ::fidl::FidlStructField(nullptr, 4u, 0u),
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 16u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Uint8Uint16Uint32Uint64AltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_Uint8Uint16Uint32Uint64Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields35conformance_Uint8Uint16Uint32Uint64, 4u, 16u, "conformance/Uint8Uint16Uint32Uint64",
-    conformance_Uint8Uint16Uint32Uint64AltTypePointerTable()));
+const fidl_type_t conformance_Uint8Uint16Uint32Uint64Table =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields35conformance_Uint8Uint16Uint32Uint64, 4u, 16u, 0u,
+                                        false, "conformance/Uint8Uint16Uint32Uint64",
+                                        conformance_Uint8Uint16Uint32Uint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields35conformance_Uint64Uint32Uint16Uint8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 12u, 0u),
     ::fidl::FidlStructField(nullptr, 14u, 0u), ::fidl::FidlStructField(nullptr, 15u, 1u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Uint64Uint32Uint16Uint8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_Uint64Uint32Uint16Uint8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields35conformance_Uint64Uint32Uint16Uint8, 4u, 16u, "conformance/Uint64Uint32Uint16Uint8",
-    conformance_Uint64Uint32Uint16Uint8AltTypePointerTable()));
+const fidl_type_t conformance_Uint64Uint32Uint16Uint8Table =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields35conformance_Uint64Uint32Uint16Uint8, 4u, 16u, 0u,
+                                        false, "conformance/Uint64Uint32Uint16Uint8",
+                                        conformance_Uint64Uint32Uint16Uint8AltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields34conformance_TransformerSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kUint32Table, 1u)};
@@ -594,15 +596,15 @@ static const ::fidl::FidlStructField Fields34conformance_SimpleTableArrayStruct[
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_SimpleTableArrayStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_SimpleTableArrayStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_SimpleTableArrayStruct, 1u, 32u, "conformance/SimpleTableArrayStruct",
-    conformance_SimpleTableArrayStructAltTypePointerTable()));
+    Fields34conformance_SimpleTableArrayStruct, 1u, 32u, 48u, false,
+    "conformance/SimpleTableArrayStruct", conformance_SimpleTableArrayStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34conformance_TransformerEmptyStruct[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TransformerEmptyStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_TransformerEmptyStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_TransformerEmptyStruct, 0u, 1u, "conformance/TransformerEmptyStruct",
-    conformance_TransformerEmptyStructAltTypePointerTable()));
+    Fields34conformance_TransformerEmptyStruct, 0u, 1u, 0u, false,
+    "conformance/TransformerEmptyStruct", conformance_TransformerEmptyStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields28conformance_EmptyStructUnion[] = {
     ::fidl::FidlUnionField(nullptr, 3u, 1u),
@@ -618,8 +620,8 @@ static const ::fidl::FidlStructField Fields34conformance_EmptyStructUnionStruct[
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_EmptyStructUnionStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_EmptyStructUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_EmptyStructUnionStruct, 1u, 8u, "conformance/EmptyStructUnionStruct",
-    conformance_EmptyStructUnionStructAltTypePointerTable()));
+    Fields34conformance_EmptyStructUnionStruct, 1u, 8u, 0u, true,
+    "conformance/EmptyStructUnionStruct", conformance_EmptyStructUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_ThreeByte[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u), ::fidl::FidlStructField(nullptr, 2u, 0u),
@@ -627,16 +629,16 @@ static const ::fidl::FidlStructField Fields21conformance_ThreeByte[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_ThreeByteAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_ThreeByteTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_ThreeByte, 3u, 3u, "conformance/ThreeByte",
-                            conformance_ThreeByteAltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_ThreeByte, 3u, 3u, 0u, false,
+                            "conformance/ThreeByte", conformance_ThreeByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_ThreeByteInVector[] = {
     ::fidl::FidlStructField(&Vector4294967295nonnullable21conformance_ThreeByteTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_ThreeByteInVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_ThreeByteInVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_ThreeByteInVector, 1u, 16u, "conformance/ThreeByteInVector",
-    conformance_ThreeByteInVectorAltTypePointerTable()));
+    Fields29conformance_ThreeByteInVector, 1u, 16u, 4294967295u, false,
+    "conformance/ThreeByteInVector", conformance_ThreeByteInVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_ThreeByteInStruct[] = {
     ::fidl::FidlStructField(&conformance_ThreeByteTable, 0u, 0u),
@@ -645,7 +647,7 @@ static const ::fidl::FidlStructField Fields29conformance_ThreeByteInStruct[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_ThreeByteInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_ThreeByteInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_ThreeByteInStruct, 3u, 9u, "conformance/ThreeByteInStruct",
+    Fields29conformance_ThreeByteInStruct, 3u, 9u, 0u, false, "conformance/ThreeByteInStruct",
     conformance_ThreeByteInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28conformance_ThreeByteInArray[] = {
@@ -653,7 +655,7 @@ static const ::fidl::FidlStructField Fields28conformance_ThreeByteInArray[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_ThreeByteInArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_ThreeByteInArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28conformance_ThreeByteInArray, 1u, 9u, "conformance/ThreeByteInArray",
+    Fields28conformance_ThreeByteInArray, 1u, 9u, 0u, false, "conformance/ThreeByteInArray",
     conformance_ThreeByteInArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38conformance_TestOptionalXUnionInStruct[] = {
@@ -663,8 +665,8 @@ static const ::fidl::FidlStructField Fields38conformance_TestOptionalXUnionInStr
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestOptionalXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_TestOptionalXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields38conformance_TestOptionalXUnionInStruct, 3u, 56u,
-                            "conformance/TestOptionalXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields38conformance_TestOptionalXUnionInStruct, 3u, 56u, 4294967295u,
+                            true, "conformance/TestOptionalXUnionInStruct",
                             conformance_TestOptionalXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields36conformance_TableWithStringAndVector[] = {
@@ -680,16 +682,16 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructOfTableWithStringAndVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructOfTableWithStringAndVectorTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields44conformance_StructOfTableWithStringAndVector, 1u, 16u,
-                            "conformance/StructOfTableWithStringAndVector",
+                            4294967295u, false, "conformance/StructOfTableWithStringAndVector",
                             conformance_StructOfTableWithStringAndVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields25conformance_StructWithInt[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructWithIntAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_StructWithIntTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields25conformance_StructWithInt, 1u, 4u, "conformance/StructWithInt",
-                            conformance_StructWithIntAltTypePointerTable()));
+const fidl_type_t conformance_StructWithIntTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields25conformance_StructWithInt, 1u, 4u, 0u, false, "conformance/StructWithInt",
+    conformance_StructWithIntAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_StructWithVectors[] = {
     ::fidl::FidlStructField(&Vector4294967295nonnullable5int32Table, 0u, 0u),
@@ -705,8 +707,8 @@ static const ::fidl::FidlStructField Fields29conformance_StructWithVectors[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructWithVectorsAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructWithVectorsTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_StructWithVectors, 7u, 112u, "conformance/StructWithVectors",
-    conformance_StructWithVectorsAltTypePointerTable()));
+    Fields29conformance_StructWithVectors, 7u, 112u, 4294967295u, false,
+    "conformance/StructWithVectors", conformance_StructWithVectorsAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28conformance_StructWithArrays[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -718,15 +720,15 @@ static const ::fidl::FidlStructField Fields28conformance_StructWithArrays[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructWithArraysAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructWithArraysTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28conformance_StructWithArrays, 6u, 120u, "conformance/StructWithArrays",
-    conformance_StructWithArraysAltTypePointerTable()));
+    Fields28conformance_StructWithArrays, 6u, 120u, 4294967295u, false,
+    "conformance/StructWithArrays", conformance_StructWithArraysAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_StructSize3Align2[] = {
     ::fidl::FidlStructField(nullptr, 2u, 0u), ::fidl::FidlStructField(nullptr, 3u, 1u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructSize3Align2AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructSize3Align2Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_StructSize3Align2, 2u, 4u, "conformance/StructSize3Align2",
+    Fields29conformance_StructSize3Align2, 2u, 4u, 0u, false, "conformance/StructSize3Align2",
     conformance_StructSize3Align2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_StructSize3Align1[] = {
@@ -734,7 +736,7 @@ static const ::fidl::FidlStructField Fields29conformance_StructSize3Align1[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructSize3Align1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructSize3Align1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_StructSize3Align1, 1u, 3u, "conformance/StructSize3Align1",
+    Fields29conformance_StructSize3Align1, 1u, 3u, 0u, false, "conformance/StructSize3Align1",
     conformance_StructSize3Align1AltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields28conformance_XUnionWithStruct[] = {
@@ -766,16 +768,16 @@ static const ::fidl::FidlStructField Fields34conformance_XUnionWithXUnionStruct[
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_XUnionWithXUnionStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_XUnionWithXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_XUnionWithXUnionStruct, 1u, 24u, "conformance/XUnionWithXUnionStruct",
-    conformance_XUnionWithXUnionStructAltTypePointerTable()));
+    Fields34conformance_XUnionWithXUnionStruct, 1u, 24u, 32u, false,
+    "conformance/XUnionWithXUnionStruct", conformance_XUnionWithXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34conformance_XUnionWithStructStruct[] = {
     ::fidl::FidlStructField(&conformance_XUnionWithStructTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_XUnionWithStructStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_XUnionWithStructStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_XUnionWithStructStruct, 1u, 24u, "conformance/XUnionWithStructStruct",
-    conformance_XUnionWithStructStructAltTypePointerTable()));
+    Fields34conformance_XUnionWithStructStruct, 1u, 24u, 8u, false,
+    "conformance/XUnionWithStructStruct", conformance_XUnionWithStructStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields27conformance_UnionWithVector[] = {
     ::fidl::FidlUnionField(nullptr, 15u, 1u),
@@ -811,7 +813,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Table_UnionWithVector_StructSandwichStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Table_UnionWithVector_StructSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields54conformance_Table_UnionWithVector_StructSandwichStruct, 1u, 16u,
+        Fields54conformance_Table_UnionWithVector_StructSandwichStruct, 1u, 16u, 4294967295u, true,
         "conformance/Table_UnionWithVector_StructSandwichStruct",
         conformance_Table_UnionWithVector_StructSandwichStructAltTypePointerTable()));
 
@@ -829,8 +831,8 @@ conformance_Table_UnionWithVector_ReservedSandwichStructAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Table_UnionWithVector_ReservedSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields56conformance_Table_UnionWithVector_ReservedSandwichStruct, 1u, 16u,
-        "conformance/Table_UnionWithVector_ReservedSandwichStruct",
+        Fields56conformance_Table_UnionWithVector_ReservedSandwichStruct, 1u, 16u, 4294967295u,
+        true, "conformance/Table_UnionWithVector_ReservedSandwichStruct",
         conformance_Table_UnionWithVector_ReservedSandwichStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_Sandwich6[] = {
@@ -840,8 +842,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich6[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich6AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich6Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich6, 3u, 40u, "conformance/Sandwich6",
-                            conformance_Sandwich6AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich6, 3u, 40u, 4294967295u, true,
+                            "conformance/Sandwich6", conformance_Sandwich6AltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields42conformance_Table_StructWithUint32Sandwich[] = {
     ::fidl::FidlTableField(&::fidl::internal::kUint32Table, 1u),
@@ -857,8 +859,8 @@ static const ::fidl::FidlStructField Fields48conformance_Table_StructWithUint32S
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Table_StructWithUint32SandwichStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Table_StructWithUint32SandwichStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields48conformance_Table_StructWithUint32SandwichStruct, 1u, 16u,
-                            "conformance/Table_StructWithUint32SandwichStruct",
+    ::fidl::FidlCodedStruct(Fields48conformance_Table_StructWithUint32SandwichStruct, 1u, 16u, 96u,
+                            false, "conformance/Table_StructWithUint32SandwichStruct",
                             conformance_Table_StructWithUint32SandwichStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields44conformance_Table_StructWithReservedSandwich[] = {
@@ -874,7 +876,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Table_StructWithReservedSandwichStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Table_StructWithReservedSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields50conformance_Table_StructWithReservedSandwichStruct, 1u, 16u,
+        Fields50conformance_Table_StructWithReservedSandwichStruct, 1u, 16u, 48u, false,
         "conformance/Table_StructWithReservedSandwichStruct",
         conformance_Table_StructWithReservedSandwichStructAltTypePointerTable()));
 
@@ -888,16 +890,16 @@ static const ::fidl::FidlStructField Fields23conformance_Regression4[] = {
     ::fidl::FidlStructField(nullptr, 25u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Regression4AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Regression4Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Regression4, 7u, 32u, "conformance/Regression4",
-                            conformance_Regression4AltTypePointerTable()));
+const fidl_type_t conformance_Regression4Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Regression4, 7u, 32u, 0u, false, "conformance/Regression4",
+    conformance_Regression4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields30conformance_StructSize16Align8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 16u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructSize16Align8AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructSize16Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30conformance_StructSize16Align8, 2u, 16u, "conformance/StructSize16Align8",
+    Fields30conformance_StructSize16Align8, 2u, 16u, 0u, false, "conformance/StructSize16Align8",
     conformance_StructSize16Align8AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields29conformance_UnionSize24Align8[] = {
@@ -929,8 +931,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich8[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich8AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich8Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich8, 3u, 48u, "conformance/Sandwich8",
-                            conformance_Sandwich8AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich8, 3u, 48u, 0u, true,
+                            "conformance/Sandwich8", conformance_Sandwich8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_Sandwich5[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -939,8 +941,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich5[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich5AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich5Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich5, 3u, 48u, "conformance/Sandwich5",
-                            conformance_Sandwich5AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich5, 3u, 48u, 0u, true,
+                            "conformance/Sandwich5", conformance_Sandwich5AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_Sandwich3[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -949,24 +951,24 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich3[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich3AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich3Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich3, 3u, 40u, "conformance/Sandwich3",
-                            conformance_Sandwich3AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich3, 3u, 40u, 0u, true,
+                            "conformance/Sandwich3", conformance_Sandwich3AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields25conformance_StringWrapper[] = {
     ::fidl::FidlStructField(&String4294967295nonnullableTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StringWrapperAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_StringWrapperTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields25conformance_StringWrapper, 1u, 16u, "conformance/StringWrapper",
-                            conformance_StringWrapperAltTypePointerTable()));
+const fidl_type_t conformance_StringWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields25conformance_StringWrapper, 1u, 16u, 4294967295u, false, "conformance/StringWrapper",
+    conformance_StringWrapperAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29conformance_StringUnionVector[] = {
     ::fidl::FidlStructField(&Vector3nonnullable32Pointer23conformance_StringUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StringUnionVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StringUnionVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_StringUnionVector, 1u, 16u, "conformance/StringUnionVector",
-    conformance_StringUnionVectorAltTypePointerTable()));
+    Fields29conformance_StringUnionVector, 1u, 16u, 4294967295u, true,
+    "conformance/StringUnionVector", conformance_StringUnionVectorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields23conformance_StringUnion[] = {
     ::fidl::FidlUnionField(nullptr, 15u, 1u),
@@ -983,24 +985,24 @@ static const ::fidl::FidlStructField Fields23conformance_ArrayStruct[] = {
     ::fidl::FidlStructField(&Array24_32Pointer23conformance_StringUnionTable, 72u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_ArrayStructAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_ArrayStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_ArrayStruct, 2u, 96u, "conformance/ArrayStruct",
-                            conformance_ArrayStructAltTypePointerTable()));
+const fidl_type_t conformance_ArrayStructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_ArrayStruct, 2u, 96u, 4294967295u, true, "conformance/ArrayStruct",
+    conformance_ArrayStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23conformance_Size8Align8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Size8Align8AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Size8Align8Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Size8Align8, 1u, 8u, "conformance/Size8Align8",
-                            conformance_Size8Align8AltTypePointerTable()));
+const fidl_type_t conformance_Size8Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Size8Align8, 1u, 8u, 0u, false, "conformance/Size8Align8",
+    conformance_Size8Align8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields27conformance_Size5Alignment4[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u), ::fidl::FidlStructField(nullptr, 5u, 3u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment4AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields27conformance_Size5Alignment4, 2u, 8u, "conformance/Size5Alignment4",
+    Fields27conformance_Size5Alignment4, 2u, 8u, 0u, false, "conformance/Size5Alignment4",
     conformance_Size5Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33conformance_Size5Alignment4Vector[] = {
@@ -1009,23 +1011,23 @@ static const ::fidl::FidlStructField Fields33conformance_Size5Alignment4Vector[]
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment4VectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment4VectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33conformance_Size5Alignment4Vector, 1u, 16u, "conformance/Size5Alignment4Vector",
-    conformance_Size5Alignment4VectorAltTypePointerTable()));
+    Fields33conformance_Size5Alignment4Vector, 1u, 16u, 4294967295u, false,
+    "conformance/Size5Alignment4Vector", conformance_Size5Alignment4VectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32conformance_Size5Alignment4Array[] = {
     ::fidl::FidlStructField(&Array24_27conformance_Size5Alignment4Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment4ArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment4ArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32conformance_Size5Alignment4Array, 1u, 24u, "conformance/Size5Alignment4Array",
-    conformance_Size5Alignment4ArrayAltTypePointerTable()));
+    Fields32conformance_Size5Alignment4Array, 1u, 24u, 0u, false,
+    "conformance/Size5Alignment4Array", conformance_Size5Alignment4ArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields27conformance_Size5Alignment1[] = {
     ::fidl::FidlStructField(nullptr, 5u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields27conformance_Size5Alignment1, 1u, 5u, "conformance/Size5Alignment1",
+    Fields27conformance_Size5Alignment1, 1u, 5u, 0u, false, "conformance/Size5Alignment1",
     conformance_Size5Alignment1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33conformance_Size5Alignment1Vector[] = {
@@ -1034,16 +1036,16 @@ static const ::fidl::FidlStructField Fields33conformance_Size5Alignment1Vector[]
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment1VectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment1VectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33conformance_Size5Alignment1Vector, 1u, 16u, "conformance/Size5Alignment1Vector",
-    conformance_Size5Alignment1VectorAltTypePointerTable()));
+    Fields33conformance_Size5Alignment1Vector, 1u, 16u, 4294967295u, false,
+    "conformance/Size5Alignment1Vector", conformance_Size5Alignment1VectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32conformance_Size5Alignment1Array[] = {
     ::fidl::FidlStructField(&Array15_27conformance_Size5Alignment1Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Size5Alignment1ArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Size5Alignment1ArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32conformance_Size5Alignment1Array, 1u, 15u, "conformance/Size5Alignment1Array",
-    conformance_Size5Alignment1ArrayAltTypePointerTable()));
+    Fields32conformance_Size5Alignment1Array, 1u, 15u, 0u, false,
+    "conformance/Size5Alignment1Array", conformance_Size5Alignment1ArrayAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields30conformance_SingleVariantUnion[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u)};
@@ -1057,9 +1059,10 @@ static const ::fidl::FidlStructField Fields36conformance_SingleVariantUnionStruc
     ::fidl::FidlStructField(&conformance_SingleVariantUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_SingleVariantUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_SingleVariantUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36conformance_SingleVariantUnionStruct, 1u, 8u, "conformance/SingleVariantUnionStruct",
-    conformance_SingleVariantUnionStructAltTypePointerTable()));
+const fidl_type_t conformance_SingleVariantUnionStructTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36conformance_SingleVariantUnionStruct, 1u, 8u, 0u,
+                                        true, "conformance/SingleVariantUnionStruct",
+                                        conformance_SingleVariantUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields23conformance_SimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kInt64Table, 1u),
@@ -1072,7 +1075,7 @@ static const ::fidl::FidlStructField Fields31conformance_StructOfSimpleTable[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructOfSimpleTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructOfSimpleTableTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31conformance_StructOfSimpleTable, 1u, 16u, "conformance/StructOfSimpleTable",
+    Fields31conformance_StructOfSimpleTable, 1u, 16u, 48u, false, "conformance/StructOfSimpleTable",
     conformance_StructOfSimpleTableAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33conformance_SimpleTableThenUint64[] = {
@@ -1081,8 +1084,8 @@ static const ::fidl::FidlStructField Fields33conformance_SimpleTableThenUint64[]
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_SimpleTableThenUint64AltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_SimpleTableThenUint64Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33conformance_SimpleTableThenUint64, 2u, 24u, "conformance/SimpleTableThenUint64",
-    conformance_SimpleTableThenUint64AltTypePointerTable()));
+    Fields33conformance_SimpleTableThenUint64, 2u, 24u, 48u, false,
+    "conformance/SimpleTableThenUint64", conformance_SimpleTableThenUint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_Sandwich7[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -1091,8 +1094,8 @@ static const ::fidl::FidlStructField Fields21conformance_Sandwich7[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Sandwich7AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_Sandwich7Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich7, 3u, 24u, "conformance/Sandwich7",
-                            conformance_Sandwich7AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_Sandwich7, 3u, 24u, 16u, true,
+                            "conformance/Sandwich7", conformance_Sandwich7AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33conformance_Sandwich1WithOptUnion[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -1101,8 +1104,8 @@ static const ::fidl::FidlStructField Fields33conformance_Sandwich1WithOptUnion[]
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Sandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Sandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33conformance_Sandwich1WithOptUnion, 3u, 24u, "conformance/Sandwich1WithOptUnion",
-    conformance_Sandwich1WithOptUnionAltTypePointerTable()));
+    Fields33conformance_Sandwich1WithOptUnion, 3u, 24u, 8u, true,
+    "conformance/Sandwich1WithOptUnion", conformance_Sandwich1WithOptUnionAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields42conformance_OutOfLineSandwich1WithOptUnion[] = {
     ::fidl::FidlStructField(&String4294967295nonnullableTable, 0u, 0u),
@@ -1112,7 +1115,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_OutOfLineSandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_OutOfLineSandwich1WithOptUnionTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields42conformance_OutOfLineSandwich1WithOptUnion, 3u, 48u,
-                            "conformance/OutOfLineSandwich1WithOptUnion",
+                            4294967295u, true, "conformance/OutOfLineSandwich1WithOptUnion",
                             conformance_OutOfLineSandwich1WithOptUnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields31conformance_ReverseOrdinalUnion[] = {
@@ -1152,9 +1155,9 @@ static const ::fidl::FidlStructField Fields23conformance_Regression3[] = {
     ::fidl::FidlStructField(&Pointer23conformance_Regression2Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Regression3AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Regression3Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Regression3, 1u, 8u, "conformance/Regression3",
-                            conformance_Regression3AltTypePointerTable()));
+const fidl_type_t conformance_Regression3Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Regression3, 1u, 8u, 40u, false, "conformance/Regression3",
+    conformance_Regression3AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23conformance_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 1u, 3u),  ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -1162,18 +1165,18 @@ static const ::fidl::FidlStructField Fields23conformance_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 24u, 0u), ::fidl::FidlStructField(nullptr, 25u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Regression1AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Regression1Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Regression1, 6u, 32u, "conformance/Regression1",
-                            conformance_Regression1AltTypePointerTable()));
+const fidl_type_t conformance_Regression1Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Regression1, 6u, 32u, 0u, false, "conformance/Regression1",
+    conformance_Regression1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23conformance_Regression2[] = {
     ::fidl::FidlStructField(&conformance_Regression1Table, 0u, 0u),
     ::fidl::FidlStructField(nullptr, 33u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Regression2AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Regression2Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Regression2, 2u, 40u, "conformance/Regression2",
-                            conformance_Regression2AltTypePointerTable()));
+const fidl_type_t conformance_Regression2Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Regression2, 2u, 40u, 0u, false, "conformance/Regression2",
+    conformance_Regression2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26conformance_NodeAttributes[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),  ::fidl::FidlStructField(nullptr, 16u, 0u),
@@ -1183,7 +1186,7 @@ static const ::fidl::FidlStructField Fields26conformance_NodeAttributes[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_NodeAttributesAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_NodeAttributesTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields26conformance_NodeAttributes, 7u, 56u, "conformance/NodeAttributes",
+    Fields26conformance_NodeAttributes, 7u, 56u, 0u, false, "conformance/NodeAttributes",
     conformance_NodeAttributesAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31conformance_FileGetAttrResponse[] = {
@@ -1192,23 +1195,23 @@ static const ::fidl::FidlStructField Fields31conformance_FileGetAttrResponse[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_FileGetAttrResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_FileGetAttrResponseTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31conformance_FileGetAttrResponse, 2u, 64u, "conformance/FileGetAttrResponse",
+    Fields31conformance_FileGetAttrResponse, 2u, 64u, 0u, false, "conformance/FileGetAttrResponse",
     conformance_FileGetAttrResponseAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields19conformance_MyUint8[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyUint8AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyUint8Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields19conformance_MyUint8, 1u, 1u, "conformance/MyUint8",
-                                        conformance_MyUint8AltTypePointerTable()));
+const fidl_type_t conformance_MyUint8Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields19conformance_MyUint8, 1u, 1u, 0u, false, "conformance/MyUint8",
+                            conformance_MyUint8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields20conformance_MyUint64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyUint64AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_MyUint64Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields20conformance_MyUint64, 1u, 8u, "conformance/MyUint64",
+    ::fidl::FidlCodedStruct(Fields20conformance_MyUint64, 1u, 8u, 0u, false, "conformance/MyUint64",
                             conformance_MyUint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields20conformance_MyUint32[] = {
@@ -1216,7 +1219,7 @@ static const ::fidl::FidlStructField Fields20conformance_MyUint32[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyUint32AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_MyUint32Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields20conformance_MyUint32, 1u, 4u, "conformance/MyUint32",
+    ::fidl::FidlCodedStruct(Fields20conformance_MyUint32, 1u, 4u, 0u, false, "conformance/MyUint32",
                             conformance_MyUint32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields20conformance_MyUint16[] = {
@@ -1224,80 +1227,80 @@ static const ::fidl::FidlStructField Fields20conformance_MyUint16[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyUint16AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_MyUint16Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields20conformance_MyUint16, 1u, 2u, "conformance/MyUint16",
+    ::fidl::FidlCodedStruct(Fields20conformance_MyUint16, 1u, 2u, 0u, false, "conformance/MyUint16",
                             conformance_MyUint16AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields18conformance_MyInt8[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyInt8AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyInt8Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields18conformance_MyInt8, 1u, 1u, "conformance/MyInt8",
-                                        conformance_MyInt8AltTypePointerTable()));
+const fidl_type_t conformance_MyInt8Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields18conformance_MyInt8, 1u, 1u, 0u, false, "conformance/MyInt8",
+                            conformance_MyInt8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields19conformance_MyInt64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyInt64AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyInt64Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields19conformance_MyInt64, 1u, 8u, "conformance/MyInt64",
-                                        conformance_MyInt64AltTypePointerTable()));
+const fidl_type_t conformance_MyInt64Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields19conformance_MyInt64, 1u, 8u, 0u, false, "conformance/MyInt64",
+                            conformance_MyInt64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields19conformance_MyInt32[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyInt32AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyInt32Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields19conformance_MyInt32, 1u, 4u, "conformance/MyInt32",
-                                        conformance_MyInt32AltTypePointerTable()));
+const fidl_type_t conformance_MyInt32Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields19conformance_MyInt32, 1u, 4u, 0u, false, "conformance/MyInt32",
+                            conformance_MyInt32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields19conformance_MyInt16[] = {
     ::fidl::FidlStructField(nullptr, 2u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyInt16AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyInt16Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields19conformance_MyInt16, 1u, 2u, "conformance/MyInt16",
-                                        conformance_MyInt16AltTypePointerTable()));
+const fidl_type_t conformance_MyInt16Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields19conformance_MyInt16, 1u, 2u, 0u, false, "conformance/MyInt16",
+                            conformance_MyInt16AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_MyFloat64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyFloat64AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_MyFloat64Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_MyFloat64, 1u, 8u, "conformance/MyFloat64",
-                            conformance_MyFloat64AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_MyFloat64, 1u, 8u, 0u, false,
+                            "conformance/MyFloat64", conformance_MyFloat64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21conformance_MyFloat32[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyFloat32AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_MyFloat32Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields21conformance_MyFloat32, 1u, 4u, "conformance/MyFloat32",
-                            conformance_MyFloat32AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields21conformance_MyFloat32, 1u, 4u, 0u, false,
+                            "conformance/MyFloat32", conformance_MyFloat32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields18conformance_MyByte[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyByteAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyByteTable =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields18conformance_MyByte, 1u, 1u, "conformance/MyByte",
-                                        conformance_MyByteAltTypePointerTable()));
+const fidl_type_t conformance_MyByteTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields18conformance_MyByte, 1u, 1u, 0u, false, "conformance/MyByte",
+                            conformance_MyByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields18conformance_MyBool[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_MyBoolAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_MyBoolTable =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields18conformance_MyBool, 1u, 1u, "conformance/MyBool",
-                                        conformance_MyBoolAltTypePointerTable()));
+const fidl_type_t conformance_MyBoolTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields18conformance_MyBool, 1u, 1u, 0u, false, "conformance/MyBool",
+                            conformance_MyBoolAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32conformance_Length2StringWrapper[] = {
     ::fidl::FidlStructField(&String2nonnullableTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_Length2StringWrapperAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_Length2StringWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32conformance_Length2StringWrapper, 1u, 16u, "conformance/Length2StringWrapper",
-    conformance_Length2StringWrapperAltTypePointerTable()));
+    Fields32conformance_Length2StringWrapper, 1u, 16u, 8u, false,
+    "conformance/Length2StringWrapper", conformance_Length2StringWrapperAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22conformance_LaunchInfo[] = {
     ::fidl::FidlStructField(&String200nonnullableTable, 0u, 0u),
@@ -1310,8 +1313,8 @@ static const ::fidl::FidlStructField Fields22conformance_LaunchInfo[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_LaunchInfoAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_LaunchInfoTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields22conformance_LaunchInfo, 7u, 72u, "conformance/LaunchInfo",
-                            conformance_LaunchInfoAltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields22conformance_LaunchInfo, 7u, 72u, 4294967295u, false,
+                            "conformance/LaunchInfo", conformance_LaunchInfoAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34conformance_CreateComponentRequest[] = {
     ::fidl::FidlStructField(&conformance_LaunchInfoTable, 0u, 0u),
@@ -1319,8 +1322,8 @@ static const ::fidl::FidlStructField Fields34conformance_CreateComponentRequest[
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_CreateComponentRequestAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_CreateComponentRequestTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34conformance_CreateComponentRequest, 2u, 80u, "conformance/CreateComponentRequest",
-    conformance_CreateComponentRequestAltTypePointerTable()));
+    Fields34conformance_CreateComponentRequest, 2u, 80u, 4294967295u, false,
+    "conformance/CreateComponentRequest", conformance_CreateComponentRequestAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields27conformance_IpAddressConfig[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u), ::fidl::FidlUnionField(nullptr, 23u, 2u)};
@@ -1336,7 +1339,7 @@ static const ::fidl::FidlStructField Fields27conformance_InterfaceConfig[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_InterfaceConfigAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_InterfaceConfigTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields27conformance_InterfaceConfig, 2u, 48u, "conformance/InterfaceConfig",
+    Fields27conformance_InterfaceConfig, 2u, 48u, 4294967295u, true, "conformance/InterfaceConfig",
     conformance_InterfaceConfigAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields40conformance_TestAddEthernetDeviceRequest[] = {
@@ -1346,17 +1349,17 @@ static const ::fidl::FidlStructField Fields40conformance_TestAddEthernetDeviceRe
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestAddEthernetDeviceRequestAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_TestAddEthernetDeviceRequestTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields40conformance_TestAddEthernetDeviceRequest, 3u, 72u,
-                            "conformance/TestAddEthernetDeviceRequest",
+    ::fidl::FidlCodedStruct(Fields40conformance_TestAddEthernetDeviceRequest, 3u, 72u, 4294967295u,
+                            true, "conformance/TestAddEthernetDeviceRequest",
                             conformance_TestAddEthernetDeviceRequestAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23conformance_Int64Struct[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_Int64StructAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_Int64StructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_Int64Struct, 1u, 8u, "conformance/Int64Struct",
-                            conformance_Int64StructAltTypePointerTable()));
+const fidl_type_t conformance_Int64StructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_Int64Struct, 1u, 8u, 0u, false, "conformance/Int64Struct",
+    conformance_Int64StructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields23conformance_SimpleUnion[] = {
     ::fidl::FidlUnionField(nullptr, 12u, 1u), ::fidl::FidlUnionField(nullptr, 8u, 2u),
@@ -1396,8 +1399,8 @@ static const ::fidl::FidlStructField Fields29conformance_TestXUnionInTable[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestXUnionInTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_TestXUnionInTableTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29conformance_TestXUnionInTable, 1u, 16u, "conformance/TestXUnionInTable",
-    conformance_TestXUnionInTableAltTypePointerTable()));
+    Fields29conformance_TestXUnionInTable, 1u, 16u, 4294967295u, true,
+    "conformance/TestXUnionInTable", conformance_TestXUnionInTableAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields36conformance_TestInlineXUnionInStruct[] = {
     ::fidl::FidlStructField(&String4294967295nonnullableTable, 0u, 0u),
@@ -1405,17 +1408,18 @@ static const ::fidl::FidlStructField Fields36conformance_TestInlineXUnionInStruc
     ::fidl::FidlStructField(&String4294967295nonnullableTable, 40u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestInlineXUnionInStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_TestInlineXUnionInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36conformance_TestInlineXUnionInStruct, 3u, 56u, "conformance/TestInlineXUnionInStruct",
-    conformance_TestInlineXUnionInStructAltTypePointerTable()));
+const fidl_type_t conformance_TestInlineXUnionInStructTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36conformance_TestInlineXUnionInStruct, 3u, 56u,
+                                        4294967295u, true, "conformance/TestInlineXUnionInStruct",
+                                        conformance_TestInlineXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38conformance_TestFlexibleXUnionInStruct[] = {
     ::fidl::FidlStructField(&conformance_SampleXUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestFlexibleXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_TestFlexibleXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields38conformance_TestFlexibleXUnionInStruct, 1u, 24u,
-                            "conformance/TestFlexibleXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields38conformance_TestFlexibleXUnionInStruct, 1u, 24u, 4294967295u,
+                            true, "conformance/TestFlexibleXUnionInStruct",
                             conformance_TestFlexibleXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields30conformance_SampleStrictXUnion[] = {
@@ -1438,16 +1442,17 @@ static const ::fidl::FidlStructField Fields36conformance_TestStrictXUnionInStruc
     ::fidl::FidlStructField(&conformance_SampleStrictXUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_TestStrictXUnionInStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t conformance_TestStrictXUnionInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36conformance_TestStrictXUnionInStruct, 1u, 24u, "conformance/TestStrictXUnionInStruct",
-    conformance_TestStrictXUnionInStructAltTypePointerTable()));
+const fidl_type_t conformance_TestStrictXUnionInStructTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36conformance_TestStrictXUnionInStruct, 1u, 24u,
+                                        4294967295u, true, "conformance/TestStrictXUnionInStruct",
+                                        conformance_TestStrictXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields20conformance_FiveByte[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u), ::fidl::FidlStructField(nullptr, 5u, 3u)};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_FiveByteAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t conformance_FiveByteTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields20conformance_FiveByte, 2u, 8u, "conformance/FiveByte",
+    ::fidl::FidlCodedStruct(Fields20conformance_FiveByte, 2u, 8u, 0u, false, "conformance/FiveByte",
                             conformance_FiveByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28conformance_FiveByteInVector[] = {
@@ -1455,8 +1460,8 @@ static const ::fidl::FidlStructField Fields28conformance_FiveByteInVector[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_FiveByteInVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_FiveByteInVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28conformance_FiveByteInVector, 1u, 16u, "conformance/FiveByteInVector",
-    conformance_FiveByteInVectorAltTypePointerTable()));
+    Fields28conformance_FiveByteInVector, 1u, 16u, 4294967295u, false,
+    "conformance/FiveByteInVector", conformance_FiveByteInVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28conformance_FiveByteInStruct[] = {
     ::fidl::FidlStructField(&conformance_FiveByteTable, 0u, 0u),
@@ -1465,7 +1470,7 @@ static const ::fidl::FidlStructField Fields28conformance_FiveByteInStruct[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_FiveByteInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_FiveByteInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28conformance_FiveByteInStruct, 3u, 24u, "conformance/FiveByteInStruct",
+    Fields28conformance_FiveByteInStruct, 3u, 24u, 0u, false, "conformance/FiveByteInStruct",
     conformance_FiveByteInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields27conformance_FiveByteInArray[] = {
@@ -1473,15 +1478,15 @@ static const ::fidl::FidlStructField Fields27conformance_FiveByteInArray[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_FiveByteInArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_FiveByteInArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields27conformance_FiveByteInArray, 1u, 24u, "conformance/FiveByteInArray",
+    Fields27conformance_FiveByteInArray, 1u, 24u, 0u, false, "conformance/FiveByteInArray",
     conformance_FiveByteInArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23conformance_EmptyStruct[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* conformance_EmptyStructAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t conformance_EmptyStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23conformance_EmptyStruct, 0u, 1u, "conformance/EmptyStruct",
-                            conformance_EmptyStructAltTypePointerTable()));
+const fidl_type_t conformance_EmptyStructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields23conformance_EmptyStruct, 0u, 1u, 0u, false, "conformance/EmptyStruct",
+    conformance_EmptyStructAltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields33conformance_XUnionWithEmptyStruct[] = {
     ::fidl::FidlXUnionField(&conformance_EmptyStructTable, 1956241662u)};
@@ -1521,7 +1526,7 @@ static const ::fidl::FidlStructField Fields31conformance_StructWithOptionals[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_StructWithOptionalsAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_StructWithOptionalsTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31conformance_StructWithOptionals, 7u, 104u, "conformance/StructWithOptionals",
+    Fields31conformance_StructWithOptionals, 7u, 104u, 64u, true, "conformance/StructWithOptionals",
     conformance_StructWithOptionalsAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31conformance_EmptyStructSandwich[] = {
@@ -1531,8 +1536,8 @@ static const ::fidl::FidlStructField Fields31conformance_EmptyStructSandwich[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 conformance_EmptyStructSandwichAltTypePointerTable() __attribute__((unused));
 const fidl_type_t conformance_EmptyStructSandwichTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31conformance_EmptyStructSandwich, 3u, 40u, "conformance/EmptyStructSandwich",
-    conformance_EmptyStructSandwichAltTypePointerTable()));
+    Fields31conformance_EmptyStructSandwich, 3u, 40u, 4294967295u, false,
+    "conformance/EmptyStructSandwich", conformance_EmptyStructSandwichAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -1959,9 +1964,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich9[] = {
     ::fidl::FidlStructField(nullptr, 34u, 6u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich9AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich9Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich9, 3u, 40u, "conformance/Sandwich9",
-                            v1_conformance_Sandwich9AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich9Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich9, 3u, 40u, 4294967295u, true, "conformance/Sandwich9",
+    v1_conformance_Sandwich9AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields35v1_conformance_UnionWithBoundString[] = {
     ::fidl::FidlUnionField(&v1_String5nonnullableTable, 0u, 1u)};
@@ -1976,7 +1981,7 @@ static const ::fidl::FidlStructField Fields41v1_conformance_UnionWithBoundString
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_UnionWithBoundStringStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_UnionWithBoundStringStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields41v1_conformance_UnionWithBoundStringStruct, 1u, 24u,
+    ::fidl::FidlCodedStruct(Fields41v1_conformance_UnionWithBoundStringStruct, 1u, 24u, 24u, true,
                             "conformance/UnionWithBoundStringStruct",
                             v1_conformance_UnionWithBoundStringStructAltTypePointerTable()));
 
@@ -1995,9 +2000,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich1[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich1AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich1Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich1, 3u, 40u, "conformance/Sandwich1",
-                            v1_conformance_Sandwich1AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich1Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich1, 3u, 40u, 8u, true, "conformance/Sandwich1",
+    v1_conformance_Sandwich1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33v1_conformance_OutOfLineSandwich1[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u),
@@ -2006,8 +2011,8 @@ static const ::fidl::FidlStructField Fields33v1_conformance_OutOfLineSandwich1[]
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_OutOfLineSandwich1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_OutOfLineSandwich1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33v1_conformance_OutOfLineSandwich1, 3u, 48u, "conformance/OutOfLineSandwich1",
-    v1_conformance_OutOfLineSandwich1AltTypePointerTable()));
+    Fields33v1_conformance_OutOfLineSandwich1, 3u, 48u, 4294967295u, true,
+    "conformance/OutOfLineSandwich1", v1_conformance_OutOfLineSandwich1AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields32v1_conformance_UnionSize36Align4[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u), ::fidl::FidlUnionField(nullptr, 7u, 2u),
@@ -2024,9 +2029,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich4[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich4AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich4Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich4, 3u, 40u, "conformance/Sandwich4",
-                            v1_conformance_Sandwich4AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich4Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich4, 3u, 40u, 32u, true, "conformance/Sandwich4",
+    v1_conformance_Sandwich4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields41v1_conformance_Sandwich4Align8WithPointer[] = {
     ::fidl::FidlStructField(&v1_conformance_Sandwich4Table, 0u, 0u),
@@ -2034,7 +2039,7 @@ static const ::fidl::FidlStructField Fields41v1_conformance_Sandwich4Align8WithP
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Sandwich4Align8WithPointerAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Sandwich4Align8WithPointerTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields41v1_conformance_Sandwich4Align8WithPointer, 2u, 48u,
+    ::fidl::FidlCodedStruct(Fields41v1_conformance_Sandwich4Align8WithPointer, 2u, 48u, 40u, true,
                             "conformance/Sandwich4Align8WithPointer",
                             v1_conformance_Sandwich4Align8WithPointerAltTypePointerTable()));
 
@@ -2044,7 +2049,7 @@ static const ::fidl::FidlStructField Fields30v1_conformance_Sandwich4Align8[] = 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Sandwich4Align8AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Sandwich4Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30v1_conformance_Sandwich4Align8, 2u, 48u, "conformance/Sandwich4Align8",
+    Fields30v1_conformance_Sandwich4Align8, 2u, 48u, 32u, true, "conformance/Sandwich4Align8",
     v1_conformance_Sandwich4Align8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields37v1_conformance_NoCodingTablesStressor[] = {
@@ -2064,9 +2069,10 @@ static const ::fidl::FidlStructField Fields37v1_conformance_NoCodingTablesStress
     ::fidl::FidlStructField(nullptr, 160u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_NoCodingTablesStressorAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_NoCodingTablesStressorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_NoCodingTablesStressor, 14u, 160u, "conformance/NoCodingTablesStressor",
-    v1_conformance_NoCodingTablesStressorAltTypePointerTable()));
+const fidl_type_t v1_conformance_NoCodingTablesStressorTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_NoCodingTablesStressor, 14u, 160u, 112u, true,
+                            "conformance/NoCodingTablesStressor",
+                            v1_conformance_NoCodingTablesStressorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields32v1_conformance_UnionSize12Align4[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u), ::fidl::FidlUnionField(nullptr, 7u, 2u),
@@ -2097,27 +2103,29 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich2[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich2AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich2Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich2, 3u, 40u, "conformance/Sandwich2",
-                            v1_conformance_Sandwich2AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich2Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich2, 3u, 40u, 8u, true, "conformance/Sandwich2",
+    v1_conformance_Sandwich2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38v1_conformance_Uint8Uint16Uint32Uint64[] = {
     ::fidl::FidlStructField(nullptr, 1u, 1u), ::fidl::FidlStructField(nullptr, 4u, 0u),
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 16u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Uint8Uint16Uint32Uint64AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Uint8Uint16Uint32Uint64Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields38v1_conformance_Uint8Uint16Uint32Uint64, 4u, 16u, "conformance/Uint8Uint16Uint32Uint64",
-    v1_conformance_Uint8Uint16Uint32Uint64AltTypePointerTable()));
+const fidl_type_t v1_conformance_Uint8Uint16Uint32Uint64Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields38v1_conformance_Uint8Uint16Uint32Uint64, 4u, 16u, 0u, false,
+                            "conformance/Uint8Uint16Uint32Uint64",
+                            v1_conformance_Uint8Uint16Uint32Uint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38v1_conformance_Uint64Uint32Uint16Uint8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 12u, 0u),
     ::fidl::FidlStructField(nullptr, 14u, 0u), ::fidl::FidlStructField(nullptr, 15u, 1u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Uint64Uint32Uint16Uint8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Uint64Uint32Uint16Uint8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields38v1_conformance_Uint64Uint32Uint16Uint8, 4u, 16u, "conformance/Uint64Uint32Uint16Uint8",
-    v1_conformance_Uint64Uint32Uint16Uint8AltTypePointerTable()));
+const fidl_type_t v1_conformance_Uint64Uint32Uint16Uint8Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields38v1_conformance_Uint64Uint32Uint16Uint8, 4u, 16u, 0u, false,
+                            "conformance/Uint64Uint32Uint16Uint8",
+                            v1_conformance_Uint64Uint32Uint16Uint8AltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields37v1_conformance_TransformerSimpleTable[] = {
     ::fidl::FidlTableField(&::fidl::internal::kUint32Table, 1u)};
@@ -2128,16 +2136,18 @@ static const ::fidl::FidlStructField Fields37v1_conformance_SimpleTableArrayStru
     ::fidl::FidlStructField(&v1_Array32_37v1_conformance_TransformerSimpleTableTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_SimpleTableArrayStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_SimpleTableArrayStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_SimpleTableArrayStruct, 1u, 32u, "conformance/SimpleTableArrayStruct",
-    v1_conformance_SimpleTableArrayStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_SimpleTableArrayStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_SimpleTableArrayStruct, 1u, 32u, 48u, false,
+                            "conformance/SimpleTableArrayStruct",
+                            v1_conformance_SimpleTableArrayStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields37v1_conformance_TransformerEmptyStruct[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TransformerEmptyStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_TransformerEmptyStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_TransformerEmptyStruct, 0u, 1u, "conformance/TransformerEmptyStruct",
-    v1_conformance_TransformerEmptyStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_TransformerEmptyStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_TransformerEmptyStruct, 0u, 1u, 0u, false,
+                            "conformance/TransformerEmptyStruct",
+                            v1_conformance_TransformerEmptyStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields31v1_conformance_EmptyStructUnion[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u),
@@ -2152,18 +2162,19 @@ static const ::fidl::FidlStructField Fields37v1_conformance_EmptyStructUnionStru
     ::fidl::FidlStructField(&v1_conformance_EmptyStructUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_EmptyStructUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_EmptyStructUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_EmptyStructUnionStruct, 1u, 24u, "conformance/EmptyStructUnionStruct",
-    v1_conformance_EmptyStructUnionStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_EmptyStructUnionStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_EmptyStructUnionStruct, 1u, 24u, 8u, true,
+                            "conformance/EmptyStructUnionStruct",
+                            v1_conformance_EmptyStructUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_ThreeByte[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u), ::fidl::FidlStructField(nullptr, 2u, 0u),
     ::fidl::FidlStructField(nullptr, 3u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_ThreeByteAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_ThreeByteTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_ThreeByte, 3u, 3u, "conformance/ThreeByte",
-                            v1_conformance_ThreeByteAltTypePointerTable()));
+const fidl_type_t v1_conformance_ThreeByteTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_ThreeByte, 3u, 3u, 0u, false, "conformance/ThreeByte",
+    v1_conformance_ThreeByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_ThreeByteInVector[] = {
     ::fidl::FidlStructField(&v1_Vector4294967295nonnullable24v1_conformance_ThreeByteTable, 0u,
@@ -2171,8 +2182,8 @@ static const ::fidl::FidlStructField Fields32v1_conformance_ThreeByteInVector[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_ThreeByteInVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_ThreeByteInVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_ThreeByteInVector, 1u, 16u, "conformance/ThreeByteInVector",
-    v1_conformance_ThreeByteInVectorAltTypePointerTable()));
+    Fields32v1_conformance_ThreeByteInVector, 1u, 16u, 4294967295u, false,
+    "conformance/ThreeByteInVector", v1_conformance_ThreeByteInVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_ThreeByteInStruct[] = {
     ::fidl::FidlStructField(&v1_conformance_ThreeByteTable, 0u, 0u),
@@ -2181,7 +2192,7 @@ static const ::fidl::FidlStructField Fields32v1_conformance_ThreeByteInStruct[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_ThreeByteInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_ThreeByteInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_ThreeByteInStruct, 3u, 9u, "conformance/ThreeByteInStruct",
+    Fields32v1_conformance_ThreeByteInStruct, 3u, 9u, 0u, false, "conformance/ThreeByteInStruct",
     v1_conformance_ThreeByteInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31v1_conformance_ThreeByteInArray[] = {
@@ -2189,7 +2200,7 @@ static const ::fidl::FidlStructField Fields31v1_conformance_ThreeByteInArray[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_ThreeByteInArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_ThreeByteInArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31v1_conformance_ThreeByteInArray, 1u, 9u, "conformance/ThreeByteInArray",
+    Fields31v1_conformance_ThreeByteInArray, 1u, 9u, 0u, false, "conformance/ThreeByteInArray",
     v1_conformance_ThreeByteInArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields41v1_conformance_TestOptionalXUnionInStruct[] = {
@@ -2199,8 +2210,8 @@ static const ::fidl::FidlStructField Fields41v1_conformance_TestOptionalXUnionIn
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestOptionalXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestOptionalXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields41v1_conformance_TestOptionalXUnionInStruct, 3u, 56u,
-                            "conformance/TestOptionalXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields41v1_conformance_TestOptionalXUnionInStruct, 3u, 56u, 4294967295u,
+                            true, "conformance/TestOptionalXUnionInStruct",
                             v1_conformance_TestOptionalXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields39v1_conformance_TableWithStringAndVector[] = {
@@ -2216,7 +2227,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructOfTableWithStringAndVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructOfTableWithStringAndVectorTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields47v1_conformance_StructOfTableWithStringAndVector, 1u, 16u,
-                            "conformance/StructOfTableWithStringAndVector",
+                            4294967295u, false, "conformance/StructOfTableWithStringAndVector",
                             v1_conformance_StructOfTableWithStringAndVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28v1_conformance_StructWithInt[] = {
@@ -2224,7 +2235,7 @@ static const ::fidl::FidlStructField Fields28v1_conformance_StructWithInt[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructWithIntAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructWithIntTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28v1_conformance_StructWithInt, 1u, 4u, "conformance/StructWithInt",
+    Fields28v1_conformance_StructWithInt, 1u, 4u, 0u, false, "conformance/StructWithInt",
     v1_conformance_StructWithIntAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_StructWithVectors[] = {
@@ -2243,8 +2254,8 @@ static const ::fidl::FidlStructField Fields32v1_conformance_StructWithVectors[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructWithVectorsAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructWithVectorsTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_StructWithVectors, 7u, 112u, "conformance/StructWithVectors",
-    v1_conformance_StructWithVectorsAltTypePointerTable()));
+    Fields32v1_conformance_StructWithVectors, 7u, 112u, 4294967295u, false,
+    "conformance/StructWithVectors", v1_conformance_StructWithVectorsAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31v1_conformance_StructWithArrays[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -2256,15 +2267,15 @@ static const ::fidl::FidlStructField Fields31v1_conformance_StructWithArrays[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructWithArraysAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructWithArraysTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31v1_conformance_StructWithArrays, 6u, 120u, "conformance/StructWithArrays",
-    v1_conformance_StructWithArraysAltTypePointerTable()));
+    Fields31v1_conformance_StructWithArrays, 6u, 120u, 4294967295u, false,
+    "conformance/StructWithArrays", v1_conformance_StructWithArraysAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_StructSize3Align2[] = {
     ::fidl::FidlStructField(nullptr, 2u, 0u), ::fidl::FidlStructField(nullptr, 3u, 1u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructSize3Align2AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructSize3Align2Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_StructSize3Align2, 2u, 4u, "conformance/StructSize3Align2",
+    Fields32v1_conformance_StructSize3Align2, 2u, 4u, 0u, false, "conformance/StructSize3Align2",
     v1_conformance_StructSize3Align2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_StructSize3Align1[] = {
@@ -2272,7 +2283,7 @@ static const ::fidl::FidlStructField Fields32v1_conformance_StructSize3Align1[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructSize3Align1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructSize3Align1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_StructSize3Align1, 1u, 3u, "conformance/StructSize3Align1",
+    Fields32v1_conformance_StructSize3Align1, 1u, 3u, 0u, false, "conformance/StructSize3Align1",
     v1_conformance_StructSize3Align1AltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields31v1_conformance_XUnionWithStruct[] = {
@@ -2303,17 +2314,19 @@ static const ::fidl::FidlStructField Fields37v1_conformance_XUnionWithXUnionStru
     ::fidl::FidlStructField(&v1_conformance_XUnionWithXUnionTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_XUnionWithXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_XUnionWithXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_XUnionWithXUnionStruct, 1u, 24u, "conformance/XUnionWithXUnionStruct",
-    v1_conformance_XUnionWithXUnionStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_XUnionWithXUnionStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_XUnionWithXUnionStruct, 1u, 24u, 32u, false,
+                            "conformance/XUnionWithXUnionStruct",
+                            v1_conformance_XUnionWithXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields37v1_conformance_XUnionWithStructStruct[] = {
     ::fidl::FidlStructField(&v1_conformance_XUnionWithStructTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_XUnionWithStructStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_XUnionWithStructStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_XUnionWithStructStruct, 1u, 24u, "conformance/XUnionWithStructStruct",
-    v1_conformance_XUnionWithStructStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_XUnionWithStructStructTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_XUnionWithStructStruct, 1u, 24u, 8u, false,
+                            "conformance/XUnionWithStructStruct",
+                            v1_conformance_XUnionWithStructStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields30v1_conformance_UnionWithVector[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u),
@@ -2350,8 +2363,8 @@ v1_conformance_Table_UnionWithVector_StructSandwichStructAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_Table_UnionWithVector_StructSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields57v1_conformance_Table_UnionWithVector_StructSandwichStruct, 1u, 16u,
-        "conformance/Table_UnionWithVector_StructSandwichStruct",
+        Fields57v1_conformance_Table_UnionWithVector_StructSandwichStruct, 1u, 16u, 4294967295u,
+        true, "conformance/Table_UnionWithVector_StructSandwichStruct",
         v1_conformance_Table_UnionWithVector_StructSandwichStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField
@@ -2370,8 +2383,8 @@ v1_conformance_Table_UnionWithVector_ReservedSandwichStructAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_Table_UnionWithVector_ReservedSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields59v1_conformance_Table_UnionWithVector_ReservedSandwichStruct, 1u, 16u,
-        "conformance/Table_UnionWithVector_ReservedSandwichStruct",
+        Fields59v1_conformance_Table_UnionWithVector_ReservedSandwichStruct, 1u, 16u, 4294967295u,
+        true, "conformance/Table_UnionWithVector_ReservedSandwichStruct",
         v1_conformance_Table_UnionWithVector_ReservedSandwichStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich6[] = {
@@ -2380,9 +2393,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich6[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich6AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich6Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich6, 3u, 40u, "conformance/Sandwich6",
-                            v1_conformance_Sandwich6AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich6Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich6, 3u, 40u, 4294967295u, true, "conformance/Sandwich6",
+    v1_conformance_Sandwich6AltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields45v1_conformance_Table_StructWithUint32Sandwich[] = {
     ::fidl::FidlTableField(&::fidl::internal::kUint32Table, 1u),
@@ -2399,7 +2412,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Table_StructWithUint32SandwichStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Table_StructWithUint32SandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields51v1_conformance_Table_StructWithUint32SandwichStruct, 1u, 16u,
+        Fields51v1_conformance_Table_StructWithUint32SandwichStruct, 1u, 16u, 96u, false,
         "conformance/Table_StructWithUint32SandwichStruct",
         v1_conformance_Table_StructWithUint32SandwichStructAltTypePointerTable()));
 
@@ -2417,7 +2430,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Table_StructWithReservedSandwichStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Table_StructWithReservedSandwichStructTable =
     fidl_type_t(::fidl::FidlCodedStruct(
-        Fields53v1_conformance_Table_StructWithReservedSandwichStruct, 1u, 16u,
+        Fields53v1_conformance_Table_StructWithReservedSandwichStruct, 1u, 16u, 48u, false,
         "conformance/Table_StructWithReservedSandwichStruct",
         v1_conformance_Table_StructWithReservedSandwichStructAltTypePointerTable()));
 
@@ -2431,16 +2444,16 @@ static const ::fidl::FidlStructField Fields26v1_conformance_Regression4[] = {
     ::fidl::FidlStructField(nullptr, 25u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Regression4AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Regression4Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Regression4, 7u, 32u, "conformance/Regression4",
-                            v1_conformance_Regression4AltTypePointerTable()));
+const fidl_type_t v1_conformance_Regression4Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Regression4, 7u, 32u, 0u, false, "conformance/Regression4",
+    v1_conformance_Regression4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields33v1_conformance_StructSize16Align8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u), ::fidl::FidlStructField(nullptr, 16u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructSize16Align8AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructSize16Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields33v1_conformance_StructSize16Align8, 2u, 16u, "conformance/StructSize16Align8",
+    Fields33v1_conformance_StructSize16Align8, 2u, 16u, 0u, false, "conformance/StructSize16Align8",
     v1_conformance_StructSize16Align8AltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields32v1_conformance_UnionSize24Align8[] = {
@@ -2471,9 +2484,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich8[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich8AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich8Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich8, 3u, 40u, "conformance/Sandwich8",
-                            v1_conformance_Sandwich8AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich8Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich8, 3u, 40u, 40u, true, "conformance/Sandwich8",
+    v1_conformance_Sandwich8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich5[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -2481,9 +2494,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich5[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich5AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich5Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich5, 3u, 40u, "conformance/Sandwich5",
-                            v1_conformance_Sandwich5AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich5Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich5, 3u, 40u, 40u, true, "conformance/Sandwich5",
+    v1_conformance_Sandwich5AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich3[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -2491,16 +2504,16 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich3[] = {
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich3AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich3Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich3, 3u, 40u, "conformance/Sandwich3",
-                            v1_conformance_Sandwich3AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich3Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich3, 3u, 40u, 16u, true, "conformance/Sandwich3",
+    v1_conformance_Sandwich3AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields28v1_conformance_StringWrapper[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StringWrapperAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StringWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields28v1_conformance_StringWrapper, 1u, 16u, "conformance/StringWrapper",
+    Fields28v1_conformance_StringWrapper, 1u, 16u, 4294967295u, false, "conformance/StringWrapper",
     v1_conformance_StringWrapperAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields32v1_conformance_StringUnionVector[] = {
@@ -2509,8 +2522,8 @@ static const ::fidl::FidlStructField Fields32v1_conformance_StringUnionVector[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StringUnionVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StringUnionVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_StringUnionVector, 1u, 16u, "conformance/StringUnionVector",
-    v1_conformance_StringUnionVectorAltTypePointerTable()));
+    Fields32v1_conformance_StringUnionVector, 1u, 16u, 4294967295u, true,
+    "conformance/StringUnionVector", v1_conformance_StringUnionVectorAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields26v1_conformance_StringUnion[] = {
     ::fidl::FidlUnionField(nullptr, 7u, 1u),
@@ -2527,24 +2540,24 @@ static const ::fidl::FidlStructField Fields26v1_conformance_ArrayStruct[] = {
     ::fidl::FidlStructField(&v1_Array72_38v1_Pointer26v1_conformance_StringUnionTable, 72u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_ArrayStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_ArrayStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_ArrayStruct, 2u, 144u, "conformance/ArrayStruct",
-                            v1_conformance_ArrayStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_ArrayStructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_ArrayStruct, 2u, 144u, 4294967295u, true, "conformance/ArrayStruct",
+    v1_conformance_ArrayStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_Size8Align8[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size8Align8AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Size8Align8Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Size8Align8, 1u, 8u, "conformance/Size8Align8",
-                            v1_conformance_Size8Align8AltTypePointerTable()));
+const fidl_type_t v1_conformance_Size8Align8Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Size8Align8, 1u, 8u, 0u, false, "conformance/Size8Align8",
+    v1_conformance_Size8Align8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields30v1_conformance_Size5Alignment4[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u), ::fidl::FidlStructField(nullptr, 5u, 3u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment4AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Size5Alignment4Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30v1_conformance_Size5Alignment4, 2u, 8u, "conformance/Size5Alignment4",
+    Fields30v1_conformance_Size5Alignment4, 2u, 8u, 0u, false, "conformance/Size5Alignment4",
     v1_conformance_Size5Alignment4AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields36v1_conformance_Size5Alignment4Vector[] = {
@@ -2552,24 +2565,25 @@ static const ::fidl::FidlStructField Fields36v1_conformance_Size5Alignment4Vecto
                             0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment4VectorAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Size5Alignment4VectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36v1_conformance_Size5Alignment4Vector, 1u, 16u, "conformance/Size5Alignment4Vector",
-    v1_conformance_Size5Alignment4VectorAltTypePointerTable()));
+const fidl_type_t v1_conformance_Size5Alignment4VectorTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_conformance_Size5Alignment4Vector, 1u, 16u,
+                                        4294967295u, false, "conformance/Size5Alignment4Vector",
+                                        v1_conformance_Size5Alignment4VectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields35v1_conformance_Size5Alignment4Array[] = {
     ::fidl::FidlStructField(&v1_Array24_30v1_conformance_Size5Alignment4Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment4ArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Size5Alignment4ArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields35v1_conformance_Size5Alignment4Array, 1u, 24u, "conformance/Size5Alignment4Array",
-    v1_conformance_Size5Alignment4ArrayAltTypePointerTable()));
+    Fields35v1_conformance_Size5Alignment4Array, 1u, 24u, 0u, false,
+    "conformance/Size5Alignment4Array", v1_conformance_Size5Alignment4ArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields30v1_conformance_Size5Alignment1[] = {
     ::fidl::FidlStructField(nullptr, 5u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment1AltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Size5Alignment1Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30v1_conformance_Size5Alignment1, 1u, 5u, "conformance/Size5Alignment1",
+    Fields30v1_conformance_Size5Alignment1, 1u, 5u, 0u, false, "conformance/Size5Alignment1",
     v1_conformance_Size5Alignment1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields36v1_conformance_Size5Alignment1Vector[] = {
@@ -2577,17 +2591,18 @@ static const ::fidl::FidlStructField Fields36v1_conformance_Size5Alignment1Vecto
                             0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment1VectorAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Size5Alignment1VectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36v1_conformance_Size5Alignment1Vector, 1u, 16u, "conformance/Size5Alignment1Vector",
-    v1_conformance_Size5Alignment1VectorAltTypePointerTable()));
+const fidl_type_t v1_conformance_Size5Alignment1VectorTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_conformance_Size5Alignment1Vector, 1u, 16u,
+                                        4294967295u, false, "conformance/Size5Alignment1Vector",
+                                        v1_conformance_Size5Alignment1VectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields35v1_conformance_Size5Alignment1Array[] = {
     ::fidl::FidlStructField(&v1_Array15_30v1_conformance_Size5Alignment1Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Size5Alignment1ArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Size5Alignment1ArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields35v1_conformance_Size5Alignment1Array, 1u, 15u, "conformance/Size5Alignment1Array",
-    v1_conformance_Size5Alignment1ArrayAltTypePointerTable()));
+    Fields35v1_conformance_Size5Alignment1Array, 1u, 15u, 0u, false,
+    "conformance/Size5Alignment1Array", v1_conformance_Size5Alignment1ArrayAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields33v1_conformance_SingleVariantUnion[] = {
     ::fidl::FidlUnionField(nullptr, 4u, 1u)};
@@ -2602,7 +2617,7 @@ static const ::fidl::FidlStructField Fields39v1_conformance_SingleVariantUnionSt
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_SingleVariantUnionStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_SingleVariantUnionStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields39v1_conformance_SingleVariantUnionStruct, 1u, 24u,
+    ::fidl::FidlCodedStruct(Fields39v1_conformance_SingleVariantUnionStruct, 1u, 24u, 8u, true,
                             "conformance/SingleVariantUnionStruct",
                             v1_conformance_SingleVariantUnionStructAltTypePointerTable()));
 
@@ -2617,17 +2632,18 @@ static const ::fidl::FidlStructField Fields34v1_conformance_StructOfSimpleTable[
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructOfSimpleTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructOfSimpleTableTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34v1_conformance_StructOfSimpleTable, 1u, 16u, "conformance/StructOfSimpleTable",
-    v1_conformance_StructOfSimpleTableAltTypePointerTable()));
+    Fields34v1_conformance_StructOfSimpleTable, 1u, 16u, 48u, false,
+    "conformance/StructOfSimpleTable", v1_conformance_StructOfSimpleTableAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields36v1_conformance_SimpleTableThenUint64[] = {
     ::fidl::FidlStructField(&v1_conformance_SimpleTableTable, 0u, 0u),
     ::fidl::FidlStructField(nullptr, 24u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_SimpleTableThenUint64AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_SimpleTableThenUint64Table = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36v1_conformance_SimpleTableThenUint64, 2u, 24u, "conformance/SimpleTableThenUint64",
-    v1_conformance_SimpleTableThenUint64AltTypePointerTable()));
+const fidl_type_t v1_conformance_SimpleTableThenUint64Table =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_conformance_SimpleTableThenUint64, 2u, 24u, 48u,
+                                        false, "conformance/SimpleTableThenUint64",
+                                        v1_conformance_SimpleTableThenUint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich7[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -2635,9 +2651,9 @@ static const ::fidl::FidlStructField Fields24v1_conformance_Sandwich7[] = {
     ::fidl::FidlStructField(nullptr, 20u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_Sandwich7AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich7Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_Sandwich7, 3u, 24u, "conformance/Sandwich7",
-                            v1_conformance_Sandwich7AltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich7Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_Sandwich7, 3u, 24u, 48u, true, "conformance/Sandwich7",
+    v1_conformance_Sandwich7AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields36v1_conformance_Sandwich1WithOptUnion[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),
@@ -2645,9 +2661,10 @@ static const ::fidl::FidlStructField Fields36v1_conformance_Sandwich1WithOptUnio
     ::fidl::FidlStructField(nullptr, 36u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Sandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Sandwich1WithOptUnionTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields36v1_conformance_Sandwich1WithOptUnion, 3u, 40u, "conformance/Sandwich1WithOptUnion",
-    v1_conformance_Sandwich1WithOptUnionAltTypePointerTable()));
+const fidl_type_t v1_conformance_Sandwich1WithOptUnionTable =
+    fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_conformance_Sandwich1WithOptUnion, 3u, 40u, 8u,
+                                        true, "conformance/Sandwich1WithOptUnion",
+                                        v1_conformance_Sandwich1WithOptUnionAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields45v1_conformance_OutOfLineSandwich1WithOptUnion[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u),
@@ -2658,7 +2675,7 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_OutOfLineSandwich1WithOptUnionAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_OutOfLineSandwich1WithOptUnionTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields45v1_conformance_OutOfLineSandwich1WithOptUnion, 3u, 48u,
-                            "conformance/OutOfLineSandwich1WithOptUnion",
+                            4294967295u, true, "conformance/OutOfLineSandwich1WithOptUnion",
                             v1_conformance_OutOfLineSandwich1WithOptUnionAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields34v1_conformance_ReverseOrdinalUnion[] = {
@@ -2699,9 +2716,9 @@ static const ::fidl::FidlStructField Fields26v1_conformance_Regression3[] = {
     ::fidl::FidlStructField(&v1_Pointer26v1_conformance_Regression2Table, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Regression3AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Regression3Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Regression3, 1u, 8u, "conformance/Regression3",
-                            v1_conformance_Regression3AltTypePointerTable()));
+const fidl_type_t v1_conformance_Regression3Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Regression3, 1u, 8u, 40u, false, "conformance/Regression3",
+    v1_conformance_Regression3AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 1u, 3u),  ::fidl::FidlStructField(nullptr, 8u, 0u),
@@ -2709,18 +2726,18 @@ static const ::fidl::FidlStructField Fields26v1_conformance_Regression1[] = {
     ::fidl::FidlStructField(nullptr, 24u, 0u), ::fidl::FidlStructField(nullptr, 25u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Regression1AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Regression1Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Regression1, 6u, 32u, "conformance/Regression1",
-                            v1_conformance_Regression1AltTypePointerTable()));
+const fidl_type_t v1_conformance_Regression1Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Regression1, 6u, 32u, 0u, false, "conformance/Regression1",
+    v1_conformance_Regression1AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_Regression2[] = {
     ::fidl::FidlStructField(&v1_conformance_Regression1Table, 0u, 0u),
     ::fidl::FidlStructField(nullptr, 33u, 7u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Regression2AltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Regression2Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Regression2, 2u, 40u, "conformance/Regression2",
-                            v1_conformance_Regression2AltTypePointerTable()));
+const fidl_type_t v1_conformance_Regression2Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Regression2, 2u, 40u, 0u, false, "conformance/Regression2",
+    v1_conformance_Regression2AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29v1_conformance_NodeAttributes[] = {
     ::fidl::FidlStructField(nullptr, 4u, 4u),  ::fidl::FidlStructField(nullptr, 16u, 0u),
@@ -2730,7 +2747,7 @@ static const ::fidl::FidlStructField Fields29v1_conformance_NodeAttributes[] = {
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_NodeAttributesAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_NodeAttributesTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields29v1_conformance_NodeAttributes, 7u, 56u, "conformance/NodeAttributes",
+    Fields29v1_conformance_NodeAttributes, 7u, 56u, 0u, false, "conformance/NodeAttributes",
     v1_conformance_NodeAttributesAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34v1_conformance_FileGetAttrResponse[] = {
@@ -2739,112 +2756,112 @@ static const ::fidl::FidlStructField Fields34v1_conformance_FileGetAttrResponse[
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_FileGetAttrResponseAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_FileGetAttrResponseTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34v1_conformance_FileGetAttrResponse, 2u, 64u, "conformance/FileGetAttrResponse",
-    v1_conformance_FileGetAttrResponseAltTypePointerTable()));
+    Fields34v1_conformance_FileGetAttrResponse, 2u, 64u, 0u, false,
+    "conformance/FileGetAttrResponse", v1_conformance_FileGetAttrResponseAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_conformance_MyUint8[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyUint8AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyUint8Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyUint8, 1u, 1u, "conformance/MyUint8",
-                            v1_conformance_MyUint8AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyUint8, 1u, 1u, 0u, false,
+                            "conformance/MyUint8", v1_conformance_MyUint8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23v1_conformance_MyUint64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyUint64AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyUint64Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint64, 1u, 8u, "conformance/MyUint64",
-                            v1_conformance_MyUint64AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint64, 1u, 8u, 0u, false,
+                            "conformance/MyUint64", v1_conformance_MyUint64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23v1_conformance_MyUint32[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyUint32AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyUint32Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint32, 1u, 4u, "conformance/MyUint32",
-                            v1_conformance_MyUint32AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint32, 1u, 4u, 0u, false,
+                            "conformance/MyUint32", v1_conformance_MyUint32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23v1_conformance_MyUint16[] = {
     ::fidl::FidlStructField(nullptr, 2u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyUint16AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyUint16Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint16, 1u, 2u, "conformance/MyUint16",
-                            v1_conformance_MyUint16AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields23v1_conformance_MyUint16, 1u, 2u, 0u, false,
+                            "conformance/MyUint16", v1_conformance_MyUint16AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21v1_conformance_MyInt8[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyInt8AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_MyInt8Table =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields21v1_conformance_MyInt8, 1u, 1u, "conformance/MyInt8",
-                                        v1_conformance_MyInt8AltTypePointerTable()));
+const fidl_type_t v1_conformance_MyInt8Table = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields21v1_conformance_MyInt8, 1u, 1u, 0u, false, "conformance/MyInt8",
+                            v1_conformance_MyInt8AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_conformance_MyInt64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyInt64AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyInt64Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt64, 1u, 8u, "conformance/MyInt64",
-                            v1_conformance_MyInt64AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt64, 1u, 8u, 0u, false,
+                            "conformance/MyInt64", v1_conformance_MyInt64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_conformance_MyInt32[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyInt32AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyInt32Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt32, 1u, 4u, "conformance/MyInt32",
-                            v1_conformance_MyInt32AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt32, 1u, 4u, 0u, false,
+                            "conformance/MyInt32", v1_conformance_MyInt32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields22v1_conformance_MyInt16[] = {
     ::fidl::FidlStructField(nullptr, 2u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyInt16AltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_MyInt16Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt16, 1u, 2u, "conformance/MyInt16",
-                            v1_conformance_MyInt16AltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields22v1_conformance_MyInt16, 1u, 2u, 0u, false,
+                            "conformance/MyInt16", v1_conformance_MyInt16AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_MyFloat64[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyFloat64AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_MyFloat64Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_MyFloat64, 1u, 8u, "conformance/MyFloat64",
-                            v1_conformance_MyFloat64AltTypePointerTable()));
+const fidl_type_t v1_conformance_MyFloat64Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_MyFloat64, 1u, 8u, 0u, false, "conformance/MyFloat64",
+    v1_conformance_MyFloat64AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields24v1_conformance_MyFloat32[] = {
     ::fidl::FidlStructField(nullptr, 4u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyFloat32AltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_MyFloat32Table = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields24v1_conformance_MyFloat32, 1u, 4u, "conformance/MyFloat32",
-                            v1_conformance_MyFloat32AltTypePointerTable()));
+const fidl_type_t v1_conformance_MyFloat32Table = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields24v1_conformance_MyFloat32, 1u, 4u, 0u, false, "conformance/MyFloat32",
+    v1_conformance_MyFloat32AltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21v1_conformance_MyByte[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyByteAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_MyByteTable =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields21v1_conformance_MyByte, 1u, 1u, "conformance/MyByte",
-                                        v1_conformance_MyByteAltTypePointerTable()));
+const fidl_type_t v1_conformance_MyByteTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields21v1_conformance_MyByte, 1u, 1u, 0u, false, "conformance/MyByte",
+                            v1_conformance_MyByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields21v1_conformance_MyBool[] = {
     ::fidl::FidlStructField(nullptr, 1u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_MyBoolAltTypePointerTable()
     __attribute__((unused));
-const fidl_type_t v1_conformance_MyBoolTable =
-    fidl_type_t(::fidl::FidlCodedStruct(Fields21v1_conformance_MyBool, 1u, 1u, "conformance/MyBool",
-                                        v1_conformance_MyBoolAltTypePointerTable()));
+const fidl_type_t v1_conformance_MyBoolTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields21v1_conformance_MyBool, 1u, 1u, 0u, false, "conformance/MyBool",
+                            v1_conformance_MyBoolAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields35v1_conformance_Length2StringWrapper[] = {
     ::fidl::FidlStructField(&v1_String2nonnullableTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Length2StringWrapperAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_Length2StringWrapperTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields35v1_conformance_Length2StringWrapper, 1u, 16u, "conformance/Length2StringWrapper",
-    v1_conformance_Length2StringWrapperAltTypePointerTable()));
+    Fields35v1_conformance_Length2StringWrapper, 1u, 16u, 8u, false,
+    "conformance/Length2StringWrapper", v1_conformance_Length2StringWrapperAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields25v1_conformance_LaunchInfo[] = {
     ::fidl::FidlStructField(&v1_String200nonnullableTable, 0u, 0u),
@@ -2857,18 +2874,19 @@ static const ::fidl::FidlStructField Fields25v1_conformance_LaunchInfo[] = {
     ::fidl::FidlStructField(&v1_Pointer37v1_conformance_TransformerEmptyStructTable, 64u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_LaunchInfoAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_LaunchInfoTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields25v1_conformance_LaunchInfo, 7u, 72u, "conformance/LaunchInfo",
-                            v1_conformance_LaunchInfoAltTypePointerTable()));
+const fidl_type_t v1_conformance_LaunchInfoTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields25v1_conformance_LaunchInfo, 7u, 72u, 4294967295u, false, "conformance/LaunchInfo",
+    v1_conformance_LaunchInfoAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields37v1_conformance_CreateComponentRequest[] = {
     ::fidl::FidlStructField(&v1_conformance_LaunchInfoTable, 0u, 0u),
     ::fidl::FidlStructField(nullptr, 76u, 4u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_CreateComponentRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_CreateComponentRequestTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields37v1_conformance_CreateComponentRequest, 2u, 80u, "conformance/CreateComponentRequest",
-    v1_conformance_CreateComponentRequestAltTypePointerTable()));
+const fidl_type_t v1_conformance_CreateComponentRequestTable = fidl_type_t(
+    ::fidl::FidlCodedStruct(Fields37v1_conformance_CreateComponentRequest, 2u, 80u, 4294967295u,
+                            false, "conformance/CreateComponentRequest",
+                            v1_conformance_CreateComponentRequestAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields30v1_conformance_IpAddressConfig[] = {
     ::fidl::FidlUnionField(nullptr, 0u, 1u), ::fidl::FidlUnionField(nullptr, 7u, 2u)};
@@ -2884,8 +2902,8 @@ static const ::fidl::FidlStructField Fields30v1_conformance_InterfaceConfig[] = 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_InterfaceConfigAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_InterfaceConfigTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30v1_conformance_InterfaceConfig, 2u, 40u, "conformance/InterfaceConfig",
-    v1_conformance_InterfaceConfigAltTypePointerTable()));
+    Fields30v1_conformance_InterfaceConfig, 2u, 40u, 4294967295u, true,
+    "conformance/InterfaceConfig", v1_conformance_InterfaceConfigAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields43v1_conformance_TestAddEthernetDeviceRequest[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u),
@@ -2895,16 +2913,16 @@ constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestAddEthernetDeviceRequestAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestAddEthernetDeviceRequestTable = fidl_type_t(
     ::fidl::FidlCodedStruct(Fields43v1_conformance_TestAddEthernetDeviceRequest, 3u, 64u,
-                            "conformance/TestAddEthernetDeviceRequest",
+                            4294967295u, true, "conformance/TestAddEthernetDeviceRequest",
                             v1_conformance_TestAddEthernetDeviceRequestAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_Int64Struct[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_Int64StructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_Int64StructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_Int64Struct, 1u, 8u, "conformance/Int64Struct",
-                            v1_conformance_Int64StructAltTypePointerTable()));
+const fidl_type_t v1_conformance_Int64StructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_Int64Struct, 1u, 8u, 0u, false, "conformance/Int64Struct",
+    v1_conformance_Int64StructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields26v1_conformance_SimpleUnion[] = {
     ::fidl::FidlUnionField(nullptr, 4u, 1u), ::fidl::FidlUnionField(nullptr, 0u, 2u),
@@ -2944,8 +2962,8 @@ static const ::fidl::FidlStructField Fields32v1_conformance_TestXUnionInTable[] 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestXUnionInTableAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestXUnionInTableTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields32v1_conformance_TestXUnionInTable, 1u, 16u, "conformance/TestXUnionInTable",
-    v1_conformance_TestXUnionInTableAltTypePointerTable()));
+    Fields32v1_conformance_TestXUnionInTable, 1u, 16u, 4294967295u, true,
+    "conformance/TestXUnionInTable", v1_conformance_TestXUnionInTableAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields39v1_conformance_TestInlineXUnionInStruct[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u),
@@ -2954,8 +2972,8 @@ static const ::fidl::FidlStructField Fields39v1_conformance_TestInlineXUnionInSt
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestInlineXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestInlineXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields39v1_conformance_TestInlineXUnionInStruct, 3u, 56u,
-                            "conformance/TestInlineXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields39v1_conformance_TestInlineXUnionInStruct, 3u, 56u, 4294967295u,
+                            true, "conformance/TestInlineXUnionInStruct",
                             v1_conformance_TestInlineXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields41v1_conformance_TestFlexibleXUnionInStruct[] = {
@@ -2963,8 +2981,8 @@ static const ::fidl::FidlStructField Fields41v1_conformance_TestFlexibleXUnionIn
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestFlexibleXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestFlexibleXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields41v1_conformance_TestFlexibleXUnionInStruct, 1u, 24u,
-                            "conformance/TestFlexibleXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields41v1_conformance_TestFlexibleXUnionInStruct, 1u, 24u, 4294967295u,
+                            true, "conformance/TestFlexibleXUnionInStruct",
                             v1_conformance_TestFlexibleXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields33v1_conformance_SampleStrictXUnion[] = {
@@ -2988,8 +3006,8 @@ static const ::fidl::FidlStructField Fields39v1_conformance_TestStrictXUnionInSt
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_TestStrictXUnionInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_TestStrictXUnionInStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields39v1_conformance_TestStrictXUnionInStruct, 1u, 24u,
-                            "conformance/TestStrictXUnionInStruct",
+    ::fidl::FidlCodedStruct(Fields39v1_conformance_TestStrictXUnionInStruct, 1u, 24u, 4294967295u,
+                            true, "conformance/TestStrictXUnionInStruct",
                             v1_conformance_TestStrictXUnionInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields23v1_conformance_FiveByte[] = {
@@ -2997,16 +3015,16 @@ static const ::fidl::FidlStructField Fields23v1_conformance_FiveByte[] = {
 constexpr static inline const ::fidl::FidlCodedStruct* v1_conformance_FiveByteAltTypePointerTable()
     __attribute__((unused));
 const fidl_type_t v1_conformance_FiveByteTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields23v1_conformance_FiveByte, 2u, 8u, "conformance/FiveByte",
-                            v1_conformance_FiveByteAltTypePointerTable()));
+    ::fidl::FidlCodedStruct(Fields23v1_conformance_FiveByte, 2u, 8u, 0u, false,
+                            "conformance/FiveByte", v1_conformance_FiveByteAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31v1_conformance_FiveByteInVector[] = {
     ::fidl::FidlStructField(&v1_Vector4294967295nonnullable23v1_conformance_FiveByteTable, 0u, 0u)};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_FiveByteInVectorAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_FiveByteInVectorTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31v1_conformance_FiveByteInVector, 1u, 16u, "conformance/FiveByteInVector",
-    v1_conformance_FiveByteInVectorAltTypePointerTable()));
+    Fields31v1_conformance_FiveByteInVector, 1u, 16u, 4294967295u, false,
+    "conformance/FiveByteInVector", v1_conformance_FiveByteInVectorAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields31v1_conformance_FiveByteInStruct[] = {
     ::fidl::FidlStructField(&v1_conformance_FiveByteTable, 0u, 0u),
@@ -3015,7 +3033,7 @@ static const ::fidl::FidlStructField Fields31v1_conformance_FiveByteInStruct[] =
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_FiveByteInStructAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_FiveByteInStructTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields31v1_conformance_FiveByteInStruct, 3u, 24u, "conformance/FiveByteInStruct",
+    Fields31v1_conformance_FiveByteInStruct, 3u, 24u, 0u, false, "conformance/FiveByteInStruct",
     v1_conformance_FiveByteInStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields30v1_conformance_FiveByteInArray[] = {
@@ -3023,15 +3041,15 @@ static const ::fidl::FidlStructField Fields30v1_conformance_FiveByteInArray[] = 
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_FiveByteInArrayAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_FiveByteInArrayTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields30v1_conformance_FiveByteInArray, 1u, 24u, "conformance/FiveByteInArray",
+    Fields30v1_conformance_FiveByteInArray, 1u, 24u, 0u, false, "conformance/FiveByteInArray",
     v1_conformance_FiveByteInArrayAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26v1_conformance_EmptyStruct[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_EmptyStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_conformance_EmptyStructTable = fidl_type_t(
-    ::fidl::FidlCodedStruct(Fields26v1_conformance_EmptyStruct, 0u, 1u, "conformance/EmptyStruct",
-                            v1_conformance_EmptyStructAltTypePointerTable()));
+const fidl_type_t v1_conformance_EmptyStructTable = fidl_type_t(::fidl::FidlCodedStruct(
+    Fields26v1_conformance_EmptyStruct, 0u, 1u, 0u, false, "conformance/EmptyStruct",
+    v1_conformance_EmptyStructAltTypePointerTable()));
 
 static const ::fidl::FidlXUnionField Fields36v1_conformance_XUnionWithEmptyStruct[] = {
     ::fidl::FidlXUnionField(&v1_conformance_EmptyStructTable, 1956241662u)};
@@ -3071,8 +3089,8 @@ static const ::fidl::FidlStructField Fields34v1_conformance_StructWithOptionals[
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_StructWithOptionalsAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_StructWithOptionalsTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34v1_conformance_StructWithOptionals, 7u, 128u, "conformance/StructWithOptionals",
-    v1_conformance_StructWithOptionalsAltTypePointerTable()));
+    Fields34v1_conformance_StructWithOptionals, 7u, 128u, 64u, true,
+    "conformance/StructWithOptionals", v1_conformance_StructWithOptionalsAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields34v1_conformance_EmptyStructSandwich[] = {
     ::fidl::FidlStructField(&v1_String4294967295nonnullableTable, 0u, 0u),
@@ -3081,8 +3099,8 @@ static const ::fidl::FidlStructField Fields34v1_conformance_EmptyStructSandwich[
 constexpr static inline const ::fidl::FidlCodedStruct*
 v1_conformance_EmptyStructSandwichAltTypePointerTable() __attribute__((unused));
 const fidl_type_t v1_conformance_EmptyStructSandwichTable = fidl_type_t(::fidl::FidlCodedStruct(
-    Fields34v1_conformance_EmptyStructSandwich, 3u, 40u, "conformance/EmptyStructSandwich",
-    v1_conformance_EmptyStructSandwichAltTypePointerTable()));
+    Fields34v1_conformance_EmptyStructSandwich, 3u, 40u, 4294967295u, false,
+    "conformance/EmptyStructSandwich", v1_conformance_EmptyStructSandwichAltTypePointerTable()));
 
 // Old <-> V1 map.
 

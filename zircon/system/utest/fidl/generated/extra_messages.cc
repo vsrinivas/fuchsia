@@ -57,7 +57,7 @@ static const ::fidl::FidlStructField Fields52fidl_test_coding_LinearizerTestVect
     ::fidl::FidlStructField(&Vector4294967295nonnullable6uint32Table, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52fidl_test_coding_LinearizerTestVectorOfUint32Request, 1u, 32u, "fidl.test.coding/LinearizerTestVectorOfUint32Request", fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_LinearizerTestVectorOfUint32RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52fidl_test_coding_LinearizerTestVectorOfUint32Request, 1u, 32u, 4294967295u, false, "fidl.test.coding/LinearizerTestVectorOfUint32Request", fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable()));
 
 static const fidl_type_t String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
 
@@ -69,7 +69,7 @@ static const ::fidl::FidlStructField Fields52fidl_test_coding_LinearizerTestVect
     ::fidl::FidlStructField(&Vector4294967295nonnullable27String4294967295nonnullableTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52fidl_test_coding_LinearizerTestVectorOfStringRequest, 1u, 32u, "fidl.test.coding/LinearizerTestVectorOfStringRequest", fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields52fidl_test_coding_LinearizerTestVectorOfStringRequest, 1u, 32u, 4294967295u, false, "fidl.test.coding/LinearizerTestVectorOfStringRequest", fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable()));
 
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint8Enum(uint64_t v) { return (v == 0ul) || (v == 255ul) || (v == 42ul) || false; }
@@ -79,7 +79,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Uint8EnumStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Uint8EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Uint8EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Uint8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Uint8EnumStruct, 1u, 1u, "fidl.test.coding/Uint8EnumStruct", fidl_test_coding_Uint8EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Uint8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Uint8EnumStruct, 1u, 1u, 0u, false, "fidl.test.coding/Uint8EnumStruct", fidl_test_coding_Uint8EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint64Enum(uint64_t v) { return (v == 0ul) || (v == 18446744073709551615ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Uint64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint64, &EnumValidatorFor_fidl_test_coding_Uint64Enum, "fidl.test.coding/Uint64Enum"));
@@ -88,7 +88,7 @@ static const ::fidl::FidlStructField Fields33fidl_test_coding_Uint64EnumStruct[]
     ::fidl::FidlStructField(&fidl_test_coding_Uint64EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Uint64EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Uint64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint64EnumStruct, 1u, 8u, "fidl.test.coding/Uint64EnumStruct", fidl_test_coding_Uint64EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Uint64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint64EnumStruct, 1u, 8u, 0u, false, "fidl.test.coding/Uint64EnumStruct", fidl_test_coding_Uint64EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint32Enum(uint64_t v) { return (v == 0ul) || (v == 4294967295ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Uint32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_fidl_test_coding_Uint32Enum, "fidl.test.coding/Uint32Enum"));
@@ -97,7 +97,7 @@ static const ::fidl::FidlStructField Fields33fidl_test_coding_Uint32EnumStruct[]
     ::fidl::FidlStructField(&fidl_test_coding_Uint32EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Uint32EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Uint32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint32EnumStruct, 1u, 4u, "fidl.test.coding/Uint32EnumStruct", fidl_test_coding_Uint32EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Uint32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint32EnumStruct, 1u, 4u, 0u, false, "fidl.test.coding/Uint32EnumStruct", fidl_test_coding_Uint32EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Uint16Enum(uint64_t v) { return (v == 0ul) || (v == 65535ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Uint16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint16, &EnumValidatorFor_fidl_test_coding_Uint16Enum, "fidl.test.coding/Uint16Enum"));
@@ -106,7 +106,7 @@ static const ::fidl::FidlStructField Fields33fidl_test_coding_Uint16EnumStruct[]
     ::fidl::FidlStructField(&fidl_test_coding_Uint16EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Uint16EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Uint16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint16EnumStruct, 1u, 2u, "fidl.test.coding/Uint16EnumStruct", fidl_test_coding_Uint16EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Uint16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_Uint16EnumStruct, 1u, 2u, 0u, false, "fidl.test.coding/Uint16EnumStruct", fidl_test_coding_Uint16EnumStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields38fidl_test_coding_StructWithManyHandles[] = {
     ::fidl::FidlStructField(&HandlehandlenonnullableTable, 0u, 0u),
@@ -114,7 +114,7 @@ static const ::fidl::FidlStructField Fields38fidl_test_coding_StructWithManyHand
     ::fidl::FidlStructField(&Vector2nonnullable23HandlehandlenonnullableTable, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_StructWithManyHandlesAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38fidl_test_coding_StructWithManyHandles, 3u, 24u, "fidl.test.coding/StructWithManyHandles", fidl_test_coding_StructWithManyHandlesAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38fidl_test_coding_StructWithManyHandles, 3u, 24u, 8u, false, "fidl.test.coding/StructWithManyHandles", fidl_test_coding_StructWithManyHandlesAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields47fidl_test_coding_SmallerTableOfStructWithHandle[] = {
     ::fidl::FidlTableField(&fidl_test_coding_StructWithManyHandlesTable,2u)
@@ -126,7 +126,7 @@ static const ::fidl::FidlStructField Fields33fidl_test_coding_StructWithHandle[]
     ::fidl::FidlStructField(nullptr, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_StructWithHandleAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_StructWithHandleTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_StructWithHandle, 2u, 8u, "fidl.test.coding/StructWithHandle", fidl_test_coding_StructWithHandleAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_StructWithHandleTable = fidl_type_t(::fidl::FidlCodedStruct(Fields33fidl_test_coding_StructWithHandle, 2u, 8u, 0u, false, "fidl.test.coding/StructWithHandle", fidl_test_coding_StructWithHandleAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields40fidl_test_coding_TableOfStructWithHandle[] = {
     ::fidl::FidlTableField(&fidl_test_coding_StructWithHandleTable,1u),
@@ -138,13 +138,13 @@ static const ::fidl::FidlStructField Fields43fidl_test_coding_SampleNullableXUni
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionNullableRefTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43fidl_test_coding_SampleNullableXUnionStruct, 1u, 24u, "fidl.test.coding/SampleNullableXUnionStruct", fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43fidl_test_coding_SampleNullableXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleNullableXUnionStruct", fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields26fidl_test_coding_IntStruct[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_IntStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_IntStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields26fidl_test_coding_IntStruct, 1u, 8u, "fidl.test.coding/IntStruct", fidl_test_coding_IntStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_IntStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields26fidl_test_coding_IntStruct, 1u, 8u, 0u, false, "fidl.test.coding/IntStruct", fidl_test_coding_IntStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields28fidl_test_coding_SimpleTable[] = {
     ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1u),
@@ -170,7 +170,7 @@ static const ::fidl::FidlStructField Fields35fidl_test_coding_SampleXUnionStruct
     ::fidl::FidlStructField(&fidl_test_coding_SampleXUnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_SampleXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_coding_SampleXUnionStruct, 1u, 24u, "fidl.test.coding/SampleXUnionStruct", fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35fidl_test_coding_SampleXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleXUnionStruct", fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields28fidl_test_coding_SampleUnion[] = {
     ::fidl::FidlUnionField(&fidl_test_coding_IntStructTable, 8u, 1u),
@@ -198,7 +198,7 @@ static const ::fidl::FidlStructField Fields41fidl_test_coding_SampleStrictXUnion
     ::fidl::FidlStructField(&fidl_test_coding_SampleStrictXUnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41fidl_test_coding_SampleStrictXUnionStruct, 1u, 24u, "fidl.test.coding/SampleStrictXUnionStruct", fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_SampleStrictXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41fidl_test_coding_SampleStrictXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleStrictXUnionStruct", fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields33fidl_test_coding_OlderSimpleTable[] = {
     ::fidl::FidlTableField(&fidl_test_coding_IntStructTable,1u)
@@ -219,7 +219,7 @@ static const ::fidl::FidlStructField Fields31fidl_test_coding_Int8EnumStruct[] =
     ::fidl::FidlStructField(&fidl_test_coding_Int8EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int8EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields31fidl_test_coding_Int8EnumStruct, 1u, 1u, "fidl.test.coding/Int8EnumStruct", fidl_test_coding_Int8EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields31fidl_test_coding_Int8EnumStruct, 1u, 1u, 0u, false, "fidl.test.coding/Int8EnumStruct", fidl_test_coding_Int8EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Int64Enum(uint64_t v) { return (v == 9223372036854775808ul) || (v == 9223372036854775807ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Int64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt64, &EnumValidatorFor_fidl_test_coding_Int64Enum, "fidl.test.coding/Int64Enum"));
@@ -228,7 +228,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Int64EnumStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Int64EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int64EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int64EnumStruct, 1u, 8u, "fidl.test.coding/Int64EnumStruct", fidl_test_coding_Int64EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int64EnumStruct, 1u, 8u, 0u, false, "fidl.test.coding/Int64EnumStruct", fidl_test_coding_Int64EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Int32Enum(uint64_t v) { return (v == 18446744071562067968ul) || (v == 2147483647ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Int32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_fidl_test_coding_Int32Enum, "fidl.test.coding/Int32Enum"));
@@ -237,7 +237,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Int32EnumStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Int32EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int32EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int32EnumStruct, 1u, 4u, "fidl.test.coding/Int32EnumStruct", fidl_test_coding_Int32EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int32EnumStruct, 1u, 4u, 0u, false, "fidl.test.coding/Int32EnumStruct", fidl_test_coding_Int32EnumStructAltTypePointerTable()));
 
 const fidl_type_t fidl_test_coding_Int32BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 67110976ul, "fidl.test.coding/Int32Bits"));
 
@@ -245,7 +245,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Int32BitsStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Int32BitsTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int32BitsStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int32BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int32BitsStruct, 1u, 4u, "fidl.test.coding/Int32BitsStruct", fidl_test_coding_Int32BitsStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int32BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int32BitsStruct, 1u, 4u, 0u, false, "fidl.test.coding/Int32BitsStruct", fidl_test_coding_Int32BitsStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_fidl_test_coding_Int16Enum(uint64_t v) { return (v == 18446744073709518848ul) || (v == 32767ul) || (v == 42ul) || false; }
 const fidl_type_t fidl_test_coding_Int16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt16, &EnumValidatorFor_fidl_test_coding_Int16Enum, "fidl.test.coding/Int16Enum"));
@@ -254,7 +254,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Int16EnumStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Int16EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int16EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int16EnumStruct, 1u, 2u, "fidl.test.coding/Int16EnumStruct", fidl_test_coding_Int16EnumStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int16EnumStruct, 1u, 2u, 0u, false, "fidl.test.coding/Int16EnumStruct", fidl_test_coding_Int16EnumStructAltTypePointerTable()));
 
 const fidl_type_t fidl_test_coding_Int16BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint16, 21ul, "fidl.test.coding/Int16Bits"));
 
@@ -262,7 +262,7 @@ static const ::fidl::FidlStructField Fields32fidl_test_coding_Int16BitsStruct[] 
     ::fidl::FidlStructField(&fidl_test_coding_Int16BitsTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* fidl_test_coding_Int16BitsStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t fidl_test_coding_Int16BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int16BitsStruct, 1u, 2u, "fidl.test.coding/Int16BitsStruct", fidl_test_coding_Int16BitsStructAltTypePointerTable()));
+const fidl_type_t fidl_test_coding_Int16BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields32fidl_test_coding_Int16BitsStruct, 1u, 2u, 0u, false, "fidl.test.coding/Int16BitsStruct", fidl_test_coding_Int16BitsStructAltTypePointerTable()));
 
 // Coding tables for v1 wire format.
 
@@ -317,7 +317,7 @@ static const ::fidl::FidlStructField Fields55v1_fidl_test_coding_LinearizerTestV
     ::fidl::FidlStructField(&v1_Vector4294967295nonnullable6uint32Table, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_LinearizerTestVectorOfUint32RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_fidl_test_coding_LinearizerTestVectorOfUint32Request, 1u, 32u, "fidl.test.coding/LinearizerTestVectorOfUint32Request", v1_fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_LinearizerTestVectorOfUint32RequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_fidl_test_coding_LinearizerTestVectorOfUint32Request, 1u, 32u, 4294967295u, false, "fidl.test.coding/LinearizerTestVectorOfUint32Request", v1_fidl_test_coding_LinearizerTestVectorOfUint32RequestAltTypePointerTable()));
 
 static const fidl_type_t v1_String4294967295nonnullableTable = fidl_type_t(::fidl::FidlCodedString(4294967295u, ::fidl::kNonnullable));
 
@@ -329,7 +329,7 @@ static const ::fidl::FidlStructField Fields55v1_fidl_test_coding_LinearizerTestV
     ::fidl::FidlStructField(&v1_Vector4294967295nonnullable30v1_String4294967295nonnullableTable, 16u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_fidl_test_coding_LinearizerTestVectorOfStringRequest, 1u, 32u, "fidl.test.coding/LinearizerTestVectorOfStringRequest", v1_fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_LinearizerTestVectorOfStringRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields55v1_fidl_test_coding_LinearizerTestVectorOfStringRequest, 1u, 32u, 4294967295u, false, "fidl.test.coding/LinearizerTestVectorOfStringRequest", v1_fidl_test_coding_LinearizerTestVectorOfStringRequestAltTypePointerTable()));
 
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Uint8Enum(uint64_t v) { return (v == 0ul) || (v == 255ul) || (v == 42ul) || false; }
@@ -339,7 +339,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Uint8EnumStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Uint8EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Uint8EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Uint8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Uint8EnumStruct, 1u, 1u, "fidl.test.coding/Uint8EnumStruct", v1_fidl_test_coding_Uint8EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Uint8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Uint8EnumStruct, 1u, 1u, 0u, false, "fidl.test.coding/Uint8EnumStruct", v1_fidl_test_coding_Uint8EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Uint64Enum(uint64_t v) { return (v == 0ul) || (v == 18446744073709551615ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Uint64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint64, &EnumValidatorFor_v1_fidl_test_coding_Uint64Enum, "fidl.test.coding/Uint64Enum"));
@@ -348,7 +348,7 @@ static const ::fidl::FidlStructField Fields36v1_fidl_test_coding_Uint64EnumStruc
     ::fidl::FidlStructField(&v1_fidl_test_coding_Uint64EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Uint64EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Uint64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint64EnumStruct, 1u, 8u, "fidl.test.coding/Uint64EnumStruct", v1_fidl_test_coding_Uint64EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Uint64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint64EnumStruct, 1u, 8u, 0u, false, "fidl.test.coding/Uint64EnumStruct", v1_fidl_test_coding_Uint64EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Uint32Enum(uint64_t v) { return (v == 0ul) || (v == 4294967295ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Uint32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint32, &EnumValidatorFor_v1_fidl_test_coding_Uint32Enum, "fidl.test.coding/Uint32Enum"));
@@ -357,7 +357,7 @@ static const ::fidl::FidlStructField Fields36v1_fidl_test_coding_Uint32EnumStruc
     ::fidl::FidlStructField(&v1_fidl_test_coding_Uint32EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Uint32EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Uint32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint32EnumStruct, 1u, 4u, "fidl.test.coding/Uint32EnumStruct", v1_fidl_test_coding_Uint32EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Uint32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint32EnumStruct, 1u, 4u, 0u, false, "fidl.test.coding/Uint32EnumStruct", v1_fidl_test_coding_Uint32EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Uint16Enum(uint64_t v) { return (v == 0ul) || (v == 65535ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Uint16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kUint16, &EnumValidatorFor_v1_fidl_test_coding_Uint16Enum, "fidl.test.coding/Uint16Enum"));
@@ -366,7 +366,7 @@ static const ::fidl::FidlStructField Fields36v1_fidl_test_coding_Uint16EnumStruc
     ::fidl::FidlStructField(&v1_fidl_test_coding_Uint16EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Uint16EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Uint16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint16EnumStruct, 1u, 2u, "fidl.test.coding/Uint16EnumStruct", v1_fidl_test_coding_Uint16EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Uint16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_Uint16EnumStruct, 1u, 2u, 0u, false, "fidl.test.coding/Uint16EnumStruct", v1_fidl_test_coding_Uint16EnumStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields41v1_fidl_test_coding_StructWithManyHandles[] = {
     ::fidl::FidlStructField(&v1_HandlehandlenonnullableTable, 0u, 0u),
@@ -374,7 +374,7 @@ static const ::fidl::FidlStructField Fields41v1_fidl_test_coding_StructWithManyH
     ::fidl::FidlStructField(&v1_Vector2nonnullable26v1_HandlehandlenonnullableTable, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_StructWithManyHandlesAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41v1_fidl_test_coding_StructWithManyHandles, 3u, 24u, "fidl.test.coding/StructWithManyHandles", v1_fidl_test_coding_StructWithManyHandlesAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_StructWithManyHandlesTable = fidl_type_t(::fidl::FidlCodedStruct(Fields41v1_fidl_test_coding_StructWithManyHandles, 3u, 24u, 8u, false, "fidl.test.coding/StructWithManyHandles", v1_fidl_test_coding_StructWithManyHandlesAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields50v1_fidl_test_coding_SmallerTableOfStructWithHandle[] = {
     ::fidl::FidlTableField(&v1_fidl_test_coding_StructWithManyHandlesTable,2u)
@@ -386,7 +386,7 @@ static const ::fidl::FidlStructField Fields36v1_fidl_test_coding_StructWithHandl
     ::fidl::FidlStructField(nullptr, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_StructWithHandleAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_StructWithHandleTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_StructWithHandle, 2u, 8u, "fidl.test.coding/StructWithHandle", v1_fidl_test_coding_StructWithHandleAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_StructWithHandleTable = fidl_type_t(::fidl::FidlCodedStruct(Fields36v1_fidl_test_coding_StructWithHandle, 2u, 8u, 0u, false, "fidl.test.coding/StructWithHandle", v1_fidl_test_coding_StructWithHandleAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields43v1_fidl_test_coding_TableOfStructWithHandle[] = {
     ::fidl::FidlTableField(&v1_fidl_test_coding_StructWithHandleTable,1u),
@@ -398,13 +398,13 @@ static const ::fidl::FidlStructField Fields46v1_fidl_test_coding_SampleNullableX
     ::fidl::FidlStructField(&v1_fidl_test_coding_SampleXUnionNullableRefTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_fidl_test_coding_SampleNullableXUnionStruct, 1u, 24u, "fidl.test.coding/SampleNullableXUnionStruct", v1_fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_SampleNullableXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_fidl_test_coding_SampleNullableXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleNullableXUnionStruct", v1_fidl_test_coding_SampleNullableXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlStructField Fields29v1_fidl_test_coding_IntStruct[] = {
     ::fidl::FidlStructField(nullptr, 8u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_IntStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_IntStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields29v1_fidl_test_coding_IntStruct, 1u, 8u, "fidl.test.coding/IntStruct", v1_fidl_test_coding_IntStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_IntStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields29v1_fidl_test_coding_IntStruct, 1u, 8u, 0u, false, "fidl.test.coding/IntStruct", v1_fidl_test_coding_IntStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields31v1_fidl_test_coding_SimpleTable[] = {
     ::fidl::FidlTableField(&v1_fidl_test_coding_IntStructTable,1u),
@@ -430,7 +430,7 @@ static const ::fidl::FidlStructField Fields38v1_fidl_test_coding_SampleXUnionStr
     ::fidl::FidlStructField(&v1_fidl_test_coding_SampleXUnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_SampleXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_coding_SampleXUnionStruct, 1u, 24u, "fidl.test.coding/SampleXUnionStruct", v1_fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_SampleXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields38v1_fidl_test_coding_SampleXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleXUnionStruct", v1_fidl_test_coding_SampleXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlUnionField Fields31v1_fidl_test_coding_SampleUnion[] = {
     ::fidl::FidlUnionField(&v1_fidl_test_coding_IntStructTable, 0u, 1u),
@@ -458,7 +458,7 @@ static const ::fidl::FidlStructField Fields44v1_fidl_test_coding_SampleStrictXUn
     ::fidl::FidlStructField(&v1_fidl_test_coding_SampleStrictXUnionTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_SampleStrictXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields44v1_fidl_test_coding_SampleStrictXUnionStruct, 1u, 24u, "fidl.test.coding/SampleStrictXUnionStruct", v1_fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_SampleStrictXUnionStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields44v1_fidl_test_coding_SampleStrictXUnionStruct, 1u, 24u, 64u, false, "fidl.test.coding/SampleStrictXUnionStruct", v1_fidl_test_coding_SampleStrictXUnionStructAltTypePointerTable()));
 
 static const ::fidl::FidlTableField Fields36v1_fidl_test_coding_OlderSimpleTable[] = {
     ::fidl::FidlTableField(&v1_fidl_test_coding_IntStructTable,1u)
@@ -479,7 +479,7 @@ static const ::fidl::FidlStructField Fields34v1_fidl_test_coding_Int8EnumStruct[
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int8EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int8EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34v1_fidl_test_coding_Int8EnumStruct, 1u, 1u, "fidl.test.coding/Int8EnumStruct", v1_fidl_test_coding_Int8EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int8EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields34v1_fidl_test_coding_Int8EnumStruct, 1u, 1u, 0u, false, "fidl.test.coding/Int8EnumStruct", v1_fidl_test_coding_Int8EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Int64Enum(uint64_t v) { return (v == 9223372036854775808ul) || (v == 9223372036854775807ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Int64EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt64, &EnumValidatorFor_v1_fidl_test_coding_Int64Enum, "fidl.test.coding/Int64Enum"));
@@ -488,7 +488,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Int64EnumStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int64EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int64EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int64EnumStruct, 1u, 8u, "fidl.test.coding/Int64EnumStruct", v1_fidl_test_coding_Int64EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int64EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int64EnumStruct, 1u, 8u, 0u, false, "fidl.test.coding/Int64EnumStruct", v1_fidl_test_coding_Int64EnumStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Int32Enum(uint64_t v) { return (v == 18446744071562067968ul) || (v == 2147483647ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Int32EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt32, &EnumValidatorFor_v1_fidl_test_coding_Int32Enum, "fidl.test.coding/Int32Enum"));
@@ -497,7 +497,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Int32EnumStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int32EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int32EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int32EnumStruct, 1u, 4u, "fidl.test.coding/Int32EnumStruct", v1_fidl_test_coding_Int32EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int32EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int32EnumStruct, 1u, 4u, 0u, false, "fidl.test.coding/Int32EnumStruct", v1_fidl_test_coding_Int32EnumStructAltTypePointerTable()));
 
 const fidl_type_t v1_fidl_test_coding_Int32BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint32, 67110976ul, "fidl.test.coding/Int32Bits"));
 
@@ -505,7 +505,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Int32BitsStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int32BitsTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int32BitsStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int32BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int32BitsStruct, 1u, 4u, "fidl.test.coding/Int32BitsStruct", v1_fidl_test_coding_Int32BitsStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int32BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int32BitsStruct, 1u, 4u, 0u, false, "fidl.test.coding/Int32BitsStruct", v1_fidl_test_coding_Int32BitsStructAltTypePointerTable()));
 
 static constexpr bool EnumValidatorFor_v1_fidl_test_coding_Int16Enum(uint64_t v) { return (v == 18446744073709518848ul) || (v == 32767ul) || (v == 42ul) || false; }
 const fidl_type_t v1_fidl_test_coding_Int16EnumTable = fidl_type_t(::fidl::FidlCodedEnum(::fidl::FidlCodedPrimitive::kInt16, &EnumValidatorFor_v1_fidl_test_coding_Int16Enum, "fidl.test.coding/Int16Enum"));
@@ -514,7 +514,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Int16EnumStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int16EnumTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int16EnumStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int16EnumStruct, 1u, 2u, "fidl.test.coding/Int16EnumStruct", v1_fidl_test_coding_Int16EnumStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int16EnumStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int16EnumStruct, 1u, 2u, 0u, false, "fidl.test.coding/Int16EnumStruct", v1_fidl_test_coding_Int16EnumStructAltTypePointerTable()));
 
 const fidl_type_t v1_fidl_test_coding_Int16BitsTable = fidl_type_t(::fidl::FidlCodedBits(::fidl::FidlCodedPrimitive::kUint16, 21ul, "fidl.test.coding/Int16Bits"));
 
@@ -522,7 +522,7 @@ static const ::fidl::FidlStructField Fields35v1_fidl_test_coding_Int16BitsStruct
     ::fidl::FidlStructField(&v1_fidl_test_coding_Int16BitsTable, 0u, 0u)
 };
 constexpr static inline const ::fidl::FidlCodedStruct* v1_fidl_test_coding_Int16BitsStructAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_fidl_test_coding_Int16BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int16BitsStruct, 1u, 2u, "fidl.test.coding/Int16BitsStruct", v1_fidl_test_coding_Int16BitsStructAltTypePointerTable()));
+const fidl_type_t v1_fidl_test_coding_Int16BitsStructTable = fidl_type_t(::fidl::FidlCodedStruct(Fields35v1_fidl_test_coding_Int16BitsStruct, 1u, 2u, 0u, false, "fidl.test.coding/Int16BitsStruct", v1_fidl_test_coding_Int16BitsStructAltTypePointerTable()));
 
 // Old <-> V1 map.
 

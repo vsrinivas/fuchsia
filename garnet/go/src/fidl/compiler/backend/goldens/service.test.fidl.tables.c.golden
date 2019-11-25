@@ -11,12 +11,12 @@ extern "C" {
 extern const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable;
 static const ::fidl::FidlStructField Fields45test_name_SecondProtocolMethodOnSecondRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, "test.name/SecondProtocolMethodOnSecondRequest", test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
+const fidl_type_t test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields45test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, 0u, false, "test.name/SecondProtocolMethodOnSecondRequest", test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
 
 extern const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable;
 static const ::fidl::FidlStructField Fields43test_name_FirstProtocolMethodOnFirstRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, "test.name/FirstProtocolMethodOnFirstRequest", test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
+const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields43test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, 0u, false, "test.name/FirstProtocolMethodOnFirstRequest", test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
 
 
 // Coding tables for v1 wire format.
@@ -26,12 +26,12 @@ const fidl_type_t test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t
 extern const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable;
 static const ::fidl::FidlStructField Fields48v1_test_name_SecondProtocolMethodOnSecondRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, "test.name/SecondProtocolMethodOnSecondRequest", v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_SecondProtocolMethodOnSecondRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields48v1_test_name_SecondProtocolMethodOnSecondRequest, 0u, 16u, 0u, false, "test.name/SecondProtocolMethodOnSecondRequest", v1_test_name_SecondProtocolMethodOnSecondRequestAltTypePointerTable()));
 
 extern const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable;
 static const ::fidl::FidlStructField Fields46v1_test_name_FirstProtocolMethodOnFirstRequest[] = {};
 constexpr static inline const ::fidl::FidlCodedStruct* v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable() __attribute__((unused));
-const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, "test.name/FirstProtocolMethodOnFirstRequest", v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
+const fidl_type_t v1_test_name_FirstProtocolMethodOnFirstRequestTable = fidl_type_t(::fidl::FidlCodedStruct(Fields46v1_test_name_FirstProtocolMethodOnFirstRequest, 0u, 16u, 0u, false, "test.name/FirstProtocolMethodOnFirstRequest", v1_test_name_FirstProtocolMethodOnFirstRequestAltTypePointerTable()));
 
 
 // Old <-> V1 map.

@@ -210,11 +210,16 @@ struct RequestHandleType : public Type {
 struct StructPointerType;
 
 struct StructType : public Type {
-  StructType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
+  StructType(std::string name, std::vector<StructField> fields, uint32_t size,
+             uint32_t max_out_of_line, bool contains_union, std::string qname)
       : Type(Kind::kStruct, std::move(name), size, CodingNeeded::kAlways),
+        max_out_of_line(max_out_of_line),
+        contains_union(contains_union),
         fields(std::move(fields)),
         qname(std::move(qname)) {}
 
+  uint32_t max_out_of_line;
+  bool contains_union;
   std::vector<StructField> fields;
   std::string qname;
   StructPointerType* maybe_reference_type = nullptr;
@@ -283,11 +288,16 @@ struct XUnionType : public Type {
 };
 
 struct MessageType : public Type {
-  MessageType(std::string name, std::vector<StructField> fields, uint32_t size, std::string qname)
+  MessageType(std::string name, std::vector<StructField> fields, uint32_t size,
+              uint32_t max_out_of_line, bool contains_union, std::string qname)
       : Type(Kind::kMessage, std::move(name), size, CodingNeeded::kAlways),
+        max_out_of_line(max_out_of_line),
+        contains_union(contains_union),
         fields(std::move(fields)),
         qname(std::move(qname)) {}
 
+  uint32_t max_out_of_line;
+  bool contains_union;
   std::vector<StructField> fields;
   std::string qname;
 };

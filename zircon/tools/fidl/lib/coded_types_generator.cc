@@ -451,7 +451,9 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
           std::string message_qname = NameMessage(method_qname, kind);
           protocol_messages.push_back(std::make_unique<coded::MessageType>(
               std::move(message_name), std::vector<coded::StructField>(),
-              message.typeshape(wire_format).InlineSize(), std::move(message_qname)));
+              message.typeshape(wire_format).InlineSize(),
+              message.typeshape(wire_format).MaxOutOfLine(),
+              message.typeshape(wire_format).ContainsUnion(), std::move(message_qname)));
         };
         if (method.maybe_request) {
           CreateMessage(*method.maybe_request, types::MessageKind::kRequest);
@@ -481,11 +483,13 @@ void CodedTypesGenerator::CompileDecl(const flat::Decl* decl, const WireFormat w
       if (struct_decl->is_request_or_response)
         break;
       std::string struct_name = NameCodedName(struct_decl->name, wire_format);
-      named_coded_types_.emplace(
-          &decl->name,
-          std::make_unique<coded::StructType>(
-              std::move(struct_name), std::vector<coded::StructField>(),
-              struct_decl->typeshape(wire_format).InlineSize(), NameFlatName(struct_decl->name)));
+      named_coded_types_.emplace(&decl->name,
+                                 std::make_unique<coded::StructType>(
+                                     std::move(struct_name), std::vector<coded::StructField>(),
+                                     struct_decl->typeshape(wire_format).InlineSize(),
+                                     struct_decl->typeshape(wire_format).MaxOutOfLine(),
+                                     struct_decl->typeshape(wire_format).ContainsUnion(),
+                                     NameFlatName(struct_decl->name)));
       break;
     }
     case flat::Decl::Kind::kUnion: {

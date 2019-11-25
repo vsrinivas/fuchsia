@@ -161,10 +161,10 @@ void Llcpp::Interface::ActionCompleterBase::Reply(::fidl::DecodedMessage<ActionR
 
 
 void Llcpp::SetTransactionHeaderFor::ActionRequest(const ::fidl::DecodedMessage<Llcpp::ActionRequest>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLlcpp_Action_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLlcpp_Action_GenOrdinal);
 }
 void Llcpp::SetTransactionHeaderFor::ActionResponse(const ::fidl::DecodedMessage<Llcpp::ActionResponse>& _msg) {
-  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLlcpp_Action_Ordinal);
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kLlcpp_Action_GenOrdinal);
 }
 
 }  // namespace coding
