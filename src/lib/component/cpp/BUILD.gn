@@ -36,7 +36,6 @@ source_set("cpp") {
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
-    "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/test_runner/cpp:cpp",
     "//src/lib/component/cpp:environment_services",

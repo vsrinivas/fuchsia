@@ -31,7 +31,6 @@ source_set("cobalt") {
   ]
 
   deps = [
-    "//garnet/public/lib/cobalt/cpp:deprecated_cobalt_logger",
     "//src/lib/callback",
     "//src/lib/cobalt/cpp:cobalt_logger",
     "//zircon/system/fidl/fuchsia-cobalt",
