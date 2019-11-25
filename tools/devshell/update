@@ -27,7 +27,7 @@ function main {
   check-for-amber-server || return -1
 
   for pkg in $(cat "${FUCHSIA_BUILD_DIR}/cache_packages.list"); do
-    fx-command-run shell amberctl get_up -n "${pkg}" -v 0
+    fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}"
   done
   fx-command-run ota
 }

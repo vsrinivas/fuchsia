@@ -30,11 +30,13 @@ function main {
 
   check-for-amber-server || return -1
 
-  if needs-update; then
-    fx-command-run shell "$@" amberctl system_update || return $?
-    fx-command-run shell log_listener --since_now yes --clock Local
-  fi
+  # Note: the following command continues to run as the system goes into
+  # reboot, so we lose SSH connection before it "completes". As such the
+  # following command completes with error, but that is not actually an error.
+  fx-command-run shell update check-now --monitor
+
   fx-command-run wait
+
   if needs-update; then
     fx-error "After update, system appears still out of date."
     return 1

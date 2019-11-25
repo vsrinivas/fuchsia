@@ -51,7 +51,7 @@ function main {
   fi
 
   for pkg in "${pkgs[@]}"; do
-    if ! fx-command-run shell amberctl get_up -n "$pkg" -v 0; then
+    if ! fx-command-run shell pkgctl resolve "fuchsia-pkg://fuchsia.com/${pkg}"; then
       r=$?
       fx-error "Push of $pkg failed"
       return $r
