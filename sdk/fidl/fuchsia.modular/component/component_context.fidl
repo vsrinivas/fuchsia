@@ -4,7 +4,6 @@
 
 library fuchsia.modular;
 
-using fuchsia.ledger;
 using fuchsia.sys;
 
 /// Provided to all component instances in their respective initialization
@@ -12,10 +11,6 @@ using fuchsia.sys;
 /// ModuleContext and an Agent gets it from its AgentContext.
 [Discoverable]
 protocol ComponentContext {
-    /// Gets the Ledger associated with this component. This ledger instance is
-    /// unique to this component (nb. not the component instance) under this user.
-    GetLedger(request<fuchsia.ledger.Ledger> request);
-
     /// Used to start an agent in the user scope if it isn't already running, and
     /// connect to it.
     ConnectToAgent(string url,

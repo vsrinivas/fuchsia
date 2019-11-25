@@ -7,6 +7,7 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 
 #include <memory>
@@ -16,7 +17,6 @@
 #include <fs/synchronous_vfs.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
@@ -25,34 +25,32 @@
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/mock_base.h"
-#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular_testing {
 namespace {
 
 using ::sys::testing::FakeLauncher;
 
-class EntityProviderRunnerTest : public TestWithLedger, modular::EntityProviderLauncher {
+class EntityProviderRunnerTest : public gtest::RealLoopFixture, modular::EntityProviderLauncher {
  public:
   EntityProviderRunnerTest() = default;
 
   void SetUp() override {
-    TestWithLedger::SetUp();
+    gtest::RealLoopFixture::SetUp();
 
     entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(
         static_cast<modular::EntityProviderLauncher*>(this));
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
     // order for agent creation to be synchronous, which these tests assume.
-    agent_runner_ = std::make_unique<modular::AgentRunner>(&launcher_, ledger_repository(),
-                                                           token_manager_.get(), nullptr,
-                                                           entity_provider_runner_.get(), &node_);
+    agent_runner_ = std::make_unique<modular::AgentRunner>(
+        &launcher_, token_manager_.get(), nullptr, entity_provider_runner_.get(), &node_);
   }
 
   void TearDown() override {
     agent_runner_.reset();
     entity_provider_runner_.reset();
 
-    TestWithLedger::TearDown();
+    gtest::RealLoopFixture::TearDown();
   }
 
  protected:

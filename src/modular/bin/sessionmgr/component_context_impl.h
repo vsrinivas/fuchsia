@@ -5,7 +5,6 @@
 #ifndef SRC_MODULAR_BIN_SESSIONMGR_COMPONENT_CONTEXT_IMPL_H_
 #define SRC_MODULAR_BIN_SESSIONMGR_COMPONENT_CONTEXT_IMPL_H_
 
-#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/string.h>
@@ -22,7 +21,6 @@ class AgentRunner;
 // The parameters of component context that do not vary by instance.
 struct ComponentContextInfo {
   AgentRunner* const agent_runner;
-  fuchsia::ledger::internal::LedgerRepository* const ledger_repository;
   EntityProviderRunner* const entity_provider_runner;
 };
 
@@ -52,9 +50,6 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
 
  private:
   // |fuchsia::modular::ComponentContext|
-  void GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) override;
-
-  // |fuchsia::modular::ComponentContext|
   void ConnectToAgent(
       std::string url,
       fidl::InterfaceRequest<fuchsia::sys::ServiceProvider> incoming_services_request,
@@ -67,7 +62,6 @@ class ComponentContextImpl : public fuchsia::modular::ComponentContext {
   void GetEntityResolver(fidl::InterfaceRequest<fuchsia::modular::EntityResolver> request) override;
 
   AgentRunner* const agent_runner_;
-  fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   EntityProviderRunner* const entity_provider_runner_;
 
   const std::string component_namespace_;

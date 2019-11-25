@@ -2,7 +2,6 @@ sdk://docs/metadata_schemas
 sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.io
-sdk://fidl/fuchsia.ledger
 sdk://fidl/fuchsia.mem
 sdk://fidl/fuchsia.modular
 sdk://fidl/fuchsia.modular.auth

@@ -6,8 +6,6 @@
 #define SRC_MODULAR_BIN_SESSIONMGR_AGENT_RUNNER_AGENT_RUNNER_H_
 
 #include <fuchsia/auth/cpp/fidl.h>
-#include <fuchsia/ledger/cpp/fidl.h>
-#include <fuchsia/ledger/internal/cpp/fidl.h>
 #include <fuchsia/modular/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -40,9 +38,7 @@ class EntityProviderRunner;
 // for some test environments that construct AgentRunner outside of a Sessionmgr.
 class AgentRunner {
  public:
-  AgentRunner(fuchsia::sys::Launcher* launcher,
-              fuchsia::ledger::internal::LedgerRepository* ledger_repository,
-              fuchsia::auth::TokenManager* token_manager,
+  AgentRunner(fuchsia::sys::Launcher* launcher, fuchsia::auth::TokenManager* token_manager,
               fuchsia::modular::UserIntelligenceProvider* user_intelligence_provider,
               EntityProviderRunner* entity_provider_runner, inspect::Node* session_inspect_node,
               std::unique_ptr<AgentServiceIndex> agent_service_index = nullptr,
@@ -144,7 +140,6 @@ class AgentRunner {
   std::map<std::string, std::unique_ptr<AgentContextImpl>> running_agents_;
 
   fuchsia::sys::Launcher* const launcher_;
-  fuchsia::ledger::internal::LedgerRepository* const ledger_repository_;
   fuchsia::auth::TokenManager* const token_manager_;
   fuchsia::modular::UserIntelligenceProvider* const user_intelligence_provider_;
   EntityProviderRunner* const entity_provider_runner_;

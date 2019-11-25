@@ -17,7 +17,6 @@ sdk://fidl/fuchsia.auth
 sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
-sdk://fidl/fuchsia.ledger
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.media
 sdk://fidl/fuchsia.media.audio

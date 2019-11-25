@@ -17,13 +17,11 @@ ComponentContextImpl::ComponentContextImpl(const ComponentContextInfo& info,
                                            std::string component_instance_id,
                                            std::string component_url)
     : agent_runner_(info.agent_runner),
-      ledger_repository_(info.ledger_repository),
       entity_provider_runner_(info.entity_provider_runner),
       component_namespace_(std::move(component_namespace)),
       component_instance_id_(std::move(component_instance_id)),
       component_url_(std::move(component_url)) {
   FXL_DCHECK(agent_runner_);
-  FXL_DCHECK(ledger_repository_);
   FXL_DCHECK(entity_provider_runner_);
 }
 
@@ -38,10 +36,6 @@ fuchsia::modular::ComponentContextPtr ComponentContextImpl::NewBinding() {
   fuchsia::modular::ComponentContextPtr ptr;
   Connect(ptr.NewRequest());
   return ptr;
-}
-
-void ComponentContextImpl::GetLedger(fidl::InterfaceRequest<fuchsia::ledger::Ledger> request) {
-  ledger_repository_->GetLedger(to_array(component_url_), std::move(request));
 }
 
 void ComponentContextImpl::ConnectToAgent(

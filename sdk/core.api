@@ -34,7 +34,6 @@ sdk://fidl/fuchsia.images
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc
-sdk://fidl/fuchsia.ledger
 sdk://fidl/fuchsia.logger
 sdk://fidl/fuchsia.math
 sdk://fidl/fuchsia.media

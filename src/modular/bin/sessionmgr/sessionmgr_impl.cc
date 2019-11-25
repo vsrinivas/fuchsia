@@ -472,14 +472,13 @@ void SessionmgrImpl::InitializeModular(const fidl::StringPtr& session_shell_url,
   }
   agent_runner_launcher_ = std::make_unique<ArgvInjectingLauncher>(
       sessionmgr_context_->svc()->Connect<fuchsia::sys::Launcher>(), argv_map);
-  agent_runner_.reset(new AgentRunner(
-      agent_runner_launcher_.get(), ledger_repository_.get(), agent_token_manager_.get(),
-      user_intelligence_provider_impl_.get(), entity_provider_runner_.get(), &inspect_root_node_,
-      std::move(agent_service_index), sessionmgr_context_));
+  agent_runner_.reset(new AgentRunner(agent_runner_launcher_.get(), agent_token_manager_.get(),
+                                      user_intelligence_provider_impl_.get(),
+                                      entity_provider_runner_.get(), &inspect_root_node_,
+                                      std::move(agent_service_index), sessionmgr_context_));
   AtEnd(Teardown(kAgentRunnerTimeout, "AgentRunner", &agent_runner_));
 
-  ComponentContextInfo component_context_info{agent_runner_.get(), ledger_repository_.get(),
-                                              entity_provider_runner_.get()};
+  ComponentContextInfo component_context_info{agent_runner_.get(), entity_provider_runner_.get()};
 
   user_intelligence_provider_impl_->StartAgents(agent_runner_.get(), config_.session_agents(),
                                                 config_.startup_agents());

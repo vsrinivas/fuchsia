@@ -8,6 +8,7 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/testing/modular/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/gtest/real_loop_fixture.h>
 #include <lib/svc/cpp/service_namespace.h>
 #include <lib/sys/cpp/testing/fake_launcher.h>
 #include <lib/zx/object.h>
@@ -20,14 +21,12 @@
 #include <fs/synchronous_vfs.h>
 
 #include "gtest/gtest.h"
-#include "peridot/lib/ledger_client/page_id.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/map_agent_service_index.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_runner.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/mock_base.h"
-#include "src/modular/lib/testing/test_with_ledger.h"
 
 namespace modular_testing {
 namespace {
@@ -131,12 +130,12 @@ class TestAgent : fuchsia::modular::Agent,
   FXL_DISALLOW_COPY_AND_ASSIGN(TestAgent);
 };
 
-class AgentRunnerTest : public TestWithLedger {
+class AgentRunnerTest : public gtest::RealLoopFixture {
  public:
   AgentRunnerTest() = default;
 
   void SetUp() override {
-    TestWithLedger::SetUp();
+    gtest::RealLoopFixture::SetUp();
 
     entity_provider_runner_ = std::make_unique<modular::EntityProviderRunner>(nullptr);
     // The |fuchsia::modular::UserIntelligenceProvider| below must be nullptr in
@@ -147,15 +146,14 @@ class AgentRunnerTest : public TestWithLedger {
     agent_runner_.reset();
     entity_provider_runner_.reset();
 
-    TestWithLedger::TearDown();
+    gtest::RealLoopFixture::TearDown();
   }
 
  protected:
   modular::AgentRunner* agent_runner() {
     if (agent_runner_ == nullptr) {
       agent_runner_ = std::make_unique<modular::AgentRunner>(
-          &launcher_, ledger_repository(), token_manager_.get(), nullptr,
-          entity_provider_runner_.get(), &node_,
+          &launcher_, token_manager_.get(), nullptr, entity_provider_runner_.get(), &node_,
           std::make_unique<modular::MapAgentServiceIndex>(std::move(agent_service_index_)));
     }
     return agent_runner_.get();
