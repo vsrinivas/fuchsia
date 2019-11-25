@@ -3,7 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ResultExt},
+    argh::FromArgs,
+    failure::{err_msg, Error, ResultExt},
     fidl::endpoints::create_endpoints,
     fidl_fuchsia_bluetooth_avdtp::*,
     fuchsia_async as fasync,
@@ -24,6 +25,16 @@ use crate::types::{PeerFactoryMap, CLEAR_LINE, PROMPT};
 
 mod commands;
 mod types;
+
+/// Command line arguments that the tool accepts.
+/// Currently, the only supported argument at launch is the profile version.
+#[derive(FromArgs)]
+#[argh(description = "A2DP Profile")]
+struct Options {
+    /// a2dp profile to use with the tool (values: "sink", "source")
+    #[argh(option, short = 'p')]
+    profile: String,
+}
 
 /// Generates the next local identifier for the current session.
 /// Increments linearly, and returns the id as a string.
@@ -262,15 +273,24 @@ async fn run_repl<'a>(peer_map: Arc<RwLock<PeerFactoryMap>>) -> Result<(), Error
 
 #[fasync::run_singlethreaded]
 async fn main() -> Result<(), Error> {
+    let args: Options = argh::from_env();
+
     syslog::init_with_tags(&["bt-avdtp-tool"]).expect("Can't init logger");
-    fx_log_info!("Running bt-avdtp-tool!");
-    // Launch a2dp sink locally, and connect to the local service
+
+    // Launch the A2DP `profile` locally, and connect to the local service.
+    // If an invalid `profile` is given, the tool will exit with an error.
     let launcher = client::launcher().expect("Failed to launch bt-avdtp-tool service");
-    let bt_a2dp = client::launch(
-        &launcher,
-        fuchsia_single_component_package_url!("bt-a2dp-sink").to_string(),
-        None,
-    )?;
+    let profile = if args.profile == "source".to_string() {
+        fuchsia_single_component_package_url!("bt-a2dp-source").to_string()
+    } else if args.profile == "sink".to_string() {
+        fuchsia_single_component_package_url!("bt-a2dp-sink").to_string()
+    } else {
+        return Err(err_msg("Invalid A2DP profile. Exiting tool.").into());
+    };
+
+    let bt_a2dp = client::launch(&launcher, profile, None)?;
+    fx_log_info!("Running bt-avdtp-tool with A2DP {}", &args.profile);
+
     let avdtp_svc = bt_a2dp
         .connect_to_service::<PeerManagerMarker>()
         .context("Failed to connect to AVDTP Peer Manager")?;
