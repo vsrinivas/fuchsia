@@ -8,6 +8,8 @@
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 #include <lib/sys/cpp/component_context.h>
 
+#include <vector>
+
 #include "stream_provider.h"
 
 class ControllerStreamProvider : public StreamProvider {
@@ -25,7 +27,7 @@ class ControllerStreamProvider : public StreamProvider {
   bool streaming_ = false;
   fuchsia::camera2::hal::ControllerSyncPtr controller_;
   fuchsia::sysmem::AllocatorSyncPtr allocator_;
-  fuchsia::sysmem::BufferCollectionSyncPtr buffer_collection_;
+  std::vector<fuchsia::sysmem::BufferCollectionSyncPtr> buffer_collections_;
   fidl::VectorPtr<fuchsia::camera2::hal::Config> configs_;
 };
 

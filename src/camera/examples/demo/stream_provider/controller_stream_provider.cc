@@ -8,6 +8,7 @@
 #include <fuchsia/hardware/camera/cpp/fidl.h>
 #include <lib/fdio/fdio.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <zircon/errors.h>
 
 #include <fbl/unique_fd.h>
 
@@ -22,10 +23,12 @@ ControllerStreamProvider::~ControllerStreamProvider() {
       FX_PLOGS(WARNING, status) << "Failed to stop streaming via the controller";
     }
   }
-  if (buffer_collection_) {
-    zx_status_t status = buffer_collection_->Close();
-    if (status != ZX_OK) {
-      FX_PLOGS(ERROR, status);
+  for (auto& buffer_collection : buffer_collections_) {
+    if (buffer_collection) {
+      zx_status_t status = buffer_collection->Close();
+      if (status != ZX_OK) {
+        FX_PLOGS(ERROR, status);
+      }
     }
   }
 }
@@ -79,6 +82,8 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
     FX_PLOGS(ERROR, status_return) << "Failed to get configs";
     return nullptr;
   }
+  ZX_ASSERT(provider->configs_.has_value());
+  provider->buffer_collections_.resize(provider->configs_->size());
 
   // Immediately enable streaming.
   status = provider->controller_->EnableStreaming();
@@ -100,20 +105,22 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
     return fit::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  static constexpr const uint32_t kConfigIndex = 1;
-  static constexpr const uint32_t kStreamConfigIndex = 1;
-  static constexpr const uint32_t kImageFormatIndex = 0;
+  constexpr uint32_t kStreamConfigIndex = 1;
+  constexpr uint32_t kImageFormatIndex = 0;
 
-  if (buffer_collection_.is_bound()) {
+  if (index >= buffer_collections_.size()) {
+    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  }
+  if (buffer_collections_[index].is_bound()) {
     FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
     return fit::error(ZX_ERR_ALREADY_BOUND);
   }
 
-  if (kConfigIndex >= configs_->size()) {
-    FX_LOGS(ERROR) << "Invalid config index " << kConfigIndex;
+  if (index >= configs_->size()) {
+    FX_LOGS(ERROR) << "Invalid config index " << index;
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto& config = configs_->at(kConfigIndex);
+  auto& config = configs_->at(index);
   if (kStreamConfigIndex >= config.stream_configs.size()) {
     FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
     return fit::error(ZX_ERR_BAD_STATE);
@@ -129,19 +136,20 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
   if (!allocator_) {
     FX_LOGS(ERROR) << "Allocator is dead!";
   }
-  zx_status_t status = allocator_->AllocateNonSharedCollection(buffer_collection_.NewRequest());
+  zx_status_t status =
+      allocator_->AllocateNonSharedCollection(buffer_collections_[index].NewRequest());
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to allocate new collection";
     return fit::error(status);
   }
-  status = buffer_collection_->SetConstraints(true, stream_config.constraints);
+  status = buffer_collections_[index]->SetConstraints(true, stream_config.constraints);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to set constraints to those reported by the controller";
     return fit::error(status);
   }
   zx_status_t status_return = ZX_OK;
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
-  status = buffer_collection_->WaitForBuffersAllocated(&status_return, &buffers);
+  status = buffer_collections_[index]->WaitForBuffersAllocated(&status_return, &buffers);
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to call WaitForBuffersAllocated";
     return fit::error(status);
@@ -175,7 +183,7 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
   }
 
   // Create the stream using the created buffer collection.
-  status = controller_->CreateStream(kConfigIndex, kStreamConfigIndex, kImageFormatIndex,
+  status = controller_->CreateStream(index, kStreamConfigIndex, kImageFormatIndex,
                                      std::move(buffers), std::move(request));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create stream";
