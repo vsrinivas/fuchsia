@@ -1,19 +1,24 @@
 use crate::backlight::BacklightControl;
+use crate::sender_channel::SenderChannel;
 use crate::sensor::SensorControl;
 use async_trait::async_trait;
 use std::sync::Arc;
 
+use failure::Error;
 use fidl_fuchsia_ui_brightness::{
     BrightnessPoint, BrightnessTable, ControlRequest as BrightnessControlRequest,
+    ControlWatchAutoBrightnessResponder, ControlWatchCurrentBrightnessResponder,
 };
 use fuchsia_async::{self as fasync, DurationExt};
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon::{Duration, DurationNum};
+use futures::channel::mpsc::UnboundedSender;
 use futures::future::{AbortHandle, Abortable};
 use futures::lock::Mutex;
 use futures::prelude::*;
 use lazy_static::lazy_static;
 use splines::{Interpolation, Key, Spline};
+use watch_handler::{Sender, WatchHandler};
 
 // Delay between sensor reads
 const SLOW_SCAN_TIMEOUT_MS: i64 = 2000;
@@ -42,6 +47,30 @@ lazy_static! {
     };
 }
 
+pub struct WatcherCurrentResponder {
+    watcher_current_responder: ControlWatchCurrentBrightnessResponder,
+}
+
+impl Sender<f32> for WatcherCurrentResponder {
+    fn send_response(self, data: f32) {
+        if let Err(e) = self.watcher_current_responder.send(data) {
+            fx_log_err!("Failed to reply to WatchCurrentBrightness: {}", e);
+        }
+    }
+}
+
+pub struct WatcherAutoResponder {
+    watcher_auto_responder: ControlWatchAutoBrightnessResponder,
+}
+
+impl Sender<bool> for WatcherAutoResponder {
+    fn send_response(self, data: bool) {
+        if let Err(e) = self.watcher_auto_responder.send(data) {
+            fx_log_err!("Failed to reply to WatchAutoBrightness: {}", e);
+        }
+    }
+}
+
 pub struct Control {
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
@@ -49,12 +78,16 @@ pub struct Control {
     auto_brightness_on: bool,
     auto_brightness_abort_handle: AbortHandle,
     spline: Spline<f32, f32>,
+    current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
+    auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
 }
 
 impl Control {
     pub fn new(
         sensor: Arc<Mutex<dyn SensorControl>>,
         backlight: Arc<Mutex<dyn BacklightControl>>,
+        current_sender_channel: Arc<Mutex<SenderChannel<f32>>>,
+        auto_sender_channel: Arc<Mutex<SenderChannel<bool>>>,
     ) -> Control {
         fx_log_info!("New Control class");
 
@@ -67,8 +100,12 @@ impl Control {
         let spline_arg = generate_spline(brightness_table);
 
         // Startup auto-brightness loop
-        let auto_brightness_abort_handle =
-            start_auto_brightness_task(sensor.clone(), backlight.clone(), spline_arg.clone());
+        let auto_brightness_abort_handle = start_auto_brightness_task(
+            sensor.clone(),
+            backlight.clone(),
+            spline_arg.clone(),
+            current_sender_channel.clone(),
+        );
 
         Control {
             backlight,
@@ -77,30 +114,43 @@ impl Control {
             auto_brightness_on,
             auto_brightness_abort_handle,
             spline: spline_arg,
+            current_sender_channel,
+            auto_sender_channel,
         }
     }
 
-    pub async fn handle_request(&mut self, request: BrightnessControlRequest) {
+    pub async fn handle_request(
+        &mut self,
+        request: BrightnessControlRequest,
+        watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
+        watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+    ) {
         // TODO(kpt): "Consider adding additional tests against the resulting FIDL service itself so
         // that you can ensure it continues serving clients correctly."
         // TODO(kpt): Make each match a testable function when hanging gets are implemented
         match request {
             BrightnessControlRequest::SetAutoBrightness { control_handle: _ } => {
-                self.set_auto_brightness();
+                self.set_auto_brightness().await;
             }
             BrightnessControlRequest::WatchAutoBrightness { responder } => {
-                let response = self.watch_auto_brightness();
-                if let Err(e) = responder.send(response) {
-                    fx_log_err!("Failed to reply to WatchAutoBrightnessReply: {}", e);
+                let watch_auto_result =
+                    self.watch_auto_brightness(watch_auto_handler, responder).await;
+                match watch_auto_result {
+                    Ok(_v) => fx_log_info!("Sent the auto value"),
+                    Err(e) => fx_log_info!("Didn't watch auto value successfully, got err {}", e),
                 }
             }
             BrightnessControlRequest::SetManualBrightness { value, control_handle: _ } => {
                 self.set_manual_brightness(value).await;
             }
             BrightnessControlRequest::WatchCurrentBrightness { responder } => {
-                let response = self.watch_current_brightness().await;
-                if let Err(e) = responder.send(response as f32) {
-                    fx_log_err!("Failed to reply to WatchCurrentBrightness: {}", e);
+                let watch_current_result =
+                    self.watch_current_brightness(watch_current_handler, responder).await;
+                match watch_current_result {
+                    Ok(_v) => fx_log_info!("Sent the current value"),
+                    Err(e) => {
+                        fx_log_info!("Didn't watch current value successfully, got err {}", e)
+                    }
                 }
             }
             BrightnessControlRequest::SetBrightnessTable { table, control_handle: _ } => {
@@ -109,8 +159,22 @@ impl Control {
         }
     }
 
+    pub async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.current_sender_channel.lock().await.add_sender_channel(sender).await;
+    }
+
+    pub async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>) {
+        self.auto_sender_channel.lock().await.add_sender_channel(sender).await;
+    }
+
+    pub fn get_backlight_and_auto_brightness_on(
+        &mut self,
+    ) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
+        (self.backlight.clone(), self.auto_brightness_on)
+    }
+
     // FIDL message handlers
-    fn set_auto_brightness(&mut self) {
+    async fn set_auto_brightness(&mut self) {
         if !self.auto_brightness_on {
             fx_log_info!("Auto-brightness turned on");
             self.auto_brightness_abort_handle.abort();
@@ -118,16 +182,22 @@ impl Control {
                 self.sensor.clone(),
                 self.backlight.clone(),
                 self.spline.clone(),
+                self.current_sender_channel.clone(),
             );
             self.auto_brightness_on = true;
+            self.auto_sender_channel.lock().await.send_value(self.auto_brightness_on);
         }
     }
 
-    fn watch_auto_brightness(&mut self) -> bool {
-        // Hanging get is not implemented yet. We want to get autobrightness into team-food.
-        // TODO(kpt): Implement hanging get (b/138455166)
+    async fn watch_auto_brightness(
+        &mut self,
+        watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+        responder: ControlWatchAutoBrightnessResponder,
+    ) -> Result<(), Error> {
         fx_log_info!("Received get auto brightness enabled");
-        self.auto_brightness_on
+        let mut hanging_get_lock = watch_auto_handler.lock().await;
+        hanging_get_lock.watch(WatcherAutoResponder { watcher_auto_responder: responder })?;
+        Ok(())
     }
 
     async fn set_manual_brightness(&mut self, value: f32) {
@@ -140,24 +210,24 @@ impl Control {
 
             self.auto_brightness_abort_handle.abort();
             self.auto_brightness_on = false;
+            self.auto_sender_channel.lock().await.send_value(self.auto_brightness_on);
         }
 
         // TODO(b/138455663): remove this when the driver changes.
         let value = num_traits::clamp(value, 0.0, 1.0);
         let backlight_clone = self.backlight.clone();
         self.set_brightness_abort_handle = Some(set_brightness(value, backlight_clone).await);
+        self.current_sender_channel.lock().await.send_value(value);
     }
 
-    async fn watch_current_brightness(&mut self) -> f64 {
-        // Hanging get is not implemented yet. We want to get autobrightness into team-food.
-        // TODO(kpt): Implement hanging get (b/138455166)
-        fx_log_info!("Received get current brightness request");
-        let backlight_clone = self.backlight.clone();
-        let backlight = backlight_clone.lock().await;
-        backlight.get_brightness().await.unwrap_or_else(|e| {
-            fx_log_err!("Failed to get brightness: {}", e);
-            1.0
-        })
+    async fn watch_current_brightness(
+        &mut self,
+        watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
+        responder: ControlWatchCurrentBrightnessResponder,
+    ) -> Result<(), Error> {
+        let mut hanging_get_lock = watch_current_handler.lock().await;
+        hanging_get_lock.watch(WatcherCurrentResponder { watcher_current_responder: responder })?;
+        Ok(())
     }
 
     /// auto brightness need to stop at this point or not
@@ -171,6 +241,7 @@ impl Control {
                 self.sensor.clone(),
                 self.backlight.clone(),
                 self.spline.clone(),
+                self.current_sender_channel.clone(),
             );
         }
     }
@@ -178,13 +249,38 @@ impl Control {
 
 #[async_trait(?Send)]
 pub trait ControlTrait {
-    async fn handle_request(&mut self, request: BrightnessControlRequest);
+    async fn handle_request(
+        &mut self,
+        request: BrightnessControlRequest,
+        watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
+        watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+    );
+    async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>);
+    async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>);
+    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool);
 }
 
 #[async_trait(?Send)]
 impl ControlTrait for Control {
-    async fn handle_request(&mut self, request: BrightnessControlRequest) {
-        self.handle_request(request).await;
+    async fn handle_request(
+        &mut self,
+        request: BrightnessControlRequest,
+        watch_current_handler: Arc<Mutex<WatchHandler<f32, WatcherCurrentResponder>>>,
+        watch_auto_handler: Arc<Mutex<WatchHandler<bool, WatcherAutoResponder>>>,
+    ) {
+        self.handle_request(request, watch_current_handler, watch_auto_handler).await;
+    }
+
+    async fn add_current_sender_channel(&mut self, sender: UnboundedSender<f32>) {
+        self.add_current_sender_channel(sender).await;
+    }
+
+    async fn add_auto_sender_channel(&mut self, sender: UnboundedSender<bool>) {
+        self.add_auto_sender_channel(sender).await;
+    }
+
+    fn get_backlight_and_auto_brightness_on(&mut self) -> (Arc<Mutex<dyn BacklightControl>>, bool) {
+        self.get_backlight_and_auto_brightness_on()
     }
 }
 
@@ -212,6 +308,7 @@ fn start_auto_brightness_task(
     sensor: Arc<Mutex<dyn SensorControl>>,
     backlight: Arc<Mutex<dyn BacklightControl>>,
     spline: Spline<f32, f32>,
+    sender_channel: Arc<Mutex<SenderChannel<f32>>>,
 ) -> AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     fasync::spawn(
@@ -234,6 +331,7 @@ fn start_auto_brightness_task(
                     }
                     set_brightness_abort_handle =
                         Some(set_brightness(value, backlight_clone).await);
+                    sender_channel.lock().await.send_value(value);
                     let large_change =
                         (last_value as i32 - value as i32).abs() > LARGE_CHANGE_THRESHOLD_NITS;
                     last_value = value as i32;
@@ -343,6 +441,7 @@ async fn set_brightness_slowly(
 mod tests {
     use super::*;
 
+    use crate::sender_channel::SenderChannel;
     use crate::sensor::AmbientLightInputRpt;
     use async_trait::async_trait;
     use failure::Error;
@@ -405,6 +504,12 @@ mod tests {
         let BrightnessTable { points } = &*BRIGHTNESS_TABLE;
         let brightness_table_old = BrightnessTable { points: points.to_vec() };
         let spline_arg = generate_spline(brightness_table_old.clone());
+
+        let current_sender_channel: SenderChannel<f32> = SenderChannel::new();
+        let current_sender_channel = Arc::new(Mutex::new(current_sender_channel));
+
+        let auto_sender_channel: SenderChannel<bool> = SenderChannel::new();
+        let auto_sender_channel = Arc::new(Mutex::new(auto_sender_channel));
         Control {
             sensor,
             backlight: _backlight,
@@ -412,6 +517,8 @@ mod tests {
             auto_brightness_on: true,
             auto_brightness_abort_handle,
             spline: spline_arg,
+            current_sender_channel,
+            auto_sender_channel,
         }
     }
 
@@ -445,12 +552,9 @@ mod tests {
         assert_eq!(cmp_float(13., brightness_curve_lux_to_nits(16, &spline).await), true);
         assert_eq!(cmp_float(70., brightness_curve_lux_to_nits(100, &spline).await), true);
         assert_eq!(cmp_float(110., brightness_curve_lux_to_nits(150, &spline).await), true);
-        assert_eq!(
-            cmp_float(151.66 as f32, brightness_curve_lux_to_nits(200, &spline).await),
-            true
-        );
-        assert_eq!(cmp_float(190. as f32, brightness_curve_lux_to_nits(240, &spline).await), true);
-        assert_eq!(cmp_float(250. as f32, brightness_curve_lux_to_nits(300, &spline).await), true);
+        assert_eq!(cmp_float(151.66, brightness_curve_lux_to_nits(200, &spline).await), true);
+        assert_eq!(cmp_float(190., brightness_curve_lux_to_nits(240, &spline).await), true);
+        assert_eq!(cmp_float(250., brightness_curve_lux_to_nits(300, &spline).await), true);
     }
 
     #[fasync::run_singlethreaded(test)]
