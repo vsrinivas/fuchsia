@@ -26,10 +26,10 @@ class StreamImpl;
 struct ChildNodeInfo {
   // Pointer to the child node.
   std::shared_ptr<ProcessNode> child_node;
-  // The Stream type/identifier for the child node.
-  ::fuchsia::camera2::CameraStreamType stream_type;
+  // The Stream types this child node supports
+  std::vector<fuchsia::camera2::CameraStreamType> stream_types;
   // The frame rate for this node.
-  ::fuchsia::camera2::FrameRate output_frame_rate;
+  fuchsia::camera2::FrameRate output_frame_rate;
 };
 
 class ProcessNode {

@@ -15,8 +15,10 @@ namespace camera {
 const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* info,
                                                                  const InternalConfigNode& node) {
   for (const auto& child_node : node.child_nodes) {
-    if (child_node.output_stream_type == info->stream_config->properties.stream_type()) {
-      return &child_node;
+    for (uint32_t i = 0; i < child_node.supported_streams.size(); i++) {
+      if (child_node.supported_streams[i] == info->stream_config->properties.stream_type()) {
+        return &child_node;
+      }
     }
   }
   return nullptr;
@@ -130,9 +132,9 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
   // Add child node info.
   ChildNodeInfo child_info;
   child_info.child_node = std::move(output_node);
-  child_info.stream_type = internal_output_node.output_stream_type;
+  child_info.stream_types = internal_output_node.supported_streams;
   child_info.output_frame_rate = internal_output_node.output_frame_rate;
-  parent_node->AddChildNodeInfo(child_info);
+  parent_node->AddChildNodeInfo(std::move(child_info));
   return result;
 }
 

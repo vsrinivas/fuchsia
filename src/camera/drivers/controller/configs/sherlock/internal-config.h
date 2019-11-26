@@ -51,13 +51,10 @@ struct InternalConfigNode {
   NodeType type;
   // To identify the input frame rate at this node.
   fuchsia::camera2::FrameRate output_frame_rate;
-  // To indentify the type of streams this node provides.
-  fuchsia::camera2::CameraStreamType output_stream_type;
   // This is only valid for Input Stream Type to differentiate
   // between ISP FR/DS/Scalar streams.
   fuchsia::camera2::CameraStreamType input_stream_type;
-  // Types of |stream_types| supported by this parent node.
-  // Only valid for Input Stream Type
+  // Types of |stream_types| supported by this node.
   std::vector<fuchsia::camera2::CameraStreamType> supported_streams;
   // Child nodes
   std::vector<InternalConfigNode> child_nodes;

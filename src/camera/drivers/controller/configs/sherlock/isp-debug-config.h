@@ -80,7 +80,10 @@ static InternalConfigNode OutputStream() {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kIspStreamFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION,
+          },
   };
 }
 

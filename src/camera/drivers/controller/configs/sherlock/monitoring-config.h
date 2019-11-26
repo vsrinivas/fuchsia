@@ -172,8 +172,11 @@ static InternalConfigNode OutputStreamMLFR() {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlFRFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+          },
   };
 }
 
@@ -182,8 +185,11 @@ static InternalConfigNode OutputStreamMLDS() {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+          },
   };
 }
 
@@ -202,8 +208,11 @@ static InternalConfigNode Gdc1() {
       .type = kGdc,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMlDSFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
-                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING,
+          },
       .child_nodes =
           {
               {
@@ -263,7 +272,10 @@ static InternalConfigNode OutputStreamMonitoring() {
       .type = kOutputStream,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::MONITORING,
+          },
   };
 }
 
@@ -282,7 +294,10 @@ static InternalConfigNode Gdc2() {
       .type = kGdc,
       .output_frame_rate.frames_per_sec_numerator = kOutputStreamMonitoringFrameRate,
       .output_frame_rate.frames_per_sec_denominator = 1,
-      .output_stream_type = fuchsia::camera2::CameraStreamType::MONITORING,
+      .supported_streams =
+          {
+              fuchsia::camera2::CameraStreamType::MONITORING,
+          },
       .child_nodes =
           {
               {

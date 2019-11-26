@@ -141,11 +141,11 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   // Add child node info.
   ChildNodeInfo child_info;
   child_info.child_node = std::move(gdc_node);
-  child_info.stream_type = internal_gdc_node.output_stream_type;
+  child_info.stream_types = internal_gdc_node.supported_streams;
   child_info.output_frame_rate = internal_gdc_node.output_frame_rate;
   auto return_value = fit::ok(child_info.child_node.get());
 
-  parent_node->AddChildNodeInfo(child_info);
+  parent_node->AddChildNodeInfo(std::move(child_info));
   cleanup.cancel();
   return return_value;
 }
