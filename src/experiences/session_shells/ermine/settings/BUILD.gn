@@ -37,6 +37,7 @@ dart_library("settings") {
 flutter_test("ermine_settings_unittests") {
   sources = [
     "battery_test.dart",
+    "bluetooth_test.dart",
     "brightness_test.dart",
     "datetime_test.dart",
     "memory_test.dart",

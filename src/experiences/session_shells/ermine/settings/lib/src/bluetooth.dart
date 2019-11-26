@@ -108,7 +108,7 @@ class BluetoothModel {
   }
 
   void listConnectedBluetoothDevices() async {
-    final remoteDevices = await _monitor.getKnownRemoteDevices();
+    final remoteDevices = List.from(await _monitor.getKnownRemoteDevices());
     await Future.forEach(remoteDevices, (device) async {
       final deviceIdentifiers =
           _bluetoothDevices.map((btDevice) => btDevice.identifier);
@@ -137,4 +137,8 @@ class BluetoothModel {
   }
 
   List<bt.RemoteDevice> get remoteDevices => _bluetoothDevices.toList();
+  set remoteDevices(List<bt.RemoteDevice> values) {
+    _bluetoothDevices = values;
+    onChange.call();
+  }
 }
