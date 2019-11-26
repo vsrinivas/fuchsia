@@ -24,8 +24,8 @@ ControllerStreamProvider::~ControllerStreamProvider() {
     }
   }
   for (auto& buffer_collection : buffer_collections_) {
-    if (buffer_collection) {
-      zx_status_t status = buffer_collection->Close();
+    if (buffer_collection.second) {
+      zx_status_t status = buffer_collection.second->Close();
       if (status != ZX_OK) {
         FX_PLOGS(ERROR, status);
       }
@@ -82,8 +82,6 @@ std::unique_ptr<StreamProvider> ControllerStreamProvider::Create() {
     FX_PLOGS(ERROR, status_return) << "Failed to get configs";
     return nullptr;
   }
-  ZX_ASSERT(provider->configs_.has_value());
-  provider->buffer_collections_.resize(provider->configs_->size());
 
   // Immediately enable streaming.
   status = provider->controller_->EnableStreaming();
@@ -101,36 +99,43 @@ fit::result<
     zx_status_t>
 ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::Stream> request,
                                           uint32_t index) {
-  if (index > 0) {
-    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  uint32_t config_index = 0;
+  uint32_t stream_config_index = 0;
+  uint32_t image_format_index = 0;
+  switch (index) {
+    case 0:
+      config_index = 1;
+      stream_config_index = 1;
+      image_format_index = 0;
+      break;
+    default:
+      return fit::error(ZX_ERR_OUT_OF_RANGE);
   }
 
-  constexpr uint32_t kStreamConfigIndex = 1;
-  constexpr uint32_t kImageFormatIndex = 0;
-
-  if (index >= buffer_collections_.size()) {
-    return fit::error(ZX_ERR_OUT_OF_RANGE);
+  auto it = buffer_collections_.find(index);
+  if (it == buffer_collections_.end()) {
+    buffer_collections_.emplace(index, nullptr);
   }
   if (buffer_collections_[index].is_bound()) {
     FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound by caller.";
     return fit::error(ZX_ERR_ALREADY_BOUND);
   }
 
-  if (index >= configs_->size()) {
-    FX_LOGS(ERROR) << "Invalid config index " << index;
+  if (config_index >= configs_->size()) {
+    FX_LOGS(ERROR) << "Invalid config index " << config_index;
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto& config = configs_->at(index);
-  if (kStreamConfigIndex >= config.stream_configs.size()) {
-    FX_LOGS(ERROR) << "Invalid stream config index " << kStreamConfigIndex;
+  auto& config = configs_->at(config_index);
+  if (stream_config_index >= config.stream_configs.size()) {
+    FX_LOGS(ERROR) << "Invalid stream config index " << stream_config_index;
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto& stream_config = config.stream_configs[kStreamConfigIndex];
-  if (kImageFormatIndex >= stream_config.image_formats.size()) {
-    FX_LOGS(ERROR) << "Invalid image format index " << kImageFormatIndex;
+  auto& stream_config = config.stream_configs[stream_config_index];
+  if (image_format_index >= stream_config.image_formats.size()) {
+    FX_LOGS(ERROR) << "Invalid image format index " << image_format_index;
     return fit::error(ZX_ERR_BAD_STATE);
   }
-  auto& image_format = stream_config.image_formats[kImageFormatIndex];
+  auto& image_format = stream_config.image_formats[image_format_index];
 
   // Attempt to create a buffer collection using controller-provided constraints.
   if (!allocator_) {
@@ -183,7 +188,7 @@ ControllerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera
   }
 
   // Create the stream using the created buffer collection.
-  status = controller_->CreateStream(index, kStreamConfigIndex, kImageFormatIndex,
+  status = controller_->CreateStream(config_index, stream_config_index, image_format_index,
                                      std::move(buffers), std::move(request));
   if (status != ZX_OK) {
     FX_PLOGS(ERROR, status) << "Failed to create stream";
