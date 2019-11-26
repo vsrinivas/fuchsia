@@ -325,6 +325,7 @@ zx_status_t ahci_bind(void* ctx, zx_device_t* parent) {
   status = device_add(parent, &args, controller->zxdev_ptr());
   if (status != ZX_OK) {
     zxlogf(ERROR, "ahci: error %d in device_add\n", status);
+    controller->Shutdown();
     return status;
   }
 
