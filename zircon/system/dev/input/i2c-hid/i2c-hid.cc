@@ -327,8 +327,9 @@ zx_status_t I2cHidbus::ReadI2cHidDesc(I2cHidDesc* hiddesc) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  I2cHidDesc* i2c_hid_desc_hdr = (I2cHidDesc*)out;
-  uint16_t desc_len = letoh16(i2c_hid_desc_hdr->wHIDDescLength);
+  // We can safely cast here because the descriptor length is the first
+  // 2 bytes of out.
+  uint16_t desc_len = letoh16(*(reinterpret_cast<uint16_t *>(out)));
   if (desc_len > sizeof(I2cHidDesc)) {
     desc_len = sizeof(I2cHidDesc);
   }
