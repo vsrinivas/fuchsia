@@ -257,22 +257,56 @@ fxt_spinel_vk_render::checksum()
   uint32_t const   pixel_count = param.surface.width * param.surface.height;
   uint32_t const * pixels      = (uint32_t const *)surface.h.map;
 
-  uint32_t checksum = 0;
+  uint32_t calculated = 0;
 
   for (uint32_t ii = 0; ii < pixel_count; ii++)
     {
-      checksum += pixels[ii] & 0xFFFFFF;  // alpha channel is ignored
+      calculated += pixels[ii] & 0xFFFFFF;  // alpha channel is ignored
     }
 
-  bool const is_checksum_match = (checksum == param.checksum);
+  //
+  // search for a matching checksum
+  //
+  bool is_pd_found = true;
 
-  EXPECT_TRUE(is_checksum_match) << "Checksum mismatch:"  //
-                                 << std::endl
-                                 << std::uppercase  //
-                                 << "  calculated: " << std::hex << checksum << std::endl
-                                 << "  expected:   " << std::hex << param.checksum << std::endl;
+  auto const checksum = param.checksums.find(calculated);
 
-  if (!is_checksum_match)
+  // checksum found?
+  if (checksum != param.checksums.end())
+    {
+      // an empty set of physical devices implies all match
+      if (!checksum->second.empty())
+        {
+          // not empty -- search for a matching vendor id
+          auto vendor_id = checksum->second.find(shared_env->instance->vk.pdp.vendorID);
+
+          // match is found
+          if (vendor_id != checksum->second.end())
+            {
+              // an empty set of device ids implies all match
+              if (!vendor_id->second.empty())
+                {
+                  // not empty -- search for a matching device id
+                  auto device_id = vendor_id->second.find(shared_env->instance->vk.pdp.deviceID);
+
+                  if (device_id == vendor_id->second.end())
+                    {
+                      is_pd_found = false;
+                    }
+                }
+            }
+          else
+            {
+              is_pd_found = false;
+            }
+        }
+    }
+  else
+    {
+      is_pd_found = false;
+    }
+
+  if (!is_pd_found)
     {
       ::testing::TestInfo const * const test_info =
         ::testing::UnitTest::GetInstance()->current_test_info();
@@ -293,7 +327,18 @@ fxt_spinel_vk_render::checksum()
       //
       std::replace(filename.begin() + std::strlen("/tmp/surface_"), filename.end(), '/', '_');
 
-      ADD_FAILURE() << "Saving surface to: " << filename << std::endl;
+      ADD_FAILURE() << std::hex                               //
+                    << std::uppercase                         //
+                    << "Checksum '0x"                         //
+                    << calculated                             //
+                    << "' not found for physical device {"    //
+                    << shared_env->instance->vk.pdp.vendorID  //
+                    << ":"                                    //
+                    << shared_env->instance->vk.pdp.deviceID  //
+                    << "}"                                    //
+                    << std::endl                              //
+                    << "Saving surface to: "                  //
+                    << filename;
 
       //
       // save PPM to local /tmp

@@ -14,6 +14,7 @@ namespace spinel::vk::test {
 
 // alias for test output aesthetics
 using spinel_vk_render = fxt_spinel_vk_render;
+using param            = param_spinel_vk_render;
 
 //
 // explicitly render a 2x2 pixel black square
@@ -324,22 +325,22 @@ TEST_P(spinel_vk_render, example)
 //
 // value parameterization is leveraged by the SVG fixture
 //
-
-param_spinel_vk_render const params_tests[] = {
+param const params[] = {
   {
-    .name     = "black_square_2x2",
-    .surface  = { 1024, 1024 },  //
-    .checksum = 0xFBF00004,      //
+    .name      = "black_square_2x2",
+    .surface   = { 1024, 1024 },  //
+    .checksums = {                //
+      { 0xFBF00004, {} }
+    }
   },
 };
 
 //
 //
 //
-
 INSTANTIATE_TEST_SUITE_P(spinel_vk_render_examples,  //
                          spinel_vk_render,           //
-                         ::testing::ValuesIn(params_tests),
+                         ::testing::ValuesIn(params),
                          fxt_spinel_vk_render::param_name);
 
 }  // namespace spinel::vk::test

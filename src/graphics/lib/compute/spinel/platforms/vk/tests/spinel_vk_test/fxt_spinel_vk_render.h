@@ -12,6 +12,8 @@
 // rendering tests.
 //
 
+#include <map>
+
 #include "fxt_spinel_vk.h"
 
 //
@@ -39,7 +41,34 @@ struct param_spinel_vk_render
   char const * svg   = nullptr;
   uint32_t     loops = 1;
 
-  uint32_t checksum;
+  //
+  // The map pairs define this relationship:
+  //
+  //   { checksum : { vendorID { deviceID }* }* }+
+  //
+  //     - each checksum  has zero or more associated vendor IDs
+  //     - each vendor ID has zero or more associated device IDs
+  //
+  // An empty device ID set implies the checksum applies to all physical
+  // devices that match the vendor ID.
+  //
+  // An empty vendor ID map implies the checksum applies to all physical
+  // devices.
+  //
+  std::map<uint32_t, std::map<uint32_t, std::set<uint32_t>>> checksums;
+
+  enum vendors
+  {
+    INTEL  = 0x8086,
+    NVIDIA = 0x10DE,
+    AMD    = 0x1002,
+    ARM    = 0x13B5
+  };
+
+  enum devices
+  {
+    AMD_V1807B = 0x15DD
+  };
 };
 
 //

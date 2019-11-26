@@ -12,6 +12,7 @@ namespace spinel::vk::test {
 
 // alias for test output aesthetics
 using spinel_vk_svg = fxt_spinel_vk_svg;
+using param         = param_spinel_vk_render;
 
 //
 //
@@ -22,9 +23,9 @@ TEST_P(spinel_vk_svg, svg_tests)
 }
 
 //
+// Each test is a name, surface size, a snippet of SVG and a device-specific checksum
 //
-//
-param_spinel_vk_render const params_tests[] = {
+param const params[] = {
   {
     .name    = "black_square_2x2",
     .surface = { 1024, 1024 },
@@ -33,8 +34,10 @@ param_spinel_vk_render const params_tests[] = {
     "  <g style = \"fill: black\">\n"
     "    <polyline points = \"2,2 4,2 4,4 2,4 2,2\"/>\n"
     "  </g>\n"
-    "</svg>",  //
-    .checksum = 0xFBF00004,
+    "</svg>",      //
+    .checksums = { //
+      { 0xFBF00004, {} }
+    }
   },
   {
     .name    = "red_square_2x2",
@@ -44,8 +47,10 @@ param_spinel_vk_render const params_tests[] = {
     "  <g style = \"fill: red\">\n"
     "    <polyline points = \"2,2 4,2 4,4 2,4 2,2\"/>\n"
     "  </g>\n"
-    "</svg>",  //
-    .checksum = 0xFBF00400,
+    "</svg>",      //
+    .checksums = { //
+      { 0xFBF00400, {} }
+    }
   },
   {
     .name    = "rasters_prefix_fix",
@@ -60,18 +65,26 @@ param_spinel_vk_render const params_tests[] = {
     "              \"-0.08,-0.02 0.28,-0.02 0.28,-0.02 0.28,0.02\n"
     "               0.28,0.02 -0.08,0.02 -0.08,0.02 -0.08,-0.02\"/>\n"
     "  </g>\n"
-    "</svg>\n",  //
-    .checksum = 0xFD0B4012,
-  },
+    "</svg>\n",
+    // Checksum varies due to differing fp32 and imageStore() implementations
+    .checksums = {
+      { 0xFD0B4012, {
+          { param::INTEL,  {}                    },  // all intel
+          { param::AMD,    { param::AMD_V1807B } } } // AMD/V1807B (Mesa)
+      },
+      { 0xFCF529FC, {
+          { param::NVIDIA, {}                    } } // all nvidia
+      },
+    }
+  }
 };
 
 //
 //
 //
-
 INSTANTIATE_TEST_SUITE_P(spinel_vk_svg_tests,  //
                          spinel_vk_svg,        //
-                         ::testing::ValuesIn(params_tests),
+                         ::testing::ValuesIn(params),
                          fxt_spinel_vk_render::param_name);
 
 }  // namespace spinel::vk::test
