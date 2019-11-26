@@ -52,32 +52,27 @@ fx set core.x64 --with //bundles:kitchen_sink
 fx build
 ```
 
-The first command selects the build configuration you wish to build and
-generates the build system itself in an output directory (e.g., `out/x64`).
-Fuchsia can ephemerally download [packages](development/build/boards_and_products.md) over the network;
-here we use the `--with` flag to include the bundle named `kitchen_sink` which is an idiom in
-english meaning "practically everything". As you become more focused in your development, you will
-probably use different `fx set` options to minimize build times.
+The `fx set` command configures the contents of your build and generates
+build rules and metadata in the default output directories, `out/default` and
+`out/default.zircon`. The argument `core.x64` refers to
+[product and board definitions](development/build/boards_and_products.md) that
+describe, among other things, what packages are built and available
+to your Fuchsia device.
 
-The second command, `fx build` actually executes the build, transforming the source code in
-build products. If you modify the source tree, you can do an incremental build
-by re-running the `fx build` command alone. `fx -i build` starts a watcher
-and automatically builds whenever a file is changed.
+A Fuchsia device can ephemerally download and install packages over the network,
+and in a development environment, your development workstation is the source of
+these ephemeral packages. The board and product definitions contain a set of packages,
+but if you need to add other packages, use the `--with` flag. This example
+includes `kitchen_sink`, which is an idiom in english meaning "practically
+everything". As you become more focused in your development, you will probably
+use more specific `--with` options to minimize build times.
+
+The `fx build` command executes the build, transforming source code into
+packages and other build artifacts. If you modify source code,
+you can do an incremental build by re-running the `fx build` command alone.
+`fx -i build` starts a watcher and automatically builds whenever a file is changed.
 
 See the [underlying build system](development/build/README.md) for more details.
-
-### _Optional:_ Customize Build Environment
-
-By default you will get a x64 debug build. You can skip this section unless
-you want something else.
-
-Run `fx set` to see a list of build options. Some examples:
-
-```sh
-fx set workstation.x64     # x64 debug build
-fx set core.arm64          # arm64 debug build
-fx set core.x64 --release  # x64 release build
-```
 
 {% dynamic if user.is_googler %}
 ### Accelerate the build with goma
