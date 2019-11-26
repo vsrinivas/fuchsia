@@ -32,7 +32,7 @@ var _mStructWithNullableXUnion = _bindings.CreateLazyMarshaler(StructWithNullabl
 func (msg *StructWithNullableXUnion) Marshaler() _bindings.Marshaler {
 	return _mStructWithNullableXUnion
 }
-type I_olderSimpleUnionTag uint32
+type I_olderSimpleUnionTag uint64
 const (
 	OlderSimpleUnion_unknownData = 0  // 0x00000000
 	OlderSimpleUnionI = 1026732503 // 0x3d32b1d7
@@ -58,8 +58,8 @@ func (_m *OlderSimpleUnion) Which() I_olderSimpleUnionTag {
 	}
 }
 
-func (_m *OlderSimpleUnion) Ordinal() uint32 {
-	return uint32(_m.I_olderSimpleUnionTag)
+func (_m *OlderSimpleUnion) Ordinal() uint64 {
+	return uint64(_m.I_olderSimpleUnionTag)
 }
 
 func (_m *OlderSimpleUnion) SetI(i int64) {
@@ -85,7 +85,7 @@ func OlderSimpleUnionWithF(f float32) OlderSimpleUnion {
 }
 
 
-type I_newerSimpleUnionTag uint32
+type I_newerSimpleUnionTag uint64
 const (
 	NewerSimpleUnion_unknownData = 0  // 0x00000000
 	NewerSimpleUnionI = 693944286 // 0x295cbfde
@@ -115,8 +115,8 @@ func (_m *NewerSimpleUnion) Which() I_newerSimpleUnionTag {
 	}
 }
 
-func (_m *NewerSimpleUnion) Ordinal() uint32 {
-	return uint32(_m.I_newerSimpleUnionTag)
+func (_m *NewerSimpleUnion) Ordinal() uint64 {
+	return uint64(_m.I_newerSimpleUnionTag)
 }
 
 func (_m *NewerSimpleUnion) SetI(i int64) {
@@ -153,7 +153,7 @@ func NewerSimpleUnionWithV(v []string) NewerSimpleUnion {
 }
 
 
-type I_strictSimpleXUnionTag uint32
+type I_strictSimpleXUnionTag uint64
 const (
 	StrictSimpleXUnionI = 1851697276 // 0x6e5ea87c
 	StrictSimpleXUnionF = 855207063 // 0x32f96c97
@@ -172,8 +172,8 @@ func (_m *StrictSimpleXUnion) Which() I_strictSimpleXUnionTag {
 	return _m.I_strictSimpleXUnionTag
 }
 
-func (_m *StrictSimpleXUnion) Ordinal() uint32 {
-	return uint32(_m.I_strictSimpleXUnionTag)
+func (_m *StrictSimpleXUnion) Ordinal() uint64 {
+	return uint64(_m.I_strictSimpleXUnionTag)
 }
 
 func (_m *StrictSimpleXUnion) SetI(i int32) {
@@ -210,7 +210,7 @@ func StrictSimpleXUnionWithS(s string) StrictSimpleXUnion {
 }
 
 
-type I_xUnionContainingEmptyStructTag uint32
+type I_xUnionContainingEmptyStructTag uint64
 const (
 	XUnionContainingEmptyStruct_unknownData = 0  // 0x00000000
 	XUnionContainingEmptyStructEmpty = 424858069 // 0x1952d1d5
@@ -232,8 +232,8 @@ func (_m *XUnionContainingEmptyStruct) Which() I_xUnionContainingEmptyStructTag 
 	}
 }
 
-func (_m *XUnionContainingEmptyStruct) Ordinal() uint32 {
-	return uint32(_m.I_xUnionContainingEmptyStructTag)
+func (_m *XUnionContainingEmptyStruct) Ordinal() uint64 {
+	return uint64(_m.I_xUnionContainingEmptyStructTag)
 }
 
 func (_m *XUnionContainingEmptyStruct) SetEmpty(empty Empty) {
@@ -248,7 +248,7 @@ func XUnionContainingEmptyStructWithEmpty(empty Empty) XUnionContainingEmptyStru
 }
 
 
-type I_strictBoundedXUnionTag uint32
+type I_strictBoundedXUnionTag uint64
 const (
 	StrictBoundedXUnionV = 2024555624 // 0x78ac4468
 )
@@ -263,8 +263,8 @@ func (_m *StrictBoundedXUnion) Which() I_strictBoundedXUnionTag {
 	return _m.I_strictBoundedXUnionTag
 }
 
-func (_m *StrictBoundedXUnion) Ordinal() uint32 {
-	return uint32(_m.I_strictBoundedXUnionTag)
+func (_m *StrictBoundedXUnion) Ordinal() uint64 {
+	return uint64(_m.I_strictBoundedXUnionTag)
 }
 
 func (_m *StrictBoundedXUnion) SetV(v []uint8) {
@@ -279,7 +279,7 @@ func StrictBoundedXUnionWithV(v []uint8) StrictBoundedXUnion {
 }
 
 
-type I_explicitXUnionTag uint32
+type I_explicitXUnionTag uint64
 const (
 	ExplicitXUnion_unknownData = 0  // 0x00000000
 	ExplicitXUnionI = 1 // 0x00000001
@@ -305,8 +305,8 @@ func (_m *ExplicitXUnion) Which() I_explicitXUnionTag {
 	}
 }
 
-func (_m *ExplicitXUnion) Ordinal() uint32 {
-	return uint32(_m.I_explicitXUnionTag)
+func (_m *ExplicitXUnion) Ordinal() uint64 {
+	return uint64(_m.I_explicitXUnionTag)
 }
 
 func (_m *ExplicitXUnion) SetI(i int64) {

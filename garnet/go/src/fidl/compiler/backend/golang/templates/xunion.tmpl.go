@@ -6,7 +6,7 @@ package templates
 
 const XUnion = `
 {{- define "XUnionDefinition" -}}
-type {{ .TagName }} uint32
+type {{ .TagName }} uint64
 const (
 	{{- if .IsFlexible }}
 	{{ $.Name }}_unknownData = 0  // 0x00000000
@@ -47,8 +47,8 @@ func (_m *{{ .Name }}) Which() {{ .TagName }} {
 	{{- end }}
 }
 
-func (_m *{{ .Name }}) Ordinal() uint32 {
-	return uint32(_m.{{ .TagName }})
+func (_m *{{ .Name }}) Ordinal() uint64 {
+	return uint64(_m.{{ .TagName }})
 }
 
 {{- range .Members }}
