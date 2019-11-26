@@ -66,7 +66,7 @@ class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory:
 
   void CreateLoggerFromProjectId(uint32_t project_id, ::zx::channel logger,
                                  CreateLoggerFromProjectIdCompleter::Sync completer) final {
-    ZX_PANIC("Not Implemented.");
+    completer.Reply(create_logger_from_id_handler_(project_id, std::move(logger)));
   }
 
   void CreateLoggerSimpleFromProjectId(
@@ -81,9 +81,14 @@ class FakeLoggerFactoryService : public ::llcpp::fuchsia::cobalt::LoggerFactory:
     create_logger_handler_ = std::move(handler);
   }
 
+  void set_create_logger_from_id_handler(fit::function<Status(uint32_t, zx::channel)> handler) {
+    create_logger_from_id_handler_ = std::move(handler);
+  }
+
  private:
   fit::function<Status(::fidl::StringView, ::llcpp::fuchsia::cobalt::ReleaseStage, zx::channel)>
       create_logger_handler_;
+  fit::function<Status(uint32_t, zx::channel)> create_logger_from_id_handler_;
 };
 
 // Fake Implementation for fuchsia::cobalt::Logger.
@@ -184,12 +189,13 @@ class FakeLoggerService : public ::llcpp::fuchsia::cobalt::Logger::Interface {
 // Struct for argument validation.
 struct CreateLoggerValidationArgs {
   void Check() const {
-    EXPECT_TRUE(is_name_ok);
+    EXPECT_TRUE(is_name_or_id_ok);
     EXPECT_TRUE(is_stage_ok);
     EXPECT_TRUE(is_channel_ok);
   }
 
   std::string project_name;
+  uint32_t project_id;
   ::llcpp::fuchsia::cobalt::ReleaseStage stage;
 
   // Return status for the fidl call.
@@ -197,7 +203,7 @@ struct CreateLoggerValidationArgs {
 
   // Used for validating the args and validation on the main thread.
   fbl::Mutex result_lock_;
-  bool is_name_ok = false;
+  bool is_name_or_id_ok = false;
   bool is_stage_ok = false;
   bool is_channel_ok = false;
 };
@@ -215,7 +221,7 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
                                         ::llcpp::fuchsia::cobalt::ReleaseStage stage,
                                         zx::channel channel) {
     fbl::AutoLock lock(&checker->result_lock_);
-    checker->is_name_ok =
+    checker->is_name_or_id_ok =
         (checker->project_name == std::string_view(project_name.data(), project_name.size()));
     checker->is_stage_ok = (static_cast<std::underlying_type<ReleaseStage>::type>(checker->stage) ==
                             static_cast<std::underlying_type<ReleaseStage>::type>(stage));
@@ -224,6 +230,16 @@ void BindLoggerToLoggerFactoryService(FakeLoggerFactoryService* binder, FakeLogg
 
     return checker->return_status;
   });
+  binder->set_create_logger_from_id_handler(
+      [bindee, checker, dispatcher](uint32_t project_id, zx::channel channel) {
+        fbl::AutoLock lock(&checker->result_lock_);
+        checker->is_name_or_id_ok = (checker->project_id == project_id);
+        checker->is_stage_ok = true;  // release stage is not used for this type of binding
+        checker->is_channel_ok = channel.is_valid();
+        fidl::Bind(dispatcher, std::move(channel), bindee);
+
+        return checker->return_status;
+      });
 }
 
 constexpr std::string_view kProjectName = "SomeProject";
@@ -462,6 +478,92 @@ TEST_F(CobaltLoggerTest, LogCounterWaitsUntilServiceBecomesAvailable) {
   ASSERT_NE(GetStorage().counters().end(), itr);
 
   EXPECT_EQ(itr->second, kCounter);
+}
+
+constexpr uint32_t kProjectId = 1234;
+
+class LoggerFromIdServiceFixture : public zxtest::Test {
+ public:
+  void SetUp() final {
+    // Initialize the service loop.
+    service_loop_ = std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
+
+    checker_.project_id = kProjectId;
+    checker_.return_status = Status::OK;
+
+    // Set up logger factory service.
+    CobaltOptions options;
+    options.project_id = kProjectId;
+    options.service_connect = [this](const char* path, zx::channel service_channel) {
+      BindLoggerFactoryService(&logger_factory_impl_, std::move(service_channel),
+                               service_loop_->dispatcher());
+      return ZX_OK;
+    };
+    logger_ = std::make_unique<CobaltLogger>(std::move(options));
+
+    BindLoggerToLoggerFactoryService(&logger_factory_impl_, &logger_impl_, &checker_,
+                                     service_loop_->dispatcher());
+  }
+
+  void StartServiceLoop() {
+    ASSERT_NOT_NULL(service_loop_);
+    ASSERT_TRUE(service_loop_->GetState() == ASYNC_LOOP_RUNNABLE);
+    service_loop_->StartThread("LoggerServiceThread");
+  }
+
+  void StopServiceLoop() {
+    service_loop_->Quit();
+    service_loop_->JoinThreads();
+    service_loop_->ResetQuit();
+  }
+
+  void TearDown() final { StopServiceLoop(); }
+
+  const InMemoryLogger& GetStorage() const { return logger_impl_.storage(); }
+
+  async::Loop* GetLoop() { return service_loop_.get(); }
+
+  Logger* logger() { return logger_.get(); }
+
+  void SetLoggerLogReturnStatus(Status status) { logger_impl_.set_log_return_status(status); }
+
+ protected:
+  CreateLoggerValidationArgs checker_;
+
+ private:
+  std::unique_ptr<CobaltLogger> logger_ = nullptr;
+
+  std::unique_ptr<async::Loop> service_loop_ = nullptr;
+
+  FakeLoggerFactoryService logger_factory_impl_;
+  FakeLoggerService logger_impl_;
+};
+
+using CobaltLoggerFromIdTest = LoggerFromIdServiceFixture;
+
+TEST_F(CobaltLoggerFromIdTest, LogHistogramReturnsTrueWhenServiceReturnsOk) {
+  std::vector<HistogramBucket> buckets;
+
+  MetricOptions info;
+  info.metric_id = 1;
+  info.component = "SomeComponent";
+  info.event_codes = {1, 2, 3, 4, 5};
+
+  for (uint32_t i = 0; i < kBucketCount; ++i) {
+    buckets.push_back({.index = i, .count = 2 * i});
+  }
+
+  ASSERT_NO_FAILURES(StartServiceLoop(), "Failed to initialize the service async dispatchers.");
+
+  ASSERT_TRUE(logger()->Log(info, buckets.data(), buckets.size()));
+  ASSERT_NO_FATAL_FAILURES(checker_.Check());
+  auto itr = GetStorage().histograms().find(info);
+  ASSERT_NE(GetStorage().histograms().end(), itr);
+  ASSERT_EQ(itr->second.size(), kBucketCount);
+
+  for (uint32_t i = 0; i < itr->second.size(); ++i) {
+    EXPECT_EQ(buckets[i].count, (itr->second).at(i));
+  }
 }
 
 }  // namespace

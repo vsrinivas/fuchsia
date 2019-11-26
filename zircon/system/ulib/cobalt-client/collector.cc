@@ -21,9 +21,11 @@ namespace internal {
 namespace {
 
 internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
-  ZX_DEBUG_ASSERT_MSG(!options.project_name.empty(), "Must define  a valid project_name.");
+  ZX_DEBUG_ASSERT_MSG(!options.project_name.empty() || options.project_id > 0,
+                      "Must define a valid project_name or project_id.");
   internal::CobaltOptions cobalt_options;
   cobalt_options.project_name = options.project_name;
+  cobalt_options.project_id = options.project_id;
   cobalt_options.service_connect = [](const char* service_path,
                                       zx::channel service) -> zx_status_t {
     return fdio_service_connect(service_path, service.release());

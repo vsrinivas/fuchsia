@@ -36,7 +36,12 @@ struct CollectorOptions {
 
   // The name used to register the project with cobalt. This will be used to route the metrics
   // to the right project.
+  // DEPRECATED: use project_id instead.
   std::string project_name;
+
+  // The ID used to register the project with cobalt. This will be used to route the metrics
+  // to the right project.
+  uint32_t project_id;
 
   // This is set internally by factory functions.
   internal::ReleaseStageType release_stage = 0;

@@ -30,7 +30,11 @@ struct CobaltOptions {
       nullptr;
 
   // Used to acquire a logger instance.
+  // DEPRECATED: use project_id instead.
   std::string project_name;
+
+  // Used to acquire a logger instance.
+  uint32_t project_id;
 
   // Which release stage to use for persisting metrics.
   ReleaseStage release_stage;
