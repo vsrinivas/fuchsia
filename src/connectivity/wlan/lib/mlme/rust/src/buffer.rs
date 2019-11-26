@@ -128,6 +128,14 @@ impl OutBuf {
             unsafe { slice::from_raw_parts(self.data, self.written_bytes) }
         }
     }
+
+    #[cfg(test)]
+    pub fn free(self) {
+        let data = self.raw as *mut Vec<u8>;
+        unsafe {
+            drop(Box::from_raw(data));
+        }
+    }
 }
 
 #[cfg(test)]
@@ -147,10 +155,9 @@ impl FakeBufferProvider {
     }
 
     pub extern "C" fn get_buffer(min_len: usize) -> InBuf {
-        let mut data = vec![0u8; min_len];
-        let data_ptr = (&mut data[..]).as_mut_ptr();
-        let ptr = data.as_mut_ptr();
-        std::mem::forget(data);
+        let mut data = Box::new(vec![0u8; min_len]);
+        let data_ptr = data.as_mut_ptr();
+        let ptr = Box::into_raw(data);
         InBuf {
             free_buffer: Self::free_buffer,
             raw: ptr as *mut c_void,

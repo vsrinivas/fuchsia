@@ -47,7 +47,10 @@ const MAX_EAPOL_FRAME_LEN: usize = 255;
 
 #[derive(Debug, PartialEq)]
 pub enum TimedEvent {
+    /// Authentication timed out. AP did not complete authentication in time.
     Authenticating,
+    /// Association timed out. AP did not complete association in time.
+    Associating,
     ChannelScheduler,
     ScannerProbeDelay(WlanChannel),
 }
@@ -72,6 +75,7 @@ pub struct Client {
     bssid: Bssid,
     iface_mac: MacAddr,
     state: Option<States>,
+    pub is_rsn: bool,
 }
 
 impl Client {
@@ -81,6 +85,7 @@ impl Client {
         scheduler: Scheduler,
         bssid: Bssid,
         iface_mac: MacAddr,
+        is_rsn: bool,
     ) -> Self {
         let timer = Timer::<TimedEvent>::new(scheduler);
         Self {
@@ -91,12 +96,19 @@ impl Client {
             bssid,
             iface_mac,
             state: Some(States::new_initial()),
+            is_rsn,
         }
     }
 
     pub fn authenticate(&mut self, timeout_bcn_count: u8) {
         // Safe: |state| is never None and always replaced with Some(..).
         self.state = Some(self.state.take().unwrap().authenticate(self, timeout_bcn_count));
+    }
+
+    // TODO(hahnr): Take MLME-ASSOCIATE.request as parameter.
+    pub fn associate(&mut self) {
+        // Safe: |state| is never None and always replaced with Some(..).
+        self.state = Some(self.state.take().unwrap().associate(self));
     }
 
     /// Returns a reference to the STA's SNS manager.
@@ -120,45 +132,49 @@ impl Client {
     /// Fuchsia's Netstack if the STA's controlled port is open.
     /// NULL-Data frames are interpreted as "Keep Alive" requests and responded with NULL data
     /// frames if the STA's controlled port is open.
+    // TODO(42080): Move entire logic into Associated state once C++ version no longer depends on
+    // this function.
     pub fn handle_data_frame<B: ByteSlice>(
         &mut self,
-        bytes: B,
-        has_padding: bool,
+        fixed_data_fields: &mac::FixedDataHdrFields,
+        addr4: Option<mac::Addr4>,
+        qos_ctrl: Option<mac::QosControl>,
+        body: B,
         is_controlled_port_open: bool,
     ) {
-        if let Some(msdus) = mac::MsduIterator::from_raw_data_frame(bytes, has_padding) {
-            match msdus {
-                // Handle NULL data frames independent of the controlled port's status.
-                mac::MsduIterator::Null => {
-                    if let Err(e) = self.send_keep_alive_resp_frame() {
-                        error!("error sending keep alive frame: {}", e);
-                    }
+        let msdus =
+            mac::MsduIterator::from_data_frame_parts(*fixed_data_fields, addr4, qos_ctrl, body);
+        match msdus {
+            // Handle NULL data frames independent of the controlled port's status.
+            mac::MsduIterator::Null => {
+                if let Err(e) = self.send_keep_alive_resp_frame() {
+                    error!("error sending keep alive frame: {}", e);
                 }
-                // Handle aggregated and non-aggregated MSDUs.
-                _ => {
-                    for msdu in msdus {
-                        let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
-                        match llc_frame.hdr.protocol_id.to_native() {
-                            // Forward EAPoL frames to SME independent of the controlled port's
-                            // status.
-                            mac::ETHER_TYPE_EAPOL => {
-                                if let Err(e) = self.send_eapol_indication(
-                                    *src_addr,
-                                    *dst_addr,
-                                    &llc_frame.body[..],
-                                ) {
-                                    error!("error sending MLME-EAPOL.indication: {}", e);
-                                }
+            }
+            // Handle aggregated and non-aggregated MSDUs.
+            _ => {
+                for msdu in msdus {
+                    let mac::Msdu { dst_addr, src_addr, llc_frame } = &msdu;
+                    match llc_frame.hdr.protocol_id.to_native() {
+                        // Forward EAPoL frames to SME independent of the controlled port's
+                        // status.
+                        mac::ETHER_TYPE_EAPOL => {
+                            if let Err(e) = self.send_eapol_indication(
+                                *src_addr,
+                                *dst_addr,
+                                &llc_frame.body[..],
+                            ) {
+                                error!("error sending MLME-EAPOL.indication: {}", e);
                             }
-                            // Deliver non-EAPoL MSDUs only if the controlled port is open.
-                            _ if is_controlled_port_open => {
-                                if let Err(e) = self.deliver_msdu(msdu) {
-                                    error!("error while handling data frame: {}", e);
-                                }
-                            }
-                            // Drop all non-EAPoL MSDUs if the controlled port is closed.
-                            _ => (),
                         }
+                        // Deliver non-EAPoL MSDUs only if the controlled port is open.
+                        _ if is_controlled_port_open => {
+                            if let Err(e) = self.deliver_msdu(msdu) {
+                                error!("error while handling data frame: {}", e);
+                            }
+                        }
+                        // Drop all non-EAPoL MSDUs if the controlled port is closed.
+                        _ => (),
                     }
                 }
             }
@@ -416,7 +432,7 @@ impl Client {
         self.state = Some(self.state.take().unwrap().on_mac_frame(self, bytes, body_aligned));
     }
 
-    /// Sends an MLME-AUTHENTICATE.confirm message to the joined BSS with authentication type
+    /// Sends an MLME-AUTHENTICATE.confirm message to the SME with authentication type
     /// `Open System` as only open authentication is supported.
     fn send_authenticate_conf(&mut self, result_code: fidl_mlme::AuthenticateResultCodes) {
         let result = self.device.access_sme_sender(|sender| {
@@ -425,6 +441,19 @@ impl Client {
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code,
                 auth_content: None,
+            })
+        });
+        if let Err(e) = result {
+            error!("error sending MLME-AUTHENTICATE.confirm: {}", e);
+        }
+    }
+
+    /// Sends an MLME-ASSOCIATE.confirm message to the SME.
+    fn send_associate_conf(&mut self, aid: mac::Aid, result_code: fidl_mlme::AssociateResultCodes) {
+        let result = self.device.access_sme_sender(|sender| {
+            sender.send_associate_conf(&mut fidl_mlme::AssociateConfirm {
+                association_id: aid,
+                result_code,
             })
         });
         if let Err(e) = result {
@@ -444,6 +473,7 @@ impl Client {
             error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
         }
     }
+
     // See `SetPowerManagement` in the C++ implementation.
     // TODO(fxb/39899): The Rust crate does not yet support channel scheduling. When channel
     //                  scheduling is available, use this code and remove the `allow(dead_code)`
@@ -470,6 +500,19 @@ impl Client {
             .send_wlan_frame(buffer, TxFlags::NONE)
             .map_err(|error| Error::Status(format!("error sending power management frame"), error))
     }
+
+    /// Sends an MLME-DISASSOCIATE.indication message to the joined BSS.
+    fn send_disassoc_ind(&mut self, reason_code: fidl_mlme::ReasonCode) {
+        let result = self.device.access_sme_sender(|sender| {
+            sender.send_disassociate_ind(&mut fidl_mlme::DisassociateIndication {
+                peer_sta_address: self.bssid.0,
+                reason_code: reason_code.into_primitive(),
+            })
+        });
+        if let Err(e) = result {
+            error!("error sending MLME-DEAUTHENTICATE.indication: {}", e);
+        }
+    }
 }
 
 #[cfg(test)]
@@ -494,7 +537,7 @@ mod tests {
 
     fn make_client_station(device: Device, scheduler: Scheduler) -> Client {
         let buf_provider = FakeBufferProvider::new();
-        let client = Client::new(device, buf_provider, scheduler, BSSID, IFACE_MAC);
+        let client = Client::new(device, buf_provider, scheduler, BSSID, IFACE_MAC, false);
         client
     }
 
@@ -667,7 +710,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&data_frame[..], false, true);
+        send_data_frame(&mut client, data_frame, true);
         #[rustfmt::skip]
         assert_eq!(&fake_device.wlan_queue[0].0[..], &[
             // Data header:
@@ -687,7 +730,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&data_frame[..], false, true);
+        send_data_frame(&mut client, data_frame, true);
         assert_eq!(fake_device.eth_queue.len(), 1);
         #[rustfmt::skip]
         assert_eq!(fake_device.eth_queue[0], [
@@ -705,7 +748,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&data_frame[..], false, true);
+        send_data_frame(&mut client, data_frame, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 2);
         #[rustfmt::skip]
@@ -733,7 +776,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&data_frame[..], false, true);
+        send_data_frame(&mut client, data_frame, true);
         let queue = &fake_device.eth_queue;
         assert_eq!(queue.len(), 1);
         #[rustfmt::skip]
@@ -753,7 +796,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&data_frame[..], false, false);
+        send_data_frame(&mut client, data_frame, false);
 
         // Verify frame was not sent to netstack.
         assert_eq!(fake_device.eth_queue.len(), 0);
@@ -766,7 +809,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&eapol_frame[..], false, false);
+        send_data_frame(&mut client, eapol_frame, false);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(fake_device.eth_queue.len(), 0);
@@ -788,7 +831,7 @@ mod tests {
         let mut fake_scheduler = FakeScheduler::new();
         let mut client =
             make_client_station(fake_device.as_device(), fake_scheduler.as_scheduler());
-        client.handle_data_frame(&eapol_frame[..], false, true);
+        send_data_frame(&mut client, eapol_frame, true);
 
         // Verify EAPoL frame was not sent to netstack.
         assert_eq!(fake_device.eth_queue.len(), 0);
@@ -914,5 +957,16 @@ mod tests {
         let mut client = make_client_station(device, scheduler);
         client.send_power_state_frame(PowerState::DOZE).expect("failed sending doze frame");
         client.send_power_state_frame(PowerState::AWAKE).expect("failed sending awake frame");
+    }
+
+    fn send_data_frame(client: &mut Client, data_frame: Vec<u8>, open_controlled_port: bool) {
+        let parsed_frame = mac::MacFrame::parse(&data_frame[..], false).expect("invalid frame");
+        let (fixed, addr4, qos, body) = match parsed_frame {
+            mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. } => {
+                (fixed_fields, addr4.map(|x| *x), qos_ctrl.map(|x| x.get()), body)
+            }
+            _ => panic!("error parsing data frame"),
+        };
+        client.handle_data_frame(&fixed, addr4, qos, body, open_controlled_port);
     }
 }

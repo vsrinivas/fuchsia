@@ -209,6 +209,7 @@ impl FakeDevice {
         unsafe {
             (*(device as *mut Self)).wlan_queue.push((buf.as_slice().to_vec(), flags));
         }
+        buf.free();
         zx::sys::ZX_OK
     }
 
@@ -221,7 +222,8 @@ impl FakeDevice {
         zx::sys::ZX_OK
     }
 
-    pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, _: OutBuf, _: u32) -> i32 {
+    pub extern "C" fn send_wlan_frame_with_failure(_: *mut c_void, buf: OutBuf, _: u32) -> i32 {
+        buf.free();
         zx::sys::ZX_ERR_IO
     }
 

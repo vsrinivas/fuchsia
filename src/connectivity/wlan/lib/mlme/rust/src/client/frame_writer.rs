@@ -35,6 +35,7 @@ pub fn write_open_auth_frame<B: Appendable>(
     Ok(())
 }
 
+#[allow(unused)]
 pub fn write_assoc_req_frame<B: Appendable>(
     buf: &mut B,
     bssid: Bssid,
@@ -60,7 +61,7 @@ pub fn write_assoc_req_frame<B: Appendable>(
     buf.append_value(&mac::AssocReqHdr { capabilities: cap_info, listen_interval: 0 })?;
 
     write_ssid(buf, ssid)?;
-    let rates_writer = RatesWriter::try_new(&rates[..])?;
+    let rates_writer = RatesWriter::try_new(rates)?;
     rates_writer.write_supported_rates(buf);
     rates_writer.write_ext_supported_rates(buf);
 

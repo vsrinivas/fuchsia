@@ -56,8 +56,9 @@ impl<E> Timer<E> {
     }
 
     pub fn cancel_event(&mut self, event_id: EventId) {
-        self.events.remove(&event_id);
-        (self.scheduler.cancel)(self.scheduler.cookie, event_id);
+        if let Some(_) = self.events.remove(&event_id) {
+            (self.scheduler.cancel)(self.scheduler.cookie, event_id);
+        }
     }
 
     pub fn cancel_all(&mut self) {

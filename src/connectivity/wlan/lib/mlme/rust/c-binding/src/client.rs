@@ -27,7 +27,15 @@ pub extern "C" fn client_sta_new(
     bssid: &[u8; 6],
     iface_mac: &[u8; 6],
 ) -> *mut Client {
-    Box::into_raw(Box::new(Client::new(device, buf_provider, scheduler, Bssid(*bssid), *iface_mac)))
+    Box::into_raw(Box::new(Client::new(
+        device,
+        buf_provider,
+        scheduler,
+        Bssid(*bssid),
+        *iface_mac,
+        // TODO(42079): Change binding to allow creating RSN clients.
+        false,
+    )))
 }
 
 #[no_mangle]
@@ -99,7 +107,21 @@ pub extern "C" fn client_sta_handle_data_frame(
 ) -> i32 {
     // Safe here because |data_frame_slice| does not outlive |data_frame|.
     let data_frame_slice: &[u8] = data_frame.into();
-    sta.handle_data_frame(data_frame_slice, has_padding, controlled_port_open);
+
+    // TODO(42080): Do not parse here. Instead, parse in associated state only.
+    match mac::MacFrame::parse(&data_frame_slice[..], has_padding) {
+        Some(mac::MacFrame::Data { fixed_fields, addr4, qos_ctrl, body, .. }) => {
+            sta.handle_data_frame(
+                &fixed_fields,
+                addr4.map(|x| *x),
+                qos_ctrl.map(|x| x.get()),
+                body,
+                controlled_port_open,
+            );
+        }
+        // Silently discard corrupted frame.
+        _ => (),
+    };
     zx::sys::ZX_OK
 }
 
