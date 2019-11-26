@@ -74,16 +74,24 @@ using HashSalt = array<byte>:HASH_SALT_SIZE;
 /// persistent on this device, then it is saved to disk.
 /// * `Finished` - the handler is in the process of shutting down and will soon
 /// terminate.
+// TODO(fxb/41637): Add and document the new states and transititions for
+// locked accounts.
 [Discoverable]
 protocol AccountHandlerControl {
     /// Creates a completely new Fuchsia account.
     ///
-    /// `id` The new account's local identifier.
+    /// `account_id` The new account's local identifier.
+    /// `auth_mechanism_id` An `AuthMechanismId` for a storage
+    ///                     unlock-capable authentication mechanism. If
+    ///                     provided, a single enrollment of that
+    ///                     mechanism will be created for storage
+    ///                     unlock.
     ///
     /// Fails with FAILED_PRECONDITION if the AccountHandler is not in the `Uninitialized`
     /// state.
     CreateAccount(
-        fuchsia.identity.account.LocalAccountId id)
+        fuchsia.identity.account.LocalAccountId account_id,
+        fuchsia.identity.account.AuthMechanismId? auth_mechanism_id)
         -> () error fuchsia.identity.account.Error;
 
     /// Loads information about a Fuchsia account that was previously provisioned

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 library fuchsia.identity.account;
+using fuchsia.sys;
 
 /// The maximum number of Fuchsia accounts that may be simultaneously
 /// provisioned on a device. This number may be increased in the future.
@@ -21,6 +22,14 @@ const uint32 MAX_NAME_SIZE = 128;
 
 /// The maximum length of an (UTF-8 encoded) auth provider type, in bytes.
 const uint32 MAX_AUTH_PROVIDER_TYPE_SIZE = 128;
+
+/// The maximum number of authentication mechanisms that can be registered
+/// for a device.
+const uint32 MAX_AUTH_MECHANISMS = 16;
+
+/// The maximum number of authentication mechanism enrollments that may be
+/// simultaneously defined within a Fuchsia account.
+const uint32 MAX_AUTH_MECHANISM_ENROLLMENTS = 32;
 
 /// Provides an upper bound to how long a Fuchsia account can live on the
 /// current device.
@@ -96,4 +105,38 @@ enum Error {
     // This enumeration may expand to include additional statuses in the future.
     // Examples are likely to include: MAX_LISTENERS, NO_SUITABLE_AUTHENTICATOR,
     // INVALID_AUTH_PROVIDER,
+};
+
+/// A fuchsia component URI pointing to a component containing an authentication
+/// mechanism. It acts as a unique, stable identifier representing an
+/// authentication mechanism.
+// TODO(dnordstrom): Allow multiple authentication mechanisms in the same
+// component.
+using AuthMechanismId = fuchsia.sys.component_url;
+
+/// Properties describing the authentication mechanism.
+struct AuthMechanismProperties {
+    /// A unique identifier for the authentication mechanism.
+    AuthMechanismId id;
+
+    /// If true, the authentication mechanism can be used for storage unlock.
+    bool storage_unlock;
+
+    // TODO(dnordstrom): Add more properties as they become useful to clients.
+};
+
+/// An identifier for an enrollment of an authentication mechanism. It is
+/// unique within an account and an authentication mechanism.
+using AuthMechanismEnrollmentId = uint64;
+
+/// Metadata about an enrollment, such as a human readable name.
+struct AuthMechanismEnrollmentMetadata {
+    /// A unique identifier associated with the enrollment.
+    AuthMechanismEnrollmentId id;
+
+    /// A short text describing the enrollment, e.g. "right thumb" for a
+    /// fingerprint authenticator.
+    string:MAX_NAME_SIZE name;
+
+    // TODO(dnordstrom): Add field for date created.
 };

@@ -100,7 +100,7 @@ class AutoLoginBaseShellApp : modular::SingleServiceApp<fuchsia::modular::BaseSh
         }
 
         account_manager_->ProvisionNewAccount(
-            fuchsia::identity::account::Lifetime::PERSISTENT, [](auto) {
+            fuchsia::identity::account::Lifetime::PERSISTENT, nullptr, [](auto) {
               FXL_LOG(INFO) << "Provisioned new account. Translating "
                                "this account into a "
                                "fuchsia::modular::auth::Account.";

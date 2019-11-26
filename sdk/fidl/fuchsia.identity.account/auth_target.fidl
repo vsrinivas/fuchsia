@@ -118,6 +118,40 @@ protocol Account {
     ///           provisioned on the current device using TokenManager.
     SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
         -> () error Error;
+
+    /// Returns all authentication mechanism enrollments.
+    GetAuthMechanismEnrollments()
+        -> (vector<AuthMechanismEnrollmentMetadata>:MAX_AUTH_MECHANISM_ENROLLMENTS enrollments)
+        error Error;
+
+    /// Create a new enrollment of the provided authentication mechanism,
+    /// and add it to the account.
+    ///
+    /// `auth_mechanism_id` The identifier of the authentication mechanism to
+    ///                     use for the enrollment.
+    ///
+    /// Returns: The `AuthMechanismEnrollmentId` of the created enrollment.
+    // TODO(dnordstrom): Define and document how to authenticate prior to making
+    // changes to the enrollment set.
+    CreateAuthMechanismEnrollment(AuthMechanismId auth_mechanism_id)
+        -> (AuthMechanismEnrollmentId enrollment_id) error Error;
+
+    /// Remove an authentication mechanism enrollment for the account.
+    ///
+    /// `enrollment_id` The id of the enrollment to remove.
+    // TODO(dnordstrom): Define and document how to authenticate prior to making
+    // changes to the enrollment set.
+    RemoveAuthMechanismEnrollment(AuthMechanismEnrollmentId enrollment_id) -> () error Error;
+
+    // TODO(dnordstrom): Add support for modifications and/or replacement of
+    // enrollments.
+
+    /// Lock an account. After a successful call, all Account and Persona
+    /// channels for this account will be terminated. If storage unlock is not
+    /// enabled for the account, a FailedPrecondition error is returned.
+    // TODO(dnordstrom): Document the side effects on underlying storage that
+    // may still be in use by the client.
+    Lock() -> () error Error;
 };
 
 /// A protocol that exposes basic information about a Fuchsia persona and access

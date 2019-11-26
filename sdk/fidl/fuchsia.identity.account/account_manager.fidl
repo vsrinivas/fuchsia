@@ -31,7 +31,8 @@ protocol AccountManager {
             account_auth_states) error Error;
 
     /// Connects a channel to read properties of and perform operations on
-    /// one account.
+    /// one account. If the account is locked, an interactive authentication
+    /// attempt will be invoked as part of this call.
     ///
     /// `id` The account's identifier as returned by GetAccountIds()
     /// `context_provider` An `AuthenticationContextProvider` capable of
@@ -43,6 +44,8 @@ protocol AccountManager {
         fuchsia.auth.AuthenticationContextProvider context_provider,
         request<Account> account)
         -> () error Error;
+
+    // TODO(dnordstrom): Add option to retrieve an account non-interactively.
 
     /// Connects a channel that will receive changes in the provisioned
     /// accounts and their authentication state. Optionally this channel will
@@ -74,7 +77,8 @@ protocol AccountManager {
     /// to a service provider (such as Google). If the service provider account
     /// is not already a recovery account for any Fuchsia account, a new Fuchsia
     /// account will be created with its recovery account set to the service
-    /// provider account.
+    /// provider account. If a storage unlock-capable authentication mechanism
+    /// is provided, a single enrollment will be created of that mecahnism.
     ///
     /// `auth_context_provider` An `AuthenticationContextProvider` capable of
     ///                         supplying UI contexts used for interactive
@@ -83,21 +87,40 @@ protocol AccountManager {
     ///                      that should be used to authenticate with the
     ///                      service provider
     /// `lifetime` The lifetime of the account
+    /// `auth_mechanism_id` An `AuthMechanismId` for a storage
+    ///                     unlock-capable authentication mechanism. If
+    ///                     provided, a single enrollment of that
+    ///                     mechanism will be created for storage
+    ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
     ProvisionFromAuthProvider(
         fuchsia.auth.AuthenticationContextProvider auth_context_provider,
         string:MAX_AUTH_PROVIDER_TYPE_SIZE auth_provider_type,
-        Lifetime lifetime)
+        Lifetime lifetime,
+        AuthMechanismId? auth_mechanism_id)
         -> (LocalAccountId account_id) error Error;
 
-    /// Adds a new, initially empty, Fuchsia account to the current device.
+    /// Adds a new, initially empty, Fuchsia account to the current device. If a
+    /// storage unlock-capable authentication mechanism is provided, a single
+    /// enrollment will be created of that mecahnism.
     ///
     /// `lifetime` The lifetime of the account
+    /// `auth_mechanism_id` An `AuthMechanismId` for a storage
+    ///                     unlock-capable authentication mechanism. If
+    ///                     provided, a single enrollment of that
+    ///                     mechanism will be created for storage
+    ///                     unlock.
     ///
     /// Returns: `account_id` The identifier of the newly added account
-    ProvisionNewAccount(Lifetime lifetime)
+    ProvisionNewAccount(
+        Lifetime lifetime,
+        AuthMechanismId? auth_mechanism_id)
         -> (LocalAccountId account_id) error Error;
+
+    /// Returns all available authentication mechanisms.
+    GetAuthenticationMechanisms()
+        -> (vector<AuthMechanismProperties>:MAX_AUTH_MECHANISMS auth_mechanisms) error Error;
 };
 
 /// An `AuthState` along with the account that it applies to.

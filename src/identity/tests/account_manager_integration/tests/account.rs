@@ -44,7 +44,7 @@ async fn provision_new_account(
     lifetime: Lifetime,
 ) -> Result<LocalAccountId, Error> {
     account_manager
-        .provision_new_account(lifetime)
+        .provision_new_account(lifetime, None)
         .await?
         .map_err(|error| format_err!("ProvisionNewAccount returned error: {:?}", error))
 }
@@ -79,6 +79,7 @@ async fn provision_account_from_dev_auth_provider(
             acp_client_end,
             "dev_auth_provider",
             Lifetime::Persistent,
+            None,
         ),
     )
     .await;
@@ -157,6 +158,14 @@ async fn test_provision_new_account() -> Result<(), Error> {
     // Provision a second new account and verify it has a different ID.
     let account_2 = provision_new_account(&account_manager, Lifetime::Persistent).await?;
     assert_ne!(account_1, account_2);
+
+    // Enrolling an auth mechanism is not yet supported
+    assert_eq!(
+        account_manager
+            .provision_new_account(Lifetime::Persistent, Some("<AUTH MECHANISM ID>"))
+            .await?,
+        Err(ApiError::UnsupportedOperation)
+    );
 
     let account_ids = account_manager.get_account_ids().await?;
     assert_eq!(account_ids.len(), 2);

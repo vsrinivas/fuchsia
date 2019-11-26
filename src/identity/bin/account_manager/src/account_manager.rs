@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-
 use account_common::{AccountManagerError, FidlLocalAccountId, LocalAccountId, ResultExt};
 use failure::{format_err, Error};
 use fidl::endpoints::{create_endpoints, ClientEnd, ServerEnd};
@@ -120,6 +119,7 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                 auth_context_provider,
                 auth_provider_type,
                 lifetime,
+                auth_mechanism_id,
                 responder,
             } => {
                 let mut response = self
@@ -127,13 +127,21 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
                         auth_context_provider,
                         auth_provider_type,
                         lifetime,
+                        auth_mechanism_id,
                     )
                     .await;
                 responder.send(&mut response)?;
             }
-            AccountManagerRequest::ProvisionNewAccount { lifetime, responder } => {
-                let mut response = self.provision_new_account(lifetime).await;
+            AccountManagerRequest::ProvisionNewAccount {
+                lifetime,
+                auth_mechanism_id,
+                responder,
+            } => {
+                let mut response = self.provision_new_account(lifetime, auth_mechanism_id).await;
                 responder.send(&mut response)?;
+            }
+            AccountManagerRequest::GetAuthenticationMechanisms { responder } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
             }
         }
         Ok(())
@@ -229,27 +237,34 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
 
     /// Creates a new account handler connection, then creates an account within it,
     /// and finally returns the connection.
-    async fn create_account_internal(&self, lifetime: Lifetime) -> Result<Arc<AHC>, ApiError> {
+    async fn create_account_internal(
+        &self,
+        lifetime: Lifetime,
+        auth_mechanism_id: Option<String>,
+    ) -> Result<Arc<AHC>, ApiError> {
         let account_handler =
             self.account_map.lock().await.new_handler(lifetime).map_err(|err| {
                 warn!("Could not initialize account handler: {:?}", err);
                 err.api_error
             })?;
         let account_id = account_handler.get_account_id();
-        account_handler.proxy().create_account(account_id.clone().into()).await.map_err(
-            |err| {
+        account_handler
+            .proxy()
+            .create_account(account_id.clone().into(), auth_mechanism_id.as_ref().map(|x| &**x))
+            .await
+            .map_err(|err| {
                 warn!("Could not create account: {:?}", err);
                 ApiError::Resource
-            },
-        )??;
+            })??;
         Ok(account_handler)
     }
 
     async fn provision_new_account(
         &self,
         lifetime: Lifetime,
+        auth_mechanism_id: Option<String>,
     ) -> Result<FidlLocalAccountId, ApiError> {
-        let account_handler = self.create_account_internal(lifetime).await?;
+        let account_handler = self.create_account_internal(lifetime, auth_mechanism_id).await?;
         let account_id = account_handler.get_account_id();
 
         // Persist the account both in memory and on disk
@@ -268,8 +283,9 @@ impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
         auth_provider_type: String,
         lifetime: Lifetime,
+        auth_mechanism_id: Option<String>,
     ) -> Result<FidlLocalAccountId, ApiError> {
-        let account_handler = self.create_account_internal(lifetime).await?;
+        let account_handler = self.create_account_internal(lifetime, auth_mechanism_id).await?;
         let account_id = account_handler.get_account_id();
 
         // Add a service provider to the account

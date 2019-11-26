@@ -303,6 +303,18 @@ impl Account {
                 let mut response = self.set_recovery_account(account);
                 responder.send(&mut response)?;
             }
+            AccountRequest::GetAuthMechanismEnrollments { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountRequest::CreateAuthMechanismEnrollment { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountRequest::RemoveAuthMechanismEnrollment { responder, .. } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
+            AccountRequest::Lock { responder } => {
+                responder.send(&mut Err(ApiError::UnsupportedOperation))?;
+            }
         }
         Ok(())
     }
@@ -412,6 +424,10 @@ mod tests {
 
     const TEST_SCENARIO: Scenario =
         Scenario { include_test: false, threat_scenario: ThreatScenario::BasicAttacker };
+
+    const TEST_AUTH_MECHANISM_ID: &str = "<AUTH MECHANISM ID>";
+
+    const TEST_ENROLLMENT_ID: u64 = 1337;
 
     /// Type to hold the common state require during construction of test objects and execution
     /// of a test, including an async executor and a temporary location in the filesystem.
@@ -768,6 +784,41 @@ mod tests {
         test.run(test.create_persistent_account().await.unwrap(), |proxy| {
             async move {
                 assert_eq!(proxy.get_recovery_account().await?, expectation);
+                Ok(())
+            }
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_auth_mechanisms() {
+        let mut test = Test::new();
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(
+                    proxy.get_auth_mechanism_enrollments().await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                assert_eq!(
+                    proxy.create_auth_mechanism_enrollment(TEST_AUTH_MECHANISM_ID).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                assert_eq!(
+                    proxy.remove_auth_mechanism_enrollment(TEST_ENROLLMENT_ID).await?,
+                    Err(ApiError::UnsupportedOperation)
+                );
+                Ok(())
+            }
+        })
+        .await;
+    }
+
+    #[fasync::run_until_stalled(test)]
+    async fn test_lock() {
+        let mut test = Test::new();
+        test.run(test.create_persistent_account().await.unwrap(), |proxy| {
+            async move {
+                assert_eq!(proxy.lock().await?, Err(ApiError::UnsupportedOperation));
                 Ok(())
             }
         })

@@ -126,7 +126,7 @@ void SessionUserProviderImpl::AddUser(fuchsia::modular::auth::IdentityProvider i
   account_manager_->ProvisionFromAuthProvider(
       authentication_context_provider_binding_.NewBinding(),
       MapIdentityProviderToAuthProviderType(identity_provider),
-      fuchsia::identity::account::Lifetime::PERSISTENT,
+      fuchsia::identity::account::Lifetime::PERSISTENT, nullptr,
       [weak_this = weak_factory_.GetWeakPtr(),
        callback = std::move(callback)](auto result) mutable {
         if (weak_this) {
