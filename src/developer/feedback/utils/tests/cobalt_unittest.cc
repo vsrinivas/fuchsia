@@ -4,8 +4,6 @@
 
 #include "src/developer/feedback/utils/cobalt.h"
 
-#include <lib/gtest/test_loop_fixture.h>
-#include <lib/sys/cpp/testing/service_directory_provider.h>
 #include <lib/zx/time.h>
 
 #include <limits>
@@ -14,6 +12,7 @@
 
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger.h"
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
+#include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
@@ -28,36 +27,33 @@ constexpr uint32_t kEventCodeStart = std::numeric_limits<uint32_t>::max();
 
 using fuchsia::cobalt::Status;
 
-class CobaltTest : public gtest::TestLoopFixture {
+class CobaltTest : public UnitTestFixture {
  public:
-  CobaltTest() : service_directory_provider_(dispatcher()) {
-    cobalt_ = std::make_unique<Cobalt>(service_directory_provider_.service_directory());
-  }
+  void SetUp() override { cobalt_ = std::make_unique<Cobalt>(services()); }
 
  protected:
-  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> stub_logger_factory) {
-    stub_logger_factory_ = std::move(stub_logger_factory);
-    if (stub_logger_factory_) {
-      FXL_CHECK(service_directory_provider_.AddService(stub_logger_factory_->GetHandler()) ==
-                ZX_OK);
+  void SetUpCobaltLoggerFactory(std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory) {
+    logger_factory_ = std::move(logger_factory);
+    if (logger_factory_) {
+      InjectServiceProvider(logger_factory_.get());
     }
 
-    // Because |cobalt_logger_| cannot send any messages until after the callback for creating the
-    // Logger has executed, we must run the loop before attempting to log events, else
-    // |cobalt_logger_| will deem the Logger not ready.
+    // Because |cobalt_| cannot send any messages until after the callback for creating the
+    // Logger has executed, we must run the loop before attempting to log events, else |cobalt_|
+    // will deem the Logger not ready.
     RunLoopUntilIdle();
   }
 
   void CheckStubLastEvents(uint32_t metric_id, uint32_t event_code) {
-    EXPECT_EQ(stub_logger_factory_->LastMetricId(), metric_id);
-    EXPECT_EQ(stub_logger_factory_->LastEventCode(), event_code);
+    EXPECT_EQ(logger_factory_->LastMetricId(), metric_id);
+    EXPECT_EQ(logger_factory_->LastEventCode(), event_code);
   }
 
-  bool WasLogEventCalled() { return stub_logger_factory_->WasLogEventCalled(); }
+  bool WasLogEventCalled() { return logger_factory_->WasLogEventCalled(); }
 
-  void CloseAllConnections() { stub_logger_factory_->CloseAllConnections(); }
-  void CloseFactoryConnection() { stub_logger_factory_->CloseFactoryConnection(); }
-  void CloseLoggerConnection() { stub_logger_factory_->CloseLoggerConnection(); }
+  void CloseAllConnections() { logger_factory_->CloseAllConnections(); }
+  void CloseFactoryConnection() { logger_factory_->CloseFactoryConnection(); }
+  void CloseLoggerConnection() { logger_factory_->CloseLoggerConnection(); }
 
   // We want generate new a new metric id and a new event code each time so we can guarantee that
   // the stub logger's values are changing.
@@ -67,8 +63,7 @@ class CobaltTest : public gtest::TestLoopFixture {
   std::unique_ptr<Cobalt> cobalt_;
 
  private:
-  sys::testing::ServiceDirectoryProvider service_directory_provider_;
-  std::unique_ptr<StubCobaltLoggerFactoryBase> stub_logger_factory_;
+  std::unique_ptr<StubCobaltLoggerFactoryBase> logger_factory_;
 
   // Define |next_metric_id| and |next_event_code| such that it's highly  unlikely that they'll ever
   // share the same value. Additionally, select starting values that are not the default constructed

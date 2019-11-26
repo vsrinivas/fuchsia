@@ -77,9 +77,8 @@ executable("cobalt_unittest") {
   ]
 
   deps = [
-    "//garnet/public/lib/gtest",
-    "//sdk/lib/sys/cpp/testing:unit",
     "//src/developer/feedback/testing:gtest_with_syslog_main",
+    "//src/developer/feedback/testing:unit_test_fixture",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/developer/feedback/utils:cobalt",
     "//third_party/googletest:gmock",
