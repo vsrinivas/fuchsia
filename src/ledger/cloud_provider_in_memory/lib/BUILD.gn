@@ -22,7 +22,6 @@ source_set("lib") {
 
   public_deps = [
     "//src/ledger/bin/fidl/include",
-    "//src/ledger/lib/commit_pack",
     "//src/lib/callback",
     "//src/lib/fxl",
   ]
@@ -31,6 +30,7 @@ source_set("lib") {
     "//sdk/fidl/fuchsia.ledger.cloud",
     "//src/ledger/bin/fidl_helpers",
     "//src/ledger/lib/convert",
+    "//src/ledger/lib/encoding",
     "//third_party/murmurhash",
   ]
 

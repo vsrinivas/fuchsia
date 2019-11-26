@@ -11,6 +11,7 @@
 #include <functional>
 
 #include "src/ledger/lib/convert/convert.h"
+#include "src/ledger/lib/encoding/encoding.h"
 #include "src/lib/fsl/socket/strings.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "third_party/murmurhash/murmurhash.h"
@@ -54,11 +55,21 @@ uint64_t GetVectorSignature(const std::vector<uint8_t>& vector, uint32_t seed) {
   return murmurhash(reinterpret_cast<const char*>(vector.data()), vector.size(), seed);
 }
 
-uint64_t GetCommitsSignature(const std::vector<cloud_provider::CommitPackEntry>& commits) {
+uint64_t GetCommitsSignature(const std::vector<cloud_provider::Commit>& commits) {
   uint64_t result = 0;
   for (const auto& commit : commits) {
-    result = result ^ GetVectorSignature(convert::ToArray(commit.id), kAddCommitsSeed);
+    // Ignore invalid commits.
+    if (commit.has_id()) {
+      result = result ^ GetVectorSignature(convert::ToArray(commit.id()), kAddCommitsSeed);
+    }
   }
+  return result;
+}
+
+cloud_provider::Commit MakeFidlCommit(CommitRecord commit) {
+  cloud_provider::Commit result;
+  result.set_id(convert::ToArray(commit.id));
+  result.set_data(convert::ToArray(commit.data));
   return result;
 }
 
@@ -68,7 +79,7 @@ class FakePageCloud::WatcherContainer {
  public:
   WatcherContainer(cloud_provider::PageCloudWatcherPtr watcher, size_t next_commit_index);
 
-  void SendCommits(std::vector<cloud_provider::CommitPackEntry> commits, size_t next_commit_index,
+  void SendCommits(std::vector<cloud_provider::Commit> commits, size_t next_commit_index,
                    fit::closure on_ack);
 
   size_t NextCommitIndex() { return next_commit_index_; }
@@ -101,9 +112,8 @@ FakePageCloud::WatcherContainer::WatcherContainer(cloud_provider::PageCloudWatch
                                                   size_t next_commit_index)
     : watcher_(std::move(watcher)), next_commit_index_(next_commit_index) {}
 
-void FakePageCloud::WatcherContainer::SendCommits(
-    std::vector<cloud_provider::CommitPackEntry> commits, size_t next_commit_index,
-    fit::closure on_ack) {
+void FakePageCloud::WatcherContainer::SendCommits(std::vector<cloud_provider::Commit> commits,
+                                                  size_t next_commit_index, fit::closure on_ack) {
   FXL_DCHECK(watcher_.is_bound());
   FXL_DCHECK(!waiting_for_watcher_ack_);
   FXL_DCHECK(!commits.empty());
@@ -111,7 +121,7 @@ void FakePageCloud::WatcherContainer::SendCommits(
   waiting_for_watcher_ack_ = true;
   next_commit_index_ = next_commit_index;
   cloud_provider::CommitPack commit_pack;
-  if (!cloud_provider::EncodeCommitPack(commits, &commit_pack)) {
+  if (!ledger::EncodeToBuffer(&commits, &commit_pack.buffer)) {
     watcher_->OnError(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
@@ -150,9 +160,9 @@ void FakePageCloud::SendPendingCommits() {
       continue;
     }
 
-    std::vector<cloud_provider::CommitPackEntry> commits;
+    std::vector<cloud_provider::Commit> commits;
     for (size_t i = container.NextCommitIndex(); i < commits_.size(); i++) {
-      commits.push_back(commits_[i]);
+      commits.push_back(MakeFidlCommit(commits_[i]));
     }
 
     container.SendCommits(std::move(commits), commits_.size(), [this] { SendPendingCommits(); });
@@ -178,18 +188,25 @@ bool FakePageCloud::MustReturnError(uint64_t request_signature) {
   }
 }
 
-void FakePageCloud::AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) {
-  std::vector<cloud_provider::CommitPackEntry> commit_entries;
-  if (!cloud_provider::DecodeCommitPack(commits, &commit_entries)) {
+void FakePageCloud::AddCommits(cloud_provider::CommitPack commit_pack,
+                               AddCommitsCallback callback) {
+  cloud_provider::Commits commits;
+  if (!ledger::DecodeFromBuffer(commit_pack.buffer, &commits)) {
     callback(cloud_provider::Status::INTERNAL_ERROR);
     return;
   }
-
+  std::vector<cloud_provider::Commit> commit_entries = std::move(commits.commits);
   if (MustReturnError(GetCommitsSignature(commit_entries))) {
     callback(cloud_provider::Status::NETWORK_ERROR);
     return;
   }
-  std::move(commit_entries.begin(), commit_entries.end(), std::back_inserter(commits_));
+  for (const cloud_provider::Commit& commit : commit_entries) {
+    if (!commit.has_id() || !commit.has_data()) {
+      callback(cloud_provider::Status::ARGUMENT_ERROR);
+      return;
+    }
+    commits_.push_back({convert::ToString(commit.id()), convert::ToString(commit.data())});
+  }
   SendPendingCommits();
   callback(cloud_provider::Status::OK);
 }
@@ -202,7 +219,7 @@ void FakePageCloud::GetCommits(std::unique_ptr<cloud_provider::PositionToken> mi
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
-  std::vector<cloud_provider::CommitPackEntry> result;
+  std::vector<cloud_provider::Commit> result;
   size_t start = 0u;
   if (!TokenToPosition(min_position_token, &start)) {
     callback(cloud_provider::Status::ARGUMENT_ERROR, nullptr, nullptr);
@@ -210,7 +227,7 @@ void FakePageCloud::GetCommits(std::unique_ptr<cloud_provider::PositionToken> mi
   }
 
   for (size_t i = start; i < commits_.size(); i++) {
-    result.push_back(commits_[i]);
+    result.push_back(MakeFidlCommit(commits_[i]));
   }
   std::unique_ptr<cloud_provider::PositionToken> token;
   if (!result.empty()) {
@@ -220,7 +237,7 @@ void FakePageCloud::GetCommits(std::unique_ptr<cloud_provider::PositionToken> mi
     token = fidl::MakeOptional(PositionToToken(commits_.size() - 1));
   }
   cloud_provider::CommitPack commit_pack;
-  if (!cloud_provider::EncodeCommitPack(result, &commit_pack)) {
+  if (!ledger::EncodeToBuffer(&result, &commit_pack.buffer)) {
     callback(cloud_provider::Status::INTERNAL_ERROR, nullptr, nullptr);
     return;
   }

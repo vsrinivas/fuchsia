@@ -11,11 +11,15 @@
 
 #include "src/ledger/bin/fidl/include/types.h"
 #include "src/ledger/cloud_provider_in_memory/lib/types.h"
-#include "src/ledger/lib/commit_pack/commit_pack.h"
 #include "src/lib/callback/auto_cleanable.h"
 #include "src/lib/fxl/macros.h"
 
 namespace ledger {
+
+struct CommitRecord {
+  std::string id;
+  std::string data;
+};
 
 class FakePageCloud : public cloud_provider::PageCloud {
  public:
@@ -33,7 +37,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   bool MustReturnError(uint64_t request_signature);
 
   // cloud_provider::PageCloud:
-  void AddCommits(cloud_provider::CommitPack commits, AddCommitsCallback callback) override;
+  void AddCommits(cloud_provider::CommitPack commit_pack, AddCommitsCallback callback) override;
   void GetCommits(std::unique_ptr<cloud_provider::PositionToken> min_position_token,
                   GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
@@ -52,7 +56,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
   fidl::BindingSet<cloud_provider::PageCloud> bindings_;
   fit::closure on_discardable_;
 
-  std::vector<cloud_provider::CommitPackEntry> commits_;
+  std::vector<CommitRecord> commits_;
   std::map<std::string, std::string> objects_;
 
   // Watchers set by the client.
