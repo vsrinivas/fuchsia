@@ -27,6 +27,7 @@ LOCAL_PACKAGES = {
   'flutter_test': '//third_party/dart-pkg/git/flutter/packages/flutter_test',
   'func': '//third_party/dart/third_party/pkg/func',
   'intl': '//third_party/dart/third_party/pkg/intl',
+  'sky_engine': '//prebuilt/third_party/sky_engine',
   'testing': '//third_party/dart/pkg/testing',
   'typed_mock': '//third_party/dart/pkg/typed_mock',
 }
