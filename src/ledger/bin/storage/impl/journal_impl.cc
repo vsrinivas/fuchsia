@@ -166,10 +166,15 @@ Status JournalImpl::CreateCommitFromChanges(
   }
   RETURN_ON_ERROR(status);
 
-  objects_to_sync->reserve(objects_to_sync->size() + new_nodes.size());
-  // TODO(qsr): When using C++17, move data out of the set using
-  // extract.
-  objects_to_sync->insert(objects_to_sync->end(), new_nodes.begin(), new_nodes.end());
+  // TODO(12356): remove compatibility flag.
+  if (environment_->diff_compatibility_policy() ==
+      DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES) {
+    objects_to_sync->reserve(objects_to_sync->size() + new_nodes.size());
+    // TODO(qsr): When using C++17, move data out of the set using
+    // extract.
+    objects_to_sync->insert(objects_to_sync->end(), new_nodes.begin(), new_nodes.end());
+  }
+
   *commit = std::move(new_commit);
   return Status::OK;
 }

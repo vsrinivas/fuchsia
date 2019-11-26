@@ -101,7 +101,9 @@ Entry WithoutEntryId(Entry entry);
 class StorageTest : public ledger::TestWithEnvironment {
  protected:
   StorageTest();
-  StorageTest(GarbageCollectionPolicy gc_policy);
+  StorageTest(GarbageCollectionPolicy gc_policy,
+              DiffCompatibilityPolicy diff_compatibility_policy =
+                  DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES);
 
   ~StorageTest() override;
 

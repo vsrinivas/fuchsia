@@ -122,6 +122,8 @@ using ::testing::Contains;
 using ::testing::ElementsAre;
 using ::testing::Field;
 using ::testing::IsEmpty;
+using ::testing::IsSubsetOf;
+using ::testing::IsSupersetOf;
 using ::testing::Not;
 using ::testing::Pair;
 using ::testing::SizeIs;
@@ -179,14 +181,67 @@ class FakeCommitWatcher : public CommitWatcher {
   ChangeSource last_source;
 };
 
+enum class HasP2P { YES, NO };
+
+enum class HasCloud {
+  // The cloud is present and supports |GetDiff|.
+  YES_WITH_DIFFS,
+  // The cloud is present but does not support |GetDiff|.
+  YES_NO_DIFFS,
+  // The cloud is not present.
+  NO
+};
+
+// Combination of features of sync and storage we want to test for.
+struct SyncFeatures {
+  // Is P2P sync available?
+  HasP2P has_p2p;
+  // Is cloud sync available? Does the cloud support diffs?
+  HasCloud has_cloud;
+  // The diff compatibility policy used by Ledger.
+  DiffCompatibilityPolicy diff_compatibility_policy;
+
+  static const SyncFeatures kDefault;
+  static const SyncFeatures kNoDiff;
+};
+
+const SyncFeatures SyncFeatures::kDefault = {HasP2P::YES, HasCloud::YES_WITH_DIFFS,
+                                             DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES};
+const SyncFeatures SyncFeatures::kNoDiff = {HasP2P::YES, HasCloud::YES_NO_DIFFS,
+                                            DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES};
+
+// Where an object is available from.
+enum ObjectAvailability {
+  // Object is only available from P2P.
+  P2P,
+  // Object is available from P2P and cloud.
+  P2P_AND_CLOUD,
+};
+
 class DelayingFakeSyncDelegate : public PageSyncDelegate {
  public:
-  explicit DelayingFakeSyncDelegate(fit::function<void(fit::closure)> on_get_object)
-      : on_get_object_(std::move(on_get_object)) {}
+  explicit DelayingFakeSyncDelegate(fit::function<void(fit::closure)> on_get_object,
+                                    fit::function<void(fit::closure)> on_get_diff = nullptr,
+                                    SyncFeatures sync_features = SyncFeatures::kDefault)
+      : features_(sync_features),
+        on_get_object_(std::move(on_get_object)),
+        on_get_diff_(std::move(on_get_diff)) {
+    if (!on_get_diff_) {
+      on_get_diff_ = [](fit::closure callback) { callback(); };
+    }
+  }
 
-  void AddObject(ObjectIdentifier object_identifier, const std::string& value) {
+  // Adds the given object to sync. |object_source| indicates if it should be available from P2P
+  // only, or from P2P and from the cloud.
+  void AddObject(ObjectIdentifier object_identifier, const std::string& value,
+                 ObjectAvailability object_source) {
     UntrackIdentifier(&object_identifier);
-    digest_to_value_[std::move(object_identifier)] = value;
+    auto [it, inserted] = digest_to_value_.emplace(std::move(object_identifier),
+                                                   std::make_pair(object_source, value));
+    if (!inserted && object_source == ObjectAvailability::P2P_AND_CLOUD) {
+      // |P2P_AND_CLOUD| is more permissive than |P2P|.
+      it->second.first = ObjectAvailability::P2P_AND_CLOUD;
+    }
   }
 
   void GetObject(ObjectIdentifier object_identifier, RetrievedObjectType retrieved_object_type,
@@ -194,43 +249,83 @@ class DelayingFakeSyncDelegate : public PageSyncDelegate {
                                     std::unique_ptr<DataSource::DataChunk>)>
                      callback) override {
     UntrackIdentifier(&object_identifier);
+    object_requests.emplace(object_identifier, retrieved_object_type);
     auto value_found = digest_to_value_.find(object_identifier);
     if (value_found == digest_to_value_.end()) {
       callback(Status::INTERNAL_NOT_FOUND, ChangeSource::CLOUD, IsObjectSynced::NO, nullptr);
       return;
     }
-    std::string& value = value_found->second;
-    object_requests.emplace(std::move(object_identifier), retrieved_object_type);
-    on_get_object_([callback = std::move(callback), value] {
-      callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
-               DataSource::DataChunk::Create(value));
-    });
+
+    auto [object_source, value] = value_found->second;
+    // Check we can return this object.
+    if (features_.has_cloud != HasCloud::NO && retrieved_object_type == RetrievedObjectType::BLOB &&
+        object_source == ObjectAvailability::P2P_AND_CLOUD) {
+      on_get_object_([callback = std::move(callback), value = value] {
+        callback(Status::OK, ChangeSource::CLOUD, IsObjectSynced::YES,
+                 DataSource::DataChunk::Create(value));
+      });
+    } else if (features_.has_p2p == HasP2P::YES) {
+      on_get_object_([callback = std::move(callback), value = value] {
+        callback(Status::OK, ChangeSource::P2P, IsObjectSynced::NO,
+                 DataSource::DataChunk::Create(value));
+      });
+    } else {
+      callback(Status::INTERNAL_NOT_FOUND, ChangeSource::CLOUD, IsObjectSynced::NO, nullptr);
+    }
+  }
+
+  void AddDiff(CommitId commit_id, CommitId base_id, std::vector<EntryChange> changes) {
+    commit_to_diff_[commit_id] = std::make_pair(std::move(base_id), std::move(changes));
   }
 
   void GetDiff(CommitId commit_id, std::vector<CommitId> possible_bases,
                fit::function<void(Status status, CommitId base_commit,
                                   std::vector<EntryChange> diff_entries)>
                    callback) override {
-    FXL_NOTIMPLEMENTED();
-    callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
+    diff_requests.emplace(commit_id, std::move(possible_bases));
+    switch (features_.has_cloud) {
+      case HasCloud::NO:
+        // We don't support diffs.
+        callback(Status::INTERNAL_NOT_FOUND, {}, {});
+        return;
+      case HasCloud::YES_NO_DIFFS:
+        // We only send diffs with base = target and empty changes.
+        callback(Status::OK, commit_id, {});
+        return;
+      case HasCloud::YES_WITH_DIFFS:
+        auto diff_found = commit_to_diff_.find(commit_id);
+        if (diff_found == commit_to_diff_.end()) {
+          callback(Status::INTERNAL_NOT_FOUND, {}, {});
+          return;
+        }
+        callback(Status::OK, diff_found->second.first, diff_found->second.second);
+    }
   }
 
   size_t GetNumberOfObjectsStored() { return digest_to_value_.size(); }
 
   std::set<std::pair<ObjectIdentifier, RetrievedObjectType>> object_requests;
+  std::set<std::pair<CommitId, std::vector<CommitId>>> diff_requests;
 
   void set_on_get_object(fit::function<void(fit::closure)> callback) {
     on_get_object_ = std::move(callback);
   }
 
+  void SetSyncFeatures(SyncFeatures features) { features_ = features; }
+
  private:
+  SyncFeatures features_;
   fit::function<void(fit::closure)> on_get_object_;
-  std::map<ObjectIdentifier, std::string> digest_to_value_;
+  fit::function<void(fit::closure)> on_get_diff_;
+  std::map<ObjectIdentifier, std::pair<ObjectAvailability, std::string>> digest_to_value_;
+  std::map<CommitId, std::pair<CommitId, std::vector<EntryChange>>> commit_to_diff_;
 };
 
 class FakeSyncDelegate : public DelayingFakeSyncDelegate {
  public:
-  FakeSyncDelegate() : DelayingFakeSyncDelegate([](fit::closure callback) { callback(); }) {}
+  FakeSyncDelegate(SyncFeatures sync_features = SyncFeatures::kDefault)
+      : DelayingFakeSyncDelegate([](fit::closure callback) { callback(); },
+                                 [](fit::closure callback) { callback(); }, sync_features) {}
 };
 
 // Shim for LevelDB that allows to selectively fail some calls.
@@ -345,8 +440,10 @@ class PageStorageTest : public StorageTest {
  public:
   PageStorageTest() : PageStorageTest(ledger::kTestingGarbageCollectionPolicy) {}
 
-  explicit PageStorageTest(GarbageCollectionPolicy gc_policy)
-      : StorageTest(gc_policy), encryption_service_(dispatcher()) {}
+  explicit PageStorageTest(GarbageCollectionPolicy gc_policy,
+                           DiffCompatibilityPolicy diff_compatibility_policy =
+                               DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES)
+      : StorageTest(gc_policy, diff_compatibility_policy), encryption_service_(dispatcher()) {}
 
   ~PageStorageTest() override = default;
 
@@ -749,6 +846,47 @@ class PageStorageTestEagerRootNodesGC : public PageStorageTest {
   PageStorageTestEagerRootNodesGC() : PageStorageTest(GarbageCollectionPolicy::EAGER_ROOT_NODES) {}
 };
 
+// A test fixture parametrized by what kind of queries will be answered by the sync delegate.
+class PageStorageSyncTest : public PageStorageTest,
+                            public ::testing::WithParamInterface<SyncFeatures> {
+ public:
+  PageStorageSyncTest() : PageStorageSyncTest(ledger::kTestingGarbageCollectionPolicy) {}
+  explicit PageStorageSyncTest(GarbageCollectionPolicy gc_policy)
+      : PageStorageTest(gc_policy, GetParam().diff_compatibility_policy) {}
+
+  // Where are tree nodes expected to be available.
+  ObjectAvailability TreeNodeObjectAvailability() {
+    switch (GetParam().diff_compatibility_policy) {
+      case DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES:
+        return ObjectAvailability::P2P_AND_CLOUD;
+      case DiffCompatibilityPolicy::USE_ONLY_DIFFS:
+        return ObjectAvailability::P2P;
+    }
+  }
+};
+
+// Sync tests need one of P2P and cloud, and if they have only cloud, they need either
+// |has_cloud| to be |YES_WITH_DIFFS| or |diff_compatibility_policy| to be
+// |USE_DIFFS_AND_TREE_NODES|.
+INSTANTIATE_TEST_SUITE_P(
+    PageStorageSyncTest, PageStorageSyncTest,
+    ::testing::Values(
+        SyncFeatures{HasP2P::YES, HasCloud::YES_WITH_DIFFS,
+                     DiffCompatibilityPolicy::USE_ONLY_DIFFS},
+        SyncFeatures{HasP2P::YES, HasCloud::YES_WITH_DIFFS,
+                     DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES},
+        SyncFeatures{HasP2P::YES, HasCloud::YES_NO_DIFFS,
+                     DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES},
+        SyncFeatures{HasP2P::YES, HasCloud::YES_NO_DIFFS, DiffCompatibilityPolicy::USE_ONLY_DIFFS},
+        SyncFeatures{HasP2P::YES, HasCloud::NO, DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES},
+        SyncFeatures{HasP2P::YES, HasCloud::NO, DiffCompatibilityPolicy::USE_ONLY_DIFFS},
+        SyncFeatures{HasP2P::NO, HasCloud::YES_NO_DIFFS,
+                     DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES},
+        SyncFeatures{HasP2P::NO, HasCloud::YES_WITH_DIFFS,
+                     DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES},
+        SyncFeatures{HasP2P::NO, HasCloud::YES_WITH_DIFFS,
+                     DiffCompatibilityPolicy::USE_ONLY_DIFFS}));
+
 TEST_F(PageStorageTest, AddGetLocalCommits) {
   // Search for a commit id that doesn't exist and see the error.
   bool called;
@@ -955,9 +1093,9 @@ TEST_F(PageStorageTest, AddCommitsOutOfOrderError) {
   EXPECT_EQ(status, Status::INTERNAL_NOT_FOUND);
 }
 
-TEST_F(PageStorageTest, AddGetSyncedCommits) {
+TEST_P(PageStorageSyncTest, AddGetSyncedCommits) {
   RunInCoroutine([this](CoroutineHandler* handler) {
-    FakeSyncDelegate sync;
+    FakeSyncDelegate sync(GetParam());
     storage_->SetSyncDelegate(&sync);
 
     // Create a node with 2 values.
@@ -972,8 +1110,10 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     ObjectIdentifier root_identifier = node->GetIdentifier();
 
     // Add the three objects to FakeSyncDelegate.
-    sync.AddObject(lazy_value.object_identifier, lazy_value.value);
-    sync.AddObject(eager_value.object_identifier, eager_value.value);
+    sync.AddObject(lazy_value.object_identifier, lazy_value.value,
+                   ObjectAvailability::P2P_AND_CLOUD);
+    sync.AddObject(eager_value.object_identifier, eager_value.value,
+                   ObjectAvailability::P2P_AND_CLOUD);
 
     {
       // Ensure root_object is not kept, as the storage it depends on will be
@@ -983,7 +1123,7 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
       fxl::StringView root_data;
       ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-      sync.AddObject(root_identifier, root_data.ToString());
+      sync.AddObject(root_identifier, root_data.ToString(), TreeNodeObjectAvailability());
     }
 
     // Reset and clear the storage.
@@ -993,11 +1133,16 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
 
     std::vector<std::unique_ptr<const Commit>> parent;
     parent.emplace_back(GetFirstHead());
+    CommitId parent_id = parent[0]->GetId();
     std::unique_ptr<const Commit> commit = storage_->GetCommitFactory()->FromContentAndParents(
         environment_.clock(), environment_.random(), root_identifier, std::move(parent));
     CommitId id = commit->GetId();
 
+    // Add the diff of the commit to FakeSyncDelegate.
+    sync.AddDiff(id, parent_id, {{entries[0], false}, {entries[1], false}});
+
     // Adding the commit should only request the tree node and the eager value.
+    // The diff should also be requested.
     sync.object_requests.clear();
     bool called;
     Status status;
@@ -1006,21 +1151,28 @@ TEST_F(PageStorageTest, AddGetSyncedCommits) {
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
-    EXPECT_EQ(sync.object_requests.size(), 2u);
-    EXPECT_TRUE(sync.object_requests.find({root_identifier, RetrievedObjectType::TREE_NODE}) !=
-                sync.object_requests.end());
-    EXPECT_TRUE(
-        sync.object_requests.find({eager_value.object_identifier, RetrievedObjectType::BLOB}) !=
-        sync.object_requests.end());
+    EXPECT_THAT(sync.diff_requests, ElementsAre(Pair(id, _)));
+
+    // We only request the root object (at least as a tree node, maybe as a blob) and the eager
+    // value (only as a BLOB).
+    EXPECT_THAT(sync.object_requests,
+                IsSupersetOf({Pair(root_identifier, RetrievedObjectType::TREE_NODE),
+                              Pair(eager_value.object_identifier, RetrievedObjectType::BLOB)}));
+    EXPECT_THAT(sync.object_requests,
+                IsSubsetOf({Pair(root_identifier, RetrievedObjectType::TREE_NODE),
+                            Pair(root_identifier, RetrievedObjectType::BLOB),
+                            Pair(eager_value.object_identifier, RetrievedObjectType::BLOB)}));
 
     // Adding the same commit twice should not request any objects from sync.
     sync.object_requests.clear();
+    sync.diff_requests.clear();
     storage_->AddCommitsFromSync(CommitAndBytesFromCommit(*commit), ChangeSource::CLOUD,
                                  callback::Capture(callback::SetWhenCalled(&called), &status));
     RunLoopUntilIdle();
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
     EXPECT_TRUE(sync.object_requests.empty());
+    EXPECT_TRUE(sync.diff_requests.empty());
 
     std::unique_ptr<const Commit> found = GetCommit(id);
     EXPECT_EQ(found->GetStorageBytes(), commit->GetStorageBytes());
@@ -1886,7 +2038,7 @@ TEST_F(PageStorageTest, GetLargeObjectPart) {
 TEST_F(PageStorageTest, GetObjectPartFromSync) {
   ObjectData data = MakeObject("_Some data_", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
-  sync.AddObject(data.object_identifier, data.value);
+  sync.AddObject(data.object_identifier, data.value, ObjectAvailability::P2P_AND_CLOUD);
   storage_->SetSyncDelegate(&sync);
 
   fsl::SizedVmo object_part = TryGetObjectPart(data.object_identifier, 1, data.size - 2,
@@ -1928,7 +2080,8 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncEndOfChunk) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -1973,7 +2126,8 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncStartOfChunk) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -2007,7 +2161,8 @@ TEST_F(PageStorageTest, GetObjectPartFromSyncZeroBytes) {
         if (digest_info.is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -2050,7 +2205,8 @@ TEST_F(PageStorageTestNoGc, GetHugeObjectPartFromSync) {
                        return;
                      }
                      digest_to_identifier[object_identifier.object_digest()] = object_identifier;
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                                    ObjectAvailability::P2P_AND_CLOUD);
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved
@@ -2124,7 +2280,8 @@ TEST_F(PageStorageTest, GetHugeObjectPartFromSyncNegativeOffset) {
         if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -2160,7 +2317,8 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
                        return;
                      }
                      digest_to_identifier[object_identifier.object_digest()] = object_identifier;
-                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+                     sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                                    ObjectAvailability::P2P_AND_CLOUD);
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   // Check that we created a part big enough to require at least two batches of pending calls.
@@ -2200,7 +2358,7 @@ TEST_F(PageStorageTest, GetHugeObjectFromSyncMaxConcurrentDownloads) {
 TEST_F(PageStorageTest, GetObjectFromSync) {
   ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
-  sync.AddObject(data.object_identifier, data.value);
+  sync.AddObject(data.object_identifier, data.value, ObjectAvailability::P2P_AND_CLOUD);
   storage_->SetSyncDelegate(&sync);
 
   std::unique_ptr<const Object> object =
@@ -2233,7 +2391,8 @@ TEST_F(PageStorageTest, FullDownloadAfterPartial) {
         if (GetObjectDigestInfo(object_identifier.object_digest()).is_inlined()) {
           return;
         }
-        sync.AddObject(std::move(object_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(object_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -2276,7 +2435,7 @@ TEST_F(PageStorageTest, GetObjectFromSyncWrongId) {
   ObjectData data = MakeObject("Some data", InlineBehavior::PREVENT);
   ObjectData data2 = MakeObject("Some data2", InlineBehavior::PREVENT);
   FakeSyncDelegate sync;
-  sync.AddObject(data.object_identifier, data2.value);
+  sync.AddObject(data.object_identifier, data2.value, ObjectAvailability::P2P_AND_CLOUD);
   storage_->SetSyncDelegate(&sync);
 
   TryGetObject(data.object_identifier, PageStorage::Location::ValueFromNetwork(),
@@ -2367,7 +2526,7 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   // retrieved by GetObject, and store inbound piece references into a map to
   // check them later.
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(SyncFeatures::kNoDiff);
   std::map<ObjectIdentifier, ObjectReferencesAndPriority> inbound_references;
   ObjectIdentifier object_identifier = ForEachPiece(
       data_str, ObjectType::TREE_NODE, &fake_factory_,
@@ -2387,7 +2546,8 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
           inbound_references[reference_identifier->second].emplace(piece_identifier.object_digest(),
                                                                    priority);
         }
-        sync.AddObject(std::move(piece_identifier), piece->GetData().ToString());
+        sync.AddObject(std::move(piece_identifier), piece->GetData().ToString(),
+                       ObjectAvailability::P2P_AND_CLOUD);
       });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   // Trigger deletion of *all* pieces from storage immediately after *any* of them is retrieved
@@ -2417,11 +2577,13 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   }
 
   // Get the object from network and check that it is correct.
-  // TODO(LE-823): when removing compatibility, we need to disable diffs for this test so we
-  // actually get the objects (getting the objects this way will still be needed for P2P).
+
+  // The tree node is not in a commit, but we still need to put the id of a commit we know in the
+  // location. Since diffs are disabled, this can be any commit.
   RetrackIdentifier(&object_identifier);
+  CommitId commit_id = GetFirstHead()->GetId();
   std::unique_ptr<const Object> object =
-      TryGetObject(object_identifier, PageStorage::Location::ValueFromNetwork());
+      TryGetObject(object_identifier, PageStorage::Location::TreeNodeFromNetwork(commit_id));
   fxl::StringView content;
   ASSERT_EQ(object->GetData(&content), Status::OK);
   EXPECT_EQ(content, data_str);
@@ -2429,8 +2591,7 @@ TEST_F(PageStorageTestNoGc, AddAndGetHugeTreenodeFromSync) {
   // Check that all pieces have been stored locally.
   EXPECT_EQ(sync.GetNumberOfObjectsStored(), sync.object_requests.size());
   for (auto [piece_identifier, object_type] : sync.object_requests) {
-    EXPECT_EQ(object_type, RetrievedObjectType::BLOB);
-    RetrackIdentifier(&piece_identifier);
+    EXPECT_EQ(object_type, RetrievedObjectType::TREE_NODE);
     TryGetPiece(piece_identifier);
   }
 
@@ -2865,6 +3026,7 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
       tree_object_identifiers_.resize(6);
       eager_object_identifiers_.resize(6);
       lazy_object_identifiers_.resize(6);
+      std::vector<std::vector<Entry>> all_entries;
       for (size_t i = 0; i < tree_object_identifiers_.size(); ++i) {
         ObjectData eager_value =
             MakeObject("eager value" + std::to_string(i), InlineBehavior::PREVENT);
@@ -2880,28 +3042,38 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
         tree_object_identifiers_[i] = node->GetIdentifier();
         eager_object_identifiers_[i] = eager_value.object_identifier;
         lazy_object_identifiers_[i] = lazy_value.object_identifier;
-        sync_.AddObject(eager_value.object_identifier, eager_value.value);
-        sync_.AddObject(lazy_value.object_identifier, lazy_value.value);
+        sync_.AddObject(eager_value.object_identifier, eager_value.value,
+                        ObjectAvailability::P2P_AND_CLOUD);
+        sync_.AddObject(lazy_value.object_identifier, lazy_value.value,
+                        ObjectAvailability::P2P_AND_CLOUD);
         std::unique_ptr<const Object> root_object =
             TryGetObject(tree_object_identifiers_[i], PageStorage::Location::Local());
         fxl::StringView root_data;
         ASSERT_EQ(root_object->GetData(&root_data), Status::OK);
-        sync_.AddObject(tree_object_identifiers_[i], root_data.ToString());
+        sync_.AddObject(tree_object_identifiers_[i], root_data.ToString(),
+                        ObjectAvailability::P2P_AND_CLOUD);
+        all_entries.push_back(entries);
       }
 
       // Create the commits, the initial upload batch, and the second batch.
+      std::unique_ptr<const Commit> root = GetFirstHead();
+
       std::vector<std::unique_ptr<const Commit>> parent;
-      parent.emplace_back(GetFirstHead());
+      parent.emplace_back(root->Clone());
       std::unique_ptr<const Commit> commit0 = storage_->GetCommitFactory()->FromContentAndParents(
           environment_.clock(), environment_.random(), tree_object_identifiers_[0],
           std::move(parent));
       parent.clear();
+      sync_.AddDiff(commit0->GetId(), root->GetId(),
+                    {{all_entries[0][0], false}, {all_entries[0][1], false}});
 
-      parent.emplace_back(GetFirstHead());
+      parent.emplace_back(root->Clone());
       std::unique_ptr<const Commit> commit1 = storage_->GetCommitFactory()->FromContentAndParents(
           environment_.clock(), environment_.random(), tree_object_identifiers_[1],
           std::move(parent));
       parent.clear();
+      sync_.AddDiff(commit1->GetId(), root->GetId(),
+                    {{all_entries[1][0], false}, {all_entries[1][1], false}});
 
       // Ensure that commit0 has a larger id than commit1.
       if (commit0->GetId() < commit1->GetId()) {
@@ -2910,6 +3082,8 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
         std::swap(eager_object_identifiers_[0], eager_object_identifiers_[1]);
         std::swap(lazy_object_identifiers_[0], lazy_object_identifiers_[1]);
       }
+      commit_identifiers_.push_back(commit0->GetId());
+      commit_identifiers_.push_back(commit1->GetId());
 
       parent.emplace_back(commit0->Clone());
       parent.emplace_back(commit1->Clone());
@@ -2917,18 +3091,21 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
           environment_.clock(), environment_.random(), tree_object_identifiers_[2],
           std::move(parent));
       parent.clear();
+      commit_identifiers_.push_back(commit2->GetId());
       EXPECT_EQ(commit2->GetParentIds()[0], commit1->GetId());
 
       parent.emplace_back(commit1->Clone());
       std::unique_ptr<const Commit> commit3 = storage_->GetCommitFactory()->FromContentAndParents(
           environment_.clock(), environment_.random(), tree_object_identifiers_[3],
           std::move(parent));
+      commit_identifiers_.push_back(commit3->GetId());
       parent.clear();
 
       parent.emplace_back(commit3->Clone());
       std::unique_ptr<const Commit> commit4 = storage_->GetCommitFactory()->FromContentAndParents(
           environment_.clock(), environment_.random(), tree_object_identifiers_[4],
           std::move(parent));
+      commit_identifiers_.push_back(commit4->GetId());
       parent.clear();
 
       parent.emplace_back(commit0->Clone());
@@ -2936,7 +3113,30 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
       std::unique_ptr<const Commit> commit5 = storage_->GetCommitFactory()->FromContentAndParents(
           environment_.clock(), environment_.random(), tree_object_identifiers_[5],
           std::move(parent));
+      commit_identifiers_.push_back(commit5->GetId());
       parent.clear();
+      sync_.AddDiff(commit5->GetId(), commit1->GetId(),
+                    {{all_entries[1][0], true},
+                     {all_entries[1][1], true},
+                     {all_entries[5][0], false},
+                     {all_entries[5][1], false}});
+
+      // Commit 5 is the only commit that is guaranteed not to be GCed after 0, 1 and 5 are added.
+      sync_.AddDiff(commit2->GetId(), commit5->GetId(),
+                    {{all_entries[5][0], true},
+                     {all_entries[5][1], true},
+                     {all_entries[2][0], false},
+                     {all_entries[2][1], false}});
+      sync_.AddDiff(commit3->GetId(), commit5->GetId(),
+                    {{all_entries[5][0], true},
+                     {all_entries[5][1], true},
+                     {all_entries[3][0], false},
+                     {all_entries[3][1], false}});
+      sync_.AddDiff(commit4->GetId(), commit5->GetId(),
+                    {{all_entries[5][0], true},
+                     {all_entries[5][1], true},
+                     {all_entries[4][0], false},
+                     {all_entries[4][1], false}});
 
       std::vector<PageStorage::CommitIdAndBytes> initial_batch;
       initial_batch.emplace_back(commit0->GetId(), commit0->GetStorageBytes().ToString());
@@ -2987,18 +3187,22 @@ class PageStorageTestAddMultipleCommits : public PageStorageTest {
         }
       }
       sync_.object_requests.clear();
+      sync_.diff_requests.clear();
     });
   }
 
   FakeSyncDelegate sync_;
+  std::vector<CommitId> commit_identifiers_;
   std::vector<ObjectIdentifier> tree_object_identifiers_;
   std::vector<ObjectIdentifier> eager_object_identifiers_;
   std::vector<ObjectIdentifier> lazy_object_identifiers_;
   std::vector<PageStorage::CommitIdAndBytes> test_batch_;
 };
 
-TEST_F(PageStorageTestAddMultipleCommits, FromSync) {
+TEST_F(PageStorageTestAddMultipleCommits, FromCloudNoDiff) {
   RunInCoroutine([this](CoroutineHandler* handler) {
+    sync_.SetSyncFeatures(
+        {HasP2P::NO, HasCloud::YES_NO_DIFFS, DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES});
     // Add commits 2, 3 4.
     bool called;
     Status status;
@@ -3009,7 +3213,42 @@ TEST_F(PageStorageTestAddMultipleCommits, FromSync) {
     ASSERT_TRUE(called);
     EXPECT_EQ(status, Status::OK);
 
-    // The tree and eager objects of the heads have been downloaded.
+    // Diffs for commits 2 and 4 have been requested (but not returned).
+    EXPECT_THAT(sync_.diff_requests, UnorderedElementsAre(Pair(commit_identifiers_[2], _),
+                                                          Pair(commit_identifiers_[4], _)));
+
+    // The tree and eager objects of commits 2 and 4 have been requested.
+    // The tree has been first requested as a tree node (and received no response), then as a blob.
+    EXPECT_THAT(
+        sync_.object_requests,
+        UnorderedElementsAre(Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
+                             Pair(tree_object_identifiers_[2], RetrievedObjectType::BLOB),
+                             Pair(eager_object_identifiers_[2], RetrievedObjectType::BLOB),
+                             Pair(tree_object_identifiers_[4], RetrievedObjectType::TREE_NODE),
+                             Pair(tree_object_identifiers_[4], RetrievedObjectType::BLOB),
+                             Pair(eager_object_identifiers_[4], RetrievedObjectType::BLOB)));
+  });
+}
+
+TEST_F(PageStorageTestAddMultipleCommits, FromCloudWithDiff) {
+  RunInCoroutine([this](CoroutineHandler* handler) {
+    sync_.SetSyncFeatures(
+        {HasP2P::NO, HasCloud::YES_WITH_DIFFS, DiffCompatibilityPolicy::USE_ONLY_DIFFS});
+    // Add commits 2, 3 4.
+    bool called;
+    Status status;
+
+    storage_->AddCommitsFromSync(std::move(test_batch_), ChangeSource::CLOUD,
+                                 callback::Capture(callback::SetWhenCalled(&called), &status));
+    RunLoopUntilIdle();
+    ASSERT_TRUE(called);
+    EXPECT_EQ(status, Status::OK);
+
+    // Commits 0 and 2 have been requested.
+    EXPECT_THAT(sync_.diff_requests, UnorderedElementsAre(Pair(commit_identifiers_[2], _),
+                                                          Pair(commit_identifiers_[4], _)));
+    // The tree and eager objects of commit 2 and 4 have been requested. The tree has been requested
+    // as a TREE_NODE, but not as a BLOB, as a diff has been received.
     EXPECT_THAT(
         sync_.object_requests,
         UnorderedElementsAre(Pair(tree_object_identifiers_[2], RetrievedObjectType::TREE_NODE),
@@ -3021,6 +3260,8 @@ TEST_F(PageStorageTestAddMultipleCommits, FromSync) {
 
 TEST_F(PageStorageTestAddMultipleCommits, FromP2P) {
   RunInCoroutine([this](CoroutineHandler* handler) {
+    sync_.SetSyncFeatures({HasP2P::YES, HasCloud::NO, DiffCompatibilityPolicy::USE_ONLY_DIFFS});
+
     // Add commits 2, 3 4.
     bool called;
     Status status;
@@ -3041,6 +3282,12 @@ TEST_F(PageStorageTestAddMultipleCommits, FromP2P) {
                              Pair(eager_object_identifiers_[3], RetrievedObjectType::BLOB),
                              Pair(tree_object_identifiers_[4], RetrievedObjectType::TREE_NODE),
                              Pair(eager_object_identifiers_[4], RetrievedObjectType::BLOB)));
+
+    // They have also been requested as diffs.
+    EXPECT_THAT(
+        sync_.diff_requests,
+        UnorderedElementsAre(Pair(commit_identifiers_[1], _), Pair(commit_identifiers_[2], _),
+                             Pair(commit_identifiers_[3], _), Pair(commit_identifiers_[4], _)));
   });
 }
 
@@ -3380,10 +3627,11 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   ResetStorage();
   RetrackIdentifier(&merge_value);
 
-  FakeSyncDelegate sync;
+  // This does not need diffs.
+  FakeSyncDelegate sync(SyncFeatures::kNoDiff);
   storage_->SetSyncDelegate(&sync);
   for (const auto& data : object_data_base) {
-    sync.AddObject(data.first, data.second);
+    sync.AddObject(data.first, data.second, ObjectAvailability::P2P_AND_CLOUD);
   }
 
   // Start adding the remote commit.
@@ -3397,16 +3645,17 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_EQ(commits_from_sync_status, Status::OK);
   ASSERT_EQ(GetHeads().size(), 2u);
 
-  bool sync_delegate_called;
-  fit::closure sync_delegate_call;
+  std::vector<fit::closure> sync_delegate_calls;
   DelayingFakeSyncDelegate sync2(
-      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+      [&sync_delegate_calls](fit::closure callback) {
+        sync_delegate_calls.push_back(std::move(callback));
+      },
+      [](auto callback) { callback(); }, SyncFeatures::kNoDiff);
   storage_->SetSyncDelegate(&sync2);
 
   for (const auto& data : object_data_merge) {
-    sync2.AddObject(data.first, data.second);
+    sync2.AddObject(data.first, data.second, ObjectAvailability::P2P_AND_CLOUD);
   }
-
   storage_->AddCommitsFromSync(std::move(commits_and_bytes_merge), ChangeSource::CLOUD,
                                callback::Capture(callback::SetWhenCalled(&commits_from_sync_called),
                                                  &commits_from_sync_status));
@@ -3414,7 +3663,7 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   // Make the loop run until GetObject is called in sync, and before
   // AddCommitsFromSync finishes.
   RunLoopUntilIdle();
-  EXPECT_TRUE(sync_delegate_called);
+  EXPECT_THAT(sync_delegate_calls, Not(IsEmpty()));
   EXPECT_FALSE(commits_from_sync_called);
 
   // Add the local commit.
@@ -3435,8 +3684,9 @@ TEST_F(PageStorageTest, MarkRemoteCommitSyncedRace) {
   EXPECT_EQ(commit->GetId(), id3);
 
   // The local commit should be commited.
-  ASSERT_TRUE(sync_delegate_call);
-  sync_delegate_call();
+  for (auto& callback : sync_delegate_calls) {
+    callback();
+  }
 
   // Let the two AddCommit finish.
   RunLoopUntilIdle();
@@ -3624,9 +3874,10 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   bool sync_delegate_called;
   fit::closure sync_delegate_call;
   DelayingFakeSyncDelegate sync(
-      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
+      callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call),
+      [](auto callback) { callback(); }, SyncFeatures::kNoDiff);
   storage_->SetSyncDelegate(&sync);
-  sync.AddObject(root_id, root_data);
+  sync.AddObject(root_id, root_data, ObjectAvailability::P2P_AND_CLOUD);
 
   // Start adding the remote commit.
   bool commits_from_sync_called;
@@ -3666,7 +3917,7 @@ TEST_F(PageStorageTest, GetCommitRootIdentifier) {
   EXPECT_EQ(root_id_from_storage, root_id);
 }
 
-TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
+TEST_P(PageStorageSyncTest, GetCommitRootIdentifierFailedToAdd) {
   bool called;
   Status status;
   std::unique_ptr<const Commit> base_commit = GetFirstHead();
@@ -3690,9 +3941,9 @@ TEST_F(PageStorageTest, GetCommitRootIdentifierFailedToAdd) {
   commit.reset();
   ResetStorage();
 
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(GetParam());
   storage_->SetSyncDelegate(&sync);
-  // We do not add the root object: GetObject will fail.
+  // We do not add the root object nor the diff: GetObject will fail.
 
   // Add the remote commit.
   bool commits_from_sync_called;
@@ -3745,7 +3996,7 @@ TEST_F(PageStorageTest, GetCommitIdFromRemoteId) {
   DelayingFakeSyncDelegate sync(
       callback::Capture(callback::SetWhenCalled(&sync_delegate_called), &sync_delegate_call));
   storage_->SetSyncDelegate(&sync);
-  sync.AddObject(root_id, root_data);
+  sync.AddObject(root_id, root_data, ObjectAvailability::P2P_AND_CLOUD);
 
   // Start adding the remote commit.
   bool commits_from_sync_called;
@@ -3891,7 +4142,7 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
 
   // Split the tree node content into pieces and add them to a SyncDelegate to be
   // retrieved by GetObject.
-  FakeSyncDelegate sync;
+  FakeSyncDelegate sync(SyncFeatures::kNoDiff);
   std::map<ObjectDigest, ObjectIdentifier> digest_to_identifier;
   ObjectIdentifier object_identifier =
       ForEachPiece(data_str, ObjectType::TREE_NODE, &fake_factory_,
@@ -3901,7 +4152,8 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
                        return;
                      }
                      digest_to_identifier[piece_identifier.object_digest()] = piece_identifier;
-                     sync.AddObject(std::move(piece_identifier), piece->GetData().ToString());
+                     sync.AddObject(std::move(piece_identifier), piece->GetData().ToString(),
+                                    ObjectAvailability::P2P);
                    });
   ASSERT_EQ(GetObjectDigestInfo(object_identifier.object_digest()).piece_type, PieceType::INDEX);
   storage_->SetSyncDelegate(&sync);
@@ -3916,6 +4168,10 @@ TEST_F(PageStorageTest, GetPieceRetrievedObjectType) {
   }
   ASSERT_NE(non_root_piece_identifier, ObjectIdentifier());
   EXPECT_NE(non_root_piece_identifier, object_identifier);
+  // We are cheating and re-adding the object as available from both P2P and cloud without its
+  // content: this will only update the object availability.
+  sync.AddObject(non_root_piece_identifier, "", ObjectAvailability::P2P_AND_CLOUD);
+
   std::unique_ptr<const Object> value_object =
       TryGetObject(non_root_piece_identifier, PageStorage::Location::ValueFromNetwork());
   EXPECT_THAT(sync.object_requests,

@@ -28,6 +28,7 @@
 #include "lib/async/cpp/task.h"
 #include "src/ledger/bin/cobalt/cobalt.h"
 #include "src/ledger/bin/public/status.h"
+#include "src/ledger/bin/storage/impl/btree/builder.h"
 #include "src/ledger/bin/storage/impl/btree/diff.h"
 #include "src/ledger/bin/storage/impl/btree/iterator.h"
 #include "src/ledger/bin/storage/impl/commit_factory.h"
@@ -639,11 +640,12 @@ void PageStorageImpl::GetObject(
       TRACE_CALLBACK(std::move(callback), "ledger", "page_storage_get_object");
   FXL_DCHECK(IsDigestValid(object_identifier.object_digest()));
   FXL_DCHECK(IsTokenValid(object_identifier));
+
   GetOrDownloadPiece(
       object_identifier, location,
-      [this, location, object_identifier = std::move(object_identifier),
-       callback = std::move(traced_callback)](Status status, std::unique_ptr<const Piece> piece,
-                                              WritePieceCallback write_callback) mutable {
+      [this, location, object_identifier, callback = std::move(traced_callback)](
+          Status status, std::unique_ptr<const Piece> piece,
+          WritePieceCallback write_callback) mutable {
         if (status != Status::OK) {
           callback(status, nullptr);
           return;
@@ -1219,6 +1221,44 @@ void PageStorageImpl::GetOrDownloadPiece(
       callback(Status::NETWORK_ERROR, nullptr, {});
       return;
     }
+    auto waiter = fxl::MakeRefCounted<
+        callback::AnyWaiter<Status, std::tuple<std::unique_ptr<const Piece>, WritePieceCallback>>>(
+        Status::OK, Status::INTERNAL_NOT_FOUND,
+        std::tuple<std::unique_ptr<const Piece>, WritePieceCallback>());
+
+    // If we are looking for a piece of a tree node, try diffs.
+    if (location.is_tree_node_from_network()) {
+      auto download_diff_callback = [callback = waiter->NewCallback()](
+                                        Status status, std::unique_ptr<const Piece> piece) {
+        callback(status, std::make_tuple(std::move(piece), nullptr));
+      };
+
+      DownloadPieceUsingDiff(object_identifier, location.in_commit(),
+                             std::move(download_diff_callback));
+    }
+
+    // And also with objects.
+    auto download_directly_callback = [callback = waiter->NewCallback()](
+                                          Status status, std::unique_ptr<const Piece> piece,
+                                          WritePieceCallback write_callback) {
+      callback(status, std::make_tuple(std::move(piece), std::move(write_callback)));
+    };
+
+    DownloadPieceDirectly(std::move(object_identifier), std::move(location),
+                          std::move(download_directly_callback));
+
+    waiter->Finalize(
+        [callback = std::move(callback)](
+            Status status, std::tuple<std::unique_ptr<const Piece>, WritePieceCallback> result) {
+          callback(status, std::move(std::get<0>(result)), std::move(std::get<1>(result)));
+        });
+  });
+}
+
+void PageStorageImpl::DownloadPieceDirectly(
+    ObjectIdentifier object_identifier, Location location,
+    fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)> callback) {
+  {
     download_manager_.StartCoroutine(
         std::move(callback),
         [this, object_identifier = std::move(object_identifier), location = std::move(location)](
@@ -1325,7 +1365,109 @@ void PageStorageImpl::GetOrDownloadPiece(
           }
           callback(Status::OK, std::move(piece), {});
         });
-  });
+  }
+}
+
+void PageStorageImpl::DownloadPieceUsingDiff(
+    ObjectIdentifier object_identifier, CommitId containing_commit,
+    fit::function<void(Status, std::unique_ptr<const Piece>)> callback) {
+  fit::function<void(Status)> on_downloaded =
+      [this, object_identifier = std::move(object_identifier),
+       callback = std::move(callback)](Status status) mutable {
+        if (status != Status::OK) {
+          callback(status, {});
+          return;
+        }
+
+        // The object is now present locally.
+        GetPiece(std::move(object_identifier), std::move(callback));
+      };
+
+  coroutine_manager_.StartCoroutine(
+      std::move(on_downloaded),
+      [this, containing_commit = std::move(containing_commit)](
+          CoroutineHandler* handler, fit::function<void(Status)> callback) mutable {
+        callback(SynchronousDownloadDiff(handler, std::move(containing_commit)));
+      });
+}
+
+Status PageStorageImpl::SynchronousDownloadDiff(coroutine::CoroutineHandler* handler,
+                                                CommitId target_commit_id) {
+  Status status;
+  std::vector<CommitId> bases;
+  if (coroutine::SyncCall(
+          handler,
+          [this, &target_commit_id](fit::callback<void(Status, std::vector<CommitId>)> callback) {
+            ChooseDiffBases(target_commit_id, std::move(callback));
+          },
+          &status, &bases) == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  if (status != Status::OK) {
+    return status;
+  }
+
+  CommitId base_commit_id;
+  std::vector<EntryChange> changes;
+  if (coroutine::SyncCall(
+          handler,
+          [this, target_commit_id, bases = std::move(bases)](
+              fit::function<void(Status, CommitId, std::vector<EntryChange>)> callback) mutable {
+            page_sync_->GetDiff(std::move(target_commit_id), std::move(bases), std::move(callback));
+          },
+          &status, &base_commit_id, &changes) == coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  if (status != Status::OK) {
+    return status;
+  }
+
+  // The base commit might be one of the commits we are currently downloading. It is fine to use it
+  // directly, as we just need to know what is its root identifier.
+  auto waiter = fxl::MakeRefCounted<callback::Waiter<Status, ObjectIdentifier>>(Status::OK);
+  GetCommitRootIdentifier(base_commit_id, waiter->NewCallback());
+  GetCommitRootIdentifier(target_commit_id, waiter->NewCallback());
+
+  std::vector<ObjectIdentifier> commit_root_ids;
+  if (coroutine::Wait(handler, waiter, &status, &commit_root_ids) ==
+      coroutine::ContinuationStatus::INTERRUPTED) {
+    return Status::INTERRUPTED;
+  }
+  if (status != Status::OK) {
+    return status;
+  }
+
+  auto& base_commit_root_id = commit_root_ids[0];
+  auto& target_commit_root_id = commit_root_ids[1];
+
+  // With full diff support, we expect the tree of the base to be locally present. In compatibility
+  // mode, we use |ValueFromNetwork| as a location for the base, as it allows retrieving it as
+  // objects if necessary, and avoids getting in a loop where we would retrieve it as a diff.
+  // TODO(12356): remove compatibility flag.
+  Location location =
+      environment_->diff_compatibility_policy() == DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES
+          ? Location::ValueFromNetwork()
+          : Location::Local();
+  ObjectIdentifier new_root_identifier;
+  std::set<ObjectIdentifier> new_identifiers;
+  status = btree::ApplyChangesFromCloud(handler, this,
+                                        {base_commit_root_id, Location::ValueFromNetwork()},
+                                        changes, &new_root_identifier, &new_identifiers);
+  if (status != Status::OK) {
+    return status;
+  }
+  // The new nodes created by |btree::ApplyChangesFromCloud| are marked as transient. This is the
+  // state we want: we don't want them to be sent to the cloud now (because if we still send tree
+  // objects, they are already in the cloud, and if we don't they don't need to be in the cloud),
+  // but we might need some of their pieces to be sent if they become part of an object later on.
+
+  if (new_root_identifier != target_commit_root_id) {
+    FXL_LOG(ERROR)
+        << "Applying the change provided by the cloud did not produce the expected tree.";
+    return Status::INTERNAL_NOT_FOUND;
+  }
+
+  return Status::OK;
 }
 
 ObjectIdentifierFactory* PageStorageImpl::GetObjectIdentifierFactory() {

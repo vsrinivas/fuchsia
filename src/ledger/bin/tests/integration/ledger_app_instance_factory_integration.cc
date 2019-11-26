@@ -28,6 +28,7 @@
 #include "src/ledger/bin/testing/ledger_app_instance_factory.h"
 #include "src/ledger/bin/testing/loop_controller_test_loop.h"
 #include "src/ledger/bin/testing/overnet/overnet_factory.h"
+#include "src/ledger/bin/tests/integration/sharding.h"
 #include "src/ledger/bin/tests/integration/test_utils.h"
 #include "src/ledger/cloud_provider_memory_diff/cpp/cloud_controller_factory.h"
 #include "src/ledger/lib/socket/socket_pair.h"
@@ -43,6 +44,17 @@ namespace ledger {
 namespace {
 
 enum class InjectNetworkError { YES, NO };
+
+enum class TestDiffs {
+  // Test compatibility with non diff-based sync: Ledger has compatibility enabled, and the cloud
+  // provider simulates missing diffs.
+  TEST_COMPATIBILITY,
+  // Test that Ledger operates correctly with diff only.
+  TEST_NO_COMPATIBILITY,
+  // Test any: the compatibility mode should have no influence on this test. We choose one of the
+  // previous modes at random to create some interesting variability.
+  TEST_ANY
+};
 
 constexpr fxl::StringView kLedgerName = "AppTests";
 constexpr zx::duration kBackoffDuration = zx::msec(5);
@@ -65,7 +77,8 @@ class DelegatedRandom final : public rng::Random {
 
 Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatcher,
                              async_dispatcher_t* io_dispatcher,
-                             sys::ComponentContext* component_context, rng::Random* random) {
+                             sys::ComponentContext* component_context, rng::Random* random,
+                             storage::DiffCompatibilityPolicy diff_compatibility_policy) {
   return EnvironmentBuilder()
       .SetAsync(dispatcher)
       .SetIOAsync(io_dispatcher)
@@ -78,6 +91,7 @@ Environment BuildEnvironment(async::TestLoop* loop, async_dispatcher_t* dispatch
       .SetClock(std::make_unique<timekeeper::TestLoopTestClock>(loop))
       .SetRandom(std::make_unique<DelegatedRandom>(random))
       .SetGcPolicy(kTestingGarbageCollectionPolicy)
+      .SetDiffCompatibilityPolicy(diff_compatibility_policy)
       .Build();
 }
 
@@ -239,13 +253,18 @@ enum class EnableSync { YES, NO };
 class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
  public:
   LedgerAppInstanceFactoryImpl(EnableSync enable_sync, InjectNetworkError inject_network_error,
-                               EnableP2PMesh enable_p2p_mesh)
+                               EnableP2PMesh enable_p2p_mesh, TestDiffs test_diffs)
       : loop_controller_(&loop_),
         random_(loop_.initial_state()),
         services_loop_(loop_controller_.StartNewLoop()),
         overnet_factory_(services_loop_->dispatcher()),
         enable_sync_(enable_sync),
-        enable_p2p_mesh_(enable_p2p_mesh) {
+        enable_p2p_mesh_(enable_p2p_mesh),
+        test_diffs_(test_diffs) {
+    if (test_diffs_ == TestDiffs::TEST_ANY) {
+      test_diffs_ =
+          random_.Draw<bool>() ? TestDiffs::TEST_COMPATIBILITY : TestDiffs::TEST_NO_COMPATIBILITY;
+    }
     async_test_subloop_t* cloud_subloop = cloud_provider::NewCloudControllerFactory(
         cloud_controller_factory_.NewRequest(), random_.Draw<uint64_t>());
     cloud_provider_loop_ = loop_.RegisterLoop(cloud_subloop);
@@ -254,6 +273,13 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
       bool called;
       cloud_controller_->SetNetworkState(cloud_provider::NetworkState::INJECT_NETWORK_ERRORS,
                                          callback::SetWhenCalled(&called));
+      loop_.RunUntilIdle();
+      FXL_CHECK(called);
+    }
+    if (test_diffs_ == TestDiffs::TEST_COMPATIBILITY) {
+      bool called;
+      cloud_controller_->SetDiffSupport(cloud_provider::DiffSupport::ACCEPT_DIFFS_RANDOMLY,
+                                        callback::SetWhenCalled(&called));
       loop_.RunUntilIdle();
       FXL_CHECK(called);
     }
@@ -280,6 +306,7 @@ class LedgerAppInstanceFactoryImpl : public LedgerAppInstanceFactory {
   OvernetFactory overnet_factory_;
   const EnableSync enable_sync_;
   const EnableP2PMesh enable_p2p_mesh_;
+  TestDiffs test_diffs_;
 };
 
 LedgerAppInstanceFactoryImpl::~LedgerAppInstanceFactoryImpl() {
@@ -297,9 +324,12 @@ LedgerAppInstanceFactoryImpl::NewLedgerAppInstance() {
       inspect_ptr.NewRequest();
   auto loop = loop_controller_.StartNewLoop();
   auto io_loop = loop_controller_.StartNewLoop();
+  auto diff_compatibility_policy = test_diffs_ == TestDiffs::TEST_COMPATIBILITY
+                                       ? storage::DiffCompatibilityPolicy::USE_DIFFS_AND_TREE_NODES
+                                       : storage::DiffCompatibilityPolicy::USE_ONLY_DIFFS;
   auto environment = std::make_unique<Environment>(
       BuildEnvironment(&loop_, loop->dispatcher(), io_loop->dispatcher(),
-                       component_context_provider_.context(), &random_));
+                       component_context_provider_.context(), &random_, diff_compatibility_policy));
   std::unique_ptr<p2p_sync::UserCommunicatorFactory> user_communicator_factory;
   if (enable_p2p_mesh_ == EnableP2PMesh::YES) {
     user_communicator_factory = std::make_unique<FakeUserCommunicatorFactory>(
@@ -326,55 +356,81 @@ namespace {
 class FactoryBuilderIntegrationImpl : public LedgerAppInstanceFactoryBuilder {
  public:
   FactoryBuilderIntegrationImpl(EnableSync enable_sync, InjectNetworkError inject_error,
-                                EnableP2PMesh enable_p2p)
-      : enable_sync_(enable_sync), inject_error_(inject_error), enable_p2p_(enable_p2p){};
+                                EnableP2PMesh enable_p2p, TestDiffs test_diffs)
+      : enable_sync_(enable_sync),
+        inject_error_(inject_error),
+        enable_p2p_(enable_p2p),
+        test_diffs_(test_diffs){};
 
   std::unique_ptr<LedgerAppInstanceFactory> NewFactory() const override {
-    return std::make_unique<LedgerAppInstanceFactoryImpl>(enable_sync_, inject_error_, enable_p2p_);
+    return std::make_unique<LedgerAppInstanceFactoryImpl>(enable_sync_, inject_error_, enable_p2p_,
+                                                          test_diffs_);
   }
 
   std::string TestSuffix() const override {
     return fxl::Concatenate(
         {std::string(enable_sync_ == EnableSync::YES ? "Sync" : "NoSync"),
          std::string(inject_error_ == InjectNetworkError::YES ? "WithNetworkError" : ""),
-         std::string(enable_p2p_ == EnableP2PMesh::YES ? "P2P" : "NoP2P")});
+         std::string(enable_p2p_ == EnableP2PMesh::YES ? "P2P" : "NoP2P"),
+         std::string(test_diffs_ == TestDiffs::TEST_ANY
+                         ? ""
+                         : test_diffs_ == TestDiffs::TEST_COMPATIBILITY ? "DiffCompatibility"
+                                                                        : "DiffOnly")});
   }
+
+  TestDiffs test_diffs() const { return test_diffs_; }
 
  private:
   EnableSync enable_sync_;
   InjectNetworkError inject_error_;
   EnableP2PMesh enable_p2p_;
+  TestDiffs test_diffs_;
 };
 
 }  // namespace
 
 std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryBuilders(
     EnableSynchronization sync_state) {
-  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_sync_builders;
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>>
+      static_sync_diffs_relevant_builders;
+  static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>>
+      static_sync_diffs_not_relevant_builders;
   static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_offline_builders;
   static std::vector<std::unique_ptr<FactoryBuilderIntegrationImpl>> static_p2p_only_builders;
   static std::once_flag flag;
 
-  auto static_sync_builders_ptr = &static_sync_builders;
+  auto static_sync_diffs_relevant_builders_ptr = &static_sync_diffs_relevant_builders;
+  auto static_sync_diffs_not_relevant_builders_ptr = &static_sync_diffs_not_relevant_builders;
   auto static_offline_builders_ptr = &static_offline_builders;
   auto static_p2p_only_builders_ptr = &static_p2p_only_builders;
-  std::call_once(flag, [&static_sync_builders_ptr, &static_offline_builders_ptr,
+  std::call_once(flag, [&static_sync_diffs_relevant_builders_ptr,
+                        &static_sync_diffs_not_relevant_builders_ptr, &static_offline_builders_ptr,
                         &static_p2p_only_builders_ptr] {
     for (auto inject_error : {InjectNetworkError::NO, InjectNetworkError::YES}) {
       for (auto enable_p2p : {EnableP2PMesh::NO, EnableP2PMesh::YES}) {
-        static_sync_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
-            EnableSync::YES, inject_error, enable_p2p));
+        for (auto test_diffs : {TestDiffs::TEST_COMPATIBILITY, TestDiffs::TEST_NO_COMPATIBILITY}) {
+          static_sync_diffs_relevant_builders_ptr->push_back(
+              std::make_unique<FactoryBuilderIntegrationImpl>(EnableSync::YES, inject_error,
+                                                              enable_p2p, test_diffs));
+        }
+        static_sync_diffs_not_relevant_builders_ptr->push_back(
+            std::make_unique<FactoryBuilderIntegrationImpl>(EnableSync::YES, inject_error,
+                                                            enable_p2p, TestDiffs::TEST_ANY));
       }
     }
     static_offline_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
-        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::NO));
+        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::NO, TestDiffs::TEST_ANY));
     static_p2p_only_builders_ptr->push_back(std::make_unique<FactoryBuilderIntegrationImpl>(
-        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::YES));
+        EnableSync::NO, InjectNetworkError::NO, EnableP2PMesh::YES, TestDiffs::TEST_ANY));
   });
 
-  std::vector<const LedgerAppInstanceFactoryBuilder*> builders;
+  std::vector<const FactoryBuilderIntegrationImpl*> builders;
 
   if (sync_state != EnableSynchronization::OFFLINE_ONLY) {
+    const auto& static_sync_builders =
+        sync_state == EnableSynchronization::SYNC_OR_OFFLINE_DIFFS_IRRELEVANT
+            ? static_sync_diffs_not_relevant_builders
+            : static_sync_diffs_relevant_builders;
     for (const auto& builder : static_sync_builders) {
       builders.push_back(builder.get());
     }
@@ -394,7 +450,19 @@ std::vector<const LedgerAppInstanceFactoryBuilder*> GetLedgerAppInstanceFactoryB
     }
   }
 
-  return builders;
+  // Filter builders depending on the test shard.
+  auto filter_builders = [](const FactoryBuilderIntegrationImpl* builder) {
+    if (builder->test_diffs() == TestDiffs::TEST_COMPATIBILITY) {
+      return GetIntegrationTestShard() == IntegrationTestShard::DIFF_COMPATIBILITY;
+    } else {
+      return GetIntegrationTestShard() == IntegrationTestShard::ALL_EXCEPT_DIFF_COMPATIBILITY;
+    }
+  };
+  std::vector<const LedgerAppInstanceFactoryBuilder*> builders_for_shard;
+  std::copy_if(builders.begin(), builders.end(), std::back_inserter(builders_for_shard),
+               filter_builders);
+
+  return builders_for_shard;
 }
 
 }  // namespace ledger

@@ -214,7 +214,7 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
       ledger::Status::OK, ledger::Status::INTERNAL_NOT_FOUND,
       std::tuple<storage::ChangeSource, storage::IsObjectSynced,
                  std::unique_ptr<storage::DataSource::DataChunk>>());
-  if (cloud_sync_) {
+  if (cloud_sync_ && retrieved_object_type == storage::RetrievedObjectType::BLOB) {
     cloud_sync_->GetObject(
         object_identifier, retrieved_object_type,
         [callback = waiter->NewCallback()](ledger::Status status, storage::ChangeSource source,
@@ -241,13 +241,16 @@ void PageSyncImpl::GetObject(storage::ObjectIdentifier object_identifier,
       });
 }
 
-void PageSyncImpl::GetDiff(storage::CommitId /*commit_id*/,
-                           std::vector<storage::CommitId> /*possible_bases*/,
+void PageSyncImpl::GetDiff(storage::CommitId commit_id,
+                           std::vector<storage::CommitId> possible_bases,
                            fit::function<void(ledger::Status status, storage::CommitId base_commit,
                                               std::vector<storage::EntryChange> diff_entries)>
                                callback) {
-  FXL_NOTIMPLEMENTED();
-  callback(ledger::Status::NOT_IMPLEMENTED, {}, {});
+  if (cloud_sync_) {
+    cloud_sync_->GetDiff(std::move(commit_id), std::move(possible_bases), std::move(callback));
+  } else {
+    callback(ledger::Status::INTERNAL_NOT_FOUND, {}, {});
+  }
 }
 
 }  // namespace sync_coordinator

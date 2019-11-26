@@ -601,7 +601,8 @@ TEST_P(PageSnapshotIntegrationTest, PageGetById) {
 }
 
 INSTANTIATE_TEST_SUITE_P(PageSnapshotIntegrationTest, PageSnapshotIntegrationTest,
-                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders()),
+                         ::testing::ValuesIn(GetLedgerAppInstanceFactoryBuilders(
+                             EnableSynchronization::SYNC_OR_OFFLINE_DIFFS_IRRELEVANT)),
                          PrintLedgerAppInstanceFactoryBuilder());
 
 }  // namespace

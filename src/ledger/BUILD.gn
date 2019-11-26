@@ -74,6 +74,7 @@ package("ledger_tests") {
     "//src/ledger/bin/tests/cloud_provider",
     "//src/ledger/bin/tests/e2e_local",
     "//src/ledger/bin/tests/integration",
+    "//src/ledger/bin/tests/integration:integration_diff_compatibility",
     "//src/ledger/cloud_provider_in_memory/bin:tests",
     "//src/ledger/lib:ledger_lib_unittests",
   ]
@@ -87,6 +88,11 @@ package("ledger_tests") {
       path = rebase_path(
               "//src/ledger/bin/tests/integration/ledger_integration_tests.cmx")
       dest = "ledger_integration_tests.cmx"
+    },
+    {
+      path = rebase_path(
+              "//src/ledger/bin/tests/integration/ledger_integration_tests_diff_compatibility.cmx")
+      dest = "ledger_integration_tests_diff_compatibility.cmx"
     },
     {
       path =
@@ -123,6 +129,10 @@ package("ledger_tests") {
     },
     {
       name = "ledger_integration_tests"
+      environments = basic_envs
+    },
+    {
+      name = "ledger_integration_tests_diff_compatibility"
       environments = basic_envs
     },
     {

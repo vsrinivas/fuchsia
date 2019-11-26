@@ -105,6 +105,9 @@ enum class EnableSynchronization {
   OFFLINE_ONLY,
   // Offline cases should be considered.
   SYNC_OR_OFFLINE,
+  // Offline cases should be considered. It's not necessary to test with both diffs enabled and
+  // diffs disabled.
+  SYNC_OR_OFFLINE_DIFFS_IRRELEVANT,
 };
 
 // Returns the list of LedgerAppInstanceFactoryBuilder to be passed as

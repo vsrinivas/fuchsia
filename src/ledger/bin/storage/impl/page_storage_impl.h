@@ -182,6 +182,17 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
       ObjectIdentifier object_identifier, Location location,
       fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)> callback);
 
+  // Same interface as |GetOrDownloadPiece|, but only fetches using |GetObject| and does not check
+  // if the object is present locally.
+  void DownloadPieceDirectly(
+      ObjectIdentifier object_identifier, Location location,
+      fit::function<void(Status, std::unique_ptr<const Piece>, WritePieceCallback)> callback);
+
+  // Same interface as |GetOrDownloadPiece|, but only fetches by applying a diff and does not check
+  // if the object is present locally. No |WritePieceCallback| is returned.
+  void DownloadPieceUsingDiff(ObjectIdentifier object_identifier, CommitId containing_commit,
+                              fit::function<void(Status, std::unique_ptr<const Piece>)> callback);
+
   // Reads the content of a piece into a provided VMO. Takes into account the global offset and size
   // in order to be able to read only the requested part of an object.
   // |global_offset| is the offset from the beginning of the full object in bytes. |global_size| is
@@ -260,6 +271,9 @@ class PageStorageImpl : public PageStorage, public CommitPruner::CommitPrunerDel
                                                     const Piece& piece, ChangeSource source,
                                                     IsObjectSynced is_object_synced,
                                                     ObjectReferencesAndPriority references);
+
+  FXL_WARN_UNUSED_RESULT Status SynchronousDownloadDiff(coroutine::CoroutineHandler* handler,
+                                                        CommitId target_commit_id);
 
   // Synchronous helper methods.
 

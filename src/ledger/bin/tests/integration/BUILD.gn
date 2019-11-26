@@ -6,7 +6,29 @@ visibility = [ "//src/ledger/*" ]
 
 executable("integration") {
   output_name = "ledger_integration_tests"
+  testonly = true
+  sources = [
+    "sharding_all_except_compatibility.cc",
+  ]
+  deps = [
+    ":integration_sharded",
+  ]
+  configs += [ "//src/ledger:ledger_config" ]
+}
 
+executable("integration_diff_compatibility") {
+  output_name = "ledger_integration_tests_diff_compatibility"
+  testonly = true
+  sources = [
+    "sharding_compatibility.cc",
+  ]
+  deps = [
+    ":integration_sharded",
+  ]
+  configs += [ "//src/ledger:ledger_config" ]
+}
+
+source_set("integration_sharded") {
   testonly = true
 
   sources = [
@@ -18,6 +40,7 @@ executable("integration") {
     "page_snapshot_tests.cc",
     "page_tests.cc",
     "page_watcher_tests.cc",
+    "sharding.h",
   ]
 
   deps = [

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/ledger_integration_tests_diff_compatibility"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.tracing.provider.Registry"
+        ]
+    }
+}
