@@ -32,3 +32,27 @@ source_set("gtest_main") {
     "//third_party/googletest:gtest",
   ]
 }
+
+# Generic main entry point target for GTest executables that also sets up a syslog logger.
+# Prefer this over gtest_main if your test component logs to syslog.
+source_set("gtest_main_with_syslog") {
+  testonly = true
+
+  sources = [
+    "run_all_unittests_with_syslog.cc",
+  ]
+
+  deps = [
+    ":test_settings",
+    "//src/lib/fxl",
+  ]
+
+  public_deps = [
+    "//third_party/googletest:gtest",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ "//zircon/public/lib/zx" ]
+    public_deps += [ "//src/lib/syslog/cpp" ]
+  }
+}

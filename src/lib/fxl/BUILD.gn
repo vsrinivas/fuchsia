@@ -232,11 +232,19 @@ executable("fxl_unittests") {
   ]
 }
 
+executable("build_gtest_main_with_syslog") {
+  testonly = true
+  deps = [
+    "test:gtest_main_with_syslog",
+  ]
+}
+
 if (is_fuchsia) {
   import("//build/test/test_package.gni")
 
   test_package("fxl_tests") {
     deps = [
+      ":build_gtest_main_with_syslog",
       ":fxl_unittests",
     ]
 
