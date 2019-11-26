@@ -14,7 +14,7 @@ go_library("lib") {
 
   deps = [
     "//garnet/go/src/amber:metrics_lib",
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",

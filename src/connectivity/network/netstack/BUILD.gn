@@ -98,7 +98,7 @@ go_library("netstack_lib") {
 
   deps = [
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",

@@ -20,7 +20,7 @@ go_library("logger_integration_go_tests_lib") {
   name = "logger_integration_tests"
 
   deps = [
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
   ]
 }

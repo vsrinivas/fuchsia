@@ -18,7 +18,7 @@ go_library("metrics_lib") {
   name = "metrics"
   source_dir = "metrics"
   deps = [
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-mem($go_toolchain)",
@@ -30,7 +30,7 @@ go_library("lib") {
   deps = [
     "//garnet/go/src/merkle",
     "//garnet/go/src/sse",
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.amber($go_toolchain)",
     "//sdk/fidl/fuchsia.pkg($go_toolchain)",

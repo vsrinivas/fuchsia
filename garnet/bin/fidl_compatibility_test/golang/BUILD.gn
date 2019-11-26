@@ -21,7 +21,7 @@ group("golang") {
 go_library("lib") {
   name = "compatibility_test"
   deps = [
-    "//garnet/public/lib/component/go/src/app",
+    "//src/lib/component/go/src/app",
     "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
   ]
