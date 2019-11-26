@@ -4,7 +4,7 @@
 
 use {
     crate::{
-        ap::{ClientEvent, Context, TimedEvent},
+        ap::{Context, TimedEvent},
         error::Error,
         timer::EventId,
     },
@@ -124,6 +124,14 @@ impl ClientRejection {
             _ => log::Level::Trace,
         }
     }
+}
+
+#[derive(Debug)]
+pub enum ClientEvent {
+    /// This is the timeout that fires after dot11BssMaxIdlePeriod (IEEE Std 802.11-2016, 11.24.13
+    /// and Annex C.3) elapses and no activity was detected, at which point the client is
+    /// disassociated.
+    BssIdleTimeout,
 }
 
 // TODO(37891): Use this code.
