@@ -20,7 +20,6 @@
 #include "src/ledger/bin/p2p_provider/public/user_id_provider.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/auto_cleanable.h"
-#include "src/lib/component/cpp/service_provider_impl.h"
 
 namespace p2p_provider {
 

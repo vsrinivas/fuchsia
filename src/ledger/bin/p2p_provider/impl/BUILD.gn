@@ -34,7 +34,6 @@ source_set("impl") {
     "//src/ledger/lib/convert",
     "//src/lib/backoff",
     "//src/lib/callback",
-    "//src/lib/component/cpp:deprecated_service_provider",
   ]
 }
 
