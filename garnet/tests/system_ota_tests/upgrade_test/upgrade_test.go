@@ -380,5 +380,15 @@ func validateDevice(t *testing.T, device *device.Client, rpcClient *sl4f.Client,
 		if err := rpcClient.ValidateStaticPackages(); err != nil {
 			t.Fatal(err)
 		}
+
+		// Ensure the device is booting from the expected boot slot
+		active_config, err := rpcClient.PaverQueryActiveConfiguration()
+		if err == sl4f.ErrNotSupported {
+			log.Printf("device does not support querying the active configuration")
+		} else if err != nil {
+			t.Fatalf("unable to determine active boot configuration: %s", err)
+		} else if active_config != sl4f.ConfigurationA {
+			t.Fatalf("expected device to boot from slot A, got %s", active_config)
+		}
 	}
 }
