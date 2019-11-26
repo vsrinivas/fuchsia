@@ -22,7 +22,7 @@
   "pkg/zx/include/lib/zx/resource.h": "ab185ab8a6c035e252e6c2abfada9389",
   "pkg/zx/include/lib/zx/socket.h": "07de84925af6c4de78194d908b93860c",
   "pkg/zx/include/lib/zx/suspend_token.h": "a1fc9750a272e2cc164c0a7c16ed117c",
-  "pkg/zx/include/lib/zx/task.h": "a961716f9360f5c4261d58e17d947279",
+  "pkg/zx/include/lib/zx/task.h": "41497d66dd998c33f039cbbeaf2965ca",
   "pkg/zx/include/lib/zx/thread.h": "973f91c7367b0c041bc43ac7882a2c99",
   "pkg/zx/include/lib/zx/time.h": "4a4513be675bbf611e7489ca9dfe2a8c",
   "pkg/zx/include/lib/zx/timer.h": "8f82d3859534e3eea20e8cc3abca049b",
