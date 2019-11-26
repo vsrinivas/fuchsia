@@ -87,8 +87,8 @@ class MsdArmDevice : public msd_device_t,
   static void DumpRegisters(const GpuFeatures& features, magma::RegisterIo* io,
                             DumpState* dump_state);
   void Dump(DumpState* dump_state, bool from_device_thread);
-  void DumpToString(std::string& dump_string, bool from_device_thread);
-  void FormatDump(DumpState& dump_state, std::string& dump_string);
+  void DumpToString(std::vector<std::string>* dump_string, bool from_device_thread);
+  void FormatDump(DumpState& dump_state, std::vector<std::string>* dump_string);
   void DumpStatusToLog();
 
   // MsdArmConnection::Owner implementation.

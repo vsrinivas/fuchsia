@@ -376,9 +376,12 @@ int MsdArmDevice::GpuInterruptThreadLoop() {
 
       // Perform the GPU dump immediately, because clearing the irq flags might cause another
       // GPU fault to be generated, which could overwrite the earlier data.
-      std::string dump;
-      DumpToString(dump, false);
-      MAGMA_LOG(INFO, "GPU fault status: %s", dump.c_str());
+      std::vector<std::string> dump;
+      DumpToString(&dump, false);
+      MAGMA_LOG(INFO, "GPU fault status");
+      for (auto& str : dump) {
+        MAGMA_LOG(INFO, "%s", str.c_str());
+      }
     }
 
     if (clear_flags.reg_value()) {
@@ -739,7 +742,7 @@ void MsdArmDevice::Dump(DumpState* dump_state, bool on_device_thread) {
   }
 }
 
-void MsdArmDevice::DumpToString(std::string& dump_string, bool on_device_thread) {
+void MsdArmDevice::DumpToString(std::vector<std::string>* dump_string, bool on_device_thread) {
   DumpState dump_state = {};
   Dump(&dump_state, on_device_thread);
 
@@ -793,42 +796,48 @@ static std::string InterpretMmuFaultStatus(uint32_t status) {
       .c_str();
 }
 
-void MsdArmDevice::FormatDump(DumpState& dump_state, std::string& dump_string) {
-  dump_string.append("Core power states\n");
+void MsdArmDevice::FormatDump(DumpState& dump_state, std::vector<std::string>* dump_string) {
+  dump_string->push_back("Core power states\n");
   for (auto& state : dump_state.power_states) {
-    dump_string += fbl::StringPrintf("Core type %s state %s bitmap: 0x%lx\n", state.core_type,
-                                     state.status_type, state.bitmask)
-                       .c_str();
+    dump_string->push_back(fbl::StringPrintf("Core type %s state %s bitmap: 0x%lx\n",
+                                             state.core_type, state.status_type, state.bitmask)
+                               .c_str());
   }
-  dump_string += fbl::StringPrintf("Total ms %" PRIu64 " Active ms %" PRIu64 "\n",
-                                   dump_state.total_time_ms, dump_state.active_time_ms)
-                     .c_str();
-  dump_string += fbl::StringPrintf("Gpu fault status 0x%x, address 0x%lx\n",
-                                   dump_state.gpu_fault_status, dump_state.gpu_fault_address)
-                     .c_str();
-  dump_string += fbl::StringPrintf("Gpu status 0x%x\n", dump_state.gpu_status).c_str();
-  dump_string += fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld\n", dump_state.cycle_count,
-                                   dump_state.timestamp)
-                     .c_str();
+  dump_string->push_back(fbl::StringPrintf("Total ms %" PRIu64 " Active ms %" PRIu64 "\n",
+                                           dump_state.total_time_ms, dump_state.active_time_ms)
+                             .c_str());
+  dump_string->push_back(fbl::StringPrintf("Gpu fault status 0x%x, address 0x%lx\n",
+                                           dump_state.gpu_fault_status,
+                                           dump_state.gpu_fault_address)
+                             .c_str());
+  dump_string->push_back(fbl::StringPrintf("Gpu status 0x%x\n", dump_state.gpu_status).c_str());
+  dump_string->push_back(fbl::StringPrintf("Gpu cycle count %ld, timestamp %ld\n",
+                                           dump_state.cycle_count, dump_state.timestamp)
+                             .c_str());
   for (size_t i = 0; i < dump_state.job_slot_status.size(); i++) {
     auto* status = &dump_state.job_slot_status[i];
-    dump_string += fbl::StringPrintf("Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n",
-                                     i, status->status, status->head, status->tail, status->config)
-                       .c_str();
+    dump_string->push_back(
+        fbl::StringPrintf("Job slot %zu status 0x%x head 0x%lx tail 0x%lx config 0x%x\n", i,
+                          status->status, status->head, status->tail, status->config)
+            .c_str());
   }
   for (size_t i = 0; i < dump_state.address_space_status.size(); i++) {
     auto* status = &dump_state.address_space_status[i];
-    dump_string += fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n",
-                                     i, status->status, status->fault_status, status->fault_address)
-                       .c_str();
-    dump_string += InterpretMmuFaultStatus(status->fault_status);
+    dump_string->push_back(
+        fbl::StringPrintf("AS %zu status 0x%x fault status 0x%x fault address 0x%lx\n", i,
+                          status->status, status->fault_status, status->fault_address)
+            .c_str());
+    dump_string->push_back(InterpretMmuFaultStatus(status->fault_status));
   }
 }
 
 magma::Status MsdArmDevice::ProcessDumpStatusToLog() {
-  std::string dump;
-  DumpToString(dump, true);
-  MAGMA_LOG(INFO, "%s", dump.c_str());
+  std::vector<std::string> dump;
+  DumpToString(&dump, true);
+  MAGMA_LOG(INFO, "Gpu register dump");
+  for (auto& str : dump) {
+    MAGMA_LOG(INFO, "%s", str.c_str());
+  }
   return MAGMA_STATUS_OK;
 }
 

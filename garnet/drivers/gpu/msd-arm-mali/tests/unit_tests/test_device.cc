@@ -8,6 +8,11 @@
 #include "msd_arm_device.h"
 #include "registers.h"
 
+bool IsStringInDump(const std::vector<std::string>& dump, const std::string& str) {
+  return std::any_of(dump.begin(), dump.end(), [str](const std::string& input_str) {
+    return input_str.find(str) != std::string::npos;
+  });
+}
 // These tests are unit testing the functionality of MsdArmDevice.
 // All of these tests instantiate the device in test mode, that is without the device thread active.
 class TestMsdArmDevice {
@@ -39,16 +44,13 @@ class TestMsdArmDevice {
     for (size_t i = 0; i < dump_state.address_space_status.size(); i++)
       EXPECT_EQ(0u, dump_state.address_space_status[i].status);
 
-    std::string dump_string;
-    device->FormatDump(dump_state, dump_string);
-    EXPECT_NE(nullptr, strstr(dump_string.c_str(), "Core type L2 Cache state Present bitmap: 0x1"));
-    EXPECT_NE(nullptr,
-              strstr(dump_string.c_str(), "Job slot 2 status 0x0 head 0x0 tail 0x0 config 0x0"));
-    EXPECT_NE(nullptr,
-              strstr(dump_string.c_str(), "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
-    EXPECT_NE(nullptr,
-              strstr(dump_string.c_str(),
-                     "Fault source_id 0, access type \"unknown\", exception type: \"Unknown\""));
+    std::vector<std::string> dump_string;
+    device->FormatDump(dump_state, &dump_string);
+    EXPECT_TRUE(IsStringInDump(dump_string, "Core type L2 Cache state Present bitmap: 0x1"));
+    EXPECT_TRUE(IsStringInDump(dump_string, "Job slot 2 status 0x0 head 0x0 tail 0x0 config 0x0"));
+    EXPECT_TRUE(IsStringInDump(dump_string, "AS 7 status 0x0 fault status 0x0 fault address 0x0"));
+    EXPECT_TRUE(IsStringInDump(
+        dump_string, "Fault source_id 0, access type \"unknown\", exception type: \"Unknown\""));
   }
 
   void MockDump() {
