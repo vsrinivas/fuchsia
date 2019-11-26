@@ -6,8 +6,6 @@
 
 #include <cmath>
 
-#include "src/lib/fxl/logging.h"
-
 namespace examples {
 
 ToneGenerator::ToneGenerator(uint32_t frames_per_second, float frequency, float volume, float decay)

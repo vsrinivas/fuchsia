@@ -37,6 +37,7 @@ executable("sync_sine_bin") {
     "//sdk/fidl/fuchsia.media",
     "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fzl",

@@ -41,7 +41,6 @@ loadable_module("audio_effects_example") {
   deps = [
     ":headers",
     "//sdk/lib/media/audio/effects",
-    "//src/lib/fxl",
     "//third_party/rapidjson",
     "//zircon/public/lib/fbl",
   ]

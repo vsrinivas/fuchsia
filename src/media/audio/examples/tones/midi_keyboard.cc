@@ -15,7 +15,7 @@
 #include <cstdio>
 #include <iostream>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/midi.h"
 #include "src/media/audio/examples/tones/tones.h"
 
@@ -28,7 +28,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
   DIR* dir = opendir(kDevMidiPath);
   if (!dir) {
     if (errno != ENOENT) {
-      FXL_LOG(WARNING) << "Error attempting to open \"" << kDevMidiPath << "\" (errno " << errno
+      FX_LOGS(WARNING) << "Error attempting to open \"" << kDevMidiPath << "\" (errno " << errno
                        << ")";
     }
     return nullptr;
@@ -50,7 +50,7 @@ std::unique_ptr<MidiKeyboard> MidiKeyboard::Create(Tones* owner) {
       fzl::UnownedFdioCaller fdio_caller(dev_fd.get());
       zx_status_t status = fuchsia_hardware_midi_DeviceGetInfo(fdio_caller.borrow_channel(), &info);
       if (status != ZX_OK) {
-        FXL_LOG(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname << "\"";
+        FX_LOGS(WARNING) << "fuchsia.hardware.midi.Device/GetInfo failed for \"" << devname << "\"";
         return nullptr;
       }
     }
@@ -90,7 +90,7 @@ void MidiKeyboard::HandleEvent() {
         break;
       }
 
-      FXL_LOG(WARNING) << "Shutting down MIDI keyboard (errno " << errno << ")";
+      FX_LOGS(WARNING) << "Shutting down MIDI keyboard (errno " << errno << ")";
       return;
     }
 
@@ -99,7 +99,7 @@ void MidiKeyboard::HandleEvent() {
     }
 
     if (evt_size > 3) {
-      FXL_LOG(WARNING) << "Shutting down MIDI keyboard, bad event size (" << evt_size << ")";
+      FX_LOGS(WARNING) << "Shutting down MIDI keyboard, bad event size (" << evt_size << ")";
       return;
     }
 

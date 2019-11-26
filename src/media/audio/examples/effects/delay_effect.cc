@@ -10,8 +10,6 @@
 #include <fbl/algorithm.h>
 #include <rapidjson/document.h>
 
-#include "src/lib/fxl/logging.h"
-
 namespace media::audio_effects_example {
 namespace {
 struct DelayConfig {

@@ -11,7 +11,7 @@
 #include <cmath>
 
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 // Set the audio stream_type to: 44.1 kHz, stereo, 16-bit LPCM (signed integer).
@@ -55,7 +55,7 @@ int MediaApp::Run() {
   }
 
   if (!AcquireAudioRendererSync()) {
-    FXL_LOG(ERROR) << "Could not acquire AudioRendererSync";
+    FX_LOGS(ERROR) << "Could not acquire AudioRendererSync";
     return 1;
   }
 
@@ -120,8 +120,8 @@ int MediaApp::Run() {
   // -- OR --
   // 2) Obtain a handle to the system's default reference clock and use that to
   //    control timing, instead of blindly using CLOCK_MONO.
-  FXL_DCHECK(ref_start_time >= 0);
-  FXL_DCHECK(media_start_time == 0);
+  FX_DCHECK(ref_start_time >= 0);
+  FX_DCHECK(media_start_time == 0);
   clock_start_time_ = static_cast<zx_time_t>(ref_start_time);
 
   while (num_packets_sent_ < kNumPacketsToSend) {
@@ -144,7 +144,7 @@ bool MediaApp::AcquireAudioRendererSync() {
 
 // Set the AudioRendererSync's audio stream_type to stereo 48kHz.
 bool MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_sync_);
+  FX_DCHECK(audio_renderer_sync_);
 
   fuchsia::media::AudioStreamType stream_type;
   stream_type.sample_format = use_float_ ? fuchsia::media::AudioSampleFormat::FLOAT
@@ -153,7 +153,7 @@ bool MediaApp::SetStreamType() {
   stream_type.frames_per_second = kFrameRate;
 
   if (audio_renderer_sync_->SetPcmStreamType(stream_type) != ZX_OK) {
-    FXL_LOG(ERROR) << "Could not set stream type";
+    FX_LOGS(ERROR) << "Could not set stream type";
     return false;
   }
   return true;
@@ -168,7 +168,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
                                    &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
+    FX_LOGS(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
     return status;
   }
 
@@ -255,7 +255,7 @@ bool MediaApp::RefillBuffer() {
 void MediaApp::WaitForPackets(size_t num_packets) {
   const zx_duration_t audio_submitted = ZX_MSEC(kMSecsPerPayload) * num_packets_sent_;
 
-  FXL_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
+  FX_DCHECK(num_packets_sent_ <= kNumPacketsToSend);
   zx_time_t wake_time = clock_start_time_ + audio_submitted;
   if (num_packets_sent_ < kNumPacketsToSend) {
     wake_time -= low_water_mark_;

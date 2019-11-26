@@ -8,7 +8,6 @@
 
 #include <fbl/algorithm.h>
 
-#include "src/lib/fxl/logging.h"
 #include "src/media/audio/examples/effects/delay_effect.h"
 #include "src/media/audio/examples/effects/rechannel_effect.h"
 #include "src/media/audio/examples/effects/swap_effect.h"

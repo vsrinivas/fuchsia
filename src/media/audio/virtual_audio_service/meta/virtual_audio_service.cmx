@@ -5,6 +5,9 @@
     "sandbox": {
         "dev": [
             "test/virtual_audio"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink"
         ]
     }
 }

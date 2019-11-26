@@ -7,6 +7,7 @@
             "class/audio-input"
         ],
         "services": [
+            "fuchsia.logger.LogSink",
             "fuchsia.media.Audio",
             "fuchsia.scheduler.ProfileProvider"
         ]

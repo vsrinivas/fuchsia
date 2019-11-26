@@ -16,7 +16,7 @@
 #include <iostream>
 #include <limits>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/midi_keyboard.h"
 
 namespace examples {
@@ -239,7 +239,7 @@ void Tones::SendPackets() {
     packet.payload_offset = (pts_ * kBytesPerFrame) % payload_buffer_.size();
     packet.payload_size = kBytesPerBuffer;
 
-    FXL_DCHECK((packet.payload_offset + packet.payload_size) <= payload_buffer_.size());
+    FX_DCHECK((packet.payload_offset + packet.payload_size) <= payload_buffer_.size());
 
     auto payload_ptr = reinterpret_cast<uint8_t*>(payload_buffer_.start()) + packet.payload_offset;
 
@@ -267,7 +267,7 @@ void Tones::SendPackets() {
     // can vary as we get routed to different outputs.
     if (!done()) {
       auto on_complete = [this]() {
-        FXL_DCHECK(active_packets_in_flight_ > 0);
+        FX_DCHECK(active_packets_in_flight_ > 0);
         active_packets_in_flight_--;
         SendPackets();
       };

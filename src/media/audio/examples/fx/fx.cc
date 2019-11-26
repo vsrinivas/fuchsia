@@ -33,6 +33,7 @@
 #include <fbl/algorithm.h>
 
 #include "src/lib/fsl/tasks/fd_waiter.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/lib/wav_writer/wav_writer.h"
 
 constexpr bool kWavWriterEnabled = false;
@@ -85,7 +86,7 @@ class FxProcessor {
  public:
   FxProcessor(std::unique_ptr<AudioInput> input, fit::closure quit_callback)
       : input_(std::move(input)), quit_callback_(std::move(quit_callback)) {
-    FXL_DCHECK(quit_callback_);
+    FX_DCHECK(quit_callback_);
   }
 
   void Startup(fuchsia::media::AudioPtr audio,
@@ -185,7 +186,7 @@ void FxProcessor::Startup(fuchsia::media::AudioPtr audio,
     return;
   }
 
-  FXL_DCHECK((input_->ring_buffer_bytes() % input_->frame_sz()) == 0);
+  FX_DCHECK((input_->ring_buffer_bytes() % input_->frame_sz()) == 0);
   input_buffer_frames_ = input_->ring_buffer_bytes() / input_->frame_sz();
 
   if (!wav_writer_.Initialize("/tmp/fx.wav", fuchsia::media::AudioSampleFormat::SIGNED_16,
@@ -688,6 +689,8 @@ void FxProcessor::UpdatePreampGain(float delta) {
 void usage(const char* prog_name) { printf("usage: %s [input_dev_num]\n", prog_name); }
 
 int main(int argc, char** argv) {
+  syslog::InitLogger({"fx"});
+
   uint32_t input_num = 0;
 
   if (argc >= 2) {

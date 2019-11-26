@@ -10,6 +10,7 @@
 
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_number_conversions.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/sync_sine/sync_sine.h"
 
 namespace {
@@ -24,6 +25,8 @@ constexpr char kFloatFormatSwitch[] = "float";
 }  // namespace
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"sync_sine"});
+
   const auto command_line = fxl::CommandLineFromArgcArgv(argc, argv);
 
   // loop is needed by StartupContext.

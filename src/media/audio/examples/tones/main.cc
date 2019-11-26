@@ -7,9 +7,12 @@
 #include <lib/async/cpp/task.h>
 
 #include "src/lib/fxl/command_line.h"
+#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/audio/examples/tones/tones.h"
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"tones"});
+
   fxl::CommandLine command_line = fxl::CommandLineFromArgcArgv(argc, argv);
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
 

@@ -9,7 +9,7 @@
 #include <lib/async/cpp/task.h>
 #include <math.h>
 
-#include "src/lib/fxl/logging.h"
+#include "src/lib/syslog/cpp/logger.h"
 
 namespace {
 // Set the AudioRenderer stream type to: 48 kHz, mono, 32-bit float.
@@ -27,7 +27,7 @@ constexpr double kAmplitude = 0.125;
 namespace examples {
 
 MediaApp::MediaApp(fit::closure quit_callback) : quit_callback_(std::move(quit_callback)) {
-  FXL_DCHECK(quit_callback_);
+  FX_DCHECK(quit_callback_);
 }
 
 // Prepare for playback, submit initial data and start the presentation timeline
@@ -64,14 +64,14 @@ void MediaApp::AcquireAudioRenderer(sys::ComponentContext* app_context) {
   audio->CreateAudioRenderer(audio_renderer_.NewRequest());
 
   audio_renderer_.set_error_handler([this](zx_status_t status) {
-    FXL_LOG(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
+    FX_LOGS(ERROR) << "fuchsia::media::AudioRenderer connection lost. Quitting.";
     Shutdown();
   });
 }
 
 // Set the AudioRenderer's audio stream_type: mono 48kHz 32-bit float.
 void MediaApp::SetStreamType() {
-  FXL_DCHECK(audio_renderer_);
+  FX_DCHECK(audio_renderer_);
 
   fuchsia::media::AudioStreamType stream_type;
 
@@ -95,7 +95,7 @@ zx_status_t MediaApp::CreateMemoryMapping() {
                                    &payload_vmo, ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER);
 
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
+    FX_LOGS(ERROR) << "VmoMapper:::CreateAndMap failed - " << status;
     return status;
   }
 
@@ -141,7 +141,7 @@ void MediaApp::SendPacket(fuchsia::media::StreamPacket packet) {
 
 void MediaApp::OnSendPacketComplete() {
   ++num_packets_completed_;
-  FXL_DCHECK(num_packets_completed_ <= kNumPayloads);
+  FX_DCHECK(num_packets_completed_ <= kNumPayloads);
 
   if (num_packets_sent_ < kNumPayloads) {
     SendPacket(CreatePacket(num_packets_sent_));
@@ -159,6 +159,8 @@ void MediaApp::Shutdown() {
 }  // namespace examples
 
 int main(int argc, const char** argv) {
+  syslog::InitLogger({"simple_sine"});
+
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
   auto startup_context = sys::ComponentContext::Create();
 

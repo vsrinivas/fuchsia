@@ -41,6 +41,7 @@ executable("tones_bin") {
     "//sdk/lib/sys/cpp",
     "//src/lib/fsl",
     "//src/lib/fxl",
+    "//src/lib/syslog/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
     "//zircon/public/lib/fbl",
