@@ -112,6 +112,25 @@ bool TestNodeLifecycle(perftest::RepeatState* state) {
   return true;
 }
 
+bool TestValueListLifecycle(perftest::RepeatState* state) {
+  struct Dummy {
+    uint64_t value;
+  };
+  state->DeclareStep("Create");
+  state->DeclareStep("Enlist");
+  state->DeclareStep("EnlistAgain");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    inspect::ValueList list;
+    state->NextStep();
+    list.emplace(Dummy{.value = 0});
+    state->NextStep();
+    list.emplace(Dummy{.value = 1});
+    state->NextStep();
+  }
+  return true;
+}
+
 template <typename T>
 bool TestMetricLifecycle(perftest::RepeatState* state) {
   auto inspector = Inspector();
@@ -270,6 +289,7 @@ bool TestHeapExtend(perftest::RepeatState* state) {
 }
 
 void RegisterTests() {
+  perftest::RegisterTest("Inspect/ValueList/Lifecycle", TestValueListLifecycle);
   perftest::RegisterTest("Inspect/Node/Lifecycle", TestNodeLifecycle);
   perftest::RegisterTest("Inspect/IntMetric/Lifecycle", TestMetricLifecycle<int64_t>);
   perftest::RegisterTest("Inspect/IntMetric/Modify", TestMetricModify<int64_t>);

@@ -134,6 +134,10 @@ out of scope) the underlying Property is deleted and no longer present
 in your component's Inspect output. This is true for Metrics and child
 Nodes as well.
 
+If you are creating a value that doesn't need to be modified, use a
+[`ValueList`](/zircon/system/ulib/inspect/include/lib/inspect/cpp/value_list.h)
+to keep them alive until they are no longer needed.
+
 * Inspection is best-effort.
 
 Due to space limitations, the Inspect library may be unable to satisfy
@@ -151,12 +155,15 @@ to its children when they are constructed:
 class Child {
   public:
     Child(inspect::Node my_node) : my_node_(std::move(my_node)) {
+      // Create a string that doesn't change, and emplace it in the ValueList
+      my_node_.CreateString("version", "1.0", &values_);
       // Create metrics and properties on my_node_.
     }
 
   private:
     inspect::Node my_node_;
     inspect::StringProperty some_property_;
+    inspect::ValueList values_;
     // ... more properties and metrics
 };
 

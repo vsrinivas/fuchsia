@@ -6,6 +6,7 @@
 #define LIB_INSPECT_CPP_VMO_TYPES_H_
 
 #include <lib/inspect/cpp/vmo/block.h>
+#include <zircon/assert.h>
 #include <zircon/types.h>
 
 #include <string>
@@ -332,30 +333,66 @@ class Node final {
   // also not be stored in a buffer.
   Node CreateChild(const std::string& name);
 
+  // Same as CreateChild, but emplaces the value in the given container.
+  template <typename T>
+  void CreateChild(const std::string& name, T* list) {
+    list->emplace(CreateChild(name));
+  }
+
   // Create a new |IntProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
   IntProperty CreateInt(const std::string& name, int64_t value);
+
+  // Same as CreateInt, but emplaces the value in the given container.
+  template <typename T>
+  void CreateInt(const std::string& name, int64_t value, T* list) {
+    list->emplace(CreateInt(name, value));
+  }
 
   // Create a new |UintProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
   UintProperty CreateUint(const std::string& name, uint64_t value);
 
+  // Same as CreateUint, but emplaces the value in the given container.
+  template <typename T>
+  void CreateUint(const std::string& name, uint64_t value, T* list) {
+    list->emplace(CreateUint(name, value));
+  }
+
   // Create a new |DoubleProperty| with the given name that is a child of this node.
   // If this node is not stored in a buffer, the created metric will
   // also not be stored in a buffer.
   DoubleProperty CreateDouble(const std::string& name, double value);
+
+  // Same as CreateDouble, but emplaces the value in the given container.
+  template <typename T>
+  void CreateDouble(const std::string& name, double value, T* list) {
+    list->emplace(CreateDouble(name, value));
+  }
 
   // Create a new |StringProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
   StringProperty CreateString(const std::string& name, const std::string& value);
 
+  // Same as CreateString, but emplaces the value in the given container.
+  template <typename T>
+  void CreateString(const std::string& name, const std::string& value, T* list) {
+    list->emplace(CreateString(name, value));
+  }
+
   // Create a new |ByteVectorProperty| with the given name and value that is a child of this node.
   // If this node is not stored in a buffer, the created property will
   // also not be stored in a buffer.
   ByteVectorProperty CreateByteVector(const std::string& name, const std::vector<uint8_t>& value);
+
+  // Same as CreateByteVector, but emplaces the value in the given container.
+  template <typename T>
+  void CreateByteVector(const std::string& name, const std::vector<uint8_t>& value, T* list) {
+    list->emplace(CreateByteVector(name, value));
+  }
 
   // Create a new |IntArray| with the given name and slots that is a child of this node.
   // If this node is not stored in a buffer, the created value will

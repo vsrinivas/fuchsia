@@ -10,6 +10,7 @@ zx_library("inspect") {
     "lib/inspect/cpp/hierarchy.h",
     "lib/inspect/cpp/reader.h",
     "lib/inspect/cpp/health.h",
+    "lib/inspect/cpp/value_list.h",
     "lib/inspect/cpp/vmo/state.h",
     "lib/inspect/cpp/vmo/types.h",
     "lib/inspect/cpp/vmo/block.h",

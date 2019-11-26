@@ -19,6 +19,7 @@ zx_test("inspect") {
     "scanner_unittest.cc",
     "snapshot_unittest.cc",
     "state_unittest.cc",
+    "value_list_unittest.cc",
   ]
 
   deps = [
