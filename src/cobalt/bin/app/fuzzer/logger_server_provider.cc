@@ -38,11 +38,11 @@ auto observation_store =
     std::make_unique<cobalt::observation_store::MemoryObservationStore>(100, 100, 1000);
 
 class NoOpHTTPClient : public cobalt::lib::clearcut::HTTPClient {
-  std::future<statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse>> Post(
+  std::future<cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse>> Post(
       cobalt::lib::clearcut::HTTPRequest request,
       std::chrono::steady_clock::time_point deadline) override {
     return std::async(std::launch::async,
-                      []() mutable -> statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
+                      []() mutable -> cobalt::lib::statusor::StatusOr<cobalt::lib::clearcut::HTTPResponse> {
                         return cobalt::util::Status::CANCELLED;
                       });
   }
