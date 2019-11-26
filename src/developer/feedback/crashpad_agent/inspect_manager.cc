@@ -8,12 +8,12 @@
 #include <zircon/errors.h>
 #include <zircon/types.h>
 
-#include <ctime>
 #include <map>
 #include <utility>
 
 #include "src/developer/feedback/crashpad_agent/constants.h"
 #include "src/developer/feedback/crashpad_agent/settings.h"
+#include "src/developer/feedback/utils/time.h"
 #include "src/lib/files/path.h"
 #include "src/lib/fxl/strings/substitute.h"
 #include "src/lib/syslog/cpp/logger.h"
@@ -23,6 +23,16 @@ namespace {
 
 using files::JoinPath;
 using inspect::Node;
+
+std::string CurrentTime(timekeeper::Clock* clock) {
+  auto current_time = CurrentUTCTime(clock);
+  if (current_time.has_value()) {
+    return current_time.value();
+  } else {
+    FX_LOGS(ERROR) << "Failed to get current UTC time";
+    return "<unknown>";
+  }
+}
 
 }  // namespace
 
@@ -46,7 +56,7 @@ bool InspectManager::AddReport(const std::string& program_name,
 
   reports_.emplace(local_report_id, report_path);
   reports_.at(local_report_id).creation_time_ =
-      node_manager_.Get(report_path).CreateString("creation_time", CurrentTime());
+      node_manager_.Get(report_path).CreateString("creation_time", CurrentTime(clock_));
 
   return true;
 }
@@ -83,7 +93,7 @@ bool InspectManager::MarkReportAsUploaded(const std::string& local_report_id,
   inspect::Node& server = node_manager_.Get(server_path);
 
   report.server_id_ = server.CreateString("id", server_properties_report_id);
-  report.server_creation_time_ = server.CreateString("creation_time", CurrentTime());
+  report.server_creation_time_ = server.CreateString("creation_time", CurrentTime(clock_));
 
   return true;
 }
@@ -150,19 +160,6 @@ void InspectManager::OnUploadPolicyChange(const feedback::Settings::UploadPolicy
   } else {
     settings_.upload_policy.Set(ToString(upload_policy));
   }
-}
-
-std::string InspectManager::CurrentTime() {
-  zx::time_utc now_utc;
-  if (const zx_status_t status = clock_->Now(&now_utc); status != ZX_OK) {
-    FX_PLOGS(ERROR, status) << "Failed to get current UTC time";
-    return "<unknown>";
-  }
-  // std::gmtime expects epoch in seconds.
-  const int64_t now_utc_seconds = now_utc.get() / zx::sec(1).get();
-  char buffer[32];
-  strftime(buffer, sizeof(buffer), "%Y-%m-%d %X %Z", std::gmtime(&now_utc_seconds));
-  return std::string(buffer);
 }
 
 }  // namespace feedback

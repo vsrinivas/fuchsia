@@ -15,6 +15,7 @@ constexpr char kAnnotationBuildVersion[] = "build.version";
 constexpr char kAnnotationChannel[] = "channel";
 constexpr char kAnnotationDeviceBoardName[] = "device.board-name";
 constexpr char kAnnotationDeviceUptime[] = "device.uptime";
+constexpr char kAnnotationDeviceUTCTime[] = "device.utc-time";
 constexpr char kAnnotationHardwareProductLanguage[] = "hardware.product.language";
 constexpr char kAnnotationHardwareProductLocaleList[] = "hardware.product.locale-list";
 constexpr char kAnnotationHardwareProductManufacturer[] = "hardware.product.manufacturer";

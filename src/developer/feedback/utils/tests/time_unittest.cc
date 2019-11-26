@@ -6,6 +6,7 @@
 
 #include <string>
 
+#include "src/lib/timekeeper/test_clock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
@@ -50,62 +51,100 @@ constexpr char kSecsAndHoursAndDaysString[] = "4d3h0m1s";
 constexpr char kMinsAndHoursAndDaysString[] = "4d3h2m0s";
 constexpr char kAllUnitsString[] = "4d3h2m1s";
 constexpr char kRndmNSecsString[] = "3d5h17m12s";
-// constexpr char kNegRndmNSecsString[] = "-3d5h17m12s";
 
-TEST(TimeTest, ZeroDuration) { EXPECT_EQ(FormatDuration(kZero).value(), kZeroString); }
+constexpr zx::time_utc kTime1(0);
+constexpr zx::time_utc kTime2((zx::hour(7) + zx::min(14) + zx::sec(52)).get());
+constexpr zx::time_utc kTime3((zx::hour(3) * 24 + zx::hour(15) + zx::min(33) + zx::sec(17)).get());
 
-TEST(TimeTest, SecondOnly) { EXPECT_EQ(FormatDuration(kSecsOnly).value(), kSecsOnlyString); }
+constexpr char kTime1Str[] = "1970-01-01 00:00:00 GMT";
+constexpr char kTime2Str[] = "1970-01-01 07:14:52 GMT";
+constexpr char kTime3Str[] = "1970-01-04 15:33:17 GMT";
 
-TEST(TimeTest, MinuteOnly) { EXPECT_EQ(FormatDuration(kMinsOnly).value(), kMinsOnlyString); }
-TEST(TimeTest, HourOnly) { EXPECT_EQ(FormatDuration(kHoursOnly).value(), kHoursOnlyString); }
+TEST(TimeTest, FormatDuration_ZeroDuration) {
+  EXPECT_EQ(FormatDuration(kZero).value(), kZeroString);
+}
 
-TEST(TimeTest, DayOnly) { EXPECT_EQ(FormatDuration(kDaysOnly).value(), kDaysOnlyString); }
+TEST(TimeTest, FormatDuration_SecondOnly) {
+  EXPECT_EQ(FormatDuration(kSecsOnly).value(), kSecsOnlyString);
+}
 
-TEST(TimeTest, SecondAndMinute) {
+TEST(TimeTest, FormatDuration_MinuteOnly) {
+  EXPECT_EQ(FormatDuration(kMinsOnly).value(), kMinsOnlyString);
+}
+TEST(TimeTest, FormatDuration_HourOnly) {
+  EXPECT_EQ(FormatDuration(kHoursOnly).value(), kHoursOnlyString);
+}
+
+TEST(TimeTest, FormatDuration_DayOnly) {
+  EXPECT_EQ(FormatDuration(kDaysOnly).value(), kDaysOnlyString);
+}
+
+TEST(TimeTest, FormatDuration_SecondAndMinute) {
   EXPECT_EQ(FormatDuration(kSecsAndMins).value(), kSecsAndMinsString);
 }
 
-TEST(TimeTest, SecondAndHour) {
+TEST(TimeTest, FormatDuration_SecondAndHour) {
   EXPECT_EQ(FormatDuration(kSecsAndHours).value(), kSecsAndHoursString);
 }
 
-TEST(TimeTest, SecondAndDay) {
+TEST(TimeTest, FormatDuration_SecondAndDay) {
   EXPECT_EQ(FormatDuration(kSecsAndDays).value(), kSecsAndDaysString);
 }
 
-TEST(TimeTest, MinuteAndHour) {
+TEST(TimeTest, FormatDuration_MinuteAndHour) {
   EXPECT_EQ(FormatDuration(kMinsAndHours).value(), kMinsAndHoursString);
 }
 
-TEST(TimeTest, MinuteAndDay) {
+TEST(TimeTest, FormatDuration_MinuteAndDay) {
   EXPECT_EQ(FormatDuration(kMinsAndDays).value(), kMinsAndDaysString);
 }
 
-TEST(TimeTest, HourAndDay) {
+TEST(TimeTest, FormatDuration_HourAndDay) {
   EXPECT_EQ(FormatDuration(kHoursAndDays).value(), kHoursAndDaysString);
 }
 
-TEST(TimeTest, SecAndMinAndHour) {
+TEST(TimeTest, FormatDuration_SecAndMinAndHour) {
   EXPECT_EQ(FormatDuration(kSecsAndMinsAndHours).value(), kSecsAndMinsAndHoursString);
 }
 
-TEST(TimeTest, SecAndMinAndDay) {
+TEST(TimeTest, FormatDuration_SecAndMinAndDay) {
   EXPECT_EQ(FormatDuration(kSecsAndMinsAndDays).value(), kSecsAndMinsAndDaysString);
 }
 
-TEST(TimeTest, SecAndHourAndDay) {
+TEST(TimeTest, FormatDuration_SecAndHourAndDay) {
   EXPECT_EQ(FormatDuration(kSecsAndHoursAndDays).value(), kSecsAndHoursAndDaysString);
 }
 
-TEST(TimeTest, MinAndHourAndDay) {
+TEST(TimeTest, FormatDuration_MinAndHourAndDay) {
   EXPECT_EQ(FormatDuration(kMinsAndHoursAndDays).value(), kMinsAndHoursAndDaysString);
 }
 
-TEST(TimeTest, AllUnits) { EXPECT_EQ(FormatDuration(kAllUnits).value(), kAllUnitsString); }
+TEST(TimeTest, FormatDuration_AllUnits) {
+  EXPECT_EQ(FormatDuration(kAllUnits).value(), kAllUnitsString);
+}
 
-TEST(TimeTest, RandomNSec) { EXPECT_EQ(FormatDuration(kRndmNSecs).value(), kRndmNSecsString); }
+TEST(TimeTest, FormatDuration_RandomNSec) {
+  EXPECT_EQ(FormatDuration(kRndmNSecs).value(), kRndmNSecsString);
+}
 
-TEST(TimeTest, NegativeRandomNSec) { EXPECT_EQ(FormatDuration(kNegRndmNSecs), std::nullopt); }
+TEST(TimeTest, FormatDuration_NegativeRandomNSec) {
+  EXPECT_EQ(FormatDuration(kNegRndmNSecs), std::nullopt);
+}
+
+TEST(TimeTest, CurrentUTCTime_NullClock) { EXPECT_EQ(CurrentUTCTime(nullptr), std::nullopt); }
+
+TEST(TimeTest, CurrentUTCTime_ValidClock) {
+  auto clock = std::make_unique<timekeeper::TestClock>();
+
+  clock->Set(kTime1);
+  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime1Str);
+
+  clock->Set(kTime2);
+  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime2Str);
+
+  clock->Set(kTime3);
+  EXPECT_EQ(CurrentUTCTime(clock.get()), kTime3Str);
+}
 
 }  // namespace
 }  // namespace feedback

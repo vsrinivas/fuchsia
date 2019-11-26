@@ -12,16 +12,22 @@
 #include <string>
 #include <vector>
 
-#include "src/developer/feedback/feedback_agent/annotations/single_sync_annotation_provider.h"
+#include "src/developer/feedback/feedback_agent/annotations/annotation_provider.h"
+#include "src/lib/timekeeper/clock.h"
 
 namespace feedback {
 
-// Get the uptime of the device.
-class UptimeProvider : public SingleSyncAnnotationProvider {
+// Get the uptime of the device and the current UTC time.
+class TimeProvider : public AnnotationProvider {
  public:
-  UptimeProvider();
+  TimeProvider(const std::set<std::string>& annotations_to_get,
+               std::unique_ptr<timekeeper::Clock> clock);
   static std::set<std::string> GetSupportedAnnotations();
-  std::optional<std::string> GetAnnotation() override;
+  fit::promise<std::vector<fuchsia::feedback::Annotation>> GetAnnotations() override;
+
+ private:
+  std::set<std::string> annotations_to_get_;
+  std::unique_ptr<timekeeper::Clock> clock_;
 };
 
 }  // namespace feedback

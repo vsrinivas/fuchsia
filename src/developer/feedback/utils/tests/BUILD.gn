@@ -136,6 +136,7 @@ executable("time_unittest") {
   deps = [
     "//src/developer/feedback/utils:time",
     "//src/lib/fxl/test:gtest_main",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gtest",
   ]
 }

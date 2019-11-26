@@ -17,8 +17,8 @@ source_set("annotation_providers") {
     "build_info_provider.h",
     "single_sync_annotation_provider.cc",
     "single_sync_annotation_provider.h",
-    "uptime_provider.cc",
-    "uptime_provider.h",
+    "time_provider.cc",
+    "time_provider.h",
   ]
 
   deps = [
@@ -31,6 +31,8 @@ source_set("annotation_providers") {
     "//src/lib/files",
     "//src/lib/fxl",
     "//src/lib/syslog/cpp",
+    "//src/lib/timekeeper",
+    "//src/lib/timekeeper:system",
     "//zircon/public/lib/fit",
     "//zircon/system/fidl/fuchsia-sysinfo",
   ]

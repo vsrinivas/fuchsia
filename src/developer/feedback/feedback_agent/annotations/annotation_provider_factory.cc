@@ -8,8 +8,9 @@
 #include "src/developer/feedback/feedback_agent/annotations/build_info_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/channel_provider.h"
 #include "src/developer/feedback/feedback_agent/annotations/product_info_provider.h"
-#include "src/developer/feedback/feedback_agent/annotations/uptime_provider.h"
+#include "src/developer/feedback/feedback_agent/annotations/time_provider.h"
 #include "src/developer/feedback/feedback_agent/constants.h"
+#include "src/lib/timekeeper/system_clock.h"
 
 namespace feedback {
 namespace {
@@ -20,7 +21,7 @@ enum class AnnotationType {
   BuildInfo,
   Channel,
   ProductInfo,
-  Uptime,
+  Time,
 };
 
 std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
@@ -33,8 +34,8 @@ std::set<std::string> GetSupportedAnnotations(const AnnotationType type) {
       return ChannelProvider::GetSupportedAnnotations();
     case AnnotationType::ProductInfo:
       return ProductInfoProvider::GetSupportedAnnotations();
-    case AnnotationType::Uptime:
-      return UptimeProvider::GetSupportedAnnotations();
+    case AnnotationType::Time:
+      return TimeProvider::GetSupportedAnnotations();
   }
 }
 
@@ -62,8 +63,9 @@ std::unique_ptr<AnnotationProvider> GetProvider(const AnnotationType type,
       return std::make_unique<ChannelProvider>(dispatcher, services, timeout);
     case AnnotationType::ProductInfo:
       return std::make_unique<ProductInfoProvider>(annotations, dispatcher, services, timeout);
-    case AnnotationType::Uptime:
-      return std::make_unique<UptimeProvider>();
+    case AnnotationType::Time:
+      return std::make_unique<TimeProvider>(annotations,
+                                            std::make_unique<timekeeper::SystemClock>());
   }
 }
 
@@ -95,7 +97,7 @@ std::vector<std::unique_ptr<AnnotationProvider>> GetProviders(
                             &providers);
   AddIfAnnotationsIntersect(AnnotationType::ProductInfo, allowlist, dispatcher, services, timeout,
                             &providers);
-  AddIfAnnotationsIntersect(AnnotationType::Uptime, allowlist, dispatcher, services, timeout,
+  AddIfAnnotationsIntersect(AnnotationType::Time, allowlist, dispatcher, services, timeout,
                             &providers);
 
   return providers;

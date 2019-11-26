@@ -54,8 +54,9 @@ using fuchsia::feedback::Screenshot;
 const std::set<std::string> kDefaultAnnotations = {
     kAnnotationBuildBoard,      kAnnotationBuildIsDebug, kAnnotationBuildLatestCommitDate,
     kAnnotationBuildProduct,    kAnnotationBuildVersion, kAnnotationChannel,
-    kAnnotationDeviceBoardName, kAnnotationDeviceUptime,
+    kAnnotationDeviceBoardName, kAnnotationDeviceUptime, kAnnotationDeviceUTCTime,
 };
+
 const std::set<std::string> kDefaultAttachments = {
     kAttachmentBuildSnapshot,
     // TODO(fxb/39804): re-enable once using Inspect service.
@@ -401,9 +402,8 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     rapidjson::Document json;
     ASSERT_FALSE(json.Parse(annotations_json.c_str()).HasParseError());
     rapidjson::Document schema_json;
-    ASSERT_FALSE(
-        schema_json
-            .Parse(fxl::Substitute(R"({
+    ASSERT_FALSE(schema_json
+                     .Parse(fxl::Substitute(R"({
   "type": "object",
   "properties": {
     "$0": {
@@ -429,15 +429,19 @@ TEST_F(DataProviderTest, GetData_AnnotationsAsAttachment) {
     },
     "$7": {
       "type": "string"
+    },
+    "$8": {
+      "type": "string"
     }
   },
   "additionalProperties": false
 })",
-                                   kAnnotationBuildBoard, kAnnotationBuildIsDebug,
-                                   kAnnotationBuildLatestCommitDate, kAnnotationBuildProduct,
-                                   kAnnotationBuildVersion, kAnnotationChannel,
-                                   kAnnotationDeviceBoardName, kAnnotationDeviceUptime))
-            .HasParseError());
+                                            kAnnotationBuildBoard, kAnnotationBuildIsDebug,
+                                            kAnnotationBuildLatestCommitDate,
+                                            kAnnotationBuildProduct, kAnnotationBuildVersion,
+                                            kAnnotationChannel, kAnnotationDeviceBoardName,
+                                            kAnnotationDeviceUptime, kAnnotationDeviceUTCTime))
+                     .HasParseError());
     rapidjson::SchemaDocument schema(schema_json);
     rapidjson::SchemaValidator validator(schema);
     EXPECT_TRUE(json.Accept(validator));
@@ -493,14 +497,17 @@ TEST_F(DataProviderTest, GetData_Channel) {
               testing::Contains(MatchesAnnotation(kAnnotationChannel, "my-channel")));
 }
 
-TEST_F(DataProviderTest, GetData_Uptime) {
+TEST_F(DataProviderTest, GetData_Time) {
   fit::result<Data, zx_status_t> result = GetData();
 
   ASSERT_TRUE(result.is_ok());
 
   const Data& data = result.value();
   ASSERT_TRUE(data.has_annotations());
-  EXPECT_THAT(data.annotations(), testing::Contains(MatchesKey(kAnnotationDeviceUptime)));
+  EXPECT_THAT(data.annotations(), testing::IsSupersetOf({
+                                      MatchesKey(kAnnotationDeviceUptime),
+                                      MatchesKey(kAnnotationDeviceUTCTime),
+                                  }));
 }
 
 TEST_F(DataProviderTest, GetData_EmptyAnnotationAllowlist) {

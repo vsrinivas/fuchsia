@@ -85,6 +85,7 @@ source_set("time") {
   ]
 
   public_deps = [
+    "//src/lib/timekeeper",
     "//zircon/public/lib/zx",
   ]
 

@@ -7,7 +7,8 @@
         "build.version",
         "channel",
         "device.board-name",
-        "device.uptime"
+        "device.uptime",
+	"device.utc-time"
     ],
     "attachment_allowlist": [
         "build.snapshot.xml",

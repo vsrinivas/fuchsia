@@ -103,6 +103,7 @@ source_set("src") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/developer/feedback/utils:inspect_node_manager",
+    "//src/developer/feedback/utils:time",
     "//src/lib/fxl",
     "//third_party/crashpad/client",
     "//third_party/crashpad/util",

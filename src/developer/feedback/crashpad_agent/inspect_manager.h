@@ -63,9 +63,6 @@ class InspectManager {
   // Callback to update |settings_| on upload policy changes.
   void OnUploadPolicyChange(const feedback::Settings::UploadPolicy& upload_policy);
 
-  // Returns a non-localized human-readable timestamp of the current time according to |clock_|.
-  std::string CurrentTime();
-
   // Inspect node containing the static configuration.
   struct Config {
     // Inspect node containing the database configuration.

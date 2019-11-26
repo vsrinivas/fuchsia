@@ -10,10 +10,15 @@
 #include <optional>
 #include <string>
 
+#include "src/lib/timekeeper/clock.h"
+
 namespace feedback {
 
 // Formats the provided duration as WdXhYmZs e.g., 1d14h7m32s
 std::optional<std::string> FormatDuration(zx::duration duration);
+
+// Returns a non-localized human-readable timestamp of the current time according to |clock_|.
+std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock);
 
 }  // namespace feedback
 

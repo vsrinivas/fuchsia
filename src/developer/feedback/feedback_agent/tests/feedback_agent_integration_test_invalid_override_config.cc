@@ -60,6 +60,7 @@ TEST_F(FeedbackAgentIntegrationTest, InvalidOverrideConfig_SmokeTest) {
                                       MatchesKey(kAnnotationBuildVersion),
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
+                                      MatchesKey(kAnnotationDeviceUTCTime),
                                   }));
 
   ASSERT_TRUE(data.has_attachments());

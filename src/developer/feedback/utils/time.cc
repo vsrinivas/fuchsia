@@ -4,6 +4,8 @@
 
 #include "src/developer/feedback/utils/time.h"
 
+#include <ctime>
+
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace feedback {
@@ -30,4 +32,21 @@ std::optional<std::string> FormatDuration(zx::duration duration) {
 
   return fxl::StringPrintf("%ldd%ldh%ldm%lds", d, h, m, s);
 }
+
+std::optional<std::string> CurrentUTCTime(timekeeper::Clock* clock) {
+  if (!clock) {
+    return std::nullopt;
+  }
+
+  zx::time_utc now_utc;
+  if (const zx_status_t status = clock->Now(&now_utc); status != ZX_OK) {
+    return std::nullopt;
+  }
+  // std::gmtime expects epoch in seconds.
+  const int64_t now_utc_seconds = now_utc.get() / zx::sec(1).get();
+  char buffer[32];
+  strftime(buffer, sizeof(buffer), "%Y-%m-%d %X %Z", std::gmtime(&now_utc_seconds));
+  return std::string(buffer);
+}
+
 }  // namespace feedback

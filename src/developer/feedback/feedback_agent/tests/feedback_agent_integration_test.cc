@@ -332,6 +332,7 @@ TEST_F(FeedbackAgentIntegrationTest, GetData_CheckKeys) {
                                       MatchesKey(kAnnotationChannel),
                                       MatchesKey(kAnnotationDeviceBoardName),
                                       MatchesKey(kAnnotationDeviceUptime),
+                                      MatchesKey(kAnnotationDeviceUTCTime),
                                   }));
 
   ASSERT_TRUE(data.has_attachments());
