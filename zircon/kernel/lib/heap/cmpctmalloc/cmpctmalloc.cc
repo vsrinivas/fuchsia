@@ -124,12 +124,28 @@
 #define PADDING_FILL 0x55
 
 #if !defined(HEAP_GROW_SIZE)
-#define HEAP_GROW_SIZE (1 * 1024 * 1024) /* Grow aggressively */
+// HEAP_GROW_SIZE is minimum size by which the heap is grown.
+//
+// A larger value can provide some performance improvement at the cost of wasted
+// memory.
+//
+// See also |HEAP_LARGE_ALLOC_BYTES|.
+#define HEAP_GROW_SIZE (256 * 1024)
 #endif
 
 static_assert(IS_PAGE_ALIGNED(HEAP_GROW_SIZE), "");
 
-#define HEAP_ALLOC_VIRTUAL_BITS 22
+#define HEAP_ALLOC_VIRTUAL_BITS 20
+
+// HEAP_LARGE_ALLOC_BYTES limits size of any single allocation.
+//
+// A larger value will, on average, "waste" more memory. Why is that? When
+// freeing memory the heap may hold on to a block before returning it to the
+// underlying allocator (see |theheap.cached_os_alloc|). The size of the cached
+// block is limited by HEAP_LARGE_ALLOC_BYTES so reducing this value limits the
+// size of the cached block.
+//
+// See also |HEAP_GROW_SIZE|.
 #define HEAP_LARGE_ALLOC_BYTES (1u << HEAP_ALLOC_VIRTUAL_BITS)
 
 // When we grow the heap we have to have somewhere in the freelist to put the
