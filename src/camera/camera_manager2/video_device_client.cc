@@ -6,6 +6,10 @@
 
 #include <fuchsia/camera2/hal/cpp/fidl.h>
 
+#include <sstream>
+#include <utility>
+#include <vector>
+
 #include <src/lib/syslog/cpp/logger.h>
 namespace camera {
 
@@ -116,21 +120,39 @@ zx_status_t VideoDeviceClient::MatchConstraints(
   }
 
   auto requested_stream_type = constraints.properties().stream_type();
-  uint32_t temp_config_index = 0;
-  for (auto &config : configs_) {
-    uint32_t temp_stream_index = 0;
-    for (auto &stream : config.stream_configs) {
+  std::vector<std::pair<uint32_t, uint32_t>> matches;
+  for (uint32_t i = 0; i < configs_.size(); ++i) {
+    auto &config = configs_[i];
+    for (uint32_t j = 0; j < config.stream_configs.size(); ++j) {
+      auto &stream = config.stream_configs[j];
       if (stream.properties.has_stream_type() &&
           stream.properties.stream_type() == requested_stream_type) {
-        *config_index = temp_config_index;
-        *stream_type = temp_stream_index;
-        return ZX_OK;
+        matches.emplace_back(i, j);
       }
-      temp_stream_index++;
     }
-    temp_config_index++;
   }
-  return ZX_ERR_NO_RESOURCES;
+
+  if (matches.empty()) {
+    FX_LOGS(ERROR) << "Stream type " << static_cast<uint32_t>(requested_stream_type)
+                   << " unsupported";
+    return ZX_ERR_NO_RESOURCES;
+  }
+
+  if (matches.size() > 1) {
+    std::stringstream ss;
+    ss << "Driver reported multiple streams of same type "
+       << static_cast<uint32_t>(requested_stream_type) << ":";
+    for (const auto &match : matches) {
+      ss << "\n  config " << match.first << ", stream " << match.second;
+    }
+    FX_LOGS(ERROR) << ss.str();
+    return ZX_ERR_INTERNAL;
+  }
+
+  *config_index = matches[0].first;
+  *stream_type = matches[0].second;
+
+  return ZX_OK;
 }
 
 zx_status_t VideoDeviceClient::GetInitialInfo() {
