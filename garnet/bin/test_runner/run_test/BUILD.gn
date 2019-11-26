@@ -8,6 +8,7 @@ executable("run_test") {
   ]
   deps = [
     "//garnet/public/lib/test_runner/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",

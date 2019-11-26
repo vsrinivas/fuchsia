@@ -141,7 +141,7 @@ void TestRunnerImpl::PassTestPoint() {
   remaining_test_points_--;
 }
 
-TestRunContext::TestRunContext(std::shared_ptr<component::StartupContext> app_context,
+TestRunContext::TestRunContext(std::shared_ptr<sys::ComponentContext> app_context,
                                TestRunObserver* connection, const std::string& test_id,
                                const std::string& url, const std::vector<std::string>& args)
     : test_runner_connection_(connection), test_id_(test_id), success_(true) {
@@ -155,8 +155,10 @@ TestRunContext::TestRunContext(std::shared_ptr<component::StartupContext> app_co
   });
 
   // 1.2 Make a child environment to run the command.
+  fuchsia::sys::EnvironmentPtr environment;
+  app_context->svc()->Connect(environment.NewRequest());
   child_env_scope_ =
-      std::make_unique<Scope>(app_context->environment(), "test_runner_env", std::move(services));
+      std::make_unique<Scope>(environment, "test_runner_env", std::move(services));
 
   // 2. Launch the test command.
   fuchsia::sys::LauncherPtr launcher;

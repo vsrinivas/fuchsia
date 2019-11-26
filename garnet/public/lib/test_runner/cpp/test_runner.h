@@ -7,12 +7,12 @@
 
 #include <fuchsia/testing/runner/cpp/fidl.h>
 #include <lib/async/cpp/task.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <memory>
 
 #include "lib/test_runner/cpp/scope.h"
 #include "lib/test_runner/cpp/test_runner_store_impl.h"
-#include "src/lib/component/cpp/startup_context.h"
 
 using fuchsia::testing::runner::TestResult;
 using fuchsia::testing::runner::TestRunner;
@@ -84,7 +84,7 @@ class TestRunnerImpl : public TestRunner {
 // reporting anything, we declare the test a failure.
 class TestRunContext {
  public:
-  TestRunContext(std::shared_ptr<component::StartupContext> app_context,
+  TestRunContext(std::shared_ptr<sys::ComponentContext> app_context,
                  TestRunObserver* connection, const std::string& test_id, const std::string& url,
                  const std::vector<std::string>& args);
 

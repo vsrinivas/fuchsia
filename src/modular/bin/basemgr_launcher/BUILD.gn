@@ -60,7 +60,6 @@ executable("basemgr_launcher_test") {
   ]
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp",
     "//sdk/fidl/fuchsia.devicesettings",
     "//sdk/fidl/fuchsia.identity.account",
     "//sdk/fidl/fuchsia.sys",

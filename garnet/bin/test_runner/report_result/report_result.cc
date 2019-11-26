@@ -7,6 +7,7 @@
 #include <lib/async-loop/default.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/spawn.h>
+#include <lib/sys/cpp/component_context.h>
 #include <unistd.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls/object.h>
@@ -14,7 +15,6 @@
 #include <iostream>
 #include <sstream>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/lib/fxl/arraysize.h"
 #include "src/lib/fxl/time/stopwatch.h"
 
@@ -84,8 +84,8 @@ int main(int argc, char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
-  auto app_context = component::StartupContext::CreateFromStartupInfo();
-  auto test_runner = app_context->ConnectToEnvironmentService<TestRunner>();
+  auto app_context = sys::ComponentContext::Create();
+  auto test_runner = app_context->svc()->Connect<TestRunner>();
   Reporter reporter(&loop, name, test_runner.get());
 
   if (!command_provided) {

@@ -6,17 +6,17 @@
 // starts a test and exits with success or failure based on the success or
 // failure of the test.
 
-#include <iostream>
-
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 
+#include <iostream>
+
 #include "garnet/bin/test_runner/run_integration_tests/test_runner_config.h"
+#include "lib/test_runner/cpp/test_runner.h"
 #include "src/lib/fxl/command_line.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "lib/test_runner/cpp/test_runner.h"
 
 namespace test_runner {
 namespace {
@@ -47,7 +47,7 @@ class TestRunObserverImpl : public test_runner::TestRunObserver {
   bool success_;
 };
 
-bool RunTest(async::Loop* loop, std::shared_ptr<component::StartupContext> app_context,
+bool RunTest(async::Loop* loop, std::shared_ptr<sys::ComponentContext> app_context,
              const std::string& url, const std::vector<std::string>& args) {
   FXL_CHECK(loop);
   uint64_t random_number;
@@ -101,8 +101,7 @@ int RunIntegrationTestsMain(int argc, char** argv) {
 
   TestRunnerConfig config(test_file);
 
-  std::shared_ptr<component::StartupContext> app_context =
-      component::StartupContext::CreateFromStartupInfo();
+  std::shared_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
 
   std::vector<std::string> test_names = settings.positional_args();
   if (test_names.empty()) {

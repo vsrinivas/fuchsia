@@ -16,9 +16,6 @@
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/interface_request.h"
-#include "lib/svc/cpp/service_provider_bridge.h"
-#include "src/lib/component/cpp/service_provider_impl.h"
-#include "src/lib/component/cpp/startup_context.h"
 
 namespace test_runner {
 

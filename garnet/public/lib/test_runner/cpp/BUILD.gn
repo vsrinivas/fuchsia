@@ -22,8 +22,11 @@ source_set("cpp") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.testing.runner",
     "//sdk/lib/fidl/cpp",
-    "//src/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/fs",
   ]
+
+  public_configs = [ "//garnet/public:config" ]
 }
