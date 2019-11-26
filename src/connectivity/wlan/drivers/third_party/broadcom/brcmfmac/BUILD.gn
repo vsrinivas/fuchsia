@@ -76,6 +76,28 @@ source_set("linuxisms") {
   ]
 }
 
+# Sources for DMA buffer handling.
+source_set("dmabuf") {
+  sources = [
+    "dma_buffer.cc",
+    "dma_pool.cc",
+    "dma_ring.cc",
+  ]
+  public = [
+    "dma_buffer.h",
+    "dma_pool.h",
+    "dma_ring.h",
+  ]
+  deps = [
+    ":debug",
+  ]
+  public_deps = [
+    "//zircon/public/lib/zx",
+    "//zircon/system/public",
+  ]
+  friend = [ "test/*" ]
+}
+
 # Sources for the BCDC firmware protocol.
 source_set("bcdc") {
   sources = [

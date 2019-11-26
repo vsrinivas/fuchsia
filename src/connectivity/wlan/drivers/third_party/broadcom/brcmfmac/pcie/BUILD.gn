@@ -31,6 +31,7 @@ source_set("pcie") {
   ]
   deps = [
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//zircon/public/lib/mmio",
     "//zircon/public/lib/zx",
     "//zircon/system/banjo/ddk.protocol.pci",
@@ -58,6 +59,7 @@ source_set("pcie_driver_test") {
     ":pcie",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:core",
     "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:debug",
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
     "//zircon/public/lib/mmio",
     "//zircon/system/banjo/ddk.protocol.pci",
   ]

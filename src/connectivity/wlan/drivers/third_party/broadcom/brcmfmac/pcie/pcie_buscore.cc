@@ -26,6 +26,7 @@
 
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_regs.h"
 
 namespace wlan {
@@ -159,6 +160,16 @@ void* PcieBuscore::GetRegPointer(uint32_t offset) {
 
 void* PcieBuscore::GetTcmPointer(uint32_t offset) {
   return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(tcm_mmio_->get()) + offset);
+}
+
+zx_status_t PcieBuscore::CreateDmaBuffer(uint32_t cache_policy, size_t size,
+                                         std::unique_ptr<DmaBuffer>* out_dma_buffer) {
+  zx_status_t status = ZX_OK;
+  zx::bti bti;
+  if ((status = pci_proto_->GetBti(0, &bti)) != ZX_OK) {
+    return status;
+  }
+  return DmaBuffer::Create(bti, cache_policy, size, out_dma_buffer);
 }
 
 void PcieBuscore::SelectCore(uint16_t coreid) { SelectCore(chip_, coreid); }

@@ -28,6 +28,8 @@
 namespace wlan {
 namespace brcmfmac {
 
+class DmaBuffer;
+
 // This class implements the brcmfmac buscore functionality (see: chip.h) for the PCIE bus.  It
 // implements the C-style bus transaction logic as defined by brcmf_buscore_ops, used to perform
 // reads and writes over the PCIE bus.
@@ -58,6 +60,10 @@ class PcieBuscore {
   // Get a pointer to the PCIE memory regions.
   void* GetRegPointer(uint32_t offset);
   void* GetTcmPointer(uint32_t offset);
+
+  // Create a DMA buffer, suitable for use with the device.
+  zx_status_t CreateDmaBuffer(uint32_t cache_policy, size_t size,
+                              std::unique_ptr<DmaBuffer>* out_dma_buffer);
 
   // Select the core to write configuration to.
   void SelectCore(uint16_t coreid);

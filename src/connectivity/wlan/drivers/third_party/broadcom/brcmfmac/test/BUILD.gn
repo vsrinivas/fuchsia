@@ -41,6 +41,51 @@ executable("debug_test") {
   ]
 }
 
+executable("dma_buffer_test") {
+  output_name = "dma_buffer_test"
+  testonly = true
+  sources = [
+    "dma_buffer_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("dma_pool_test") {
+  output_name = "dma_pool_test"
+  testonly = true
+  sources = [
+    "dma_pool_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("dma_ring_test") {
+  output_name = "dma_ring_test"
+  testonly = true
+  sources = [
+    "dma_ring_test.cc",
+  ]
+  deps = [
+    "//src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac:dmabuf",
+    "//src/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fake-bti",
+    "//zircon/public/lib/fake_ddk",
+    "//zircon/public/lib/zx",
+  ]
+}
+
 executable("firmware_test") {
   output_name = "firmware_test"
   testonly = true
@@ -84,33 +129,25 @@ executable("workqueue_test") {
 
 unittest_package("brcmfmac_test") {
   package_name = "brcmfmac_test"
-  deps = [
-    ":channel_conversion_test",
-    ":debug_test",
-    ":firmware_test",
-    ":netbuf_test",
-    ":workqueue_test",
-  ]
-  tests = [
-    {
-      name = "channel_conversion_test"
-      environments = basic_envs
-    },
-    {
-      name = "debug_test"
-      environments = basic_envs
-    },
-    {
-      name = "firmware_test"
-      environments = basic_envs
-    },
-    {
-      name = "netbuf_test"
-      environments = basic_envs
-    },
-    {
-      name = "workqueue_test"
-      environments = basic_envs
-    },
-  ]
+  deps = []
+  tests = []
+  foreach(test_name,
+          [
+            "channel_conversion_test",
+            "debug_test",
+            "dma_buffer_test",
+            "dma_pool_test",
+            "dma_ring_test",
+            "firmware_test",
+            "netbuf_test",
+            "workqueue_test",
+          ]) {
+    deps += [ ":$test_name" ]
+    tests += [
+      {
+        name = "$test_name"
+        environments = basic_envs
+      },
+    ]
+  }
 }

@@ -15,8 +15,12 @@
 
 #include <zircon/errors.h>
 #include <zircon/status.h>
+#include <zircon/syscalls.h>
 
+#include <algorithm>
+#include <cstring>
 #include <memory>
+#include <vector>
 
 #include <ddk/driver.h>
 #include <ddk/protocol/pci.h>
@@ -25,6 +29,7 @@
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/chipcommon.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/debug.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/device.h"
+#include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/dma_buffer.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_bus.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_buscore.h"
 #include "src/connectivity/wlan/drivers/third_party/broadcom/brcmfmac/pcie/pcie_device.h"
@@ -112,6 +117,34 @@ zx_status_t RunPcieBusComponentsTest(zx_device_t* parent) {
     BRCMF_ERR("Bus chip read returned chip 0x%x rev. %d, expected 0x%x rev. %d\n", chipreg_chip,
               chipreg_rev, chip->chip, chip->chiprev);
     return ZX_ERR_NOT_SUPPORTED;
+  }
+
+  // Smoke-test CPU access to DMA-visible memory.
+  constexpr size_t kDmaBufferSize = 8 * 1024;
+  std::unique_ptr<DmaBuffer> dma_buffer;
+  if ((status = pcie_buscore->CreateDmaBuffer(ZX_CACHE_POLICY_CACHED, kDmaBufferSize,
+                                              &dma_buffer)) != ZX_OK) {
+    BRCMF_ERR("DMA buffer creation failed: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  if ((status = dma_buffer->Map(ZX_VM_PERM_READ | ZX_VM_PERM_WRITE)) != ZX_OK) {
+    BRCMF_ERR("DMA buffer map failed: %s\n", zx_status_get_string(status));
+    return status;
+  }
+  if (!dma_buffer->is_valid() || dma_buffer->dma_address() == 0 ||
+      dma_buffer->size() != kDmaBufferSize) {
+    BRCMF_ERR("PcieBuscore created invalid DMA buffer: is_valid=%d, dma_address=0x%zx, size=%zu\n",
+              dma_buffer->is_valid(), static_cast<size_t>(dma_buffer->dma_address()),
+              dma_buffer->size());
+    return ZX_ERR_NO_RESOURCES;
+  }
+  std::vector dma_data(kDmaBufferSize, '\x80');
+  std::memcpy(reinterpret_cast<void*>(dma_buffer->address()), dma_data.data(), kDmaBufferSize);
+  std::vector dma_read_data(kDmaBufferSize, '\0');
+  std::memcpy(dma_read_data.data(), reinterpret_cast<void*>(dma_buffer->address()), kDmaBufferSize);
+  if (!std::equal(dma_data.begin(), dma_data.end(), dma_read_data.begin())) {
+    BRCMF_ERR("DMA buffer read did not return written data\n");
+    return ZX_ERR_IO_DATA_INTEGRITY;
   }
 
   return ZX_OK;
