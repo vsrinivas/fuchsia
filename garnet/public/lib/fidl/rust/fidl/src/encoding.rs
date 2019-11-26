@@ -843,7 +843,10 @@ pub fn encode_absent_vector(encoder: &mut Encoder<'_>) -> Result<()> {
 }
 
 /// Encode an optional iterator over encodable elements into a FIDL vector-like representation.
-pub fn encode_encodable_iter<Iter, T>(encoder: &mut Encoder<'_>, iter_opt: Option<Iter>) -> Result<()>
+pub fn encode_encodable_iter<Iter, T>(
+    encoder: &mut Encoder<'_>,
+    iter_opt: Option<Iter>,
+) -> Result<()>
 where
     Iter: ExactSizeIterator<Item = T>,
     T: Encodable,
@@ -2015,12 +2018,9 @@ fn union_result_inline_size<O: Layout>(context: &Context) -> usize {
 }
 
 /// Decodes the inline portion of a xunion. Returns (ordinal, num_bytes, num_handles).
-pub fn decode_xunion_inline_portion(decoder: &mut Decoder<'_>) -> Result<(u32, u32, u32)> {
-    let mut ordinal: u32 = 0;
+pub fn decode_xunion_inline_portion(decoder: &mut Decoder) -> Result<(u64, u32, u32)> {
+    let mut ordinal: u64 = 0;
     ordinal.decode(decoder)?;
-
-    let mut _reserved: u32 = 0;
-    _reserved.decode(decoder)?;
 
     let mut num_bytes: u32 = 0;
     num_bytes.decode(decoder)?;
@@ -2288,7 +2288,7 @@ macro_rules! fidl_union {
                 panic!("unreachable union member")
             }
 
-            fn ordinal(&self) -> u32 {
+            fn ordinal(&self) -> u64 {
                 match self {
                     $(
                         $name::$member_name(_) => $member_xunion_ordinal,
@@ -2355,10 +2355,8 @@ macro_rules! fidl_union {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 if encoder.context().unions_use_xunion_format {
                     let mut ordinal = self.ordinal();
-                    // Encode tag
+                    // Encode ordinal
                     $crate::fidl_encode!(&mut ordinal, encoder)?;
-                    // Reserved
-                    $crate::fidl_encode!(&mut 0u32, encoder)?;
                     encoder.recurse(|encoder| {
                         match self {
                             $(
@@ -2534,7 +2532,7 @@ macro_rules! fidl_xunion {
             $(
                 #[doc(hidden)]
                 $unknown_name {
-                    ordinal: u32,
+                    ordinal: u64,
                     bytes: Vec<u8>,
                     handles: Vec<$crate::handle::Handle>,
                 },
@@ -2542,7 +2540,7 @@ macro_rules! fidl_xunion {
         }
 
         impl $name {
-            fn ordinal(&self) -> u32 {
+            fn ordinal(&self) -> u64 {
                 match *self {
                     $(
                         $name::$member_name(_) => $member_ordinal,
@@ -2562,10 +2560,8 @@ macro_rules! fidl_xunion {
         impl $crate::encoding::Encodable for $name {
             fn encode(&mut self, encoder: &mut $crate::encoding::Encoder<'_>) -> $crate::Result<()> {
                 let mut ordinal = self.ordinal();
-                // Encode tag
+                // Encode ordinal
                 $crate::fidl_encode!(&mut ordinal, encoder)?;
-                // Reserved
-                $crate::fidl_encode!(&mut 0u32, encoder)?;
                 encoder.recurse(|encoder| {
                     match self {
                         $(
@@ -4308,6 +4304,49 @@ mod test {
             let result = Decoder::decode_with_context(ctx, buf, handle_buf, &mut strict_xunion);
             assert_matches!(result, Err(Error::UnknownUnionTag));
         }
+    }
+
+    #[test]
+    fn xunion_with_64_bit_ordinal() {
+        fidl_xunion! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+            name: BigOrdinal,
+            members: [
+                X {
+                    ty: u64,
+                    ordinal: 0xffffffffu64,
+                },
+            ],
+        };
+
+        for ctx in CONTEXTS {
+            let mut x = BigOrdinal::X(0);
+            assert_eq!(x.ordinal(), 0xffffffffu64);
+            assert_eq!(encode_decode(ctx, &mut x).ordinal(), 0xffffffffu64);
+        }
+    }
+
+    #[test]
+    fn union_as_xunion_with_64_bit_ordinal() {
+        fidl_union! {
+            #[derive(Debug, Copy, Clone, Eq, PartialEq)]
+            name: BigOrdinal,
+            members: [
+                X {
+                    ty: u64,
+                    offset: 8,
+                    xunion_ordinal: 0xffffffffu64,
+                },
+            ],
+            size: 8,
+            align: 8,
+            out_of_line_ty: OutOfLine,
+        };
+
+        let mut x = BigOrdinal::X(0);
+        let ctx = &Context { unions_use_xunion_format: true };
+        assert_eq!(x.ordinal(), 0xffffffffu64);
+        assert_eq!(encode_decode(ctx, &mut x).ordinal(), 0xffffffffu64);
     }
 
     #[test]
