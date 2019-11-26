@@ -37,6 +37,38 @@ BanjoAst {
                     },
                 ],
             },
+            Struct {
+                attributes: Attrs(
+                    [],
+                ),
+                name: Ident {
+                    namespace: Some(
+                        "banjo.examples.simple",
+                    ),
+                    name: "StructWithZxField",
+                },
+                fields: [
+                    StructField {
+                        attributes: Attrs(
+                            [],
+                        ),
+                        ty: Identifier {
+                            id: Ident {
+                                namespace: Some(
+                                    "zx",
+                                ),
+                                name: "status",
+                            },
+                            reference: false,
+                        },
+                        ident: Ident {
+                            namespace: None,
+                            name: "status",
+                        },
+                        val: None,
+                    },
+                ],
+            },
             Enum {
                 attributes: Attrs(
                     [],

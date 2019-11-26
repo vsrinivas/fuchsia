@@ -11,6 +11,10 @@ struct Point {
     int32 y;
 };
 
+struct StructWithZxField {
+    zx.status status;
+};
+
 enum Direction : uint32 {
     Up = 0;
     Down = 1;

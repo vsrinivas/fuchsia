@@ -60,9 +60,14 @@ fn can_derive_partialeq(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
                 false
             }
         }
-        ast::Ty::Identifier { id, .. } => match ast.id_to_decl(id).unwrap() {
-            ast::Decl::Union { .. } => return false,
-            _ => return true,
+        ast::Ty::Identifier { id, .. } => {
+            if id.is_base_type() {
+                return true;
+            }
+            match ast.id_to_decl(id).unwrap() {
+                ast::Decl::Union { .. } => return false,
+                _ => return true,
+            }
         },
         ast::Ty::Handle { .. } => true,
     }
@@ -107,8 +112,13 @@ fn can_derive_debug(ast: &ast::BanjoAst, ty: &ast::Ty) -> bool {
                 false
             }
         }
-        ast::Ty::Identifier { id, .. } => match ast.id_to_decl(id).unwrap() {
-            _ => return true,
+        ast::Ty::Identifier { id, .. } => {
+            if id.is_base_type() {
+                return true;
+            }
+            match ast.id_to_decl(id).unwrap() {
+                _ => return true,
+            }
         },
         ast::Ty::Handle { .. } => true,
     }

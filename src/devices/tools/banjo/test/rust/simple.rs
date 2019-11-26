@@ -19,6 +19,12 @@ pub struct Point {
 }
 
 #[repr(C)]
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct StructWithZxField {
+    pub status: zircon::sys::zx_status_t,
+}
+
+#[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub struct Direction(u32);
 
