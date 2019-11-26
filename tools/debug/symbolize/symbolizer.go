@@ -53,7 +53,6 @@ type LLVMSymbolizer struct {
 func NewLLVMSymbolizer(llvmSymboPath string) *LLVMSymbolizer {
 	var out LLVMSymbolizer
 	out.path = llvmSymboPath
-	out.symbolizer = exec.Command(llvmSymboPath)
 	out.input = make(chan llvmSymboArgs)
 	out.cache = &cache.LRUCache{Size: maxCacheSize}
 	return &out
@@ -66,8 +65,23 @@ func unknownStr(str string) OptStr {
 	return NewOptStr(str)
 }
 
+func (s *LLVMSymbolizer) restart() error {
+	if err := s.stdin.Close(); err != nil {
+		return err
+	}
+	if err := s.symbolizer.Wait(); err != nil {
+		return err
+	}
+	return s.start()
+}
+
 func (s *LLVMSymbolizer) handle(ctx context.Context) {
 	for {
+		// TODO(42018): llvm-symbolizer can use *tons* of memory so we restart it every time
+		// right now. Once it no longer uses up so much memory, remove this.
+		if err := s.restart(); err != nil {
+			panic("restarting llvm-symbolizer failed: " + fmt.Sprintf("%v", err))
+		}
 		select {
 		case <-ctx.Done():
 			return
@@ -132,7 +146,8 @@ func (s *LLVMSymbolizer) handle(ctx context.Context) {
 	}
 }
 
-func (s *LLVMSymbolizer) Start(ctx context.Context) error {
+func (s *LLVMSymbolizer) start() error {
+	s.symbolizer = exec.Command(s.path)
 	var err error
 	if s.stdin, err = s.symbolizer.StdinPipe(); err != nil {
 		return err
@@ -141,6 +156,13 @@ func (s *LLVMSymbolizer) Start(ctx context.Context) error {
 		return err
 	}
 	if err = s.symbolizer.Start(); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *LLVMSymbolizer) Start(ctx context.Context) error {
+	if err := s.start(); err != nil {
 		return err
 	}
 	go s.handle(ctx)
