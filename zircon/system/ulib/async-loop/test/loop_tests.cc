@@ -4,6 +4,7 @@
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async-loop/default.h>
+#include <lib/async/cpp/paged_vmo.h>
 #include <lib/async/cpp/time.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async/irq.h>
@@ -14,6 +15,8 @@
 #include <lib/zx/clock.h>
 #include <lib/zx/event.h>
 #include <lib/zx/interrupt.h>
+#include <lib/zx/pager.h>
+#include <limits.h>
 #include <threads.h>
 #include <zircon/process.h>
 #include <zircon/status.h>
@@ -276,6 +279,33 @@ class TestReceiver : async_receiver_t {
   }
 
   zx_packet_user_t last_data_storage_{};
+};
+
+class TestPagedVmo : public async_paged_vmo_t {
+ public:
+  TestPagedVmo()
+      : async_paged_vmo_t{
+            {ASYNC_STATE_INIT}, &TestPagedVmo::CallHandler, ZX_HANDLE_INVALID, ZX_HANDLE_INVALID} {}
+
+  zx_status_t Create(async_dispatcher_t* dispatcher, const zx::pager& pager, zx::vmo* vmo_out) {
+    zx_status_t status = async_create_paged_vmo(dispatcher, this, 0, pager.get(), PAGE_SIZE,
+                                                vmo_out->reset_and_get_address());
+    this->pager = pager.get();
+    this->vmo = vmo_out->get();
+    return status;
+  }
+
+  bool IsCanceled() { return canceled_; }
+
+ private:
+  static void CallHandler(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
+                          zx_status_t status, const zx_packet_page_request_t* page_request) {
+    if (status == ZX_ERR_CANCELED) {
+      static_cast<TestPagedVmo*>(paged_vmo)->canceled_ = true;
+    }
+  }
+
+  bool canceled_ = false;
 };
 
 // The C++ loop wrapper is one-to-one with the underlying C API so for the
@@ -940,6 +970,36 @@ bool receiver_shutdown_test() {
   END_TEST;
 }
 
+bool paged_vmo_shutdown_test() {
+  BEGIN_TEST;
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  EXPECT_EQ(ASYNC_LOOP_RUNNABLE, loop.GetState(), "loop runnable");
+
+  zx::pager pager;
+  EXPECT_EQ(ZX_OK, zx::pager::create(0, &pager), "pager create");
+  zx::vmo vmo;
+
+  TestPagedVmo paged_vmo;
+  EXPECT_EQ(ZX_OK, paged_vmo.Create(loop.dispatcher(), pager, &vmo), "paged vmo create");
+
+  zx_info_vmo_t info;
+  EXPECT_EQ(ZX_OK, vmo.get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr),
+            "vmo get info");
+  EXPECT_EQ(ZX_INFO_VMO_PAGER_BACKED, info.flags & ZX_INFO_VMO_PAGER_BACKED, "vmo pager backed");
+
+  loop.Shutdown();
+
+  // Verify that we sent a ZX_ERR_CANCELED to the handler on loop shutdown.
+  // TODO(rashaeqbal): Ideally we want to verify that the VMO has been detached from the pager.
+  // However, there is currently no straightforward way to verify this. Checking for ZX_ERR_CANCELED
+  // serves as a proxy for this, since we detach before the ZX_ERR_CANCELED status is sent to the
+  // handler.
+  EXPECT_TRUE(paged_vmo.IsCanceled(), "paged vmo cancel after shutdown");
+
+  END_TEST;
+}
+
 uint32_t get_thread_state(zx_handle_t thread) {
   zx_info_thread_t info;
   __UNUSED zx_status_t status =
@@ -1279,4 +1339,5 @@ for (int i = 0; i < 3; i++) {
   RUN_TEST(threads_receivers_run_concurrently_test)
 }
 RUN_TEST(create_default_test)
+RUN_TEST(paged_vmo_shutdown_test)
 END_TEST_CASE(loop_tests)

@@ -31,9 +31,12 @@ class PagedVmoBase {
   PagedVmoBase& operator=(PagedVmoBase&&) = delete;
 
   template <typename T>
-  static T* Dispatch(async_paged_vmo_t* paged_vmo) {
+  static T* Dispatch(async_paged_vmo_t* paged_vmo, zx_status_t status) {
     static_assert(offsetof(PagedVmoBase, paged_vmo_) == 0, "Non-castable offset");
     auto self = reinterpret_cast<PagedVmoBase*>(paged_vmo);
+    if (status != ZX_OK) {
+      self->dispatcher_ = nullptr;
+    }
     return static_cast<T*>(self);
   }
 
@@ -112,7 +115,7 @@ class PagedVmoMethod final : public PagedVmoBase {
  private:
   static void CallHandler(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
                           zx_status_t status, const zx_packet_page_request_t* page_request) {
-    auto self = Dispatch<PagedVmoMethod>(paged_vmo);
+    auto self = Dispatch<PagedVmoMethod>(paged_vmo, status);
     (self->instance_->*method)(dispatcher, self, status, page_request);
   }
 

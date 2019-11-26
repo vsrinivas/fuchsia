@@ -224,4 +224,34 @@ TEST(PagedVmoStubsTest, DetachStub) {
   EXPECT_STATUS(ZX_ERR_NOT_SUPPORTED, async_detach_paged_vmo(&dispatcher, &paged_vmo));
 }
 
+void CanceledUnboundTest(Harness* harness) {
+  MockDispatcher dispatcher;
+  zx::pager pager;
+  ASSERT_EQ(zx::pager::create(0, &pager), ZX_OK);
+  uint32_t options = 1;
+  uint64_t vmo_size = 2;
+  zx::vmo vmo;
+  ASSERT_OK(harness->paged_vmo().CreateVmo(&dispatcher, zx::unowned_pager(pager.get()), options,
+                                           vmo_size, &vmo));
+
+  ASSERT_FALSE(harness->handler_ran);
+  dispatcher.last_paged_vmo->handler(&dispatcher, dispatcher.last_paged_vmo, ZX_ERR_CANCELED,
+                                     nullptr);
+  EXPECT_TRUE(harness->handler_ran);
+  EXPECT_EQ(&harness->paged_vmo(), harness->last_paged_vmo);
+  EXPECT_STATUS(ZX_ERR_CANCELED, harness->last_status);
+  EXPECT_EQ(nullptr, harness->last_request);
+  EXPECT_FALSE(harness->paged_vmo().is_bound());
+}
+
+TEST(PagedVmoLambdaTest, CanceledUnbound) {
+  LambdaHarness harness;
+  CanceledUnboundTest(&harness);
+}
+
+TEST(PagedVmoMethodTest, CanceledUnbound) {
+  MethodHarness harness;
+  CanceledUnboundTest(&harness);
+}
+
 }  // namespace

@@ -49,7 +49,6 @@ zx_status_t async_create_paged_vmo(async_dispatcher_t* dispatcher, async_paged_v
 
 // Detach ownership of VMO from pager.
 //
-// Returns |ZX_ERR_BAD_STATE| if the dispatcher is shutting down.
 // Returns |ZX_ERR_NOT_SUPPORTED| if not supported by the dispatcher.
 // Returns |ZX_ERR_BAD_HANDLE| if pager or vmo is not a valid handle.
 // Returns |ZX_ERR_WRONG_TYPE| if pager is not a pager handle or vmo is not a vmo handle.

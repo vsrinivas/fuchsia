@@ -121,6 +121,7 @@ static zx_status_t async_loop_dispatch_guest_bell_trap(async_loop_t* loop,
 static zx_status_t async_loop_dispatch_paged_vmo(async_loop_t* loop, async_paged_vmo_t* paged_vmo,
                                                  zx_status_t status,
                                                  const zx_packet_page_request_t* page_request);
+static zx_status_t async_loop_cancel_paged_vmo(async_paged_vmo_t* paged_vmo);
 static void async_loop_wake_threads(async_loop_t* loop);
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task);
 static void async_loop_restart_timer_locked(async_loop_t* loop);
@@ -227,6 +228,10 @@ void async_loop_shutdown(async_loop_t* loop) {
   list_node_t* node;
   while ((node = list_remove_head(&loop->wait_list))) {
     async_wait_t* wait = node_to_wait(node);
+    // Since the wait is being canceled, it would make sense to call zx_port_cancel()
+    // here before invoking the callback to ensure that the waited-upon handle is
+    // no longer attached to the port.  However, the port is about to be destroyed
+    // so we can optimize that step away.
     async_loop_dispatch_wait(loop, wait, ZX_ERR_CANCELED, NULL);
   }
   while ((node = list_remove_head(&loop->due_list))) {
@@ -243,6 +248,10 @@ void async_loop_shutdown(async_loop_t* loop) {
   }
   while ((node = list_remove_head(&loop->paged_vmo_list))) {
     async_paged_vmo_t* paged_vmo = node_to_paged_vmo(node);
+    // The loop owns the association between the pager and the VMO so when the
+    // loop is shutting down, it is responsible for breaking that association
+    // then notifying the callback that the wait has been canceled.
+    async_loop_cancel_paged_vmo(paged_vmo);
     async_loop_dispatch_paged_vmo(loop, paged_vmo, ZX_ERR_CANCELED, NULL);
   }
 
@@ -678,6 +687,12 @@ static zx_status_t async_loop_detach_paged_vmo(async_dispatcher_t* async,
   // NOTE: the client owns the VMO and is responsible for freeing it.
   list_delete(node);
   return status;
+}
+
+static zx_status_t async_loop_cancel_paged_vmo(async_paged_vmo_t* paged_vmo) {
+  // This function gets called from the async loop shutdown path. The handler will not receive any
+  // detach callbacks as the loop is shutting down. So explicitly detach the VMO from the pager.
+  return zx_pager_detach_vmo(paged_vmo->pager, paged_vmo->vmo);
 }
 
 static void async_loop_insert_task_locked(async_loop_t* loop, async_task_t* task) {

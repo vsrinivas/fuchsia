@@ -56,7 +56,7 @@ PagedVmo::~PagedVmo() = default;
 
 void PagedVmo::CallHandler(async_dispatcher_t* dispatcher, async_paged_vmo_t* paged_vmo,
                            zx_status_t status, const zx_packet_page_request_t* request) {
-  auto self = Dispatch<PagedVmo>(paged_vmo);
+  auto self = Dispatch<PagedVmo>(paged_vmo, status);
   self->handler_(dispatcher, self, status, request);
 }
 
