@@ -500,6 +500,8 @@ mod tests {
     #[test]
     fn test_try_load_config() {
         let test_config = Config::new("/test", "/test", "/test");
+
+        // Missing config should raise ConfigNotFound.
         let doesntexist = String::from("/doesntexist");
         match test_config.try_load_config(Path::new(&doesntexist)) {
             Err(CONFIG(error::Config::ConfigNotFound { path })) => {
@@ -509,6 +511,7 @@ mod tests {
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
 
+        // An invalid config should fail to deserialize.
         let invalid_empty = String::from("/pkg/data/invalid_empty.json");
         match test_config.try_load_config(Path::new(&invalid_empty)) {
             Err(CONFIG(error::Config::FailedToDeserializeConfig { path, error: _ })) => {
@@ -518,14 +521,18 @@ mod tests {
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
 
+        // A valid config should deserialize successfully.
         let valid_empty = String::from("/pkg/data/valid_empty.json");
         let contents = fs::read_to_string(&valid_empty)
             .expect(format!("Failed to open testdata file: {}", valid_empty).as_str());
+
         let expected_config: Value;
         match serde_json::from_str(&contents) {
             Ok(j) => expected_config = j,
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
+
+        // The serde_json::Value's should match.
         match test_config.try_load_config(Path::new(&valid_empty)) {
             Ok(j) => {
                 assert_eq!(expected_config, j);
@@ -539,6 +546,8 @@ mod tests {
         let device_schema_path = "/pkg/data/device_schema.json";
         let valid_factory_path = "/pkg/data/valid_factory_config.json";
         let test_config = Config::new("", valid_factory_path, device_schema_path);
+
+        // Loads and deserializes the expected config.
         let valid_config = String::from("/pkg/data/valid_factory_config.json");
         let contents = fs::read_to_string(&valid_config)
             .expect(format!("Failed to open testdata file: {}", valid_config).as_ref());
@@ -547,9 +556,22 @@ mod tests {
             Ok(j) => expected_config = j,
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
+
         match test_config.is_valid_config(&expected_config) {
             Ok(_) => (),
             Err(e) => panic!("Got unexpected error result: {}", e),
         }
+    }
+
+    #[test]
+    fn test_toulouse_factory_config_deserializes() {
+        let config_path = "/pkg/data/toulouse_factory_config.json";
+        let mut contents = String::new();
+        let mut f = File::open(config_path).unwrap();
+        f.read_to_string(&mut contents).unwrap();
+
+        // Makes sure that the Toulouse factory configuration can be deserialized.
+        let _deserialized_config: DeviceConfig = serde_json::from_str(&contents)
+            .expect(format!("Failed to deserialized {}", config_path).as_ref());
     }
 }

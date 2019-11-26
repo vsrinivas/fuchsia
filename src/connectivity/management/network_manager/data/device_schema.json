@@ -164,17 +164,14 @@
                       ]
                     },
                     "type": {
-                      "$id": "/properties/interfaces/interface/config/type",
                       "$ref": "#/definitions/interface_types"
                     }
                   }
                 },
                 "oper_state": {
-                  "$id": "/properties/interfaces/interface/oper_state",
                   "$ref": "#/definitions/oper_states"
                 },
                 "subinterfaces": {
-                  "$id": "/properties/interfaces/interface/subinterfaces",
                   "type": "array",
                   "additionalItems": false,
                   "required": [ "subinterface" ],
@@ -183,30 +180,24 @@
                       "type": "object",
                       "description": "Subinterface describes a Logical Interface (LIF)",
                       "additionalProperties": false,
-                      "required": [ "config" ],
                       "properties": {
                         "config": {
-                          "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config",
                           "description": "Describes the configuration of this subinterface.",
                           "additionalProperties": false,
                           "properties": {
                             "enabled": {
-                              "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config/enabled",
                               "type": "boolean",
                               "default": false
                             },
                             "admin_state": {
-                              "$id": "/properties/interfaces/interface/subinterfaces/subinterface/config/admin_state",
                               "$ref": "#/definitions/admin_states"
                             }
                           }
                         },
                         "ipv4": {
-                          "$id": "/properties/interfaces/interface/ipv4",
                           "$ref": "#/definitions/ip_address_config"
                         },
                         "ipv6": {
-                          "$id": "/properties/interfaces/interface/ipv6",
                           "$ref": "#/definitions/ip_address_config"
                         }
                       }
@@ -214,22 +205,18 @@
                   }
                 },
                 "switched_vlan": {
-                  "$id": "/properties/interfaces/interface/switched_vlan",
                   "type": "object",
                   "additionalProperties": false,
                   "required": [ "interface_mode" ],
                   "properties": {
                     "interface_mode": {
-                      "$id": "/properties/interfaces/interface/switched_vlan/interface_mode",
                       "type": "string",
                       "enum": [ "ACCESS", "TRUNK" ]
                     },
                     "access_vlan": {
-                      "$id": "/properties/interfaces/interface/switched_vlan/access_vlan",
                       "$ref": "#/definitions/vlan_id"
                     },
                     "trunk_vlans": {
-                      "$id": "/properties/interfaces/interface/switched_vlan/trunk_vlans",
                       "type": "array",
                       "additionalItems": false,
                       "items": {
@@ -245,42 +232,35 @@
                     "config": {
                       "properties": {
                         "auto_negotiate": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/auto_negotiate",
                           "description": "Set to true to request the interface to auto-negotiate transmission parameters with its peer interface.",
                           "type": "boolean",
                           "default": true
                         },
                         "duplex_mode": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/duplex_mode",
                           "description": "When auto-negotiate is true, this optionally sets the duplex mode that will be advertised to the peer.",
                           "type": "string",
                           "enum": [ "FULL", "HALF" ]
                         },
                         "enable_flow_control": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/enable_flow_control",
                           "type": "boolean",
                           "examples": [ false ]
                         },
                         "mac_address": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/mac_address",
                           "type": "string",
                           "examples": [
                             "de:ad:be:ef:ca:fe"
                           ]
                         },
                         "mtu": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/mtu",
                           "type": "integer"
                         },
                         "port_speed": {
-                          "$id": "/properties/interfaces/interface/ethernet/config/port_speed",
                           "$ref": "#/definitions/port_speed"
                         }
                       }
                     }
                   },
                   "tcp_offload": {
-                    "$id": "/properties/interfaces/interface/tcp_offload",
                     "type": "boolean",
                     "default": false
                   }
@@ -306,7 +286,6 @@
           }
         },
         "acls": {
-          "$id": "/properties/acls",
           "type": "object",
           "additionalProperties": false,
           "description": "TODO(cgibson): Implement me."
@@ -370,7 +349,10 @@
                   "items": {
                     "device_name": {
                       "type": "string",
-                      "description": "A human-readable device name."
+                      "description": "A human-readable device name.",
+                      "examples": [
+                          "My Web Server"
+                      ]
                     },
                     "mac_address": {
                       "type": "string",

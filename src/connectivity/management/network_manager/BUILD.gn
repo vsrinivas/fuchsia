@@ -105,6 +105,10 @@ test_package("network_manager_tests") {
       path = rebase_path("data/device_schema.json")
       dest = "device_schema.json"
     },
+    {
+      path = rebase_path("data/toulouse.json")
+      dest = "toulouse_factory_config.json"
+    },
   ]
 }
 
