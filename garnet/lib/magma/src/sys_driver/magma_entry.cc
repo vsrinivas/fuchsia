@@ -155,12 +155,14 @@ static zx_status_t device_message(void* context, fidl_msg_t* message, fidl_txn_t
 
 static void device_release(void* context) {
   gpu_device* device = get_gpu_device(context);
+  MAGMA_LOG(INFO, "Starting device_release");
   {
     std::unique_lock<std::mutex> lock(device->magma_mutex);
     magma_stop(device);
   }
 
   delete device;
+  MAGMA_LOG(INFO, "Finished device_release");
 }
 
 static zx_protocol_device_t device_proto = {
