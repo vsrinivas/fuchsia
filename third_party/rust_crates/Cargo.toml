@@ -46,6 +46,7 @@ maplit = "1.0"
 matches = "0.1.8"
 memchr = "2.0"
 nom = { version = "5.0.0", default-features = false, features = ["std", "regexp_macros"] }
+once_cell = { version = "1.2.0", features = ["parking_lot"] }
 parking_lot = "0.9"
 paste = "0.1"
 percent-encoding = "2.1"

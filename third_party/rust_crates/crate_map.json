@@ -261,6 +261,11 @@
             "package_name": "num-traits"
         },
         {
+            "crate_name": "once_cell",
+            "crate_type": "lib",
+            "package_name": "once_cell"
+        },
+        {
             "crate_name": "openat",
             "crate_type": "lib",
             "package_name": "openat"
@@ -716,6 +721,11 @@
             "crate_name": "num",
             "crate_type": "lib",
             "package_name": "num"
+        },
+        {
+            "crate_name": "once_cell",
+            "crate_type": "lib",
+            "package_name": "once_cell"
         },
         {
             "crate_name": "parking_lot",
