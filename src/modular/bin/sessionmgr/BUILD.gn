@@ -41,6 +41,7 @@ source_set("sessionmgr_lib") {
   ]
 
   public_deps = [
+    ":user_intelligence_provider",
     "//peridot/lib/scoped_tmpfs",
     "//sdk/fidl/fuchsia.app.discover",
     "//sdk/fidl/fuchsia.ledger",
@@ -55,7 +56,7 @@ source_set("sessionmgr_lib") {
     "//sdk/fidl/fuchsia.ui.policy",
     "//sdk/fidl/fuchsia.ui.scenic",
     "//sdk/fidl/fuchsia.ui.views",
-    "//src/lib/component/cpp",
+    "//src/lib/component/cpp:deprecated_service_provider",
     "//src/modular/bin/sessionmgr/agent_runner",
   ]
 
@@ -64,7 +65,6 @@ source_set("sessionmgr_lib") {
     ":focus",
     ":presentation_provider",
     ":session_ctl",
-    ":user_intelligence_provider",
     "//peridot/lib/ledger_client:constants",
     "//peridot/lib/ledger_client:operations",
     "//peridot/lib/ledger_client:types",
@@ -214,6 +214,7 @@ source_set("user_intelligence_provider") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/svc/cpp",
     "//sdk/lib/sys/cpp",
   ]
 
@@ -221,14 +222,13 @@ source_set("user_intelligence_provider") {
     ":focus",
     ":rate_limited_retry",
     "agent_runner",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.bluetooth.le",
     "//sdk/fidl/fuchsia.intl",
     "//sdk/fidl/fuchsia.modular",
     "//sdk/fidl/fuchsia.net.oldhttp",
-    "//src/lib/component/cpp",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/lib:maxwell_internal",
+    "//src/modular/lib/connect",
     "//zircon/system/fidl/fuchsia-cobalt",
   ]
 }

@@ -35,7 +35,6 @@ source_set("component_base") {
   public_deps = [
     ":component_main",
     "//sdk/lib/sys/cpp",
-    "//src/lib/component/cpp",
     "//src/lib/fxl",
     "//src/modular/lib/fidl:single_service_app",
     "//src/modular/lib/integration_testing/cpp",

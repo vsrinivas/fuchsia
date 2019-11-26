@@ -28,7 +28,6 @@
 
 #include "peridot/lib/ledger_client/operations.h"
 #include "peridot/lib/util/string_escape.h"
-#include "src/lib/component/cpp/connect.h"
 #include "src/lib/fsl/types/type_converters.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/logging.h"

@@ -17,12 +17,12 @@
 #include <fs/synchronous_vfs.h>
 
 #include "gtest/gtest.h"
-#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/macros.h"
 #include "src/modular/bin/sessionmgr/agent_runner/agent_runner.h"
 #include "src/modular/bin/sessionmgr/entity_provider_runner/entity_provider_launcher.h"
+#include "src/modular/lib/connect/connect.h"
 #include "src/modular/lib/fidl/array_to_string.h"
 #include "src/modular/lib/testing/mock_base.h"
 
@@ -117,7 +117,7 @@ class MyEntityProvider : fuchsia::modular::Agent,
     FXL_CHECK(launch_info_.additional_services);
     FXL_CHECK(launch_info_.additional_services->provider.is_valid());
     auto additional_services = launch_info_.additional_services->provider.Bind();
-    component::ConnectToService(additional_services.get(), agent_context_.NewRequest());
+    connect::ConnectToService(additional_services.get(), agent_context_.NewRequest());
     fuchsia::modular::ComponentContextPtr component_context;
     agent_context_->GetComponentContext(component_context.NewRequest());
     component_context->GetEntityResolver(entity_resolver_.NewRequest());

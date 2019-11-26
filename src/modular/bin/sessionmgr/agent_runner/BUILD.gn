@@ -31,7 +31,7 @@ source_set("agent_runner") {
     "//sdk/fidl/fuchsia.sys",
     "//sdk/lib/fidl/cpp",
     "//sdk/lib/sys/cpp",
-    "//src/lib/component/cpp",
+    "//src/lib/component/cpp:deprecated_service_provider",
     "//src/lib/fsl",
     "//src/lib/fxl",
     "//src/modular/bin/sessionmgr:component_context",

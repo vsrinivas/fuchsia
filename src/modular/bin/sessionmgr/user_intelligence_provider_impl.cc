@@ -11,9 +11,9 @@
 #include <lib/svc/cpp/service_namespace.h>
 #include <zircon/status.h>
 
-#include "src/lib/component/cpp/connect.h"
 #include "src/lib/files/file.h"
 #include "src/modular/bin/basemgr/cobalt/cobalt.h"
+#include "src/modular/lib/connect/connect.h"
 
 namespace modular {
 
@@ -39,7 +39,7 @@ template <class Interface>
 void UserIntelligenceProviderImpl::SessionAgentData::ConnectOrQueueServiceRequest(
     fidl::InterfaceRequest<Interface> request) {
   if (services) {
-    component::ConnectToService(services.get(), std::move(request));
+    connect::ConnectToService(services.get(), std::move(request));
   } else {
     pending_service_requests.emplace_back(std::move(request));
   }

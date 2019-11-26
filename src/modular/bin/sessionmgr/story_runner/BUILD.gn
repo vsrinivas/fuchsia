@@ -49,7 +49,7 @@ source_set("story_runner") {
     "//sdk/lib/sys/cpp",
     "//sdk/lib/sys/inspect/cpp",
     "//src/ledger/bin/fidl",
-    "//src/lib/component/cpp",
+    "//src/lib/component/cpp:deprecated_service_provider",
     "//src/lib/fxl",
     "//src/modular/bin/basemgr/cobalt",
     "//src/modular/bin/sessionmgr:component_context",
