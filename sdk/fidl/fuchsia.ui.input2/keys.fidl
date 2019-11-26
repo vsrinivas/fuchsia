@@ -371,6 +371,10 @@ enum Key : uint32 {
     /// Corresponds to USB HID page 0x0007 usage 0x00e7
     RIGHT_META = 0x00000058;
 
+    /// Keyboard Menu
+    /// Corresponds to USB HID page 0x0007 usage 0x0076
+    MENU = 0x00000059;
+
     // Keypad keys
     // Reserved range: 0x00000200 - 0x000002ff
 
@@ -442,6 +446,10 @@ enum Key : uint32 {
     /// Corresponds to USB HID page 0x0007 usage 0x0063
     KEYPAD_DOT = 0x00000210;
 
+    // Keypad =
+    // Corresponds to USB HID page 0x0007 usage 0x0067
+    KEYPAD_EQUALS = 0x00000211;
+
     // Media keys
     // Reserved range: 0x00000300 - 0x000004ff
 
@@ -468,9 +476,6 @@ enum Key : uint32 {
     // Corresponds to USB HID page 0x0007 usage 0x0066
     // Note: Reserved for typical keyboard status or keyboard errors.
     // Sent as a member of the keyboard array.
-    //
-    // Keypad =
-    // Corresponds to USB HID page 0x0007 usage 0x0067
     //
     // Keyboard F13
     // Corresponds to USB HID page 0x0007 usage 0x0068
@@ -513,9 +518,6 @@ enum Key : uint32 {
     //
     // Keyboard Help
     // Corresponds to USB HID page 0x0007 usage 0x0075
-    //
-    // Keyboard Menu
-    // Corresponds to USB HID page 0x0007 usage 0x0076
     //
     // Keyboard Select
     // Corresponds to USB HID page 0x0007 usage 0x0077

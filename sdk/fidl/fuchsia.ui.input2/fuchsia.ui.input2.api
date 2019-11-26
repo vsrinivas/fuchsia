@@ -1,7 +1,7 @@
 {
   "fidl/fuchsia.ui.input2/events.fidl": "b9f2ffb454287cd3c098043c4346871b",
   "fidl/fuchsia.ui.input2/keyboard.fidl": "805a239b5e0224c604d7f8a3ae82deaa",
-  "fidl/fuchsia.ui.input2/keys.fidl": "c4993e805b736b22a0a7933ce2edb077",
+  "fidl/fuchsia.ui.input2/keys.fidl": "6a1528f5afcc79a5a91daf5b1c302d7e",
   "fidl/fuchsia.ui.input2/layout.fidl": "861d652da7e0a75f2c180d91e2ea8e33",
   "fidl/fuchsia.ui.input2/modifiers.fidl": "607159b519ce3f32283fd27fa479a499",
   "fidl/fuchsia.ui.input2/semantic_keys.fidl": "a05b3ff14f3570f1d4dcb2746ee799bb"

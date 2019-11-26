@@ -224,7 +224,7 @@ mod tests {
         let service = KeymapService::new().expect("new keymap service");
         let keymap = service.keymap.lock().await;
         assert_eq!(keymap.name, TEST_LAYOUT_NAME);
-        assert_eq!(keymap.layouts.len(), 3);
+        assert_eq!(keymap.layouts.len(), 6);
 
         let layout = keymap.layouts.get(0).expect("layout page populated");
         assert_eq!(layout.entries.len(), 28);

@@ -1,1382 +1,2277 @@
 {
   "test_cases": [
     {
-      "key" : "0x00000025",
+      "key": "0x00000025",
       "modifiers": [],
       "semantic_key": {
         "action": "0x00000031"
       }
     },
     {
-      "key" : "0x00000032",
+      "key": "0x00000032",
       "modifiers": [],
       "semantic_key": {
         "symbol": "`"
       }
     },
     {
-      "key" : "0x0000001b",
+      "key": "0x0000001b",
       "modifiers": [],
       "semantic_key": {
         "symbol": "1"
       }
     },
     {
-      "key" : "0x0000001c",
+      "key": "0x0000001c",
       "modifiers": [],
       "semantic_key": {
         "symbol": "2"
       }
     },
     {
-      "key" : "0x0000001d",
+      "key": "0x0000001d",
       "modifiers": [],
       "semantic_key": {
         "symbol": "3"
       }
     },
     {
-      "key" : "0x0000001e",
+      "key": "0x0000001e",
       "modifiers": [],
       "semantic_key": {
         "symbol": "4"
       }
     },
     {
-      "key" : "0x0000001f",
+      "key": "0x0000001f",
       "modifiers": [],
       "semantic_key": {
         "symbol": "5"
       }
     },
     {
-      "key" : "0x00000020",
+      "key": "0x00000020",
       "modifiers": [],
       "semantic_key": {
         "symbol": "6"
       }
     },
     {
-      "key" : "0x00000021",
+      "key": "0x00000021",
       "modifiers": [],
       "semantic_key": {
         "symbol": "7"
       }
     },
     {
-      "key" : "0x00000022",
+      "key": "0x00000022",
       "modifiers": [],
       "semantic_key": {
         "symbol": "8"
       }
     },
     {
-      "key" : "0x00000023",
+      "key": "0x00000023",
       "modifiers": [],
       "semantic_key": {
         "symbol": "9"
       }
     },
     {
-      "key" : "0x00000024",
+      "key": "0x00000024",
       "modifiers": [],
       "semantic_key": {
         "symbol": "0"
       }
     },
     {
-      "key" : "0x0000002a",
+      "key": "0x0000002a",
       "modifiers": [],
       "semantic_key": {
         "symbol": "-"
       }
     },
     {
-      "key" : "0x0000002b",
+      "key": "0x0000002b",
       "modifiers": [],
       "semantic_key": {
         "symbol": "="
       }
     },
     {
-      "key" : "0x00000011",
+      "key": "0x00000011",
       "modifiers": [],
       "semantic_key": {
         "symbol": "q"
       }
     },
     {
-      "key" : "0x00000017",
+      "key": "0x00000017",
       "modifiers": [],
       "semantic_key": {
         "symbol": "w"
       }
     },
     {
-      "key" : "0x00000005",
+      "key": "0x00000005",
       "modifiers": [],
       "semantic_key": {
         "symbol": "e"
       }
     },
     {
-      "key" : "0x00000012",
+      "key": "0x00000012",
       "modifiers": [],
       "semantic_key": {
         "symbol": "r"
       }
     },
     {
-      "key" : "0x00000014",
+      "key": "0x00000014",
       "modifiers": [],
       "semantic_key": {
         "symbol": "t"
       }
     },
     {
-      "key" : "0x00000019",
+      "key": "0x00000019",
       "modifiers": [],
       "semantic_key": {
         "symbol": "y"
       }
     },
     {
-      "key" : "0x00000015",
+      "key": "0x00000015",
       "modifiers": [],
       "semantic_key": {
         "symbol": "u"
       }
     },
     {
-      "key" : "0x00000009",
+      "key": "0x00000009",
       "modifiers": [],
       "semantic_key": {
         "symbol": "i"
       }
     },
     {
-      "key" : "0x0000000f",
+      "key": "0x0000000f",
       "modifiers": [],
       "semantic_key": {
         "symbol": "o"
       }
     },
     {
-      "key" : "0x00000010",
+      "key": "0x00000010",
       "modifiers": [],
       "semantic_key": {
         "symbol": "p"
       }
     },
     {
-      "key" : "0x0000002c",
+      "key": "0x0000002c",
       "modifiers": [],
       "semantic_key": {
         "symbol": "["
       }
     },
     {
-      "key" : "0x0000002d",
+      "key": "0x0000002d",
       "modifiers": [],
       "semantic_key": {
         "symbol": "]"
       }
     },
     {
-      "key" : "0x0000002e",
+      "key": "0x0000002e",
       "modifiers": [],
       "semantic_key": {
         "symbol": "\\"
       }
     },
     {
-      "key" : "0x00000001",
+      "key": "0x00000001",
       "modifiers": [],
       "semantic_key": {
         "symbol": "a"
       }
     },
     {
-      "key" : "0x00000013",
+      "key": "0x00000013",
       "modifiers": [],
       "semantic_key": {
         "symbol": "s"
       }
     },
     {
-      "key" : "0x00000004",
+      "key": "0x00000004",
       "modifiers": [],
       "semantic_key": {
         "symbol": "d"
       }
     },
     {
-      "key" : "0x00000006",
+      "key": "0x00000006",
       "modifiers": [],
       "semantic_key": {
         "symbol": "f"
       }
     },
     {
-      "key" : "0x00000007",
+      "key": "0x00000007",
       "modifiers": [],
       "semantic_key": {
         "symbol": "g"
       }
     },
     {
-      "key" : "0x00000008",
+      "key": "0x00000008",
       "modifiers": [],
       "semantic_key": {
         "symbol": "h"
       }
     },
     {
-      "key" : "0x0000000a",
+      "key": "0x0000000a",
       "modifiers": [],
       "semantic_key": {
         "symbol": "j"
       }
     },
     {
-      "key" : "0x0000000b",
+      "key": "0x0000000b",
       "modifiers": [],
       "semantic_key": {
         "symbol": "k"
       }
     },
     {
-      "key" : "0x0000000c",
+      "key": "0x0000000c",
       "modifiers": [],
       "semantic_key": {
         "symbol": "l"
       }
     },
     {
-      "key" : "0x00000030",
+      "key": "0x00000030",
       "modifiers": [],
       "semantic_key": {
         "symbol": ";"
       }
     },
     {
-      "key" : "0x00000031",
+      "key": "0x00000031",
       "modifiers": [],
       "semantic_key": {
         "symbol": "'"
       }
     },
     {
-      "key" : "0x00000050",
+      "key": "0x00000050",
       "modifiers": [],
       "semantic_key": {
         "symbol": "§"
       }
     },
     {
-      "key" : "0x0000001a",
+      "key": "0x0000001a",
       "modifiers": [],
       "semantic_key": {
         "symbol": "z"
       }
     },
     {
-      "key" : "0x00000018",
+      "key": "0x00000018",
       "modifiers": [],
       "semantic_key": {
         "symbol": "x"
       }
     },
     {
-      "key" : "0x00000003",
+      "key": "0x00000003",
       "modifiers": [],
       "semantic_key": {
         "symbol": "c"
       }
     },
     {
-      "key" : "0x00000016",
+      "key": "0x00000016",
       "modifiers": [],
       "semantic_key": {
         "symbol": "v"
       }
     },
     {
-      "key" : "0x00000002",
+      "key": "0x00000002",
       "modifiers": [],
       "semantic_key": {
         "symbol": "b"
       }
     },
     {
-      "key" : "0x0000000e",
+      "key": "0x0000000e",
       "modifiers": [],
       "semantic_key": {
         "symbol": "n"
       }
     },
     {
-      "key" : "0x0000000d",
+      "key": "0x0000000d",
       "modifiers": [],
       "semantic_key": {
         "symbol": "m"
       }
     },
     {
-      "key" : "0x00000033",
+      "key": "0x00000033",
       "modifiers": [],
       "semantic_key": {
         "symbol": ","
       }
     },
     {
-      "key" : "0x00000034",
+      "key": "0x00000034",
       "modifiers": [],
       "semantic_key": {
         "symbol": "."
       }
     },
     {
-      "key" : "0x00000035",
+      "key": "0x00000035",
       "modifiers": [],
       "semantic_key": {
         "symbol": "/"
       }
     },
     {
-      "key" : "0x00000029",
+      "key": "0x00000029",
       "modifiers": [],
       "semantic_key": {
         "symbol": " "
       }
     },
     {
-      "key" : "0x00000032",
-      "modifiers": ["Shift"],
+      "key": "0x00000032",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "~"
       }
     },
     {
-      "key" : "0x0000001b",
-      "modifiers": ["Shift"],
+      "key": "0x0000001b",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "!"
       }
     },
     {
-      "key" : "0x0000001c",
-      "modifiers": ["Shift"],
+      "key": "0x0000001c",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "@"
       }
     },
     {
-      "key" : "0x0000001d",
-      "modifiers": ["Shift"],
+      "key": "0x0000001d",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "#"
       }
     },
     {
-      "key" : "0x0000001e",
-      "modifiers": ["Shift"],
+      "key": "0x0000001e",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "$"
       }
     },
     {
-      "key" : "0x0000001f",
-      "modifiers": ["Shift"],
+      "key": "0x0000001f",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "%"
       }
     },
     {
-      "key" : "0x00000020",
-      "modifiers": ["Shift"],
+      "key": "0x00000020",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "^"
       }
     },
     {
-      "key" : "0x00000021",
-      "modifiers": ["Shift"],
+      "key": "0x00000021",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "&"
       }
     },
     {
-      "key" : "0x00000022",
-      "modifiers": ["Shift"],
+      "key": "0x00000022",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "*"
       }
     },
     {
-      "key" : "0x00000023",
-      "modifiers": ["Shift"],
+      "key": "0x00000023",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "("
       }
     },
     {
-      "key" : "0x00000024",
-      "modifiers": ["Shift"],
+      "key": "0x00000024",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": ")"
       }
     },
     {
-      "key" : "0x0000002a",
-      "modifiers": ["Shift"],
+      "key": "0x0000002a",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "_"
       }
     },
     {
-      "key" : "0x0000002b",
-      "modifiers": ["Shift"],
+      "key": "0x0000002b",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "+"
       }
     },
     {
-      "key" : "0x00000011",
-      "modifiers": ["Shift"],
+      "key": "0x00000011",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "Q"
       }
     },
     {
-      "key" : "0x00000017",
-      "modifiers": ["Shift"],
+      "key": "0x00000017",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "W"
       }
     },
     {
-      "key" : "0x00000005",
-      "modifiers": ["Shift"],
+      "key": "0x00000005",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "E"
       }
     },
     {
-      "key" : "0x00000012",
-      "modifiers": ["Shift"],
+      "key": "0x00000012",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "R"
       }
     },
     {
-      "key" : "0x00000014",
-      "modifiers": ["Shift"],
+      "key": "0x00000014",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "T"
       }
     },
     {
-      "key" : "0x00000019",
-      "modifiers": ["Shift"],
+      "key": "0x00000019",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "Y"
       }
     },
     {
-      "key" : "0x00000015",
-      "modifiers": ["Shift"],
+      "key": "0x00000015",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "U"
       }
     },
     {
-      "key" : "0x00000009",
-      "modifiers": ["Shift"],
+      "key": "0x00000009",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "I"
       }
     },
     {
-      "key" : "0x0000000f",
-      "modifiers": ["Shift"],
+      "key": "0x0000000f",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "O"
       }
     },
     {
-      "key" : "0x00000010",
-      "modifiers": ["Shift"],
+      "key": "0x00000010",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "P"
       }
     },
     {
-      "key" : "0x0000002c",
-      "modifiers": ["Shift"],
+      "key": "0x0000002c",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "{"
       }
     },
     {
-      "key" : "0x0000002d",
-      "modifiers": ["Shift"],
+      "key": "0x0000002d",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "}"
       }
     },
     {
-      "key" : "0x0000002e",
-      "modifiers": ["Shift"],
+      "key": "0x0000002e",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "|"
       }
     },
     {
-      "key" : "0x00000001",
-      "modifiers": ["Shift"],
+      "key": "0x00000001",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "A"
       }
     },
     {
-      "key" : "0x00000013",
-      "modifiers": ["Shift"],
+      "key": "0x00000013",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "S"
       }
     },
     {
-      "key" : "0x00000004",
-      "modifiers": ["Shift"],
+      "key": "0x00000004",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "D"
       }
     },
     {
-      "key" : "0x00000006",
-      "modifiers": ["Shift"],
+      "key": "0x00000006",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "F"
       }
     },
     {
-      "key" : "0x00000007",
-      "modifiers": ["Shift"],
+      "key": "0x00000007",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "G"
       }
     },
     {
-      "key" : "0x00000008",
-      "modifiers": ["Shift"],
+      "key": "0x00000008",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "H"
       }
     },
     {
-      "key" : "0x0000000a",
-      "modifiers": ["Shift"],
+      "key": "0x0000000a",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "J"
       }
     },
     {
-      "key" : "0x0000000b",
-      "modifiers": ["Shift"],
+      "key": "0x0000000b",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "K"
       }
     },
     {
-      "key" : "0x0000000c",
-      "modifiers": ["Shift"],
+      "key": "0x0000000c",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "L"
       }
     },
     {
-      "key" : "0x00000030",
-      "modifiers": ["Shift"],
+      "key": "0x00000030",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": ":"
       }
     },
     {
-      "key" : "0x00000031",
-      "modifiers": ["Shift"],
+      "key": "0x00000031",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "\""
       }
     },
     {
-      "key" : "0x00000050",
-      "modifiers": ["Shift"],
+      "key": "0x00000050",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "|"
       }
     },
     {
-      "key" : "0x0000001a",
-      "modifiers": ["Shift"],
+      "key": "0x0000001a",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "Z"
       }
     },
     {
-      "key" : "0x00000018",
-      "modifiers": ["Shift"],
+      "key": "0x00000018",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "X"
       }
     },
     {
-      "key" : "0x00000003",
-      "modifiers": ["Shift"],
+      "key": "0x00000003",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "C"
       }
     },
     {
-      "key" : "0x00000016",
-      "modifiers": ["Shift"],
+      "key": "0x00000016",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "V"
       }
     },
     {
-      "key" : "0x00000002",
-      "modifiers": ["Shift"],
+      "key": "0x00000002",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "B"
       }
     },
     {
-      "key" : "0x0000000e",
-      "modifiers": ["Shift"],
+      "key": "0x0000000e",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "N"
       }
     },
     {
-      "key" : "0x0000000d",
-      "modifiers": ["Shift"],
+      "key": "0x0000000d",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "M"
       }
     },
     {
-      "key" : "0x00000033",
-      "modifiers": ["Shift"],
+      "key": "0x00000033",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "<"
       }
     },
     {
-      "key" : "0x00000034",
-      "modifiers": ["Shift"],
+      "key": "0x00000034",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": ">"
       }
     },
     {
-      "key" : "0x00000035",
-      "modifiers": ["Shift"],
+      "key": "0x00000035",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": "?"
       }
     },
     {
-      "key" : "0x00000029",
-      "modifiers": ["Shift"],
+      "key": "0x00000029",
+      "modifiers": [
+        "Shift"
+      ],
       "semantic_key": {
         "symbol": " "
       }
     },
     {
-      "key" : "0x00000032",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000032",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "~"
       }
     },
     {
-      "key" : "0x0000001b",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001b",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "!"
       }
     },
     {
-      "key" : "0x0000001c",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001c",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "@"
       }
     },
     {
-      "key" : "0x0000001d",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001d",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "#"
       }
     },
     {
-      "key" : "0x0000001e",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001e",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "$"
       }
     },
     {
-      "key" : "0x0000001f",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001f",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "%"
       }
     },
     {
-      "key" : "0x00000020",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000020",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "^"
       }
     },
     {
-      "key" : "0x00000021",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000021",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "&"
       }
     },
     {
-      "key" : "0x00000022",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000022",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "*"
       }
     },
     {
-      "key" : "0x00000023",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000023",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "("
       }
     },
     {
-      "key" : "0x00000024",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000024",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": ")"
       }
     },
     {
-      "key" : "0x0000002a",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000002a",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "_"
       }
     },
     {
-      "key" : "0x0000002b",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000002b",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "+"
       }
     },
     {
-      "key" : "0x00000011",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000011",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Q"
       }
     },
     {
-      "key" : "0x00000017",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000017",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "W"
       }
     },
     {
-      "key" : "0x00000005",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000005",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "E"
       }
     },
     {
-      "key" : "0x00000012",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000012",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "R"
       }
     },
     {
-      "key" : "0x00000014",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000014",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "T"
       }
     },
     {
-      "key" : "0x00000019",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000019",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Y"
       }
     },
     {
-      "key" : "0x00000015",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000015",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "U"
       }
     },
     {
-      "key" : "0x00000009",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000009",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "I"
       }
     },
     {
-      "key" : "0x0000000f",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000f",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "O"
       }
     },
     {
-      "key" : "0x00000010",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000010",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "P"
       }
     },
     {
-      "key" : "0x0000002c",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000002c",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "{"
       }
     },
     {
-      "key" : "0x0000002d",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000002d",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "}"
       }
     },
     {
-      "key" : "0x0000002e",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000002e",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "|"
       }
     },
     {
-      "key" : "0x00000001",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000001",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "A"
       }
     },
     {
-      "key" : "0x00000013",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000013",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "S"
       }
     },
     {
-      "key" : "0x00000004",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000004",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "D"
       }
     },
     {
-      "key" : "0x00000006",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000006",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "F"
       }
     },
     {
-      "key" : "0x00000007",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000007",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "G"
       }
     },
     {
-      "key" : "0x00000008",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000008",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "H"
       }
     },
     {
-      "key" : "0x0000000a",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000a",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "J"
       }
     },
     {
-      "key" : "0x0000000b",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000b",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "K"
       }
     },
     {
-      "key" : "0x0000000c",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000c",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "L"
       }
     },
     {
-      "key" : "0x00000030",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000030",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": ":"
       }
     },
     {
-      "key" : "0x00000031",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000031",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "\""
       }
     },
     {
-      "key" : "0x00000050",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000050",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "|"
       }
     },
     {
-      "key" : "0x0000001a",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000001a",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Z"
       }
     },
     {
-      "key" : "0x00000018",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000018",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "X"
       }
     },
     {
-      "key" : "0x00000003",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000003",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "C"
       }
     },
     {
-      "key" : "0x00000016",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000016",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "V"
       }
     },
     {
-      "key" : "0x00000002",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000002",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "B"
       }
     },
     {
-      "key" : "0x0000000e",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000e",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "N"
       }
     },
     {
-      "key" : "0x0000000d",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x0000000d",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "M"
       }
     },
     {
-      "key" : "0x00000033",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000033",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "<"
       }
     },
     {
-      "key" : "0x00000034",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000034",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": ">"
       }
     },
     {
-      "key" : "0x00000035",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000035",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "?"
       }
     },
     {
-      "key" : "0x00000029",
-      "modifiers": ["Shift", "CapsLock"],
+      "key": "0x00000029",
+      "modifiers": [
+        "Shift",
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": " "
       }
     },
     {
-      "key" : "0x00000032",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000032",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "`"
       }
     },
     {
-      "key" : "0x0000001b",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001b",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "1"
       }
     },
     {
-      "key" : "0x0000001c",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001c",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "2"
       }
     },
     {
-      "key" : "0x0000001d",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001d",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "3"
       }
     },
     {
-      "key" : "0x0000001e",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001e",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "4"
       }
     },
     {
-      "key" : "0x0000001f",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001f",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "5"
       }
     },
     {
-      "key" : "0x00000020",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000020",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "6"
       }
     },
     {
-      "key" : "0x00000021",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000021",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "7"
       }
     },
     {
-      "key" : "0x00000022",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000022",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "8"
       }
     },
     {
-      "key" : "0x00000023",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000023",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "9"
       }
     },
     {
-      "key" : "0x00000024",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000024",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "0"
       }
     },
     {
-      "key" : "0x0000002a",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000002a",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "-"
       }
     },
     {
-      "key" : "0x0000002b",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000002b",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "="
       }
     },
     {
-      "key" : "0x00000011",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000011",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Q"
       }
     },
     {
-      "key" : "0x00000017",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000017",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "W"
       }
     },
     {
-      "key" : "0x00000005",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000005",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "E"
       }
     },
     {
-      "key" : "0x00000012",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000012",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "R"
       }
     },
     {
-      "key" : "0x00000014",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000014",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "T"
       }
     },
     {
-      "key" : "0x00000019",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000019",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Y"
       }
     },
     {
-      "key" : "0x00000015",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000015",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "U"
       }
     },
     {
-      "key" : "0x00000009",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000009",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "I"
       }
     },
     {
-      "key" : "0x0000000f",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000f",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "O"
       }
     },
     {
-      "key" : "0x00000010",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000010",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "P"
       }
     },
     {
-      "key" : "0x0000002c",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000002c",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "["
       }
     },
     {
-      "key" : "0x0000002d",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000002d",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "]"
       }
     },
     {
-      "key" : "0x0000002e",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000002e",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "\\"
       }
     },
     {
-      "key" : "0x00000001",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000001",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "A"
       }
     },
     {
-      "key" : "0x00000013",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000013",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "S"
       }
     },
     {
-      "key" : "0x00000004",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000004",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "D"
       }
     },
     {
-      "key" : "0x00000006",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000006",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "F"
       }
     },
     {
-      "key" : "0x00000007",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000007",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "G"
       }
     },
     {
-      "key" : "0x00000008",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000008",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "H"
       }
     },
     {
-      "key" : "0x0000000a",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000a",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "J"
       }
     },
     {
-      "key" : "0x0000000b",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000b",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "K"
       }
     },
     {
-      "key" : "0x0000000c",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000c",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "L"
       }
     },
     {
-      "key" : "0x00000030",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000030",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": ";"
       }
     },
     {
-      "key" : "0x00000031",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000031",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "'"
       }
     },
     {
-      "key" : "0x00000050",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000050",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "§"
       }
     },
     {
-      "key" : "0x0000001a",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000001a",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "Z"
       }
     },
     {
-      "key" : "0x00000018",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000018",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "X"
       }
     },
     {
-      "key" : "0x00000003",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000003",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "C"
       }
     },
     {
-      "key" : "0x00000016",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000016",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "V"
       }
     },
     {
-      "key" : "0x00000002",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000002",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "B"
       }
     },
     {
-      "key" : "0x0000000e",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000e",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "N"
       }
     },
     {
-      "key" : "0x0000000d",
-      "modifiers": ["CapsLock"],
+      "key": "0x0000000d",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "M"
       }
     },
     {
-      "key" : "0x00000033",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000033",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": ","
       }
     },
     {
-      "key" : "0x00000034",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000034",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "."
       }
     },
     {
-      "key" : "0x00000035",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000035",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": "/"
       }
     },
     {
-      "key" : "0x00000029",
-      "modifiers": ["CapsLock"],
+      "key": "0x00000029",
+      "modifiers": [
+        "CapsLock"
+      ],
       "semantic_key": {
         "symbol": " "
+      }
+    },
+    {
+      "key": "0x00000026",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000082"
+      }
+    },
+    {
+      "key": "0x00000037",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000061"
+      }
+    },
+    {
+      "key": "0x00000038",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000062"
+      }
+    },
+    {
+      "key": "0x00000039",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000063"
+      }
+    },
+    {
+      "key": "0x0000003a",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000064"
+      }
+    },
+    {
+      "key": "0x0000003b",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000065"
+      }
+    },
+    {
+      "key": "0x0000003c",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000066"
+      }
+    },
+    {
+      "key": "0x0000003d",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000067"
+      }
+    },
+    {
+      "key": "0x0000003e",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000068"
+      }
+    },
+    {
+      "key": "0x0000003f",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000069"
+      }
+    },
+    {
+      "key": "0x00000040",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x0000006A"
+      }
+    },
+    {
+      "key": "0x00000041",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x0000006B"
+      }
+    },
+    {
+      "key": "0x00000042",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x0000006C"
+      }
+    },
+    {
+      "key": "0x00000044",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000007"
+      }
+    },
+    {
+      "key": "0x00000046",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000043"
+      }
+    },
+    {
+      "key": "0x00000047",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000026"
+      }
+    },
+    {
+      "key": "0x00000048",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000028"
+      }
+    },
+    {
+      "key": "0x00000049",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000042"
+      }
+    },
+    {
+      "key": "0x0000004a",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000025"
+      }
+    },
+    {
+      "key": "0x0000004b",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000027"
+      }
+    },
+    {
+      "key": "0x0000004f",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000024"
+      }
+    },
+    {
+      "key": "0x0000004d",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000022"
+      }
+    },
+    {
+      "key": "0x0000004e",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000021"
+      }
+    },
+    {
+      "key": "0x0000004c",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000023"
+      }
+    },
+    {
+      "key": "0x0000020C",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000026"
+      }
+    },
+    {
+      "key": "0x0000020D",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000024"
+      }
+    },
+    {
+      "key": "0x0000020E",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000028"
+      }
+    },
+    {
+      "key": "0x00000209",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000022"
+      }
+    },
+    {
+      "key": "0x0000020B",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000023"
+      }
+    },
+    {
+      "key": "0x00000206",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000025"
+      }
+    },
+    {
+      "key": "0x00000207",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000021"
+      }
+    },
+    {
+      "key": "0x00000208",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000027"
+      }
+    },
+    {
+      "key": "0x00000205",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000031"
+      }
+    },
+    {
+      "key": "0x0000020F",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000043"
+      }
+    },
+    {
+      "key": "0x00000210",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000042"
+      }
+    },
+    {
+      "key": "0x00000027",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000041"
+      }
+    },
+    {
+      "key": "0x00000028",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000032"
+      }
+    },
+    {
+      "key": "0x00000025",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000031"
+      }
+    },
+    {
+      "key": "0x00000036",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000003"
+      }
+    },
+    {
+      "key": "0x00000200",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000006"
+      }
+    },
+    {
+      "key": "0x00000059",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000081"
+      }
+    },
+    {
+      "key": "0x00000052",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000008"
+      }
+    },
+    {
+      "key": "0x00000056",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000008"
+      }
+    },
+    {
+      "key": "0x00000036",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000003"
+      }
+    },
+    {
+      "key": "0x00000051",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000004"
+      }
+    },
+    {
+      "key": "0x00000055",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000004"
+      }
+    },
+    {
+      "key": "0x00000200",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000006"
+      }
+    },
+    {
+      "key": "0x00000054",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000005"
+      }
+    },
+    {
+      "key": "0x00000058",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000005"
+      }
+    },
+    {
+      "key": "0x00000053",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000001"
+      }
+    },
+    {
+      "key": "0x00000057",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000001"
+      }
+    },
+    {
+      "key": "0x00000201",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "/"
+      }
+    },
+    {
+      "key": "0x00000202",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "*"
+      }
+    },
+    {
+      "key": "0x00000203",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "-"
+      }
+    },
+    {
+      "key": "0x00000204",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "+"
+      }
+    },
+    {
+      "key": "0x00000211",
+      "modifiers": [],
+      "semantic_key": {
+        "symbol": "="
+      }
+    },
+    {
+      "key": "0x00000205",
+      "modifiers": [],
+      "semantic_key": {
+        "action": "0x00000031"
+      }
+    },
+    {
+      "key": "0x00000201",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "/"
+      }
+    },
+    {
+      "key": "0x00000202",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "*"
+      }
+    },
+    {
+      "key": "0x00000203",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "-"
+      }
+    },
+    {
+      "key": "0x00000204",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "+"
+      }
+    },
+    {
+      "key": "0x00000211",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "="
+      }
+    },
+    {
+      "key": "0x0000020C",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "7"
+      }
+    },
+    {
+      "key": "0x0000020D",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "8"
+      }
+    },
+    {
+      "key": "0x0000020E",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "9"
+      }
+    },
+    {
+      "key": "0x00000209",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "4"
+      }
+    },
+    {
+      "key": "0x0000020A",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "5"
+      }
+    },
+    {
+      "key": "0x0000020B",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "6"
+      }
+    },
+    {
+      "key": "0x00000206",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "1"
+      }
+    },
+    {
+      "key": "0x00000207",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "2"
+      }
+    },
+    {
+      "key": "0x00000208",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "3"
+      }
+    },
+    {
+      "key": "0x00000205",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "action": "0x00000031"
+      }
+    },
+    {
+      "key": "0x0000020F",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "0"
+      }
+    },
+    {
+      "key": "0x00000210",
+      "modifiers": [
+        "NumLock"
+      ],
+      "semantic_key": {
+        "symbol": "."
       }
     }
   ]
