@@ -10,6 +10,7 @@
 #include <lib/fdio/fdio.h>
 #include <stdio.h>
 
+#include <atomic>
 #include <utility>
 
 #include <fs/pseudo_dir.h>
@@ -241,6 +242,101 @@ TEST_F(ConnectionTest, NegotiateProtocol) {
   expect_on_open(zx::unowned_channel(fc1), [](fio::NodeInfo* info) {
     EXPECT_TRUE(info->is_file());
   });
+}
+
+// A vnode which maintains a counter of number of |Open| calls that
+// have not been balanced out with a |Close|.
+class CountOutstandingOpenVnode : public fs::Vnode {
+ public:
+  CountOutstandingOpenVnode() = default;
+
+  fs::VnodeProtocolSet GetProtocols() const final { return fs::VnodeProtocol::kFile; }
+
+  zx_status_t GetNodeInfoForProtocol(__UNUSED fs::VnodeProtocol, __UNUSED fs::Rights,
+                                     fs::VnodeRepresentation* info) final {
+    *info = fs::VnodeRepresentation::File{};
+    return ZX_OK;
+  }
+
+  zx_status_t Open(__UNUSED ValidatedOptions options,
+                   __UNUSED fbl::RefPtr<Vnode>* out_redirect) final {
+    num_open_.fetch_add(1);
+    return ZX_OK;
+  }
+
+  zx_status_t Close() final {
+    num_open_.fetch_sub(1);
+    return ZX_OK;
+  }
+
+  uint64_t num_open() const { return num_open_.load(); }
+
+ private:
+  std::atomic<uint64_t> num_open_ = {};
+};
+
+class ConnectionClosingTest : public zxtest::Test {
+ public:
+  // Setup file structure with one directory and one file. Note: On creation
+  // directories and files have no flags and rights.
+  ConnectionClosingTest() : loop_(&kAsyncLoopConfigNoAttachToCurrentThread) {
+    vfs_.SetDispatcher(loop_.dispatcher());
+    root_ = fbl::AdoptRef<fs::PseudoDir>(new fs::PseudoDir());
+    count_outstanding_open_vnode_ = fbl::AdoptRef(new CountOutstandingOpenVnode());
+    root_->AddEntry("count_outstanding_open_vnode", count_outstanding_open_vnode_);
+  }
+
+  zx_status_t ConnectClient(zx::channel server_end) {
+    // Serve root directory with maximum rights
+    return vfs_.ServeDirectory(root_, std::move(server_end));
+  }
+
+ protected:
+  fbl::RefPtr<CountOutstandingOpenVnode> count_outstanding_open_vnode() const {
+    return count_outstanding_open_vnode_;
+  }
+
+  async::Loop& loop() { return loop_; }
+
+ private:
+  async::Loop loop_;
+  fs::SynchronousVfs vfs_;
+  fbl::RefPtr<fs::PseudoDir> root_;
+  fbl::RefPtr<CountOutstandingOpenVnode> count_outstanding_open_vnode_;
+};
+
+TEST_F(ConnectionClosingTest, ClosingChannelImpliesClosingNode) {
+  // Create connection to vfs.
+  zx::channel client_end, server_end;
+  ASSERT_OK(zx::channel::create(0u, &client_end, &server_end));
+  ASSERT_OK(ConnectClient(std::move(server_end)));
+
+  constexpr uint32_t kOpenMode = 0755;
+  constexpr int kNumActiveClients = 20;
+
+  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), 0);
+
+  // Create a number of active connections to "count_outstanding_open_vnode".
+  std::vector<zx::channel> clients;
+  for (int i = 0; i < kNumActiveClients; i++) {
+    zx::channel fc1, fc2;
+    ASSERT_OK(zx::channel::create(0u, &fc1, &fc2));
+    ASSERT_OK(fio::Directory::Call::Open(
+        zx::unowned_channel(client_end),
+        fio::OPEN_RIGHT_READABLE, kOpenMode,
+        fidl::StringView("count_outstanding_open_vnode"), std::move(fc2)).status());
+    clients.push_back(std::move(fc1));
+  }
+
+  ASSERT_OK(loop().RunUntilIdle());
+  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), kNumActiveClients);
+
+  // Drop all the clients, leading to |Close| being invoked
+  // on "count_outstanding_open_vnode" eventually.
+  clients.clear();
+
+  ASSERT_OK(loop().RunUntilIdle());
+  ASSERT_EQ(count_outstanding_open_vnode()->num_open(), 0);
 }
 
 }  // namespace

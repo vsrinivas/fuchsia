@@ -148,10 +148,12 @@ class Connection : public fbl::DoublyLinkedListable<std::unique_ptr<Connection>>
   void HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
                      const zx_packet_signal_t* signal);
 
-  // Sends an explicit close message to the underlying vnode.
-  // Only necessary if the handler has not returned ERR_DISPATCHER_DONE
-  // and has been opened.
-  void CallClose();
+  // The contract of the Vnode API is that there should be a balancing |Close| call
+  // for every |Open| call made on a vnode.
+  // Calls |Close| on the underlying vnode explicitly if necessary.
+  zx_status_t EnsureVnodeClosed();
+
+  bool vnode_is_open_;
 
   bool is_open() const { return wait_.object() != ZX_HANDLE_INVALID; }
   void set_closed() { wait_.set_object(ZX_HANDLE_INVALID); }

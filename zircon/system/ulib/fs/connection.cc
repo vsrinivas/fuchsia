@@ -192,7 +192,8 @@ zx_status_t EnforceHierarchicalRights(Rights parent_rights, VnodeConnectionOptio
 
 Connection::Connection(Vfs* vfs, fbl::RefPtr<Vnode> vnode, zx::channel channel,
                        VnodeProtocol protocol, VnodeConnectionOptions options)
-    : vfs_(vfs),
+    : vnode_is_open_(!options.flags.node_reference),
+      vfs_(vfs),
       vnode_(std::move(vnode)),
       channel_(std::move(channel)),
       wait_(this, ZX_HANDLE_INVALID, kWakeSignals),
@@ -211,9 +212,7 @@ Connection::~Connection() {
   }
 
   // Invoke a "close" call to the underlying object if we haven't already.
-  if (is_open()) {
-    CallClose();
-  }
+  EnsureVnodeClosed();
 
   // Release the token associated with this connection's vnode since the connection
   // will be releasing the vnode's reference once this function returns.
@@ -288,24 +287,20 @@ void Connection::HandleSignals(async_dispatcher_t* dispatcher, async::WaitBase* 
 }
 
 void Connection::Terminate(bool call_close) {
-  if (call_close) {
-    // Give the dispatcher a chance to clean up.
-    CallClose();
-  } else {
-    // It's assumed that someone called the close handler
-    // prior to calling this function.
-    set_closed();
-  }
+  EnsureVnodeClosed();
 
   // Tell the VFS that the connection closed remotely.
   // This might have the side-effect of destroying this object.
   vfs_->OnConnectionClosedRemotely(this);
 }
 
-void Connection::CallClose() {
-  CloseMessage(
-      [this](fidl_msg_t* msg, FidlConnection* txn) { return HandleMessage(msg, txn->Txn()); });
+zx_status_t Connection::EnsureVnodeClosed() {
+  if (!vnode_is_open_) {
+    return ZX_OK;
+  }
+  vnode_is_open_ = false;
   set_closed();
+  return vnode_->Close();
 }
 
 zx_status_t Connection::NodeClone(uint32_t clone_flags, zx_handle_t object) {
@@ -362,12 +357,7 @@ zx_status_t Connection::NodeClone(uint32_t clone_flags, zx_handle_t object) {
 }
 
 zx_status_t Connection::NodeClose(fidl_txn_t* txn) {
-  zx_status_t status;
-  if (options().flags.node_reference) {
-    status = ZX_OK;
-  } else {
-    status = vnode_->Close();
-  }
+  zx_status_t status = EnsureVnodeClosed();
   fuchsia_io_NodeClose_reply(txn, status);
 
   return ERR_DISPATCHER_DONE;
