@@ -12,7 +12,6 @@
 
 namespace escher {
 
-/* static */
 std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(EscherWeakPtr weak_escher,
                                                         uint64_t frame_trace_number) {
   if (!weak_escher) {
@@ -57,46 +56,9 @@ CommandBufferPtr BatchGpuUploader::Writer::TakeCommandsAndShutdown() {
   FXL_DCHECK(command_buffer_);
   // Assume that if a writer was requested, it was written to, and the buffer
   // needs to be kept alive.
-  command_buffer_->KeepAlive(std::move(buffer_));
+  command_buffer_->KeepAlive(buffer_);
 
   // Underlying CommandBuffer is being removed, shutdown this writer.
-  buffer_ = nullptr;
-  return std::move(command_buffer_);
-}
-
-BatchGpuUploader::Reader::Reader(CommandBufferPtr command_buffer, BufferPtr buffer)
-    : command_buffer_(std::move(command_buffer)), buffer_(std::move(buffer)) {
-  FXL_DCHECK(command_buffer_ && buffer_);
-}
-
-BatchGpuUploader::Reader::~Reader() { FXL_DCHECK(!command_buffer_ && !buffer_); }
-
-void BatchGpuUploader::Reader::ReadBuffer(const BufferPtr& source, vk::BufferCopy region) {
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadBuffer");
-
-  command_buffer_->vk().copyBuffer(source->vk(), buffer_->vk(), 1, &region);
-  command_buffer_->KeepAlive(source);
-}
-
-void BatchGpuUploader::Reader::ReadImage(const ImagePtr& source, vk::BufferImageCopy region) {
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::Reader::ReadImage");
-
-  command_buffer_->TransitionImageLayout(source, source->layout(),
-                                         vk::ImageLayout::eTransferSrcOptimal);
-  command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
-                                          buffer_->vk(), 1, &region);
-  command_buffer_->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
-                                         vk::ImageLayout::eShaderReadOnlyOptimal);
-  command_buffer_->KeepAlive(source);
-}
-
-CommandBufferPtr BatchGpuUploader::Reader::TakeCommandsAndShutdown() {
-  FXL_DCHECK(command_buffer_);
-  // Assume that if a reader was requested, it was read from, and the buffer
-  // needs to be kept alive.
-  command_buffer_->KeepAlive(std::move(buffer_));
-
-  // Underlying CommandBuffer is being removed, shutdown this reader.
   buffer_ = nullptr;
   return std::move(command_buffer_);
 }
@@ -109,7 +71,6 @@ BatchGpuUploader::BatchGpuUploader(EscherWeakPtr weak_escher, uint64_t frame_tra
 BatchGpuUploader::~BatchGpuUploader() {
   FXL_CHECK(!frame_);
   FXL_CHECK(writer_count_ == 0);
-  FXL_CHECK(reader_count_ == 0);
 }
 
 void BatchGpuUploader::Initialize() {
@@ -130,7 +91,7 @@ void BatchGpuUploader::Initialize() {
   is_initialized_ = true;
 }
 
-std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(size_t size) {
+std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(vk::DeviceSize size) {
   if (!is_initialized_) {
     Initialize();
   }
@@ -154,30 +115,6 @@ std::unique_ptr<BatchGpuUploader::Writer> BatchGpuUploader::AcquireWriter(size_t
   return std::make_unique<BatchGpuUploader::Writer>(std::move(command_buffer), std::move(buffer));
 }
 
-std::unique_ptr<BatchGpuUploader::Reader> BatchGpuUploader::AcquireReader(size_t size) {
-  if (!is_initialized_) {
-    Initialize();
-  }
-  FXL_DCHECK(frame_);
-  FXL_DCHECK(size);
-  // TODO(SCN-846) Relax this check once Readers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Reader.
-  FXL_DCHECK(reader_count_ == 0);
-
-  TRACE_DURATION("gfx", "escher::BatchGpuUploader::AcquireReader");
-
-  vk::DeviceSize vk_size = size;
-  BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
-  FXL_DCHECK(buffer) << "Error allocating buffer";
-
-  CommandBufferPtr command_buffer = frame_->TakeCommandBuffer();
-  FXL_DCHECK(command_buffer) << "Error getting the frame's command buffer.";
-
-  ++reader_count_;
-  return std::make_unique<BatchGpuUploader::Reader>(std::move(command_buffer), std::move(buffer));
-}
-
 void BatchGpuUploader::PostWriter(std::unique_ptr<BatchGpuUploader::Writer> writer) {
   FXL_DCHECK(frame_);
   if (!writer) {
@@ -194,32 +131,16 @@ void BatchGpuUploader::PostWriter(std::unique_ptr<BatchGpuUploader::Writer> writ
   writer.reset();
 }
 
-void BatchGpuUploader::PostReader(std::unique_ptr<BatchGpuUploader::Reader> reader,
-                                  fit::function<void(escher::BufferPtr buffer)> callback) {
-  FXL_DCHECK(frame_);
-  if (!reader) {
-    return;
-  }
-  read_callbacks_.push_back(std::make_pair(reader->buffer(), std::move(callback)));
-
-  // TODO(SCN-846) Relax this check once Readers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Reader.
-  FXL_DCHECK(reader_count_ == 1);
-
-  auto command_buffer = reader->TakeCommandsAndShutdown();
-  frame_->PutCommandBuffer(std::move(command_buffer));
-  --reader_count_;
-  reader.reset();
-}
-
 void BatchGpuUploader::Submit(fit::function<void()> callback) {
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
-  FXL_DCHECK(writer_count_ == 0 && reader_count_ == 0);
+  FXL_DCHECK(writer_count_ == 0);
   if (!is_initialized_) {
     // This uploader was never used, nothing to submit.
+    if (callback) {
+      callback();
+    }
     return;
   }
   FXL_DCHECK(frame_);
@@ -237,11 +158,7 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
   frame_->EndFrame(SemaphorePtr(),
-                   [callback = std::move(callback), read_callbacks = std::move(read_callbacks_)]() {
-                     for (auto& pair : read_callbacks) {
-                       auto buffer = pair.first;
-                       pair.second(buffer);
-                     }
+                   [callback = std::move(callback)]() {
                      if (callback) {
                        callback();
                      }

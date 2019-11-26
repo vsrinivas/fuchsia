@@ -21,10 +21,16 @@ namespace escher {
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
 // to the GPU driver.
 //
-// TODO(SCN-844) Migrate users of impl::GpuUploader to this class.
+// TODO(SCN-1197) Add memory barriers so the BatchGpuUploader and
+// BatchGpuDownloader can handle synchronization of reads and writes on the same
+// Resource.
 //
-// TODO (SCN-1197) Add memory barriers so the BatchGpuUploader can handle
-// reads and writes on the same Resource in the same batch.
+// Currently users of BatchGpuUploader should manually enforce that the
+// BatchGpuUploader waits on other BatchGpuUploader or gfx::Engine if they write
+// to the images / buffers the BatchGpuUploader reads from, by using
+// AddWaitSemaphore() function. Also, Submit() function will return a semaphore
+// being signaled when command buffer finishes execution, which can be used for
+// synchronization.
 class BatchGpuUploader {
  public:
   static std::unique_ptr<BatchGpuUploader> New(EscherWeakPtr weak_escher,
@@ -72,61 +78,20 @@ class BatchGpuUploader {
     FXL_DISALLOW_COPY_AND_ASSIGN(Writer);
   };  // class BatchGpuUploader::Writer
 
-  // Provides a pointer in host-accessible GPU memory, and methods to copy into
-  // this memory from Images and Buffers on the GPU.
-  class Reader {
-   public:
-    Reader(CommandBufferPtr command_buffer, BufferPtr buffer);
-    ~Reader();
-
-    // Schedule a buffer-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places a wait semaphore on the source,
-    // which is signaled when the batched commands are done.
-    void ReadBuffer(const BufferPtr& source, vk::BufferCopy region);
-
-    // Schedule a image-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places a wait semaphore on the source,
-    // which is signaled when the batched commands are done.
-    void ReadImage(const ImagePtr& source, vk::BufferImageCopy region);
-
-    const BufferPtr buffer() { return buffer_; }
-
-   private:
-    friend class BatchGpuUploader;
-    // Gets the CommandBuffer to batch commands with all other posted writers.
-    // This writer cannot be used after the command buffer has been retrieved.
-    CommandBufferPtr TakeCommandsAndShutdown();
-
-    CommandBufferPtr command_buffer_;
-    BufferPtr buffer_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
-  };  // class BatchGpuUploader::Reader
-
   // Obtain a Writer that has the specified amount of write space.
   //
   // TODO(SCN-846) Only one writer can be acquired at a time. When we move to
   // backing writers with secondary CommandBuffers, multiple writes can be
   // acquired at once and their writes can be parallelized across threads.
-  std::unique_ptr<Writer> AcquireWriter(size_t size);
-
-  // Obtain a Reader that has the specified amount of space to read into.
-  std::unique_ptr<Reader> AcquireReader(size_t size);
+  std::unique_ptr<Writer> AcquireWriter(vk::DeviceSize size);
 
   // Post a Writer to the batch uploader. The Writer's work will be posted to
   // the GPU on Submit();
   void PostWriter(std::unique_ptr<Writer> writer);
 
-  // Post a Reader to the batch uploader. The Reader's work will be posted to
-  // the host on Submit(). After submit, the callback will be called with the
-  // buffer read from the GPU.
-  void PostReader(std::unique_ptr<Reader> reader,
-                  fit::function<void(escher::BufferPtr buffer)> callback);
-
-  // Submits all Writers' and Reader's work to the GPU. No Writers or Readers can be posted once
-  // Submit is called.
+  // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
+  // can be posted once Submit is called. Callback function will be called after
+  // all work is done.
   void Submit(fit::function<void()> callback = nullptr);
 
   // Submit() will wait on all semaphores added by AddWaitSemaphore().
@@ -139,7 +104,6 @@ class BatchGpuUploader {
   void Initialize();
 
   int32_t writer_count_ = 0;
-  int32_t reader_count_ = 0;
 
   EscherWeakPtr escher_;
   bool is_initialized_ = false;
@@ -149,7 +113,6 @@ class BatchGpuUploader {
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
 
-  std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>> read_callbacks_;
   std::vector<std::pair<SemaphorePtr, vk::PipelineStageFlags>> wait_semaphores_;
   std::vector<SemaphorePtr> signal_semaphores_;
 

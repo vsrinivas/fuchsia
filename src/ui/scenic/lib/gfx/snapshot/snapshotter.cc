@@ -11,6 +11,7 @@
 #include "src/lib/fsl/vmo/vector.h"
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/escher.h"
+#include "src/ui/lib/escher/third_party/granite/vk/command_buffer.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/image.h"
 #include "src/ui/scenic/lib/gfx/engine/engine.h"
@@ -98,7 +99,9 @@ escher::ImagePtr Snapshotter::CreateReplacementImage(uint32_t width, uint32_t he
 }
 
 Snapshotter::Snapshotter(escher::EscherWeakPtr escher)
-    : gpu_uploader_(escher::BatchGpuUploader::New(escher)), escher_(escher) {}
+    : gpu_downloader_(
+          escher::BatchGpuDownloader::New(escher, escher::CommandBuffer::Type::kGraphics)),
+      escher_(escher) {}
 
 void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot_callback) {
   FXL_DCHECK(resource) << "Cannot snapshot null resource.";
@@ -131,30 +134,23 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
     auto replacement_semaphore = escher::Semaphore::New(escher_->vk_device());
     gpu_uploader_for_replacements_->AddSignalSemaphore(replacement_semaphore);
     gpu_uploader_for_replacements_->Submit();
-    gpu_uploader_->AddWaitSemaphore(std::move(replacement_semaphore),
+    gpu_downloader_->AddWaitSemaphore(std::move(replacement_semaphore),
                                     vk::PipelineStageFlagBits::eTransfer);
   }
 
   // If the Snapshotter has a Engine binding, we need to ensure that the
   // commands in |gpu_downloader_| are executed after commands in the engine's
   // command buffer.
-  if (escher_ && escher_->semaphore_chain() && gpu_uploader_->HasContentToUpload()) {
+  if (escher_ && escher_->semaphore_chain() && gpu_downloader_->HasContentToDownload()) {
     auto semaphore_pair = escher_->semaphore_chain()->TakeLastAndCreateNextSemaphore();
-    gpu_uploader_->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
-    gpu_uploader_->AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
-                                    vk::PipelineStageFlagBits::eTransfer);
+    gpu_downloader_->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+    gpu_downloader_->AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
+                                      vk::PipelineStageFlagBits::eTransfer);
   }
 
-  // If there are no GPU operations, call the callback directly
-  // as the BatchGPUUploader will not call it unless it has work
-  // on the GPU to do. This is necessary as there are some scenes
-  // that do not contain any gpu buffers or textures.
-  if (!gpu_uploader_->HasContentToUpload()) {
-    content_ready_callback();
-  } else {
-    // Submit all images/buffers to be read from GPU.
-    gpu_uploader_->Submit(std::move(content_ready_callback));
-  }
+  // The |content_ready_callback| will be always called no matter whether we
+  // have contents to download or not.
+  gpu_downloader_->Submit(std::move(content_ready_callback));
 }
 
 void Snapshotter::Visit(EntityNode* r) { VisitNode(r); }
@@ -381,16 +377,16 @@ void Snapshotter::ReadImage(escher::ImagePtr image,
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  auto reader = gpu_uploader_->AcquireReader(image->size());
+  auto reader = gpu_downloader_->AcquireReader(image->size());
   reader->ReadImage(image, region);
-  gpu_uploader_->PostReader(std::move(reader), std::move(callback));
+  gpu_downloader_->PostReader(std::move(reader), std::move(callback));
 }
 
 void Snapshotter::ReadBuffer(escher::BufferPtr buffer,
                              fit::function<void(escher::BufferPtr buffer)> callback) {
-  auto reader = gpu_uploader_->AcquireReader(buffer->size());
+  auto reader = gpu_downloader_->AcquireReader(buffer->size());
   reader->ReadBuffer(buffer, {0, 0, buffer->size()});
-  gpu_uploader_->PostReader(std::move(reader), std::move(callback));
+  gpu_downloader_->PostReader(std::move(reader), std::move(callback));
 }
 
 }  // namespace gfx

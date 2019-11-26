@@ -4,6 +4,7 @@
 
 #include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 
+#include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/test/gtest_escher.h"
 #include "src/ui/lib/escher/util/image_utils.h"
@@ -73,7 +74,7 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
   EXPECT_TRUE(escher->Cleanup());
 
   // Check if the image downloaded contains color_2.
-  auto downloader = BatchGpuUploader::New(escher);
+  auto downloader = BatchGpuDownloader::New(escher);
   auto reader = downloader->AcquireReader(image_size);
   reader->ReadImage(image, region);
   bool downloaded = false;

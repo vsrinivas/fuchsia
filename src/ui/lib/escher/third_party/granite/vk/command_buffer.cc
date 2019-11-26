@@ -211,6 +211,8 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layo
                                  vk::AccessFlags dst_access) {
   FXL_DCHECK(!IsInRenderPass());
   FXL_DCHECK(!image->is_transient());
+  FXL_DCHECK(image->layout() == old_layout || old_layout == vk::ImageLayout::eUndefined ||
+             old_layout == vk::ImageLayout::ePreinitialized);
 
   impl_->KeepAlive(image.get());
 
@@ -226,6 +228,8 @@ void CommandBuffer::ImageBarrier(const ImagePtr& image, vk::ImageLayout old_layo
   barrier.subresourceRange.layerCount = VK_REMAINING_ARRAY_LAYERS;
   barrier.srcQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
   barrier.dstQueueFamilyIndex = VK_QUEUE_FAMILY_IGNORED;
+
+  image->set_layout(new_layout);
 
   vk().pipelineBarrier(src_stages, dst_stages, {}, 0, nullptr, 0, nullptr, 1, &barrier);
 }

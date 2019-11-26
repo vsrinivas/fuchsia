@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 
+#include "src/ui/lib/escher/renderer/batch_gpu_downloader.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/scenic/lib/gfx/resources/resource_visitor.h"
 #include "src/ui/scenic/lib/gfx/snapshot/serializer.h"
@@ -77,7 +78,7 @@ class Snapshotter : public ResourceVisitor {
   escher::ImagePtr CreateReplacementImage(uint32_t width, uint32_t height);
   std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_for_replacements_;
 
-  std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_;
+  std::unique_ptr<escher::BatchGpuDownloader> gpu_downloader_;
   const escher::EscherWeakPtr escher_;
 
   // Holds the current serializer for the scenic node being serialized. This is

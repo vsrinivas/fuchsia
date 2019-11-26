@@ -10,6 +10,7 @@
 
 namespace escher {
 
+class BatchGpuDownloader;
 class BatchGpuUploader;
 class BlockAllocator;
 class Buffer;

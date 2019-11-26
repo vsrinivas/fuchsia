@@ -47,6 +47,7 @@ if (is_mac) {
       "paper/paper_transform_stack_unittest.cc",
       "pose_buffer_latching_test.cc",
       "protected_memory_unittest.cc",
+      "renderer/batch_gpu_downloader_unittest.cc",
       "renderer/batch_gpu_uploader_unittest.cc",
       "renderer/buffer_cache_unittest.cc",
       "renderer/frame_unittest.cc",

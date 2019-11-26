@@ -16,10 +16,12 @@ ImagePtr Image::WrapVkImage(ResourceManager* image_owner, ImageInfo info, vk::Im
 
 Image::Image(ResourceManager* image_owner, ImageInfo info, vk::Image image, vk::DeviceSize size,
              uint8_t* host_ptr)
-    : Resource(image_owner), info_(info), image_(image), size_(size), host_ptr_(host_ptr) {
-  auto is_depth_stencil = image_utils::IsDepthStencilFormat(info.format);
-  has_depth_ = is_depth_stencil.first;
-  has_stencil_ = is_depth_stencil.second;
-}
+    : Resource(image_owner),
+      info_(info),
+      image_(image),
+      has_depth_(image_utils::IsDepthFormat(info.format)),
+      has_stencil_(image_utils::IsStencilFormat(info.format)),
+      size_(size),
+      host_ptr_(host_ptr) {}
 
 }  // namespace escher

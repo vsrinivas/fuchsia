@@ -28,8 +28,8 @@ struct ImageInfo {
   bool operator==(const ImageInfo& other) const {
     return format == other.format && width == other.width && height == other.height &&
            sample_count == other.sample_count && usage == other.usage &&
-           memory_flags == other.memory_flags && is_mutable == other.is_mutable &&
-           is_external == other.is_external;
+           memory_flags == other.memory_flags && tiling == other.tiling &&
+           is_mutable == other.is_mutable && is_external == other.is_external;
   }
 
   // Transient images are neither loaded nor stored by render passes.  Instead
@@ -68,11 +68,14 @@ class Image : public Resource {
   uint8_t* host_ptr() const { return host_ptr_; }
 
   // TODO(ES-83): how does this interact with swapchain_layout_?
-  // Should this be automatically set when various transitions are made, e.g.
-  // finishing a render-pass?  Should it be locked so that the layout can't be
-  // changed during a render-pass where it is used as an attachment?
-  void set_layout(vk::ImageLayout new_layout) { layout_ = new_layout; }
+  // Should it be locked so that the layout can't be changed during a render-pass
+  // where it is used as an attachment?
+
   vk::ImageLayout layout() const { return layout_; }
+
+  bool is_layout_initialized() const {
+    return layout() != vk::ImageLayout::eUndefined && layout() != vk::ImageLayout::ePreinitialized;
+  }
 
   // Specify the layout that should be transitioned to when this image is used
   // as a framebuffer attachment.
@@ -92,10 +95,20 @@ class Image : public Resource {
         uint8_t* host_ptr_);
 
  private:
+  friend class CommandBuffer;
+  friend class impl::CommandBuffer;
+
+  // Set the image layout stored in |layout_|. This should be only used by
+  // friend classes like |CommandBuffer| or |impl::CommandBuffer|
+  // when they made transitions to image layouts, e.g. when we invoke
+  // |TransitionImageLayout| to manually do layout transitions in
+  // BatchGpuUploader.
+  void set_layout(vk::ImageLayout new_layout) { layout_ = new_layout; }
+
   const ImageInfo info_;
   const vk::Image image_;
-  bool has_depth_;
-  bool has_stencil_;
+  const bool has_depth_;
+  const bool has_stencil_;
   const vk::DeviceSize size_;
   uint8_t* const host_ptr_;
 

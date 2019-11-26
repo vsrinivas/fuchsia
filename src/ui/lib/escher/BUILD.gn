@@ -344,6 +344,8 @@ template("escher_library") {
       "paper/paper_transform_stack.h",
       "profiling/timestamp_profiler.cc",
       "profiling/timestamp_profiler.h",
+      "renderer/batch_gpu_downloader.cc",
+      "renderer/batch_gpu_downloader.h",
       "renderer/batch_gpu_uploader.cc",
       "renderer/batch_gpu_uploader.h",
       "renderer/buffer_cache.cc",

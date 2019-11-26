@@ -157,6 +157,8 @@ void CommandBuffer::CopyBufferAfterBarrier(const BufferPtr& src, const BufferPtr
   CopyBuffer(src, dst, region);
 }
 
+// TODO(41296): Move this function out to a separated utility function, rather
+// than part of impl::CommandBuffer.
 void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout old_layout,
                                           vk::ImageLayout new_layout) {
   KeepAlive(image);
@@ -227,7 +229,12 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
       break;
     case vk::ImageLayout::eUndefined:
       // If layout was eUndefined, we don't need a srcAccessMask.
-      src_stage_mask = vk::PipelineStageFlagBits::eAllCommands;
+
+      // Source images with eUndefined layout have not yet been initialized nor
+      // used, or we do not care about their previously stored data. So we use
+      // eTopOfPipe as the source stage mask, as it will never block the
+      // pipeline barrier.
+      src_stage_mask = vk::PipelineStageFlagBits::eTopOfPipe;
       break;
     default:
       FXL_LOG(ERROR) << "CommandBuffer does not know how to transition from layout: "
@@ -279,6 +286,8 @@ void CommandBuffer::TransitionImageLayout(const ImagePtr& image, vk::ImageLayout
 
   src_stage_mask = src_stage_mask & pipeline_stage_mask_;
   dst_stage_mask = dst_stage_mask & pipeline_stage_mask_;
+
+  image->set_layout(new_layout);
 
   command_buffer_.pipelineBarrier(src_stage_mask, dst_stage_mask, vk::DependencyFlagBits::eByRegion,
                                   0, nullptr, 0, nullptr, 1, &barrier);
