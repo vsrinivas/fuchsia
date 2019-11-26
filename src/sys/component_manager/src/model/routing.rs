@@ -507,25 +507,22 @@ async fn walk_offer_chain<'a>(
                 RoutedCapability::Use(use_decl) => {
                     ComponentManagerCapability::builtin_from_use_decl(use_decl).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(
-                            "no matching use found for capability {:?} from component {}",
+                            "no matching use found for capability {:?}",
                             pos.capability,
-                            pos.moniker(),
                         ))
                     })
                 }
                 RoutedCapability::Offer(offer_decl) => {
                     ComponentManagerCapability::builtin_from_offer_decl(offer_decl).map_err(|_| {
                         ModelError::capability_discovery_error(format_err!(
-                            "no matching offers found for capability {:?} from component {}",
+                            "no matching offers found for capability {:?}",
                             pos.capability,
-                            pos.moniker(),
                         ))
                     })
                 }
                 _ => Err(ModelError::capability_discovery_error(format_err!(
-                    "Unsupported capability {:?} from component {}",
+                    "Unsupported capability {:?}",
                     pos.capability,
-                    pos.moniker(),
                 ))),
             }?;
 
