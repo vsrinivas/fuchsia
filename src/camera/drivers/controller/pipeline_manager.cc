@@ -24,9 +24,7 @@ const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* i
   return nullptr;
 }
 
-// NOTE: This API currently supports only debug config
-// At a later point it will also need to take care of scenarios where same source stream
-// provides multiple output streams.
+// NOTE: This API currently supports only single consumer node use cases.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
     const InternalConfigNode& producer, PipelineInfo* info) {
   fuchsia::sysmem::BufferCollectionInfo_2 buffers;
@@ -44,8 +42,8 @@ fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManage
     // TODO(braval): Add support for the case of two consumer nodes, which will be needed for the
     // video conferencing config.
     std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
-    constraints.push_back(producer.constraints);
-    constraints.push_back(consumer->constraints);
+    constraints.push_back(producer.output_constraints);
+    constraints.push_back(consumer->input_constraints);
 
     auto status = memory_allocator_.AllocateSharedMemory(constraints, &buffers);
     if (status != ZX_OK) {

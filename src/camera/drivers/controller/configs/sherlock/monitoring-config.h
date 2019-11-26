@@ -223,7 +223,10 @@ static InternalConfigNode Gdc1() {
           {
               GdcConfig::MONITORING_ML,
           },
-      .constraints = Gdc1Constraints(),
+      .input_constraints = Gdc1Constraints(),
+      // This node doesn't need |output_constraints| because next node is Output node so
+      // there is no need to create internal buffers.
+      .output_constraints = InvalidConstraints(),
       .image_formats = OutputStreamMLDSImageFormats(),
   };
 }
@@ -260,7 +263,9 @@ InternalConfigNode MonitorConfigFullRes() {
                   Gdc1(),
               },
           },
-      .constraints = MonitorConfigFullResConstraints(),
+      // Input node doesn't need |input_constraints|
+      .input_constraints = InvalidConstraints(),
+      .output_constraints = MonitorConfigFullResConstraints(),
       .image_formats = OutputStreamMLFRImageFormats(),
   };
 }
@@ -310,7 +315,9 @@ static InternalConfigNode Gdc2() {
               GdcConfig::MONITORING_480p,
               GdcConfig::MONITORING_360p,
           },
-      .constraints = Gdc2Constraints(),
+      .input_constraints = Gdc2Constraints(),
+      // This node does need |output_constraints| when we add GE2D node.
+      .output_constraints = InvalidConstraints(),
       .image_formats = OutputStreamMonitoringImageFormats(),
   };
 }
@@ -341,7 +348,9 @@ InternalConfigNode MonitorConfigDownScaledRes() {
                   Gdc2(),
               },
           },
-      .constraints = MonitorConfigDownScaledResConstraints(),
+      .input_constraints = InvalidConstraints(),
+      .output_constraints = MonitorConfigDownScaledResConstraints(),
+      // Input node doesn't need |input_constraints|
       .image_formats = MonitorConfigDownScaledResImageFormats(),
   };
 }
