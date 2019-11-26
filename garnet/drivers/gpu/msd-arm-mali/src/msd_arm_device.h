@@ -150,6 +150,7 @@ class MsdArmDevice : public msd_device_t,
   void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
   static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
   bool PowerDownL2();
+  bool PowerDownShaders();
   bool ResetDevice();
 
   magma::Status ProcessDumpStatusToLog();

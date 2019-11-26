@@ -43,6 +43,44 @@ class TestPowerManager {
     }
   }
 
+  void MockDisable() {
+    auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
+    auto power_manager = std::make_unique<PowerManager>(reg_io.get());
+
+    constexpr uint64_t kCoresEnabled = 2;
+    constexpr uint32_t kShaderReadyOffset =
+        static_cast<uint32_t>(registers::CoreReadyState::CoreType::kShader) +
+        static_cast<uint32_t>(registers::CoreReadyState::StatusType::kReady);
+    reg_io->Write32(kShaderReadyOffset, kCoresEnabled);
+
+    power_manager->DisableShaders(reg_io.get());
+
+    registers::CoreReadyState::CoreType actions[] = {registers::CoreReadyState::CoreType::kShader,
+                                                     registers::CoreReadyState::CoreType::kL2,
+                                                     registers::CoreReadyState::CoreType::kTiler};
+    for (size_t i = 0; i < fbl::count_of(actions); i++) {
+      uint32_t offset =
+          static_cast<uint32_t>(actions[i]) +
+          static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOff);
+
+      if (actions[i] == registers::CoreReadyState::CoreType::kShader)
+        EXPECT_EQ(kCoresEnabled, reg_io->Read32(offset));
+      else
+        EXPECT_EQ(0u, reg_io->Read32(offset));
+    }
+    power_manager->DisableL2(reg_io.get());
+    for (size_t i = 0; i < fbl::count_of(actions); i++) {
+      uint32_t offset =
+          static_cast<uint32_t>(actions[i]) +
+          static_cast<uint32_t>(registers::CoreReadyState::ActionType::kActionPowerOff);
+
+      if (actions[i] == registers::CoreReadyState::CoreType::kShader)
+        EXPECT_EQ(kCoresEnabled, reg_io->Read32(offset));
+      else
+        EXPECT_EQ(1u, reg_io->Read32(offset));
+    }
+  }
+
   void TimeCoalesce() {
     auto reg_io = std::make_unique<magma::RegisterIo>(MockMmio::Create(1024 * 1024));
     PowerManager power_manager(reg_io.get());
@@ -66,6 +104,11 @@ class TestPowerManager {
 TEST(PowerManager, MockEnable) {
   TestPowerManager test;
   test.MockEnable();
+}
+
+TEST(PowerManager, MockDisable) {
+  TestPowerManager test;
+  test.MockDisable();
 }
 
 TEST(PowerManager, TimeAccumulation) {

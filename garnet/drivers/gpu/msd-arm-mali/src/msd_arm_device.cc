@@ -1101,8 +1101,13 @@ bool MsdArmDevice::ExitProtectedMode() {
   // hit the MMU while that's happening.
   address_manager_->ClearAddressMappings(false);
 
+  if (!PowerDownShaders()) {
+    MAGMA_LOG(ERROR, "Powering down shaders timed out");
+    // Keep trying to reset the device, or the job scheduler will hang forever.
+  }
   if (!PowerDownL2()) {
-    return DRETF(false, "Powering down L2 timed out\n");
+    MAGMA_LOG(ERROR, "Powering down L2 timed out");
+    // Keep trying to reset the device, or the job scheduler will hang forever.
   }
 
   return ResetDevice();
@@ -1136,6 +1141,11 @@ bool MsdArmDevice::ResetDevice() {
 bool MsdArmDevice::PowerDownL2() {
   power_manager_->DisableL2(register_io_.get());
   return power_manager_->WaitForL2Disable(register_io_.get());
+}
+
+bool MsdArmDevice::PowerDownShaders() {
+  power_manager_->DisableShaders(register_io_.get());
+  return power_manager_->WaitForShaderDisable(register_io_.get());
 }
 
 bool MsdArmDevice::IsInProtectedMode() {

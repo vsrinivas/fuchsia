@@ -24,7 +24,7 @@ void PowerManager::EnableCores(magma::RegisterIo* io, uint64_t shader_bitmask) {
                                         registers::CoreReadyState::ActionType::kActionPowerOn, 1);
 }
 
-void PowerManager::DisableL2(magma::RegisterIo* io) {
+void PowerManager::DisableShaders(magma::RegisterIo* io) {
   uint32_t powered_on_shaders =
       registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
                                              registers::CoreReadyState::StatusType::kReady) |
@@ -35,10 +35,28 @@ void PowerManager::DisableL2(magma::RegisterIo* io) {
   registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kShader,
                                         registers::CoreReadyState::ActionType::kActionPowerOff,
                                         powered_on_shaders);
+}
+
+void PowerManager::DisableL2(magma::RegisterIo* io) {
   registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kL2,
                                         registers::CoreReadyState::ActionType::kActionPowerOff, 1);
   registers::CoreReadyState::WriteState(io, registers::CoreReadyState::CoreType::kTiler,
                                         registers::CoreReadyState::ActionType::kActionPowerOff, 1);
+}
+
+bool PowerManager::WaitForShaderDisable(magma::RegisterIo* io) {
+  while (true) {
+    uint32_t powered_on =
+        registers::CoreReadyState::ReadBitmask(io, registers::CoreReadyState::CoreType::kShader,
+                                               registers::CoreReadyState::StatusType::kReady) |
+        registers::CoreReadyState::ReadBitmask(
+            io, registers::CoreReadyState::CoreType::kShader,
+            registers::CoreReadyState::StatusType::kPowerTransitioning);
+    if (!powered_on)
+      return true;
+    if (!power_state_semaphore_->Wait(1000))
+      return false;
+  }
 }
 
 bool PowerManager::WaitForL2Disable(magma::RegisterIo* io) {

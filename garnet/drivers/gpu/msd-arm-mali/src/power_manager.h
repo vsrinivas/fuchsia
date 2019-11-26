@@ -5,12 +5,12 @@
 #ifndef GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_POWER_MANAGER_H_
 #define GARNET_DRIVERS_GPU_MSD_ARM_MALI_SRC_POWER_MANAGER_H_
 
-#include <magma_util/macros.h>
-#include <magma_util/register_io.h>
-
 #include <chrono>
 #include <deque>
 #include <mutex>
+
+#include <magma_util/macros.h>
+#include <magma_util/register_io.h>
 
 #include "platform_semaphore.h"
 
@@ -40,7 +40,9 @@ class PowerManager {
   bool GetTotalTime(uint32_t* buffer_out);
 
   void DisableL2(magma::RegisterIo* io);
+  void DisableShaders(magma::RegisterIo* io);
   bool WaitForL2Disable(magma::RegisterIo* io);
+  bool WaitForShaderDisable(magma::RegisterIo* io);
   bool WaitForShaderReady(magma::RegisterIo* io);
 
  private:
