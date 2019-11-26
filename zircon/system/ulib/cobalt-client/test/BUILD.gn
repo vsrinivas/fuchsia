@@ -9,11 +9,13 @@ group("test") {
   ]
 }
 
-source_set("cobalt-logger-test") {
+source_set("collector-test") {
   testonly = true
   sources = [
     "cobalt_logger_test.cc",
+    "collector_test.cc",
   ]
+  include_dirs = [ "../include/" ]
   deps = [
     "$zx/system/fidl/fuchsia-cobalt:llcpp",
     "$zx/system/ulib/async:async-cpp",
@@ -24,37 +26,48 @@ source_set("cobalt-logger-test") {
     "$zx/system/ulib/cobalt-client:collector",
     "$zx/system/ulib/cobalt-client:in-memory-logger",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/sync",
     "$zx/system/ulib/fit",
     "$zx/system/ulib/zxtest",
   ]
 }
 
-zx_test("cobalt-client-unit") {
+source_set("metrics-test") {
+  testonly= true
   sources = [
-    "collector_test.cc",
     "counter_test.cc",
     "histogram_test.cc",
-    "in-memory-logger-test.cc",
-    "main.cc",
     "metric_options_test.cc",
   ]
+  include_dirs = [ "../include/" ]
   deps = [
-    ":cobalt-logger-test",
-    "$zx/system/fidl/fuchsia-cobalt:c",
-    "$zx/system/fidl/fuchsia-io:c",
-    "$zx/system/fidl/fuchsia-mem:c",
-    "$zx/system/ulib/async",
-    "$zx/system/ulib/async:async-cpp",
-    "$zx/system/ulib/async:async-default",
-    "$zx/system/ulib/async-loop",
-    "$zx/system/ulib/async-loop:async-loop-cpp",
-    "$zx/system/ulib/async-loop:async-loop-default.static",
-    "$zx/system/ulib/cobalt-client",
-    "$zx/system/ulib/cobalt-client:in-memory-logger",
-    "$zx/system/ulib/fidl",
-    "$zx/system/ulib/fidl-utils",
     "$zx/system/ulib/sync",
-    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/cobalt-client:types-internal",
+    "$zx/system/ulib/cobalt-client:metrics",
+    "$zx/system/ulib/cobalt-client:collector",
+    "$zx/system/ulib/fit",
     "$zx/system/ulib/zxtest",
+  ]
+}
+
+source_set("in-memory-logger-test") {
+  testonly= true
+  sources = [
+    "in-memory-logger-test.cc",
+  ]
+  include_dirs = [ "../include/" ]
+  deps = [
+    "$zx/system/ulib/cobalt-client:metrics",
+    "$zx/system/ulib/cobalt-client:in-memory-logger",
+    "$zx/system/ulib/zxtest",
+  ]
+}
+
+zx_test("cobalt-client-unit") {
+  sources = []
+  deps = [
+    ":collector-test",
+    ":metrics-test",
+    ":in-memory-logger-test",
   ]
 }
