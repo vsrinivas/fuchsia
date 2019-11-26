@@ -111,8 +111,6 @@ void AudioAdminTest::SetUp() {
       });
 
   environment()->ConnectToService(audio_core_sync_.NewRequest());
-  audio_core_sync_->SetSystemGain(0.0f);
-  audio_core_sync_->SetSystemMute(false);
 }
 
 void AudioAdminTest::TearDown() {
@@ -254,6 +252,25 @@ void AudioAdminTest::SetUpRenderer(unsigned int index, fuchsia::media::AudioRend
   audio_renderer_[index]->SetUsage(usage);
   audio_renderer_[index]->SetPcmStreamType(format);
   audio_renderer_[index]->AddPayloadBuffer(0, std::move(payload_vmo));
+
+  // TODO(41973): Move into device setup.
+  audio_dev_enum_->SetDeviceGain(virtual_audio_output_token_,
+                                 fuchsia::media::AudioGainInfo{
+                                     .gain_db = 0.0,
+                                     .flags = 0,
+                                 },
+                                 fuchsia::media::SetAudioGainFlag_GainValid);
+
+  uint64_t gain_adjusted_token = 0;
+  fuchsia::media::AudioGainInfo gain_info;
+  audio_dev_enum_->GetDeviceGain(virtual_audio_output_token_, [&gain_adjusted_token, &gain_info](
+                                                                  auto token, auto new_gain_info) {
+    gain_info = new_gain_info;
+    gain_adjusted_token = token;
+  });
+  RunLoopUntil([this, &gain_adjusted_token]() {
+    return gain_adjusted_token == virtual_audio_output_token_;
+  });
 
   // All audio renderers, by default, are set to 0 dB unity gain (passthru).
 }
