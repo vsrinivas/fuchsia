@@ -4,6 +4,7 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         model::{testing::test_helpers, AbsoluteMoniker, ComponentManagerConfig},
         startup,
     },
@@ -36,8 +37,7 @@ async fn main() -> Result<(), Error> {
     info!("Component manager for test is starting up...");
     let model = startup::model_setup(&args).await?;
     let builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-            .await?;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
     let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();

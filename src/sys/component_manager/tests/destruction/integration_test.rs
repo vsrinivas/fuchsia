@@ -4,6 +4,7 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         model::{
             self,
             hooks::*,
@@ -35,7 +36,7 @@ async fn destruction() -> Result<(), Error> {
     };
     let model = startup::model_setup(&args).await?;
     let _builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default()).await;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await;
     let test_hook = TestHook::new();
 
     let breakpoint_system = BreakpointSystem::new();

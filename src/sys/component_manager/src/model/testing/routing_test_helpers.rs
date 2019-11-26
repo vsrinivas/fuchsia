@@ -4,6 +4,7 @@
 
 use {
     crate::{
+        builtin_environment::BuiltinEnvironment,
         klog,
         model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
         model::*,
@@ -129,13 +130,10 @@ impl RoutingTest {
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
         }));
-        let builtin_environment = startup::builtin_environment_setup(
-            &startup_args,
-            &model,
-            ComponentManagerConfig::default(),
-        )
-        .await
-        .expect("builtin environment setup failed");
+        let builtin_environment =
+            BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
+                .await
+                .expect("builtin environment setup failed");
 
         model.root_realm.hooks.install(additional_hooks).await;
         model.root_realm.hooks.install(echo_service.hooks()).await;

@@ -32,7 +32,7 @@ impl RootRealmStopNotifier {
         }]
     }
 
-    pub async fn wait_for_root_realm_destroy(self) {
+    pub async fn wait_for_root_realm_stop(self) {
         self.rx.await.expect("Failed to wait for root instance to be stopped");
     }
 }

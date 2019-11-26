@@ -4,9 +4,10 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         model::{
             self, hooks::*, testing::breakpoints::*, testing::test_helpers, AbsoluteMoniker,
-            BuiltinEnvironment, ComponentManagerConfig, Model,
+            ComponentManagerConfig, Model,
         },
         startup,
     },
@@ -76,8 +77,7 @@ impl TestRunner {
         let model = startup::model_setup(&args).await?;
         let hub_test_hook = install_hub_test_hook(&model).await;
         let builtin_environment =
-            startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-                .await?;
+            BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
 
         // Setup ServiceFs
         let hub_proxy = builtin_environment.bind_service_fs_for_hub(&model).await?;

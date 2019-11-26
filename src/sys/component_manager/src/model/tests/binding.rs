@@ -3,9 +3,12 @@
 // found in the LICENSE file.
 
 use {
-    crate::model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
-    crate::model::*,
-    crate::startup,
+    crate::{
+        builtin_environment::BuiltinEnvironment,
+        model::testing::{mocks::*, test_helpers::*, test_hook::TestHook},
+        model::*,
+        startup,
+    },
     cm_rust::{self, ChildDecl, ComponentDecl},
     fidl_fuchsia_sys2 as fsys,
     std::collections::HashSet,
@@ -37,13 +40,10 @@ async fn new_model_with(
         root_resolver_registry: resolver,
         elf_runner: Arc::new(mock_runner),
     }));
-    let builtin_environment = startup::builtin_environment_setup(
-        &startup_args,
-        &model,
-        ComponentManagerConfig::default(),
-    )
-    .await
-    .expect("builtin environment setup failed");
+    let builtin_environment =
+        BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
+            .await
+            .expect("builtin environment setup failed");
     model.root_realm.hooks.install(additional_hooks).await;
     (model, builtin_environment)
 }

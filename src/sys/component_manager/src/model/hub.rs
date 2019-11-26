@@ -607,17 +607,22 @@ impl model::Hook for HubInner {
 mod tests {
     use {
         super::*,
-        crate::model::{
-            self,
-            testing::mocks,
-            testing::{
-                test_helpers::*,
-                test_helpers::{dir_contains, list_directory, list_directory_recursive, read_file},
-                test_hook::HubInjectionTestHook,
+        crate::{
+            builtin_environment::BuiltinEnvironment,
+            model::{
+                self,
+                testing::mocks,
+                testing::{
+                    test_helpers::*,
+                    test_helpers::{
+                        dir_contains, list_directory, list_directory_recursive, read_file,
+                    },
+                    test_hook::HubInjectionTestHook,
+                },
+                ComponentManagerConfig,
             },
-            BuiltinEnvironment, ComponentManagerConfig,
+            startup,
         },
-        crate::startup,
         cm_rust::{
             self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeDirectoryDecl,
             ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, UseDecl, UseDirectoryDecl,
@@ -738,13 +743,10 @@ mod tests {
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
         }));
-        let builtin_environment = startup::builtin_environment_setup(
-            &startup_args,
-            &model,
-            ComponentManagerConfig::default(),
-        )
-        .await
-        .expect("failed to set up builtin environment");
+        let builtin_environment =
+            BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
+                .await
+                .expect("failed to set up builtin environment");
         let hub_proxy = builtin_environment
             .bind_service_fs_for_hub(&model)
             .await

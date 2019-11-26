@@ -5,19 +5,10 @@
 use {
     crate::{
         elf_runner::{ElfRunner, ProcessLauncherConnector},
-        framework::RealmCapabilityHost,
         fuchsia_base_pkg_resolver,
         fuchsia_boot_resolver::{self, FuchsiaBootResolver},
         fuchsia_pkg_resolver,
-        model::{
-            error::ModelError, hub::Hub, testing::breakpoints::BreakpointSystem,
-            BuiltinEnvironment, ComponentManagerConfig, HooksRegistration, Model, ModelParams,
-            OutgoingBinder, ResolverRegistry,
-        },
-        process_launcher::ProcessLauncher,
-        system_controller::SystemController,
-        vmex::VmexService,
-        work_scheduler::WorkScheduler,
+        model::{Model, ModelParams, ResolverRegistry},
     },
     failure::{format_err, Error, ResultExt},
     fidl::endpoints::ServiceMarker,
@@ -166,56 +157,6 @@ fn connect_sys_loader() -> Result<Option<LoaderProxy>, Error> {
     return Ok(Some(loader));
 }
 
-/// Serves services built into component_manager and provides methods for connecting to those
-/// services.
-pub struct BuiltinRootCapabilities {
-    pub work_scheduler: Arc<WorkScheduler>,
-    process_launcher: Option<Arc<ProcessLauncher>>,
-    vmex_service: Option<Arc<VmexService>>,
-    system_controller: Arc<SystemController>,
-}
-
-// TODO(fsamuel): Merge BuiltinRootCapabilities and BuiltinEnvironment.
-impl BuiltinRootCapabilities {
-    /// Creates a new BuiltinRootCapabilities. The available built-in capabilities depends on the
-    /// configuration provided in Arguments:
-    ///
-    /// * If [Arguments::use_builtin_process_launcher] is true, a fuchsia.process.Launcher service
-    ///   is available.
-    /// * If [Arguments::use_builtin_vmex] is true, a fuchsia.security.resource.Vmex service is
-    ///   available.
-    pub async fn new(args: &Arguments, model: &Arc<Model>) -> Self {
-        let mut process_launcher = None;
-        if args.use_builtin_process_launcher {
-            process_launcher = Some(Arc::new(ProcessLauncher::new()));
-        }
-        let mut vmex_service = None;
-        if args.use_builtin_vmex {
-            vmex_service = Some(Arc::new(VmexService::new()));
-        }
-        Self {
-            work_scheduler: WorkScheduler::new(Arc::downgrade(model) as Weak<dyn OutgoingBinder>)
-                .await,
-            process_launcher,
-            vmex_service,
-            system_controller: Arc::new(SystemController::new()),
-        }
-    }
-
-    pub fn hooks(&self) -> Vec<HooksRegistration> {
-        let mut all_hooks: Vec<HooksRegistration> = vec![];
-        all_hooks.append(&mut WorkScheduler::hooks(&self.work_scheduler));
-        if let Some(process_launcher) = &self.process_launcher {
-            all_hooks.append(&mut process_launcher.hooks());
-        }
-        if let Some(vmex_service) = &self.vmex_service {
-            all_hooks.append(&mut vmex_service.hooks());
-        }
-        all_hooks.append(&mut self.system_controller.hooks());
-        all_hooks
-    }
-}
-
 /// Creates and sets up a model with standard parameters. This is easier than setting up the
 /// model manually with `Model::new()`.
 pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
@@ -243,26 +184,6 @@ pub async fn model_setup(args: &Arguments) -> Result<Arc<Model>, Error> {
 
     *model_for_resolver.lock().await = Some(Arc::downgrade(&model));
     Ok(model)
-}
-
-pub async fn builtin_environment_setup(
-    args: &Arguments,
-    model: &Arc<Model>,
-    config: ComponentManagerConfig,
-) -> Result<BuiltinEnvironment, ModelError> {
-    let builtin_capabilities = Arc::new(BuiltinRootCapabilities::new(args, model).await);
-    let realm_capability_host = RealmCapabilityHost::new(model.clone(), config);
-    model.root_realm.hooks.install(realm_capability_host.hooks()).await;
-    model.root_realm.hooks.install(builtin_capabilities.hooks()).await;
-    let hub = Hub::new(args.root_component_url.clone())?;
-    let breakpoint_system = {
-        if args.debug {
-            Some(BreakpointSystem::new())
-        } else {
-            None
-        }
-    };
-    Ok(BuiltinEnvironment::new(builtin_capabilities, realm_capability_host, hub, breakpoint_system))
 }
 
 #[cfg(test)]

@@ -340,6 +340,7 @@ mod tests {
     use super::*;
     use {
         crate::{
+            builtin_environment::BuiltinEnvironment,
             model::testing::{mocks::*, routing_test_helpers::*, test_helpers::*, test_hook::*},
             startup,
         },
@@ -388,7 +389,7 @@ mod tests {
                 elf_runner: Arc::new(mock_runner),
             }));
             let builtin_environment = Arc::new(
-                startup::builtin_environment_setup(&startup_args, &model, config)
+                BuiltinEnvironment::new(&startup_args, &model, config)
                     .await
                     .expect("failed to set up builtin environment"),
             );

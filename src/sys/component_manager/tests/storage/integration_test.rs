@@ -4,6 +4,7 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         model::{
             hooks::*,
             moniker::AbsoluteMoniker,
@@ -53,8 +54,7 @@ async fn storage() -> Result<(), Error> {
     };
     let model = startup::model_setup(&args).await?;
     let _builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-            .await?;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
 
     let root_moniker = AbsoluteMoniker::root();
     model.bind(&root_moniker).await.context("could not bind to root realm")?;
@@ -87,8 +87,7 @@ async fn storage_from_collection() -> Result<(), Error> {
     };
     let model = startup::model_setup(&args).await?;
     let builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-            .await?;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
 
     let test_hook = TestHook::new();
 

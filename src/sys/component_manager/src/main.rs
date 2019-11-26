@@ -7,8 +7,9 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         klog,
-        model::{AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, Model},
+        model::{AbsoluteMoniker, ComponentManagerConfig, Model},
         startup,
     },
     failure::{Error, ResultExt},
@@ -36,7 +37,7 @@ fn main() -> Result<(), Error> {
     let fut = async {
         match run_root(args).await {
             Ok((model, _builtin_environment)) => {
-                model.wait_for_root_realm_destroy().await;
+                model.wait_for_root_realm_stop().await;
             }
             Err(err) => {
                 error!("Component manager setup failed: {:?}", err);
@@ -52,8 +53,7 @@ fn main() -> Result<(), Error> {
 async fn run_root(args: startup::Arguments) -> Result<(Arc<Model>, BuiltinEnvironment), Error> {
     let model = startup::model_setup(&args).await.context("failed to set up model")?;
     let builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-            .await?;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
     builtin_environment.bind_service_fs_to_out(&model).await?;
 
     let root_moniker = AbsoluteMoniker::root();

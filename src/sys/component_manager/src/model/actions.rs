@@ -248,9 +248,12 @@ fn ok_or_first_error(results: Vec<Result<(), ModelError>>) -> Result<(), ModelEr
 mod tests {
     use super::*;
     use {
-        crate::klog,
-        crate::model::testing::{mocks::*, test_helpers::*, test_hook::*},
-        crate::startup::{self, Arguments},
+        crate::{
+            builtin_environment::BuiltinEnvironment,
+            klog,
+            model::testing::{mocks::*, test_helpers::*, test_hook::*},
+            startup::Arguments,
+        },
         cm_rust::{
             CapabilityPath, ChildDecl, CollectionDecl, ComponentDecl, ExposeDecl,
             ExposeLegacyServiceDecl, ExposeSource, ExposeTarget, NativeIntoFidl, OfferDecl,
@@ -368,13 +371,9 @@ mod tests {
             // to start and stop in a certain lifecycle ordering. In particular, some unit
             // tests will destroy component instances before binding to their parents.
             let builtin_environment = Arc::new(
-                startup::builtin_environment_setup(
-                    &args,
-                    &model,
-                    ComponentManagerConfig::default(),
-                )
-                .await
-                .expect("failed to set up builtin environment"),
+                BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default())
+                    .await
+                    .expect("failed to set up builtin environment"),
             );
             let builtin_environment_inner = builtin_environment.clone();
             let test_hook = TestHook::new();

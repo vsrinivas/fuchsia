@@ -4,9 +4,10 @@
 
 use {
     component_manager_lib::{
+        builtin_environment::BuiltinEnvironment,
         model::{
-            self, AbsoluteMoniker, BuiltinEnvironment, ComponentManagerConfig, EventType, Hook,
-            HooksRegistration, Model,
+            self, AbsoluteMoniker, ComponentManagerConfig, EventType, Hook, HooksRegistration,
+            Model,
         },
         startup,
     },
@@ -33,8 +34,7 @@ async fn create_model(root_component_url: &str) -> Result<(Arc<Model>, BuiltinEn
     };
     let model = startup::model_setup(&args).await?;
     let builtin_environment =
-        startup::builtin_environment_setup(&args, &model, ComponentManagerConfig::default())
-            .await?;
+        BuiltinEnvironment::new(&args, &model, ComponentManagerConfig::default()).await?;
     Ok((model, builtin_environment))
 }
 
@@ -96,8 +96,7 @@ async fn unbound_work_scheduler_test() -> Result<(), Error> {
         "fuchsia-pkg://fuchsia.com/work_scheduler_integration_test#meta/worker_client.cm";
     let test_runner = TestRunner::new(root_component_url).await?;
     let model = test_runner.model;
-    let work_scheduler =
-        test_runner.builtin_environment.builtin_capabilities.work_scheduler.clone();
+    let work_scheduler = test_runner.builtin_environment.work_scheduler.clone();
 
     work_scheduler
         .schedule_work(
