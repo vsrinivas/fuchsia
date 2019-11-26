@@ -72,7 +72,7 @@ class StrictSimpleXUnion final {
   static StrictSimpleXUnion WithS(::std::string&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -80,7 +80,6 @@ class StrictSimpleXUnion final {
     kI = 1851697276,  // 0x6e5ea87c
     kF = 855207063,  // 0x32f96c97
     kS = 850602487,  // 0x32b329f7
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<StrictSimpleXUnion> New() { return ::std::make_unique<StrictSimpleXUnion>(); }
@@ -88,8 +87,6 @@ class StrictSimpleXUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, StrictSimpleXUnion* value, size_t offset);
   zx_status_t Clone(StrictSimpleXUnion* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_i() const { return tag_ == Tag::kI; }
   
@@ -143,7 +140,7 @@ class StrictSimpleXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int32_t i_;
     float f_;
@@ -173,13 +170,12 @@ class StrictBoundedXUnion final {
   static StrictBoundedXUnion WithV(::std::vector<uint8_t>&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
   
     kV = 2024555624,  // 0x78ac4468
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<StrictBoundedXUnion> New() { return ::std::make_unique<StrictBoundedXUnion>(); }
@@ -187,8 +183,6 @@ class StrictBoundedXUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, StrictBoundedXUnion* value, size_t offset);
   zx_status_t Clone(StrictBoundedXUnion* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_v() const { return tag_ == Tag::kV; }
   
@@ -222,7 +216,7 @@ class StrictBoundedXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     ::std::vector<uint8_t> v_;
   };
@@ -251,7 +245,7 @@ class OlderSimpleUnion final {
   static OlderSimpleUnion WithF(float&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -260,7 +254,6 @@ class OlderSimpleUnion final {
   
     kI = 1026732503,  // 0x3d32b1d7
     kF = 1362546558,  // 0x5136cf7e
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<OlderSimpleUnion> New() { return ::std::make_unique<OlderSimpleUnion>(); }
@@ -268,8 +261,6 @@ class OlderSimpleUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, OlderSimpleUnion* value, size_t offset);
   zx_status_t Clone(OlderSimpleUnion* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_i() const { return tag_ == Tag::kI; }
   
@@ -323,7 +314,7 @@ class OlderSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     float f_;
@@ -556,7 +547,7 @@ class NewerSimpleUnion final {
   static NewerSimpleUnion WithV(::std::vector<::std::string>&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -566,7 +557,6 @@ class NewerSimpleUnion final {
     kI = 693944286,  // 0x295cbfde
     kS = 473666119,  // 0x1c3b9247
     kV = 1815655055,  // 0x6c38b28f
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<NewerSimpleUnion> New() { return ::std::make_unique<NewerSimpleUnion>(); }
@@ -574,8 +564,6 @@ class NewerSimpleUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, NewerSimpleUnion* value, size_t offset);
   zx_status_t Clone(NewerSimpleUnion* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_i() const { return tag_ == Tag::kI; }
   
@@ -640,7 +628,7 @@ class NewerSimpleUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     ::std::string s_;
@@ -672,7 +660,7 @@ class ExplicitXUnion final {
   static ExplicitXUnion WithF(float&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -681,7 +669,6 @@ class ExplicitXUnion final {
   
     kI = 1,  // 0x1
     kF = 4,  // 0x4
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<ExplicitXUnion> New() { return ::std::make_unique<ExplicitXUnion>(); }
@@ -689,8 +676,6 @@ class ExplicitXUnion final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, ExplicitXUnion* value, size_t offset);
   zx_status_t Clone(ExplicitXUnion* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_i() const { return tag_ == Tag::kI; }
   
@@ -744,7 +729,7 @@ class ExplicitXUnion final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     int64_t i_;
     float f_;
@@ -795,7 +780,7 @@ class XUnionContainingEmptyStruct final {
   static XUnionContainingEmptyStruct WithEmpty(class Empty&&);
 
   enum class InternalTag : fidl_xunion_tag_t {
-    kEmpty_internalUseOnly = kFidlXUnionEmptyTag,
+    kEmpty = kFidlXUnionEmptyTag,
   };
 
   enum __attribute__((enum_extensibility(closed))) Tag : fidl_xunion_tag_t {
@@ -803,7 +788,6 @@ class XUnionContainingEmptyStruct final {
     Empty = kUnknown,  // DEPRECATED: use kUnknown instead.
   
     kEmpty = 424858069,  // 0x1952d1d5
-    Invalid = ::std::numeric_limits<::fidl_union_tag_t>::max(),
   };
 
   static inline ::std::unique_ptr<XUnionContainingEmptyStruct> New() { return ::std::make_unique<XUnionContainingEmptyStruct>(); }
@@ -811,8 +795,6 @@ class XUnionContainingEmptyStruct final {
   void Encode(::fidl::Encoder* encoder, size_t offset);
   static void Decode(::fidl::Decoder* decoder, XUnionContainingEmptyStruct* value, size_t offset);
   zx_status_t Clone(XUnionContainingEmptyStruct* result) const;
-
-  bool has_invalid_tag() const { return Which() == Tag::Invalid; }
 
   bool is_empty() const { return tag_ == Tag::kEmpty; }
   
@@ -855,7 +837,7 @@ class XUnionContainingEmptyStruct final {
   void Destroy();
   void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
 
-  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty_internalUseOnly);
+  ::fidl_xunion_tag_t tag_ = static_cast<fidl_xunion_tag_t>(InternalTag::kEmpty);
   union {
     class Empty empty_;
     std::vector<uint8_t> unknown_data_;
@@ -932,7 +914,7 @@ struct Equality<::test::name::StrictSimpleXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::StrictSimpleXUnion::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::StrictSimpleXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::StrictSimpleXUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -988,7 +970,7 @@ struct Equality<::test::name::StrictBoundedXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::StrictBoundedXUnion::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::StrictBoundedXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::StrictBoundedXUnion::Tag::kV:
         return ::fidl::Equals(_lhs.v_, _rhs.v_);
@@ -1040,7 +1022,7 @@ struct Equality<::test::name::OlderSimpleUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::OlderSimpleUnion::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::OlderSimpleUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::OlderSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1093,7 +1075,7 @@ struct Equality<::test::name::NewerSimpleUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::NewerSimpleUnion::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::NewerSimpleUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::NewerSimpleUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1148,7 +1130,7 @@ struct Equality<::test::name::ExplicitXUnion> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::ExplicitXUnion::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::ExplicitXUnion::InternalTag::kEmpty):
         return true;
       case ::test::name::ExplicitXUnion::Tag::kI:
         return ::fidl::Equals(_lhs.i_, _rhs.i_);
@@ -1219,7 +1201,7 @@ struct Equality<::test::name::XUnionContainingEmptyStruct> {
     }
 
     switch (_lhs.Ordinal()) {
-      case static_cast<fidl_xunion_tag_t>(::test::name::XUnionContainingEmptyStruct::InternalTag::kEmpty_internalUseOnly):
+      case static_cast<fidl_xunion_tag_t>(::test::name::XUnionContainingEmptyStruct::InternalTag::kEmpty):
         return true;
       case ::test::name::XUnionContainingEmptyStruct::Tag::kEmpty:
         return ::fidl::Equals(_lhs.empty_, _rhs.empty_);

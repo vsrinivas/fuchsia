@@ -120,10 +120,6 @@ void TestHarnessImpl::ConnectToModularService(fuchsia::modular::testing::Modular
     case fuchsia::modular::testing::ModularService::Tag::kAgentContext: {
       BufferSessionAgentService(std::move(service.agent_context()));
     } break;
-
-    case fuchsia::modular::testing::ModularService::Tag::Invalid:
-      assert(false && "should not have improperly constructed ModularService");
-      return;
   }
 }
 

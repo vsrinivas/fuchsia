@@ -65,9 +65,6 @@ std::string ToInspect(const fuchsia::modular::AnnotationValue& value) {
     case fuchsia::modular::AnnotationValue::Tag::kUnknown:
       text = "unknown";
       break;
-    case fuchsia::modular::AnnotationValue::Tag::Invalid:
-      text = "invalid";
-      break;
   }
   return text;
 }
