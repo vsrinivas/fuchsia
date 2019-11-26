@@ -6,13 +6,25 @@
 
 #include <lib/fit/function.h>
 
+#include <variant>
+
 #include "src/lib/fxl/logging.h"
 #include "src/ui/lib/escher/forward_declarations.h"
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
+#include "src/ui/lib/escher/util/align.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/gpu_mem.h"
 
 namespace escher {
+
+namespace {
+
+// Vulkan specs requires that bufferOffset in VkBufferImageCopy be multiple of
+// 4, so we enforce that all buffer offsets (including buffers and images) align
+// to multiples of 4 by aligning up the addresses.
+constexpr vk::DeviceSize kByteAlignment = 4;
+
+}  // namespace
 
 std::unique_ptr<BatchGpuDownloader> BatchGpuDownloader::New(EscherWeakPtr weak_escher,
                                                             CommandBuffer::Type command_buffer_type,
@@ -24,47 +36,6 @@ std::unique_ptr<BatchGpuDownloader> BatchGpuDownloader::New(EscherWeakPtr weak_e
   }
   return std::make_unique<BatchGpuDownloader>(std::move(weak_escher), command_buffer_type,
                                               frame_trace_number);
-}
-
-BatchGpuDownloader::Reader::Reader(CommandBufferPtr command_buffer, BufferPtr buffer)
-    : command_buffer_(std::move(command_buffer)), buffer_(std::move(buffer)) {
-  FXL_DCHECK(command_buffer_ && buffer_);
-}
-
-BatchGpuDownloader::Reader::~Reader() { FXL_DCHECK(!command_buffer_ && !buffer_); }
-
-void BatchGpuDownloader::Reader::ReadBuffer(const BufferPtr& source, vk::BufferCopy region) {
-  TRACE_DURATION("gfx", "escher::BatchGpuDownloader::Reader::ReadBuffer");
-
-  command_buffer_->vk().copyBuffer(source->vk(), buffer_->vk(), 1, &region);
-  command_buffer_->KeepAlive(source);
-}
-
-void BatchGpuDownloader::Reader::ReadImage(const ImagePtr& source, vk::BufferImageCopy region) {
-  TRACE_DURATION("gfx", "escher::BatchGpuDownloader::Reader::ReadImage");
-
-  auto source_layout = source->layout();
-  auto target_layout =
-      source->is_layout_initialized() ? source->layout() : vk::ImageLayout::eShaderReadOnlyOptimal;
-
-  command_buffer_->TransitionImageLayout(source, source_layout,
-                                         vk::ImageLayout::eTransferSrcOptimal);
-  command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
-                                          buffer_->vk(), 1, &region);
-  command_buffer_->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
-                                         target_layout);
-  command_buffer_->KeepAlive(source);
-}
-
-CommandBufferPtr BatchGpuDownloader::Reader::TakeCommandsAndShutdown() {
-  FXL_DCHECK(command_buffer_);
-  // Assume that if a reader was requested, it was read from, and the buffer
-  // needs to be kept alive.
-  command_buffer_->KeepAlive(buffer_);
-
-  // Underlying CommandBuffer is being removed, shutdown this writer.
-  buffer_ = nullptr;
-  return std::move(command_buffer_);
 }
 
 BatchGpuDownloader::BatchGpuDownloader(EscherWeakPtr weak_escher,
@@ -82,6 +53,7 @@ void BatchGpuDownloader::Initialize() {
   // TODO(ES-115) Back the downloader with transfer queue command buffers
   // directly, rather than use a frame to manage GPU submits, when command
   // buffer recycling is refactored.
+  FXL_DCHECK(!has_submitted_);
   if (!frame_) {
     frame_ = escher_->NewFrame("Gpu Downloader", frame_trace_number_,
                                /*enable_gpu_logging=*/false, command_buffer_type_,
@@ -93,54 +65,99 @@ void BatchGpuDownloader::Initialize() {
   }
   FXL_DCHECK(buffer_cache_);
 
+  command_buffer_ = frame_->TakeCommandBuffer();
+  FXL_DCHECK(command_buffer_) << "Error getting the frame's command buffer.";
+
+  current_offset_ = 0U;
   is_initialized_ = true;
 }
 
-std::unique_ptr<BatchGpuDownloader::Reader> BatchGpuDownloader::AcquireReader(vk::DeviceSize size) {
+void BatchGpuDownloader::ScheduleReadBuffer(const BufferPtr& source, vk::BufferCopy region,
+                                            BatchGpuDownloader::CallbackType callback) {
   if (!is_initialized_) {
     Initialize();
   }
-  FXL_DCHECK(frame_);
-  FXL_DCHECK(size);
-  // TODO(SCN-846) Relax this check once Readers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Reader.
-  FXL_DCHECK(reader_count_ == 0);
+  FXL_DCHECK(!has_submitted_);
+  FXL_DCHECK(region.dstOffset == 0U);
 
-  TRACE_DURATION("gfx", "escher::BatchGpuDownloader::AcquireReader");
+  TRACE_DURATION("gfx", "escher::BatchGpuDownloader::ScheduleReadBuffer");
+  vk::DeviceSize dst_offset = AlignedToNext(current_offset_, kByteAlignment);
+  auto final_region = vk::BufferCopy(region.srcOffset, dst_offset, region.size);
 
-  vk::DeviceSize vk_size = size;
-  BufferPtr buffer = buffer_cache_->NewHostBuffer(vk_size);
-  FXL_DCHECK(buffer) << "Error allocating buffer";
-
-  CommandBufferPtr command_buffer = frame_->TakeCommandBuffer();
-  FXL_DCHECK(command_buffer) << "Error getting the frame's command buffer.";
-
-  ++reader_count_;
-  return std::make_unique<BatchGpuDownloader::Reader>(std::move(command_buffer), std::move(buffer));
+  copy_info_records_.push_back(
+      CopyInfo{.type = CopyType::COPY_BUFFER,
+               .offset = dst_offset,
+               .size = region.size,
+               .callback = std::move(callback),
+               .copy_info = BufferCopyInfo{.source = source, .region = final_region}});
+  current_offset_ = dst_offset + copy_info_records_.back().size;
+  command_buffer_->KeepAlive(source);
 }
 
-void BatchGpuDownloader::PostReader(std::unique_ptr<BatchGpuDownloader::Reader> reader,
-                                    fit::function<void(escher::BufferPtr buffer)> callback) {
-  FXL_DCHECK(frame_);
-  if (!reader) {
-    return;
+void BatchGpuDownloader::ScheduleReadImage(const ImagePtr& source, vk::BufferImageCopy region,
+                                           BatchGpuDownloader::CallbackType callback) {
+  if (!is_initialized_) {
+    Initialize();
   }
-  read_callbacks_.push_back(std::make_pair(reader->buffer(), std::move(callback)));
+  FXL_DCHECK(!has_submitted_);
+  FXL_DCHECK(region.bufferOffset == 0U);
 
-  // TODO(SCN-846) Relax this check once Readers are backed by secondary
-  // buffers, and the frame's primary command buffer is not moved into the
-  // Reader.
-  FXL_DCHECK(reader_count_ == 1);
+  // For now we expect that we only accept full image to be downloadable.
+  FXL_DCHECK(region.imageOffset == vk::Offset3D(0, 0, 0) &&
+             region.imageExtent == vk::Extent3D(source->width(), source->height(), 1U));
 
-  auto command_buffer = reader->TakeCommandsAndShutdown();
-  frame_->PutCommandBuffer(std::move(command_buffer));
-  --reader_count_;
-  reader.reset();
+  TRACE_DURATION("gfx", "escher::BatchGpuDownloader::ScheduleReadImage");
+  vk::DeviceSize dst_offset = AlignedToNext(current_offset_, kByteAlignment);
+  auto final_region = region;
+  final_region.setBufferOffset(dst_offset);
+
+  copy_info_records_.push_back(
+      CopyInfo{.type = CopyType::COPY_IMAGE,
+               .offset = dst_offset,
+               // TODO(add a bug) Use the size calculated from region.
+               .size = source->size(),
+               .callback = std::move(callback),
+               .copy_info = ImageCopyInfo{.source = source, .region = final_region}});
+  current_offset_ = dst_offset + copy_info_records_.back().size;
+  command_buffer_->KeepAlive(source);
+}
+
+void BatchGpuDownloader::CopyBuffersAndImagesToTargetBuffer(BufferPtr target_buffer) {
+  TRACE_DURATION("gfx", "BatchGpuDownloader::CopyBuffersAndImagesToTargetBuffer");
+
+  for (const auto& copy_info_record : copy_info_records_) {
+    switch (copy_info_record.type) {
+      case CopyType::COPY_IMAGE: {
+        const auto* image_copy_info = std::get_if<ImageCopyInfo>(&copy_info_record.copy_info);
+        FXL_DCHECK(image_copy_info);
+
+        ImagePtr source = image_copy_info->source;
+        auto source_layout = source->layout();
+        auto target_layout = source->is_layout_initialized()
+                                 ? source->layout()
+                                 : vk::ImageLayout::eShaderReadOnlyOptimal;
+
+        command_buffer_->TransitionImageLayout(source, source_layout,
+                                               vk::ImageLayout::eTransferSrcOptimal);
+        command_buffer_->vk().copyImageToBuffer(source->vk(), vk::ImageLayout::eTransferSrcOptimal,
+                                                target_buffer->vk(), 1, &image_copy_info->region);
+        command_buffer_->TransitionImageLayout(source, vk::ImageLayout::eTransferSrcOptimal,
+                                               target_layout);
+        break;
+      }
+      case CopyType::COPY_BUFFER: {
+        const auto* buffer_copy_info = std::get_if<BufferCopyInfo>(&copy_info_record.copy_info);
+        FXL_DCHECK(buffer_copy_info);
+
+        command_buffer_->vk().copyBuffer(buffer_copy_info->source->vk(), target_buffer->vk(), 1,
+                                         &buffer_copy_info->region);
+        break;
+      }
+    }
+  }
 }
 
 void BatchGpuDownloader::Submit(fit::function<void()> callback) {
-  FXL_DCHECK(reader_count_ == 0);
   if (!is_initialized_) {
     // This downloader was never used, nothing to submit.
     if (callback) {
@@ -148,19 +165,34 @@ void BatchGpuDownloader::Submit(fit::function<void()> callback) {
     }
     return;
   }
+  FXL_DCHECK(!has_submitted_);
   FXL_DCHECK(frame_);
 
-  TRACE_DURATION("gfx", "BatchGpuDownloader::SubmitBatch");
-  frame_->EndFrame(SemaphorePtr(),
-                   [callback = std::move(callback), read_callbacks = std::move(read_callbacks_)]() {
-                     for (auto& [buffer, read_callback_function] : read_callbacks) {
-                       read_callback_function(buffer);
-                     }
-                     if (callback) {
-                       callback();
-                     }
-                   });
+  TRACE_DURATION("gfx", "BatchGpuDownloader::Submit");
+
+  // Create a large buffer to store all images / buffers to be downloaded.
+  vk::DeviceSize buffer_size = copy_info_records_.back().offset + copy_info_records_.back().size;
+  BufferPtr buffer = buffer_cache_->NewHostBuffer(buffer_size);
+  FXL_DCHECK(buffer) << "Error allocating buffer";
+  command_buffer_->KeepAlive(buffer);
+
+  // Put all the copy commands to the command buffer, and send the command
+  // buffer back to |frame_|.
+  CopyBuffersAndImagesToTargetBuffer(buffer);
+  frame_->PutCommandBuffer(std::move(command_buffer_));
+
+  frame_->EndFrame(
+      SemaphorePtr(), [callback = std::move(callback), readers_info = std::move(copy_info_records_),
+                       buffer = std::move(buffer)]() {
+        for (const auto& reader_info : readers_info) {
+          reader_info.callback(buffer->host_ptr() + reader_info.offset, reader_info.size);
+        }
+        if (callback) {
+          callback();
+        }
+      });
   frame_ = nullptr;
+  has_submitted_ = true;
 }
 
 }  // namespace escher

@@ -83,31 +83,41 @@ class RoundedRectangleSerializer : public ShapeSerializer {
 
 class AttributeBufferSerializer : public Serializer<snapshot::AttributeBuffer> {
  public:
-  int vertex_count;
-  int stride;
-  escher::BufferPtr buffer;
+  AttributeBufferSerializer(size_t vertex_count, size_t stride, const void* host_ptr, size_t size)
+      : vertex_count_(vertex_count), stride_(stride), host_ptr_(host_ptr), size_(size) {}
 
   virtual Offset<snapshot::AttributeBuffer> serialize(FlatBufferBuilder& builder) override {
     uint8_t* bytes = nullptr;
-    auto fb_buffer = builder.CreateUninitializedVector(buffer->size(), &bytes);
-    memcpy(bytes, buffer->host_ptr(), buffer->size());
+    auto fb_buffer = builder.CreateUninitializedVector(size_, &bytes);
+    memcpy(bytes, host_ptr_, size_);
 
-    return snapshot::CreateAttributeBuffer(builder, fb_buffer, vertex_count, stride);
+    return snapshot::CreateAttributeBuffer(builder, fb_buffer, vertex_count_, stride_);
   }
+
+ private:
+  const size_t vertex_count_ = 0U;
+  const size_t stride_ = 0U;
+  const void* const host_ptr_ = nullptr;
+  const size_t size_ = 0U;
 };
 
 class IndexBufferSerializer : public Serializer<snapshot::IndexBuffer> {
  public:
-  int index_count;
-  escher::BufferPtr buffer;
+  IndexBufferSerializer(size_t index_count, const void* host_ptr, size_t size)
+      : index_count_(index_count), host_ptr_(host_ptr), size_(size) {}
 
   virtual Offset<snapshot::IndexBuffer> serialize(FlatBufferBuilder& builder) override {
     uint8_t* bytes = nullptr;
-    auto fb_buffer = builder.CreateUninitializedVector(buffer->size(), &bytes);
-    memcpy(bytes, buffer->host_ptr(), buffer->size());
+    auto fb_buffer = builder.CreateUninitializedVector(size_, &bytes);
+    memcpy(bytes, host_ptr_, size_);
 
-    return snapshot::CreateIndexBuffer(builder, fb_buffer, index_count);
+    return snapshot::CreateIndexBuffer(builder, fb_buffer, index_count_);
   }
+
+ private:
+  const size_t index_count_ = 0U;
+  const void* const host_ptr_ = nullptr;
+  const size_t size_ = 0U;
 };
 
 class GeometrySerializer : public Serializer<snapshot::Geometry> {
@@ -146,17 +156,24 @@ class ColorSerializer : public MaterialSerializer {
 
 class ImageSerializer : public MaterialSerializer {
  public:
-  int32_t format, width, height;
-  escher::BufferPtr buffer;
+  ImageSerializer(int32_t format, size_t width, size_t height, const void* host_ptr, size_t size)
+      : format_(format), width_(width), height_(height), host_ptr_(host_ptr), size_(size) {}
 
   virtual snapshot::Material type() override { return snapshot::Material_Image; }
   virtual Offset<void> serialize(FlatBufferBuilder& builder) override {
     uint8_t* bytes = nullptr;
-    auto data = builder.CreateUninitializedVector(buffer->size(), &bytes);
-    memcpy(bytes, buffer->host_ptr(), buffer->size());
+    auto data = builder.CreateUninitializedVector(size_, &bytes);
+    memcpy(bytes, host_ptr_, size_);
 
-    return snapshot::CreateImage(builder, format, width, height, data).Union();
+    return snapshot::CreateImage(builder, format_, width_, height_, data).Union();
   }
+
+ private:
+  const int32_t format_ = static_cast<int32_t>(vk::Format::eUndefined);
+  const size_t width_ = 0U;
+  const size_t height_ = 0U;
+  const void* const host_ptr_ = nullptr;
+  const size_t size_ = 0U;
 };
 
 class TransformSerializer : public Serializer<snapshot::Transform> {

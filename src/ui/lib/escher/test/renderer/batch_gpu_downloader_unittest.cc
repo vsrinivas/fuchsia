@@ -54,13 +54,9 @@ VK_TEST_F(BatchGpuDownloaderTest, CallbackTriggeredOnEmptyDownloader) {
   EXPECT_TRUE(callback_executed);
 }
 
-VK_TEST_F(BatchGpuDownloaderTest, AcquireThenSubmitReader) {
+VK_TEST_F(BatchGpuDownloaderTest, SubmitEmptyDownloader) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuDownloader> downloader = BatchGpuDownloader::New(escher);
-
-  auto reader = downloader->AcquireReader(256);
-  bool reader_done = false;
-  downloader->PostReader(std::move(reader), [&reader_done](BufferPtr) { reader_done = true; });
 
   // BatchGpuDownloader must be submitted before it is destroyed.
   bool batch_download_done = false;
@@ -69,19 +65,31 @@ VK_TEST_F(BatchGpuDownloaderTest, AcquireThenSubmitReader) {
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
-  EXPECT_TRUE(reader_done);
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, LazyInitializationTest) {
   auto escher = test::GetEscher()->GetWeakPtr();
+
+  // Create buffer to read from.
+  const size_t buffer_size = 3 * sizeof(vec3);
+  BufferFactoryAdapter buffer_factory(escher->gpu_allocator(), escher->resource_recycler());
+  BufferPtr vertex_buffer = buffer_factory.NewBuffer(buffer_size,
+                                                     vk::BufferUsageFlagBits::eVertexBuffer |
+                                                         vk::BufferUsageFlagBits::eTransferSrc |
+                                                         vk::BufferUsageFlagBits::eTransferDst,
+                                                     vk::MemoryPropertyFlagBits::eDeviceLocal);
+  ASSERT_TRUE(vertex_buffer) << "Fatal: Cannot allocate device-local vertex buffer.";
+
   std::unique_ptr<BatchGpuDownloader> downloader = BatchGpuDownloader::New(escher);
 
-  // BatchGpuDownloader will not be initialized until instantiation of Readers.
+  // BatchGpuDownloader will not be initialized until we schedule a read.
   EXPECT_FALSE(downloader->HasContentToDownload());
 
-  auto reader = downloader->AcquireReader(256);
-  bool reader_done = false;
-  downloader->PostReader(std::move(reader), [&reader_done](BufferPtr) { reader_done = true; });
+  // Read the vertex buffer.
+  bool read_done = false;
+  downloader->ScheduleReadBuffer(
+      vertex_buffer, {0, 0, vertex_buffer->size()},
+      [&read_done](const void* host_ptr, size_t size) { read_done = true; });
 
   EXPECT_TRUE(downloader->HasContentToDownload());
 
@@ -91,7 +99,7 @@ VK_TEST_F(BatchGpuDownloaderTest, LazyInitializationTest) {
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
-  EXPECT_TRUE(reader_done);
+  EXPECT_TRUE(read_done);
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, SupportAllCommandBufferTypes) {
@@ -106,8 +114,6 @@ VK_TEST_F(BatchGpuDownloaderTest, SupportAllCommandBufferTypes) {
     const auto command_buffer_type = kCommandBufferTypes[i];
     std::unique_ptr<BatchGpuDownloader> downloader =
         BatchGpuDownloader::New(escher, command_buffer_type);
-    auto reader = downloader->AcquireReader(256);
-    downloader->PostReader(std::move(reader), [](BufferPtr) {});
     downloader->Submit([done_ptr = &downloaders_done[i]]() { *done_ptr = true; });
   }
 
@@ -116,33 +122,6 @@ VK_TEST_F(BatchGpuDownloaderTest, SupportAllCommandBufferTypes) {
   for (size_t i = 0; i < downloaders_done.size(); ++i) {
     EXPECT_TRUE(downloaders_done[i]);
   }
-}
-
-VK_TEST_F(BatchGpuDownloaderTest, AcquireThenSubmitMultipleReaders) {
-  auto escher = test::GetEscher()->GetWeakPtr();
-  std::unique_ptr<BatchGpuDownloader> downloader = BatchGpuDownloader::New(escher);
-
-  auto reader = downloader->AcquireReader(256);
-  downloader->PostReader(std::move(reader), [](BufferPtr) {});
-  // CommandBuffer should not have been posted to the driver, cleanup should
-  // fail.
-  escher->vk_device().waitIdle();
-  EXPECT_FALSE(escher->Cleanup());
-
-  auto reader2 = downloader->AcquireReader(256);
-  downloader->PostReader(std::move(reader2), [](BufferPtr) {});
-  // CommandBuffer should not have been posted to the driver, cleanup should
-  // fail.
-  escher->vk_device().waitIdle();
-  EXPECT_FALSE(escher->Cleanup());
-
-  bool batched_download_done = false;
-  downloader->Submit([&batched_download_done]() { batched_download_done = true; });
-  // Trigger Cleanup, which triggers the callback on the submitted command
-  // buffer.
-  escher->vk_device().waitIdle();
-  EXPECT_TRUE(escher->Cleanup());
-  EXPECT_TRUE(batched_download_done);
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, InitializeUploaderAndDownloader) {
@@ -154,11 +133,7 @@ VK_TEST_F(BatchGpuDownloaderTest, InitializeUploaderAndDownloader) {
   auto downloader = BatchGpuDownloader::New(escher);
 
   auto writer = uploader->AcquireWriter(256);
-  auto reader = downloader->AcquireReader(256);
-  bool reader_done = false;
-
   uploader->PostWriter(std::move(writer));
-  downloader->PostReader(std::move(reader), [&reader_done](BufferPtr) { reader_done = true; });
 
   bool uploader_finished = false;
   bool batch_download_done = false;
@@ -169,7 +144,6 @@ VK_TEST_F(BatchGpuDownloaderTest, InitializeUploaderAndDownloader) {
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(uploader_finished);
   EXPECT_TRUE(batch_download_done);
-  EXPECT_TRUE(reader_done);
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
@@ -199,17 +173,15 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
 
   BatchGpuDownloader downloader(escher, CommandBuffer::Type::kGraphics, 0);
   downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
-  auto reader = downloader.AcquireReader(image->size());
-  reader->ReadImage(image, region);
-  // Verify that the "download done" Semaphore was set on the image.
 
   bool read_image_done = false;
-  downloader.PostReader(std::move(reader), [&read_image_done, original = std::move(pixels),
-                                            num_bytes = kWidth * kHeight](BufferPtr buffer) {
-    bool pixels_match = !memcmp(original.get(), buffer->host_ptr(), num_bytes);
-    EXPECT_TRUE(pixels_match);
-    read_image_done = true;
-  });
+  downloader.ScheduleReadImage(image, region,
+                               [&read_image_done, original = std::move(pixels),
+                                num_bytes = kWidth * kHeight](const void* host_ptr, size_t size) {
+                                 bool pixels_match = !memcmp(original.get(), host_ptr, num_bytes);
+                                 EXPECT_TRUE(pixels_match);
+                                 read_image_done = true;
+                               });
 
   bool batch_download_done = false;
   downloader.Submit([&batch_download_done]() { batch_download_done = true; });
@@ -220,7 +192,7 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadImageTest) {
   EXPECT_TRUE(batch_download_done);
 }
 
-// For each Read() operation of BatchGpuDownloader::Reader, the Reader will
+// For each Read() operation of BatchGpuDownloader, BatchGpuDownloader will
 // keep the image layout if image layout is initialized; otherwise it will set
 // image layout to eShaderReadOnlyOptimal.
 //
@@ -259,27 +231,26 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadTheSameImageTwice) {
   // We first read the image to a buffer.
   BatchGpuDownloader downloader(escher, CommandBuffer::Type::kGraphics, 0);
   downloader.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
-  auto reader = downloader.AcquireReader(image->size());
-  reader->ReadImage(image, region);
-  // Verify that the "download done" Semaphore was set on the image.
 
   bool read_image_done = false;
-  downloader.PostReader(std::move(reader),
-                        [&read_image_done](BufferPtr buffer) { read_image_done = true; });
+  downloader.ScheduleReadImage(
+      image, region,
+      [&read_image_done](const void* host_ptr, size_t size) { read_image_done = true; });
+
   bool batch_download_done = false;
   downloader.Submit([&batch_download_done]() { batch_download_done = true; });
 
   // After submitting the downloader command queue, read the same image again.
-  // In this case Reader will do eShaderReadOnlyOptimal -> eTransferSrc
-  // and eTransferSrc -> eShaderReadOnlyOptimal conversion.
+  // In this case BatchGpuDownloader will do eShaderReadOnlyOptimal ->
+  // eTransferSrc and eTransferSrc -> eShaderReadOnlyOptimal conversion.
   BatchGpuDownloader downloader2(escher, CommandBuffer::Type::kGraphics, 0);
   downloader2.AddWaitSemaphore(sema, vk::PipelineStageFlagBits::eTransfer);
-  auto reader2 = downloader2.AcquireReader(image->size());
-  reader2->ReadImage(image, region);
 
   bool read_image_done_2 = false;
-  downloader2.PostReader(std::move(reader2),
-                         [&read_image_done_2](BufferPtr buffer) { read_image_done_2 = true; });
+  downloader2.ScheduleReadImage(
+      image, region,
+      [&read_image_done_2](const void* host_ptr, size_t size) { read_image_done_2 = true; });
+
   bool batch_download_done_2 = false;
   downloader2.Submit([&batch_download_done_2]() { batch_download_done_2 = true; });
 
@@ -318,19 +289,18 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadBufferTest) {
   // Do read.
   std::unique_ptr<BatchGpuDownloader> downloader =
       BatchGpuDownloader::New(escher, CommandBuffer::Type::kTransfer);
-  auto reader = downloader->AcquireReader(buffer_size);
-  reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
 
   bool read_buffer_done = false;
-  downloader->PostReader(std::move(reader), [&read_buffer_done](BufferPtr buffer) {
-    void* host_ptr = buffer->host_ptr();
-    vec3* const verts = static_cast<vec3*>(host_ptr);
-    EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
-    EXPECT_EQ(verts[1], vec3(0.f, 1.f, 0.f));
-    EXPECT_EQ(verts[2], vec3(1.f, 0.f, 0.f));
+  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                                 [&read_buffer_done](const void* host_ptr, size_t size) {
+                                   const vec3* verts = static_cast<const vec3*>(host_ptr);
+                                   EXPECT_EQ(verts[0], vec3(0.f, 0.f, 0.f));
+                                   EXPECT_EQ(verts[1], vec3(0.f, 1.f, 0.f));
+                                   EXPECT_EQ(verts[2], vec3(1.f, 0.f, 0.f));
 
-    read_buffer_done = true;
-  });
+                                   read_buffer_done = true;
+                                 });
+
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
 
@@ -340,11 +310,11 @@ VK_TEST_F(BatchGpuDownloaderTest, ReadBufferTest) {
   EXPECT_TRUE(batch_download_done);
 }
 
-// Test to make sure that multiple readers can access the same
-// buffer and still succesfully submit work to the GPU and have
-// it finish. This is to make sure that the command buffer does
-// not get stuck waiting on itself.
-VK_TEST_F(BatchGpuDownloaderTest, MultipleReaderSameBuffer) {
+// Test to make sure that multiple downloader can access the same buffer
+// multiple times and still succesfully submit work to the GPU and have it
+// finish. This is to make sure that the command buffer does not get stuck
+// waiting on itself.
+VK_TEST_F(BatchGpuDownloaderTest, MultipleReadToSameBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
   std::unique_ptr<BatchGpuDownloader> downloader = BatchGpuDownloader::New(escher);
 
@@ -358,29 +328,26 @@ VK_TEST_F(BatchGpuDownloaderTest, MultipleReaderSameBuffer) {
                                                      vk::MemoryPropertyFlagBits::eDeviceLocal);
   ASSERT_TRUE(vertex_buffer) << "Fatal: Cannot allocate device-local vertex buffer.";
 
-  // Create a reader and read the vertex buffer.
-  bool reader_callback_executed = false;
-  auto reader = downloader->AcquireReader(vertex_buffer->size());
-  reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  downloader->PostReader(std::move(reader), [&reader_callback_executed](BufferPtr) {
-    reader_callback_executed = true;
-  });
+  // Read the vertex buffer.
+  bool read_callback_executed = false;
+  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                                 [&read_callback_executed](const void* host_ptr, size_t size) {
+                                   read_callback_executed = true;
+                                 });
 
-  // Create a second reader and read the *same* vertex buffer.
-  bool reader2_callback_executed = false;
-  auto reader2 = downloader->AcquireReader(vertex_buffer->size());
-  reader2->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  downloader->PostReader(std::move(reader2), [&reader2_callback_executed](BufferPtr) {
-    reader2_callback_executed = true;
-  });
+  // Read the *same* vertex buffer again.
+  bool read2_callback_executed = false;
+  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                                 [&read2_callback_executed](const void* host_ptr, size_t size) {
+                                   read2_callback_executed = true;
+                                 });
 
-  // Create a third reader and read the *same* vertex buffer.
-  bool reader3_callback_executed = false;
-  auto reader3 = downloader->AcquireReader(vertex_buffer->size());
-  reader3->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
-  downloader->PostReader(std::move(reader3), [&reader3_callback_executed](BufferPtr) {
-    reader3_callback_executed = true;
-  });
+  // Read the *same* vertex buffer once again.
+  bool read3_callback_executed = false;
+  downloader->ScheduleReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()},
+                                 [&read3_callback_executed](const void* host_ptr, size_t size) {
+                                   read3_callback_executed = true;
+                                 });
 
   bool batch_download_done = false;
   downloader->Submit([&batch_download_done]() { batch_download_done = true; });
@@ -390,9 +357,9 @@ VK_TEST_F(BatchGpuDownloaderTest, MultipleReaderSameBuffer) {
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());
   EXPECT_TRUE(batch_download_done);
-  EXPECT_TRUE(reader_callback_executed);
-  EXPECT_TRUE(reader2_callback_executed);
-  EXPECT_TRUE(reader3_callback_executed);
+  EXPECT_TRUE(read_callback_executed);
+  EXPECT_TRUE(read2_callback_executed);
+  EXPECT_TRUE(read3_callback_executed);
 }
 
 VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
@@ -423,21 +390,20 @@ VK_TEST_F(BatchGpuDownloaderTest, DISABLED_ReadAfterWriteSucceeds) {
   // Posting and submitting should succeed.
   uploader->PostWriter(std::move(writer));
 
-  // Create reader to read from the buffer pending a write.
+  // Create a BatchGpuDownloader to read from the buffer pending a write.
   auto downloader = BatchGpuDownloader::New(escher, CommandBuffer::Type::kTransfer);
-  auto reader = downloader->AcquireReader(buffer_size);
-  reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
 
   bool read_buffer_done = false;
-  downloader->PostReader(std::move(reader), [&read_buffer_done, &write_verts](BufferPtr buffer) {
-    void* host_ptr = buffer->host_ptr();
-    vec3* const read_verts = static_cast<vec3*>(host_ptr);
-    EXPECT_EQ(read_verts[0], write_verts[0]);
-    EXPECT_EQ(read_verts[1], write_verts[1]);
-    EXPECT_EQ(read_verts[2], write_verts[2]);
+  downloader->ScheduleReadBuffer(
+      vertex_buffer, {0, 0, vertex_buffer->size()},
+      [&read_buffer_done, &write_verts](const void* host_ptr, size_t size) {
+        const vec3* read_verts = static_cast<const vec3*>(host_ptr);
+        EXPECT_EQ(read_verts[0], write_verts[0]);
+        EXPECT_EQ(read_verts[1], write_verts[1]);
+        EXPECT_EQ(read_verts[2], write_verts[2]);
 
-    read_buffer_done = true;
-  });
+        read_buffer_done = true;
+      });
 
   // Submit all the work.
   bool batch_download_done = false;

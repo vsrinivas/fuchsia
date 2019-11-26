@@ -157,12 +157,11 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
   signal_semaphores_.clear();
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
-  frame_->EndFrame(SemaphorePtr(),
-                   [callback = std::move(callback)]() {
-                     if (callback) {
-                       callback();
-                     }
-                   });
+  frame_->EndFrame(SemaphorePtr(), [callback = std::move(callback)]() {
+    if (callback) {
+      callback();
+    }
+  });
   frame_ = nullptr;
 }
 

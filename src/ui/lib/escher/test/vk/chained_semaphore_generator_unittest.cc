@@ -75,15 +75,13 @@ VK_TEST_F(ChainedSemaphoreGeneratorTest, SequentialUpload) {
 
   // Check if the image downloaded contains color_2.
   auto downloader = BatchGpuDownloader::New(escher);
-  auto reader = downloader->AcquireReader(image_size);
-  reader->ReadImage(image, region);
   bool downloaded = false;
   bool image_correct = false;
-  downloader->PostReader(std::move(reader),
-                         [&color_2, &downloaded, &image_correct](BufferPtr buffer) {
-                           downloaded = true;
-                           image_correct = memcmp(buffer->host_ptr(), color_2, image_size) == 0;
-                         });
+  downloader->ScheduleReadImage(
+      image, region, [&color_2, &downloaded, &image_correct](const void* host_ptr, size_t size) {
+        downloaded = true;
+        image_correct = memcmp(host_ptr, color_2, image_size) == 0;
+      });
   downloader->Submit();
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());

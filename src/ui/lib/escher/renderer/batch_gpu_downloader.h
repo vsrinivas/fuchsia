@@ -7,6 +7,8 @@
 
 #include <lib/fit/function.h>
 
+#include <variant>
+
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/renderer/buffer_cache.h"
 #include "src/ui/lib/escher/renderer/frame.h"
@@ -34,6 +36,8 @@ namespace escher {
 // synchronization.
 class BatchGpuDownloader {
  public:
+  using CallbackType = fit::function<void(const void* host_ptr, size_t size)>;
+
   static std::unique_ptr<BatchGpuDownloader> New(
       EscherWeakPtr weak_escher,
       CommandBuffer::Type command_buffer_type = CommandBuffer::Type::kGraphics,
@@ -44,57 +48,18 @@ class BatchGpuDownloader {
                      uint64_t frame_trace_number = 0);
   ~BatchGpuDownloader();
 
-  // Returns true if the BatchGpuDownloader has acquired a reader and has work
-  // to do on the GPU.
-  bool HasContentToDownload() const { return is_initialized_; }
+  // Returns true if the BatchGpuDownloader has work to do on the GPU.
+  bool HasContentToDownload() const { return !copy_info_records_.empty(); }
 
-  // Provides a pointer in host-accessible GPU memory, and methods to copy into
-  // this memory from Images and Buffers on the GPU.
+  // Schedule a buffer-to-buffer copy that will be submitted when Submit()
+  // is called.  Retains a reference to the source until the submission's
+  // CommandBuffer is retired.
+  void ScheduleReadBuffer(const BufferPtr& source, vk::BufferCopy region, CallbackType callback);
 
-  // TODO(41297): Remove Reader from BatchGpuDownloader; we can have one single
-  // buffer for all the downloads, and let BatchGpuDownloader manage all the
-  // downloads instead.
-  class Reader {
-   public:
-    Reader(CommandBufferPtr command_buffer, BufferPtr buffer);
-    ~Reader();
-
-    // Schedule a buffer-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places a wait semaphore on the source,
-    // which is signaled when the batched commands are done.
-    void ReadBuffer(const BufferPtr& source, vk::BufferCopy region);
-
-    // Schedule a image-to-buffer copy that will be submitted when Submit()
-    // is called.  Retains a reference to the source until the submission's
-    // CommandBuffer is retired. Places a wait semaphore on the source,
-    // which is signaled when the batched commands are done.
-    void ReadImage(const ImagePtr& source, vk::BufferImageCopy region);
-
-    const BufferPtr buffer() { return buffer_; }
-
-   private:
-    friend class BatchGpuDownloader;
-    // Gets the CommandBuffer to batch commands with all other posted readers.
-    // This reader cannot be used after the command buffer has been retrieved.
-    CommandBufferPtr TakeCommandsAndShutdown();
-
-    CommandBufferPtr command_buffer_;
-    BufferPtr buffer_;
-
-    FXL_DISALLOW_COPY_AND_ASSIGN(Reader);
-  };
-
-  // Obtain a Reader that has the specified amount of space to read into.
-  std::unique_ptr<Reader> AcquireReader(vk::DeviceSize size);
-
-  // Post a Reader to the batch uploader. The Reader's work will be posted to
-  // the host on Submit(). After submit, the callback will be called with the
-  // buffer read from the GPU.
-  // Note that callback will always be called even if there was no ReadBuffer()
-  // or ReadImage() called before.
-  void PostReader(std::unique_ptr<Reader> reader,
-                  fit::function<void(escher::BufferPtr buffer)> callback);
+  // Schedule a image-to-buffer copy that will be submitted when Submit()
+  // is called.  Retains a reference to the source until the submission's
+  // CommandBuffer is retired.
+  void ScheduleReadImage(const ImagePtr& source, vk::BufferImageCopy region, CallbackType callback);
 
   // Submits all Reader's work to the GPU. No Readers can be posted once Submit
   // is called. Callback function will be called after all work is done.
@@ -117,21 +82,48 @@ class BatchGpuDownloader {
   }
 
  private:
+  enum class CopyType { COPY_IMAGE = 0, COPY_BUFFER = 1 };
+  struct ImageCopyInfo {
+    ImagePtr source;
+    vk::BufferImageCopy region;
+  };
+  struct BufferCopyInfo {
+    BufferPtr source;
+    vk::BufferCopy region;
+  };
+  using CopyInfoVariant = std::variant<ImageCopyInfo, BufferCopyInfo>;
+
+  struct CopyInfo {
+    CopyType type;
+    vk::DeviceSize offset;
+    vk::DeviceSize size;
+    CallbackType callback;
+    // copy_info can either be a ImageCopyInfo or a BufferCopyInfo.
+    CopyInfoVariant copy_info;
+  };
+
   void Initialize();
 
-  int32_t reader_count_ = 0;
+  // Push all pending commands to |command_buffer_| to copy all the buffers and
+  // images we scheduled before to the target buffer.
+  void CopyBuffersAndImagesToTargetBuffer(BufferPtr target_buffer);
 
   EscherWeakPtr escher_;
 
   CommandBuffer::Type command_buffer_type_ = CommandBuffer::Type::kTransfer;
   bool is_initialized_ = false;
+  bool has_submitted_ = false;
+
   // The trace number for the frame. Cached to support lazy frame creation.
   const uint64_t frame_trace_number_;
   // Lazily created when the first Reader is acquired.
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
 
-  std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>> read_callbacks_;
+  CommandBufferPtr command_buffer_;
+  vk::DeviceSize current_offset_ = 0U;
+
+  std::vector<CopyInfo> copy_info_records_;
   std::vector<std::pair<SemaphorePtr, vk::PipelineStageFlags>> wait_semaphores_;
   std::vector<SemaphorePtr> signal_semaphores_;
 

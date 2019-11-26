@@ -135,7 +135,7 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
     gpu_uploader_for_replacements_->AddSignalSemaphore(replacement_semaphore);
     gpu_uploader_for_replacements_->Submit();
     gpu_downloader_->AddWaitSemaphore(std::move(replacement_semaphore),
-                                    vk::PipelineStageFlagBits::eTransfer);
+                                      vk::PipelineStageFlagBits::eTransfer);
   }
 
   // If the Snapshotter has a Engine binding, we need to ensure that the
@@ -315,14 +315,9 @@ void Snapshotter::VisitImage(escher::ImagePtr image) {
   auto width = image->width();
   auto height = image->height();
 
-  ReadImage(image, [format, width, height,
-                    node_serializer = current_node_serializer_](escher::BufferPtr buffer) {
-    auto image = std::make_shared<ImageSerializer>();
-    image->buffer = buffer;
-    image->format = format;
-    image->width = width;
-    image->height = height;
-
+  ReadImage(image, [format, width, height, node_serializer = current_node_serializer_](
+                       const void* host_ptr, size_t size) {
+    auto image = std::make_shared<ImageSerializer>(format, width, height, host_ptr, size);
     node_serializer->material = image;
   });
 }
@@ -346,27 +341,22 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
       continue;
     }
 
-    ReadBuffer(src_buffer, [geometry, is_index_buffer, mesh](escher::BufferPtr buffer) {
+    ReadBuffer(src_buffer, [geometry, is_index_buffer, mesh](const void* host_ptr, size_t size) {
       if (is_index_buffer) {
-        auto indices = std::make_shared<IndexBufferSerializer>();
-        indices->buffer = buffer;
-        indices->index_count = mesh->num_indices();
-
+        auto indices = std::make_shared<IndexBufferSerializer>(mesh->num_indices(), host_ptr, size);
         geometry->indices = indices;
       } else {
-        auto attribute = std::make_shared<AttributeBufferSerializer>();
-        attribute->buffer = buffer;
-        attribute->vertex_count = mesh->num_vertices();
-        attribute->stride = mesh->spec().stride(0);
-
+        auto attribute = std::make_shared<AttributeBufferSerializer>(
+            /* vertex_count */ mesh->num_vertices(), /* stride */ mesh->spec().stride(0), host_ptr,
+            size);
         geometry->attributes.push_back(attribute);
       }
     });
   }
 }
 
-void Snapshotter::ReadImage(escher::ImagePtr image,
-                            fit::function<void(escher::BufferPtr buffer)> callback) {
+void Snapshotter::ReadImage(const escher::ImagePtr& image,
+                            escher::BatchGpuDownloader::CallbackType callback) {
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;
@@ -377,16 +367,13 @@ void Snapshotter::ReadImage(escher::ImagePtr image,
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  auto reader = gpu_downloader_->AcquireReader(image->size());
-  reader->ReadImage(image, region);
-  gpu_downloader_->PostReader(std::move(reader), std::move(callback));
+  gpu_downloader_->ScheduleReadImage(image, region, std::move(callback));
 }
 
-void Snapshotter::ReadBuffer(escher::BufferPtr buffer,
-                             fit::function<void(escher::BufferPtr buffer)> callback) {
-  auto reader = gpu_downloader_->AcquireReader(buffer->size());
-  reader->ReadBuffer(buffer, {0, 0, buffer->size()});
-  gpu_downloader_->PostReader(std::move(reader), std::move(callback));
+void Snapshotter::ReadBuffer(const escher::BufferPtr& buffer,
+                             escher::BatchGpuDownloader::CallbackType callback) {
+  auto region = vk::BufferCopy(/* srcOffset */ 0, /* dstOffset */ 0, /* size */ buffer->size());
+  gpu_downloader_->ScheduleReadBuffer(buffer, region, std::move(callback));
 }
 
 }  // namespace gfx
