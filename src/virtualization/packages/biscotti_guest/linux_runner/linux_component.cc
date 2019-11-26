@@ -7,6 +7,8 @@
 #include <lib/async/default.h>
 #include <zircon/status.h>
 
+#include "src/lib/fxl/logging.h"
+
 namespace linux_runner {
 
 // static

@@ -7,10 +7,10 @@
 
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/guest_manager/realm_impl.h"
 
 class ManagerImpl : public fuchsia::virtualization::Manager {
@@ -27,7 +27,7 @@ class ManagerImpl : public fuchsia::virtualization::Manager {
   void List(ListCallback callback) override;
   void Connect(uint32_t id, fidl::InterfaceRequest<fuchsia::virtualization::Realm> env) override;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   std::unordered_map<uint32_t, std::unique_ptr<RealmImpl>> environments_;
   fidl::BindingSet<fuchsia::virtualization::Manager> bindings_;
 };

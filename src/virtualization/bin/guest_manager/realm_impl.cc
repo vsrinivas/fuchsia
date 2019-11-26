@@ -4,24 +4,27 @@
 
 #include "src/virtualization/bin/guest_manager/realm_impl.h"
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/fit/function.h>
 
 #include "src/lib/fxl/logging.h"
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 
-RealmImpl::RealmImpl(uint32_t id, const std::string& label, component::StartupContext* context,
+RealmImpl::RealmImpl(uint32_t id, const std::string& label, sys::ComponentContext* context,
                      fidl::InterfaceRequest<fuchsia::virtualization::Realm> request)
     : id_(id),
       label_(label),
       host_vsock_endpoint_(fit::bind_member(this, &RealmImpl::GetAcceptor)) {
   // Create environment.
-  context->environment()->CreateNestedEnvironment(
-      env_.NewRequest(), env_controller_.NewRequest(), label,
-      /*additional_services=*/nullptr, {.inherit_parent_services = true});
+  fuchsia::sys::EnvironmentPtr environment;
+  context->svc()->Connect(environment.NewRequest());
+  environment->CreateNestedEnvironment(env_.NewRequest(), env_controller_.NewRequest(), label,
+                                       /*additional_services=*/nullptr,
+                                       {.inherit_parent_services = true});
   env_->GetLauncher(launcher_.NewRequest());
   zx::channel h1, h2;
   FXL_CHECK(zx::channel::create(0, &h1, &h2) == ZX_OK);
-  context->environment()->GetDirectory(std::move(h1));
+  environment->GetDirectory(std::move(h1));
 
   AddBinding(std::move(request));
 }
@@ -37,23 +40,22 @@ void RealmImpl::AddBinding(fidl::InterfaceRequest<Realm> request) {
 void RealmImpl::LaunchInstance(fuchsia::virtualization::LaunchInfo launch_info,
                                fidl::InterfaceRequest<fuchsia::virtualization::Guest> controller,
                                LaunchInstanceCallback callback) {
-  component::Services services;
   fuchsia::sys::ComponentControllerPtr component_controller;
   fuchsia::sys::LaunchInfo info;
   info.url = launch_info.url;
   info.arguments = std::move(launch_info.args);
-  info.directory_request = services.NewRequest();
+  auto services = sys::ServiceDirectory::CreateWithRequest(&info.directory_request);
   info.flat_namespace = std::move(launch_info.flat_namespace);
   std::string label = launch_info.label.has_value() ? launch_info.label.value() : launch_info.url;
   auto guest_services = std::make_unique<GuestServices>(std::move(launch_info));
   info.additional_services = guest_services->ServeDirectory();
   launcher_->CreateComponent(std::move(info), component_controller.NewRequest());
-  services.ConnectToService(std::move(controller));
+  services->Connect(std::move(controller));
 
   // Setup guest endpoint.
   const uint32_t cid = next_guest_cid_++;
   fuchsia::virtualization::GuestVsockEndpointPtr guest_endpoint;
-  services.ConnectToService(guest_endpoint.NewRequest());
+  services->Connect(guest_endpoint.NewRequest());
   guest_endpoint.events().OnShutdown = fit::bind_member(this, &RealmImpl::OnVsockShutdown);
   auto endpoint =
       std::make_unique<GuestVsockEndpoint>(cid, std::move(guest_endpoint), &host_vsock_endpoint_);

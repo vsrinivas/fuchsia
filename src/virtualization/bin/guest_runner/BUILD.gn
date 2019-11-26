@@ -13,12 +13,14 @@ source_set("lib") {
   ]
 
   public_deps = [
+    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/fidl/fuchsia.virtualization.vmm",
-    "//src/lib/component/cpp",
+    "//sdk/lib/sys/cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/async-loop-default",
+    "//zircon/public/lib/fs",
   ]
 }
 

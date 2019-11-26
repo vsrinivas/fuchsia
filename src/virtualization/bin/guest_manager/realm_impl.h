@@ -9,10 +9,10 @@
 #include <fuchsia/virtualization/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
+#include <lib/sys/cpp/component_context.h>
 
 #include <unordered_map>
 
-#include "src/lib/component/cpp/startup_context.h"
 #include "src/virtualization/bin/guest_manager/guest_component.h"
 #include "src/virtualization/bin/guest_manager/host_vsock_endpoint.h"
 
@@ -23,7 +23,7 @@ static constexpr uint32_t kFirstGuestCid = 3;
 
 class RealmImpl : public fuchsia::virtualization::Realm {
  public:
-  RealmImpl(uint32_t id, const std::string& label, component::StartupContext* context,
+  RealmImpl(uint32_t id, const std::string& label, sys::ComponentContext* context,
             fidl::InterfaceRequest<fuchsia::virtualization::Realm> request);
 
   RealmImpl(const RealmImpl&) = delete;

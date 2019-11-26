@@ -11,7 +11,6 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/function.h>
-#include <lib/svc/cpp/service_provider_bridge.h>
 #include <lib/sys/cpp/outgoing_directory.h>
 #include <lib/zx/eventpair.h>
 

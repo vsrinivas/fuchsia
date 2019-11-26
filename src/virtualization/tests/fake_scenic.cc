@@ -12,7 +12,7 @@
 #include <lib/fit/defer.h>
 #include <lib/fostr/fidl/fuchsia/ui/gfx/formatting.h>
 #include <lib/fostr/fidl/fuchsia/ui/scenic/formatting.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 #include <string.h>
 #include <zircon/errors.h>
 

@@ -6,7 +6,7 @@
 
 GuestComponent::GuestComponent(const std::string& label,
                                std::unique_ptr<GuestVsockEndpoint> endpoint,
-                               component::Services services,
+                               std::shared_ptr<sys::ServiceDirectory> services,
                                std::unique_ptr<GuestServices> guest_services,
                                fuchsia::sys::ComponentControllerPtr component_controller)
     : label_(label),
@@ -17,10 +17,10 @@ GuestComponent::GuestComponent(const std::string& label,
 
 void GuestComponent::ConnectToInstance(
     fidl::InterfaceRequest<fuchsia::virtualization::Guest> request) {
-  services_.ConnectToService(std::move(request));
+  services_->Connect(std::move(request));
 }
 
 void GuestComponent::ConnectToBalloon(
     fidl::InterfaceRequest<fuchsia::virtualization::BalloonController> request) {
-  services_.ConnectToService(std::move(request));
+  services_->Connect(std::move(request));
 }

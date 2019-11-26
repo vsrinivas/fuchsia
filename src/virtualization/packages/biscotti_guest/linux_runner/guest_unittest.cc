@@ -21,6 +21,7 @@
 
 #include <unordered_map>
 
+#include "src/lib/fxl/logging.h"
 #include "src/virtualization/packages/biscotti_guest/linux_runner/ports.h"
 
 namespace linux_runner {

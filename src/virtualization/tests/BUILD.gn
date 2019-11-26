@@ -55,9 +55,9 @@ source_set("guest_console") {
     "socket.h",
   ]
   deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/inet",
     "//zircon/public/lib/fbl",
@@ -138,8 +138,8 @@ source_set("lib") {
     "//garnet/public/lib/fostr",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.virtualization",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl",
     "//src/lib/inet",
     "//src/virtualization/bin/vmm/device",

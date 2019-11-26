@@ -4,12 +4,13 @@
 
 #include "src/virtualization/bin/guest_runner/runner_impl.h"
 
-#include <fs/pseudo_dir.h>
-#include <fs/remote_dir.h>
 #include <fuchsia/virtualization/vmm/cpp/fidl.h>
 #include <lib/async/default.h>
 
 #include <memory>
+
+#include <fs/pseudo_dir.h>
+#include <fs/remote_dir.h>
 
 #include "lib/svc/cpp/service_provider_bridge.h"
 #include "src/lib/fxl/logging.h"
@@ -17,10 +18,9 @@
 namespace guest_runner {
 
 RunnerImpl::RunnerImpl()
-    : context_(component::StartupContext::CreateFromStartupInfo()),
-      vfs_(async_get_default_dispatcher()) {
-  context_->environment()->GetLauncher(launcher_.NewRequest());
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+    : context_(sys::ComponentContext::Create()), vfs_(async_get_default_dispatcher()) {
+  context_->svc()->Connect(launcher_.NewRequest());
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void RunnerImpl::StartComponent(

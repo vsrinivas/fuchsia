@@ -6,9 +6,10 @@
 #define SRC_VIRTUALIZATION_BIN_GUEST_RUNNER_RUNNER_IMPL_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/sys/cpp/component_context.h>
 
-#include "lib/fidl/cpp/binding_set.h"
-#include "src/lib/component/cpp/startup_context.h"
+#include <fs/synchronous_vfs.h>
 
 namespace guest_runner {
 
@@ -25,7 +26,7 @@ class RunnerImpl : public fuchsia::sys::Runner {
       fuchsia::sys::Package application, fuchsia::sys::StartupInfo startup_info,
       ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) override;
 
-  std::unique_ptr<component::StartupContext> context_;
+  std::unique_ptr<sys::ComponentContext> context_;
   fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
   fs::SynchronousVfs vfs_;

@@ -7,7 +7,7 @@
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/virtualization/cpp/fidl.h>
-#include <lib/svc/cpp/services.h>
+#include <lib/sys/cpp/service_directory.h>
 
 #include "src/virtualization/bin/guest_manager/guest_services.h"
 #include "src/virtualization/bin/guest_manager/guest_vsock_endpoint.h"
@@ -17,7 +17,8 @@
 class GuestComponent {
  public:
   GuestComponent(const std::string& label, std::unique_ptr<GuestVsockEndpoint> endpoint,
-                 component::Services services, std::unique_ptr<GuestServices> guest_services,
+                 std::shared_ptr<sys::ServiceDirectory> services,
+                 std::unique_ptr<GuestServices> guest_services,
                  fuchsia::sys::ComponentControllerPtr component_controller);
 
   const std::string& label() const { return label_; }
@@ -29,7 +30,7 @@ class GuestComponent {
  private:
   const std::string label_;
   std::unique_ptr<GuestVsockEndpoint> endpoint_;
-  component::Services services_;
+  std::shared_ptr<sys::ServiceDirectory> services_;
   std::unique_ptr<GuestServices> guest_services_;
   fuchsia::sys::ComponentControllerPtr component_controller_;
 };

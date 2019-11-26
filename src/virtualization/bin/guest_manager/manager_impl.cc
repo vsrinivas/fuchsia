@@ -8,8 +8,8 @@
 
 static uint32_t g_next_env_id = 0;
 
-ManagerImpl::ManagerImpl() : context_(component::StartupContext::CreateFromStartupInfo()) {
-  context_->outgoing().AddPublicService(bindings_.GetHandler(this));
+ManagerImpl::ManagerImpl() : context_(sys::ComponentContext::Create()) {
+  context_->outgoing()->AddPublicService(bindings_.GetHandler(this));
 }
 
 void ManagerImpl::Create(fidl::StringPtr label,

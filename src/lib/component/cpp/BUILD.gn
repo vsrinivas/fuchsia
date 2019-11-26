@@ -37,8 +37,6 @@ source_set("cpp") {
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
     "//garnet/public/lib/test_runner/cpp:cpp",
-    "//src/virtualization/bin/guest_manager:lib",
-    "//src/virtualization/bin/guest_runner:lib",
   ]
 }
 

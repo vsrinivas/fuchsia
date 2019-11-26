@@ -52,7 +52,6 @@ source_set("lib") {
   ]
   public_configs = [ ":linux_runner_net_config" ]
   public_deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.ui.app",
     "//sdk/fidl/fuchsia.virtualization",

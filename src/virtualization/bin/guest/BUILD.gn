@@ -24,7 +24,6 @@ executable("bin") {
   ]
 
   deps = [
-    "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.sys",
     "//sdk/fidl/fuchsia.virtualization",
     "//sdk/lib/sys/cpp",
