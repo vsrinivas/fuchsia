@@ -35,12 +35,13 @@ source_set("common") {
     "$zx/system/banjo/ddk.protocol.sysmem",
     "$zx/system/dev/lib/device-protocol-pdev",
     "$zx/system/dev/lib/device-protocol-platform-device",
-    "$zx/system/fidl/fuchsia-sysmem:c",
+    "$zx/system/fidl/fuchsia-sysmem:llcpp",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/image-format",
+    "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/mipi-dsi",
     "$zx/system/ulib/zircon",
     "$zx/system/ulib/zircon-internal",
@@ -80,6 +81,7 @@ zx_test("dsi-host") {
     "$zx/system/ulib/async-loop:async-loop-default",
     "$zx/system/ulib/driver",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",
+    "$zx/system/ulib/image-format:image-format-llcpp",
     "$zx/system/ulib/zxtest",
   ]
 }
