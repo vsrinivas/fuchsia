@@ -42,6 +42,10 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 // type: char[ZBI_BOARD_NAME_LEN]
 #define DEVICE_METADATA_BOARD_NAME 0x4E524F42  // BORN
 
+// Platform board revision (for sysinfo driver)
+// type: char[ZBI_BOARD_REVISION_LEN]
+#define DEVICE_METADATA_BOARD_REVISION 0x52524F42  // BORR
+
 // Platform board private data (for board driver)
 // type: ???
 #define DEVICE_METADATA_BOARD_PRIVATE 0x524F426D  // mBOR

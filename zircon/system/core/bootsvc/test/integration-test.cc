@@ -296,6 +296,7 @@ bool TestBootItems() {
   uint32_t types[] = {
       ZBI_TYPE_CRASHLOG,
       ZBI_TYPE_PLATFORM_ID,
+      ZBI_TYPE_DRV_BOARD_INFO,
       ZBI_TYPE_STORAGE_RAMDISK,
   };
   for (uint32_t type : types) {

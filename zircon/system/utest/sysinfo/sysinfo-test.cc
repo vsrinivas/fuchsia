@@ -46,6 +46,25 @@ TEST(SysinfoTest, GetBoardName) {
   ASSERT_GT(actual_size, 0, "board name is empty");
 }
 
+TEST(SysinfoTest, GetBoardRevision) {
+  // Get the resource handle from the driver.
+  fbl::unique_fd fd(open(kSysinfoPath, O_RDWR));
+  ASSERT_TRUE(fd.is_valid(), "Can't open sysinfo");
+
+  zx::channel channel;
+  ASSERT_OK(fdio_get_service_handle(fd.release(), channel.reset_and_get_address()),
+            "Failed to get channel");
+
+  // Test fuchsia_sysinfo_DeviceGetBoardRevision().
+  uint32_t board_revision;
+  zx_status_t status;
+  zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetBoardRevision(channel.get(),
+                                                                   &status,
+                                                                   &board_revision);
+  ASSERT_OK(fidl_status, "Failed to get board revision");
+  ASSERT_OK(status, "Failed to get board revision");
+}
+
 TEST(SysinfoTest, GetInterruptControllerInfo) {
   // Get the resource handle from the driver.
   fbl::unique_fd fd(open(kSysinfoPath, O_RDWR));

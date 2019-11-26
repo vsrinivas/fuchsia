@@ -75,6 +75,14 @@ const zbi_platform_id_t kPlatformId = []() {
   return plat_id;
 }();
 
+#define BOARD_REVISION_TEST      42
+
+const zbi_board_info_t kBoardInfo = []() {
+  zbi_board_info_t board_info = {};
+  board_info.revision = BOARD_REVISION_TEST;
+  return board_info;
+}();
+
 // This function is responsible for serializing driver data. It must be kept
 // updated with the function that deserialized the data. This function
 // is TestBoard::FetchAndDeserialize.
@@ -92,6 +100,18 @@ zx_status_t GetBootItem(const fbl::Vector<board_test::DeviceEntry>& entries, uin
         return status;
       }
       *length = sizeof(kPlatformId);
+      break;
+    }
+    case ZBI_TYPE_DRV_BOARD_INFO: {
+      zx_status_t status = zx::vmo::create(sizeof(kBoardInfo), 0, &vmo);
+      if (status != ZX_OK) {
+        return status;
+      }
+      status = vmo.write(&kBoardInfo, 0, sizeof(kBoardInfo));
+      if (status != ZX_OK) {
+        return status;
+      }
+      *length = sizeof(kBoardInfo);
       break;
     }
     case ZBI_TYPE_DRV_BOARD_PRIVATE: {

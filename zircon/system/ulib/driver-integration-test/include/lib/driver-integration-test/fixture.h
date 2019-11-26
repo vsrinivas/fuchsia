@@ -35,6 +35,8 @@ class IsolatedDevmgr {
     fbl::Vector<const char*> arguments;
     // A board name to appear.
     fbl::String board_name;
+    // Board_revision
+    uint32_t board_revision;
     // If set to true, the block watcher will be disabled.
     bool disable_block_watcher = true;
     // If set to true, the netsvc will be disabled.

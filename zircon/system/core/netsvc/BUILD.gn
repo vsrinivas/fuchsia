@@ -67,6 +67,7 @@ source_set("netsvc_common") {
     "zbi.cc",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-boot:c",
     "$zx/system/fidl/fuchsia-device:llcpp",
     "$zx/system/fidl/fuchsia-device-manager:c",
     "$zx/system/fidl/fuchsia-hardware-block:llcpp",
@@ -74,6 +75,7 @@ source_set("netsvc_common") {
     "$zx/system/fidl/fuchsia-sysinfo:llcpp",
     "$zx/system/ulib/async-loop:async-loop-cpp",
     "$zx/system/ulib/async-loop:async-loop-default.static",
+    "$zx/system/ulib/bootfs",
     "$zx/system/ulib/chromeos-disk-setup",
     "$zx/system/ulib/fdio",
     "$zx/system/ulib/fidl-async:fidl-async-cpp",

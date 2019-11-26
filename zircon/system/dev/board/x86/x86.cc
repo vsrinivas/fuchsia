@@ -116,6 +116,13 @@ zx_status_t X86::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "DdkPublishMetadata(board_name) failed: %d\n", status);
   }
 
+  constexpr uint32_t dummy_board_rev = 42;
+  status = board->DdkPublishMetadata("/dev/misc/sysinfo", DEVICE_METADATA_BOARD_REVISION,
+                                     &dummy_board_rev, sizeof(dummy_board_rev));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "DdkPublishMetadata(board_revision) failed: %d\n", status);
+  }
+
   // Inform platform bus of our board name.
   pbus_board_info_t board_info = {};
   strlcpy(board_info.board_name, board_name, sizeof(board_info.board_name));

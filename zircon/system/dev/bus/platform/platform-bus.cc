@@ -508,13 +508,44 @@ zx_status_t PlatformBus::Init() {
       zxlogf(ERROR, "device_publish_metadata(board_name) failed: %d\n", status);
       return status;
     }
+    // This is optionally set later by the board driver.
+    board_info_.board_revision = 0;
 #else
     zxlogf(ERROR, "platform_bus: ZBI_TYPE_PLATFORM_ID not found\n");
     return ZX_ERR_INTERNAL;
 #endif
   }
-  // This is optionally set later by the board driver.
+
+  // Set default board_revision
   board_info_.board_revision = 0;
+  zx::vmo boardinfo_vmo;
+  uint32_t boardinfo_len;
+  zbi_board_info_t zbi_boardinfo;
+  status = GetBootItem(ZBI_TYPE_DRV_BOARD_INFO, 0, &boardinfo_vmo, &boardinfo_len);
+  if (status == ZX_OK) {
+    if (boardinfo_vmo.is_valid()) {
+      status = boardinfo_vmo.read(&zbi_boardinfo, 0, boardinfo_len);
+      if (status == ZX_OK) {
+        board_info_.board_revision = zbi_boardinfo.revision;
+      } else {
+        zxlogf(ERROR, "Failed to read zbi_boardinfo_t VMO\n");
+      }
+    } else {
+      zxlogf(ERROR, "Invalid zbi_boardinfo_t VMO\n");
+    }
+  } else {
+    zxlogf(ERROR, "Boot Item ZBI_TYPE_DRV_BOARD_INFO not found\n");
+  }
+
+  // Publish board revision to sysinfo driver
+  status = device_publish_metadata(parent(), "/dev/misc/sysinfo",
+                                   DEVICE_METADATA_BOARD_REVISION,
+                                   &board_info_.board_revision,
+                                   sizeof(board_info_.board_revision));
+  if (status != ZX_OK) {
+    zxlogf(ERROR, "device_publish_metadata(board_revision) failed: %d\n", status);
+    return status;
+  }
 
   // Then we attach the platform-bus device below it.
   zx_device_prop_t props[] = {

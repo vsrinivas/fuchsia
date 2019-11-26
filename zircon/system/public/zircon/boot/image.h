@@ -131,6 +131,7 @@ typedef struct {
     macro(ZBI_TYPE_DRV_MAC_ADDRESS, "DRV_MAC_ADDRESS", ".bin") \
     macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin") \
     macro(ZBI_TYPE_DRV_BOARD_PRIVATE, "DRV_BOARD_PRIVATE", ".bin") \
+    macro(ZBI_TYPE_DRV_BOARD_INFO, "DRV_BOARD_INFO", ".bin") \
     macro(ZBI_TYPE_IMAGE_ARGS, "IMAGE_ARGS", ".txt") \
     macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin")
 
@@ -343,6 +344,14 @@ typedef struct {
     uint32_t pid;
     char board_name[ZBI_BOARD_NAME_LEN];
 } zbi_platform_id_t;
+#endif
+
+#define ZBI_TYPE_DRV_BOARD_INFO         (0x4953426D) // mBSI
+// Board-specific information.
+#ifndef __ASSEMBLER__
+typedef struct {
+    uint32_t revision;
+} zbi_board_info_t;
 #endif
 
 // CPU configuration, a zbi_cpu_config_t header followed by one or more

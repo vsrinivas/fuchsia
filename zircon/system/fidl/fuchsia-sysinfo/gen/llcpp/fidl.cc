@@ -25,6 +25,13 @@ extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 [[maybe_unused]]
+constexpr uint64_t kDevice_GetBoardRevision_Ordinal = 0x77e43d7900000000lu;
+[[maybe_unused]]
+constexpr uint64_t kDevice_GetBoardRevision_GenOrdinal = 0x37d6e2fe633b7f4blu;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardRevisionRequestTable;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+[[maybe_unused]]
 constexpr uint64_t kDevice_GetInterruptControllerInfo_Ordinal = 0x5f8bb9e400000000lu;
 [[maybe_unused]]
 constexpr uint64_t kDevice_GetInterruptControllerInfo_GenOrdinal = 0x5d276f3ebc0b70b6lu;
@@ -156,6 +163,67 @@ Device::UnownedResultOf::GetBoardName Device::Call::GetBoardName(zx::unowned_cha
 }
 
 template <>
+Device::ResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(zx::unowned_channel _client_end) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardRevisionRequest, ::fidl::MessageDirection::kSending>();
+  ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
+  auto& _write_bytes_array = _write_bytes_inlined;
+  uint8_t* _write_bytes = _write_bytes_array.view().data();
+  memset(_write_bytes, 0, GetBoardRevisionRequest::PrimarySize);
+  ::fidl::BytePart _request_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetBoardRevisionRequest));
+  ::fidl::DecodedMessage<GetBoardRevisionRequest> _decoded_request(std::move(_request_bytes));
+  Super::SetResult(
+      Device::InPlace::GetBoardRevision(std::move(_client_end), Super::response_buffer()));
+}
+
+Device::ResultOf::GetBoardRevision Device::SyncClient::GetBoardRevision() {
+  return ResultOf::GetBoardRevision(zx::unowned_channel(this->channel_));
+}
+
+Device::ResultOf::GetBoardRevision Device::Call::GetBoardRevision(zx::unowned_channel _client_end) {
+  return ResultOf::GetBoardRevision(std::move(_client_end));
+}
+
+template <>
+Device::UnownedResultOf::GetBoardRevision_Impl<Device::GetBoardRevisionResponse>::GetBoardRevision_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  FIDL_ALIGNDECL uint8_t _write_bytes[sizeof(GetBoardRevisionRequest)] = {};
+  ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  memset(_request_buffer.data(), 0, GetBoardRevisionRequest::PrimarySize);
+  _request_buffer.set_actual(sizeof(GetBoardRevisionRequest));
+  ::fidl::DecodedMessage<GetBoardRevisionRequest> _decoded_request(std::move(_request_buffer));
+  Super::SetResult(
+      Device::InPlace::GetBoardRevision(std::move(_client_end), std::move(_response_buffer)));
+}
+
+Device::UnownedResultOf::GetBoardRevision Device::SyncClient::GetBoardRevision(::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetBoardRevision(zx::unowned_channel(this->channel_), std::move(_response_buffer));
+}
+
+Device::UnownedResultOf::GetBoardRevision Device::Call::GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer) {
+  return UnownedResultOf::GetBoardRevision(std::move(_client_end), std::move(_response_buffer));
+}
+
+::fidl::DecodeResult<Device::GetBoardRevisionResponse> Device::InPlace::GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer) {
+  constexpr uint32_t _write_num_bytes = sizeof(GetBoardRevisionRequest);
+  ::fidl::internal::AlignedBuffer<_write_num_bytes> _write_bytes;
+  ::fidl::BytePart _request_buffer = _write_bytes.view();
+  _request_buffer.set_actual(_write_num_bytes);
+  ::fidl::DecodedMessage<GetBoardRevisionRequest> params(std::move(_request_buffer));
+  Device::SetTransactionHeaderFor::GetBoardRevisionRequest(params);
+  auto _encode_request_result = ::fidl::Encode(std::move(params));
+  if (_encode_request_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::GetBoardRevisionResponse>::FromFailure(
+        std::move(_encode_request_result));
+  }
+  auto _call_result = ::fidl::Call<GetBoardRevisionRequest, GetBoardRevisionResponse>(
+    std::move(_client_end), std::move(_encode_request_result.message), std::move(response_buffer));
+  if (_call_result.status != ZX_OK) {
+    return ::fidl::DecodeResult<Device::GetBoardRevisionResponse>::FromFailure(
+        std::move(_call_result));
+  }
+  return ::fidl::Decode(std::move(_call_result.message));
+}
+
+template <>
 Device::ResultOf::GetInterruptControllerInfo_Impl<Device::GetInterruptControllerInfoResponse>::GetInterruptControllerInfo_Impl(zx::unowned_channel _client_end) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoRequest, ::fidl::MessageDirection::kSending>();
   ::fidl::internal::AlignedBuffer<_kWriteAllocSize> _write_bytes_inlined;
@@ -252,6 +320,18 @@ bool Device::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* 
       }
       impl->GetBoardName(
           Interface::GetBoardNameCompleter::Sync(txn));
+      return true;
+    }
+    case kDevice_GetBoardRevision_Ordinal:
+    case kDevice_GetBoardRevision_GenOrdinal:
+    {
+      auto result = ::fidl::DecodeAs<GetBoardRevisionRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->GetBoardRevision(
+          Interface::GetBoardRevisionCompleter::Sync(txn));
       return true;
     }
     case kDevice_GetInterruptControllerInfo_Ordinal:
@@ -367,6 +447,44 @@ void Device::Interface::GetBoardNameCompleterBase::Reply(::fidl::DecodedMessage<
 }
 
 
+void Device::Interface::GetBoardRevisionCompleterBase::Reply(int32_t status, uint32_t revision) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetBoardRevisionResponse, ::fidl::MessageDirection::kSending>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<GetBoardRevisionResponse*>(_write_bytes);
+  Device::SetTransactionHeaderFor::GetBoardRevisionResponse(
+      ::fidl::DecodedMessage<GetBoardRevisionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetBoardRevisionResponse::PrimarySize,
+              GetBoardRevisionResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.revision = std::move(revision);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(GetBoardRevisionResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetBoardRevisionResponse>(std::move(_response_bytes)));
+}
+
+void Device::Interface::GetBoardRevisionCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, uint32_t revision) {
+  if (_buffer.capacity() < GetBoardRevisionResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<GetBoardRevisionResponse*>(_buffer.data());
+  Device::SetTransactionHeaderFor::GetBoardRevisionResponse(
+      ::fidl::DecodedMessage<GetBoardRevisionResponse>(
+          ::fidl::BytePart(reinterpret_cast<uint8_t*>(&_response),
+              GetBoardRevisionResponse::PrimarySize,
+              GetBoardRevisionResponse::PrimarySize)));
+  _response.status = std::move(status);
+  _response.revision = std::move(revision);
+  _buffer.set_actual(sizeof(GetBoardRevisionResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<GetBoardRevisionResponse>(std::move(_buffer)));
+}
+
+void Device::Interface::GetBoardRevisionCompleterBase::Reply(::fidl::DecodedMessage<GetBoardRevisionResponse> params) {
+  Device::SetTransactionHeaderFor::GetBoardRevisionResponse(params);
+  CompleterBase::SendReply(std::move(params));
+}
+
+
 void Device::Interface::GetInterruptControllerInfoCompleterBase::Reply(int32_t status, ::llcpp::fuchsia::sysinfo::InterruptControllerInfo* info) {
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<GetInterruptControllerInfoResponse, ::fidl::MessageDirection::kSending>();
   FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize];
@@ -427,6 +545,13 @@ void Device::SetTransactionHeaderFor::GetBoardNameRequest(const ::fidl::DecodedM
 }
 void Device::SetTransactionHeaderFor::GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg) {
   fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardName_GenOrdinal);
+}
+
+void Device::SetTransactionHeaderFor::GetBoardRevisionRequest(const ::fidl::DecodedMessage<Device::GetBoardRevisionRequest>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardRevision_GenOrdinal);
+}
+void Device::SetTransactionHeaderFor::GetBoardRevisionResponse(const ::fidl::DecodedMessage<Device::GetBoardRevisionResponse>& _msg) {
+  fidl_init_txn_header(&_msg.message()->_hdr, 0, kDevice_GetBoardRevision_GenOrdinal);
 }
 
 void Device::SetTransactionHeaderFor::GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg) {

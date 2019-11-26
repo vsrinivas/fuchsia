@@ -27,6 +27,12 @@ protocol Device {
     // Return the board name for the platform we are running on.
     GetBoardName() -> (zx.status status, string:SYSINFO_BOARD_NAME_LEN? name);
 
+    // Return the board revision for the board we are running on.
+    // TODO (nealo):  Remove Transitional qualifier after all board bootloaders
+    // provide board serial number, mac address and revision.
+    [Transitional = "Adding Board Revision"]
+    GetBoardRevision() -> (zx.status status, uint32 revision);
+
     // Return interrupt controller information.
     GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
 };

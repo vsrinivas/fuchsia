@@ -15,11 +15,15 @@
 #include "lib/fidl/llcpp/traits.h"
 #include "zircon/types.h"
 #undef VMOID_INVALID
+#include <fuchsia/boot/c/fidl.h>
 #include <fuchsia/device/llcpp/fidl.h>
 #include <fuchsia/hardware/block/llcpp/fidl.h>
 #include <fuchsia/sysinfo/llcpp/fidl.h>
+#include <lib/bootfs/parser.h>
 #include <lib/fdio/directory.h>
 #include <lib/fzl/fdio.h>
+#include <lib/zx/resource.h>
+#include <lib/zx/vmo.h>
 #include <zircon/boot/netboot.h>
 #include <zircon/status.h>
 
@@ -135,8 +139,11 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
     return false;
   }
 
-  strncpy(real_board_name, response.name.data(),
-          std::min<size_t>(ZX_MAX_NAME_LEN, response.name.size()));
+  size_t strlen = std::min<size_t>(ZX_MAX_NAME_LEN, response.name.size());
+  strncpy(real_board_name, response.name.data(), strlen);
+  if (strlen == ZX_MAX_NAME_LEN) {
+    real_board_name[strlen-1] = '\0';
+  }
 
   // Special case x64 to check if chromebook.
 #if __x86_64__
@@ -147,6 +154,19 @@ zx_status_t GetBoardName(const zx::channel& sysinfo, char* real_board_name) {
   }
 #endif
 
+  return ZX_OK;
+}
+
+zx_status_t GetBoardRevision(const zx::channel& sysinfo, uint32_t* board_revision) {
+  auto result = ::llcpp::fuchsia::sysinfo::Device::Call::GetBoardRevision(zx::unowned(sysinfo));
+  if (!result.ok()) {
+    return false;
+  }
+  const auto& response = result.value();
+  if (response.status != ZX_OK) {
+    return false;
+  }
+  *board_revision = response.revision;
   return ZX_OK;
 }
 
@@ -161,7 +181,6 @@ bool CheckBoardName(const zx::channel& sysinfo, const char* name, size_t length)
   if (GetBoardName(sysinfo, real_board_name) != ZX_OK) {
     return false;
   }
-
   length = std::min(length, ZX_MAX_NAME_LEN);
 
   return strncmp(real_board_name, name, length) == 0;
@@ -182,9 +201,10 @@ bool ReadBoardInfo(const zx::channel& sysinfo, void* data, off_t offset, size_t*
   if (GetBoardName(sysinfo, board_info->board_name) != ZX_OK) {
     return false;
   }
-  // TODO(surajmalhotra): Implement board revision read.
 
-  // TODO(surajmalhotra): Implement mac address read.
+  if (GetBoardRevision(sysinfo, &board_info->board_revision) != ZX_OK) {
+    return false;
+  }
 
   *length = sizeof(board_info_t);
   return true;

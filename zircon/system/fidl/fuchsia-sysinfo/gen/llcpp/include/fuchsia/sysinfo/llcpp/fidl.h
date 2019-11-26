@@ -42,6 +42,10 @@ extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardNameRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
 extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardNameResponseTable;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardRevisionRequestTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardRevisionRequestTable;
+extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
 extern "C" const fidl_type_t v1_fuchsia_sysinfo_DeviceGetInterruptControllerInfoRequestTable;
 extern "C" const fidl_type_t fuchsia_sysinfo_DeviceGetInterruptControllerInfoResponseTable;
@@ -90,6 +94,26 @@ class Device final {
         ::fidl::internal::TransactionalMessageKind::kResponse;
   };
   using GetBoardNameRequest = ::fidl::AnyZeroArgMessage;
+
+  struct GetBoardRevisionResponse final {
+    FIDL_ALIGNDECL
+    fidl_message_header_t _hdr;
+    int32_t status;
+    uint32_t revision;
+
+    static constexpr const fidl_type_t* Type = &fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+    static constexpr const fidl_type_t* AltType = &v1_fuchsia_sysinfo_DeviceGetBoardRevisionResponseTable;
+    static constexpr uint32_t MaxNumHandles = 0;
+    static constexpr uint32_t PrimarySize = 24;
+    static constexpr uint32_t MaxOutOfLine = 0;
+    static constexpr uint32_t AltPrimarySize = 24;
+    static constexpr uint32_t AltMaxOutOfLine = 0;
+    static constexpr bool HasFlexibleEnvelope = false;
+    static constexpr bool ContainsUnion = false;
+    static constexpr ::fidl::internal::TransactionalMessageKind MessageKind =
+        ::fidl::internal::TransactionalMessageKind::kResponse;
+  };
+  using GetBoardRevisionRequest = ::fidl::AnyZeroArgMessage;
 
   struct GetInterruptControllerInfoResponse final {
     FIDL_ALIGNDECL
@@ -149,6 +173,22 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetBoardRevision_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
+     public:
+      GetBoardRevision_Impl(zx::unowned_channel _client_end);
+      ~GetBoardRevision_Impl() = default;
+      GetBoardRevision_Impl(GetBoardRevision_Impl&& other) = default;
+      GetBoardRevision_Impl& operator=(GetBoardRevision_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::OwnedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::OwnedSyncCallBase<ResponseType>;
      public:
@@ -168,6 +208,7 @@ class Device final {
    public:
     using GetHypervisorResource = GetHypervisorResource_Impl<GetHypervisorResourceResponse>;
     using GetBoardName = GetBoardName_Impl<GetBoardNameResponse>;
+    using GetBoardRevision = GetBoardRevision_Impl<GetBoardRevisionResponse>;
     using GetInterruptControllerInfo = GetInterruptControllerInfo_Impl<GetInterruptControllerInfoResponse>;
   };
 
@@ -209,6 +250,22 @@ class Device final {
       using Super::operator*;
     };
     template <typename ResponseType>
+    class GetBoardRevision_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
+      using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
+     public:
+      GetBoardRevision_Impl(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+      ~GetBoardRevision_Impl() = default;
+      GetBoardRevision_Impl(GetBoardRevision_Impl&& other) = default;
+      GetBoardRevision_Impl& operator=(GetBoardRevision_Impl&& other) = default;
+      using Super::status;
+      using Super::error;
+      using Super::ok;
+      using Super::Unwrap;
+      using Super::value;
+      using Super::operator->;
+      using Super::operator*;
+    };
+    template <typename ResponseType>
     class GetInterruptControllerInfo_Impl final : private ::fidl::internal::UnownedSyncCallBase<ResponseType> {
       using Super = ::fidl::internal::UnownedSyncCallBase<ResponseType>;
      public:
@@ -228,6 +285,7 @@ class Device final {
    public:
     using GetHypervisorResource = GetHypervisorResource_Impl<GetHypervisorResourceResponse>;
     using GetBoardName = GetBoardName_Impl<GetBoardNameResponse>;
+    using GetBoardRevision = GetBoardRevision_Impl<GetBoardRevisionResponse>;
     using GetInterruptControllerInfo = GetInterruptControllerInfo_Impl<GetInterruptControllerInfoResponse>;
   };
 
@@ -253,6 +311,12 @@ class Device final {
 
     // Caller provides the backing storage for FIDL message via request and response buffers.
     UnownedResultOf::GetBoardName GetBoardName(::fidl::BytePart _response_buffer);
+
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    ResultOf::GetBoardRevision GetBoardRevision();
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    UnownedResultOf::GetBoardRevision GetBoardRevision(::fidl::BytePart _response_buffer);
 
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo();
@@ -281,6 +345,12 @@ class Device final {
     // Caller provides the backing storage for FIDL message via request and response buffers.
     static UnownedResultOf::GetBoardName GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
 
+    // Allocates 40 bytes of message buffer on the stack. No heap allocation necessary.
+    static ResultOf::GetBoardRevision GetBoardRevision(zx::unowned_channel _client_end);
+
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    static UnownedResultOf::GetBoardRevision GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart _response_buffer);
+
     // Allocates 56 bytes of message buffer on the stack. No heap allocation necessary.
     static ResultOf::GetInterruptControllerInfo GetInterruptControllerInfo(zx::unowned_channel _client_end);
 
@@ -298,6 +368,8 @@ class Device final {
     static ::fidl::DecodeResult<GetHypervisorResourceResponse> GetHypervisorResource(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<GetBoardNameResponse> GetBoardName(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
+
+    static ::fidl::DecodeResult<GetBoardRevisionResponse> GetBoardRevision(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
     static ::fidl::DecodeResult<GetInterruptControllerInfoResponse> GetInterruptControllerInfo(zx::unowned_channel _client_end, ::fidl::BytePart response_buffer);
 
@@ -338,6 +410,20 @@ class Device final {
     using GetBoardNameCompleter = ::fidl::Completer<GetBoardNameCompleterBase>;
 
     virtual void GetBoardName(GetBoardNameCompleter::Sync _completer) = 0;
+
+    class GetBoardRevisionCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, uint32_t revision);
+      void Reply(::fidl::BytePart _buffer, int32_t status, uint32_t revision);
+      void Reply(::fidl::DecodedMessage<GetBoardRevisionResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using GetBoardRevisionCompleter = ::fidl::Completer<GetBoardRevisionCompleterBase>;
+
+    virtual void GetBoardRevision(GetBoardRevisionCompleter::Sync _completer) { _completer.Close(ZX_ERR_NOT_SUPPORTED); }
 
     class GetInterruptControllerInfoCompleterBase : public _Base {
      public:
@@ -382,6 +468,8 @@ class Device final {
     static void GetHypervisorResourceResponse(const ::fidl::DecodedMessage<Device::GetHypervisorResourceResponse>& _msg);
     static void GetBoardNameRequest(const ::fidl::DecodedMessage<Device::GetBoardNameRequest>& _msg);
     static void GetBoardNameResponse(const ::fidl::DecodedMessage<Device::GetBoardNameResponse>& _msg);
+    static void GetBoardRevisionRequest(const ::fidl::DecodedMessage<Device::GetBoardRevisionRequest>& _msg);
+    static void GetBoardRevisionResponse(const ::fidl::DecodedMessage<Device::GetBoardRevisionResponse>& _msg);
     static void GetInterruptControllerInfoRequest(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoRequest>& _msg);
     static void GetInterruptControllerInfoResponse(const ::fidl::DecodedMessage<Device::GetInterruptControllerInfoResponse>& _msg);
   };
@@ -429,6 +517,15 @@ static_assert(sizeof(::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse)
     == ::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse::PrimarySize);
 static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse, status) == 16);
 static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetBoardNameResponse, name) == 24);
+
+template <>
+struct IsFidlType<::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse> : public std::true_type {};
+template <>
+struct IsFidlMessage<::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse> : public std::true_type {};
+static_assert(sizeof(::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse)
+    == ::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse::PrimarySize);
+static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse, status) == 16);
+static_assert(offsetof(::llcpp::fuchsia::sysinfo::Device::GetBoardRevisionResponse, revision) == 20);
 
 template <>
 struct IsFidlType<::llcpp::fuchsia::sysinfo::Device::GetInterruptControllerInfoResponse> : public std::true_type {};

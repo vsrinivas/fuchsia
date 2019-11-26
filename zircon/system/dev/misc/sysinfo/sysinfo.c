@@ -22,6 +22,7 @@ typedef struct {
   zx_device_t* zxdev;
   mtx_t lock;
   char board_name[ZBI_BOARD_NAME_LEN];
+  uint32_t board_revision;
 } sysinfo_t;
 
 static zx_status_t fidl_get_hypervisor_resource(void* ctx, fidl_txn_t* txn) {
@@ -50,6 +51,23 @@ static zx_status_t fidl_get_board_name(void* ctx, fidl_txn_t* txn) {
   return fuchsia_sysinfo_DeviceGetBoardName_reply(txn, status, sysinfo->board_name, board_name_len);
 }
 
+static zx_status_t fidl_get_board_revision(void* ctx, fidl_txn_t* txn) {
+  sysinfo_t* sysinfo = ctx;
+
+  zx_status_t status = ZX_OK;
+
+  mtx_lock(&sysinfo->lock);
+  if (sysinfo->board_revision == 0) {
+    size_t actual = 0;
+    status = device_get_metadata(sysinfo->zxdev, DEVICE_METADATA_BOARD_REVISION,
+                                 &sysinfo->board_revision,
+                                 sizeof(sysinfo->board_revision), &actual);
+  }
+  mtx_unlock(&sysinfo->lock);
+
+  return fuchsia_sysinfo_DeviceGetBoardRevision_reply(txn, status, sysinfo->board_revision);
+}
+
 static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn) {
   zx_status_t status = ZX_OK;
   fuchsia_sysinfo_InterruptControllerInfo info = {};
@@ -71,6 +89,7 @@ static zx_status_t fidl_get_interrupt_controller_info(void* ctx, fidl_txn_t* txn
 static fuchsia_sysinfo_Device_ops_t fidl_ops = {
     .GetHypervisorResource = fidl_get_hypervisor_resource,
     .GetBoardName = fidl_get_board_name,
+    .GetBoardRevision = fidl_get_board_revision,
     .GetInterruptControllerInfo = fidl_get_interrupt_controller_info,
 };
 

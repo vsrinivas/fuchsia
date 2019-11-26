@@ -81,6 +81,10 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
     completer.Reply(ZX_OK, fidl::StringView(board_, 32));
   }
 
+  void GetBoardRevision(GetBoardRevisionCompleter::Sync completer) {
+    completer.Reply(ZX_OK, board_rev_);
+  }
+
   void GetInterruptControllerInfo(GetInterruptControllerInfoCompleter::Sync completer) {
     completer.Reply(ZX_ERR_NOT_SUPPORTED, nullptr);
   }
@@ -93,6 +97,7 @@ class FakeSysinfo : public ::llcpp::fuchsia::sysinfo::Device::Interface {
   zx::channel svc_chan_;
 
   char board_[32] = {};
+  uint32_t board_rev_ = 0;
 };
 
 }  // namespace
