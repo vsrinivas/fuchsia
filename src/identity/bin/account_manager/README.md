@@ -41,16 +41,21 @@ fuchsia.identity.account.Persona or fuchsia.auth.TokenManager.
 protocol. The crate's main function creates a single instance of this struct
 and uses it to handle all incoming requests.
 
-`AccountManager` maintains a single `AccountHandlerContext` instance and a map
-from the local identifiers of all accounts on the device to an associated
-`AccountHandlerConnection`. These `AccountHandlerConnection` instances are
-created lazily upon the first request pertaining to a particular account.
+`AccountManager` maintains a single `AccountHandlerContext` instance and an
+`AccountMap` which contains the existing accounts and opens connections to them
+on demand. New accounts are created by the AccountManager, and then the
+`AccountHandlerConnection` is handed over to the `AccountMap`.
 
-`AccountHandlerConnection` launches, initializes, and maintains a connection to
-an instance of the Account Handler component.
-`AccountHandlerConnection` launches, initializes, and maintains a connection to
-an instance of the Account Handler component. Each component instance is
-launched in a separate environment based on the local account ID.
+`AccountMap` is the source of truth for active accounts on the device, keyed by
+local account id. It is responsible for storing the set of persistent accounts
+to disk. It lazily estalishes `AccountHandlerConnection` instances upon the
+first request pertaining to existing accounts.
+
+The `AccountHandlerConnection` trait defines static- and instance methods for
+intializing and maintaining a connection to an Account Handler component. It is
+implemented by `AccountHandlerConnectionImpl` in business logic, where each
+component instance is launched in a separate environment based on the local
+account ID.
 
 `AccountHandlerContext` implements the
 fuchsia.identity.internal.AccountHandlerContext FIDL protocol, using a map

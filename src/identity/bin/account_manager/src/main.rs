@@ -21,6 +21,7 @@ pub mod inspect;
 mod prototype;
 mod stored_account_list;
 
+use crate::account_handler_connection::AccountHandlerConnectionImpl;
 use crate::account_manager::AccountManager;
 use failure::{Error, ResultExt};
 use fidl_fuchsia_auth::AuthProviderConfig;
@@ -94,12 +95,15 @@ fn main() -> Result<(), Error> {
     inspector.serve(&mut fs)?;
 
     let account_manager = Arc::new(
-        AccountManager::new(PathBuf::from(DATA_DIR), &auth_provider_config, &inspector).map_err(
-            |e| {
-                error!("Error initializing AccountManager {:?}", e);
-                e
-            },
-        )?,
+        AccountManager::<AccountHandlerConnectionImpl>::new(
+            PathBuf::from(DATA_DIR),
+            &auth_provider_config,
+            &inspector,
+        )
+        .map_err(|e| {
+            error!("Error initializing AccountManager {:?}", e);
+            e
+        })?,
     );
 
     fs.dir("svc").add_fidl_service(move |stream| {

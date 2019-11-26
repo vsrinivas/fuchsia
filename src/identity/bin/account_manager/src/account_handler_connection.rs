@@ -4,8 +4,10 @@
 
 use crate::account_handler_context::AccountHandlerContext;
 use account_common::{AccountManagerError, LocalAccountId, ResultExt as AccountResultExt};
-use failure::{format_err, ResultExt};
-use fidl_fuchsia_identity_account::{Error, Lifetime};
+use async_trait::async_trait;
+use core::fmt::Debug;
+use failure::ResultExt;
+use fidl_fuchsia_identity_account::{Error as ApiError, Lifetime};
 use fidl_fuchsia_identity_internal::{AccountHandlerControlMarker, AccountHandlerControlProxy};
 use fidl_fuchsia_sys::EnvironmentControllerProxy;
 use fuchsia_async as fasync;
@@ -24,8 +26,39 @@ const ACCOUNT_HANDLER_URL: &str = fuchsia_single_component_package_url!("account
 const ACCOUNT_HANDLER_EPHEMERAL_URL: &str =
     "fuchsia-pkg://fuchsia.com/account_handler#meta/account_handler_ephemeral.cmx";
 
-/// The information necessary to maintain a connection to an AccountHandler component instance.
-pub struct AccountHandlerConnection {
+/// This trait is an abstraction over a connection to an account handler
+/// component. It contains both static methods for creating connections
+/// either by loading or creating a new account as well as instance methods for
+/// calling the active account handler.
+#[async_trait]
+pub trait AccountHandlerConnection: Send + Sized + Debug {
+    /// Create a new uninitialized AccountHandlerConnection.
+    fn new(
+        account_id: LocalAccountId,
+        lifetime: Lifetime,
+        context: Arc<AccountHandlerContext>,
+    ) -> Result<Self, AccountManagerError>;
+
+    /// Returns the lifetime of the account.
+    fn get_account_id(&self) -> &LocalAccountId;
+
+    /// Returns the lifetime of the account.
+    fn get_lifetime(&self) -> &Lifetime;
+
+    /// An AccountHandlerControlProxy for this connection.
+    fn proxy(&self) -> &AccountHandlerControlProxy;
+
+    /// Requests that the AccountHandler component instance terminate gracefully.
+    ///
+    /// Any subsequent operations that attempt to use `proxy()` will fail after this call. The
+    /// resources associated with the connection when only be freed once the
+    /// `AccountHandlerConnectionImpl` is dropped.
+    async fn terminate(&self);
+}
+
+/// Implementation of an AccountHandlerConnection which creates real component
+/// instances.
+pub struct AccountHandlerConnectionImpl {
     /// An `App` object for the launched AccountHandler.
     ///
     /// Note: This must remain in scope for the component to remain running, but never needs to be
@@ -38,6 +71,9 @@ pub struct AccountHandlerConnection {
     /// read.
     _env_controller: EnvironmentControllerProxy,
 
+    /// The local account id of the account.
+    account_id: LocalAccountId,
+
     /// The lifetime of the account.
     lifetime: Lifetime,
 
@@ -45,19 +81,14 @@ pub struct AccountHandlerConnection {
     proxy: AccountHandlerControlProxy,
 }
 
-impl fmt::Debug for AccountHandlerConnection {
+impl fmt::Debug for AccountHandlerConnectionImpl {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "AccountHandlerConnection {{ lifetime: {:?} }}", self.lifetime)
+        write!(f, "AccountHandlerConnectionImpl {{ lifetime: {:?} }}", self.lifetime)
     }
 }
 
-impl AccountHandlerConnection {
-    /// Launches a new AccountHandler component instance and establishes a connection to its
-    /// control channel.
-    ///
-    /// Note: This method is not public. Callers should use one of the factory methods that also
-    /// sends an initialization call to the AccountHandler after connection, such as `load_account`
-    /// or `create_account`
+#[async_trait]
+impl AccountHandlerConnection for AccountHandlerConnectionImpl {
     fn new(
         account_id: LocalAccountId,
         lifetime: Lifetime,
@@ -93,76 +124,35 @@ impl AccountHandlerConnection {
                 env_label.as_ref(),
             )
             .context("Failed to start launcher")
-            .account_manager_error(Error::Resource)?;
+            .account_manager_error(ApiError::Resource)?;
         fasync::spawn(fs_for_account_handler.collect());
         let proxy = app
             .connect_to_service::<AccountHandlerControlMarker>()
             .context("Failed to connect to AccountHandlerControl")
-            .account_manager_error(Error::Resource)?;
+            .account_manager_error(ApiError::Resource)?;
 
-        Ok(AccountHandlerConnection { _app: app, _env_controller: env_controller, lifetime, proxy })
+        Ok(AccountHandlerConnectionImpl {
+            _app: app,
+            _env_controller: env_controller,
+            account_id,
+            lifetime,
+            proxy,
+        })
     }
 
-    /// Returns the lifetime of the account that this handler manages.
-    pub fn get_lifetime(&self) -> &Lifetime {
+    fn get_account_id(&self) -> &LocalAccountId {
+        &self.account_id
+    }
+
+    fn get_lifetime(&self) -> &Lifetime {
         &self.lifetime
     }
 
-    /// Launches a new AccountHandler component instance, establishes a connection to its control
-    /// channel, and requests that it loads an existing account.
-    pub async fn load_account(
-        account_id: &LocalAccountId,
-        context: Arc<AccountHandlerContext>,
-    ) -> Result<Self, AccountManagerError> {
-        let connection = Self::new(account_id.clone(), Lifetime::Persistent, Arc::clone(&context))?;
-        match connection
-            .proxy
-            .load_account(account_id.clone().into())
-            .await
-            .account_manager_error(Error::Resource)?
-        {
-            Ok(()) => Ok(connection),
-            Err(err) => Err(Into::<AccountManagerError>::into(err)
-                .with_cause(format_err!("Error loading existing account"))),
-        }
-    }
-
-    /// Launches a new AccountHandler component instance, establishes a connection to its control
-    /// channel, and requests that it create a new account.
-    pub async fn create_account(
-        context: Arc<AccountHandlerContext>,
-        lifetime: Lifetime,
-    ) -> Result<(Self, LocalAccountId), AccountManagerError> {
-        let account_id = LocalAccountId::new(rand::random::<u64>());
-        let connection = Self::new(account_id.clone(), lifetime, Arc::clone(&context))?;
-
-        match connection
-            .proxy()
-            .create_account(account_id.clone().into())
-            .await
-            .account_manager_error(Error::Resource)?
-        {
-            Ok(()) => {
-                // TODO(jsankey): Longer term, local ID may need to be related to the global ID
-                // rather than just a random number.
-                Ok((connection, account_id))
-            }
-            Err(err) => Err(Into::<AccountManagerError>::into(err)
-                .with_cause(format_err!("Account handler returned error"))),
-        }
-    }
-
-    /// Returns the AccountHandlerControlProxy for this connection
-    pub fn proxy(&self) -> &AccountHandlerControlProxy {
+    fn proxy(&self) -> &AccountHandlerControlProxy {
         &self.proxy
     }
 
-    /// Requests that the AccountHandler component instance terminate gracefully.
-    ///
-    /// Any subsequent operations that attempt to use `proxy()` will fail after this call. The
-    /// resources associated with the connection when only be freed once the
-    /// `AccountHandlerConnection` is dropped.
-    pub async fn terminate(&self) {
+    async fn terminate(&self) {
         let mut event_stream = self.proxy.take_event_stream();
         if let Err(err) = self.proxy.terminate() {
             warn!("Error gracefully terminating account handler {:?}", err);

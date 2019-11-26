@@ -42,13 +42,12 @@ lazy_static! {
 /// launches and configures AuthenticationProvider components to perform authentication via
 /// service providers, and launches and delegates to AccountHandler component instances to
 /// determine the detailed state and authentication for each account.
-pub struct AccountManager {
+///
+/// `AHC` An AccountHandlerConnection used to spawn new AccountHandler components.
+pub struct AccountManager<AHC: AccountHandlerConnection> {
     /// The account map maintains the state of all accounts as well as connections to their account
     /// handlers.
-    account_map: Mutex<AccountMap>,
-
-    /// An object to service requests for contextual information from AccountHandlers.
-    context: Arc<AccountHandlerContext>,
+    account_map: Mutex<AccountMap<AHC>>,
 
     /// Contains the client ends of all AccountListeners which are subscribed to account events.
     event_emitter: AccountEventEmitter,
@@ -58,14 +57,14 @@ pub struct AccountManager {
     _auth_providers_inspect: inspect::AuthProviders,
 }
 
-impl AccountManager {
+impl<AHC: AccountHandlerConnection> AccountManager<AHC> {
     /// Constructs a new AccountManager, loading existing set of accounts from `data_dir`, and an
     /// auth provider configuration. The directory must exist at construction.
     pub fn new(
         data_dir: PathBuf,
         auth_provider_config: &[AuthProviderConfig],
         inspector: &Inspector,
-    ) -> Result<AccountManager, Error> {
+    ) -> Result<AccountManager<AHC>, Error> {
         let context = Arc::new(AccountHandlerContext::new(auth_provider_config));
         let account_map = AccountMap::load(data_dir, Arc::clone(&context), inspector.root())?;
 
@@ -78,7 +77,6 @@ impl AccountManager {
 
         Ok(Self {
             account_map: Mutex::new(account_map),
-            context,
             event_emitter,
             _auth_providers_inspect: auth_providers_inspect,
         })
@@ -229,30 +227,39 @@ impl AccountManager {
         Ok(())
     }
 
+    /// Creates a new account handler connection, then creates an account within it,
+    /// and finally returns the connection.
+    async fn create_account_internal(&self, lifetime: Lifetime) -> Result<Arc<AHC>, ApiError> {
+        let account_handler =
+            self.account_map.lock().await.new_handler(lifetime).map_err(|err| {
+                warn!("Could not initialize account handler: {:?}", err);
+                err.api_error
+            })?;
+        let account_id = account_handler.get_account_id();
+        account_handler.proxy().create_account(account_id.clone().into()).await.map_err(
+            |err| {
+                warn!("Could not create account: {:?}", err);
+                ApiError::Resource
+            },
+        )??;
+        Ok(account_handler)
+    }
+
     async fn provision_new_account(
         &self,
         lifetime: Lifetime,
     ) -> Result<FidlLocalAccountId, ApiError> {
-        // Create an account
-        let (account_handler, account_id) =
-            match AccountHandlerConnection::create_account(Arc::clone(&self.context), lifetime)
-                .await
-            {
-                Ok((connection, account_id)) => (Arc::new(connection), account_id),
-                Err(err) => {
-                    warn!("Failure creating account: {:?}", err);
-                    return Err(err.api_error);
-                }
-            };
+        let account_handler = self.create_account_internal(lifetime).await?;
+        let account_id = account_handler.get_account_id();
 
         // Persist the account both in memory and on disk
-        if let Err(err) = self.add_account(account_handler.clone(), account_id.clone()).await {
+        if let Err(err) = self.add_account(account_handler.clone()).await {
             warn!("Failure adding account: {:?}", err);
             account_handler.terminate().await;
             Err(err.api_error)
         } else {
-            info!("Adding new local account {:?}", &account_id);
-            Ok(account_id.into())
+            info!("Adding new local account {:?}", account_id);
+            Ok(account_id.clone().into())
         }
     }
 
@@ -262,23 +269,14 @@ impl AccountManager {
         auth_provider_type: String,
         lifetime: Lifetime,
     ) -> Result<FidlLocalAccountId, ApiError> {
-        // Create an account
-        let (account_handler, account_id) =
-            match AccountHandlerConnection::create_account(Arc::clone(&self.context), lifetime)
-                .await
-            {
-                Ok((connection, account_id)) => (Arc::new(connection), account_id),
-                Err(err) => {
-                    warn!("Failure adding account: {:?}", err);
-                    return Err(err.api_error);
-                }
-            };
+        let account_handler = self.create_account_internal(lifetime).await?;
+        let account_id = account_handler.get_account_id();
 
         // Add a service provider to the account
         let _user_profile = match Self::add_service_provider_account(
             auth_context_provider,
             auth_provider_type,
-            account_handler.clone(),
+            Arc::clone(&account_handler),
         )
         .await
         {
@@ -292,13 +290,13 @@ impl AccountManager {
         };
 
         // Persist the account both in memory and on disk
-        if let Err(err) = self.add_account(account_handler.clone(), account_id.clone()).await {
+        if let Err(err) = self.add_account(Arc::clone(&account_handler)).await {
             warn!("Failure adding service provider account: {:?}", err);
             account_handler.terminate().await;
             Err(err.api_error)
         } else {
             info!("Adding new account {:?}", &account_id);
-            Ok(account_id.into())
+            Ok(account_id.clone().into())
         }
     }
 
@@ -306,7 +304,7 @@ impl AccountManager {
     async fn add_service_provider_account(
         auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
         auth_provider_type: String,
-        account_handler: Arc<AccountHandlerConnection>,
+        account_handler: Arc<AHC>,
     ) -> Result<UserProfileInfo, AccountManagerError> {
         // Use account handler to get a channel to the account
         let (account_client_end, account_server_end) =
@@ -351,14 +349,10 @@ impl AccountManager {
     }
 
     // Add the account to the AccountManager, including persistent state.
-    async fn add_account(
-        &self,
-        account_handler: Arc<AccountHandlerConnection>,
-        account_id: LocalAccountId,
-    ) -> Result<(), AccountManagerError> {
+    async fn add_account(&self, account_handler: Arc<AHC>) -> Result<(), AccountManagerError> {
         let mut account_map = self.account_map.lock().await;
 
-        account_map.add_account(&account_id, account_handler).await.map_err(|err| {
+        account_map.add_account(Arc::clone(&account_handler)).await.map_err(|err| {
             warn!("Could not add account: {:?}", err);
             // TODO(fxb/39829): Improve error mapping.
             if err.api_error == ApiError::FailedPrecondition {
@@ -367,7 +361,7 @@ impl AccountManager {
                 err.api_error
             }
         })?;
-        let event = AccountEvent::AccountAdded(account_id.clone());
+        let event = AccountEvent::AccountAdded(account_handler.get_account_id().clone());
         self.event_emitter.publish(&event).await;
         Ok(())
     }
@@ -376,6 +370,7 @@ impl AccountManager {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::account_handler_connection::AccountHandlerConnectionImpl;
     use crate::stored_account_list::{StoredAccountList, StoredAccountMetadata};
     use fidl::endpoints::{create_request_stream, RequestStream};
     use fidl_fuchsia_identity_account::{
@@ -389,6 +384,8 @@ mod tests {
     use lazy_static::lazy_static;
     use std::path::Path;
     use tempfile::TempDir;
+
+    type TestAccountManager = AccountManager<AccountHandlerConnectionImpl>;
 
     lazy_static! {
         /// Configuration for a set of fake auth providers used for testing.
@@ -407,9 +404,9 @@ mod tests {
 
     const FORCE_REMOVE_ON: bool = true;
 
-    fn request_stream_test<TestFn, Fut>(account_manager: AccountManager, test_fn: TestFn)
+    fn request_stream_test<TestFn, Fut>(account_manager: TestAccountManager, test_fn: TestFn)
     where
-        TestFn: FnOnce(AccountManagerProxy, Arc<AccountManager>) -> Fut,
+        TestFn: FnOnce(AccountManagerProxy, Arc<TestAccountManager>) -> Fut,
         Fut: Future<Output = Result<(), Error>>,
     {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
@@ -439,7 +436,7 @@ mod tests {
         existing_ids: Vec<u64>,
         data_dir: &Path,
         inspector: &Inspector,
-    ) -> AccountManager {
+    ) -> TestAccountManager {
         let stored_account_list = existing_ids
             .iter()
             .map(|&id| StoredAccountMetadata::new(LocalAccountId::new(id)))
@@ -452,7 +449,10 @@ mod tests {
     }
 
     // Contructs an account manager that reads its accounts from the supplied directory.
-    fn read_accounts(data_dir: &Path, inspector: &Inspector) -> AccountManager {
+    fn read_accounts(
+        data_dir: &Path,
+        inspector: &Inspector,
+    ) -> AccountManager<AccountHandlerConnectionImpl> {
         AccountManager::new(data_dir.to_path_buf(), &AUTH_PROVIDER_CONFIG, inspector).unwrap()
     }
 
