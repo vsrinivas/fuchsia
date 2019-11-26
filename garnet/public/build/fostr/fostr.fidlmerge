@@ -251,11 +251,13 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
   switch (value.Which()) {
         {{- $type_name := .Name.Parts.Name }}
         {{- range .Members }}
+          {{- if not .Reserved }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
-          {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
+            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
       return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
-          {{- else }}
+            {{- else }}
       return os << "{{ .Name }} " << value.{{ .Name }}();
+            {{- end }}
           {{- end }}
         {{- end }}
     case {{ $type_name }}::Tag::Invalid:
@@ -276,11 +278,13 @@ std::ostream& operator<<(std::ostream& os, const {{ .Name.Parts.Name }}& value) 
   switch (value.Ordinal()) {
         {{- $type_name := .Name.Parts.Name }}
         {{- range .Members }}
+          {{- if not .Reserved }}
     case {{ $type_name }}::Tag::k{{ toUpperCamelCase .Name }}:
-          {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
+            {{- if and (not .Type.Nullable) (eq .Type.Kind "vector") }}
       return os << "{{ .Name }} " << ::fostr::PrintVector(value.{{ .Name }}());
-          {{- else }}
+            {{- else }}
       return os << "{{ .Name }} " << value.{{ .Name }}();
+            {{- end }}
           {{- end }}
         {{- end }}
     case static_cast<fidl_xunion_tag_t>({{ $type_name }}::InternalTag::kEmpty):

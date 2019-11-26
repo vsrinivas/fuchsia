@@ -18,13 +18,15 @@ struct MyStruct {
 };
 
 xunion MyXunion {
-    int32 i;
-    bool b;
+    1: int32 i;
+    2: bool b;
+    3: reserved;
 };
 
 union MyUnion {
     1: int32 i;
     2: bool b;
+    3: reserved;
 };
 
 table SimpleTable {
