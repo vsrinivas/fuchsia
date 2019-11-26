@@ -11,7 +11,7 @@ use std::thread;
 
 use fuchsia_syslog::macros::*;
 
-use sl4f_lib::server::sl4f::{serve, Sl4f};
+use sl4f_lib::server::sl4f::{serve, Sl4f, Sl4fClients};
 use sl4f_lib::server::sl4f_executor::run_fidl_loop;
 
 // Config, flexible for any ip/port combination
@@ -27,24 +27,24 @@ fn main() -> Result<(), Error> {
     let address = format!("{}:{}", SERVER_IP, SERVER_PORT);
     fx_log_info!("Now listening on: {:?}", address);
 
-    // Session storing all information about state
-    // Currently supported: Bluetooth, wlan
-    // Add other stacks to sl4f.rs
-    let sl4f_session: Arc<RwLock<Sl4f>> = Sl4f::new()?;
+    // State for clients that utilize the /init endpoint
+    let sl4f_clients = Arc::new(RwLock::new(Sl4fClients::new()));
+
+    // State for facades
+    let sl4f = Arc::new(Sl4f::new(Arc::clone(&sl4f_clients))?);
 
     // Create channel for communication: rouille sync side -> async exec side
     let (rouille_sender, async_receiver) = mpsc::unbounded();
-    let sl4f_session_async = sl4f_session.clone();
 
     // Create thread for listening to test commands
     thread::spawn(move || {
         // Start listening on address
         rouille::start_server(address, move |request| {
-            serve(&request, sl4f_session.clone(), rouille_sender.clone())
+            serve(&request, Arc::clone(&sl4f_clients), rouille_sender.clone())
         });
     });
 
-    executor.run_singlethreaded(run_fidl_loop(sl4f_session_async, async_receiver));
+    executor.run_singlethreaded(run_fidl_loop(sl4f, async_receiver));
 
     Ok(())
 }

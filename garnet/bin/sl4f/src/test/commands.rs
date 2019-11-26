@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::server::Facade;
 use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::Arc;
 
 use crate::test::facade::TestFacade;
 use crate::test::types::TestPlan;
@@ -15,10 +16,20 @@ struct RunTestArgs {
     test: String,
 }
 
-pub async fn test_method_to_fidl(
+impl Facade for TestFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        test_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
+async fn test_method_to_fidl(
     method_name: String,
     args_value: Value,
-    facade: Arc<TestFacade>,
+    facade: &TestFacade,
 ) -> Result<Value, Error> {
     match method_name.as_str() {
         "RunTest" => {

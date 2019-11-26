@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::server::Facade;
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::ServiceInfo;
 use fidl_fuchsia_bluetooth_le::{AdvertisingData, AdvertisingParameters, ScanFilter};
 use fuchsia_syslog::macros::*;
+use futures::future::{FutureExt, LocalBoxFuture};
 use parking_lot::RwLock;
 use serde_json::{to_value, Value};
-use std::sync::Arc;
 
 // Bluetooth-related functionality
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
@@ -102,13 +103,31 @@ fn ble_publish_service_to_fidl(args_raw: Value) -> Result<(ServiceInfo, String),
     Ok((service_info, local_service_id.to_string()))
 }
 
+impl Facade for BleAdvertiseFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        ble_advertise_method_to_fidl(method, args, self).boxed_local()
+    }
+
+    fn cleanup(&self) {
+        Self::cleanup(self)
+    }
+
+    fn print(&self) {
+        Self::print(self)
+    }
+}
+
 // Takes ACTS method command and executes corresponding BLE
 // Advertise FIDL methods.
 // Packages result into serde::Value
-pub async fn ble_advertise_method_to_fidl(
+async fn ble_advertise_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<BleAdvertiseFacade>,
+    facade: &BleAdvertiseFacade,
 ) -> Result<Value, Error> {
     // TODO(armansito): Once the facade supports multi-advertising it should generate and
     // return a unique ID for each instance. For now we return this dummy ID for the
@@ -128,12 +147,30 @@ pub async fn ble_advertise_method_to_fidl(
     }
 }
 
+impl Facade for RwLock<BluetoothFacade> {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        ble_method_to_fidl(method, args, self).boxed_local()
+    }
+
+    fn cleanup(&self) {
+        BluetoothFacade::cleanup(self)
+    }
+
+    fn print(&self) {
+        self.read().print()
+    }
+}
+
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
-pub async fn ble_method_to_fidl(
+async fn ble_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<RwLock<BluetoothFacade>>,
+    facade: &RwLock<BluetoothFacade>,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::BlePublishService => {
@@ -144,10 +181,28 @@ pub async fn ble_method_to_fidl(
     }
 }
 
-pub async fn bt_control_method_to_fidl(
+impl Facade for BluetoothControlFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        bt_control_method_to_fidl(method, args, self).boxed_local()
+    }
+
+    fn cleanup(&self) {
+        Self::cleanup(self)
+    }
+
+    fn print(&self) {
+        Self::print(self)
+    }
+}
+
+async fn bt_control_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<BluetoothControlFacade>,
+    facade: &BluetoothControlFacade,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::BluetoothAcceptPairing => {
@@ -209,13 +264,31 @@ pub async fn bt_control_method_to_fidl(
     }
 }
 
+impl Facade for GattClientFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        gatt_client_method_to_fidl(method, args, self).boxed_local()
+    }
+
+    fn cleanup(&self) {
+        Self::cleanup(self)
+    }
+
+    fn print(&self) {
+        Self::print(self)
+    }
+}
+
 // Takes ACTS method command and executes corresponding Gatt Client
 // FIDL methods.
 // Packages result into serde::Value
-pub async fn gatt_client_method_to_fidl(
+async fn gatt_client_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<GattClientFacade>,
+    facade: &GattClientFacade,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::BleStartScan => {
@@ -309,10 +382,28 @@ pub async fn gatt_client_method_to_fidl(
     }
 }
 
-pub async fn gatt_server_method_to_fidl(
+impl Facade for GattServerFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        gatt_server_method_to_fidl(method, args, self).boxed_local()
+    }
+
+    fn cleanup(&self) {
+        Self::cleanup(self)
+    }
+
+    fn print(&self) {
+        Self::print(self)
+    }
+}
+
+async fn gatt_server_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<GattServerFacade>,
+    facade: &GattServerFacade,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::GattServerPublishServer => {
@@ -327,10 +418,20 @@ pub async fn gatt_server_method_to_fidl(
     }
 }
 
-pub async fn profile_server_method_to_fidl(
+impl Facade for ProfileServerFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        profile_server_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
+async fn profile_server_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<ProfileServerFacade>,
+    facade: &ProfileServerFacade,
 ) -> Result<Value, Error> {
     match BluetoothMethod::from_str(&method_name) {
         BluetoothMethod::ProfileServerInit => {

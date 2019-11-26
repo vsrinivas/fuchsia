@@ -3,9 +3,27 @@
 // found in the LICENSE file.
 
 use failure::Error;
+use futures::future::LocalBoxFuture;
 use serde_derive::{Deserialize, Serialize};
 use serde_json::Value;
-use std::sync::mpsc;
+use std::{fmt::Debug, sync::mpsc};
+
+/// An Sl4f facade that can handle incoming requests.
+pub trait Facade: Debug {
+    /// Asynchronously handle the incoming request for the given method and arguments, returning a
+    /// future object representing the pending operation.
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>>;
+
+    /// In response to a request to /cleanup, cleanup any cross-request state.
+    fn cleanup(&self) {}
+
+    /// In response to a request to /print, log relevant facade state.
+    fn print(&self) {}
+}
 
 /// Information about each client that has connected
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -55,9 +73,16 @@ impl CommandResponse {
     }
 }
 
-// Represents a RPC request to be fulfilled by the FIDL event loop
+/// Represents a RPC request to be fulfilled by the FIDL event loop
 #[derive(Debug)]
-pub struct AsyncRequest {
+pub enum AsyncRequest {
+    Cleanup(mpsc::Sender<()>),
+    Command(AsyncCommandRequest),
+}
+
+/// Represents a RPC command request to be fulfilled by the FIDL event loop
+#[derive(Debug)]
+pub struct AsyncCommandRequest {
     // tx: Transmit channel from FIDL event loop to RPC request side
     pub tx: mpsc::Sender<AsyncResponse>,
 
@@ -74,19 +99,19 @@ pub struct AsyncRequest {
     pub params: Value,
 }
 
-impl AsyncRequest {
+impl AsyncCommandRequest {
     pub fn new(
         tx: mpsc::Sender<AsyncResponse>,
         id: String,
         method_type: String,
         name: String,
         params: Value,
-    ) -> AsyncRequest {
-        AsyncRequest { tx, id, method_type, name, params }
+    ) -> AsyncCommandRequest {
+        AsyncCommandRequest { tx, id, method_type, name, params }
     }
 }
 
-// Represents a RPC response from the FIDL event loop to the RPC request side
+/// Represents a RPC response from the FIDL event loop to the RPC request side
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct AsyncResponse {
     // res: serde_json::Value of FIDL method result
@@ -100,58 +125,6 @@ impl AsyncResponse {
         match res {
             Ok(v) => AsyncResponse { result: Some(v), error: None },
             Err(e) => AsyncResponse { result: None, error: Some(e.to_string()) },
-        }
-    }
-}
-
-/// Enum for supported connectivity stacks
-/// Make sure to update sl4f.rs:method_to_fidl() match statement
-pub enum FacadeType {
-    AudioFacade,
-    BaseManagerFacade,
-    BleAdvertiseFacade,
-    Bluetooth,
-    BluetoothControlFacade,
-    FactoryStoreFacade,
-    FileFacade,
-    GattClientFacade,
-    GattServerFacade,
-    LoggingFacade,
-    NetstackFacade,
-    ProfileServerFacade,
-    SetUiFacade,
-    ScenicFacade,
-    TestFacade,
-    TraceutilFacade,
-    WebdriverFacade,
-    Wlan,
-    Paver,
-    Undefined,
-}
-
-impl FacadeType {
-    pub fn from_str(facade: &String) -> FacadeType {
-        match facade.as_ref() {
-            "audio_facade" => FacadeType::AudioFacade,
-            "basemgr_facade" => FacadeType::BaseManagerFacade,
-            "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
-            "bluetooth" => FacadeType::Bluetooth,
-            "bt_control_facade" => FacadeType::BluetoothControlFacade,
-            "factory_store_facade" => FacadeType::FactoryStoreFacade,
-            "file_facade" => FacadeType::FileFacade,
-            "gatt_client_facade" => FacadeType::GattClientFacade,
-            "gatt_server_facade" => FacadeType::GattServerFacade,
-            "logging_facade" => FacadeType::LoggingFacade,
-            "netstack_facade" => FacadeType::NetstackFacade,
-            "profile_server_facade" => FacadeType::ProfileServerFacade,
-            "scenic_facade" => FacadeType::ScenicFacade,
-            "setui_facade" => FacadeType::SetUiFacade,
-            "traceutil_facade" => FacadeType::TraceutilFacade,
-            "test_facade" => FacadeType::TestFacade,
-            "webdriver_facade" => FacadeType::WebdriverFacade,
-            "wlan" => FacadeType::Wlan,
-            "paver" => FacadeType::Paver,
-            _ => FacadeType::Undefined,
         }
     }
 }

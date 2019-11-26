@@ -6,3 +6,5 @@ pub mod constants;
 pub mod sl4f;
 pub mod sl4f_executor;
 pub mod sl4f_types;
+
+pub use crate::server::sl4f_types::Facade;

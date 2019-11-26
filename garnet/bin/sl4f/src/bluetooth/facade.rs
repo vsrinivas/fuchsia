@@ -18,7 +18,6 @@ use fuchsia_zircon as zx;
 use futures::future::{ready as fready, Future, TryFutureExt};
 use parking_lot::RwLock;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::common_utils::error::Sl4fError;
 
@@ -47,11 +46,8 @@ pub struct BluetoothFacade {
 }
 
 impl BluetoothFacade {
-    pub fn new() -> Arc<RwLock<BluetoothFacade>> {
-        Arc::new(RwLock::new(BluetoothFacade {
-            server_proxy: None,
-            service_proxies: HashMap::new(),
-        }))
+    pub fn new() -> RwLock<BluetoothFacade> {
+        RwLock::new(BluetoothFacade { server_proxy: None, service_proxies: HashMap::new() })
     }
 
     pub fn set_server_proxy(bt_facade: &RwLock<BluetoothFacade>) {
@@ -90,13 +86,13 @@ impl BluetoothFacade {
     }
 
     pub fn cleanup_gatt(bt_facade: &RwLock<BluetoothFacade>) {
-        BluetoothFacade::cleanup_server_proxy(bt_facade.clone());
-        BluetoothFacade::cleanup_service_proxies(bt_facade.clone());
+        BluetoothFacade::cleanup_server_proxy(bt_facade);
+        BluetoothFacade::cleanup_service_proxies(bt_facade);
     }
 
     // Close both central and peripheral proxies
-    pub fn cleanup(bt_facade: Arc<RwLock<BluetoothFacade>>) {
-        BluetoothFacade::cleanup_gatt(&bt_facade);
+    pub fn cleanup(bt_facade: &RwLock<BluetoothFacade>) {
+        BluetoothFacade::cleanup_gatt(bt_facade);
     }
 
     pub fn print(&self) {

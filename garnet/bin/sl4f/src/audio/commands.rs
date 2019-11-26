@@ -3,15 +3,26 @@
 // found in the LICENSE file.
 
 use crate::audio::{facade::AudioFacade, types::AudioMethod};
+use crate::server::Facade;
 use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::Value;
-use std::sync::Arc;
+
+impl Facade for AudioFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        audio_method_to_fidl(method, args, self).boxed_local()
+    }
+}
 
 // Takes SL4F method command and executes corresponding Audio Client methods.
-pub async fn audio_method_to_fidl(
+async fn audio_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<AudioFacade>,
+    facade: &AudioFacade,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         AudioMethod::PutInputAudio => facade.put_input_audio(args).await,

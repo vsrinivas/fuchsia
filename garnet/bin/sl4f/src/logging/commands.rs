@@ -4,14 +4,25 @@
 
 use crate::logging::facade::LoggingFacade;
 use crate::logging::types::LoggingMethod;
-use failure::{bail, Error};
+use crate::server::Facade;
+use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
-use std::sync::Arc;
 
-pub async fn logging_method_to_fidl(
+impl Facade for LoggingFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        logging_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
+async fn logging_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<LoggingFacade>,
+    facade: &LoggingFacade,
 ) -> Result<Value, Error> {
     match LoggingMethod::from_str(&method_name) {
         LoggingMethod::LogErr => {

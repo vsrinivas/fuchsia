@@ -5,12 +5,10 @@
 use failure::Error;
 use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
-use parking_lot::{Mutex, RwLock};
+use maplit::{convert_args, hashmap};
+use parking_lot::RwLock;
 use rouille::{self, router, Request, Response};
-use serde;
-use serde_json;
-use serde_json::{to_value, Value};
-use std;
+use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::io::Read;
 use std::sync::Arc;
@@ -18,7 +16,8 @@ use std::sync::Arc;
 // Standardized sl4f types and constants
 use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
 use crate::server::sl4f_types::{
-    AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
+    AsyncCommandRequest, AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
+    Facade,
 };
 
 // Audio related includes
@@ -30,9 +29,10 @@ use crate::basemgr::facade::BaseManagerFacade;
 // Bluetooth related includes
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::bt_control_facade::BluetoothControlFacade;
-use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
 use crate::bluetooth::gatt_server_facade::GattServerFacade;
+
+use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::profile_server_facade::ProfileServerFacade;
 
 use crate::common_utils::error::Sl4fError;
@@ -70,253 +70,161 @@ use crate::webdriver::facade::WebdriverFacade;
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
-/// Sl4f object. This stores all information about state for each connectivity stack.
-/// Every session will have a new Sl4f object.
-/// For example, to add WLAN stack support, add "wlan_facade" to the struct definition and update
-/// the impl functions. Then, update method_to_fidl() to support the "wlan" method type.
-#[derive(Debug, Clone)]
+/// Sl4f stores state for all facades and has access to information for all connected clients.
+///
+/// To add support for a new Facade implementation, see the hashmap in `Sl4f::new`.
+#[derive(Debug)]
 pub struct Sl4f {
-    // audio_facade: Thread safe object for state for Audio tests
-    audio_facade: Arc<AudioFacade>,
+    // facades: Mapping of method prefix to object implementing that facade's API.
+    facades: HashMap<String, Arc<dyn Facade>>,
 
-    // basemgr_facade: Thread safe object for restarting sessions for tests.
-    basemgr_facade: Arc<BaseManagerFacade>,
-
-    // bt_facade: Thread safe object for state for ble functions.
-    ble_advertise_facade: Arc<BleAdvertiseFacade>,
-
-    // bt_facade: Thread safe object for state for bluetooth connectivity tests
-    bt_facade: Arc<RwLock<BluetoothFacade>>,
-
-    // bt_control_facade: Thread safe object for state for  Bluetooth control tests
-    bt_control_facade: Arc<BluetoothControlFacade>,
-
-    // factory_store_facade: Thread safe object for state for Factory functions.
-    factory_store_facade: Arc<FactoryStoreFacade>,
-
-    // file_facade: Thread safe object for state for  File control functions
-    file_facade: Arc<FileFacade>,
-
-    // gatt_client_facade: Thread safe object for state for Gatt Client tests
-    gatt_client_facade: Arc<GattClientFacade>,
-
-    // gatt_server_facade: Thread safe object for state for Gatt Server tests
-    gatt_server_facade: Arc<GattServerFacade>,
-
-    // logging_facade: Thread safe object for state for logging functions.
-    logging_facade: Arc<LoggingFacade>,
-
-    // netstack_facade: Thread safe object for state for netstack functions.
-    netstack_facade: Arc<NetstackFacade>,
-
-    // paver_facade: Thread safe object for state for paver functions.
-    paver_facade: Arc<PaverFacade>,
-
-    // profile_server_facade: Thread safe object for state for prifle server functions.
-    profile_server_facade: Arc<ProfileServerFacade>,
-
-    // scenic_facade: thread safe object for state for Scenic functions.
-    scenic_facade: Arc<ScenicFacade>,
-
-    // setui_facade: thread safe object for state for SetUi functions.
-    setui_facade: Arc<SetUiFacade>,
-
-    // test_facade: Thread safe object for state for Test functions.
-    test_facade: Arc<TestFacade>,
-
-    // traceutil_facade: Thread safe object for state for Traceutil functions.
-    traceutil_facade: Arc<TraceutilFacade>,
-
-    // webdriver_facade: thread safe object for state for webdriver functions.
-    webdriver_facade: Arc<WebdriverFacade>,
-
-    // wlan_facade: Thread safe object for state for wlan connectivity tests
-    wlan_facade: Arc<WlanFacade>,
-
-    // clients: Thread safe map for clients that are connected to the sl4f server.
-    // key = session_id (unique for every ACTS instance) and value = Data about client (see
-    // sl4f_types.rs)
-    clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
+    // connected clients
+    clients: Arc<RwLock<Sl4fClients>>,
 }
 
 impl Sl4f {
-    pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
-        let audio_facade = Arc::new(AudioFacade::new()?);
-        let basemgr_facade = Arc::new(BaseManagerFacade::new());
-        let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
-        let bt_control_facade = Arc::new(BluetoothControlFacade::new());
-        let factory_store_facade = Arc::new(FactoryStoreFacade::new());
-        let file_facade = Arc::new(FileFacade::new());
-        let gatt_client_facade = Arc::new(GattClientFacade::new());
-        let gatt_server_facade = Arc::new(GattServerFacade::new());
-        let logging_facade = Arc::new(LoggingFacade::new());
-        let netstack_facade = Arc::new(NetstackFacade::new());
-        let paver_facade = Arc::new(PaverFacade::new());
-        let profile_server_facade = Arc::new(ProfileServerFacade::new());
-        let scenic_facade = Arc::new(ScenicFacade::new());
-        let setui_facade = Arc::new(SetUiFacade::new()?);
-        let test_facade = Arc::new(TestFacade::new());
-        let traceutil_facade = Arc::new(TraceutilFacade::new());
-        let webdriver_facade = Arc::new(WebdriverFacade::new());
-        let wlan_facade = Arc::new(WlanFacade::new()?);
-        Ok(Arc::new(RwLock::new(Sl4f {
-            audio_facade,
-            basemgr_facade,
-            ble_advertise_facade,
-            bt_facade: BluetoothFacade::new(),
-            bt_control_facade,
-            factory_store_facade,
-            file_facade,
-            gatt_client_facade,
-            gatt_server_facade,
-            logging_facade,
-            netstack_facade,
-            paver_facade,
-            profile_server_facade,
-            scenic_facade,
-            setui_facade,
-            test_facade,
-            traceutil_facade,
-            webdriver_facade,
-            wlan_facade,
-            clients: Arc::new(Mutex::new(HashMap::new())),
-        })))
+    pub fn new(clients: Arc<RwLock<Sl4fClients>>) -> Result<Sl4f, Error> {
+        fn to_arc_trait_object<'a, T: Facade + 'a>(facade: T) -> Arc<dyn Facade + 'a> {
+            Arc::new(facade) as Arc<dyn Facade>
+        }
+        // To add support for a new facade, define a new submodule with the Facade implementation
+        // and construct an instance and include it in the mapping below. The key is used to route
+        // requests to the appropriate Facade. Facade constructors should generally not fail, as a
+        // facade that returns an error here will prevent sl4f from starting.
+        let facades = convert_args!(
+            keys = String::from,
+            values = to_arc_trait_object,
+            hashmap!(
+                "audio_facade" => AudioFacade::new()?,
+                "basemgr_facade" => BaseManagerFacade::new(),
+                "ble_advertise_facade" => BleAdvertiseFacade::new(),
+                "bluetooth" => BluetoothFacade::new(),
+                "bt_control_facade" => BluetoothControlFacade::new(),
+                "factory_store_facade" => FactoryStoreFacade::new(),
+                "file_facade" => FileFacade::new(),
+                "gatt_client_facade" => GattClientFacade::new(),
+                "gatt_server_facade" => GattServerFacade::new(),
+                "logging_facade" => LoggingFacade::new(),
+                "netstack_facade" => NetstackFacade::new(),
+                "paver" => PaverFacade::new(),
+                "profile_server_facade" => ProfileServerFacade::new(),
+                "scenic_facade" => ScenicFacade::new(),
+                "setui_facade" => SetUiFacade::new()?,
+                "test_facade" => TestFacade::new(),
+                "traceutil_facade" => TraceutilFacade::new(),
+                "webdriver_facade" => WebdriverFacade::new(),
+                "wlan" => WlanFacade::new()?,
+            )
+        );
+        Ok(Sl4f { facades, clients })
     }
 
-    pub fn get_netstack_facade(&self) -> Arc<NetstackFacade> {
-        self.netstack_facade.clone()
+    /// Gets the facade registered with the given name, if one exists.
+    pub fn get_facade(&self, name: &str) -> Option<Arc<dyn Facade>> {
+        self.facades.get(name).map(Arc::clone)
     }
 
-    pub fn get_audio_facade(&self) -> Arc<AudioFacade> {
-        self.audio_facade.clone()
-    }
-
-    pub fn get_basemgr_facade(&self) -> Arc<BaseManagerFacade> {
-        self.basemgr_facade.clone()
-    }
-
-    pub fn get_ble_advertise_facade(&self) -> Arc<BleAdvertiseFacade> {
-        self.ble_advertise_facade.clone()
-    }
-
-    pub fn get_bt_control_facade(&self) -> Arc<BluetoothControlFacade> {
-        self.bt_control_facade.clone()
-    }
-
-    pub fn get_factory_store_facade(&self) -> Arc<FactoryStoreFacade> {
-        self.factory_store_facade.clone()
-    }
-
-    pub fn get_file_facade(&self) -> Arc<FileFacade> {
-        self.file_facade.clone()
-    }
-
-    pub fn get_gatt_client_facade(&self) -> Arc<GattClientFacade> {
-        self.gatt_client_facade.clone()
-    }
-
-    pub fn get_gatt_server_facade(&self) -> Arc<GattServerFacade> {
-        self.gatt_server_facade.clone()
-    }
-
-    pub fn get_bt_facade(&self) -> Arc<RwLock<BluetoothFacade>> {
-        self.bt_facade.clone()
-    }
-
-    pub fn get_logging_facade(&self) -> Arc<LoggingFacade> {
-        self.logging_facade.clone()
-    }
-
-    pub fn get_paver_facade(&self) -> Arc<PaverFacade> {
-        self.paver_facade.clone()
-    }
-
-    pub fn get_profile_server_facade(&self) -> Arc<ProfileServerFacade> {
-        self.profile_server_facade.clone()
-    }
-
-    pub fn get_scenic_facade(&self) -> Arc<ScenicFacade> {
-        self.scenic_facade.clone()
-    }
-
-    pub fn get_setui_facade(&self) -> Arc<SetUiFacade> {
-        self.setui_facade.clone()
-    }
-
-    pub fn get_test_facade(&self) -> Arc<TestFacade> {
-        self.test_facade.clone()
-    }
-
-    pub fn get_traceutil_facade(&self) -> Arc<TraceutilFacade> {
-        self.traceutil_facade.clone()
-    }
-
-    pub fn get_webdriver_facade(&self) -> Arc<WebdriverFacade> {
-        self.webdriver_facade.clone()
-    }
-
-    pub fn get_wlan_facade(&self) -> Arc<WlanFacade> {
-        self.wlan_facade.clone()
-    }
-
-    pub fn get_clients(&self) -> Arc<Mutex<HashMap<String, Vec<ClientData>>>> {
-        self.clients.clone()
-    }
-
-    pub fn cleanup_clients(&self) {
-        self.clients.lock().clear();
-    }
-
-    pub fn cleanup(&mut self) {
-        BluetoothFacade::cleanup(self.bt_facade.clone());
-        self.ble_advertise_facade.cleanup();
-        self.bt_control_facade.cleanup();
-        self.gatt_client_facade.cleanup();
-        self.gatt_server_facade.cleanup();
-        self.cleanup_clients();
+    /// Implement the Facade trait method cleanup() to clean up state when "/cleanup" is queried.
+    pub fn cleanup(&self) {
+        for facade in self.facades.values() {
+            facade.cleanup();
+        }
+        self.clients.write().cleanup_clients();
     }
 
     pub fn print_clients(&self) {
-        fx_log_info!("SL4F Clients: {:?}", self.clients);
+        self.clients.read().print_clients();
     }
 
-    // Add *_facade.print() when new Facade objects are added (i.e WlanFacade)
+    /// Implement the Facade trait method print() to log state when "/print" is queried.
     pub fn print(&self) {
-        self.bt_facade.read().print();
-        self.ble_advertise_facade.print();
-        self.bt_control_facade.print();
-        self.gatt_client_facade.print();
-        self.gatt_server_facade.print();
+        for facade in self.facades.values() {
+            facade.print();
+        }
     }
 }
 
-// Handles all incoming requests to SL4F server, routes accordingly
+/// Metadata for clients utilizing the /init API.
+#[derive(Debug)]
+pub struct Sl4fClients {
+    // clients: map of clients that are connected to the sl4f server.
+    // key = session_id (unique for every ACTS instance) and value = Data about client (see
+    // sl4f_types.rs)
+    clients: HashMap<String, Vec<ClientData>>,
+}
+
+impl Sl4fClients {
+    pub fn new() -> Self {
+        Self { clients: HashMap::new() }
+    }
+
+    /// Registers a new connected client. Returns true if the client was already initialized.
+    fn init_client(&mut self, id: String) -> bool {
+        use std::collections::hash_map::Entry::*;
+        match self.clients.entry(id) {
+            Occupied(entry) => {
+                fx_log_warn!(tag: "client_init",
+                    "Key: {:?} already exists in clients. ",
+                    entry.key()
+                );
+                true
+            }
+            Vacant(entry) => {
+                entry.insert(Vec::new());
+                fx_log_info!(tag: "client_init", "Updated clients: {:?}", self.clients);
+                false
+            }
+        }
+    }
+
+    fn store_response(&mut self, client_id: &str, command_response: ClientData) {
+        match self.clients.get_mut(client_id) {
+            Some(client_responses) => {
+                client_responses.push(command_response);
+                fx_log_info!(tag: "store_response", "Stored response. Updated clients: {:?}", self.clients);
+            }
+            None => {
+                fx_log_err!(tag: "store_response", "Client doesn't exist in server database: {:?}", client_id)
+            }
+        }
+    }
+
+    fn cleanup_clients(&mut self) {
+        self.clients.clear();
+    }
+
+    fn print_clients(&self) {
+        fx_log_info!("SL4F Clients: {:?}", self.clients);
+    }
+}
+
+/// Handles all incoming requests to SL4F server, routes accordingly
 pub fn serve(
     request: &Request,
-    sl4f_session: Arc<RwLock<Sl4f>>,
+    clients: Arc<RwLock<Sl4fClients>>,
     rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
     router!(request,
         (GET) (/) => {
             // Parse the command request
             fx_log_info!(tag: "serve", "Received command request.");
-            client_request(sl4f_session.clone(), &request, rouille_sender.clone())
+            client_request(&clients, &request, &rouille_sender)
         },
         (GET) (/init) => {
             // Initialize a client
             fx_log_info!(tag: "serve", "Received init request.");
-            client_init(&request, sl4f_session.write().get_clients().clone())
+            client_init(&request, &clients)
         },
         (GET) (/print_clients) => {
             // Print information about all clients
             fx_log_info!(tag: "serve", "Received print client request.");
             const PRINT_ACK: &str = "Successfully printed clients.";
-            sl4f_session.read().print_clients();
+            clients.read().print_clients();
             rouille::Response::json(&PRINT_ACK)
         },
         (GET) (/cleanup) => {
             fx_log_info!(tag: "serve", "Received server cleanup request.");
-            server_cleanup(&request, sl4f_session.clone())
+            server_cleanup(&request, &rouille_sender)
         },
         _ => {
             fx_log_err!(tag: "serve", "Received unknown server request.");
@@ -327,33 +235,12 @@ pub fn serve(
     )
 }
 
-// Given the session id, method id, and result of FIDL call, store the result for this client
-fn store_response(
-    sl4f_session: Arc<RwLock<Sl4f>>,
-    client_id: String,
-    method_id: String,
-    result: AsyncResponse,
-) {
-    let clients = sl4f_session.write().clients.clone();
-
-    // If the current client session is found, append the result of the FIDL call to the result
-    // history
-    if clients.lock().contains_key(&client_id) {
-        let command_response = ClientData::new(method_id.clone(), result.clone());
-        clients.lock().entry(client_id.clone()).or_insert(Vec::new()).push(command_response);
-    } else {
-        fx_log_err!(tag: "store_response", "Client doesn't exist in server database: {:?}", client_id);
-    }
-
-    fx_log_info!(tag: "store_response", "Stored response. Updated clients: {:?}", clients);
-}
-
-// Given the request, map the test request to a FIDL query and execute
-// asynchronously
+/// Given the request, map the test request to a FIDL query and execute
+/// asynchronously
 fn client_request(
-    sl4f_session: Arc<RwLock<Sl4f>>,
+    clients: &Arc<RwLock<Sl4fClients>>,
     request: &Request,
-    rouille_sender: mpsc::UnboundedSender<AsyncRequest>,
+    rouille_sender: &mpsc::UnboundedSender<AsyncRequest>,
 ) -> Response {
     const FAIL_TEST_ACK: &str = "Command failed";
 
@@ -369,12 +256,19 @@ fn client_request(
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
     let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
-    let req =
-        AsyncRequest::new(async_sender, method_id.clone(), method_type, method_name, method_params);
-    rouille_sender.unbounded_send(req).expect("Failed to send request to async thread.");
+    let req = AsyncCommandRequest::new(
+        async_sender,
+        method_id.clone(),
+        method_type,
+        method_name,
+        method_params,
+    );
+    rouille_sender
+        .unbounded_send(AsyncRequest::Command(req))
+        .expect("Failed to send request to async thread.");
     let resp: AsyncResponse = rouille_receiver.recv().unwrap();
 
-    store_response(sl4f_session, session_id.clone(), method_id.clone(), resp.clone());
+    clients.write().store_response(&session_id, ClientData::new(method_id.clone(), resp.clone()));
     fx_log_info!(tag: "client_request", "Received async thread response: {:?}", resp);
 
     // If the response has a return value, package into response, otherwise use error code
@@ -390,12 +284,9 @@ fn client_request(
     }
 }
 
-// Initializes a new client, adds to clients, a thread-safe HashMap
-// Returns a rouille::Response
-fn client_init(
-    request: &Request,
-    clients: Arc<Mutex<HashMap<String, Vec<ClientData>>>>,
-) -> Response {
+/// Initializes a new client, adds to clients, a thread-safe HashMap
+/// Returns a rouille::Response
+fn client_init(request: &Request, clients: &Arc<RwLock<Sl4fClients>>) -> Response {
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
 
@@ -411,25 +302,17 @@ fn client_init(
 
     // Initialize client with key = id, val = client data
     let client_id = client_id_raw.as_str().map(String::from).unwrap();
-    let client_data = Vec::new();
 
-    if clients.lock().contains_key(&client_id) {
-        fx_log_warn!(tag: "client_init",
-            "Key: {:?} already exists in clients. ",
-            &client_id
-        );
-        return rouille::Response::json(&FAIL_INIT_ACK);
+    if clients.write().init_client(client_id) {
+        rouille::Response::json(&FAIL_INIT_ACK)
+    } else {
+        rouille::Response::json(&INIT_ACK)
     }
-
-    clients.lock().insert(client_id, client_data);
-    fx_log_info!(tag: "client_init", "Updated clients: {:?}", clients);
-
-    rouille::Response::json(&INIT_ACK)
 }
 
-// Given the name of the ACTS method, derive method type + method name
-// Returns two "", "" on invalid input which will later propagate to
-// method_to_fidl and raise an error
+/// Given the name of the ACTS method, derive method type + method name
+/// Returns two "", "" on invalid input which will later propagate to
+/// method_to_fidl and raise an error
 fn split_string(method_name_raw: String) -> (String, String) {
     let split = method_name_raw.split(COMMAND_DELIMITER);
     let string_split: Vec<&str> = split.collect();
@@ -442,8 +325,8 @@ fn split_string(method_name_raw: String) -> (String, String) {
     (string_split[0].to_string(), string_split[1].to_string())
 }
 
-// Given a request, grabs the method id, name, and parameters
-// Return Sl4fError if fail
+/// Given a request, grabs the method id, name, and parameters
+/// Return Sl4fError on error
 fn parse_request(request: &Request) -> Result<(String, String, String, String, Value), Error> {
     let mut data = match request.data() {
         Some(d) => d,
@@ -476,7 +359,10 @@ fn parse_request(request: &Request) -> Result<(String, String, String, String, V
     Ok((session_id, method_id, method_type, method_name, method_params))
 }
 
-fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Response {
+fn server_cleanup(
+    request: &Request,
+    rouille_sender: &mpsc::UnboundedSender<AsyncRequest>,
+) -> Response {
     const FAIL_CLEANUP_ACK: &str = "Failed to cleanup SL4F resources.";
     const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
 
@@ -486,17 +372,16 @@ fn server_cleanup(request: &Request, sl4f_session: Arc<RwLock<Sl4f>>) -> Respons
         Err(_) => return Response::json(&FAIL_CLEANUP_ACK),
     };
 
-    // Cleanup all resources associated with session
-    // Validate result
-    let session = sl4f_session.clone();
-    session.write().cleanup();
-    session.read().print();
+    // Create channel for async thread to respond to
+    let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
 
-    let ack = match to_value(serde::export::Some(CLEANUP_ACK.to_string())) {
-        Ok(v) => CommandResponse::new(method_id, Some(v), None),
-        Err(e) => CommandResponse::new(method_id, None, Some(e.to_string())),
-    };
+    // Cleanup all resources associated with sl4f
+    rouille_sender
+        .unbounded_send(AsyncRequest::Cleanup(async_sender))
+        .expect("Failed to send request to async thread.");
+    let () = rouille_receiver.recv().expect("Async thread dropped responder.");
 
+    let ack = CommandResponse::new(method_id, Some(json!(CLEANUP_ACK)), None);
     rouille::Response::json(&ack)
 }
 

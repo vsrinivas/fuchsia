@@ -2,20 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::server::Facade;
 use failure::{format_err, Error};
 use fuchsia_syslog::macros::*;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
-use std::sync::Arc;
 
 // Testing helper methods
 use crate::wlan::facade::WlanFacade;
 
+impl Facade for WlanFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        wlan_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
 // Takes ACTS method command and executes corresponding FIDL method
 // Packages result into serde::Value
-pub async fn wlan_method_to_fidl(
+async fn wlan_method_to_fidl(
     method_name: String,
     args: Value,
-    wlan_facade: Arc<WlanFacade>,
+    wlan_facade: &WlanFacade,
 ) -> Result<Value, Error> {
     match method_name.as_ref() {
         "scan" => {

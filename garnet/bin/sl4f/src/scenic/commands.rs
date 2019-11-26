@@ -6,16 +6,27 @@ use crate::scenic::{
     facade::ScenicFacade,
     types::{PresentViewRequest, ScenicMethod},
 };
+use crate::server::Facade;
 use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
-use std::sync::Arc;
+
+impl Facade for ScenicFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        scenic_method_to_fidl(method, args, self).boxed_local()
+    }
+}
 
 // Takes ACTS method command and executes corresponding Scenic Client
 // FIDL methods.
-pub async fn scenic_method_to_fidl(
+async fn scenic_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<ScenicFacade>,
+    facade: &ScenicFacade,
 ) -> Result<Value, Error> {
     match method_name.parse()? {
         ScenicMethod::TakeScreenshot => facade.take_screenshot().await,

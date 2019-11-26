@@ -2,18 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::server::Facade;
 use failure::{bail, Error};
-
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
-use std::sync::Arc;
 
 use crate::webdriver::facade::WebdriverFacade;
 
+impl Facade for WebdriverFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        webdriver_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
 /// Forwards SL4F Webdriver commands to Webdriver facade.
-pub async fn webdriver_method_to_fidl(
+async fn webdriver_method_to_fidl(
     method_name: String,
     _args: Value,
-    facade: Arc<WebdriverFacade>,
+    facade: &WebdriverFacade,
 ) -> Result<Value, Error> {
     match method_name.as_ref() {
         "EnableDevTools" => {

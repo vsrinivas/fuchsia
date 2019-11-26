@@ -3,19 +3,30 @@
 // found in the LICENSE file.
 
 use crate::netstack::types::NetstackMethod;
+use crate::server::Facade;
 use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{to_value, Value};
-use std::sync::Arc;
 
 use crate::common_utils::common::parse_u64_identifier;
 use crate::netstack::facade::NetstackFacade;
 
+impl Facade for NetstackFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        netstack_method_to_fidl(method, args, self).boxed_local()
+    }
+}
+
 // Takes ACTS method command and executes corresponding Netstack Client
 // FIDL methods.
-pub async fn netstack_method_to_fidl(
+async fn netstack_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<NetstackFacade>,
+    facade: &NetstackFacade,
 ) -> Result<Value, Error> {
     match NetstackMethod::from_str(&method_name) {
         NetstackMethod::InitNetstack => {

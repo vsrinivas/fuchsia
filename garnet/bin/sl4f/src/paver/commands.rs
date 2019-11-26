@@ -3,15 +3,26 @@
 // found in the LICENSE file.
 
 use super::{facade::PaverFacade, types::Method};
+use crate::server::Facade;
 use failure::Error;
+use futures::future::{FutureExt, LocalBoxFuture};
 use serde_json::{from_value, to_value, Value};
-use std::sync::Arc;
+
+impl Facade for PaverFacade {
+    fn handle_request(
+        &self,
+        method: String,
+        args: Value,
+    ) -> LocalBoxFuture<'_, Result<Value, Error>> {
+        paver_method_to_fidl(method, args, self).boxed_local()
+    }
+}
 
 // Takes SL4F method command and executes corresponding file facade method.
 pub async fn paver_method_to_fidl(
     method_name: String,
     args: Value,
-    facade: Arc<PaverFacade>,
+    facade: &PaverFacade,
 ) -> Result<Value, Error> {
     handle_request(method_name.parse()?, args, &facade).await
 }
