@@ -137,7 +137,10 @@ config("compiler") {
       compiler_flags += [ "-ffixed-x18" ]
     } else if (current_cpu == "x64") {
       # Let the compiler generate the cmpxchg16b instruction.
-      compiler_flags += [ "-mcx16" ]
+      compiler_flags += [
+        "-mcx16",
+        "-march=x86-64",
+      ]
     }
   }
 
@@ -286,6 +289,7 @@ config("freestanding") {
 
 config("data_sections") {
   cflags = [ "-fdata-sections" ]
+  ldflags = cflags
 }
 
 config("linker_gc") {
