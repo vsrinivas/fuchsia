@@ -156,9 +156,9 @@ pub async fn handle_events<H: HostListener>(
             HostEvent::OnAdapterStateChanged { ref state } => {
                 host_.write().info.update_state(Some(state.into()));
             }
-            // TODO(NET-968): Add integration test for this.
+            // TODO(613): Add integration test for this.
             HostEvent::OnDeviceUpdated { device } => listener.on_peer_updated(Peer::from(device)),
-            // TODO(NET-1038): Add integration test for this.
+            // TODO(814): Add integration test for this.
             HostEvent::OnDeviceRemoved { identifier } => listener.on_peer_removed(identifier),
             HostEvent::OnNewBondingData { data } => {
                 fx_log_info!("Received bonding data");

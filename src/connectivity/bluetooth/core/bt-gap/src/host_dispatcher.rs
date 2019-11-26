@@ -577,7 +577,7 @@ impl HostDispatcher {
     }
 
     pub fn on_device_updated(&self, peer: Peer) {
-        // TODO(NET-1297): generic method for this pattern
+        // TODO(825): generic method for this pattern
         let mut d = control::RemoteDevice::from(peer.clone());
         self.notify_event_listeners(|listener| {
             let _res = listener
@@ -686,7 +686,7 @@ impl HostDispatcher {
         // Enable privacy by default.
         host_device.read().enable_privacy(true).map_err(|e| e.as_failure())?;
 
-        // TODO(NET-1445): Only the active host should be made connectable and scanning in the background.
+        // TODO(845): Only the active host should be made connectable and scanning in the background.
         host_device
             .read()
             .set_connectable(true)
@@ -894,7 +894,7 @@ fn start_pairing_delegate(
     host_device: Arc<RwLock<HostDevice>>,
 ) -> Result<(), Error> {
     // Initialize bt-gap as this host's pairing delegate.
-    // TODO(NET-1445): Do this only for the active host. This will make sure that non-active hosts
+    // TODO(845): Do this only for the active host. This will make sure that non-active hosts
     // always reject pairing.
     let (delegate_client_end, delegate_stream) = endpoints::create_request_stream()?;
     host_device.read().set_host_pairing_delegate(
