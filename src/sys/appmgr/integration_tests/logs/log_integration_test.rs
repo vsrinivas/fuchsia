@@ -25,7 +25,7 @@ const CHILD_WITH_LOGS_URL: &str =
     "fuchsia-pkg://fuchsia.com/appmgr_log_integration_tests#meta/log_emitter_for_test.cmx";
 const OBSERVER_URL: &str = "fuchsia-pkg://fuchsia.com/archivist#meta/observer.cmx";
 
-#[fasync::run_singlethreaded]
+#[fasync::run(2)]
 async fn main() {
     let mut builder = AppBuilder::new(OBSERVER_URL);
     let observer_dir_req = Arc::clone(builder.directory_request().unwrap());
@@ -41,14 +41,17 @@ async fn main() {
     }));
 
     let log_proxy = observer.connect_to_service::<LogMarker>().unwrap();
-    AppBuilder::new(CHILD_WITH_LOGS_URL)
-        .spawn(&observed_launcher)
-        .expect("launching child")
-        .wait()
-        .await
-        .expect("child execution");
 
-    validate_log_stream(
+    let child = async {
+        AppBuilder::new(CHILD_WITH_LOGS_URL)
+            .spawn(&observed_launcher)
+            .expect("launching child")
+            .wait()
+            .await
+            .expect("child execution");
+    };
+
+    let validator = validate_log_stream(
         vec![LogMessage {
             severity: 0,
             tags: vec!["log_emitter_for_test".into()],
@@ -60,6 +63,6 @@ async fn main() {
         }],
         log_proxy,
         None,
-    )
-    .await;
+    );
+    futures::future::join(child, validator).await;
 }
