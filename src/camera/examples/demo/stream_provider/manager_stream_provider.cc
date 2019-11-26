@@ -129,7 +129,10 @@ ManagerStreamProvider::ConnectToStream(fidl::InterfaceRequest<fuchsia::camera2::
   sysmem_constraints.usage.cpu = fuchsia::sysmem::cpuUsageRead | fuchsia::sysmem::cpuUsageWrite;
   collection->SetConstraints(true, std::move(sysmem_constraints));
 
-  fuchsia::camera2::StreamConstraints stream_constraints;  // Intentionally empty.
+  fuchsia::camera2::StreamProperties stream_properties;
+  stream_properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+  fuchsia::camera2::StreamConstraints stream_constraints;
+  stream_constraints.set_properties(std::move(stream_properties));
   fuchsia::sysmem::ImageFormat_2 format_ret;
   manager_->ConnectToStream(kDeviceId, std::move(stream_constraints), std::move(manager_token),
                             std::move(request),
