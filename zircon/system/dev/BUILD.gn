@@ -12,7 +12,6 @@ group("dev") {
     "audio",
     "backlight",
     "block",
-    "bluetooth",
     "board",
     "bus",
     "clk",
