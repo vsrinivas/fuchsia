@@ -65,7 +65,17 @@ use {
 /// });
 /// ```
 ///
-/// The first argument can be an Inspector, in which case the whole tree is read from the VMO and
+/// In order to do a match on a tree where they keys need to be computed (they are some
+/// expression), you'll need to use `=>` instead of `:`:
+///
+/// ```
+/// assert_inspect_tree!(node_hierarchy, key: {
+///     key_fn() => "value",
+/// })
+/// ```
+/// Note that `key_fn` has to return a `String`.
+///
+/// The first argument can be an Inspector, in which case the whole tree is read from the Tree and
 /// matched against:
 /// ```
 /// let inspector = Inspector::new().unwrap();
@@ -116,6 +126,12 @@ macro_rules! assert_inspect_tree {
     // Allows string literal for key
     (@build $tree_assertion:expr, $key:tt: $($rest:tt)+) => {{
         let key: &'static str = $key;
+        assert_inspect_tree!(@build $tree_assertion, var key: $($rest)+);
+    }};
+    // Allows an expression that resolves into a String for key
+    (@build $tree_assertion:expr, $key:expr => $($rest:tt)+) => {{
+        let key_string : String = $key;
+        let key = &key_string;
         assert_inspect_tree!(@build $tree_assertion, var key: $($rest)+);
     }};
 
@@ -628,6 +644,17 @@ mod tests {
             disposition: LinkNodeDisposition::Child,
         }];
         assert_inspect_tree!(partial, root: {});
+    }
+
+    #[test]
+    fn test_matching_with_expression_as_key() {
+        let propreties = vec![Property::String("sub".to_string(), "sub_value".to_string())];
+        let partial = PartialNodeHierarchy::new("root", propreties, vec![]);
+        let value = || "sub_value";
+        let key = || "sub".to_string();
+        assert_inspect_tree!(partial, root: {
+            key() => value(),
+        });
     }
 
     fn simple_tree() -> NodeHierarchy {
