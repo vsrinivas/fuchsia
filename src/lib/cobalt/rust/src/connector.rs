@@ -24,7 +24,12 @@ use {
 pub enum ConnectionType {
     /// Connecting with ProjectName relys on the Cobalt FIDL service's internal copy of the metrics
     /// registry.
+    /// DEPRECATED: use ProjectId instead.
     ProjectName(Cow<'static, str>),
+
+    /// Connecting with ProjectId relies on the Cobalt FIDL service's internal copy of the metrics
+    /// registry.
+    ProjectId(u32),
 
     /// Connecting with ConfigPath provides the Cobalt FIDL service with your own copy of the
     /// metrics registry. This can be useful if your module will be updated out-of-band from the
@@ -34,8 +39,14 @@ pub enum ConnectionType {
 
 impl ConnectionType {
     /// Constructs a `ConnectionType::ProjectName(_)`
+    /// DEPRECATED: use project_id instead.
     pub fn project_name<S: Into<Cow<'static, str>>>(s: S) -> Self {
         ConnectionType::ProjectName(s.into())
+    }
+
+    /// Constructs a `ConnectionType::ProjectId(_)`
+    pub fn project_id(project_id: u32) -> Self {
+        ConnectionType::ProjectId(project_id)
     }
 
     /// Constructs a `ConnectionType::ConfigPath(_)`
@@ -108,8 +119,15 @@ impl CobaltConnector {
             .context("Failed to connect to the Cobalt LoggerFactory")?;
 
         let res = match connection_type {
-            ConnectionType::ProjectName(project_name) => logger_factory
-                .create_logger_from_project_name(&project_name, self.release_stage, server_end).await,
+            ConnectionType::ProjectName(project_name) => {
+                logger_factory
+                    .create_logger_from_project_name(&project_name, self.release_stage, server_end)
+                    .await
+            }
+
+            ConnectionType::ProjectId(project_id) => {
+                logger_factory.create_logger_from_project_id(project_id, server_end).await
+            }
 
             ConnectionType::ConfigPath(config_path) => {
                 let mut cobalt_config = File::open(config_path.as_ref())?;
@@ -118,10 +136,12 @@ impl CobaltConnector {
 
                 let config = fuchsia_mem::Buffer { vmo, size };
 
-                logger_factory.create_logger(
-                    &mut ProjectProfile { config, release_stage: self.release_stage },
-                    server_end,
-                ).await
+                logger_factory
+                    .create_logger(
+                        &mut ProjectProfile { config, release_stage: self.release_stage },
+                        server_end,
+                    )
+                    .await
             }
         };
 
@@ -146,10 +166,14 @@ impl CobaltConnector {
             let resp = logger.log_cobalt_event(&mut event).await;
             match resp {
                 Ok(Status::Ok) => continue,
-                Ok(other) => log_error(format!("Cobalt returned an error for metric {}: {:?}",
-                    event.metric_id, other)),
-                Err(e) => log_error(format!("Failed to send event to Cobalt for metric {}: {}",
-                    event.metric_id, e)),
+                Ok(other) => log_error(format!(
+                    "Cobalt returned an error for metric {}: {:?}",
+                    event.metric_id, other
+                )),
+                Err(e) => log_error(format!(
+                    "Failed to send event to Cobalt for metric {}: {}",
+                    event.metric_id, e
+                )),
             }
         }
     }

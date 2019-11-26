@@ -31,7 +31,7 @@ pub use {
 /// # Example
 ///
 /// ```no_run
-/// cobalt_fidl::serve(100, ConnectionType::project_name("test_project"));
+/// cobalt_fidl::serve(100, ConnectionType::project_id(1234));
 /// ```
 pub fn serve(
     buffer_size: usize,

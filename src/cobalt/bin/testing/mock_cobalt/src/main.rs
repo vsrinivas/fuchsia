@@ -5,7 +5,7 @@
 use {
     failure::Error,
     fidl_fuchsia_cobalt::{
-        self as cobalt, CobaltEvent, LoggerFactoryRequest::CreateLoggerFromProjectName,
+        self as cobalt, CobaltEvent, LoggerFactoryRequest::CreateLoggerFromProjectId,
     },
     fidl_fuchsia_cobalt_test as cobalt_test, fuchsia_async as fasync,
     fuchsia_cobalt::CobaltEventExt,
@@ -59,19 +59,17 @@ type EventsLogHandle = Arc<Mutex<EventsLog>>;
 
 // Entries in the HashMap are concurrently added by run_cobalt_service and
 // looked up by run_cobalt_query_service.
-type LoggersHandle = Arc<Mutex<HashMap<String, EventsLogHandle>>>;
+type LoggersHandle = Arc<Mutex<HashMap<u32, EventsLogHandle>>>;
 
-/// Create a new Logger. Accepts all `project_name` values.
+/// Create a new Logger. Accepts all `project_id` values.
 async fn run_cobalt_service(
     mut stream: cobalt::LoggerFactoryRequestStream,
     loggers: LoggersHandle,
 ) -> Result<(), Error> {
     while let Some(event) = stream.try_next().await? {
-        if let CreateLoggerFromProjectName { project_name, logger, responder, release_stage: _ } =
-            event
-        {
+        if let CreateLoggerFromProjectId { project_id, logger, responder } = event {
             let log =
-                loggers.lock().await.entry(project_name).or_insert_with(Default::default).clone();
+                loggers.lock().await.entry(project_id).or_insert_with(Default::default).clone();
             fasync::spawn_local(handle_cobalt_logger(logger.into_stream()?, log));
             responder.send(cobalt::Status::Ok)?;
         } else {
@@ -197,15 +195,15 @@ async fn run_cobalt_query_service(
     loggers: LoggersHandle,
 ) -> Result<(), Error> {
     let mut client_state: HashMap<
-        String,
+        u32,
         HashMap<fidl_fuchsia_cobalt_test::LogMethod, Arc<Mutex<usize>>>,
     > = HashMap::new();
     use cobalt_test::LogMethod::*;
 
     while let Some(event) = stream.try_next().await? {
         match event {
-            cobalt_test::LoggerQuerierRequest::WatchLogs { project_name, method, responder } => {
-                if let Some(state) = loggers.lock().await.get(&project_name) {
+            cobalt_test::LoggerQuerierRequest::WatchLogs { project_id, method, responder } => {
+                if let Some(state) = loggers.lock().await.get(&project_id) {
                     let mut state = state.lock().await;
                     let log_state = match method {
                         LogEvent => &mut state.log_event,
@@ -219,7 +217,7 @@ async fn run_cobalt_query_service(
                         LogCobaltEvents => &mut state.log_cobalt_events,
                     };
                     let last_observed = client_state
-                        .entry(project_name)
+                        .entry(project_id)
                         .or_insert_with(Default::default)
                         .entry(method)
                         .or_insert_with(Default::default);
@@ -243,11 +241,11 @@ async fn run_cobalt_query_service(
                 }
             }
             cobalt_test::LoggerQuerierRequest::ResetLogger {
-                project_name,
+                project_id,
                 method,
                 control_handle: _,
             } => {
-                if let Some(log) = loggers.lock().await.get(&project_name) {
+                if let Some(log) = loggers.lock().await.get(&project_id) {
                     let mut state = log.lock().await;
                     match method {
                         LogEvent => state.log_event.log.clear(),
@@ -319,11 +317,11 @@ mod tests {
         assert!(loggers.lock().await.is_empty());
 
         factory_proxy
-            .create_logger_from_project_name("foo", ReleaseStage::Ga, server)
+            .create_logger_from_project_id(1234, server)
             .await
-            .expect("create_logger_from_project_name fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed");
 
-        assert!(loggers.lock().await.get("foo").is_some());
+        assert!(loggers.lock().await.get(&1234).is_some());
     }
 
     #[fasync::run_until_stalled(test)]
@@ -344,16 +342,16 @@ mod tests {
         fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
 
         factory_proxy
-            .create_logger_from_project_name("foo", ReleaseStage::Ga, server)
+            .create_logger_from_project_id(123, server)
             .await
-            .expect("create_logger_from_project_name fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed");
 
         // Log a single event
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
             Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
-                .watch_logs("foo", LogMethod::LogEvent)
+                .watch_logs(123, LogMethod::LogEvent)
                 .await
                 .expect("log_event fidl call to succeed")
         );
@@ -377,9 +375,9 @@ mod tests {
         fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
 
         factory_proxy
-            .create_logger_from_project_name("foo", ReleaseStage::Ga, server)
+            .create_logger_from_project_id(12, server)
             .await
-            .expect("create_logger_from_project_name fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed");
 
         // Log 1 more than the maximum number of events that can be stored and assert that
         // `more` flag is true on logger query request
@@ -390,7 +388,7 @@ mod tests {
                 .expect("repeated log_event fidl call to succeed");
         }
         let (events, more) = querier_proxy
-            .watch_logs("foo", LogMethod::LogEvent)
+            .watch_logs(12, LogMethod::LogEvent)
             .await
             .expect("watch_logs fidl call to succeed")
             .expect("logger to exist and have recorded events");
@@ -415,7 +413,7 @@ mod tests {
         assert_eq!(
             Err(QueryError::LoggerNotFound),
             querier_proxy
-                .watch_logs("foo", LogMethod::LogEvent)
+                .watch_logs(1, LogMethod::LogEvent)
                 .await
                 .expect("watch_logs fidl call to succeed")
         );
@@ -431,12 +429,12 @@ mod tests {
             create_proxy::<LoggerMarker>().expect("create logger proxy and server end to succeed");
 
         fasync::spawn_local(run_cobalt_service(factory_stream, loggers.clone()).map(|_| ()));
-        let project_name = "foo";
+        let project_id = 1;
 
         factory_proxy
-            .create_logger_from_project_name(project_name, ReleaseStage::Ga, server)
+            .create_logger_from_project_id(project_id, server)
             .await
-            .expect("create_logger_from_project_name fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed");
 
         let metric_id = 1;
         let event_code = 2;
@@ -468,7 +466,7 @@ mod tests {
             .await?;
         logger_proxy.log_cobalt_events(&mut vec![].into_iter()).await?;
         let log = loggers.lock().await;
-        let log = log.get(project_name).expect("project should have been created");
+        let log = log.get(&project_id).expect("project should have been created");
         let state = log.lock().await;
         assert_eq!(state.log_event.log.len(), 1);
         assert_eq!(state.log_event_count.log.len(), 1);
@@ -499,29 +497,29 @@ mod tests {
         fasync::spawn_local(run_cobalt_query_service(query_stream, loggers.clone()).map(|_| ()));
 
         factory_proxy
-            .create_logger_from_project_name("foo", ReleaseStage::Ga, server)
+            .create_logger_from_project_id(987, server)
             .await
-            .expect("create_logger_from_project_name fidl call to succeed");
+            .expect("create_logger_from_project_id fidl call to succeed");
 
         // Log a single event
         logger_proxy.log_event(1, 2).await.expect("log_event fidl call to succeed");
         assert_eq!(
             Ok((vec![CobaltEvent::builder(1).with_event_code(2).as_event()], false)),
             querier_proxy
-                .watch_logs("foo", LogMethod::LogEvent)
+                .watch_logs(987, LogMethod::LogEvent)
                 .await
                 .expect("log_event fidl call to succeed")
         );
 
         // Clear logger state
         querier_proxy
-            .reset_logger("foo", LogMethod::LogEvent)
+            .reset_logger(987, LogMethod::LogEvent)
             .expect("reset_logger fidl call to succeed");
 
         assert_eq!(
             Ok((vec![], false)),
             querier_proxy
-                .watch_logs("foo", LogMethod::LogEvent)
+                .watch_logs(987, LogMethod::LogEvent)
                 .await
                 .expect("watch_logs fidl call to succeed")
         );
@@ -549,12 +547,11 @@ mod tests {
         // will never return.
         let services = futures::future::join(cobalt_service, cobalt_query_service);
 
-        let project_name = "foo";
+        let project_id = 765;
         let mut create_logger = futures::future::select(
             services,
-            factory_proxy.create_logger_from_project_name(
-                project_name,
-                ReleaseStage::Ga,
+            factory_proxy.create_logger_from_project_id(
+                project_id,
                 logger_proxy_server_end,
             ),
         );
@@ -572,7 +569,7 @@ mod tests {
             }
         };
 
-        let watch_logs_hanging_get = querier_proxy.watch_logs(project_name, LogMethod::LogEvent);
+        let watch_logs_hanging_get = querier_proxy.watch_logs(project_id, LogMethod::LogEvent);
         let mut watch_logs_hanging_get =
             futures::future::select(continuation, watch_logs_hanging_get);
         let watch_logs_poll = executor.run_until_stalled(&mut watch_logs_hanging_get);

@@ -32,23 +32,23 @@ enum QueryError {
 [Discoverable]
 protocol LoggerQuerier {
     /// Returns the _first_ N events that were logged for the logger with the
-    /// given `project_name` and a `more` flag indicating whether there were
+    /// given `project_id` and a `more` flag indicating whether there were
     /// more than N events logged. There is no way to retrieve events logged
     /// after the first N events.
     ///
-    /// Returns an error if a Logger for the given `project_name` has not been
+    /// Returns an error if a Logger for the given `project_id` has not been
     /// created through a request to the LoggerFactory protocol.
     ///
     /// Repeated calls to WatchLogs for a given LogMethod will block until new
     /// events are logged with that method, enabling tests to synchronize
     /// without sleeps or timeouts.
-    WatchLogs(string:64 project_name, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more) error QueryError;
+    WatchLogs(uint32 project_id, LogMethod method) -> (vector<cobalt.CobaltEvent>:MAX_QUERY_LENGTH events, bool more) error QueryError;
 
     /// Clear all logged events by logging `method` for the logger with the
-    /// given `project_name`.
+    /// given `project_id`.
     ///
-    /// This is a no-op if a logger for the given `project_name` does not exist.
-    /// Notably, it does _not_ create a new logger with `project_name` if one
+    /// This is a no-op if a logger for the given `project_id` does not exist.
+    /// Notably, it does _not_ create a new logger with `project_id` if one
     /// does not already exist.
-    ResetLogger(string:64 project_name, LogMethod method);
+    ResetLogger(uint32 project_id, LogMethod method);
 };
