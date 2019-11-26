@@ -264,6 +264,7 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
                     CreateLoggerCallback callback) override {
     received_project_name_ = "";
+    received_project_id_ = 0;
     received_release_stage_ = fuchsia::cobalt::ReleaseStage::GA;
     logger_.reset(new FakeLoggerImpl());
     logger_bindings_.AddBinding(logger_.get(), std::move(request));
@@ -293,7 +294,12 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
 
   void CreateLoggerFromProjectId(uint32_t project_id,
                                  fidl::InterfaceRequest<fuchsia::cobalt::Logger> request,
-                                 CreateLoggerFromProjectIdCallback callback) override {}
+                                 CreateLoggerFromProjectIdCallback callback) override {
+    received_project_id_ = project_id;
+    logger_.reset(new FakeLoggerImpl());
+    logger_bindings_.AddBinding(logger_.get(), std::move(request));
+    callback(fuchsia::cobalt::Status::OK);
+  }
 
   void CreateLoggerSimpleFromProjectId(
       uint32_t project_id, fidl::InterfaceRequest<fuchsia::cobalt::LoggerSimple> request,
@@ -301,10 +307,12 @@ class FakeLoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
 
   FakeLoggerImpl* logger() { return logger_.get(); }
   std::string received_project_name() { return received_project_name_; }
+  uint32_t received_project_id() { return received_project_id_; }
   ReleaseStage received_release_stage() { return received_release_stage_; }
 
  private:
   std::string received_project_name_;
+  uint32_t received_project_id_;
   ReleaseStage received_release_stage_;
   std::unique_ptr<FakeLoggerImpl> logger_;
   fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
@@ -369,6 +377,16 @@ TEST_F(CobaltLoggerTest, InitializeCobalt) {
   RunLoopUntilIdle();
   EXPECT_EQ("MyProject", logger_factory()->received_project_name());
   EXPECT_EQ(fuchsia::cobalt::ReleaseStage::DEBUG, logger_factory()->received_release_stage());
+}
+
+TEST_F(CobaltLoggerTest, InitializeCobaltFromId) {
+  EXPECT_NE(cobalt_logger(), nullptr);
+  EXPECT_EQ("", logger_factory()->received_project_name());
+  EXPECT_EQ(0u, logger_factory()->received_project_id());
+  NewCobaltLoggerFromProjectId(async_get_default_dispatcher(), service_directory(), 1234);
+  RunLoopUntilIdle();
+  EXPECT_EQ("", logger_factory()->received_project_name());
+  EXPECT_EQ(1234u, logger_factory()->received_project_id());
 }
 
 TEST_F(CobaltLoggerTest, LogEvent) {

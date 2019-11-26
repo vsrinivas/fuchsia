@@ -377,10 +377,31 @@ std::unique_ptr<CobaltLogger> NewCobaltLogger(async_dispatcher_t* dispatcher,
 // versions of the metric and report definitions to be used by the returned
 // CobaltLogger. The |project_name| should be the name of one of the projects in
 // that bundled registry.
+// DEPRECATED: use NewCobaltLoggerFromProjectId instead.
 std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
     async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
     std::string project_name,
     fuchsia::cobalt::ReleaseStage release_stage = fuchsia::cobalt::ReleaseStage::GA);
+
+// Returns a CobaltLogger initialized with the provided parameters.
+//
+// |dispatcher| A pointer to an async_dispatcher_t to be used for all
+// asynchronous operations.
+//
+// |services| A shared pointer to the ServiceDirectory that provides access to the
+// services received by the component using this CobaltLogger.
+//
+// |project_id| The ID of the Cobalt project to be associated with the
+// returned CobaltLogger.
+//
+// Use this version of NewCobaltLogger*() when the version of the Cobalt
+// registry that was bundled with the Cobalt service itself contains the latest
+// versions of the metric and report definitions to be used by the returned
+// CobaltLogger. The |project_id| should be the ID of one of the projects in
+// that bundled registry.
+std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    uint32_t project_id);
 
 }  // namespace cobalt
 

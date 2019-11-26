@@ -26,10 +26,12 @@ using fuchsia::cobalt::Status;
 namespace cobalt {
 
 BaseCobaltLoggerImpl::BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, std::string project_name,
+                                           uint32_t project_id,
                                            fuchsia::cobalt::ReleaseStage release_stage,
                                            ProjectProfile profile)
     : dispatcher_(dispatcher),
       project_name_(std::move(project_name)),
+      project_id_(project_id),
       release_stage_(release_stage),
       profile_(std::move(profile)) {}
 
@@ -133,7 +135,7 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
     return;
   }
 
-  if (project_name_.empty()) {
+  if (project_name_.empty() && project_id_ == 0) {
     logger_factory->CreateLogger(
         CloneProjectProfile(), logger_.NewRequest(), [this](Status status) {
           if (status == Status::OK) {
@@ -145,6 +147,20 @@ void BaseCobaltLoggerImpl::ConnectToCobaltApplication() {
             }
           } else {
             FX_LOGST(ERROR, "cobalt_lib") << "CreateLogger() failed.";
+          }
+        });
+  } else if (project_name_.empty()) {
+    logger_factory->CreateLoggerFromProjectId(
+        project_id_, logger_.NewRequest(), [this](Status status) {
+          if (status == Status::OK) {
+            if (logger_) {
+              logger_.set_error_handler([this](zx_status_t status) { OnConnectionError(); });
+              SendEvents();
+            } else {
+              OnConnectionError();
+            }
+          } else {
+            FX_LOGST(ERROR, "cobalt_lib") << "CreateLoggerFromProjectId() failed";
           }
         });
   } else {
@@ -259,7 +275,7 @@ fidl::InterfacePtr<LoggerFactory> CobaltLoggerImpl::ConnectToLoggerFactory() {
 CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
                                    ProjectProfile profile)
-    : BaseCobaltLoggerImpl(dispatcher, "", ReleaseStage::GA, std::move(profile)),
+    : BaseCobaltLoggerImpl(dispatcher, "", 0, ReleaseStage::GA, std::move(profile)),
       services_(services) {
   ConnectToCobaltApplication();
 }
@@ -268,7 +284,15 @@ CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
                                    std::shared_ptr<sys::ServiceDirectory> services,
                                    std::string project_name,
                                    fuchsia::cobalt::ReleaseStage release_stage)
-    : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), release_stage, ProjectProfile()),
+    : BaseCobaltLoggerImpl(dispatcher, std::move(project_name), 0, release_stage, ProjectProfile()),
+      services_(services) {
+  ConnectToCobaltApplication();
+}
+
+CobaltLoggerImpl::CobaltLoggerImpl(async_dispatcher_t* dispatcher,
+                                   std::shared_ptr<sys::ServiceDirectory> services,
+                                   uint32_t project_id)
+    : BaseCobaltLoggerImpl(dispatcher, "", project_id, ReleaseStage::GA, ProjectProfile()),
       services_(services) {
   ConnectToCobaltApplication();
 }

@@ -274,7 +274,7 @@ class CobaltEvents : public BaseEvent {
 class BaseCobaltLoggerImpl : public CobaltLogger {
  public:
   BaseCobaltLoggerImpl(async_dispatcher_t* dispatcher, std::string project_name,
-                       fuchsia::cobalt::ReleaseStage release_stage,
+                       uint32_t project_id, fuchsia::cobalt::ReleaseStage release_stage,
                        fuchsia::cobalt::ProjectProfile profile);
   ~BaseCobaltLoggerImpl() override;
   void LogEvent(uint32_t metric_id, uint32_t event_code) override;
@@ -314,17 +314,16 @@ class BaseCobaltLoggerImpl : public CobaltLogger {
   async_dispatcher_t* const dispatcher_;
   fuchsia::cobalt::LoggerPtr logger_;
 
-  // This object is in one of two modes depending on which constructor was
-  // used.
+  // This object is in one of two modes depending on which constructor was used.
   //
-  // Mode 1: |project_name_| is non-empty. In this case |release_stage| should
-  // also have been set, |profile_| is ignored, and when connecting to Cobalt
-  // we use CreateLoggerFromProjectName().
+  // Mode 1: |project_name_| is non-empty or |project_id_| is non-zero. In this case |release_stage|
+  // should also have been set, |profile_| is ignored, and when connecting to Cobalt we use
+  // CreateLoggerFromProjectName() or CreateLoggerFromProjectId().
   //
-  // Mode 2: |project_name_| is empty. In this case |profile_| should have
-  // been set, |release_stage_| is ignored, and when connecting to Cobalt
-  // we use CreateLogger().
+  // Mode 2: |project_name_| is empty. In this case |profile_| should have been set,
+  // |release_stage_| is ignored, and when connecting to Cobalt we use CreateLogger().
   const std::string project_name_;
+  const uint32_t project_id_;
   const fuchsia::cobalt::ReleaseStage release_stage_ = fuchsia::cobalt::ReleaseStage::GA;
   const fuchsia::cobalt::ProjectProfile profile_;
 
@@ -343,8 +342,14 @@ class CobaltLoggerImpl : public BaseCobaltLoggerImpl {
 
   // Use this version of the constructor in order to connect to the Cobalt
   // application via CreateLoggerFromProjectName().
+  // DEPRECATED: use the alternative below that accepts a project ID.
   CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
                    std::string project_name, fuchsia::cobalt::ReleaseStage release_stage);
+
+  // Use this version of the constructor in order to connect to the Cobalt
+  // application via CreateLoggerFromProjectId().
+  CobaltLoggerImpl(async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+                   uint32_t project_id);
 
   ~CobaltLoggerImpl() override{};
 

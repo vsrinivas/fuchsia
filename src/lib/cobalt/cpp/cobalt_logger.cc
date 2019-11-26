@@ -43,4 +43,10 @@ std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectName(
                                             release_stage);
 }
 
+std::unique_ptr<CobaltLogger> NewCobaltLoggerFromProjectId(
+    async_dispatcher_t* dispatcher, std::shared_ptr<sys::ServiceDirectory> services,
+    uint32_t project_id) {
+  return std::make_unique<CobaltLoggerImpl>(dispatcher, services, project_id);
+}
+
 }  // namespace cobalt
