@@ -43,6 +43,7 @@
 #include "blob.h"
 #include "blobfs-checker.h"
 #include "compression/compressor.h"
+#include "iterator/block-iterator.h"
 
 using block_client::RemoteBlockDevice;
 using digest::Digest;
@@ -149,6 +150,16 @@ zx_status_t Blobfs::Create(async_dispatcher_t* dispatcher, std::unique_ptr<Block
   auto fs = std::unique_ptr<Blobfs>(
       new Blobfs(dispatcher, std::move(device), superblock, options->writability));
   fs->block_info_ = std::move(block_info);
+
+  if (options->pager) {
+    status = fs->InitPager();
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Could not initialize user pager\n");
+      return status;
+    }
+    fs->paging_enabled_ = true;
+    FS_TRACE_INFO("blobfs: Initialized user pager\n");
+  }
 
   if (options->metrics) {
     fs->Metrics().Collect();
@@ -781,5 +792,47 @@ zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<fs::Vnode>* out, ServeLayout layout
 }
 
 Journal* Blobfs::journal() { return journal_.get(); }
+
+zx_status_t Blobfs::AttachTransferVmo(const zx::vmo& transfer_vmo) {
+  return AttachVmo(transfer_vmo, &transfer_vmoid_);
+}
+
+zx_status_t Blobfs::PopulateTransferVmo(uint32_t map_index, uint32_t start_block,
+                                        uint32_t block_count) {
+  fs::Ticker ticker(Metrics().Collecting());
+  fs::ReadTxn txn(this);
+  AllocatedExtentIterator extent_iter(GetAllocator(), map_index);
+  BlockIterator block_iter(&extent_iter);
+
+  // Navigate to the start block.
+  zx_status_t status = IterateToBlock(&block_iter, start_block);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to navigate to start block %u: %s\n", start_block,
+                   zx_status_get_string(status));
+    return status;
+  }
+
+  // Enqueue operations to read in the required blocks to the transfer buffer.
+  const uint64_t data_start = DataStartBlock(Info());
+  status = StreamBlocks(
+      &block_iter, block_count, [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
+        txn.Enqueue(transfer_vmoid_, vmo_offset - start_block, dev_offset + data_start, length);
+        return ZX_OK;
+      });
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to enqueue read operations: %s\n", zx_status_get_string(status));
+    return status;
+  }
+
+  // Issue the read.
+  status = txn.Transact();
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("blobfs: Failed to transact read operations: %s\n",
+                   zx_status_get_string(status));
+    return status;
+  }
+  Metrics().UpdateMerkleDiskRead(block_count * kBlobfsBlockSize, ticker.End());
+  return ZX_OK;
+}
 
 }  // namespace blobfs

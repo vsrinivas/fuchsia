@@ -20,6 +20,7 @@ zx_test("blobfs-unit") {
     "unit/allocated-extent-iterator-test.cc",
     "unit/allocator-test.cc",
     "unit/blob-cache-test.cc",
+    "unit/blobfs-pager-test.cc",
     "unit/blobfs-test.cc",
     "unit/compressor-test.cc",
     "unit/create-tests.cc",

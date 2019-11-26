@@ -50,6 +50,11 @@ class BlockIterator {
 using StreamFn = fbl::Function<zx_status_t(uint64_t local_off, uint64_t dev_off, uint32_t length)>;
 zx_status_t StreamBlocks(BlockIterator* iterator, uint32_t block_count, StreamFn stream);
 
+// IterateToBlock is a utility function which moves the iterator to block number |block_num|.
+// Used by the blobfs pager to navigate to an arbitrary offset within a blob.
+// NOTE: This can only move the iterator forward relative to the current position.
+zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num);
+
 }  // namespace blobfs
 
 #endif  // ZIRCON_SYSTEM_ULIB_BLOBFS_ITERATOR_BLOCK_ITERATOR_H_

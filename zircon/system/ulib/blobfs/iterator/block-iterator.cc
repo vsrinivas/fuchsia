@@ -11,8 +11,6 @@
 
 #include <blobfs/format.h>
 
-#include "extent-iterator.h"
-
 namespace blobfs {
 
 BlockIterator::BlockIterator(ExtentIterator* iterator) : iterator_(iterator) {}
@@ -38,6 +36,22 @@ zx_status_t BlockIterator::Next(uint32_t length, uint32_t* out_length, uint64_t*
   *out_length = std::min(blocks_left_, length);
   *out_start = (extent_->Start() + extent_->Length()) - blocks_left_;
   blocks_left_ -= *out_length;
+  return ZX_OK;
+}
+
+zx_status_t IterateToBlock(BlockIterator* iter, uint32_t block_num) {
+  while (!iter->Done() && block_num > iter->BlockIndex()) {
+    uint32_t out_length = 0;
+    uint64_t out_start = 0;
+    auto blocks_to_iterate_over = static_cast<uint32_t>(block_num - iter->BlockIndex());
+    zx_status_t status = iter->Next(blocks_to_iterate_over, &out_length, &out_start);
+    if (status != ZX_OK) {
+      return status;
+    }
+  }
+  if (iter->Done()) {
+    return ZX_ERR_INVALID_ARGS;
+  }
   return ZX_OK;
 }
 

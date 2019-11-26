@@ -50,6 +50,7 @@
 #include "iterator/allocated-extent-iterator.h"
 #include "iterator/extent-iterator.h"
 #include "metrics.h"
+#include "pager/user-pager.h"
 #include "transaction-manager.h"
 
 namespace blobfs {
@@ -61,7 +62,7 @@ using storage::UnbufferedOperationsBuilder;
 
 constexpr char kOutgoingDataRoot[] = "root";
 
-class Blobfs : public TransactionManager {
+class Blobfs : public TransactionManager, public UserPager {
  public:
   DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -164,8 +165,18 @@ class Blobfs : public TransactionManager {
   // Adds reserved blocks to allocated bitmap and writes the bitmap out to disk.
   void PersistBlocks(const ReservedExtent& extent, storage::UnbufferedOperationsBuilder* ops);
 
+  bool PagingEnabled() const { return paging_enabled_; }
+
  private:
   friend class BlobfsChecker;
+
+  ////////////////
+  // UserPager interface.
+  //
+  // Allows populating the pager transfer buffer with a blob's blocks from the block device.
+  zx_status_t AttachTransferVmo(const zx::vmo& transfer_vmo) final;
+  zx_status_t PopulateTransferVmo(uint32_t map_index, uint32_t start_block,
+                                  uint32_t block_count) final;
 
   Blobfs(async_dispatcher_t* dispatcher, std::unique_ptr<BlockDevice> device,
          const Superblock* info, Writability writable);
@@ -241,6 +252,9 @@ class Blobfs : public TransactionManager {
   uint64_t fs_id_ = 0;
 
   BlobfsMetrics metrics_ = {};
+
+  vmoid_t transfer_vmoid_ = {};
+  bool paging_enabled_ = false;
 };
 
 }  // namespace blobfs

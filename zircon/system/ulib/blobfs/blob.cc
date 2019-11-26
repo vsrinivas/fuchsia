@@ -121,35 +121,73 @@ zx_status_t Blob::InitVmos() {
 
   fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
   FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
-  zx_status_t status = mapping_.CreateAndMap(vmo_size, vmo_name.c_str());
+
+  // Use the pager only if the blob is uncompressed AND blobfs has a pager set up.
+  bool use_pager =
+      (((inode_.header.flags & (kBlobFlagLZ4Compressed | kBlobFlagZSTDCompressed)) == 0) &&
+       blobfs_->PagingEnabled());
+
+  zx_status_t status;
+  if (use_pager) {
+    page_watcher_ = std::make_unique<PageWatcher>(blobfs_, GetMapIndex());
+    zx::vmo vmo;
+    status = page_watcher_->CreatePagedVmo(vmo_size, &vmo);
+    if (status != ZX_OK) {
+      return status;
+    }
+
+    vmo.set_property(ZX_PROP_NAME, vmo_name.c_str(), vmo_name.length());
+    status = mapping_.Map(std::move(vmo));
+  } else {
+    status = mapping_.CreateAndMap(vmo_size, vmo_name.c_str());
+  }
+
   if (status != ZX_OK) {
-    FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
+    FS_TRACE_ERROR("Failed to initialize vmo; error: %s\n", zx_status_get_string(status));
     return status;
   }
   vmoid_t vmoid;
-  if ((status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid)) != ZX_OK) {
-    FS_TRACE_ERROR("Failed to attach VMO to block device; error: %d\n", status);
+  status = blobfs_->AttachVmo(mapping_.vmo(), &vmoid);
+  if (status != ZX_OK) {
+    FS_TRACE_ERROR("Failed to attach VMO to block device; error: %s\n",
+                   zx_status_get_string(status));
     return status;
   }
   {
     auto detach_vmo = fbl::MakeAutoCall([this, &vmoid]() { blobfs_->DetachVmo(vmoid); });
 
-    if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
-      if ((status = InitCompressed(CompressionAlgorithm::LZ4, vmoid)) != ZX_OK) {
-        return status;
+    if (use_pager) {
+      // TODO(rashaeqbal): Remove this once Merkle tree verification no longer requires the entire
+      // blob to be present (fxb/35678).
+      // For now page in the entire blob. This is different from the InitUncompressed() path below,
+      // which reads the data directly into the blob's VMO. This path exercises the blobfs pager.
+      char bytes[kBlobfsBlockSize];
+      for (uint64_t blk = 0; blk < num_blocks; blk++) {
+        status = mapping_.vmo().read(static_cast<void*>(bytes), blk * kBlobfsBlockSize,
+                                     kBlobfsBlockSize);
+        if (status != ZX_OK) {
+          FS_TRACE_ERROR("Failed to read in data at block %zu; error %s\n", blk,
+                         zx_status_get_string(status));
+          return status;
+        }
       }
+    } else if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
+      status = InitCompressed(CompressionAlgorithm::LZ4, vmoid);
     } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
-      if ((status = InitCompressed(CompressionAlgorithm::ZSTD, vmoid)) != ZX_OK) {
-        return status;
-      }
+      status = InitCompressed(CompressionAlgorithm::ZSTD, vmoid);
     } else {
-      if ((status = InitUncompressed(vmoid)) != ZX_OK) {
-        return status;
-      }
+      status = InitUncompressed(vmoid);
+    }
+
+    if (status != ZX_OK) {
+      return status;
     }
   }
 
-  if ((status = Verify()) != ZX_OK) {
+  // TODO(rashaeqbal): Remove this once fxb/35678 is in. Instead verify pages as they are populated
+  // by the pager.
+  status = Verify();
+  if (status != ZX_OK) {
     return status;
   }
 
@@ -311,6 +349,7 @@ Blob::Blob(Blobfs* bs, const Digest& digest)
       clone_watcher_(this) {}
 
 void Blob::BlobCloseHandles() {
+  page_watcher_.reset();
   mapping_.Reset();
   readable_event_.reset();
 }
@@ -743,9 +782,21 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out
       uint32_t prev_count = init_count_.fetch_sub(1);
       ZX_DEBUG_ASSERT(prev_count == 1);
     });
-    if ((status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
-                                              inode_.blob_size, &clone)) != ZX_OK) {
-      FS_TRACE_ERROR("blobfs: Failed to create child VMO: %d\n", status);
+
+    zx_info_vmo_t info;
+    status = mapping_.vmo().get_info(ZX_INFO_VMO, &info, sizeof(info), nullptr, nullptr);
+    if (status != ZX_OK) {
+      return status;
+    }
+    if (info.flags & ZX_INFO_VMO_PAGER_BACKED) {
+      status = mapping_.vmo().create_child(ZX_VMO_CHILD_PRIVATE_PAGER_COPY, merkle_bytes,
+                                           inode_.blob_size, &clone);
+    } else {
+      status = mapping_.vmo().create_child(ZX_VMO_CHILD_COPY_ON_WRITE, merkle_bytes,
+                                           inode_.blob_size, &clone);
+    }
+    if (status != ZX_OK) {
+      FS_TRACE_ERROR("blobfs: Failed to create child VMO: %s\n", zx_status_get_string(status));
       return status;
     }
   }
@@ -858,6 +909,7 @@ bool Blob::ShouldCache() const {
 void Blob::ActivateLowMemory() {
   // We shouldn't be putting the blob into a low-memory state while it is still mapped.
   ZX_ASSERT(clone_watcher_.object() == ZX_HANDLE_INVALID);
+  page_watcher_.reset();
   mapping_.Reset();
 }
 

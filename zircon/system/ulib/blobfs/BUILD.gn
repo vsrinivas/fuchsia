@@ -59,6 +59,8 @@ zx_library("blobfs") {
       "iterator/node-populator.cc",
       "metrics.cc",
       "mount.cc",
+      "pager/page-watcher.cc",
+      "pager/user-pager.cc",
       "runner.cc",
     ]
     public_deps += [

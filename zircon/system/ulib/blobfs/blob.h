@@ -41,6 +41,7 @@
 #include "compression/compressor.h"
 #include "format-assertions.h"
 #include "metrics.h"
+#include "pager/page-watcher.h"
 
 namespace blobfs {
 
@@ -224,7 +225,7 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   // Does not verify the blob.
   zx_status_t InitUncompressed(vmoid_t vmoid);
 
-  // Verifies the integrity of the in-memory Blob.
+  // Verifies the integrity of the in-memory Blob - operates on the entire blob at once.
   // InitVmos() must have already been called for this blob.
   zx_status_t Verify() const;
 
@@ -282,6 +283,9 @@ class Blob final : public CacheNode, fbl::Recyclable<Blob> {
   };
 
   std::unique_ptr<WritebackInfo> write_info_ = {};
+
+  // Reads in the blob's pages on demand.
+  std::unique_ptr<PageWatcher> page_watcher_ = nullptr;
 };
 
 }  // namespace blobfs

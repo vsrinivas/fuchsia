@@ -43,6 +43,7 @@ struct MountOptions {
   Writability writability = Writability::Writable;
   bool metrics = false;
   bool journal = false;
+  bool pager = false;
   CachePolicy cache_policy = CachePolicy::EvictImmediately;
 };
 

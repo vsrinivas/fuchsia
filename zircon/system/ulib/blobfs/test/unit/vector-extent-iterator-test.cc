@@ -116,6 +116,34 @@ TEST(VectorExtentIteratorTest, BlockIterator) {
   ASSERT_TRUE(iter.Done());
 }
 
+// Test that |IterateToBlock| correctly iterates to the desired block.
+TEST(VectorExtentIteratorTest, BlockIteratorRandomStart) {
+  MockSpaceManager space_manager;
+  std::unique_ptr<Allocator> allocator;
+  constexpr size_t kAllocatedExtents = 10;
+  constexpr size_t kAllocatedNodes = 1;
+
+  ASSERT_NO_FAILURES(TestSetup(kAllocatedExtents, kAllocatedNodes, /* fragmented=*/true,
+                               &space_manager, &allocator));
+
+  fbl::Vector<ReservedExtent> extents;
+  ASSERT_OK(allocator->ReserveBlocks(kAllocatedExtents, &extents));
+  ASSERT_EQ(kAllocatedExtents, extents.size());
+
+  for (int i = 0; i < 20; i++) {
+    VectorExtentIterator vector_iter(extents);
+    BlockIterator iter(&vector_iter);
+
+    uint32_t block_index = static_cast<uint32_t>(rand() % kAllocatedExtents);
+    ASSERT_OK(IterateToBlock(&iter, block_index));
+    ASSERT_EQ(block_index, iter.BlockIndex());
+  }
+
+  VectorExtentIterator vector_iter(extents);
+  BlockIterator iter(&vector_iter);
+  ASSERT_EQ(IterateToBlock(&iter, kAllocatedExtents + 10), ZX_ERR_INVALID_ARGS);
+}
+
 void ValidateStreamBlocks(fbl::Vector<ReservedExtent> extents, uint32_t block_count) {
   VectorExtentIterator vector_iter(extents);
   BlockIterator block_iter(&vector_iter);
