@@ -33,6 +33,20 @@ source_set("gpretty_printers") {
   ]
 }
 
+source_set("gtest_with_syslog_main") {
+  testonly = true
+
+  sources = [
+    "gtest_with_syslog_main.cc",
+  ]
+
+  public_deps = [
+    "//src/lib/fxl/test:test_settings",
+    "//src/lib/syslog/cpp",
+    "//third_party/googletest:gtest",
+  ]
+}
+
 source_set("unit_test_fixture") {
   testonly = true
 

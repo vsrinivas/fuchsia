@@ -22,8 +22,6 @@
 #include "src/developer/feedback/testing/stubs/stub_cobalt_logger_factory.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/files/scoped_temp_dir.h"
-#include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -299,13 +297,3 @@ TEST_F(RebootLogHandlerTest, Fail_CallHandleTwice) {
 
 }  // namespace
 }  // namespace feedback
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback", "test"});
-  return RUN_ALL_TESTS();
-}

@@ -155,8 +155,7 @@ executable("config_unittest") {
 
   deps = [
     "//src/developer/feedback/crashpad_agent:src",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gtest",
   ]
 }
@@ -182,11 +181,10 @@ executable("crashpad_agent_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/crashpad/util",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -226,9 +224,8 @@ executable("database_unittest") {
     "//garnet/public/lib/timekeeper:testing",
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/fsl:fsl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -248,8 +245,7 @@ executable("inspect_manager_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -269,11 +265,10 @@ executable("privacy_settings_ptr_unittest") {
     "//garnet/public/lib/fostr/fidl/fuchsia.settings",
     "//sdk/fidl/fuchsia.settings",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing:unit_test_fixture",
     "//src/lib/files",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
   ]
@@ -294,9 +289,8 @@ executable("queue_unittest") {
     "//sdk/lib/inspect/testing/cpp",
     "//src/developer/feedback/crashpad_agent:constants",
     "//src/developer/feedback/crashpad_agent:src",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/lib/fsl:fsl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/feedback/utils/promise.h"
+
 #include <lib/async/cpp/executor.h>
 #include <lib/fit/promise.h>
 #include <lib/gtest/test_loop_fixture.h>
@@ -11,10 +13,7 @@
 
 #include "lib/async/cpp/executor.h"
 #include "lib/fit/promise_internal.h"
-#include "src/developer/feedback/utils/promise.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -155,13 +154,3 @@ TEST_F(PromiseTest, Check_TwoPtrsStaysAlive) {
 
 }  // namespace
 }  // namespace feedback
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback", "test"});
-  return RUN_ALL_TESTS();
-}

@@ -59,11 +59,10 @@ executable("archive_unittest") {
     "//sdk/fidl/fuchsia.feedback",
     "//src/developer/feedback/testing:gmatchers",
     "//src/developer/feedback/testing:gpretty_printers",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:archive",
     "//src/lib/fsl",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/system/fidl/fuchsia-mem",
@@ -80,10 +79,9 @@ executable("cobalt_unittest") {
   deps = [
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/testing/stubs:stub_cobalt_logger_factory",
     "//src/developer/feedback/utils:cobalt",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",
@@ -99,9 +97,8 @@ executable("inspect_node_manager_unittest") {
 
   deps = [
     "//sdk/lib/inspect/testing/cpp",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:inspect_node_manager",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]
@@ -116,10 +113,9 @@ executable("promise_unittest") {
 
   deps = [
     "//garnet/public/lib/gtest",
+    "//src/developer/feedback/testing:gtest_with_syslog_main",
     "//src/developer/feedback/utils:promise",
     "//src/lib/fxl",
-    "//src/lib/fxl/test:test_settings",
-    "//src/lib/syslog/cpp",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/async-cpp",

@@ -8,8 +8,6 @@
 #include <lib/zx/time.h>
 #include <zircon/errors.h>
 
-#include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
@@ -108,13 +106,3 @@ TEST_F(RefCountedDelayedTaskTest, Check_TaskStaysBlocked_TwoAcquires_DelayedRele
 
 }  // namespace
 }  // namespace feedback
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback", "test"});
-  return RUN_ALL_TESTS();
-}

@@ -16,8 +16,6 @@
 #include "src/developer/feedback/crashpad_agent/tests/fake_privacy_settings.h"
 #include "src/developer/feedback/testing/unit_test_fixture.h"
 #include "src/lib/fxl/logging.h"
-#include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
 
 namespace feedback {
@@ -286,13 +284,3 @@ void PrintTo(const Settings::UploadPolicy& upload_policy, std::ostream* os) {
 }
 
 }  // namespace feedback
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback", "test"});
-  return RUN_ALL_TESTS();
-}

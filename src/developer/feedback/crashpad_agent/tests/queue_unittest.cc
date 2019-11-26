@@ -19,8 +19,6 @@
 #include "src/lib/files/scoped_temp_dir.h"
 #include "src/lib/fsl/vmo/strings.h"
 #include "src/lib/fxl/strings/string_printf.h"
-#include "src/lib/fxl/test/test_settings.h"
-#include "src/lib/syslog/cpp/logger.h"
 #include "third_party/crashpad/client/crash_report_database.h"
 #include "third_party/googletest/googlemock/include/gmock/gmock.h"
 #include "third_party/googletest/googletest/include/gtest/gtest.h"
@@ -530,13 +528,3 @@ TEST_F(QueueTest, Check_InspectTree) {
 
 }  // namespace
 }  // namespace feedback
-
-int main(int argc, char** argv) {
-  if (!fxl::SetTestSettings(argc, argv)) {
-    return EXIT_FAILURE;
-  }
-
-  testing::InitGoogleTest(&argc, argv);
-  syslog::InitLogger({"feedback", "test"});
-  return RUN_ALL_TESTS();
-}
