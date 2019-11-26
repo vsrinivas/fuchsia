@@ -14,8 +14,6 @@
 #include <src/virtualization/tests/fake_netstack.h>
 #include <src/virtualization/tests/guest_console.h>
 
-#include "src/lib/component/cpp/environment_services_helper.h"
-
 static constexpr char kGuestLabel[] = "debian_guest";
 static constexpr char kGuestManagerUrl[] =
     "fuchsia-pkg://fuchsia.com/guest_manager#meta/guest_manager.cmx";

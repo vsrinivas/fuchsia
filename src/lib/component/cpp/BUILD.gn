@@ -37,7 +37,6 @@ source_set("cpp") {
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
     "//garnet/public/lib/test_runner/cpp:cpp",
-    "//src/lib/component/cpp:environment_services",
     "//src/virtualization/bin/guest_manager:lib",
     "//src/virtualization/bin/guest_runner:lib",
   ]
@@ -66,25 +65,5 @@ source_set("deprecated_service_provider") {
     "//src/modular/bin/sessionmgr/agent_runner",
     "//src/modular/bin/sessionmgr/story_runner",
     ":cpp",
-  ]
-}
-
-source_set("environment_services") {
-  sources = [
-    "environment_services_helper.cc",
-    "environment_services_helper.h",
-  ]
-
-  public_deps = [
-    ":cpp",
-  ]
-
-  # This library is deprecated.
-  #
-  # Use //sdk/lib/sys/cpp instead.
-  #
-  # DO NOT ADD MORE ENTRIES TO THIS LIST.
-  visibility = [
-    "testing",
   ]
 }
