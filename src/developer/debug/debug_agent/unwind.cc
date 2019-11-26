@@ -239,6 +239,9 @@ zx_status_t UnwindStackNgUnwind(const zx::process& process, uint64_t dl_debug_ad
     if (ret <= 0)
       break;
 
+    // Clear registers left over from previous frame.
+    frame.regs.clear();
+
     unw_word_t val;
     unw_get_reg(&cursor, UNW_REG_IP, &val);
     if (val == 0)

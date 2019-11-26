@@ -18,7 +18,7 @@
 ##   is in $PATH and that it works.
 ##
 ## Usage: fx debug [(--core|-c) <CORE>] [--no-agent] [(--port|-p) <PORT>]
-##                 [(--verbose-agent|-va)]
+##                 [--unwind=(aosp|ng)] [(--verbose-agent|-va)]
 ##
 ##    --core            Load a minidump file into zxdb.
 ##    --no-agent        Don't start a Debug Agent.
@@ -26,6 +26,8 @@
 ##                      Will use 2345 by default.
 ##    --target-core     Look on the target for a minidump file taken by
 ##                      crashpad, download it and load it into zxdb.
+##    --unwind          Choose the unwinder to use. Options are "ng" for "ngunwind" (Fuchsia's
+##                      fork of libunwind), or "aosp" (Android's unwinder). Defaults to "ng".
 ##    --verbose-agent   Whether the debug agent's stdout/stderr should be shown.
 ##                      Useful for debugging the debugger. Yo' dawg.
 ##

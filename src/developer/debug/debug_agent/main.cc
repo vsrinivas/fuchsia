@@ -34,7 +34,7 @@ const char kNgUnwinder[] = "ng";
 struct CommandLineOptions {
   int port = 0;
   bool debug_mode = false;
-  std::string unwind = kAospUnwinder;
+  std::string unwind = kNgUnwinder;
 };
 
 const char kHelpIntro[] = R"(debug_agent --port=<port> [ <options> ]
