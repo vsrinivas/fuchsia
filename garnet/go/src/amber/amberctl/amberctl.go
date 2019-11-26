@@ -93,18 +93,6 @@ func (e ErrGetFile) Error() string {
 	return string(e)
 }
 
-func doTest(pxy *amber.ControlInterface) error {
-	v := int32(42)
-	resp, err := pxy.DoTest(v)
-	if err != nil {
-		fmt.Println(err)
-		return err
-	}
-
-	fmt.Printf("Response: %s\n", resp)
-	return nil
-}
-
 type Services struct {
 	amber         *amber.ControlInterface
 	resolver      *pkg.PackageResolverInterface
@@ -542,11 +530,6 @@ func do(services Services) int {
 	case "check":
 		log.Printf("%q not yet supported\n", os.Args[1])
 		return 1
-	case "test":
-		if err := doTest(services.amber); err != nil {
-			log.Printf("error testing connection to amber: %s", err)
-			return 1
-		}
 	case "system_update":
 		result, err := services.updateManager.CheckNow(
 			update.Options{
