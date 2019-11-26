@@ -14,10 +14,9 @@ use std::io::Read;
 use std::sync::Arc;
 
 // Standardized sl4f types and constants
-use crate::server::constants::{COMMAND_DELIMITER, COMMAND_SIZE};
 use crate::server::sl4f_types::{
     AsyncCommandRequest, AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
-    Facade,
+    Facade, MethodId, RequestId,
 };
 
 // Audio related includes
@@ -229,7 +228,7 @@ pub fn serve(
         _ => {
             fx_log_err!(tag: "serve", "Received unknown server request.");
             const FAIL_REQUEST_ACK: &str = "Unknown GET request.";
-            let res = CommandResponse::new("".to_string(), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
+            let res = CommandResponse::new(json!(""), None, serde::export::Some(FAIL_REQUEST_ACK.to_string()));
             rouille::Response::json(&res)
         }
     )
@@ -244,41 +243,39 @@ fn client_request(
 ) -> Response {
     const FAIL_TEST_ACK: &str = "Command failed";
 
-    let (session_id, method_id, method_type, method_name, method_params) =
-        match parse_request(request) {
-            Ok(res) => res,
-            Err(e) => {
-                fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
-                return Response::json(&FAIL_TEST_ACK);
-            }
-        };
+    let (request_id, method_id, method_params) = match parse_request(request) {
+        Ok(res) => res,
+        Err(e) => {
+            fx_log_err!(tag: "client_request", "Failed to parse request. {:?}", e);
+            return Response::json(&FAIL_TEST_ACK);
+        }
+    };
 
     // Create channel for async thread to respond to
     // Package response and ship over JSON RPC
     let (async_sender, rouille_receiver) = std::sync::mpsc::channel();
-    let req = AsyncCommandRequest::new(
-        async_sender,
-        method_id.clone(),
-        method_type,
-        method_name,
-        method_params,
-    );
+    let req = AsyncCommandRequest::new(async_sender, method_id, method_params);
     rouille_sender
         .unbounded_send(AsyncRequest::Command(req))
         .expect("Failed to send request to async thread.");
     let resp: AsyncResponse = rouille_receiver.recv().unwrap();
 
-    clients.write().store_response(&session_id, ClientData::new(method_id.clone(), resp.clone()));
+    if let Some(session_id) = request_id.session_id() {
+        clients.write().store_response(
+            session_id,
+            ClientData::new(request_id.response_id().clone(), resp.clone()),
+        );
+    }
     fx_log_info!(tag: "client_request", "Received async thread response: {:?}", resp);
 
     // If the response has a return value, package into response, otherwise use error code
     match resp.result {
         Some(async_res) => {
-            let res = CommandResponse::new(method_id, Some(async_res), None);
+            let res = CommandResponse::new(request_id.into_response_id(), Some(async_res), None);
             rouille::Response::json(&res)
         }
         None => {
-            let res = CommandResponse::new(method_id, None, resp.error);
+            let res = CommandResponse::new(request_id.into_response_id(), None, resp.error);
             rouille::Response::json(&res)
         }
     }
@@ -290,7 +287,7 @@ fn client_init(request: &Request, clients: &Arc<RwLock<Sl4fClients>>) -> Respons
     const INIT_ACK: &str = "Recieved init request.";
     const FAIL_INIT_ACK: &str = "Failed to init client.";
 
-    let (_, _, _, _, method_params) = match parse_request(request) {
+    let (_, _, method_params) = match parse_request(request) {
         Ok(res) => res,
         Err(_) => return Response::json(&FAIL_INIT_ACK),
     };
@@ -310,24 +307,9 @@ fn client_init(request: &Request, clients: &Arc<RwLock<Sl4fClients>>) -> Respons
     }
 }
 
-/// Given the name of the ACTS method, derive method type + method name
-/// Returns two "", "" on invalid input which will later propagate to
-/// method_to_fidl and raise an error
-fn split_string(method_name_raw: String) -> (String, String) {
-    let split = method_name_raw.split(COMMAND_DELIMITER);
-    let string_split: Vec<&str> = split.collect();
-
-    // Input must be two strings separated by "."
-    if string_split.len() != COMMAND_SIZE {
-        return ("".to_string(), "".to_string());
-    };
-
-    (string_split[0].to_string(), string_split[1].to_string())
-}
-
 /// Given a request, grabs the method id, name, and parameters
-/// Return Sl4fError on error
-fn parse_request(request: &Request) -> Result<(String, String, String, String, Value), Error> {
+/// Return Sl4fError if fail
+fn parse_request(request: &Request) -> Result<(RequestId, MethodId, Value), Error> {
     let mut data = match request.data() {
         Some(d) => d,
         None => return Err(Sl4fError::new("Failed to parse request buffer.").into()),
@@ -344,19 +326,19 @@ fn parse_request(request: &Request) -> Result<(String, String, String, String, V
         Err(_) => return Err(Sl4fError::new("Failed to unpack request data.").into()),
     };
 
-    let method_id_raw = request_data.id.clone();
-    let method_name_raw = request_data.method.clone();
-    let method_params = request_data.params.clone();
+    let request_id_raw = request_data.id;
+    let method_id_raw = request_data.method;
+    let method_params = request_data.params;
     fx_log_info!(tag: "parse_request",
-        "method id: {:?}, name: {:?}, args: {:?}",
-        method_id_raw, method_name_raw, method_params
+        "request id: {:?}, name: {:?}, args: {:?}",
+        request_id_raw, method_id_raw, method_params
     );
 
+    let request_id = RequestId::new(request_id_raw);
     // Separate the method_name field of the request into the method type (e.g bluetooth) and the
-    // actual method name itself
-    let (method_type, method_name) = split_string(method_name_raw.clone());
-    let (session_id, method_id) = split_string(method_id_raw.clone());
-    Ok((session_id, method_id, method_type, method_name, method_params))
+    // actual method name itself, defaulting to an empty method id if not formatted properly.
+    let method_id = method_id_raw.parse().unwrap_or_default();
+    Ok((request_id, method_id, method_params))
 }
 
 fn server_cleanup(
@@ -367,7 +349,7 @@ fn server_cleanup(
     const CLEANUP_ACK: &str = "Successful cleanup of SL4F resources.";
 
     fx_log_info!(tag: "server_cleanup", "Cleaning up server state");
-    let (_, method_id, _, _, _) = match parse_request(request) {
+    let (request_id, _, _) = match parse_request(request) {
         Ok(res) => res,
         Err(_) => return Response::json(&FAIL_CLEANUP_ACK),
     };
@@ -381,38 +363,6 @@ fn server_cleanup(
         .expect("Failed to send request to async thread.");
     let () = rouille_receiver.recv().expect("Async thread dropped responder.");
 
-    let ack = CommandResponse::new(method_id, Some(json!(CLEANUP_ACK)), None);
+    let ack = CommandResponse::new(request_id.into_response_id(), Some(json!(CLEANUP_ACK)), None);
     rouille::Response::json(&ack)
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn split_string_test() {
-        // Standard command
-        let mut method_name = "bt.send".to_string();
-        assert_eq!(("bt".to_string(), "send".to_string()), split_string(method_name));
-
-        // Invalid command (should result in empty result)
-        method_name = "bluetooth_send".to_string();
-        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
-
-        // Too many separators in command
-        method_name = "wlan.scan.start".to_string();
-        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
-
-        // Empty command
-        method_name = "".to_string();
-        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
-
-        // No separator
-        method_name = "BluetoothSend".to_string();
-        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
-
-        // Invalid separator
-        method_name = "Bluetooth,Scan".to_string();
-        assert_eq!(("".to_string(), "".to_string()), split_string(method_name));
-    }
 }

@@ -12,7 +12,7 @@ use std::sync::Arc;
 // Sl4f related inclusions
 use crate::common_utils::error::Sl4fError;
 use crate::server::sl4f::Sl4f;
-use crate::server::sl4f_types::{AsyncCommandRequest, AsyncRequest, AsyncResponse};
+use crate::server::sl4f_types::{AsyncCommandRequest, AsyncRequest, AsyncResponse, MethodId};
 
 pub async fn run_fidl_loop(sl4f: Arc<Sl4f>, receiver: mpsc::UnboundedReceiver<AsyncRequest>) {
     const CONCURRENT_REQ_LIMIT: usize = 10; // TODO(CONN-6) figure out a good parallel value for this
@@ -30,11 +30,11 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
             sl4f.print();
             done.send(()).unwrap();
         }
-        AsyncRequest::Command(AsyncCommandRequest { tx, id, method_type, name, params }) => {
+        AsyncRequest::Command(AsyncCommandRequest { tx, method_id, params }) => {
             fx_log_info!(tag: "run_fidl_loop",
-                         "Received synchronous request: {:?}, {:?}, {:?}, {:?}, {:?}",
-                         tx, id, method_type, name, params);
-            match method_to_fidl(method_type, name, params, Arc::clone(&sl4f)).await {
+                         "Received synchronous request: {:?}, {:?}, {:?}",
+                         tx, method_id, params);
+            match method_to_fidl(method_id, params, Arc::clone(&sl4f)).await {
                 Ok(response) => {
                     let async_response = AsyncResponse::new(Ok(response));
 
@@ -55,15 +55,10 @@ async fn handle_request(sl4f: Arc<Sl4f>, request: AsyncRequest) {
     }
 }
 
-async fn method_to_fidl(
-    method_type: String,
-    method_name: String,
-    args: Value,
-    sl4f: Arc<Sl4f>,
-) -> Result<Value, Error> {
-    if let Some(facade) = sl4f.get_facade(&method_type) {
-        facade.handle_request(method_name, args).await
+async fn method_to_fidl(method_id: MethodId, args: Value, sl4f: Arc<Sl4f>) -> Result<Value, Error> {
+    if let Some(facade) = sl4f.get_facade(&method_id.facade) {
+        facade.handle_request(method_id.method, args).await
     } else {
-        Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_type)).into())
+        Err(Sl4fError::new(&format!("Invalid FIDL method type {:?}", &method_id.facade)).into())
     }
 }
