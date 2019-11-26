@@ -4,9 +4,12 @@
 
 import 'package:meta/meta.dart';
 
+import 'metrics/cpu_metrics.dart';
 import 'metrics/drm_fps.dart';
 import 'metrics/flutter_frame_stats.dart';
+import 'metrics/memory_metrics.dart';
 import 'metrics/scenic_frame_stats.dart';
+import 'metrics/temperature_metrics.dart';
 import 'metrics_results.dart';
 import 'trace_model.dart';
 
@@ -42,6 +45,9 @@ List<TestCaseResults> processWithDefaultMetricsRegistry(
     'flutter_frame_stats': flutterFrameStatsMetricsProcessor,
     'scenic_frame_stats': scenicFrameStatsMetricsProcessor,
     'drm_fps': drmFpsMetricsProcessor,
+    'cpu': cpuMetricsProcessor,
+    'memory': memoryMetricsProcessor,
+    'temperature': temperatureMetricsProcessor,
   };
 
   final processor = mapping[metricsSpec.name];

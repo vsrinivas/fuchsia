@@ -2,6 +2,159 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+const String testCpuMetricJsonString = '''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "system_metrics",
+      "name": "cpu_usage",
+      "ts": 3000000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"average_cpu_percentage":43.00}
+    },
+    {
+      "cat": "system_metrics",
+      "name": "cpu_usage",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"average_cpu_percentage":20.00}
+    }
+  ],
+  "systemTraceEvents": {
+    "type": "fuchsia",
+    "events": [
+      {
+        "ph": "p",
+        "pid": 7009,
+        "name": "root_presenter"
+      },
+      {
+        "ph": "t",
+        "pid": 7009,
+        "tid": 7022,
+        "name": "initial-thread"
+      }
+    ]
+  }
+}
+''';
+
+const String testMemoryMetricJsonString = '''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "memory_monitor",
+      "name": "fixed",
+      "ts": 3000000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"total":1610612736, "wired":60354560, "total_heap":15183872}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "allocated",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"vmo":781942784, "mmu_overhead":77529088, "ipc":49152}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "allocated",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"vmo":781942785, "mmu_overhead":77529089, "ipc":49152}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "free",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"free":670000000, "free_heap":460000}
+    },
+    {
+      "cat": "memory_monitor",
+      "name": "free",
+      "ts": 4100000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"free":620000000, "free_heap":430000}
+    }
+  ],
+  "systemTraceEvents": {
+    "type": "fuchsia",
+    "events": [
+      {
+        "ph": "p",
+        "pid": 7009,
+        "name": "root_presenter"
+      },
+      {
+        "ph": "t",
+        "pid": 7009,
+        "tid": 7022,
+        "name": "initial-thread"
+      }
+    ]
+  }
+}
+''';
+
+const String testTemperatureMetricJsonString = '''
+{
+  "displayTimeUnit": "ns",
+  "traceEvents": [
+    {
+      "cat": "system_metrics",
+      "name": "temperature",
+      "ts": 3000000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"temperature":50}
+    },
+    {
+      "cat": "system_metrics",
+      "name": "temperature",
+      "ts": 13200000000,
+      "pid": 7009,
+      "tid": 7022,
+      "ph": "C",
+      "args":{"temperature":60}
+    }
+  ],
+  "systemTraceEvents": {
+    "type": "fuchsia",
+    "events": [
+      {
+        "ph": "p",
+        "pid": 7009,
+        "name": "root_presenter"
+      },
+      {
+        "ph": "t",
+        "pid": 7009,
+        "tid": 7022,
+        "name": "initial-thread"
+      }
+    ]
+  }
+}
+''';
+
 const String testModelJsonString = '''
 {
   "displayTimeUnit": "ns",

@@ -387,4 +387,38 @@ void main(List<String> args) {
     expect(results[2].values[0], _closeTo(60.00052440691961));
     expect(results[3].values[0], _closeTo(60.025630989830326));
   });
+
+  test('CPU metric', () async {
+    final model = createModelFromJsonString(testCpuMetricJsonString);
+    final metricsSpec = MetricsSpec(name: 'cpu');
+    final results = cpuMetricsProcessor(model, metricsSpec);
+    expect(results[0].values[0], _closeTo(43.00));
+    expect(results[0].values[1], _closeTo(20.00));
+  });
+
+  test('Temperature metric', () async {
+    final model = createModelFromJsonString(testTemperatureMetricJsonString);
+    final metricsSpec = MetricsSpec(name: 'temperature');
+    final results = temperatureMetricsProcessor(model, metricsSpec);
+    expect(results[0].values[0], _closeTo(50.00));
+    expect(results[0].values[1], _closeTo(60.00));
+  });
+
+  test('Memory metric', () async {
+    final model = createModelFromJsonString(testMemoryMetricJsonString);
+    final metricsSpec = MetricsSpec(name: 'memory');
+    final results = memoryMetricsProcessor(model, metricsSpec);
+    expect(results[0].label, equals('Total System Memory'));
+    expect(results[0].values[0], _closeTo(940612736));
+    expect(results[0].values[1], _closeTo(990612736));
+    expect(results[1].label, equals('VMO Memory'));
+    expect(results[1].values[0], _closeTo(781942784));
+    expect(results[1].values[1], _closeTo(781942785));
+    expect(results[2].label, equals('MMU Overhead Memory'));
+    expect(results[2].values[0], _closeTo(77529088));
+    expect(results[2].values[1], _closeTo(77529089));
+    expect(results[3].label, equals('IPC Memory'));
+    expect(results[3].values[0], _closeTo(49152));
+    expect(results[3].values[1], _closeTo(49152));
+  });
 }

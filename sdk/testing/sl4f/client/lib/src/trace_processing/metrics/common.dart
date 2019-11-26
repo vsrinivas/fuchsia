@@ -4,16 +4,35 @@
 
 import 'dart:math';
 
+import '../time_delta.dart';
+import '../time_point.dart';
 import '../trace_model.dart';
 
 // This file contains common utility functions that are shared across metrics.
 
 T _add<T extends num>(T a, T b) => a + b;
+T _min<T extends Comparable<T>>(T a, T b) => a.compareTo(b) < 0 ? a : b;
+T _max<T extends Comparable<T>>(T a, T b) => a.compareTo(b) > 0 ? a : b;
 
 /// Get all events contained in [model], without regard for what [Process] or
 /// [Thread] they belong to.
 Iterable<Event> getAllEvents(Model model) => model.processes
     .expand((process) => process.threads.expand((thread) => thread.events));
+
+/// Get the trace duration by subtracing the max event end time by the min event start time.
+TimeDelta getTotalTraceDuration(Model model) {
+  final allEvents = getAllEvents(model);
+  if (allEvents.isEmpty) {
+    return TimeDelta.zero();
+  }
+  TimePoint traceStartTime = allEvents.map((e) => e.start).reduce(_min);
+  TimePoint traceEndTime = allEvents
+      .map((e) => e is DurationEvent
+          ? e.start + e.duration
+          : (e is AsyncEvent ? e.start + e.duration : e.start))
+      .reduce(_max);
+  return traceEndTime - traceStartTime;
+}
 
 /// Filter [events] for events that have a matching [category] and [name]
 /// fields.
@@ -31,6 +50,18 @@ Iterable<T> filterEventsTyped<T extends Event>(Iterable<Event> events,
         (event is T) &&
         (category == null || event.category == category) &&
         (name == null || event.name == name)));
+
+Iterable<T> getArgsFromEvents<T extends Object>(
+    Iterable<Event> events, String argKey) {
+  return events.map((e) {
+    if (!(e.args.containsKey(argKey) && e.args[argKey] is T)) {
+      throw ArgumentError(
+          'Error, expected events to include arg key "$argKey" of type $T');
+    }
+    final T v = e.args[argKey];
+    return v;
+  });
+}
 
 /// Find all [Event]s that follow [event].
 ///
