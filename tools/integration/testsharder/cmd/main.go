@@ -18,6 +18,9 @@ var (
 	// The path to the Fuchsia build directory root.
 	buildDir string
 
+	// The path to the Fuchsia checkout root.
+	checkoutDir string
+
 	// The filepath to write output to. If unspecified, stdout is used.
 	outputFile string
 
@@ -45,6 +48,8 @@ See https://go.fuchsia.dev/fuchsia/tools/+/master/testsharder/mode.go.
 
 func init() {
 	flag.StringVar(&buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
+	// TODO(olivernewman): Make -checkout-dir required after recipes set it.
+	flag.StringVar(&checkoutDir, "checkout-dir", "", "path to the fuchsia checkout root")
 	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
 	flag.Var(&mode, "mode", "mode in which to run the testsharder (e.g., normal or restricted).")
 	flag.Var(&tags, "tag", "environment tags on which to filter; only the tests that match all tags will be sharded")
