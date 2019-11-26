@@ -52,8 +52,13 @@ TEST(LightTest, InputReport) {
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_INPUT, report.rpt_id);
 
-  EXPECT_EQ(0xd652df, report.ambient_light);
-  EXPECT_EQ(0x125d, report.proximity);
+  // Use memcpy() to avoid loading a misaligned pointer in this packed struct.
+  uint32_t ambient_light;
+  uint16_t proximity;
+  memcpy(&ambient_light, &report.ambient_light, sizeof(ambient_light));
+  memcpy(&proximity, &report.proximity, sizeof(proximity));
+  EXPECT_EQ(0xd652df, ambient_light);
+  EXPECT_EQ(0x125d, proximity);
 
   mock_i2c.VerifyAndClear();
 }
@@ -74,7 +79,11 @@ TEST(LightTest, FeatureReport) {
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_FEATURE, report.rpt_id);
-  EXPECT_EQ(0, report.interval_ms);
+
+  // Use memcpy() to avoid loading a misaligned pointer in this packed struct.
+  uint32_t interval_ms;
+  memcpy(&interval_ms, &report.interval_ms, sizeof(interval_ms));
+  EXPECT_EQ(0, interval_ms);
 
   report.interval_ms = 1000;
 
@@ -86,7 +95,9 @@ TEST(LightTest, FeatureReport) {
   EXPECT_EQ(sizeof(report), actual);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_FEATURE, report.rpt_id);
-  EXPECT_EQ(1000, report.interval_ms);
+
+  memcpy(&interval_ms, &report.interval_ms, sizeof(interval_ms));
+  EXPECT_EQ(1000, interval_ms);
 }
 
 TEST(LightTest, Polling) {
@@ -124,17 +135,25 @@ TEST(LightTest, Polling) {
 
   ASSERT_EQ(3, mock_ifc.reports().size());
 
+  // Use memcpy() to avoid loads on misaligned pointers to the packed
+  // ltr_578als_input_rpt_t type.
+  uint32_t ambient_light;
+  uint16_t proximity;
+  memcpy(&ambient_light, &mock_ifc.reports()[0].ambient_light, sizeof(ambient_light));
+  memcpy(&proximity, &mock_ifc.reports()[0].proximity, sizeof(proximity));
   EXPECT_EQ(LTR_578ALS_RPT_ID_INPUT, mock_ifc.reports()[0].rpt_id);
-  EXPECT_EQ(0x74ccdb, mock_ifc.reports()[0].ambient_light);
-  EXPECT_EQ(0xf9b0, mock_ifc.reports()[0].proximity);
+  EXPECT_EQ(0x74ccdb, ambient_light);
+  EXPECT_EQ(0xf9b0, proximity);
 
   EXPECT_EQ(LTR_578ALS_RPT_ID_INPUT, mock_ifc.reports()[1].rpt_id);
   EXPECT_EQ(0xf2875c, mock_ifc.reports()[1].ambient_light);
   EXPECT_EQ(0x04e7, mock_ifc.reports()[1].proximity);
 
+  memcpy(&ambient_light, &mock_ifc.reports()[2].ambient_light, sizeof(ambient_light));
+  memcpy(&proximity, &mock_ifc.reports()[2].proximity, sizeof(proximity));
   EXPECT_EQ(LTR_578ALS_RPT_ID_INPUT, mock_ifc.reports()[2].rpt_id);
-  EXPECT_EQ(0x3f904e, mock_ifc.reports()[2].ambient_light);
-  EXPECT_EQ(0xec31, mock_ifc.reports()[2].proximity);
+  EXPECT_EQ(0x3f904e, ambient_light);
+  EXPECT_EQ(0xec31, proximity);
 }
 
 TEST(LightTest, NotImplemented) {
