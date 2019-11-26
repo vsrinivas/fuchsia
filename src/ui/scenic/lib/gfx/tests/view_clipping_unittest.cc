@@ -287,8 +287,7 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
   PaperDrawCallFactory* draw_call_factory = paper_renderer->draw_call_factory();
   draw_call_factory->set_track_cache_entries(true);
 
- auto gpu_uploader =
-      std::make_shared<BatchGpuUploader>(escher, frame->frame_number());
+  auto gpu_uploader = std::make_shared<BatchGpuUploader>(escher, frame->frame_number());
 
   paper_renderer->BeginFrame(frame, gpu_uploader, paper_scene, {camera}, output_image);
 
@@ -340,7 +339,9 @@ VK_TEST_F(ViewClippingTest, SceneTraversal) {
 
   // End frame
   paper_renderer->FinalizeFrame();
-  auto upload_semaphore = gpu_uploader->Submit();
+  auto upload_semaphore = escher::Semaphore::New(escher->vk_device());
+  gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  gpu_uploader->Submit();
   paper_renderer->EndFrame(std::move(upload_semaphore));
   cache.EndFrame();
 

@@ -224,7 +224,10 @@ VK_TEST_F(ShaderProgramTest, GeneratePipelines) {
   // TODO(ES-83): move into ShaderProgramTest.
   BatchGpuUploader gpu_uploader(escher->GetWeakPtr(), 0);
   auto noise_image = image_utils::NewNoiseImage(escher->image_cache(), &gpu_uploader, 512, 512);
-  cb->AddWaitSemaphore(gpu_uploader.Submit(), vk::PipelineStageFlagBits::eFragmentShader);
+  auto upload_semaphore = escher::Semaphore::New(escher->vk_device());
+  gpu_uploader.AddSignalSemaphore(upload_semaphore);
+  gpu_uploader.Submit();
+  cb->AddWaitSemaphore(std::move(upload_semaphore), vk::PipelineStageFlagBits::eFragmentShader);
   auto noise_texture = escher->NewTexture(noise_image, vk::Filter::eLinear);
 
   cb->BeginRenderPass(render_pass_info);

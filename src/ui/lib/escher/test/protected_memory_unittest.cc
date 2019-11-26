@@ -54,7 +54,9 @@ void RenderFrameForProtectedMemoryTest(const PaperRendererPtr& renderer, const F
   renderer->DrawVLine(escher::DebugRects::kRed, 0, 0, 30, 1);
 
   renderer->FinalizeFrame();
-  auto upload_semaphore = gpu_uploader->Submit();
+  auto upload_semaphore = escher::Semaphore::New(frame->escher()->vk_device());
+  gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  gpu_uploader->Submit();
 
   renderer->EndFrame(std::move(upload_semaphore));
   frame->EndFrame(SemaphorePtr(), [] {});

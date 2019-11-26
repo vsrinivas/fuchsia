@@ -13,6 +13,7 @@
 #include "src/ui/lib/escher/escher.h"
 #include "src/ui/lib/escher/util/trace_macros.h"
 #include "src/ui/lib/escher/vk/image.h"
+#include "src/ui/scenic/lib/gfx/engine/engine.h"
 #include "src/ui/scenic/lib/gfx/resources/buffer.h"
 #include "src/ui/scenic/lib/gfx/resources/camera.h"
 #include "src/ui/scenic/lib/gfx/resources/compositor/display_compositor.h"
@@ -126,8 +127,21 @@ void Snapshotter::TakeSnapshot(Resource* resource, TakeSnapshotCallback snapshot
   // TODO(before-41029): would be more efficient to just serialize fake data directly, but
   // that would require significant changes to snapshotter.
   if (gpu_uploader_for_replacements_) {
-    auto replacement_semaphore = gpu_uploader_for_replacements_->Submit();
+    FXL_DCHECK(gpu_uploader_for_replacements_->HasContentToUpload());
+    auto replacement_semaphore = escher::Semaphore::New(escher_->vk_device());
+    gpu_uploader_for_replacements_->AddSignalSemaphore(replacement_semaphore);
+    gpu_uploader_for_replacements_->Submit();
     gpu_uploader_->AddWaitSemaphore(std::move(replacement_semaphore),
+                                    vk::PipelineStageFlagBits::eTransfer);
+  }
+
+  // If the Snapshotter has a Engine binding, we need to ensure that the
+  // commands in |gpu_downloader_| are executed after commands in the engine's
+  // command buffer.
+  if (escher_ && escher_->semaphore_chain() && gpu_uploader_->HasContentToUpload()) {
+    auto semaphore_pair = escher_->semaphore_chain()->TakeLastAndCreateNextSemaphore();
+    gpu_uploader_->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+    gpu_uploader_->AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
                                     vk::PipelineStageFlagBits::eTransfer);
   }
 

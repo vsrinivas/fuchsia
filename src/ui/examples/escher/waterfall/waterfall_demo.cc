@@ -330,7 +330,9 @@ void WaterfallDemo::DrawFrame(const FramePtr& frame, const ImagePtr& output_imag
                                          renderer_.get());
   }
   renderer_->FinalizeFrame();
-  auto upload_semaphore = gpu_uploader->Submit();
+  auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+  gpu_uploader->AddSignalSemaphore(upload_semaphore);
+  gpu_uploader->Submit();
   renderer_->EndFrame(std::move(upload_semaphore));
 
   if (++frame_count_ == 1) {

@@ -15,6 +15,7 @@
 #include "src/ui/lib/escher/status.h"
 #include "src/ui/lib/escher/util/hash.h"
 #include "src/ui/lib/escher/util/hash_map.h"
+#include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/lib/escher/vk/command_buffer.h"
 #include "src/ui/lib/escher/vk/shader_program_factory.h"
 #include "src/ui/lib/escher/vk/vulkan_context.h"
@@ -133,6 +134,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   impl::RenderPassCache* render_pass_cache() const { return render_pass_cache_.get(); }
   impl::FramebufferAllocator* framebuffer_allocator() const { return framebuffer_allocator_.get(); }
   ImageViewAllocator* image_view_allocator() const { return image_view_allocator_.get(); }
+  ChainedSemaphoreGenerator* semaphore_chain() const { return semaphore_chain_.get(); }
 
   // Pool for CommandBuffers submitted on the main queue.
   impl::CommandBufferPool* command_buffer_pool() { return command_buffer_pool_.get(); }
@@ -191,6 +193,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   std::unique_ptr<impl::FramebufferAllocator> framebuffer_allocator_;
   std::unique_ptr<ImageViewAllocator> image_view_allocator_;
   std::unique_ptr<impl::FrameManager> frame_manager_;
+
+  std::unique_ptr<ChainedSemaphoreGenerator> semaphore_chain_;
 
   HashMap<Hash, std::unique_ptr<impl::DescriptorSetAllocator>> descriptor_set_allocators_;
 

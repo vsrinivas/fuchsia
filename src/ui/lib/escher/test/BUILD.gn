@@ -71,6 +71,7 @@ if (is_mac) {
       "util/object_pool_unittest.cc",
       "util/stack_allocator_unittest.cc",
       "vk/buffer_unittest.cc",
+      "vk/chained_semaphore_generator_unittest.cc",
       "vk/command_buffer_unittest.cc",
       "vk/descriptor_set_allocator_unittest.cc",
       "vk/descriptor_set_layout_unittest.cc",

@@ -311,8 +311,11 @@ VK_TEST_F(BatchGpuUploaderTest, ReadImageTest) {
   auto pixels = image_utils::NewNoisePixels(kWidth, kHeight);
   auto image = image_utils::NewImage(escher->image_cache(), vk::Format::eR8Unorm, kWidth, kHeight);
   BatchGpuUploader uploader(escher, 0);
-  image_utils::WritePixelsToImage(&uploader, pixels.get(), image, vk::ImageLayout::eTransferSrcOptimal);
-  auto sema = uploader.Submit();
+  image_utils::WritePixelsToImage(&uploader, pixels.get(), image,
+                                  vk::ImageLayout::eTransferSrcOptimal);
+  auto sema = escher::Semaphore::New(escher->vk_device());
+  uploader.AddSignalSemaphore(sema);
+  uploader.Submit();
 
   // Read back the uploaded pixels.
   vk::BufferImageCopy region;

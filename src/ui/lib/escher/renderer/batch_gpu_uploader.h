@@ -126,14 +126,14 @@ class BatchGpuUploader {
                   fit::function<void(escher::BufferPtr buffer)> callback);
 
   // Submits all Writers' and Reader's work to the GPU. No Writers or Readers can be posted once
-  // Submit is called.  Returns a semaphore that can be waited upon to guarantee that all reads and
-  // writes have completed (null if there were none).
-  SemaphorePtr Submit(fit::function<void()> callback = nullptr);
+  // Submit is called.
+  void Submit(fit::function<void()> callback = nullptr);
 
   // Submit() will wait on all semaphores added by AddWaitSemaphore().
-  void AddWaitSemaphore(SemaphorePtr sema, vk::PipelineStageFlags flags) {
-    wait_semaphores_.push_back({std::move(sema), flags});
-  }
+  void AddWaitSemaphore(SemaphorePtr sema, vk::PipelineStageFlags flags);
+
+  // Submit() will signal all semaphores added by AddSignalSemaphore().
+  void AddSignalSemaphore(SemaphorePtr sema);
 
  private:
   void Initialize();
@@ -151,6 +151,7 @@ class BatchGpuUploader {
 
   std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>> read_callbacks_;
   std::vector<std::pair<SemaphorePtr, vk::PipelineStageFlags>> wait_semaphores_;
+  std::vector<SemaphorePtr> signal_semaphores_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);
 };

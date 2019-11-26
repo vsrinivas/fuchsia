@@ -101,7 +101,10 @@ VK_TEST_F(PaperRendererTest, Text) {
       ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
       ren->DrawDebugText(glyphs, {0, 10 * scale}, scale);
       ren->FinalizeFrame();
-      ren->EndFrame(gpu_uploader->Submit());
+      auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+      gpu_uploader->AddSignalSemaphore(upload_semaphore);
+      gpu_uploader->Submit();
+      ren->EndFrame(upload_semaphore);
 
       const int32_t scale_squared = scale * scale;
 
@@ -159,7 +162,10 @@ VK_TEST_F(PaperRendererTest, Lines) {
             ren->BeginFrame(fd.frame, gpu_uploader, scene, cameras, fd.color_attachment);
             ren->DrawVLine(kColor, 0, 0, endCoord, thickness);
             ren->FinalizeFrame();
-            ren->EndFrame(gpu_uploader->Submit());
+            auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+            gpu_uploader->AddSignalSemaphore(upload_semaphore);
+            gpu_uploader->Submit();
+            ren->EndFrame(std::move(upload_semaphore));
           }
           EXPECT_EQ(expected_colored, get_colored_data(kColor))
               << "FAILED WHILE DRAWING VERTICAL LINE OF COLOR \"" << kColor
@@ -172,7 +178,10 @@ VK_TEST_F(PaperRendererTest, Lines) {
 
             ren->DrawHLine(kColor, 0, 0, endCoord, thickness);
             ren->FinalizeFrame();
-            ren->EndFrame(gpu_uploader->Submit());
+            auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+            gpu_uploader->AddSignalSemaphore(upload_semaphore);
+            gpu_uploader->Submit();
+            ren->EndFrame(std::move(upload_semaphore));
           }
           EXPECT_EQ(expected_colored, get_colored_data(kColor))
               << "FAILED WHILE DRAWING HORIZONTAL LINE OF COLOR \"" << kColor
@@ -214,7 +223,10 @@ VK_TEST_F(PaperRendererTest, Data) {
 
       ren->AddDebugTimeStamp(ts);
       ren->FinalizeFrame();
-      ren->EndFrame(gpu_uploader->Submit());
+      auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+      gpu_uploader->AddSignalSemaphore(upload_semaphore);
+      gpu_uploader->Submit();
+      ren->EndFrame(std::move(upload_semaphore));
 
       int16_t render_time = done_time - start_time;
 

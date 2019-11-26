@@ -452,6 +452,8 @@ template("escher_library") {
       "vk/buffer.cc",
       "vk/buffer.h",
       "vk/buffer_factory.h",
+      "vk/chained_semaphore_generator.cc",
+      "vk/chained_semaphore_generator.h",
       "vk/command_buffer.h",
       "vk/framebuffer.cc",
       "vk/framebuffer.h",

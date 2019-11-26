@@ -213,26 +213,30 @@ void BatchGpuUploader::PostReader(std::unique_ptr<BatchGpuUploader::Reader> read
   reader.reset();
 }
 
-SemaphorePtr BatchGpuUploader::Submit(fit::function<void()> callback) {
+void BatchGpuUploader::Submit(fit::function<void()> callback) {
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.
   FXL_DCHECK(writer_count_ == 0 && reader_count_ == 0);
   if (!is_initialized_) {
     // This uploader was never used, nothing to submit.
-    return SemaphorePtr();
+    return;
   }
   FXL_DCHECK(frame_);
 
   // Add semaphores for the submitted command buffer to wait on.
-  for (auto& pair: wait_semaphores_) {
+  for (auto& pair : wait_semaphores_) {
     frame_->cmds()->AddWaitSemaphore(std::move(pair.first), pair.second);
   }
   wait_semaphores_.clear();
 
+  for (auto& sem : signal_semaphores_) {
+    frame_->cmds()->AddSignalSemaphore(std::move(sem));
+  }
+  signal_semaphores_.clear();
+
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
-  auto uploads_finished_sema = Semaphore::New(frame_->cmds()->vk_device());
-  frame_->EndFrame(uploads_finished_sema,
+  frame_->EndFrame(SemaphorePtr(),
                    [callback = std::move(callback), read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
                        auto buffer = pair.first;
@@ -243,7 +247,20 @@ SemaphorePtr BatchGpuUploader::Submit(fit::function<void()> callback) {
                      }
                    });
   frame_ = nullptr;
-  return uploads_finished_sema;
+}
+
+void BatchGpuUploader::AddWaitSemaphore(SemaphorePtr sema, vk::PipelineStageFlags flags) {
+  if (!is_initialized_) {
+    Initialize();
+  }
+  wait_semaphores_.push_back({std::move(sema), flags});
+}
+
+void BatchGpuUploader::AddSignalSemaphore(SemaphorePtr sema) {
+  if (!is_initialized_) {
+    Initialize();
+  }
+  signal_semaphores_.push_back(std::move(sema));
 }
 
 }  // namespace escher

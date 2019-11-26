@@ -16,6 +16,7 @@
 
 #include "src/ui/lib/escher/renderer/batch_gpu_uploader.h"
 #include "src/ui/lib/escher/util/fuchsia_utils.h"
+#include "src/ui/lib/escher/vk/chained_semaphore_generator.h"
 #include "src/ui/scenic/lib/gfx/engine/hardware_layer_assignment.h"
 #include "src/ui/scenic/lib/gfx/engine/session.h"
 #include "src/ui/scenic/lib/gfx/engine/session_handler.h"
@@ -176,7 +177,8 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
 
     success &= hla.swapchain->DrawAndPresentFrame(
         timings, i, hla,
-        [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()}](
+        [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()},
+         semaphore_chain{escher_->semaphore_chain()}](
             zx::time target_presentation_time, const escher::ImagePtr& output_image,
             const HardwareLayerAssignment::Item hla_item,
             const escher::SemaphorePtr& acquire_semaphore,
@@ -197,6 +199,13 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
           if (!is_last_hla) {
             frame->SubmitPartialFrame(frame_done_semaphore);
           } else {
+            auto semaphore_pair = semaphore_chain->TakeLastAndCreateNextSemaphore();
+            frame->cmds()->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+            frame->cmds()->AddWaitSemaphore(std::move(semaphore_pair.semaphore_to_wait),
+                                            vk::PipelineStageFlagBits::eVertexInput |
+                                                vk::PipelineStageFlagBits::eFragmentShader |
+                                                vk::PipelineStageFlagBits::eColorAttachmentOutput |
+                                                vk::PipelineStageFlagBits::eTransfer);
             frame->EndFrame(frame_done_semaphore, nullptr);
           }
         });

@@ -109,6 +109,8 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
 
   frame_manager_ = std::make_unique<impl::FrameManager>(GetWeakPtr());
 
+  semaphore_chain_ = std::make_unique<ChainedSemaphoreGenerator>(vk_device());
+
   // Query relevant Vulkan properties.
   auto device_properties = vk_physical_device().getProperties();
   timestamp_period_ = device_properties.limits.timestampPeriod;

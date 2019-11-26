@@ -15,6 +15,7 @@ class BlockAllocator;
 class Buffer;
 class BufferCache;
 class Camera;
+class ChainedSemaphoreGenerator;
 struct ClipPlanes;
 class CommandBuffer;
 class DebugFont;

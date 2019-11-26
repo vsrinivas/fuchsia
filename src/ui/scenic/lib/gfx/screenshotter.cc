@@ -174,6 +174,16 @@ void Screenshotter::TakeScreenshot(
   engine->renderer()->RenderLayers(frame, zx::time(dispatcher_clock_now()), {.output_image = image},
                                    drawable_layers);
 
+  // Generate Vulkan Semaphore pairs so that gfx tasks such as screenshotting,
+  // rendering, etc. are properly synchronized.
+  // See the class comment of |Engine| for details.
+  auto semaphore_pair = escher->semaphore_chain()->TakeLastAndCreateNextSemaphore();
+  frame->cmds()->AddSignalSemaphore(std::move(semaphore_pair.semaphore_to_signal));
+  frame->cmds()->AddWaitSemaphore(
+      std::move(semaphore_pair.semaphore_to_wait),
+      vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader |
+          vk::PipelineStageFlagBits::eColorAttachmentOutput | vk::PipelineStageFlagBits::eTransfer);
+
   // TODO(SCN-1096): Nobody signals this semaphore, so there's no point.  One
   // way that it could be used is export it as a zx::event and watch for that to
   // be signaled instead of adding a completion-callback to the command-buffer.
@@ -182,6 +192,7 @@ void Screenshotter::TakeScreenshot(
 
   // TODO(SCN-1096): instead of submitting another command buffer, this could be
   // done as part of the same Frame above.
+
   vk::Queue queue = escher->command_buffer_pool()->queue();
   auto* command_buffer = escher->command_buffer_pool()->GetCommandBuffer();
 
@@ -199,8 +210,6 @@ void Screenshotter::TakeScreenshot(
                                         vk::ImageLayout::eTransferSrcOptimal);
   command_buffer->vk().copyImageToBuffer(image->vk(), vk::ImageLayout::eTransferSrcOptimal,
                                          buffer->vk(), 1, &region);
-  command_buffer->TransitionImageLayout(image, vk::ImageLayout::eUndefined,
-                                        vk::ImageLayout::eColorAttachmentOptimal);
   command_buffer->KeepAlive(image);
 
   command_buffer->Submit(

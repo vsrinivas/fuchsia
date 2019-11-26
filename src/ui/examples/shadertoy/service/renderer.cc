@@ -153,8 +153,11 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
     escher::BatchGpuUploader gpu_uploader(escher()->GetWeakPtr(), frame_number_);
     full_screen_ = NewFullScreenMesh(escher()->mesh_manager(), &gpu_uploader);
     white_texture_ = CreateWhiteTexture(&gpu_uploader);
+    auto upload_semaphore = escher::Semaphore::New(escher()->vk_device());
+    gpu_uploader.AddSignalSemaphore(upload_semaphore);
+    gpu_uploader.Submit();
     command_buffer->AddWaitSemaphore(
-        gpu_uploader.Submit(),
+        std::move(upload_semaphore),
         vk::PipelineStageFlagBits::eVertexInput | vk::PipelineStageFlagBits::eFragmentShader);
   }
 
@@ -189,7 +192,7 @@ void Renderer::DrawFrame(const escher::FramebufferPtr& framebuffer, const Pipeli
     vk::DeviceSize vbo_offset = attribute_buffer.offset;
     vk_command_buffer.bindVertexBuffers(vbo_binding, 1, &vbo, &vbo_offset);
     vk_command_buffer.bindIndexBuffer(full_screen_->vk_index_buffer(),
-                                       full_screen_->index_buffer_offset(), vk::IndexType::eUint32);
+                                      full_screen_->index_buffer_offset(), vk::IndexType::eUint32);
     vk_command_buffer.drawIndexed(full_screen_->num_indices(), 1, 0, 0, 0);
   }
 
