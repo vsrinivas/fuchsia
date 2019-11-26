@@ -33,7 +33,7 @@ executable("unittests") {
 
   deps = [
     ":process",
-    "//garnet/public/lib/component/cpp/testing",
+    "//sdk/lib/sys/cpp",
     "//src/lib/fxl/test:gtest_main",
   ]
 }

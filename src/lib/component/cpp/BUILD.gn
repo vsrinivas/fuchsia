@@ -61,7 +61,6 @@ source_set("deprecated_service_provider") {
   #
   # DO NOT ADD MORE ENTRIES TO THIS LIST.
   visibility = [
-    "//garnet/public/lib/component/cpp:deprecated_service_provider",
     "//src/ledger/bin/p2p_provider/impl",
     "//src/modular/bin/sessionmgr:sessionmgr_lib",
     "//src/modular/bin/sessionmgr/agent_runner",

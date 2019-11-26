@@ -72,7 +72,6 @@ executable("tiles_unittests") {
 
   deps = [
     ":tiles_lib",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/gtest",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",

@@ -76,7 +76,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   // Push the bash script to the guest
   zx::channel put_local, put_remote;
   zx::channel::create(0, &put_local, &put_remote);
-  zx_status_t open_status = fdio_open(kTestScriptSource, ZX_FS_RIGHT_READABLE, put_local.release());
+  zx_status_t open_status =
+      fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
   zx_status_t transfer_status = ZX_ERR_IO;
@@ -171,7 +172,8 @@ TEST_F(GuestInteractionTest, GrpcExecScriptTest) {
   zx::channel get_local, get_remote;
   zx::channel::create(0, &get_local, &get_remote);
   open_status = fdio_open(kHostOuputCopyLocation,
-                          ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE,
+                          fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                              fuchsia::io::OPEN_FLAG_TRUNCATE,
                           get_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
@@ -242,7 +244,8 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   // Push the test file to the guest
   zx::channel put_local, put_remote;
   zx::channel::create(0, &put_local, &put_remote);
-  zx_status_t open_status = fdio_open(test_file, ZX_FS_RIGHT_READABLE, put_local.release());
+  zx_status_t open_status =
+      fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE, put_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 
   zx_status_t transfer_status = ZX_ERR_IO;
@@ -257,7 +260,8 @@ TEST_F(GuestInteractionTest, GrpcPutGetTest) {
   zx::channel get_local, get_remote;
   zx::channel::create(0, &get_local, &get_remote);
   open_status = fdio_open(host_verification_file,
-                          ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE,
+                          fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                              fuchsia::io::OPEN_FLAG_TRUNCATE,
                           get_local.release());
   ASSERT_EQ(open_status, ZX_OK);
 

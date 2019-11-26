@@ -15,7 +15,6 @@
 #include <src/virtualization/tests/guest_console.h>
 
 #include "src/lib/component/cpp/environment_services_helper.h"
-#include "src/lib/component/cpp/testing/test_util.h"
 
 static constexpr char kGuestLabel[] = "debian_guest";
 static constexpr char kGuestManagerUrl[] =

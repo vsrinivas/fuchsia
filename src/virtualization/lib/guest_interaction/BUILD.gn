@@ -113,7 +113,6 @@ source_set("integration_test_lib") {
   ]
   deps = [
     ":proto",
-    "//garnet/public/lib/component/cpp/testing",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
@@ -224,7 +223,6 @@ executable("server_daemon_test") {
     ":integration_test_lib",
     ":platform_interface_posix",
     ":proto",
-    "//garnet/public/lib/component/cpp/testing",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",
     "//sdk/fidl/fuchsia.virtualization",
@@ -315,7 +313,6 @@ executable("guest_interaction_service_test") {
     ":common",
     ":fuchsia.netemul.guest",
     ":integration_test_lib",
-    "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/svc/cpp",
     "//sdk/fidl/fuchsia.net.stack",
     "//sdk/fidl/fuchsia.netstack",

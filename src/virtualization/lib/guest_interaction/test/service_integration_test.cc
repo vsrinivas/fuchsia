@@ -45,7 +45,7 @@ TEST_F(GuestInteractionTest, FidlExecScriptTest) {
 
   // Push the bash script to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_file;
-  zx_status_t status = fdio_open(kTestScriptSource, ZX_FS_RIGHT_READABLE,
+  zx_status_t status = fdio_open(kTestScriptSource, fuchsia::io::OPEN_RIGHT_READABLE,
                                  put_file.NewRequest().TakeChannel().release());
 
   ASSERT_EQ(status, ZX_OK);
@@ -147,7 +147,8 @@ TEST_F(GuestInteractionTest, FidlExecScriptTest) {
   // stdin.  Pull this file back and inspect its contents.
   fidl::InterfaceHandle<fuchsia::io::File> get_file;
   status = fdio_open(kHostOuputCopyLocation,
-                     ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE,
+                     fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                         fuchsia::io::OPEN_FLAG_TRUNCATE,
                      get_file.NewRequest().TakeChannel().release());
   ASSERT_EQ(status, ZX_OK);
 
@@ -215,8 +216,8 @@ TEST_F(GuestInteractionTest, FidlPutGetTest) {
 
   // Push the file to the guest
   fidl::InterfaceHandle<fuchsia::io::File> put_file;
-  zx_status_t status =
-      fdio_open(test_file, ZX_FS_RIGHT_READABLE, put_file.NewRequest().TakeChannel().release());
+  zx_status_t status = fdio_open(test_file, fuchsia::io::OPEN_RIGHT_READABLE,
+                                 put_file.NewRequest().TakeChannel().release());
   ASSERT_EQ(status, ZX_OK);
 
   bool put_complete = false;
@@ -234,7 +235,8 @@ TEST_F(GuestInteractionTest, FidlPutGetTest) {
   // from the file generated above.
   fidl::InterfaceHandle<fuchsia::io::File> get_file;
   status = fdio_open(host_verification_file,
-                     ZX_FS_RIGHT_WRITABLE | ZX_FS_FLAG_CREATE | ZX_FS_FLAG_TRUNCATE,
+                     fuchsia::io::OPEN_RIGHT_WRITABLE | fuchsia::io::OPEN_FLAG_CREATE |
+                         fuchsia::io::OPEN_FLAG_TRUNCATE,
                      get_file.NewRequest().TakeChannel().release());
 
   bool get_complete = false;
