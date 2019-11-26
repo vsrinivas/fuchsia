@@ -295,7 +295,7 @@ TEST_F(BreakpointImplTest, Watchpoint) {
   EXPECT_EQ(out.breakpoint.locations[0].address, 0u);
   // For now, the debugger will send the same address as a range/begin.
   EXPECT_EQ(out.breakpoint.locations[0].address_range.begin(), kAddress);
-  EXPECT_EQ(out.breakpoint.locations[0].address_range.end(), kAddress);
+  EXPECT_EQ(out.breakpoint.locations[0].address_range.end(), kAddress + 4);
 }
 
 }  // namespace zxdb

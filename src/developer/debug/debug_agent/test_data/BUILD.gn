@@ -100,10 +100,6 @@ executable("watchpoint_test_exe") {
   sources = [
     "watchpoint_test_exe.cc",
   ]
-
-  deps = [
-    ":debug_agent_test_so",
-  ]
 }
 
 if (current_cpu == "x64") {

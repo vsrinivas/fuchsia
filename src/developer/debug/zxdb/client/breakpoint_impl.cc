@@ -301,11 +301,10 @@ void BreakpointImpl::SendBackendAddOrChange(fit::callback<void(const Err&)> call
         case debug_ipc::BreakpointType::kHardware:
           addition.address = pair.second.address();
           break;
-        // TODO(donosoc): This should receive a range within input location, but x64 doesn't allow
-        // big ranges so this works as a first pass.
+        // TODO: This should either the variable size or some way to determine it.
         case debug_ipc::BreakpointType::kWatchpoint: {
           uint64_t address = pair.second.address();
-          addition.address_range = {address, address};
+          addition.address_range = {address, address + 4};
           break;
         }
         case debug_ipc::BreakpointType::kLast:

@@ -365,11 +365,10 @@ WatchpointInstallationResult ArchProvider::InstallWatchpoint(zx::thread* thread,
   if (status != ZX_OK)
     return WatchpointInstallationResult(status);
 
-  DEBUG_LOG(Archx64) << "Before installing watchpoint: " << std::endl
+  DEBUG_LOG(Archx64) << "Before installing watchpoint for range " << range.ToString() << std::endl
                      << DebugRegistersToString(debug_regs);
 
-  uint64_t size = range.end() - range.end();
-  auto result = SetupWatchpoint(&debug_regs, range.begin(), size);
+  auto result = SetupWatchpoint(&debug_regs, range.begin(), range.size());
   if (result.status != ZX_OK)
     return WatchpointInstallationResult(result.status);
 
