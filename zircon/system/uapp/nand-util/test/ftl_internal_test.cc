@@ -135,10 +135,10 @@ TEST(NdmData, BothBadBlockTypes) {
 }
 
 constexpr uint32_t kControl4[] = {
-    0x00010001, 0x00000002, 0x19a0c54b, 0x0000012c, 0x00040000, 0x0000012b, 0x0000012a,
-    0x0000011c, 0x00000129, 0x0000011c, 0x0000011b, 0x0000002d, 0x00000102, 0x00012c00,
-    0x00000000, 0x00011b00, 0x00011b00, 0x00011c00, 0xffffff00, 0xffffffff, 0x000000ff,
-    0x00011b00, 0x6c746600, 0x00000000, 0x00000000, 0x00000000, 0xffffff00, 0xffffffff};
+    0x00010001, 0x00000002, 0x19a0c54b, 0x0000012c, 0x00040000, 0x0000012b, 0x0000012a, 0x0000011c,
+    0x00000129, 0x0000011c, 0x0000011b, 0x0000002d, 0x00000102, 0x00012c00, 0x00000000, 0x00011b00,
+    0x00011b00, 0x00011c00, 0xffffff00, 0xffffffff, 0x000000ff, 0x00011b00, 0x6c746600, 0x00000000,
+    0x00000000, 0x00000000, 0xffffff00, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
 
 TEST(NdmData, Transitional) {
   NdmData ndm;
@@ -157,6 +157,83 @@ TEST(NdmData, Transitional) {
   EXPECT_EQ(283, replacements[0]);
   EXPECT_EQ(284, replacements[1]);
 #endif
+}
+
+// Goes over a few members to verify that the proper shift is taking place.
+TEST(GetHeader, Version1Basic) {
+  NdmHeader header = GetNdmHeader(kControl2);
+  EXPECT_EQ(1, header.major_version);
+  EXPECT_EQ(1, header.minor_version);
+  EXPECT_EQ(0x12c, header.num_blocks);
+  EXPECT_EQ(0x12a, header.control_block1);
+}
+
+TEST(GetHeader, Version1Transitional) {
+  NdmHeader header = GetNdmHeader(kControl4);
+  EXPECT_EQ(1, header.major_version);
+  EXPECT_EQ(1, header.minor_version);
+  EXPECT_EQ(0x12c, header.num_blocks);
+  EXPECT_EQ(0x12a, header.control_block1);
+  EXPECT_EQ(0x11c, header.transfer_to_block);
+  EXPECT_EQ(0x11b, header.transfer_bad_block);
+  EXPECT_EQ(0x2d, header.transfer_bad_page);
+}
+
+constexpr uint32_t kControlBlockBadBlocksV2[] = {
+    0x00000002, 0x00010001, 0x00000002, 0x01148752, 0x0000001e, 0x00010000, 0x0000001d, 0x0000001c,
+    0xffffffff, 0xffffffff, 0xffffffff, 0x00000003, 0x0000000d, 0x00000001, 0x00000000, 0x0000001e,
+    0x00000003, 0x0000001b, 0xffffffff, 0xffffffff, 0x00000000, 0x0000001a, 0x006c7466, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
+
+TEST(GetHeader, Version2Basic) {
+  NdmHeader header = GetNdmHeader(kControlBlockBadBlocksV2);
+  EXPECT_EQ(2, header.major_version);
+  EXPECT_EQ(0, header.minor_version);
+  EXPECT_EQ(0x1e, header.num_blocks);
+  EXPECT_EQ(0x1c, header.control_block1);
+}
+
+constexpr uint32_t kControlBlockTransferV2[] = {
+    0x00000002, 0x00010001, 0x00000001, 0xdc1fd63c, 0x0000001e, 0x00010000, 0x0000001d, 0x0000001c,
+    0xffffffff, 0xffffffff, 0x0000001b, 0x00000003, 0x0000000d, 0x00000001, 0x00000000, 0x0000001e,
+    0x00000003, 0x0000001b, 0xffffffff, 0xffffffff, 0x00000000, 0x0000001a, 0x006c7466, 0x00000000,
+    0x00000000, 0x00000000, 0x00000000, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff, 0xffffffff};
+
+TEST(GetHeader, Version2Transitional) {
+  NdmHeader header = GetNdmHeader(kControlBlockTransferV2);
+  EXPECT_EQ(2, header.major_version);
+  EXPECT_EQ(0, header.minor_version);
+  EXPECT_EQ(0x1e, header.num_blocks);
+  EXPECT_EQ(0x1c, header.control_block1);
+  EXPECT_EQ(0x1b, header.transfer_to_block);
+  EXPECT_EQ(0x3, header.transfer_bad_block);
+  EXPECT_EQ(0xd, header.transfer_bad_page);
+}
+
+TEST(NdmData, BothBadBlockTypesVersion2) {
+  NdmData ndm;
+  fbl::Vector<int32_t> bad_blocks;
+  fbl::Vector<int32_t> replacements;
+  ndm.ParseNdmData(kControlBlockBadBlocksV2, &bad_blocks, &replacements);
+
+  ASSERT_EQ(2, bad_blocks.size());
+  ASSERT_EQ(1, replacements.size());
+  EXPECT_EQ(0, bad_blocks[0]);
+  EXPECT_EQ(3, bad_blocks[1]);
+  EXPECT_EQ(27, replacements[0]);
+}
+
+TEST(NdmData, TransitionalVersion2) {
+  NdmData ndm;
+  fbl::Vector<int32_t> bad_blocks;
+  fbl::Vector<int32_t> replacements;
+  ndm.ParseNdmData(kControlBlockTransferV2, &bad_blocks, &replacements);
+
+  ASSERT_EQ(2, bad_blocks.size());
+  ASSERT_EQ(1, replacements.size());
+  EXPECT_EQ(0, bad_blocks[0]);
+  EXPECT_EQ(3, bad_blocks[1]);
+  EXPECT_EQ(27, replacements[0]);
 }
 
 }  // namespace internal

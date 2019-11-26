@@ -42,8 +42,8 @@ bool IsDataBlock(const SpareArea& oob);
 bool IsCopyBlock(const SpareArea& oob);
 bool IsMapBlock(const SpareArea& oob);
 
-// Header of an NDM control block.
-struct NdmHeader {
+// Header of an NDM control block version 1.
+struct NdmHeaderV1 {
   uint16_t current_location;
   uint16_t last_location;
   int32_t sequence_num;
@@ -56,6 +56,31 @@ struct NdmHeader {
   int32_t free_control_block;
   int32_t transfer_to_block;
 };
+
+// Header of an NDM control block.
+struct NdmHeader {
+  uint16_t major_version;
+  uint16_t minor_version;
+  uint16_t current_location;
+  uint16_t last_location;
+  int32_t sequence_num;
+  uint32_t crc;
+  int32_t num_blocks;
+  int32_t block_size;
+  int32_t control_block0;
+  int32_t control_block1;
+  int32_t free_virt_block;
+  int32_t free_control_block;
+  int32_t transfer_to_block;
+  int32_t transfer_bad_block;
+  int32_t transfer_bad_page;
+};
+static_assert(sizeof(NdmHeader) == sizeof(NdmHeaderV1) + sizeof(int32_t) * 3);
+static_assert(offsetof(NdmHeader, current_location) == sizeof(uint32_t));
+static_assert(offsetof(NdmHeaderV1, current_location) == 0);
+
+// Populates a header structure from nand data. Defined here only for tests.
+NdmHeader GetNdmHeader(const void* page);
 
 // Encapsulates the NDM related functionality.
 class NdmData {
@@ -98,7 +123,7 @@ class NdmData {
   void DumpHeader(const NdmHeader& h) const;
   void DumpNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
                    fbl::Vector<int32_t>* replacements) const;
-  void DumpPartitions(const void* data, int num_partitions) const;
+  void DumpPartitions(const NdmHeader& header, const char* data, int num_partitions) const;
 
   NdmHeader header_ = {};
   int32_t header_block_ = 0;

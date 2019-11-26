@@ -6,8 +6,6 @@
 
 #include <zircon/assert.h>
 
-#include <stdio.h>
-
 namespace internal {
 namespace {
 
@@ -18,7 +16,7 @@ struct NdmSpareArea {
   uint8_t ndm;  // 0 for NDM.
 };
 
-// Follows NdmHeader if transfer_to_block != FFs.
+// Follows NdmHeaderV1 if transfer_to_block != FFs.
 struct TransferInfo {
   int32_t transfer_bad_block;
   int32_t transfer_bad_page;
@@ -46,6 +44,12 @@ struct NdmPartition {
   int32_t num_blocks;
   char name[15];
   uint8_t type;
+};
+
+// User data attached to a partition, for version >= 2.
+struct NdmPartitionData {
+  uint32_t data_size;  // Number of bytes on |data|.
+  uint8_t data[];
 };
 
 uint32_t ReadBytes(const uint8_t* data, int bytes) {
@@ -117,6 +121,25 @@ bool IsMapBlock(const SpareArea& oob) {
   return block_count != -1 && block_count != -2;
 }
 
+NdmHeader GetNdmHeader(const void* page) {
+  NdmHeader header = *reinterpret_cast<const NdmHeader*>(page);
+  if (header.major_version < 2) {
+    const NdmHeaderV1& v1 = *reinterpret_cast<const NdmHeaderV1*>(page);
+    memcpy(&header.current_location, &v1, sizeof(v1));
+    header.transfer_bad_block = -1;
+    header.transfer_bad_page = -1;
+
+    if (v1.transfer_to_block != -1) {
+      const char* data = reinterpret_cast<const char*>(page);
+      data += sizeof(v1);
+      const TransferInfo& transfer = *reinterpret_cast<const TransferInfo*>(data);
+      header.transfer_bad_block = transfer.transfer_bad_block;
+      header.transfer_bad_page = transfer.transfer_bad_page;
+    }
+  }
+  return header;
+}
+
 bool NdmData::FindHeader(const NandBroker& nand) {
   page_multiplier_ = nand.Info().oob_size < 16 ? 16 / nand.Info().oob_size : 1;
 
@@ -136,11 +159,7 @@ bool NdmData::FindHeader(const NandBroker& nand) {
       fbl::Vector<int32_t> replacements;
       ParseNdmData(nand.data(), &bad_blocks, &replacements);
 
-      const NdmHeader& header = *reinterpret_cast<const NdmHeader*>(nand.data());
-      if (header.last_location != 1 || header.current_location != 1) {
-        // TODO(40208): Add support for ver 2.0.
-        break;
-      }
+      const NdmHeader header = GetNdmHeader(nand.data());
       if (header.sequence_num >= last) {
         last = header.sequence_num;
         header_page_ = page;
@@ -191,22 +210,21 @@ void NdmData::DumpInfo() const {
 
 void NdmData::ParseNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
                            fbl::Vector<int32_t>* replacements) const {
-  const NdmHeader& h = *reinterpret_cast<const NdmHeader*>(page);
-  const char* data = reinterpret_cast<const char*>(page);
-  data += sizeof(h);
+  const NdmHeader h = GetNdmHeader(page);
   if (h.current_location == 0xFFFF) {
     return;
   }
+
+  const char* data = reinterpret_cast<const char*>(page);
+  data += (h.major_version < 2) ? sizeof(NdmHeaderV1) : sizeof(h);
   DumpHeader(h);
 
-  if (h.transfer_to_block != -1) {
+  if (h.transfer_to_block != -1 && h.major_version < 2) {
     const TransferInfo& transfer = *reinterpret_cast<const TransferInfo*>(data);
     data += sizeof(transfer.transfer_bad_block);
     data += sizeof(transfer.transfer_bad_page);
     data += sizeof(transfer.unused);
 
-    Log("transfer_bad_block %d, transfer_bad_page %d, unused %u\n", transfer.transfer_bad_block,
-        transfer.transfer_bad_page, transfer.unused);
 #if defined(__arm__) || defined(__aarch64__)
     return;
 #endif
@@ -239,17 +257,19 @@ void NdmData::ParseNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
     }
   }
 
-  DumpPartitions(data, bad_data.num_partitions);
+  DumpPartitions(h, data, bad_data.num_partitions);
   Log("Total bad blocks %lu\n\n", bad_blocks->size());
 }
 
 void NdmData::DumpHeader(const NdmHeader& h) const {
   Log("NDM control block %d:\n", h.sequence_num);
+  Log("version %u.%u\n", h.major_version, h.minor_version);
   Log("current_location %d, last_location %d\n", h.current_location, h.last_location);
   Log("num_blocks %d, block_size %d\n", h.num_blocks, h.block_size);
   Log("control_block_0 %d, control_block_1 %d\n", h.control_block0, h.control_block1);
   Log("free_virt_block %d, free_control_block %d, transfer_to_block %d\n", h.free_virt_block,
       h.free_control_block, h.transfer_to_block);
+  Log("transfer_bad_block %d, transfer_bad_page %d\n", h.transfer_bad_block, h.transfer_bad_page);
 }
 
 void NdmData::DumpNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
@@ -260,15 +280,24 @@ void NdmData::DumpNdmData(const void* page, fbl::Vector<int32_t>* bad_blocks,
   logging_ = old;
 }
 
-void NdmData::DumpPartitions(const void* data, int num_partitions) const {
-  const NdmPartition* partition = reinterpret_cast<const NdmPartition*>(data);
-  for (int32_t i = 0; i < num_partitions; i++, partition++) {
+void NdmData::DumpPartitions(const NdmHeader& header, const char* data, int num_partitions) const {
+  for (int32_t i = 0; i < num_partitions; i++) {
+    auto partition = reinterpret_cast<const NdmPartition*>(data);
+    data += sizeof(*partition);
     char name[sizeof(partition->name) + 1];
     memcpy(name, partition->name, sizeof(partition->name));
     name[sizeof(partition->name)] = '\0';
     Log("Partition %d:\n", i);
     Log("first_block %d, num_blocks %d, name %s, type %d\n", partition->first_block,
         partition->num_blocks, name, partition->type);
+
+    if (header.major_version >= 2) {
+      auto partition_data = reinterpret_cast<const NdmPartitionData*>(data);
+      data += sizeof(*partition_data);
+
+      // TODO(40208): Dump the partition parameters.
+      data += partition_data->data_size;
+    }
   }
 }
 

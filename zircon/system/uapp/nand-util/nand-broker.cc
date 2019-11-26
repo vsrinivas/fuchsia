@@ -196,6 +196,8 @@ bool NandBroker::LoadBroker() {
     return true;
   }
 
+  // A broker driver may or may not be loaded. Try to load it and see if that
+  // fails.
   fdio_t* io = fdio_unsafe_fd_to_io(device_.get());
   if (io == nullptr) {
     printf("Could not convert fd to io\n");
@@ -212,14 +214,15 @@ bool NandBroker::LoadBroker() {
   }
 
   fdio_unsafe_release(io);
-  if (status != ZX_OK || call_status != ZX_OK) {
-    fprintf(stderr, "Failed to issue bind command\n");
-    return false;
-  }
+  bool bind_failed = (status != ZX_OK || call_status != ZX_OK);
 
   device_ = OpenBroker(path_);
   if (!device_) {
-    printf("Failed to bind broker\n");
+    if (bind_failed) {
+      printf("Failed to issue bind command for broker\n");
+    } else {
+      printf("Failed to bind broker\n");
+    }
     return false;
   }
   return true;
