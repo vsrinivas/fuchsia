@@ -290,8 +290,8 @@ impl Associated {
         sta.handle_data_frame(fixed_data_fields, addr4, qos_ctrl, body, is_controlled_port_open);
     }
 
-    /// Processes an inbound deauthentication frame.
-    /// This always results in an MLME-DEAUTHENTICATE.indication message to MLME's SME peer.
+    /// Processes an inbound diassociation frame.
+    /// This always results in an MLME-DISASSOCIATE.indication message to MLME's SME peer.
     fn on_disassoc_frame(&self, sta: &mut Client, disassoc_hdr: &mac::DisassocHdr) {
         let reason_code = fidl_mlme::ReasonCode::from_primitive(disassoc_hdr.reason_code.0)
             .unwrap_or(fidl_mlme::ReasonCode::UnspecifiedReason);
@@ -310,13 +310,18 @@ statemachine!(
     Authenticated => Associating,
     Associating => Associated,
 
-    // Deauthentication & Timeout:
+    // Timeout:
     Authenticating => Joined,
-    Associating => [Joined, Authenticated],
+    Associating => Authenticated,
+
     // Deauthentication:
+    Authenticating => Joined,
     Authenticated => Joined,
+    Associating => Joined,
     Associated => Joined,
+
     // Disassociation:
+    Associating => Authenticated,
     Associated => Authenticated,
 
     // TODO(hahnr): Handle lost BSS.
