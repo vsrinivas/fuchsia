@@ -17,22 +17,6 @@ using TreeName = string:MAX_TREE_NAME_LENGTH;
 table TreeContent {
     /// Buffer containing the bytes of a tree in Inspect format.
     1: fuchsia.mem.Buffer buffer;
-
-    /// Describes the current state of the buffer, which informs the
-    /// reader how to interpet it (see below).
-    2: TreeState state;
-};
-
-/// The state of the buffer returned in a TreeContent.
-enum TreeState {
-    /// The VMO backing the buffer is still in use. Clients must interpret
-    /// the whole buffer accoring to the Inspect format reading algorithm.
-    IN_USE = 1;
-
-    /// The VMO backing the buffer is complete, and will not be modified further.
-    /// Clients may read the buffer without performing the whole
-    /// consistency algorithm, but they should still be wary of the input.
-    COMPLETE = 2;
 };
 
 /// Iterator protocol for listing the names of children of a particular Tree.
@@ -45,13 +29,34 @@ protocol TreeNameIterator {
 };
 
 /// The Tree protocol represents a hierarchy of Inspect VMOs.
+///
+/// Link values stored in an Inspect file contain references to new
+/// named files that contain a continuation of the data for the overall
+/// hierarchy. Protocol Tree allows clients to request these named files so
+/// long as the hosting component is still alive.
+///
+/// Connecting to a particular tree keeps the content for that Tree resident
+/// in memory. Clients are recommended to traverse the trees in depth-first
+/// order to reduce memory usage. Serving components are free to deny
+/// connections to avoid unbounded memory usage.
 [Discoverable]
 protocol Tree {
     /// Get the content for the Inspect VMO backing this tree.
+    ///
+    /// So long as the Tree connection is still maintained, the contents
+    /// of the tree are guaranteed to still be live. Once the connection is
+    /// lost, the serving component is free to clear the contents of returned
+    /// shared buffers.
+    ///
+    /// Serving components may return different buffers to GetContent
+    /// requests for the same Tree.
     GetContent() -> (TreeContent content);
 
     /// Iterate over the names of Trees that are children of this Tree.
-    ListChildrenNames(request<TreeNameIterator> tree_iterator);
+    ///
+    /// The underlying list of children may change in between calls to
+    /// ListChildNames and OpenChild.
+    ListChildNames(request<TreeNameIterator> tree_iterator);
 
     /// Open a child Tree by name.
     ///

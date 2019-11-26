@@ -54,7 +54,7 @@ impl ReadableTree for TreeProxy {
     async fn tree_names(&self) -> Result<Vec<String>, Error> {
         let (name_iterator, server_end) =
             fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
-        self.list_children_names(server_end)?;
+        self.list_child_names(server_end)?;
         let mut names = vec![];
         loop {
             let subset_names = name_iterator.get_next().await?;

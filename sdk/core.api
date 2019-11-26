@@ -31,6 +31,7 @@ sdk://fidl/fuchsia.hardware.ethernet
 sdk://fidl/fuchsia.hardware.goldfish
 sdk://fidl/fuchsia.hwinfo
 sdk://fidl/fuchsia.images
+sdk://fidl/fuchsia.inspect
 sdk://fidl/fuchsia.intl
 sdk://fidl/fuchsia.io
 sdk://fidl/fuchsia.ldsvc

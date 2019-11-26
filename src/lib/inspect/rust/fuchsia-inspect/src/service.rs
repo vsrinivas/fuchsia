@@ -7,7 +7,7 @@ use {
     failure::{Error, ResultExt},
     fidl_fuchsia_inspect::{
         TreeContent, TreeNameIteratorRequest, TreeNameIteratorRequestStream, TreeRequest,
-        TreeRequestStream, TreeState, MAX_TREE_NAME_LIST_SIZE,
+        TreeRequestStream, MAX_TREE_NAME_LIST_SIZE,
     },
     fidl_fuchsia_mem::Buffer,
     fuchsia_async as fasync,
@@ -28,11 +28,10 @@ pub async fn handle_request_stream(
                 let buffer_data = vmo.and_then(|vmo| vmo.get_size().ok().map(|size| (vmo, size)));
                 let content = TreeContent {
                     buffer: buffer_data.map(|data| Buffer { vmo: data.0, size: data.1 }),
-                    state: Some(TreeState::InUse),
                 };
                 responder.send(content)?;
             }
-            TreeRequest::ListChildrenNames { tree_iterator, .. } => {
+            TreeRequest::ListChildNames { tree_iterator, .. } => {
                 let values = inspector.tree_names().await?;
                 let request_stream = tree_iterator.into_stream()?;
                 spawn_tree_name_iterator_server(values, request_stream)
@@ -114,11 +113,11 @@ mod tests {
     }
 
     #[fasync::run_singlethreaded(test)]
-    async fn list_children_names() -> Result<(), Error> {
+    async fn list_child_names() -> Result<(), Error> {
         let tree = spawn_server()?;
         let (name_iterator, server_end) =
             fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
-        tree.list_children_names(server_end)?;
+        tree.list_child_names(server_end)?;
         verify_iterator(name_iterator, vec!["lazy-0".to_string()]).await?;
         Ok(())
     }
@@ -135,7 +134,7 @@ mod tests {
         });
         let (name_iterator, server_end) =
             fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
-        child_tree.list_children_names(server_end)?;
+        child_tree.list_child_names(server_end)?;
         verify_iterator(name_iterator, vec!["lazy-vals-0".to_string()]).await?;
 
         let (child_tree_2, server_end) = fidl::endpoints::create_proxy::<TreeMarker>()?;
@@ -147,7 +146,7 @@ mod tests {
         });
         let (name_iterator, server_end) =
             fidl::endpoints::create_proxy::<TreeNameIteratorMarker>()?;
-        child_tree_2.list_children_names(server_end)?;
+        child_tree_2.list_child_names(server_end)?;
         verify_iterator(name_iterator, vec![]).await?;
 
         Ok(())
@@ -168,7 +167,6 @@ mod tests {
     fn parse_content(tree_content: TreeContent) -> Result<NodeHierarchy, Error> {
         let buffer = tree_content.buffer.unwrap();
         assert_eq!(buffer.size, constants::DEFAULT_VMO_SIZE_BYTES as u64);
-        assert_eq!(tree_content.state, Some(TreeState::InUse));
         Ok(PartialNodeHierarchy::try_from(&buffer.vmo)?.into())
     }
 

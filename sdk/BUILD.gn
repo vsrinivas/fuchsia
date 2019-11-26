@@ -139,6 +139,7 @@ sdk_molecule("fidl") {
     "//sdk/fidl/fuchsia.web:fuchsia.web_sdk($fidl_toolchain)",
     "//sdk/fidl/fuchsia.wlan.service:fuchsia.wlan.service_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt_sdk($fidl_toolchain)",
+    "//zircon/system/fidl/fuchsia-inspect:fuchsia-inspect_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-io:fuchsia-io_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-logger:fuchsia-logger_sdk($fidl_toolchain)",
     "//zircon/system/fidl/fuchsia-mem:fuchsia-mem_sdk($fidl_toolchain)",
