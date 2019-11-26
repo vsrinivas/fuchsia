@@ -14,13 +14,13 @@ use fidl_fuchsia_media_sessions2::*;
 use fidl_table_validation::*;
 use fuchsia_async as fasync;
 use fuchsia_syslog::fx_log_info;
+use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{
     future::{AbortHandle, Abortable},
     stream::FusedStream,
     task::{Context, Poll},
     Future, FutureExt, Stream, TryStreamExt,
 };
-use rand::random;
 use std::convert::*;
 use std::pin::Pin;
 use waitgroup::*;
@@ -138,6 +138,7 @@ impl ValidPlayerInfoDelta {
 #[derive(Debug)]
 pub struct Player {
     id: u64,
+    id_handle: zx::Event,
     inner: PlayerProxy,
     state: ValidPlayerInfoDelta,
     server_handles: Vec<AbortHandle>,
@@ -152,8 +153,11 @@ impl Player {
         client_end: ClientEnd<PlayerMarker>,
         registration: PlayerRegistration,
     ) -> Result<Self> {
+        let id_handle = zx::Event::create()?;
+        let id = id_handle.get_koid()?.raw_koid();
         Ok(Player {
-            id: random(), // TODO(37877): Care about collisions.
+            id,
+            id_handle,
             inner: client_end.into_proxy()?,
             state: ValidPlayerInfoDelta::default(),
             server_handles: vec![],
