@@ -1,5 +1,8 @@
 {{> header }}
 
+<devsite-filter>
+<input type="text" placeholder="Type a keyword here to find a FIDL">
+
 <table>
 <tr><th>Name</th><th>Description</th></tr>
 {{#each table_of_contents ~}}
@@ -9,5 +12,7 @@
 </tr>
 {{/each ~}}
 </table>
+
+</devsite-filter>
 
 {{> footer }}

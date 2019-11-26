@@ -1,5 +1,8 @@
 [TOC]
 
+<devsite-filter>
+<input type="text" placeholder="Type a keyword here to find a FIDL">
+
 <table>
 <tr><th>Name</th><th>Description</th></tr>
 <tr>
@@ -11,5 +14,7 @@
     <td>Fuchsia Media API</td>
 </tr>
 </table>
+
+</devsite-filter>
 
 Generated with fidldoc v0.0.4
