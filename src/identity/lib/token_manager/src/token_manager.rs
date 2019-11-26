@@ -612,7 +612,7 @@ mod tests {
     /// Creates a TokenManager and serves requests for it.
     async fn create_and_serve_token_manager(
         stream: TokenManagerRequestStream,
-        auth_provider_supplier: &FakeAuthProviderSupplier,
+        auth_provider_supplier: FakeAuthProviderSupplier,
     ) -> Result<(), failure::Error> {
         let tmp_dir = TempDir::new().unwrap();
         let db_path = tmp_dir.path().join("tokens.json");
@@ -622,7 +622,7 @@ mod tests {
     /// Creates an in-memory TokenManager and serves requests for it.
     async fn create_and_serve_in_memory_token_manager(
         stream: TokenManagerRequestStream,
-        auth_provider_supplier: &FakeAuthProviderSupplier,
+        auth_provider_supplier: FakeAuthProviderSupplier,
     ) -> Result<(), failure::Error> {
         let task_group = TaskGroup::new();
         let token_manager = TokenManager::new_in_memory(auth_provider_supplier, task_group.clone());
@@ -632,10 +632,10 @@ mod tests {
     }
 
     /// Creates a TokenManager given a location to the file db, and serves requests for it.
-    async fn create_and_serve_token_manager_with_db_path<'a>(
-        db_path: &'a Path,
+    async fn create_and_serve_token_manager_with_db_path(
+        db_path: &Path,
         stream: TokenManagerRequestStream,
-        auth_provider_supplier: &'a FakeAuthProviderSupplier,
+        auth_provider_supplier: FakeAuthProviderSupplier,
     ) -> Result<(), failure::Error> {
         let task_group = TaskGroup::new();
 
@@ -916,7 +916,7 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+            create_and_serve_token_manager(tm_stream, auth_provider_supplier),
         )
         .await;
         assert!(ap_result.is_ok());
@@ -961,7 +961,7 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+            create_and_serve_token_manager(tm_stream, auth_provider_supplier),
         )
         .await;
         assert!(ap_result.is_ok());
@@ -1033,7 +1033,7 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+            create_and_serve_token_manager(tm_stream, auth_provider_supplier),
         )
         .await;
         assert!(ap_result.is_ok());
@@ -1123,7 +1123,7 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_token_manager(tm_stream, &auth_provider_supplier),
+            create_and_serve_token_manager(tm_stream, auth_provider_supplier),
         )
         .await;
         assert!(ap_result.is_ok());
@@ -1158,7 +1158,7 @@ mod tests {
             create_and_serve_token_manager_with_db_path(
                 &db_path,
                 tm_stream,
-                &auth_provider_supplier,
+                auth_provider_supplier,
             ),
         )
         .await;
@@ -1200,7 +1200,7 @@ mod tests {
             create_and_serve_token_manager_with_db_path(
                 &db_path,
                 tm_stream,
-                &auth_provider_supplier,
+                auth_provider_supplier,
             ),
         )
         .await;
@@ -1290,7 +1290,7 @@ mod tests {
         let (ap_result, client_result, tm_result) = join3(
             auth_provider_supplier.run(),
             client_fut,
-            create_and_serve_in_memory_token_manager(tm_stream, &auth_provider_supplier),
+            create_and_serve_in_memory_token_manager(tm_stream, auth_provider_supplier),
         )
         .await;
         assert!(ap_result.is_ok());

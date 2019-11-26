@@ -32,9 +32,6 @@ pub struct FakeAuthProviderSupplier {
 
 #[derive(Debug, Fail)]
 pub enum FakeAuthProviderError {
-    #[fail(display = "FakeAuthProvider error: Some auth providers were never used")]
-    UnusedAuthProviders,
-
     #[fail(display = "FakeAuthProvider error: A server error occurred: {:?}", _0)]
     ServerError(fidl::Error),
 }
@@ -62,18 +59,22 @@ impl FakeAuthProviderSupplier {
     }
 
     /// Run the added auth providers to completion. We return an error if a server function
-    /// returns an error or if not all clients have been given out during the call.
+    /// returns an error.  If a server function is never invoked by retrieving the
+    /// corresponding ClientEnd using get(), the returned future will never complete.
     /// This is intended to run concurrently with the client code under test.
-    pub async fn run(&self) -> Result<(), FakeAuthProviderError> {
+    pub fn run(&self) -> impl Future<Output = Result<(), FakeAuthProviderError>> {
         let futs = std::mem::replace(&mut *self.servers.lock(), FuturesUnordered::new());
-        futs.collect::<Vec<_>>().await
-            .into_iter()
-            .collect::<Result<Vec<_>, fidl::Error>>()
-            .map_err(|err| FakeAuthProviderError::ServerError(err))?;
-        if !self.auth_providers.lock().is_empty() {
-            return Err(FakeAuthProviderError::UnusedAuthProviders);
+        // This method is not async and instead returns a future so that the future does
+        // not need to borrow `self`.  This allows the future to be polled while a
+        // concurrent task takes ownership of `self`.
+        async move {
+            futs.collect::<Vec<_>>()
+                .await
+                .into_iter()
+                .collect::<Result<Vec<_>, fidl::Error>>()
+                .map_err(|err| FakeAuthProviderError::ServerError(err))?;
+            Ok(())
         }
-        Ok(())
     }
 }
 
@@ -89,15 +90,6 @@ impl AuthProviderSupplier for FakeAuthProviderSupplier {
         FutureObj::new(Box::new(async move {
             client_end.ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
         }))
-    }
-}
-
-impl<'a> AuthProviderSupplier for &'a FakeAuthProviderSupplier {
-    fn get<'b>(
-        &'b self,
-        auth_provider_type: &'b str,
-    ) -> FutureObj<'b, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
-        AuthProviderSupplier::get(*self, auth_provider_type)
     }
 }
 
@@ -160,10 +152,8 @@ mod tests {
                 ap_proxy.revoke_app_or_persistent_credential("HOOLI_CREDENTIAL").await.unwrap();
             assert_eq!(status, AuthProviderStatus::BadRequest);
 
-            let ap_proxy = auth_provider_supplier_clone.get("pied-piper").await
-                .unwrap()
-                .into_proxy()
-                .unwrap();
+            let ap_proxy =
+                auth_provider_supplier_clone.get("pied-piper").await.unwrap().into_proxy().unwrap();
             let (status, auth_token) =
                 ap_proxy.get_app_id_token("PIED_PIPER_CREDENTIAL", None).await.unwrap();
             assert_eq!(status, AuthProviderStatus::Ok);
