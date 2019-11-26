@@ -327,5 +327,12 @@ TEST(SuperblockTest, TestRepairSuperblockWithBitmapReconstruction) {
   ASSERT_GT(backup.alloc_inode_count, 0);
 }
 
+TEST(IndirectVmo, VmoSizeIncreasesWithIndirectBlock) {
+  uint32_t kFewIndirectBlocksWithDoubleIndirectBlock = 4 * kMinfsDirectPerIndirect;
+  for (uint32_t i = 0; i < kFewIndirectBlocksWithDoubleIndirectBlock; i++) {
+    ASSERT_LT(GetVmoSizeForIndirect(0), GetVmoSizeForIndirect(i + 1));
+  }
+}
+
 }  // namespace
 }  // namespace minfs

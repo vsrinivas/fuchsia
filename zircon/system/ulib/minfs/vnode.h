@@ -452,6 +452,17 @@ class VnodeMinfs : public fs::Vnode,
   //                                                              by doubly indirect blocks
   // DataBlockAssigner may modify this field asynchronously, so a valid Transaction object must
   // be held before accessing it.
+  //
+  // vmo_indirect_ layout is sparse even when the corresponding file is not sparse.
+  // Meaning, the layout of vmo looks something like
+  // +----------------+-----------------+-----------------+------+-----------------+...
+  // | indirect block | dindirect block | indirect blocks | hole | indirect blocks |...
+  // +----------------+-----------------+-----------------+------+-----------------+...
+  // Above, the "hole" in vmo address range will never contain valid data(block numbers)
+  // irrespective of how large the file gets. This is because of how GetVmoOffsetForIndirect
+  // is implemented. Having sparse vmo layout, without any need for it to be sparse,
+  // makes reading/debugging difficult.
+  // TODO(fxb/42096).
   std::unique_ptr<fzl::ResizeableVmoMapper> vmo_indirect_;
 
   fuchsia_hardware_block_VmoID vmoid_{};

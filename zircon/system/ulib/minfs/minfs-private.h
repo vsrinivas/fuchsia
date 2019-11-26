@@ -483,7 +483,9 @@ constexpr uint32_t GetVmoOffsetForIndirect(uint32_t dibindex) {
 // Return the required vmo size (in bytes) to store indirect blocks pointed to by doubly indirect
 // block dibindex
 constexpr size_t GetVmoSizeForIndirect(uint32_t dibindex) {
-  return GetVmoOffsetForIndirect(dibindex + 1) * kMinfsBlockSize;
+  // See comments for VnodeMinfs::vmo_indirect_.
+  size_t size = GetVmoOffsetForIndirect(dibindex + 1);
+  return size * kMinfsBlockSize;
 }
 
 // Return the block offset of doubly indirect blocks in vmo_indirect_
