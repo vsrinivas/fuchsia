@@ -620,11 +620,8 @@ zx_status_t SystemMetricsDaemon::ReinitializeIfPeerClosed(zx_status_t zx_status)
 
 void SystemMetricsDaemon::InitializeLogger() {
   fuchsia::cobalt::Status status = fuchsia::cobalt::Status::INTERNAL_ERROR;
-  // Create a Cobalt Logger. The project name is the one we specified in the
-  // Cobalt metrics registry. We specify that our release stage is DOGFOOD.
-  // This means we are not allowed to use any metrics declared as DEBUG
-  // or FISHFOOD.
-  static const char kProjectName[] = "fuchsia_system_metrics";
+  // Create a Cobalt Logger. The project ID is the one we specified in the
+  // Cobalt metrics registry.
   // Connect to the cobalt fidl service provided by the environment.
   context_->svc()->Connect(factory_.NewRequest());
   if (!factory_) {
@@ -632,8 +629,8 @@ void SystemMetricsDaemon::InitializeLogger() {
     return;
   }
 
-  factory_->CreateLoggerFromProjectName(kProjectName, fuchsia::cobalt::ReleaseStage::DOGFOOD,
-                                        logger_fidl_proxy_.NewRequest(), &status);
+  factory_->CreateLoggerFromProjectId(fuchsia_system_metrics::kProjectId,
+                                      logger_fidl_proxy_.NewRequest(), &status);
   if (status != fuchsia::cobalt::Status::OK) {
     FX_LOGS(ERROR) << "Unable to get Logger from factory. Status=" << StatusToString(status);
     return;

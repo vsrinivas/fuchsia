@@ -5,11 +5,16 @@
 #include "src/cobalt/bin/system-metrics/system_metrics_daemon.h"
 
 #include <fuchsia/cobalt/cpp/fidl.h>
+#include <fuchsia/cobalt/cpp/fidl_test_base.h>
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/gtest/test_loop_fixture.h>
+#include <lib/sys/cpp/testing/component_context_provider.h>
 
 #include <future>
+#include <thread>
 
 #include "gtest/gtest.h"
+#include "lib/fidl/cpp/binding_set.h"
 #include "src/cobalt/bin/system-metrics/metrics_registry.cb.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_cpu_stats_fetcher.h"
 #include "src/cobalt/bin/system-metrics/testing/fake_memory_stats_fetcher.h"
@@ -35,6 +40,7 @@ using DeviceState =
 using fuchsia_system_metrics::FuchsiaUpPingMetricDimensionUptime;
 using fuchsia_system_metrics::FuchsiaUptimeMetricDimensionUptimeRange;
 using std::chrono::hours;
+using std::chrono::milliseconds;
 using std::chrono::minutes;
 using std::chrono::seconds;
 
@@ -666,4 +672,111 @@ TEST_F(SystemMetricsDaemonTest, GetUpTimeEventCode) {
   EXPECT_EQ(TimeSinceBoot::UpThreeDays, GetUpTimeEventCode(seconds(360000)));
   EXPECT_EQ(TimeSinceBoot::UpTwoDays, GetUpTimeEventCode(seconds(172800)));
   EXPECT_EQ(TimeSinceBoot::Up, GetUpTimeEventCode(seconds(59)));
+}
+
+class MockLogger : public ::fuchsia::cobalt::testing::Logger_TestBase {
+ public:
+  void LogCobaltEvents(std::vector<fuchsia::cobalt::CobaltEvent> events,
+                       LogCobaltEventsCallback callback) override {
+    num_calls_++;
+    num_events_ += events.size();
+    callback(fuchsia::cobalt::Status::OK);
+  }
+  void NotImplemented_(const std::string& name) override {
+    ASSERT_TRUE(false) << name << " is not implemented";
+  }
+  int num_calls() { return num_calls_; }
+  int num_events() { return num_events_; }
+
+ private:
+  int num_calls_ = 0;
+  int num_events_ = 0;
+};
+
+class MockLoggerFactory : public ::fuchsia::cobalt::testing::LoggerFactory_TestBase {
+ public:
+  MockLogger* logger() { return logger_.get(); }
+  uint32_t received_project_id() { return received_project_id_; }
+
+  void CreateLoggerFromProjectId(uint32_t project_id,
+                                 ::fidl::InterfaceRequest<fuchsia::cobalt::Logger> logger,
+                                 CreateLoggerFromProjectIdCallback callback) override {
+    received_project_id_ = project_id;
+    logger_.reset(new MockLogger());
+    logger_bindings_.AddBinding(logger_.get(), std::move(logger));
+    callback(fuchsia::cobalt::Status::OK);
+  }
+
+  void NotImplemented_(const std::string& name) override {
+    ASSERT_TRUE(false) << name << " is not implemented";
+  }
+
+ private:
+  uint32_t received_project_id_;
+  std::unique_ptr<MockLogger> logger_;
+  fidl::BindingSet<fuchsia::cobalt::Logger> logger_bindings_;
+};
+
+class SystemMetricsDaemonInitializationTest : public gtest::TestLoopFixture {
+ public:
+  ~SystemMetricsDaemonInitializationTest() override = default;
+
+  seconds LogMemoryUsage() {
+    // The SystemMetricsDaemon will make asynchronous calls to the MockLogger*s that are also
+    // running in this class/tests thread. So the call to the SystemMetricsDaemon needs to be made
+    // on a different thread, such that the MockLogger*s running on the main thread can respond to
+    // those calls.
+    std::future<seconds> result = std::async([this]() { return daemon_->LogMemoryUsage(); });
+    while (result.wait_for(milliseconds(1)) != std::future_status::ready) {
+      // Run the main thread's loop, allowing the MockLogger* objects to respond to requests.
+      RunLoopUntilIdle();
+    }
+    return result.get();
+  }
+
+ protected:
+  void SetUp() override {
+    // Create a MockLoggerFactory and add it to the services the fake context can provide.
+    auto service_provider = context_provider_.service_directory_provider();
+    logger_factory_ = new MockLoggerFactory();
+    service_provider->AddService(factory_bindings_.GetHandler(logger_factory_, dispatcher()));
+
+    // Initialize the SystemMetricsDaemon with the fake context, and other fakes.
+    daemon_ = std::unique_ptr<SystemMetricsDaemon>(new SystemMetricsDaemon(
+        dispatcher(), context_provider_.context(), nullptr,
+        std::unique_ptr<cobalt::SteadyClock>(fake_clock_),
+        std::unique_ptr<cobalt::MemoryStatsFetcher>(new FakeMemoryStatsFetcher()),
+        std::unique_ptr<cobalt::CpuStatsFetcher>(new FakeCpuStatsFetcher()),
+        std::unique_ptr<cobalt::TemperatureFetcher>(new FakeTemperatureFetcher()), nullptr));
+  }
+
+  // Note that we first save an unprotected pointer in fake_clock_ and then
+  // give ownership of the pointer to daemon_.
+  FakeSteadyClock* fake_clock_ = new FakeSteadyClock();
+  std::unique_ptr<SystemMetricsDaemon> daemon_;
+
+  MockLoggerFactory* logger_factory_;
+  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> factory_bindings_;
+  sys::testing::ComponentContextProvider context_provider_;
+};
+
+// Tests the initialization of a new SystemMetricsDaemon's connection to the Cobalt FIDL objects.
+TEST_F(SystemMetricsDaemonInitializationTest, LogSomethingAnything) {
+  // Make sure the Logger has not been initialized yet.
+  EXPECT_EQ(0u, logger_factory_->received_project_id());
+  EXPECT_EQ(nullptr, logger_factory_->logger());
+
+  // When LogMemoryUsage() is invoked the first time, it connects to the LoggerFactory and gets a
+  // logger, and returns a longer time to the next run.
+  EXPECT_EQ(seconds(300).count(), LogMemoryUsage().count());
+
+  // Make sure the Logger has now been initialized, and for the correct project, but has not yet
+  // logged anything.
+  EXPECT_EQ(fuchsia_system_metrics::kProjectId, logger_factory_->received_project_id());
+  ASSERT_NE(nullptr, logger_factory_->logger());
+  EXPECT_EQ(0, logger_factory_->logger()->num_calls());
+
+  // Second call to LogMemoryUsage() succeeds at logging the metric, and returns a shorter time.
+  EXPECT_EQ(seconds(60).count(), LogMemoryUsage().count());
+  EXPECT_EQ(2, logger_factory_->logger()->num_calls());
 }

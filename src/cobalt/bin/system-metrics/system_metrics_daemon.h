@@ -50,6 +50,7 @@ class SystemMetricsDaemon {
 
  private:
   friend class SystemMetricsDaemonTest;
+  friend class SystemMetricsDaemonInitializationTest;
 
   // This private constructor is intended for use in tests. |context| may
   // be null because InitializeLogger() will not be invoked. Instead,
