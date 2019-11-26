@@ -1109,10 +1109,6 @@ class V1ToOld final : public TransformerBase {
       return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union-as-xunion missing");
     }
 
-    if (src_xunion->padding != static_cast<decltype(src_xunion->padding)>(0)) {
-      return TRANSFORMER_FAIL(ZX_ERR_BAD_STATE, position, "union-as-xunion padding is non-zero");
-    }
-
     switch (src_xunion->envelope.presence) {
       case FIDL_ALLOC_PRESENT:
         // OK
@@ -1318,7 +1314,6 @@ class OldToV1 final : public TransformerBase {
     // Write envelope header.
     fidl_xunion_t xunion;
     xunion.tag = dst_field.xunion_ordinal;
-    xunion.padding = 0;
     xunion.envelope.num_bytes = FIDL_ALIGN(dst_field_size);
     xunion.envelope.num_handles = field_traversal_result.handle_count;
     xunion.envelope.presence = FIDL_ALLOC_PRESENT;

@@ -193,13 +193,14 @@ TEST(InlineXUnionInStruct, FailToDecodeZeroOrdinalXUnion) {
   EXPECT_STREQ(decode_result.error, "xunion with zero as ordinal must be empty");
   EXPECT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
 }
-TEST(InlineXUnionInStruct, FailToDecodeNonZeroPaddingXUnion) {
+// The xunion ordinal hashing algorithm generates 32 bit values. But if it did
+// generate values bigger than that, they would decode successfully
+TEST(InlineXUnionInStruct, SuccessLargeXUnionOrdinal) {
   // clang-format off
   auto encoded_bytes = std::vector<uint8_t>{
       0x06, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "before"
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // "before" is present
       0x53, 0x76, 0x31, 0x6f, 0xaa, 0xaa, 0xaa, 0xaa,  // xunion header
-                                                       // padding = 0xAAAAAAAA
       0x18, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // num bytes; num handles
       0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // envelope data present
       0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // length of "after"
@@ -217,8 +218,7 @@ TEST(InlineXUnionInStruct, FailToDecodeNonZeroPaddingXUnion) {
       fidl::BytePart(&encoded_bytes[0], static_cast<uint32_t>(encoded_bytes.size()),
                      static_cast<uint32_t>(encoded_bytes.size())));
   auto decode_result = fidl::Decode(std::move(encoded_msg));
-  ASSERT_STREQ(decode_result.error, "non-zero padding bytes detected");
-  ASSERT_EQ(decode_result.status, ZX_ERR_INVALID_ARGS);
+  ASSERT_EQ(decode_result.status, ZX_OK);
 }
 TEST(ComplexTable, SuccessEmpty) {
   // clang-format off

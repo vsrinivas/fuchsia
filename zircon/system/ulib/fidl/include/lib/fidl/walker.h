@@ -695,9 +695,6 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
           Pop();
           continue;
         }
-        const auto padding_position = frame->position + offsetof(fidl_xunion_t, padding);
-        auto status = visitor.VisitInternalPadding(padding_position, sizeof(xunion->padding));
-        FIDL_STATUS_GUARD(status);
         // Validate zero-ordinal invariants
         if (xunion->tag == 0) {
           if (envelope_ptr->data != nullptr || envelope_ptr->num_bytes != 0 ||
@@ -729,7 +726,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
 
         // Make sure we don't process a malformed envelope
         const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
-        status = visitor.EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
+        auto status = visitor.EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
         FIDL_STATUS_GUARD(status);
         frame->xunion_state.inside_envelope = true;
         // Skip empty envelopes

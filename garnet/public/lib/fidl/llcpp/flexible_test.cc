@@ -113,10 +113,6 @@ class RewriteTransaction : public fidl::Transaction {
         memset(&real_msg_bytes[envelope_payload_offset], 0xBB, kUnknownBytes);
       }
     } else {
-      // XUnion
-      auto indicator_xunion = reinterpret_cast<fidl_xunion_t*>(indicator_msg.bytes().data() +
-                                                               sizeof(fidl_message_header_t));
-      ZX_ASSERT(indicator_xunion->padding == 0);
       // Manually craft the actual response which has an unknown ordinal
       constexpr uint32_t kBadOrdinal = 0x8badf00d;
       static_assert(kBadOrdinal !=
@@ -126,7 +122,6 @@ class RewriteTransaction : public fidl::Transaction {
       auto real_response =
           reinterpret_cast<fidl_xunion_t*>(&real_msg_bytes[sizeof(fidl_message_header_t)]);
       real_response->tag = kBadOrdinal;
-      real_response->padding = 0;
 
       auto indicator_response =
           reinterpret_cast<test::ReceiveFlexibleEnvelope::GetUnknownXUnionMoreHandlesResponse*>(

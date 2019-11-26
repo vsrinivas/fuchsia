@@ -563,7 +563,7 @@ bool linearize_xunion_empty_invariant_empty() {
   // Non-zero ordinal with empty envelope is an error
   SampleNullableXUnionStruct xunion = {};
   xunion.opt_xu.header =
-      (fidl_xunion_t){.tag = kSampleXUnionIntStructOrdinal, .padding = 0, .envelope = {}};
+      (fidl_xunion_t){.tag = kSampleXUnionIntStructOrdinal, .envelope = {}};
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size];
   const char* error = nullptr;
@@ -586,7 +586,6 @@ bool linearize_xunion_empty_invariant_zero_ordinal() {
   SampleNullableXUnionStruct xunion = {};
   xunion.opt_xu.header = (fidl_xunion_t){
       .tag = 0,
-      .padding = 0,
       .envelope = (fidl_envelope_t){.num_bytes = 8, .num_handles = 0, .data = &int_struct}};
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size];
@@ -609,7 +608,6 @@ bool linearize_xunion_primitive_field() {
   SampleXUnionStruct xunion = {};
   xunion.xu.header = (fidl_xunion_t){
       .tag = kSampleXUnionRawIntOrdinal,
-      .padding = 0,
       .envelope = (fidl_envelope_t){.num_bytes = 0, .num_handles = 0, .data = &raw_int}};
   constexpr uint32_t buf_size = 512;
   uint8_t buffer[buf_size];

@@ -332,10 +332,9 @@ typedef struct {
 // Extensible unions, or "xunions" (colloquially pronounced "zoo-nions") are
 // similar to unions, except that storage for union members are out-of-line
 // rather than inline. This enables union members to be added and removed while
-// preserving ABI compatibility with the existing xunion definition. Like
-// unions, xunions have a 4-byte tag, and may be nullable.
+// preserving ABI compatibility with the existing xunion definition.
 
-typedef uint32_t fidl_xunion_tag_t;
+typedef uint64_t fidl_xunion_tag_t;
 
 enum {
   kFidlXUnionEmptyTag = 0,  // The tag representing an empty xunion.
@@ -343,7 +342,6 @@ enum {
 
 typedef struct {
   fidl_xunion_tag_t tag;
-  uint32_t padding;  // Should always be zero.
   fidl_envelope_t envelope;
 } fidl_xunion_t;
 
