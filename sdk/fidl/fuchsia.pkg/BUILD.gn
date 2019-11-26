@@ -18,7 +18,6 @@ fidl("fuchsia.pkg") {
     "font_resolver.fidl",
     "repo.fidl",
     "resolver.fidl",
-    "system_blob_admin.fidl",
   ]
 
   public_deps = [
