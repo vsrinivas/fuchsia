@@ -26,7 +26,6 @@ namespace {
 constexpr uint32_t kIspStreamMinBufferForCamping = 5;
 constexpr uint32_t kIspStreamWidth = 2176;
 constexpr uint32_t kIspStreamHeight = 2720;
-constexpr uint32_t kIspStreamBytesPerRowDivisor = 128;
 constexpr uint32_t kIspStreamFrameRate = 30;
 constexpr ::fuchsia::sysmem::PixelFormatType kIspStreamPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
@@ -50,7 +49,7 @@ static std::vector<fuchsia::sysmem::ImageFormat_2> IspDebugStreamImageFormats() 
 static fuchsia::camera2::hal::StreamConfig IspDebugStreamConfig() {
   StreamConstraints stream(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
   stream.AddImageFormat(kIspStreamWidth, kIspStreamHeight, kIspStreamPixelFormat);
-  stream.set_bytes_per_row_divisor(kIspStreamBytesPerRowDivisor);
+  stream.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kIspStreamFrameRate);
   stream.set_buffer_count_for_camping(kIspStreamMinBufferForCamping);

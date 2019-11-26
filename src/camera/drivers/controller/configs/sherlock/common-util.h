@@ -9,6 +9,11 @@
 
 namespace camera {
 
+namespace {
+constexpr uint32_t kGdcBytesPerRowDivisor = 16;
+constexpr uint32_t kIspBytesPerRowDivisor = 128;
+}  // namespace
+
 fuchsia::camera2::StreamProperties GetStreamProperties(fuchsia::camera2::CameraStreamType type) {
   fuchsia::camera2::StreamProperties ret{};
   ret.set_stream_type(type);

@@ -12,6 +12,7 @@
 #include "fake_gdc.h"
 #include "fake_isp.h"
 #include "src/camera/drivers/controller/configs/sherlock/monitoring-config.h"
+#include "src/camera/drivers/controller/configs/sherlock/video-conferencing-config.h"
 #include "src/camera/drivers/controller/memory_allocation.h"
 #include "src/camera/drivers/controller/pipeline_manager.h"
 
@@ -65,7 +66,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
             buffer_collection_info.settings.image_format_constraints.max_coded_height);
   EXPECT_EQ(kOutputStreamMlFRWidth,
             buffer_collection_info.settings.image_format_constraints.max_coded_width);
-  EXPECT_EQ(kISPPerRowDivisor,
+  EXPECT_EQ(kIspBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
     EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
@@ -74,6 +75,57 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigFR) {
       buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
 }
 
+// Validate FR --> GDC1
+TEST_F(ControllerMemoryAllocatorTest, VideoConfigFR_GDC1) {
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(VideoConfigFullResConstraints());
+  constraints.push_back(GdcVideo1InputConstraints());
+  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+                                                                      &buffer_collection_info));
+  EXPECT_EQ(buffer_collection_info.buffer_count, kMlFRMinBufferForCamping);
+  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kIspFRWidth * kIspFRHeight);
+  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+  EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
+            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+  EXPECT_EQ(kIspFRHeight,
+            buffer_collection_info.settings.image_format_constraints.max_coded_height);
+  EXPECT_EQ(kIspFRWidth, buffer_collection_info.settings.image_format_constraints.max_coded_width);
+  EXPECT_EQ(kIspBytesPerRowDivisor,
+            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+  }
+  EXPECT_FALSE(
+      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+}
+
+// Validate GDC1 --> GDC2
+TEST_F(ControllerMemoryAllocatorTest, VideoConfigGDC1_GDC2) {
+  fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection_info;
+  std::vector<fuchsia::sysmem::BufferCollectionConstraints> constraints;
+  constraints.push_back(GdcVideo1OutputConstraints());
+  constraints.push_back(GdcVideo2Constraints());
+  EXPECT_EQ(ZX_OK, controller_memory_allocator_->AllocateSharedMemory(constraints,
+                                                                      &buffer_collection_info));
+  EXPECT_EQ(buffer_collection_info.buffer_count, kVideoMinBufferForCamping);
+  EXPECT_TRUE(buffer_collection_info.settings.buffer_settings.is_physically_contiguous);
+  EXPECT_GT(buffer_collection_info.settings.buffer_settings.size_bytes, kGdcFRWidth * kGdcFRHeight);
+  EXPECT_TRUE(buffer_collection_info.settings.has_image_format_constraints);
+  EXPECT_EQ(fuchsia::sysmem::PixelFormatType::NV12,
+            buffer_collection_info.settings.image_format_constraints.pixel_format.type);
+  EXPECT_EQ(kGdcFRHeight,
+            buffer_collection_info.settings.image_format_constraints.max_coded_height);
+  EXPECT_EQ(kGdcFRWidth, buffer_collection_info.settings.image_format_constraints.max_coded_width);
+  EXPECT_EQ(kGdcBytesPerRowDivisor,
+            buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
+  for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
+    EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());
+  }
+  EXPECT_FALSE(
+      buffer_collection_info.buffers.at(buffer_collection_info.buffer_count).vmo.is_valid());
+}
 // Validate DS --> GDC2 --> (GE2D) --> OutputStreamMonitoring
 // This validates only DS --> GDC2
 // Buffer collection constraints.
@@ -95,7 +147,7 @@ TEST_F(ControllerMemoryAllocatorTest, MonitorConfigDS) {
             buffer_collection_info.settings.image_format_constraints.min_coded_height);
   EXPECT_EQ(kOutputStreamDSWidth,
             buffer_collection_info.settings.image_format_constraints.min_coded_width);
-  EXPECT_EQ(kISPPerRowDivisor,
+  EXPECT_EQ(kIspBytesPerRowDivisor,
             buffer_collection_info.settings.image_format_constraints.bytes_per_row_divisor);
   for (uint32_t i = 0; i < buffer_collection_info.buffer_count; i++) {
     EXPECT_TRUE(buffer_collection_info.buffers.at(i).vmo.is_valid());

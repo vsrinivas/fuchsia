@@ -22,6 +22,7 @@ namespace camera {
 namespace {
 constexpr uint32_t kDebugConfig = 0;
 constexpr uint32_t kMonitorConfig = 1;
+constexpr uint32_t kVideoConfig = 2;
 }  // namespace
 
 class ControllerProtocolTest : public gtest::TestLoopFixture {
@@ -115,6 +116,22 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     ASSERT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams.size(), 1u);
     EXPECT_EQ(info->streams_info[1].child_nodes[0].child_nodes[0].supported_streams[0],
               fuchsia::camera2::CameraStreamType::MONITORING);
+
+    // Video Conferencing configuration
+    EXPECT_EQ(ZX_OK, controller_protocol_device_->GetInternalConfiguration(kVideoConfig, &info));
+    EXPECT_EQ(info->streams_info.size(), 1u);
+
+    // 1st stream is FR
+    EXPECT_EQ(info->streams_info[0].input_stream_type,
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION);
+    // FR Supported streams
+    EXPECT_EQ(info->streams_info[0].supported_streams.size(), 2u);
+    EXPECT_EQ(info->streams_info[0].supported_streams[0],
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_EQ(info->streams_info[0].supported_streams[1],
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   }
 
   void TestDebugStreamConfigNode() {
@@ -274,6 +291,49 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
   }
 
+  void TestConfigure_VideoConfig_Stream1() {
+    controller_protocol_device_->PopulateConfigurations();
+    InternalConfigInfo* internal_info = nullptr;
+    // Get the internal configuration for monitor config
+    EXPECT_EQ(ZX_OK,
+              controller_protocol_device_->GetInternalConfiguration(kVideoConfig, &internal_info));
+    // Get the stream config
+    auto stream_config_node = controller_protocol_device_->GetStreamConfigNode(
+        internal_info, fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                           fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                           fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    ASSERT_NE(nullptr, stream_config_node);
+
+    fuchsia::sysmem::BufferCollectionInfo_2 buffer_collection;
+    fuchsia::camera2::hal::StreamConfig stream_config;
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                                             fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                                             fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    PipelineInfo info;
+    info.output_buffers = std::move(buffer_collection);
+    info.image_format_index = 0;
+    info.node = *stream_config_node;
+    info.stream_config = &stream_config;
+
+    auto result = pipeline_manager_->CreateInputNode(&info);
+    EXPECT_EQ(true, result.is_ok());
+
+    EXPECT_NE(nullptr, result.value()->isp_stream_protocol());
+    EXPECT_EQ(NodeType::kInputStream, result.value()->type());
+
+    auto graph_result = pipeline_manager_->CreateGraph(&info, info.node, result.value().get());
+    ASSERT_EQ(true, graph_result.is_ok());
+
+    ASSERT_NE(nullptr, graph_result.value());
+    EXPECT_NE(nullptr, graph_result.value()->client_stream());
+    EXPECT_EQ(NodeType::kOutputStream, graph_result.value()->type());
+
+    // Check if GDC1 & GDC2 node was created.
+    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
+    EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->parent_node()->type());
+  }
+
   void TestShutdownPathAfterStreamingOn() {
     controller_protocol_device_->PopulateConfigurations();
     InternalConfigInfo* internal_info = nullptr;
@@ -354,8 +414,13 @@ TEST_F(ControllerProtocolTest, TestShutdownPathAfterStreamingOn) {
 TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream1) {
   TestConfigure_MonitorConfig_Stream1();
 }
+
 TEST_F(ControllerProtocolTest, TestConfigure_MonitorConfig_Stream2) {
   TestConfigure_MonitorConfig_Stream2();
+}
+
+TEST_F(ControllerProtocolTest, TestConfigure_VideoConfig_Stream1) {
+  TestConfigure_VideoConfig_Stream1();
 }
 
 TEST_F(ControllerProtocolTest, LoadGdcConfig) {

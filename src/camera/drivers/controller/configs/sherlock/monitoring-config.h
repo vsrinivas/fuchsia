@@ -29,8 +29,6 @@ namespace {
 constexpr uint32_t kOutputStreamMlFRMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlFRWidth = 2176;
 constexpr uint32_t kOutputStreamMlFRHeight = 2720;
-constexpr uint32_t kOutputStreamMlFRLayers = 1;
-constexpr uint32_t kISPPerRowDivisor = 128;
 constexpr uint32_t kOutputStreamMlFRFrameRate = 10;
 constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMlFRPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
@@ -39,7 +37,6 @@ constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMlFRPixelFormat =
 constexpr uint32_t kOutputStreamMlDSMinBufferForCamping = 5;
 constexpr uint32_t kOutputStreamMlDSWidth = 640;
 constexpr uint32_t kOutputStreamMlDSHeight = 512;
-constexpr uint32_t kOutputStreamMlDSLayers = 1;
 constexpr uint32_t kOutputStreamMlDSFrameRate = 10;
 constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMlDSPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
@@ -58,7 +55,6 @@ constexpr uint32_t kOutputStreamMonitoringFrameRate = 30;
 constexpr ::fuchsia::sysmem::PixelFormatType kOutputStreamMonitoringPixelFormat =
     fuchsia::sysmem::PixelFormatType::NV12;
 
-constexpr uint32_t kGdcBytesPerRowDivisor = 16;
 }  // namespace
 
 /**********************************
@@ -78,7 +74,7 @@ static fuchsia::camera2::hal::StreamConfig OutputStreamMLFRConfig() {
                            fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   stream.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                         kOutputStreamMlFRPixelFormat);
-  stream.set_bytes_per_row_divisor(kISPPerRowDivisor);
+  stream.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream.set_contiguous(true);
   stream.set_frames_per_second(kOutputStreamMlFRFrameRate);
   stream.set_buffer_count_for_camping(kOutputStreamMlFRMinBufferForCamping);
@@ -233,7 +229,7 @@ static InternalConfigNode Gdc1() {
 
 fuchsia::sysmem::BufferCollectionConstraints MonitorConfigFullResConstraints() {
   StreamConstraints stream_constraints;
-  stream_constraints.set_bytes_per_row_divisor(kISPPerRowDivisor);
+  stream_constraints.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamMlFRWidth, kOutputStreamMlFRHeight,
                                     kOutputStreamMlFRPixelFormat);
@@ -324,7 +320,7 @@ static InternalConfigNode Gdc2() {
 
 fuchsia::sysmem::BufferCollectionConstraints MonitorConfigDownScaledResConstraints() {
   StreamConstraints stream_constraints;
-  stream_constraints.set_bytes_per_row_divisor(kISPPerRowDivisor);
+  stream_constraints.set_bytes_per_row_divisor(kIspBytesPerRowDivisor);
   stream_constraints.set_contiguous(true);
   stream_constraints.AddImageFormat(kOutputStreamDSWidth, kOutputStreamDSHeight,
                                     kOutputStreamMonitoringPixelFormat);
