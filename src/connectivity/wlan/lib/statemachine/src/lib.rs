@@ -144,9 +144,9 @@ impl<S> State<S> {
 
     pub fn transition_to<T>(self, new_state: T) -> State<T>
     where
-        State<S>: StateTransition<T>,
+        S: StateTransition<T>,
     {
-        Self::__internal_transition_to(new_state)
+        S::__internal_transition_to(new_state)
     }
 
     pub fn apply<T, E>(self, transition: T) -> E
@@ -204,9 +204,9 @@ pub trait MultiTransition<E, S> {
 impl<S> Transition<S> {
     pub fn to<T>(self, new_state: T) -> State<T>
     where
-        State<S>: StateTransition<T>,
+        S: StateTransition<T>,
     {
-        State::<S>::__internal_transition_to(new_state)
+        S::__internal_transition_to(new_state)
     }
 }
 
@@ -252,6 +252,25 @@ mod tests {
         () => A2,
         A2 => B2,
         A2 => B2, // Test duplicate transitions
+    );
+
+    #[derive(Debug)]
+    pub struct NonGen;
+    #[derive(Debug)]
+    pub struct Gen1<E>(E);
+    #[derive(Debug)]
+    pub struct Gen2<'a, F>(&'a Vec<F>);
+    #[derive(Debug)]
+    pub struct Gen3<'a, E, F>(E, Gen2<'a, F>);
+    statemachine!(
+        // Complicated test with generics and lifetimes.
+        #[derive(Debug)]
+        enum States3<'a, E, F>,
+        () => Gen1<E>,
+        Gen1<E> => [NonGen, Gen1<E>, Gen2<'a, F>, Gen3<'a, E, F>],
+        NonGen => [NonGen, Gen1<E>],
+        Gen2<'a, F> => Gen1<E>,
+        Gen3<'a, E, F> => Gen2<'a, F>,
     );
 
     #[test]
@@ -335,6 +354,36 @@ mod tests {
             States2::A2(state) => state.transition_to(B2).into(),
             other => panic!("expected state A to be active: {:?}", other),
         };
+
+        // No assertion needed. This test verifies that the enum struct "States2" was generated
+        // properly.
+    }
+
+    #[test]
+    fn generic_state_transitions() {
+        let test_vec = vec![10, 20, 30];
+
+        // Construct a generic state.
+        let state = State::new(Gen1("test"));
+        // Transition to a generic state with a lifetime.
+        let state = state.transition_to(Gen2(&test_vec));
+        // Store data with a lifetime, then reinsert into a later state.
+        let (transition, data) = state.release_data();
+        let state = transition.to(Gen1("test2"));
+        let (transition, data2) = state.release_data();
+        assert_eq!(data2.0, "test2");
+        let state = transition.to(Gen3(data2.0, data));
+        assert_eq!((state.1).0, &test_vec);
+    }
+
+    #[test]
+    fn generated_generic_enum() {
+        let _state_machine: States3<'_, &str, u16> =
+            match States3::<&str, u16>::Gen1(State::new(Gen1("test"))) {
+                // Test generated From impls:
+                States3::Gen1(state) => state.transition_to(NonGen).into(),
+                other => panic!("expected state A to be active: {:?}", other),
+            };
 
         // No assertion needed. This test verifies that the enum struct "States2" was generated
         // properly.

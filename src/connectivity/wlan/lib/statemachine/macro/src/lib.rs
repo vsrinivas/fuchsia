@@ -19,6 +19,18 @@ use proc_macro::TokenStream;
 ///     C => A
 /// );
 /// ```
+/// Example using generics and lifetimes:
+/// ```
+/// statemachine!(
+///     () => A<T>,
+///     A<T> => B<'a, T2>,
+///     B<'a, T2> => [A<T>, C]
+/// );
+/// ```
+/// If a generic parameter is supplied for a particular state, an identical parameter must be
+/// supplied for all other instances of that state. E.g. a single state machine may not include
+/// both `A<T>` and `A<T2>` as states.
+///
 /// Example to also generate optional enum type:
 /// ```
 /// statemachine!(
