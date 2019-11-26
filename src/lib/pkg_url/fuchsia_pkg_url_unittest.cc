@@ -29,6 +29,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/component_hello_world/0", fp.package_path());
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello_world.cmx"));
   EXPECT_EQ("fuchsia.com", fp.host_name());
@@ -36,6 +37,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("meta/hello_world.cmx", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/component_hello_world/0", fp.package_path());
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#meta/stuff"));
   EXPECT_EQ("fuchsia.com", fp.host_name());
@@ -43,6 +45,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("meta/stuff", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/component_hello_world/0", fp.package_path());
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://example.com/data-package#stuff"));
   EXPECT_EQ("example.com", fp.host_name());
@@ -50,6 +53,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("stuff", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://example.com/data-package/0", fp.package_path());
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://example.com/data-package/variant123#stuff"));
   EXPECT_EQ("example.com", fp.host_name());
@@ -57,6 +61,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("variant123", fp.variant());
   EXPECT_EQ("", fp.hash());
   EXPECT_EQ("stuff", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://example.com/data-package/variant123", fp.package_path());
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://example.com/data-package/variant123?hash=1234#stuff"));
   EXPECT_EQ("example.com", fp.host_name());
@@ -64,6 +69,7 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_EQ("variant123", fp.variant());
   EXPECT_EQ("1234", fp.hash());
   EXPECT_EQ("stuff", fp.resource_path());
+  EXPECT_EQ("fuchsia-pkg://example.com/data-package/variant123?hash=1234", fp.package_path());
 }
 
 TEST(FuchsiaPkgUrl, pkgfs_dir_path) {
