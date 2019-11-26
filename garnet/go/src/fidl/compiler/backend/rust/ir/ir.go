@@ -82,7 +82,7 @@ type Result struct {
 	OkOGTypes []types.Type
 	Ok        []string
 	ErrOGType types.Type
-	Err       UnionMember
+	ErrType   string
 	Size      int
 	Alignment int
 }
@@ -871,7 +871,7 @@ func (c *compiler) compileUnionMember(val types.UnionMember) UnionMember {
 	}
 }
 
-func (c *compiler) compileResult(val types.Union, root Root) Result {
+func (c *compiler) compileResultFromUnion(val types.Union, root Root) Result {
 	r := Result{
 		Attributes: val.Attributes,
 		ECI:        val.Name,
@@ -879,7 +879,36 @@ func (c *compiler) compileResult(val types.Union, root Root) Result {
 		OkOGTypes:  []types.Type{},
 		Ok:         []string{},
 		ErrOGType:  val.Members[1].Type,
-		Err:        c.compileUnionMember(val.Members[1]),
+		ErrType:    c.compileUnionMember(val.Members[1]).Type.Decl,
+		Size:       val.Size,
+		Alignment:  val.Alignment,
+	}
+
+	OkArm := val.Members[0]
+	ci := c.compileCamelCompoundIdentifier(OkArm.Type.Identifier)
+
+	// always a struct on the Ok arms in Results
+	for _, v := range root.Structs {
+		if v.Name == ci {
+			for _, m := range v.Members {
+				r.OkOGTypes = append(r.OkOGTypes, m.OGType)
+				r.Ok = append(r.Ok, m.Type)
+			}
+		}
+	}
+
+	return r
+}
+
+func (c *compiler) compileResultFromXUnion(val types.XUnion, root Root) Result {
+	r := Result{
+		Attributes: val.Attributes,
+		ECI:        val.Name,
+		Name:       c.compileCamelCompoundIdentifier(val.Name),
+		OkOGTypes:  []types.Type{},
+		Ok:         []string{},
+		ErrOGType:  val.Members[1].Type,
+		ErrType:    c.compileXUnionMember(val.Members[1]).Type,
 		Size:       val.Size,
 		Alignment:  val.Alignment,
 	}
@@ -1181,10 +1210,14 @@ typeSwitch:
 	case types.UnionDeclType:
 		union := dc.root.findUnion(eci)
 		var result *Result
+		var xunion *XUnion
 		if union == nil {
 			result = dc.root.findResult(eci)
 		}
 		if union == nil && result == nil {
+			xunion = dc.root.findXUnion(eci)
+		}
+		if union == nil && result == nil && xunion == nil {
 			log.Panic("union not found: ", eci)
 		}
 		if union != nil {
@@ -1199,7 +1232,7 @@ typeSwitch:
 				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
 			}
 			union.Derives = derivesOut
-		} else {
+		} else if result != nil {
 			// It's a Result, not a union
 			// Check if the derives have already been calculated
 			if deriveStatus.complete {
@@ -1212,6 +1245,16 @@ typeSwitch:
 			}
 			derivesOut = derivesOut.and(dc.fillDerivesForType(result.ErrOGType))
 			result.Derives = derivesOut
+		} else {
+			if deriveStatus.complete {
+				derivesOut = xunion.Derives
+				break typeSwitch
+			}
+			derivesOut = derivesAll
+			for _, member := range xunion.Members {
+				derivesOut = derivesOut.and(dc.fillDerivesForType(member.OGType))
+			}
+			xunion.Derives = derivesOut
 		}
 	case types.XUnionDeclType:
 		xunion := dc.root.findXUnion(eci)
@@ -1231,7 +1274,9 @@ typeSwitch:
 			// FIXME(cramertj) When large arrays are no longer an issue and we
 			// stop tracking Debug and PartialEq, this should set all values to
 			// false for non-strict xunions.
-			derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+			if !xunion.Strictness {
+				derivesOut = derivesOut.remove(derivesCopy).andUnknown()
+			}
 		}
 		xunion.Derives = derivesOut
 	default:
@@ -1360,12 +1405,23 @@ func Compile(r types.Root) Root {
 		root.XUnions = append(root.XUnions, c.compileXUnion(v))
 	}
 
+	// TODO(fxb/39159): Toggle to confirm Union & XUnion APIs align, and all
+	// can be properly compiled.
+	treatUnionAsXUnions := false
 	for _, v := range r.Unions {
-		// Results are a specialized type of Union
-		if v.Attributes.HasAttribute("Result") {
-			root.Results = append(root.Results, c.compileResult(v, root))
+		if !treatUnionAsXUnions {
+			if v.Attributes.HasAttribute("Result") {
+				root.Results = append(root.Results, c.compileResultFromUnion(v, root))
+			} else {
+				root.Unions = append(root.Unions, c.compileUnion(v))
+			}
 		} else {
-			root.Unions = append(root.Unions, c.compileUnion(v))
+			vConverted := types.ConvertUnionToXUnion(v)
+			if v.Attributes.HasAttribute("Result") {
+				root.Results = append(root.Results, c.compileResultFromXUnion(vConverted, root))
+			} else {
+				root.XUnions = append(root.XUnions, c.compileXUnion(vConverted))
+			}
 		}
 	}
 

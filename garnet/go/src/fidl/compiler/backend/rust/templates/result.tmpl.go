@@ -16,6 +16,6 @@ pub type {{ .Name }} = std::result::Result< (
       {{ $ok_member_type }}
     {{- end }}
   {{- end }}
-), {{ .Err.Type.Decl }} >;
+), {{ .ErrType }} >;
 {{- end }}
 `
