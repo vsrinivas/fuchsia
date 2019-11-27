@@ -131,7 +131,6 @@ group("drivers") {
     "//garnet/packages/prod:bluetooth_drivers",
     "//garnet/packages/prod:openthread",
     "//garnet/packages/prod:usb_video",
-    "//garnet/packages/prod:virtual_audio_driver",
     "//garnet/packages/prod:vulkan",
     "//garnet/packages/prod:wlan_drivers",
     "//src/camera/drivers",
@@ -197,10 +196,6 @@ group("all") {
     "//garnet/packages/prod:magma-arm-mali",
     "//garnet/packages/prod:magma-img-rgx-mt8167",
     "//garnet/packages/prod:magma-qcom-adreno",
-    "//garnet/packages/prod:media",
-    "//garnet/packages/prod:media_codec_all",
-    "//garnet/packages/prod:mediaplayer",
-    "//garnet/packages/prod:mediasession",
     "//garnet/packages/prod:memory_monitor",
     "//garnet/packages/prod:netstack",
     "//garnet/packages/prod:netstack3",
@@ -470,16 +465,7 @@ group("cobalt_client") {
   ]
 }
 
-group("media_codec_all") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_aac",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
-    "//src/media/codec:codec_runner_sw_sbc",
-  ]
-}
-
+# TODO(dalesat): Part of soft transition...remove.
 group("media_codec_factory") {
   testonly = true
   public_deps = [
@@ -487,6 +473,7 @@ group("media_codec_factory") {
   ]
 }
 
+# TODO(dalesat): Part of soft transition...remove.
 group("media_codec_sw_aac") {
   testonly = true
   public_deps = [
@@ -495,26 +482,12 @@ group("media_codec_sw_aac") {
   ]
 }
 
+# TODO(dalesat): Part of soft transition...remove.
 group("media_codec_sw_sbc") {
   testonly = true
   public_deps = [
     "//src/media/codec:codec_factory",
     "//src/media/codec:codec_runner_sw_sbc",
-  ]
-}
-
-group("media_codec_sw_ffmpeg") {
-  testonly = true
-  public_deps = [
-    "//src/media/codec:codec_factory",
-    "//src/media/codec:codec_runner_sw_ffmpeg",
-  ]
-}
-
-group("mediaplayer") {
-  testonly = true
-  public_deps = [
-    "//src/media/playback/mediaplayer",
   ]
 }
 
@@ -532,19 +505,6 @@ group("bluetooth_profiles") {
     "//garnet/packages/prod:bluetooth_a2dp",
     "//garnet/packages/prod:bluetooth_avrcp",
     "//garnet/packages/prod:bluetooth_hid",
-  ]
-}
-
-group("media") {
-  testonly = true
-  public_deps = [
-    "//garnet/packages/prod:media_codec_all",
-    "//garnet/packages/prod:mediaplayer",
-    "//garnet/packages/prod:mediasession",
-    "//garnet/packages/prod:tts",
-    "//src//camera/simple_camera/simple_camera_server:simple_camera_server_cpp",
-    "//src/camera/camera_manager",
-    "//src/media/audio/bundles:audio",
   ]
 }
 
@@ -616,6 +576,7 @@ group("timezone") {
   ]
 }
 
+# TODO(dalesat): Part of soft transition...remove.
 group("virtual_audio_driver") {
   testonly = true
   public_deps = [
@@ -812,7 +773,6 @@ group("wlanif") {
 group("tts") {
   testonly = true
   public_deps = [
-    "//src/media/audio/bundles:audio",
     "//src/speech/tts:tts_service",
   ]
 }
@@ -848,13 +808,6 @@ group("far") {
   public_deps = [
     "//garnet/bin/far",
     "//garnet/bin/far:host",
-  ]
-}
-
-group("mediasession") {
-  testonly = true
-  public_deps = [
-    "//src/media/sessions",
   ]
 }
 

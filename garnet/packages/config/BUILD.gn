@@ -21,13 +21,6 @@ group("network") {
   ]
 }
 
-group("vim2_media_config") {
-  testonly = true
-  public_deps = [
-    "//src/media/audio/vim2_media_config:vim2_media_config",
-  ]
-}
-
 group("openssh_keys") {
   testonly = true
   public_deps = [
@@ -79,19 +72,13 @@ group("services") {
   ]
 }
 
-group("mediasession") {
-  testonly = true
-  public_deps = [
-    "//src/media/sessions:configs",
-  ]
-}
-
 group("shortcut") {
   public_deps = [
     "//src/ui/bin/shortcut:configs",
   ]
 }
 
+# TODO(dalesat): Part of soft transition...remove
 group("virtual_audio") {
   testonly = true
   public_deps = [

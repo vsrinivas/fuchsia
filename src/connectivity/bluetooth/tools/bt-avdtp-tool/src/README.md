@@ -10,7 +10,7 @@ Before running, make sure you've included the tool and the a2dp profiles in your
 ```
 --with //src/connectivity/bluetooth/profiles/bt-a2dp-sink
 --with //src/connectivity/bluetooth/profiles/bt-a2dp-source
---with //src/media/audio/bundles:audio --with //src/media/playback/mediaplayer
+--with //src/media/audio/bundles:services --with //src/media/playback/mediaplayer
 --with //src/connectivity/bluetooth/tools/bt-avdtp-tool
 ```
 
