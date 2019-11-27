@@ -33,9 +33,8 @@ class QuitObserver : public test_runner::TestRunObserver {
 };
 
 int main(int argc, char** argv) {
-  // TODO: The normal pattern is to create the loop before the context.
-  std::shared_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
   async::Loop loop(&kAsyncLoopConfigAttachToCurrentThread);
+  std::shared_ptr<sys::ComponentContext> app_context = sys::ComponentContext::Create();
 
   fxl::CommandLine settings = fxl::CommandLineFromArgcArgv(argc, argv);
   std::vector<std::string> args = settings.positional_args();
