@@ -1021,8 +1021,11 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   sym_stat.switches.emplace_back(kDumpIndexSwitch, false, "dump-index", 0);
   (*verbs)[Verb::kSymStat] = std::move(sym_stat);
 
-  (*verbs)[Verb::kSymNear] = VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
-                                        kSymNearHelp, CommandGroup::kSymbol);
+  // sym-near
+  VerbRecord sym_near(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp, kSymNearHelp,
+                      CommandGroup::kSymbol);
+  sym_near.param_type = VerbRecord::kOneParam;
+  (*verbs)[Verb::kSymNear] = std::move(sym_near);
 
   VerbRecord search(&DoSymSearch, {"sym-search"}, kSymSearchShortHelp, kSymSearchHelp,
                     CommandGroup::kSymbol);

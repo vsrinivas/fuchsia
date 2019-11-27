@@ -15,9 +15,17 @@ namespace zxdb {
 class Command;
 class Err;
 
+struct CommandToken {
+  CommandToken() = default;
+  CommandToken(size_t o, std::string s) : offset(o), str(std::move(s)) {}
+
+  size_t offset = 0;  // Byte offset within the input string.
+  std::string str;
+};
+
 // Converts the given string to a series of tokens. This is used by ParseCommand and is exposed
 // separate for testing purposes.
-Err TokenizeCommand(const std::string& input, std::vector<std::string>* result);
+Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result);
 
 Err ParseCommand(const std::string& input, Command* output);
 

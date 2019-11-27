@@ -95,6 +95,15 @@ enum class Verb {
 };
 
 struct VerbRecord {
+  enum ParamType {
+    // The parameters are separated on whitespace and each one is added to the Command::args.
+    kWhitespaceSeparated,
+
+    // All parameters after switches are treated as one string. Everything, including whitespace,
+    // is assigned to Command::args[0].
+    kOneParam,
+  };
+
   // Type for the callback that runs a command.
   using CommandExecutor = fit::function<Err(ConsoleContext*, const Command&)>;
 
@@ -143,6 +152,8 @@ struct VerbRecord {
 
   CommandGroup command_group = CommandGroup::kGeneral;
   SourceAffinity source_affinity = SourceAffinity::kNone;
+
+  ParamType param_type = kWhitespaceSeparated;
 
   CommandCompleter complete = nullptr;
 };

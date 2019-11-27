@@ -20,7 +20,7 @@ bool CompletionContains(const std::vector<std::string>& suggestions, const std::
 }  // namespace
 
 TEST(CommandParser, Tokenizer) {
-  std::vector<std::string> output;
+  std::vector<CommandToken> output;
 
   EXPECT_FALSE(TokenizeCommand("", &output).has_error());
   EXPECT_TRUE(output.empty());
@@ -30,17 +30,22 @@ TEST(CommandParser, Tokenizer) {
 
   EXPECT_FALSE(TokenizeCommand("a", &output).has_error());
   EXPECT_EQ(1u, output.size());
-  EXPECT_EQ("a", output[0]);
+  EXPECT_EQ(0u, output[0].offset);
+  EXPECT_EQ("a", output[0].str);
 
   EXPECT_FALSE(TokenizeCommand("ab cd", &output).has_error());
   EXPECT_EQ(2u, output.size());
-  EXPECT_EQ("ab", output[0]);
-  EXPECT_EQ("cd", output[1]);
+  EXPECT_EQ(0u, output[0].offset);
+  EXPECT_EQ("ab", output[0].str);
+  EXPECT_EQ(3u, output[1].offset);
+  EXPECT_EQ("cd", output[1].str);
 
   EXPECT_FALSE(TokenizeCommand("  ab  cd  ", &output).has_error());
   EXPECT_EQ(2u, output.size());
-  EXPECT_EQ("ab", output[0]);
-  EXPECT_EQ("cd", output[1]);
+  EXPECT_EQ(2u, output[0].offset);
+  EXPECT_EQ("ab", output[0].str);
+  EXPECT_EQ(6u, output[1].offset);
+  EXPECT_EQ("cd", output[1].str);
 }
 
 TEST(CommandParser, ParserBasic) {
@@ -213,6 +218,20 @@ TEST(CommandParser, VerbSwitches) {
   err = ParseCommand("mem-read -s", &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ("Argument needed for \"-s\".", err.msg());
+}
+
+// Some verbs take all arguments as one large string, ignoring whitespace. "print" is one of these.
+TEST(CommandParser, OneParam) {
+  Command output;
+
+  Err err = ParseCommand("print  x + 2 ", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(Verb::kPrint, output.verb());
+
+  ASSERT_EQ(1u, output.args().size());
+
+  // The whitespace at the end is not trimmed. This could possibly be changed in the future.
+  EXPECT_EQ("x + 2 ", output.args()[0]);
 }
 
 TEST(CommandParser, Completions) {

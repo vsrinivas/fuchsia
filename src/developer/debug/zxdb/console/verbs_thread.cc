@@ -1409,6 +1409,7 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   // print
   VerbRecord print(&DoPrint, {"print", "p"}, kPrintShortHelp, kPrintHelp, CommandGroup::kQuery);
   print.switches = format_switches;
+  print.param_type = VerbRecord::kOneParam;
   (*verbs)[Verb::kPrint] = std::move(print);
 
   // regs

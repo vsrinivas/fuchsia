@@ -81,11 +81,11 @@ bool IsIndexToken(const std::string& token) {
 
 class Parser {
  public:
-  Parser(Command* command, const FillCommandContextCallback& fill_context)
-      : fill_context_(fill_context), command_(command) {}
+  Parser(const std::string& input, Command* command, const FillCommandContextCallback& fill_context)
+      : input_(input), fill_context_(fill_context), command_(command) {}
 
-  const Err& Parse(const std::string& input) {
-    if (!Tokenize(input)) {
+  const Err& Parse() {
+    if (!Tokenize(input_)) {
       return err_;
     }
 
@@ -95,17 +95,17 @@ class Parser {
     return err_;
   }
 
-  const Err& Complete(const std::string& input, std::vector<std::string>* results) {
+  const Err& Complete(std::vector<std::string>* results) {
     FXL_DCHECK(results->empty());
 
-    if (!Tokenize(input)) {
+    if (!Tokenize(input_)) {
       return err_;
     }
 
     std::string to_complete;
 
-    if (!tokens_.empty() && input.back() != ' ') {
-      to_complete = tokens_.back();
+    if (!tokens_.empty() && input_.back() != ' ') {
+      to_complete = tokens_.back().str;
       tokens_.pop_back();
     }
 
@@ -120,9 +120,7 @@ class Parser {
       (this->*(state->complete))(to_complete, results);
     }
 
-    auto prefix = std::string(input);
-    prefix.resize(prefix.size() - to_complete.size());
-
+    std::string prefix = input_.substr(0, input_.size() - to_complete.size());
     for (auto& result : *results) {
       result = prefix + result;
     }
@@ -149,7 +147,7 @@ class Parser {
         : advance(advance), complete(complete) {}
   };
 
-  const std::string& token() { return tokens_[pos_]; }
+  const std::string& token_str() { return tokens_[pos_].str; }
 
   bool Advance() {
     const State* start = state_;
@@ -187,17 +185,6 @@ class Parser {
 
   bool Accept() { return false; }
 
-  std::string ParsePrefix() {
-    std::string ret;
-
-    for (size_t i = 0; i < pos_; i++) {
-      ret += tokens_[i];
-      ret += " ";
-    }
-
-    return ret;
-  }
-
   bool DoNounState();
   bool DoNounIndexState();
   bool DoVerbState();
@@ -228,6 +215,8 @@ class Parser {
     err_ = TokenizeCommand(input, &tokens_);
     return !err_.has_error();
   }
+
+  const std::string input_;
 
   // Used for completions. Optionally set to fill in the noun information for
   // a given command so the completion code can use them.
@@ -260,7 +249,7 @@ class Parser {
   // instead of consuming another token.
   std::optional<std::string> sw_value_ = std::nullopt;
 
-  std::vector<std::string> tokens_;
+  std::vector<CommandToken> tokens_;
 
   // States we've been through without advancing. This is important for
   // completion.
@@ -303,9 +292,9 @@ bool Parser::DoNounState() {
   }
 
   const auto& nouns = GetStringNounMap();
-  auto found = nouns.find(token());
+  auto found = nouns.find(token_str());
   if (found == nouns.end()) {
-    if (pos_ > 0 && !at_end() && token()[0] == '-') {
+    if (pos_ > 0 && !at_end() && token_str()[0] == '-') {
       return GoTo(Parser::kSwitchesState);
     } else {
       return GoTo(Parser::kVerbState);
@@ -323,14 +312,14 @@ bool Parser::DoNounState() {
 // Consume optional following index if it's all integers. For example, it
 // could be "process 2 run" (with index) or "process run" (without).
 bool Parser::DoNounIndexState() {
-  if (at_end() || !IsIndexToken(token())) {
+  if (at_end() || !IsIndexToken(token_str())) {
     command_->SetNoun(noun_, Command::kNoIndex);
     return GoTo(Parser::kNounState);
   }
 
   size_t noun_index = Command::kNoIndex;
-  if (sscanf(token().c_str(), "%zu", &noun_index) != 1) {
-    return Fail("Invalid index \"" + token() + "\" for \"" + NounToString(noun_) + "\".");
+  if (sscanf(token_str().c_str(), "%zu", &noun_index) != 1) {
+    return Fail("Invalid index \"" + token_str() + "\" for \"" + NounToString(noun_) + "\".");
   }
 
   command_->SetNoun(noun_, noun_index);
@@ -342,19 +331,19 @@ bool Parser::DoSwitchesState() {
     return GoTo(Parser::kArgState);
   }
 
-  if (token()[0] != '-') {
+  if (token_str()[0] != '-') {
     return GoTo(Parser::kArgState);
   }
 
-  if (token() == "--") {
+  if (token_str() == "--") {
     return Consume(Parser::kArgState);
   }
 
-  if (token().size() == 1) {
+  if (token_str().size() == 1) {
     return Fail("Invalid switch \"-\".");
   }
 
-  if (token()[1] == '-') {
+  if (token_str()[1] == '-') {
     return GoTo(Parser::kLongSwitchState);
   } else {
     return GoTo(Parser::kSwitchState);
@@ -367,16 +356,16 @@ bool Parser::DoLongSwitchState() {
 
   // Two-hyphen (--) switch.
   size_t equals_index = std::string::npos;
-  sw_record_ = FindLongSwitch(token(), switches, &equals_index);
+  sw_record_ = FindLongSwitch(token_str(), switches, &equals_index);
   if (!sw_record_) {
-    return Fail("Unknown switch \"" + token() + "\".");
+    return Fail("Unknown switch \"" + token_str() + "\".");
   }
 
   sw_name_ = std::string("--") + sw_record_->name;
 
   if (equals_index != std::string::npos) {
     // Extract the token following the equals sign.
-    sw_value_ = token().substr(equals_index + 1);
+    sw_value_ = token_str().substr(equals_index + 1);
   } else {
     sw_value_ = std::nullopt;
   }
@@ -390,7 +379,7 @@ bool Parser::DoSwitchState() {
   std::string value;
 
   // Single-dash token means one character.
-  char switch_char = token()[1];
+  char switch_char = token_str()[1];
   sw_record_ = FindSwitch(switch_char, switches);
   if (!sw_record_) {
     return Fail(std::string("Unknown switch \"-") + switch_char + "\".");
@@ -398,8 +387,8 @@ bool Parser::DoSwitchState() {
 
   sw_name_ = std::string("-") + sw_record_->ch;
 
-  if (token().size() > 2) {
-    sw_value_ = token().substr(2);
+  if (token_str().size() > 2) {
+    sw_value_ = token_str().substr(2);
   }
 
   return Consume(Parser::kSwitchArgState);
@@ -421,7 +410,7 @@ bool Parser::DoSwitchArgState() {
   } else if (at_end()) {
     return Fail("Argument needed for \"" + sw_name_ + "\".");
   } else {
-    command_->SetSwitch(sw_record_->id, token());
+    command_->SetSwitch(sw_record_->id, token_str());
     return Consume(Parser::kSwitchesState);
   }
 }
@@ -433,9 +422,9 @@ bool Parser::DoVerbState() {
 
   // Consume the verb.
   const auto& verb_strings = GetStringVerbMap();
-  auto found_verb_str = verb_strings.find(token());
+  auto found_verb_str = verb_strings.find(token_str());
   if (found_verb_str == verb_strings.end()) {
-    return Fail("The string \"" + token() + "\" is not a valid verb.");
+    return Fail("The string \"" + token_str() + "\" is not a valid verb.");
   }
 
   command_->set_verb(found_verb_str->second);
@@ -454,7 +443,15 @@ bool Parser::DoArgState() {
     return Accept();
   }
 
-  std::vector<std::string> args(tokens_.begin() + pos_, tokens_.end());
+  std::vector<std::string> args;
+  if (verb_record_ && verb_record_->param_type == VerbRecord::kOneParam) {
+    // Treat all arguments as one giant parameter rather than whitespace separated ones.
+    args.push_back(input_.substr(tokens_[pos_].offset));
+  } else {
+    for (size_t i = pos_; i < tokens_.size(); i++)
+      args.push_back(tokens_[i].str);
+  }
+
   command_->set_args(std::move(args));
   pos_ = tokens_.size();
 
@@ -520,11 +517,10 @@ void Parser::DoCompleteArgs(const std::string& to_complete, std::vector<std::str
 
 }  // namespace
 
-Err TokenizeCommand(const std::string& input, std::vector<std::string>* result) {
+Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result) {
   result->clear();
 
-  // TODO(brettw) this will probably need some kind of quoting and escaping
-  // logic.
+  // TODO(brettw) this will probably need some kind of quoting and escaping logic.
   size_t cur = 0;
   while (true) {
     // Skip separators
@@ -543,7 +539,7 @@ Err TokenizeCommand(const std::string& input, std::vector<std::string>* result) 
       break;  // Got to end of input.
 
     // Emit token.
-    result->push_back(input.substr(token_begin, cur - token_begin));
+    result->emplace_back(token_begin, input.substr(token_begin, cur - token_begin));
   }
 
   // This returns an Err() to allow for adding escaping errors in the future.
@@ -553,8 +549,8 @@ Err TokenizeCommand(const std::string& input, std::vector<std::string>* result) 
 Err ParseCommand(const std::string& input, Command* output) {
   *output = Command();
 
-  Parser parser(output, FillCommandContextCallback());
-  parser.Parse(input);
+  Parser parser(input, output, FillCommandContextCallback());
+  parser.Parse();
 
   FXL_DCHECK(parser.err().has_error() || parser.at_end());
 
@@ -566,10 +562,10 @@ Err ParseCommand(const std::string& input, Command* output) {
 std::vector<std::string> GetCommandCompletions(const std::string& input,
                                                const FillCommandContextCallback& fill_context) {
   Command temp;
-  Parser parser(&temp, std::move(fill_context));
+  Parser parser(input, &temp, std::move(fill_context));
 
   std::vector<std::string> result;
-  parser.Complete(input, &result);
+  parser.Complete(&result);
 
   return result;
 }

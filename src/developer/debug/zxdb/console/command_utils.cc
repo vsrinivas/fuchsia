@@ -488,22 +488,10 @@ Err EvalCommandExpression(const Command& cmd, const char* verb,
   if (err.has_error())
     return err;
 
-  // This takes one expression that may have spaces, so concatenate everything
-  // the command parser has split apart back into one thing.
-  //
-  // If we run into limitations of this, we should add a "don't parse the args"
-  // flag to the command record.
-  std::string expr;
-  for (const auto& cur : cmd.args()) {
-    if (!expr.empty())
-      expr.push_back(' ');
-    expr += cur;
-  }
-
-  if (expr.empty())
+  if (cmd.args().size() != 1)
     return Err("Usage: %s <expression>\nSee \"help %s\" for more.", verb, verb);
 
-  EvalExpression(expr, std::move(eval_context), follow_references, std::move(cb));
+  EvalExpression(cmd.args()[0], std::move(eval_context), follow_references, std::move(cb));
   return Err();
 }
 

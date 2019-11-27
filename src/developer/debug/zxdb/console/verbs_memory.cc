@@ -568,12 +568,14 @@ void AppendMemoryVerbs(std::map<Verb, VerbRecord>* verbs) {
                          kMemAnalyzeHelp, CommandGroup::kQuery);
   mem_analyze.switches.push_back(num_switch);
   mem_analyze.switches.push_back(size_switch);
+  mem_analyze.param_type = VerbRecord::kOneParam;
   (*verbs)[Verb::kMemAnalyze] = std::move(mem_analyze);
 
   // Mem-read. Note: "x" is the GDB command to read memory.
   VerbRecord mem_read(&DoMemRead, &CompleteInputLocation, {"mem-read", "x"}, kMemReadShortHelp,
                       kMemReadHelp, CommandGroup::kQuery);
   mem_read.switches.push_back(size_switch);
+  mem_read.param_type = VerbRecord::kOneParam;
   (*verbs)[Verb::kMemRead] = std::move(mem_read);
 
   // Stack.
