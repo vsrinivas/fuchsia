@@ -21,7 +21,7 @@ void GatherMemoryDigest::Gather() {
       {"Graphics", "memory_digest:graphics"},
       {"Video Buffer", "memory_digest:video_buffer"},
       {"Fshost", "memory_digest:fs_host"},
-      {"Minfs", "memory_digest:min_fx"},
+      {"Minfs", "memory_digest:min_fs"},
       {"Blobfs", "memory_digest:blob_fs"},
       {"Flutter", "memory_digest:flutter"},
       {"Web", "memory_digest:web"},
@@ -32,6 +32,8 @@ void GatherMemoryDigest::Gather() {
       {"Amber", "memory_digest:amber"},
       {"Pkgfs", "memory_digest:pkg_fs"},
       {"Cast", "memory_digest:cast"},
+      {"Archivist", "memory_digest:archivist"},
+      {"Cobalt", "memory_digest:cobalt"},
 
       // Special entries that are not part of kDefaultBucketMatches.
       {"Orphaned", "memory_digest:orphaned"},
