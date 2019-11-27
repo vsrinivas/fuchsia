@@ -97,10 +97,11 @@ enum class Verb {
 struct VerbRecord {
   enum ParamType {
     // The parameters are separated on whitespace and each one is added to the Command::args.
+    // It uses C-style string quoting for separating arguments containing whitespace.
     kWhitespaceSeparated,
 
-    // All parameters after switches are treated as one string. Everything, including whitespace,
-    // is assigned to Command::args[0].
+    // All parameters after switches are treated as one string. Everything including whitespace,
+    // quoted strings, and literal backslashes are assigned to Command::args[0].
     kOneParam,
   };
 

@@ -29,23 +29,37 @@ TEST(CommandParser, Tokenizer) {
   EXPECT_TRUE(output.empty());
 
   EXPECT_FALSE(TokenizeCommand("a", &output).has_error());
-  EXPECT_EQ(1u, output.size());
+  ASSERT_EQ(1u, output.size());
   EXPECT_EQ(0u, output[0].offset);
   EXPECT_EQ("a", output[0].str);
 
   EXPECT_FALSE(TokenizeCommand("ab cd", &output).has_error());
-  EXPECT_EQ(2u, output.size());
+  ASSERT_EQ(2u, output.size());
   EXPECT_EQ(0u, output[0].offset);
   EXPECT_EQ("ab", output[0].str);
   EXPECT_EQ(3u, output[1].offset);
   EXPECT_EQ("cd", output[1].str);
 
   EXPECT_FALSE(TokenizeCommand("  ab  cd  ", &output).has_error());
-  EXPECT_EQ(2u, output.size());
+  ASSERT_EQ(2u, output.size());
   EXPECT_EQ(2u, output[0].offset);
   EXPECT_EQ("ab", output[0].str);
   EXPECT_EQ(6u, output[1].offset);
   EXPECT_EQ("cd", output[1].str);
+
+  // Quoting.
+  EXPECT_FALSE(TokenizeCommand("  \"one string\" R\"(two\"string)\"  ", &output).has_error());
+  ASSERT_EQ(2u, output.size());
+  EXPECT_EQ(2u, output[0].offset);
+  EXPECT_EQ("one string", output[0].str);
+  EXPECT_EQ(15u, output[1].offset);
+  EXPECT_EQ("two\"string", output[1].str);
+
+  // Quoting in the middle of a token.
+  EXPECT_FALSE(TokenizeCommand(" foo\"one string\"bar ", &output).has_error());
+  ASSERT_EQ(1u, output.size());
+  EXPECT_EQ(1u, output[0].offset);
+  EXPECT_EQ("fooone stringbar", output[0].str);
 }
 
 TEST(CommandParser, ParserBasic) {
@@ -176,6 +190,14 @@ TEST(CommandParser, VerbSwitches) {
   ASSERT_EQ(1u, output.args().size());
   EXPECT_EQ("next", output.args()[0]);
 
+  // Quoted value.
+  err = ParseCommand("mem-read --size \"23 4\" next", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("23 4", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
+
   // Valid long switch with equals sign.
   err = ParseCommand("mem-read --size=234 next", &output);
   EXPECT_FALSE(err.has_error()) << err.msg();
@@ -211,6 +233,14 @@ TEST(CommandParser, VerbSwitches) {
   EXPECT_FALSE(err.has_error());
   EXPECT_EQ(1u, output.switches().size());
   EXPECT_EQ("567", output.GetSwitchValue(size_switch->id));
+  ASSERT_EQ(1u, output.args().size());
+  EXPECT_EQ("next", output.args()[0]);
+
+  // Short switch with quoted value.
+  err = ParseCommand("mem-read -s\"56 7\" next", &output);
+  EXPECT_FALSE(err.has_error());
+  EXPECT_EQ(1u, output.switches().size());
+  EXPECT_EQ("56 7", output.GetSwitchValue(size_switch->id));
   ASSERT_EQ(1u, output.args().size());
   EXPECT_EQ("next", output.args()[0]);
 

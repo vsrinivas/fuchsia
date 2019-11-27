@@ -12,6 +12,7 @@
 #include "src/developer/debug/zxdb/common/err.h"
 #include "src/developer/debug/zxdb/console/command.h"
 #include "src/developer/debug/zxdb/console/nouns.h"
+#include "src/developer/debug/zxdb/expr/parse_string.h"
 #include "src/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -520,7 +521,6 @@ void Parser::DoCompleteArgs(const std::string& to_complete, std::vector<std::str
 Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result) {
   result->clear();
 
-  // TODO(brettw) this will probably need some kind of quoting and escaping logic.
   size_t cur = 0;
   while (true) {
     // Skip separators
@@ -531,15 +531,30 @@ Err TokenizeCommand(const std::string& input, std::vector<CommandToken>* result)
       break;
     size_t token_begin = cur;
 
+    std::string token;
+
     // Skip to end of token.
     while (cur < input.size() && !IsTokenSeparator(input[cur])) {
-      ++cur;
+      // Allow quoting.
+      if (auto string_info = DoesBeginStringLiteral(ExprLanguage::kC, input, cur)) {
+        size_t error_location = 0;
+        auto str = ParseStringLiteral(input, *string_info, &cur, &error_location);
+        if (str.has_error())
+          return str.err();
+
+        token += str.value();
+      } else {
+        // Handle all other characters as literals. We may want backslash-escaping here in the
+        // future.
+        token.push_back(input[cur]);
+        ++cur;
+      }
     }
     if (cur == token_begin)
       break;  // Got to end of input.
 
     // Emit token.
-    result->emplace_back(token_begin, input.substr(token_begin, cur - token_begin));
+    result->emplace_back(token_begin, std::move(token));
   }
 
   // This returns an Err() to allow for adding escaping errors in the future.
