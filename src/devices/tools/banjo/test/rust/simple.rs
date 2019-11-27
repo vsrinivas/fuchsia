@@ -26,7 +26,7 @@ pub struct StructWithZxField {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Direction(u32);
+pub struct Direction(pub u32);
 
 impl Direction {
     pub const UP: Self = Self(0);
@@ -35,5 +35,43 @@ impl Direction {
     pub const RIGHT: Self = Self(3);
 }
 
+impl std::ops::BitAnd for Direction {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for Direction {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for Direction {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for Direction {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for Direction {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for Direction {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 

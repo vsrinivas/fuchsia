@@ -20,12 +20,50 @@ pub struct EchoMore {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct EchoMe(u32);
+pub struct EchoMe(pub u32);
 
 impl EchoMe {
     pub const ZERO: Self = Self(0);
     pub const ONE: Self = Self(1);
 }
 
+impl std::ops::BitAnd for EchoMe {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for EchoMe {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for EchoMe {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for EchoMe {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for EchoMe {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for EchoMe {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 

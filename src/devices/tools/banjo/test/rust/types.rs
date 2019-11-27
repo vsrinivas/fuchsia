@@ -313,76 +313,418 @@ pub struct interfaces {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct default_enum(u32);
+pub struct default_enum(pub u32);
 
 impl default_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for default_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for default_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for default_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for default_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for default_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for default_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i8_enum(i8);
+pub struct i8_enum(pub i8);
 
 impl i8_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for i8_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i8_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i8_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i8_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i8_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i8_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i16_enum(i16);
+pub struct i16_enum(pub i16);
 
 impl i16_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for i16_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i16_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i16_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i16_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i16_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i16_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i32_enum(i32);
+pub struct i32_enum(pub i32);
 
 impl i32_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for i32_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i32_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i32_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i32_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i32_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i32_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct i64_enum(i64);
+pub struct i64_enum(pub i64);
 
 impl i64_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for i64_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for i64_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for i64_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for i64_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for i64_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for i64_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u8_enum(u8);
+pub struct u8_enum(pub u8);
 
 impl u8_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for u8_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for u8_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for u8_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for u8_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for u8_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for u8_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u16_enum(u16);
+pub struct u16_enum(pub u16);
 
 impl u16_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for u16_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for u16_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for u16_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for u16_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for u16_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for u16_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u32_enum(u32);
+pub struct u32_enum(pub u32);
 
 impl u32_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for u32_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for u32_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for u32_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for u32_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for u32_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for u32_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct u64_enum(u64);
+pub struct u64_enum(pub u64);
 
 impl u64_enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for u64_enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for u64_enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for u64_enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for u64_enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for u64_enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for u64_enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

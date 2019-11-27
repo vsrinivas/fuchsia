@@ -19,12 +19,50 @@ pub struct ThisIsAStruct {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct ThisIsAnEnum(u32);
+pub struct ThisIsAnEnum(pub u32);
 
 impl ThisIsAnEnum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for ThisIsAnEnum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for ThisIsAnEnum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for ThisIsAnEnum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for ThisIsAnEnum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for ThisIsAnEnum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for ThisIsAnEnum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

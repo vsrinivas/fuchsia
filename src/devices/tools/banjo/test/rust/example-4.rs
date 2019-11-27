@@ -19,11 +19,49 @@ pub struct Point {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct Enum(u32);
+pub struct Enum(pub u32);
 
 impl Enum {
     pub const X: Self = Self(23);
 }
 
+impl std::ops::BitAnd for Enum {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for Enum {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for Enum {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for Enum {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for Enum {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for Enum {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 

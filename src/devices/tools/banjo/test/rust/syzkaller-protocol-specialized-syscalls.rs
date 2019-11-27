@@ -14,7 +14,7 @@ use fuchsia_zircon as zircon;
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_create_options(u32);
+pub struct zx_create_options(pub u32);
 
 impl zx_create_options {
     pub const VARIANT0: Self = Self(0);
@@ -22,6 +22,44 @@ impl zx_create_options {
     pub const VARIANT2: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_create_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_create_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_create_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_create_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_create_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_create_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]

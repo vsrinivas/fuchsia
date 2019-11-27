@@ -439,7 +439,7 @@ pub struct zx_system_powerctl_arg {
 
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_clock_id(zircon::sys::zx_clock_t);
+pub struct zx_clock_id(pub zircon::sys::zx_clock_t);
 
 impl zx_clock_id {
     pub const ZX_CLOCK_MONOTONIC: Self = Self(0);
@@ -447,9 +447,47 @@ impl zx_clock_id {
     pub const ZX_CLOCK_THREAD: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_clock_id {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_clock_id {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_clock_id {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_clock_id {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_clock_id {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_clock_id {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_feature_kind(u32);
+pub struct zx_feature_kind(pub u32);
 
 impl zx_feature_kind {
     pub const ZX_FEATURE_KIND_CPU: Self = Self(0);
@@ -457,17 +495,93 @@ impl zx_feature_kind {
     pub const ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_feature_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_feature_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_feature_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_feature_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_feature_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_feature_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_event_kind(u32);
+pub struct zx_event_kind(pub u32);
 
 impl zx_event_kind {
     pub const ZX_SYSTEM_EVENT_LOW_MEMORY: Self = Self(0);
 }
 
+impl std::ops::BitAnd for zx_event_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_event_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_event_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_event_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_event_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_event_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_cache_flush_options(u32);
+pub struct zx_cache_flush_options(pub u32);
 
 impl zx_cache_flush_options {
     pub const ZX_CACHE_FLUSH_DATA: Self = Self(1);
@@ -475,9 +589,47 @@ impl zx_cache_flush_options {
     pub const ZX_CACHE_FLUSH_INSN: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_cache_flush_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_cache_flush_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_cache_flush_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_cache_flush_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_cache_flush_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_cache_flush_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_rights(zircon::sys::zx_rights_t);
+pub struct zx_rights(pub zircon::sys::zx_rights_t);
 
 impl zx_rights {
     pub const ZX_RIGHT_NONE: Self = Self(0);
@@ -504,17 +656,93 @@ impl zx_rights {
     pub const ZX_RIGHT_SAME_RIGHTS: Self = Self(2147483648);
 }
 
+impl std::ops::BitAnd for zx_rights {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_rights {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_rights {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_rights {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_rights {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_rights {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_object_wait_async_options(u32);
+pub struct zx_object_wait_async_options(pub u32);
 
 impl zx_object_wait_async_options {
     pub const ZX_WAIT_ASYNC_ONCE: Self = Self(0);
 }
 
+impl std::ops::BitAnd for zx_object_wait_async_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_object_wait_async_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_object_wait_async_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_object_wait_async_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_object_wait_async_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_object_wait_async_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_object_property_values(u32);
+pub struct zx_object_property_values(pub u32);
 
 impl zx_object_property_values {
     pub const ZX_PROP_NAME: Self = Self(3);
@@ -526,9 +754,47 @@ impl zx_object_property_values {
     pub const ZX_PROP_EXCEPTION_STATE: Self = Self(16);
 }
 
+impl std::ops::BitAnd for zx_object_property_values {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_object_property_values {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_object_property_values {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_object_property_values {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_object_property_values {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_object_property_values {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_object_info_topics(u32);
+pub struct zx_object_info_topics(pub u32);
 
 impl zx_object_info_topics {
     pub const ZX_INFO_NONE: Self = Self(0);
@@ -556,18 +822,94 @@ impl zx_object_info_topics {
     pub const ZX_INFO_JOB: Self = Self(24);
 }
 
+impl std::ops::BitAnd for zx_object_info_topics {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_object_info_topics {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_object_info_topics {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_object_info_topics {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_object_info_topics {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_object_info_topics {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_obj_props(u32);
+pub struct zx_obj_props(pub u32);
 
 impl zx_obj_props {
     pub const ZX_OBJ_PROP_NONE: Self = Self(0);
     pub const ZX_OBJ_PROP_WAITABLE: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_obj_props {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_obj_props {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_obj_props {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_obj_props {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_obj_props {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_obj_props {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_obj_types(u32);
+pub struct zx_obj_types(pub u32);
 
 impl zx_obj_types {
     pub const ZX_OBJ_TYPE_NONE: Self = Self(0);
@@ -598,9 +940,47 @@ impl zx_obj_types {
     pub const ZX_OBJ_TYPE_EXCEPTION: Self = Self(29);
 }
 
+impl std::ops::BitAnd for zx_obj_types {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_obj_types {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_obj_types {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_obj_types {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_obj_types {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_obj_types {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_thread_state_values(u32);
+pub struct zx_thread_state_values(pub u32);
 
 impl zx_thread_state_values {
     pub const ZX_THREAD_STATE_NEW: Self = Self(0);
@@ -620,9 +1000,47 @@ impl zx_thread_state_values {
     pub const ZX_THREAD_STATE_BLOCKED_PAGER: Self = Self(2307);
 }
 
+impl std::ops::BitAnd for zx_thread_state_values {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_thread_state_values {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_thread_state_values {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_thread_state_values {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_thread_state_values {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_thread_state_values {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_exception_channel_types(u32);
+pub struct zx_exception_channel_types(pub u32);
 
 impl zx_exception_channel_types {
     pub const ZX_EXCEPTION_CHANNEL_TYPE_NONE: Self = Self(0);
@@ -633,9 +1051,47 @@ impl zx_exception_channel_types {
     pub const ZX_EXCEPTION_CHANNEL_TYPE_JOB_DEBUGGER: Self = Self(5);
 }
 
+impl std::ops::BitAnd for zx_exception_channel_types {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_exception_channel_types {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_exception_channel_types {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_exception_channel_types {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_exception_channel_types {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_exception_channel_types {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_exception_port_types(u32);
+pub struct zx_exception_port_types(pub u32);
 
 impl zx_exception_port_types {
     pub const ZX_EXCEPTION_PORT_TYPE_NONE: Self = Self(0);
@@ -646,9 +1102,47 @@ impl zx_exception_port_types {
     pub const ZX_EXCEPTION_PORT_TYPE_JOB_DEBUGGER: Self = Self(5);
 }
 
+impl std::ops::BitAnd for zx_exception_port_types {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_exception_port_types {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_exception_port_types {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_exception_port_types {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_exception_port_types {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_exception_port_types {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_info_maps_type_vals(u32);
+pub struct zx_info_maps_type_vals(pub u32);
 
 impl zx_info_maps_type_vals {
     pub const ZX_INFO_MAPS_TYPE_NONE: Self = Self(0);
@@ -657,9 +1151,47 @@ impl zx_info_maps_type_vals {
     pub const ZX_INFO_MAPS_TYPE_MAPPING: Self = Self(3);
 }
 
+impl std::ops::BitAnd for zx_info_maps_type_vals {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_info_maps_type_vals {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_info_maps_type_vals {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_info_maps_type_vals {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_info_maps_type_vals {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_info_maps_type_vals {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_cache_policy_options(u32);
+pub struct zx_cache_policy_options(pub u32);
 
 impl zx_cache_policy_options {
     pub const ZX_CACHE_POLICY_CACHED: Self = Self(0);
@@ -669,9 +1201,47 @@ impl zx_cache_policy_options {
     pub const ZX_CACHE_POLICY_MASK: Self = Self(3);
 }
 
+impl std::ops::BitAnd for zx_cache_policy_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_cache_policy_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_cache_policy_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_cache_policy_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_cache_policy_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_cache_policy_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_info_vmo_type_vals(u32);
+pub struct zx_info_vmo_type_vals(pub u32);
 
 impl zx_info_vmo_type_vals {
     pub const ZX_INFO_VMO_TYPE_PAGED: Self = Self(1);
@@ -684,9 +1254,47 @@ impl zx_info_vmo_type_vals {
     pub const ZX_INFO_VMO_CONTIGUOUS: Self = Self(64);
 }
 
+impl std::ops::BitAnd for zx_info_vmo_type_vals {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_info_vmo_type_vals {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_info_vmo_type_vals {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_info_vmo_type_vals {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_info_vmo_type_vals {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_info_vmo_type_vals {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_socket_create_options(u32);
+pub struct zx_socket_create_options(pub u32);
 
 impl zx_socket_create_options {
     pub const ZX_SOCKET_STREAM: Self = Self(0);
@@ -695,35 +1303,187 @@ impl zx_socket_create_options {
     pub const ZX_SOCKET_HAS_ACCEPT: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_socket_create_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_socket_create_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_socket_create_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_socket_create_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_socket_create_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_socket_create_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_socket_read_options(u32);
+pub struct zx_socket_read_options(pub u32);
 
 impl zx_socket_read_options {
     pub const ZX_SOCKET_CONTROL: Self = Self(4);
     pub const ZX_SOCKET_PEEK: Self = Self(8);
 }
 
+impl std::ops::BitAnd for zx_socket_read_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_socket_read_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_socket_read_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_socket_read_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_socket_read_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_socket_read_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_socket_write_options(u32);
+pub struct zx_socket_write_options(pub u32);
 
 impl zx_socket_write_options {
     pub const ZX_SOCKET_CONTROL: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_socket_write_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_socket_write_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_socket_write_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_socket_write_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_socket_write_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_socket_write_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_socket_shutdown_options(u32);
+pub struct zx_socket_shutdown_options(pub u32);
 
 impl zx_socket_shutdown_options {
     pub const ZX_SOCKET_SHUTDOWN_WRITE: Self = Self(1);
     pub const ZX_SOCKET_SHUTDOWN_READ: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_socket_shutdown_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_socket_shutdown_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_socket_shutdown_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_socket_shutdown_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_socket_shutdown_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_socket_shutdown_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct thread_state_kind(u32);
+pub struct thread_state_kind(pub u32);
 
 impl thread_state_kind {
     pub const ZX_THREAD_STATE_GENERAL_REGS: Self = Self(0);
@@ -735,27 +1495,141 @@ impl thread_state_kind {
     pub const ZX_THREAD_X86_REGISTER_GS: Self = Self(7);
 }
 
+impl std::ops::BitAnd for thread_state_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for thread_state_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for thread_state_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for thread_state_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for thread_state_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for thread_state_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_job_policy_options(u32);
+pub struct zx_job_policy_options(pub u32);
 
 impl zx_job_policy_options {
     pub const ZX_JOB_POL_RELATIVE: Self = Self(0);
     pub const ZX_JOB_POL_ABSOLUTE: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_job_policy_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_job_policy_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_job_policy_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_job_policy_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_job_policy_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_job_policy_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_job_policy_topic(u32);
+pub struct zx_job_policy_topic(pub u32);
 
 impl zx_job_policy_topic {
     pub const ZX_JOB_POL_BASIC: Self = Self(0);
     pub const ZX_JOB_POL_TIMER_SLACK: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_job_policy_topic {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_job_policy_topic {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_job_policy_topic {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_job_policy_topic {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_job_policy_topic {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_job_policy_topic {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_job_policy_conditions(u32);
+pub struct zx_job_policy_conditions(pub u32);
 
 impl zx_job_policy_conditions {
     pub const ZX_POL_BAD_HANDLE: Self = Self(0);
@@ -775,9 +1649,47 @@ impl zx_job_policy_conditions {
     pub const ZX_POL_AMBIENT_MARK_VMO_EXEC: Self = Self(14);
 }
 
+impl std::ops::BitAnd for zx_job_policy_conditions {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_job_policy_conditions {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_job_policy_conditions {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_job_policy_conditions {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_job_policy_conditions {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_job_policy_conditions {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_job_policy_actions(u32);
+pub struct zx_job_policy_actions(pub u32);
 
 impl zx_job_policy_actions {
     pub const ZX_POL_ACTION_ALLOW: Self = Self(0);
@@ -787,33 +1699,185 @@ impl zx_job_policy_actions {
     pub const ZX_POL_ACTION_KILL: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_job_policy_actions {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_job_policy_actions {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_job_policy_actions {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_job_policy_actions {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_job_policy_actions {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_job_policy_actions {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_task_exception_port_options(u32);
+pub struct zx_task_exception_port_options(pub u32);
 
 impl zx_task_exception_port_options {
     pub const ZX_EXCEPTION_PORT_DEBUGGER: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_task_exception_port_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_task_exception_port_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_task_exception_port_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_task_exception_port_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_task_exception_port_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_task_exception_port_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_task_resume_options(u32);
+pub struct zx_task_resume_options(pub u32);
 
 impl zx_task_resume_options {
     pub const ZX_RESUME_TRY_NEXT: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_task_resume_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_task_resume_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_task_resume_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_task_resume_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_task_resume_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_task_resume_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_port_create_options(u32);
+pub struct zx_port_create_options(pub u32);
 
 impl zx_port_create_options {
     pub const ZX_PORT_BIND_TO_INTERRUPT: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_port_create_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_port_create_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_port_create_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_port_create_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_port_create_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_port_create_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_port_packet_type(u32);
+pub struct zx_port_packet_type(pub u32);
 
 impl zx_port_packet_type {
     pub const ZX_PKT_TYPE_USER: Self = Self(0);
@@ -827,9 +1891,47 @@ impl zx_port_packet_type {
     pub const ZX_PKT_TYPE_PAGE_REQUEST: Self = Self(9);
 }
 
+impl std::ops::BitAnd for zx_port_packet_type {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_port_packet_type {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_port_packet_type {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_port_packet_type {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_port_packet_type {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_port_packet_type {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_timer_options(u32);
+pub struct zx_timer_options(pub u32);
 
 impl zx_timer_options {
     pub const ZX_TIMER_SLACK_CENTER: Self = Self(0);
@@ -837,17 +1939,93 @@ impl zx_timer_options {
     pub const ZX_TIMER_SLACK_LATE: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_timer_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_timer_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_timer_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_timer_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_timer_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_timer_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmo_create_options(u32);
+pub struct zx_vmo_create_options(pub u32);
 
 impl zx_vmo_create_options {
     pub const ZX_VMO_RESIZABLE: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_vmo_create_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmo_create_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmo_create_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmo_create_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmo_create_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmo_create_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmo_opcodes(u32);
+pub struct zx_vmo_opcodes(pub u32);
 
 impl zx_vmo_opcodes {
     pub const ZX_VMO_OP_COMMIT: Self = Self(1);
@@ -860,9 +2038,47 @@ impl zx_vmo_opcodes {
     pub const ZX_VMO_OP_CACHE_CLEAN_INVALIDATE: Self = Self(9);
 }
 
+impl std::ops::BitAnd for zx_vmo_opcodes {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmo_opcodes {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmo_opcodes {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmo_opcodes {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmo_opcodes {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmo_opcodes {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmo_cache_policy_options(u32);
+pub struct zx_vmo_cache_policy_options(pub u32);
 
 impl zx_vmo_cache_policy_options {
     pub const ZX_CACHE_POLICY_CACHED: Self = Self(0);
@@ -872,9 +2088,47 @@ impl zx_vmo_cache_policy_options {
     pub const ZX_CACHE_POLICY_MASK: Self = Self(3);
 }
 
+impl std::ops::BitAnd for zx_vmo_cache_policy_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmo_cache_policy_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmo_cache_policy_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmo_cache_policy_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmo_cache_policy_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmo_cache_policy_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmo_clone_options(u32);
+pub struct zx_vmo_clone_options(pub u32);
 
 impl zx_vmo_clone_options {
     pub const ZX_VMO_CLONE_COPY_ON_WRITE: Self = Self(1);
@@ -882,9 +2136,47 @@ impl zx_vmo_clone_options {
     pub const ZX_VMO_CHILD_RESIZABLE: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_vmo_clone_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmo_clone_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmo_clone_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmo_clone_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmo_clone_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmo_clone_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmar_allocate_map_options(zircon::sys::zx_vm_option_t);
+pub struct zx_vmar_allocate_map_options(pub zircon::sys::zx_vm_option_t);
 
 impl zx_vmar_allocate_map_options {
     pub const ZX_VM_PERM_READ: Self = Self(1);
@@ -925,9 +2217,47 @@ impl zx_vmar_allocate_map_options {
     pub const ZX_VM_ALIGN_4GB: Self = Self(536870912);
 }
 
+impl std::ops::BitAnd for zx_vmar_allocate_map_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmar_allocate_map_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmar_allocate_map_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmar_allocate_map_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmar_allocate_map_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmar_allocate_map_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vmar_protect_options(zircon::sys::zx_vm_option_t);
+pub struct zx_vmar_protect_options(pub zircon::sys::zx_vm_option_t);
 
 impl zx_vmar_protect_options {
     pub const ZX_VM_PERM_READ: Self = Self(1);
@@ -935,9 +2265,47 @@ impl zx_vmar_protect_options {
     pub const ZX_VM_PERM_EXECUTE: Self = Self(4);
 }
 
+impl std::ops::BitAnd for zx_vmar_protect_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vmar_protect_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vmar_protect_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vmar_protect_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vmar_protect_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vmar_protect_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_profile_scheduler_priority(i32);
+pub struct zx_profile_scheduler_priority(pub i32);
 
 impl zx_profile_scheduler_priority {
     pub const ZX_PRIORITY_LOWEST: Self = Self(0);
@@ -947,25 +2315,139 @@ impl zx_profile_scheduler_priority {
     pub const ZX_PRIORITY_HIGHEST: Self = Self(31);
 }
 
+impl std::ops::BitAnd for zx_profile_scheduler_priority {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_profile_scheduler_priority {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_profile_scheduler_priority {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_profile_scheduler_priority {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_profile_scheduler_priority {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_profile_scheduler_priority {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_profile_info_type(u32);
+pub struct zx_profile_info_type(pub u32);
 
 impl zx_profile_info_type {
     pub const ZX_PROFILE_INFO_SCHEDULER: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_profile_info_type {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_profile_info_type {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_profile_info_type {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_profile_info_type {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_profile_info_type {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_profile_info_type {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_debuglog_create_options(u32);
+pub struct zx_debuglog_create_options(pub u32);
 
 impl zx_debuglog_create_options {
     pub const ZX_LOG_FLAG_READABLE: Self = Self(1073741824);
 }
 
+impl std::ops::BitAnd for zx_debuglog_create_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_debuglog_create_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_debuglog_create_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_debuglog_create_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_debuglog_create_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_debuglog_create_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_interrupt_options(u32);
+pub struct zx_interrupt_options(pub u32);
 
 impl zx_interrupt_options {
     pub const ZX_INTERRUPT_REMAP_IRQ: Self = Self(1);
@@ -979,18 +2461,94 @@ impl zx_interrupt_options {
     pub const ZX_INTERRUPT_VIRTUAL: Self = Self(16);
 }
 
+impl std::ops::BitAnd for zx_interrupt_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_interrupt_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_interrupt_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_interrupt_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_interrupt_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_interrupt_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_iommu_type(u32);
+pub struct zx_iommu_type(pub u32);
 
 impl zx_iommu_type {
     pub const ZX_IOMMU_TYPE_DUMMY: Self = Self(0);
     pub const ZX_IOMMU_TYPE_INTEL: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_iommu_type {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_iommu_type {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_iommu_type {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_iommu_type {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_iommu_type {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_iommu_type {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_bti_pin_options(u32);
+pub struct zx_bti_pin_options(pub u32);
 
 impl zx_bti_pin_options {
     pub const ZX_BTI_PERM_READ: Self = Self(1);
@@ -1000,9 +2558,47 @@ impl zx_bti_pin_options {
     pub const ZX_BTI_CONTIGUOUS: Self = Self(16);
 }
 
+impl std::ops::BitAnd for zx_bti_pin_options {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_bti_pin_options {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_bti_pin_options {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_bti_pin_options {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_bti_pin_options {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_bti_pin_options {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_rsrc_kind_vals(u32);
+pub struct zx_rsrc_kind_vals(pub u32);
 
 impl zx_rsrc_kind_vals {
     pub const ZX_RSRC_KIND_MMIO: Self = Self(0);
@@ -1014,9 +2610,47 @@ impl zx_rsrc_kind_vals {
     pub const ZX_RSRC_KIND_SMC: Self = Self(6);
 }
 
+impl std::ops::BitAnd for zx_rsrc_kind_vals {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_rsrc_kind_vals {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_rsrc_kind_vals {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_rsrc_kind_vals {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_rsrc_kind_vals {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_rsrc_kind_vals {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_guest_trap_kind(u32);
+pub struct zx_guest_trap_kind(pub u32);
 
 impl zx_guest_trap_kind {
     pub const ZX_GUEST_TRAP_BELL: Self = Self(0);
@@ -1024,26 +2658,140 @@ impl zx_guest_trap_kind {
     pub const ZX_GUEST_TRAP_IO: Self = Self(2);
 }
 
+impl std::ops::BitAnd for zx_guest_trap_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_guest_trap_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_guest_trap_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_guest_trap_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_guest_trap_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_guest_trap_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vcpu_read_state_kind(u32);
+pub struct zx_vcpu_read_state_kind(pub u32);
 
 impl zx_vcpu_read_state_kind {
     pub const ZX_VCPU_STATE: Self = Self(0);
 }
 
+impl std::ops::BitAnd for zx_vcpu_read_state_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vcpu_read_state_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vcpu_read_state_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vcpu_read_state_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vcpu_read_state_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vcpu_read_state_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_vcpu_write_state_kind(u32);
+pub struct zx_vcpu_write_state_kind(pub u32);
 
 impl zx_vcpu_write_state_kind {
     pub const ZX_VCPU_STATE: Self = Self(0);
     pub const ZX_VCPU_IO: Self = Self(1);
 }
 
+impl std::ops::BitAnd for zx_vcpu_write_state_kind {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_vcpu_write_state_kind {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_vcpu_write_state_kind {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_vcpu_write_state_kind {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_vcpu_write_state_kind {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_vcpu_write_state_kind {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 #[repr(C)]
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub struct zx_system_powerctl_cmd(u32);
+pub struct zx_system_powerctl_cmd(pub u32);
 
 impl zx_system_powerctl_cmd {
     pub const ZX_SYSTEM_POWERCTL_ENABLE_ALL_CPUS: Self = Self(1);
@@ -1056,6 +2804,44 @@ impl zx_system_powerctl_cmd {
     pub const ZX_SYSTEM_POWERCTL_SHUTDOWN: Self = Self(8);
 }
 
+impl std::ops::BitAnd for zx_system_powerctl_cmd {
+    type Output = Self;
+    fn bitand(self, rhs: Self) -> Self {
+        Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitAndAssign for zx_system_powerctl_cmd {
+    fn bitand_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 & rhs.0)
+    }
+}
+
+impl std::ops::BitOr for zx_system_powerctl_cmd {
+    type Output = Self;
+    fn bitor(self, rhs: Self) -> Self {
+        Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitOrAssign for zx_system_powerctl_cmd {
+    fn bitor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 | rhs.0)
+    }
+}
+
+impl std::ops::BitXor for zx_system_powerctl_cmd {
+    type Output = Self;
+    fn bitxor(self, rhs: Self) -> Self {
+        Self(self.0 ^ rhs.0)
+    }
+}
+
+impl std::ops::BitXorAssign for zx_system_powerctl_cmd {
+    fn bitxor_assign(&mut self, rhs: Self) {
+        *self = Self(self.0 ^ rhs.0)
+    }
+}
 
 #[repr(C)]
 #[derive(Copy, Clone)]
