@@ -169,10 +169,13 @@
           },
           "legacy_service": {
             "title": "Used legacy service source path",
-            "description": "The path under which a legacy service is offered to this component",
-            "allOf": [
+            "description": "A path, or a list of paths, under which a legacy service is offered to this component",
+            "oneOf": [
               {
                 "$ref": "#/definitions/path-clause"
+              },
+              {
+                "$ref": "#/definitions/path-clause-multiple"
               }
             ],
             "examples": [

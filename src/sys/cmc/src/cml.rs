@@ -242,9 +242,9 @@ pub enum OneOrMany<T> {
 }
 
 impl<T: Clone> OneOrMany<T> {
-    pub fn to_vec(self: OneOrMany<T>) -> Vec<T> {
+    pub fn to_vec(&self) -> Vec<T> {
         match self {
-            OneOrMany::One(x) => return vec![x],
+            OneOrMany::One(x) => return vec![x.clone()],
             OneOrMany::Many(xs) => return xs.to_vec(),
         }
     }
@@ -334,8 +334,6 @@ impl CapabilityClause for Use {
     fn service(&self) -> &Option<String> {
         &self.service
     }
-    // TODO(340156): Only OneOrMany::One legacy_service is supported for now. Teach `use` rules to
-    // accept OneOrMany::Many legacy_services.
     fn legacy_service(&self) -> &Option<OneOrMany<String>> {
         &self.legacy_service
     }

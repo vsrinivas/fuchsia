@@ -98,32 +98,47 @@ fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
 fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
     let mut out_uses = vec![];
     for use_ in use_in {
-        let out = if let Some(p) = use_.service() {
+        if let Some(p) = use_.service() {
             let source = extract_use_source(use_)?;
             let target_id = one_target_capability_id(use_, use_)?;
-            Ok(cm::Use::Service(cm::UseService {
+            out_uses.push(cm::Use::Service(cm::UseService {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
-            }))
-        } else if let Some(OneOrMany::One(p)) = use_.legacy_service() {
+            }));
+        } else if let Some(p) = use_.legacy_service() {
             let source = extract_use_source(use_)?;
-            let target_id = one_target_capability_id(use_, use_)?;
-            Ok(cm::Use::LegacyService(cm::UseLegacyService {
-                source,
-                source_path: cm::Path::new(p.clone())?,
-                target_path: cm::Path::new(target_id)?,
-            }))
+            let target_ids = all_target_capability_ids(use_, use_)
+                .ok_or(Error::internal("no capability"))?
+                .to_vec();
+            let source_ids = p.to_vec();
+            for target_id in target_ids {
+                let target_path = cm::Path::new(target_id)?;
+                // When multiple source paths are provided, there is no way to alias each one, so
+                // source_path == target_path.
+                // When one source path is provided, source_path may be aliased to a different
+                // target_path, so we source_paths[0] to derive the source_path.
+                let source_path = if source_ids.len() == 1 {
+                    cm::Path::new(source_ids[0].clone())?
+                } else {
+                    target_path.clone()
+                };
+                out_uses.push(cm::Use::LegacyService(cm::UseLegacyService {
+                    source: source.clone(),
+                    source_path,
+                    target_path,
+                }));
+            }
         } else if let Some(p) = use_.directory() {
             let source = extract_use_source(use_)?;
             let target_id = one_target_capability_id(use_, use_)?;
             let rights = extract_use_rights(use_)?;
-            Ok(cm::Use::Directory(cm::UseDirectory {
+            out_uses.push(cm::Use::Directory(cm::UseDirectory {
                 source,
                 source_path: cm::Path::new(p.clone())?,
                 target_path: cm::Path::new(target_id)?,
                 rights,
-            }))
+            }));
         } else if let Some(p) = use_.storage() {
             let target_path = match all_target_capability_ids(use_, use_) {
                 Some(OneOrMany::One(target_path)) => Ok(cm::Path::new(target_path).ok()),
@@ -132,16 +147,15 @@ fn translate_use(use_in: &Vec<cml::Use>) -> Result<Vec<cm::Use>, Error> {
                 }
                 None => Ok(None),
             }?;
-            Ok(cm::Use::Storage(cm::UseStorage {
+            out_uses.push(cm::Use::Storage(cm::UseStorage {
                 type_: str_to_storage_type(p.as_str())?,
                 target_path,
-            }))
+            }));
         } else if let Some(p) = use_.runner() {
-            Ok(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
+            out_uses.push(cm::Use::Runner(cm::UseRunner { source_name: cm::Name::new(p.clone())? }))
         } else {
-            Err(Error::internal(format!("no capability")))
-        }?;
-        out_uses.push(out);
+            return Err(Error::internal(format!("no capability")));
+        };
     }
     Ok(out_uses)
 }
@@ -211,41 +225,26 @@ fn translate_offer(
                     target_path: cm::Path::new(target_id)?,
                 }));
             }
-        } else if let Some(OneOrMany::One(p)) = offer.legacy_service() {
+        } else if let Some(p) = offer.legacy_service() {
             let source = extract_offer_source(offer)?;
             let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
+            let source_ids = p.to_vec();
             for (target, target_id) in targets {
+                // When multiple source paths are provided, there is no way to alias each one, so
+                // source_path == target_path.
+                // When one source path is provided, source_path may be aliased to a different
+                // target_path, so we source_ids[0] to derive the source_path.
+                let source_path = if source_ids.len() == 1 {
+                    cm::Path::new(source_ids[0].clone())?
+                } else {
+                    cm::Path::new(target_id.clone())?
+                };
                 out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
-                    source_path: cm::Path::new(p.clone())?,
+                    source_path,
                     source: source.clone(),
                     target,
                     target_path: cm::Path::new(target_id)?,
                 }));
-            }
-        } else if let Some(OneOrMany::Many(p)) = offer.legacy_service() {
-            let source = extract_offer_source(offer)?;
-            let targets = extract_all_targets_for_each_child(offer, all_children, all_collections)?;
-            for (target, target_id) in targets {
-                let target_path = cm::Path::new(target_id)?;
-                // When multiple source paths are provided, there is no way to alias each one, so
-                // source_path == target_path.
-                // When one source path is provided, source_path may be aliased to a different
-                // target_path, so we p[0] to derive the source_path.
-                if p.len() == 1 {
-                    out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
-                        source_path: cm::Path::new(p[0].clone())?,
-                        source: source.clone(),
-                        target,
-                        target_path,
-                    }));
-                } else {
-                    out_offers.push(cm::Offer::LegacyService(cm::OfferLegacyService {
-                        source_path: target_path.clone(),
-                        source: source.clone(),
-                        target,
-                        target_path,
-                    }));
-                }
             }
         } else if let Some(p) = offer.directory() {
             let source = extract_offer_source(offer)?;
@@ -449,7 +448,7 @@ fn extract_storage_targets(
         .collect()
 }
 
-// Return a list of (child, capability target_id) expressed in the `offer`.
+// Return a list of (child, target capability id) expressed in the `offer`.
 fn extract_all_targets_for_each_child(
     in_obj: &cml::Offer,
     all_children: &HashSet<&cml::Name>,
@@ -478,6 +477,7 @@ where
     U: cml::AsClause,
 {
     if let Some(as_) = to_obj.r#as() {
+        // We've already validated that when `as` is specified, only 1 source id exists.
         Some(OneOrMany::One(as_.clone()))
     } else {
         if let Some(p) = in_obj.service() {
@@ -1267,6 +1267,7 @@ mod tests {
                 "use": [
                     { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                     { "legacy_service": "/fonts/LegacyCoolFonts", "as": "/svc/fuchsia.fonts.LegacyProvider" },
+                    { "legacy_service": [ "/fonts/ReallyGoodFonts", "/fonts/IWouldNeverUseTheseFonts"]},
                 ],
                 "expose": [
                     { "directory": "/volumes/blobfs", "from": "self", "rights": ["r*"]},
@@ -1325,6 +1326,24 @@ mod tests {
                 },
                 "source_path": "/fonts/LegacyCoolFonts",
                 "target_path": "/svc/fuchsia.fonts.LegacyProvider"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/fonts/ReallyGoodFonts",
+                "target_path": "/fonts/ReallyGoodFonts"
+            }
+        },
+        {
+            "legacy_service": {
+                "source": {
+                    "realm": {}
+                },
+                "source_path": "/fonts/IWouldNeverUseTheseFonts",
+                "target_path": "/fonts/IWouldNeverUseTheseFonts"
             }
         }
     ],

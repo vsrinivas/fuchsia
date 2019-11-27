@@ -173,7 +173,7 @@ impl<'a> CapabilityId<'a> {
         }
     }
 
-    /// Given a CapabilityClause (such as an Offer or Expose), return the set of target identifiers.
+    /// Given a CapabilityClause (Use, Offer or Expose), return the set of target identifiers.
     ///
     /// When only one capability identifier is specified, the target identifier name is derived
     /// using the "as" clause. If an "as" clause is not specified, the target identifier is the same
@@ -200,10 +200,9 @@ impl<'a> CapabilityId<'a> {
                     "\"as\" field can only be specified when one `legacy_service` is supplied.",
                 )),
 
-                (None, _) => Ok(legacy_svcs
-                    .iter()
-                    .map(|svc: &std::string::String| CapabilityId::Path(svc))
-                    .collect()),
+                (None, _) => {
+                    Ok(legacy_svcs.iter().map(|svc: &String| CapabilityId::Path(svc)).collect())
+                }
             };
         } else if let Some(p) = clause.directory().as_ref() {
             return Ok(vec![CapabilityId::Path(alias.unwrap_or(p))]);
@@ -211,14 +210,9 @@ impl<'a> CapabilityId<'a> {
             return Ok(vec![CapabilityId::Runner(alias.unwrap_or(p))]);
         }
 
-        // Storage does not support "as" aliases. Return an error if it is
-        // used.
+        // Offers rules prohibit using the "as" clause for storage; this is validated outside the
+        // scope of this function.
         if let Some(p) = clause.storage().as_ref() {
-            if alias.is_some() {
-                return Err(Error::validate(
-                    "\"as\" field cannot be used for storage offer targets",
-                ));
-            }
             return Ok(vec![CapabilityId::StorageType(p)]);
         }
 
@@ -257,8 +251,9 @@ impl<'a> ValidationContext<'a> {
 
         // Validate "use".
         if let Some(uses) = self.document.r#use.as_ref() {
+            let mut used_ids = HashSet::new();
             for use_ in uses.iter() {
-                self.validate_use(&use_)?;
+                self.validate_use(&use_, &mut used_ids)?;
             }
         }
 
@@ -295,7 +290,11 @@ impl<'a> ValidationContext<'a> {
         Ok(())
     }
 
-    fn validate_use(&self, use_: &cml::Use) -> Result<(), Error> {
+    fn validate_use(
+        &self,
+        use_: &'a cml::Use,
+        used_ids: &mut HashSet<CapabilityId<'a>>,
+    ) -> Result<(), Error> {
         let storage = use_.storage.as_ref().map(|s| s.as_str());
         match (storage, &use_.r#as) {
             (Some("meta"), Some(_)) => {
@@ -309,6 +308,18 @@ impl<'a> ValidationContext<'a> {
             }
             _ => Ok(()),
         }?;
+
+        // Disallow multiple capability ids of the same name.
+        let capability_ids = CapabilityId::from_clause(use_)?;
+        for capability_id in capability_ids {
+            if !used_ids.insert(capability_id) {
+                return Err(Error::validate(format!(
+                    "\"{}\" is a duplicate \"use\" target {}",
+                    capability_id.as_str(),
+                    capability_id.type_str()
+                )));
+            }
+        }
 
         // All directory "use" expressions must have directory rights.
         if use_.directory.is_some() {
@@ -400,6 +411,13 @@ impl<'a> ValidationContext<'a> {
                      or \"collections\"",
                     to
                 )));
+            }
+
+            // Storage cannot be aliased when offered. Return an error if it is used.
+            if offer.storage.is_some() && offer.r#as.is_some() {
+                return Err(Error::validate(
+                    "\"as\" field cannot be used for storage offer targets",
+                ));
             }
 
             // Ensure that a target is not offered more than once.
@@ -1633,8 +1651,9 @@ mod tests {
                 "use": [
                   { "service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
                   { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
-                  { "legacy_service": "/fonts/CoolFonts", "as": "/svc/fuchsia.fonts.Provider" },
-                  { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "legacy_service": "/fonts/CoolFonts", "as": "/svc/MyFonts" },
+                  { "legacy_service": "/svc/fuchsia.test.hub.HubReport", "from": "framework" },
+                  { "legacy_service": ["/svc/fuchsia.ui.scenic.Scenic", "/svc/fuchsia.net.Connectivity"] },
                   {
                     "directory": "/data/assets",
                     "rights": ["rw*"],
@@ -1683,6 +1702,44 @@ mod tests {
                 ]
             }),
             result = Err(Error::validate_schema(CML_SCHEMA, "Pattern condition is not met at /use/0/from")),
+        },
+        test_cml_use_bad_as => {
+            input = json!({
+                "use": [
+                    {
+                        "legacy_service": ["/fonts/CoolFonts", "/fonts/FunkyFonts"],
+                        "as": "/fonts/MyFonts"
+                    }
+                ]
+            }),
+            result = Err(Error::validate("\"as\" field can only be specified when one `legacy_service` is supplied.")),
+        },
+        test_cml_use_bad_duplicate_targets => {
+            input = json!({
+                "use": [
+                  { "service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                  { "legacy_service": "/svc/fuchsia.sys2.Realm", "from": "framework" },
+                ],
+            }),
+            result = Err(Error::validate("\"/svc/fuchsia.sys2.Realm\" is a duplicate \"use\" target path")),
+        },
+        test_cml_use_bad_duplicate_legacy_service => {
+            input = json!({
+                "use": [
+                  { "legacy_service": ["/svc/fuchsia.sys2.Realm", "/svc/fuchsia.sys2.Realm"] },
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/legacy_service")),
+        },
+        test_cml_use_empty_legacy_services => {
+            input = json!({
+                "use": [
+                    {
+                        "legacy_service": [],
+                    },
+                ],
+            }),
+            result = Err(Error::validate_schema(CML_SCHEMA, "OneOf conditions are not met at /use/0/legacy_service")),
         },
 
         // expose
