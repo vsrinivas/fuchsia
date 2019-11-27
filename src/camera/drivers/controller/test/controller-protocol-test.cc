@@ -251,6 +251,42 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Check if GDC node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
+
+    // Validate the configured and supported streams for Input node.
+    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    ASSERT_EQ(result.value()->supported_streams().size(), 2u);
+    EXPECT_EQ(result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    EXPECT_EQ(result.value()->supported_streams().at(1),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    // Validate the configured and supported streams for GDC node.
+    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    // Validate the configured and supported streams for Output node.
+    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
   }
 
   void TestConfigure_MonitorConfig_Stream2() {
@@ -271,6 +307,7 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     PipelineInfo info;
     info.output_buffers = std::move(buffer_collection);
     info.image_format_index = 0;
+
     info.node = *stream_config_node;
     info.stream_config = &stream_config;
 
@@ -289,6 +326,33 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
 
     // Check if GDC node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
+
+    // Validate the configured and supported streams for Input node.
+    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    ASSERT_EQ(result.value()->supported_streams().size(), 1u);
+    EXPECT_EQ(result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    // Validate the configured and supported streams for GDC node.
+    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    // Validate the configured and supported streams for Output node.
+    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
+
+    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::MONITORING);
   }
 
   void TestConfigure_VideoConfig_Stream1() {
@@ -332,6 +396,62 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     // Check if GDC1 & GDC2 node was created.
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->type());
     EXPECT_EQ(NodeType::kGdc, graph_result.value()->parent_node()->parent_node()->type());
+
+    // Validate the configured and supported streams for Input node.
+    ASSERT_EQ(result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    ASSERT_EQ(result.value()->supported_streams().size(), 2u);
+    EXPECT_EQ(result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_EQ(result.value()->supported_streams().at(1),
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    // Validate the configured and supported streams for GDC2 node.
+    ASSERT_EQ(graph_result.value()->parent_node()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    ASSERT_EQ(graph_result.value()->parent_node()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    // Validate the configured and supported streams for GDC1 node.
+    ASSERT_EQ(graph_result.value()->parent_node()->parent_node()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    ASSERT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().size(), 2u);
+    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+    EXPECT_EQ(graph_result.value()->parent_node()->parent_node()->supported_streams().at(1),
+              fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    // Validate the configured and supported streams for Output node.
+    ASSERT_EQ(graph_result.value()->configured_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->configured_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
+
+    ASSERT_EQ(graph_result.value()->supported_streams().size(), 1u);
+    EXPECT_EQ(graph_result.value()->supported_streams().at(0),
+              fuchsia::camera2::CameraStreamType::FULL_RESOLUTION |
+                  fuchsia::camera2::CameraStreamType::MACHINE_LEARNING |
+                  fuchsia::camera2::CameraStreamType::VIDEO_CONFERENCE);
   }
 
   void TestShutdownPathAfterStreamingOn() {

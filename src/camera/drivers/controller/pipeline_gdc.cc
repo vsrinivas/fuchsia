@@ -116,9 +116,10 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   });
 
   // Create GDC Node
-  auto gdc_node = std::make_unique<camera::ProcessNode>(gdc_, internal_gdc_node.type, parent_node,
-                                                        internal_gdc_node.image_formats,
-                                                        std::move(output_buffers_hlcpp));
+  auto gdc_node = std::make_unique<camera::ProcessNode>(
+      gdc_, internal_gdc_node.type, parent_node, internal_gdc_node.image_formats,
+      std::move(output_buffers_hlcpp), info->stream_config->properties.stream_type(),
+      internal_gdc_node.supported_streams);
   if (!gdc_node) {
     FX_LOGS(ERROR) << "Failed to create GDC node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -141,7 +142,6 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGdcNode(
   // Add child node info.
   ChildNodeInfo child_info;
   child_info.child_node = std::move(gdc_node);
-  child_info.stream_types = internal_gdc_node.supported_streams;
   child_info.output_frame_rate = internal_gdc_node.output_frame_rate;
   auto return_value = fit::ok(child_info.child_node.get());
 

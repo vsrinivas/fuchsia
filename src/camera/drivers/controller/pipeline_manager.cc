@@ -81,7 +81,8 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 
   // Create Input Node
   auto processing_node = std::make_unique<camera::ProcessNode>(
-      info->node.type, info->node.image_formats, std::move(buffers), old_buffer_collection);
+      info->node.type, info->node.image_formats, std::move(buffers), old_buffer_collection,
+      info->stream_config->properties.stream_type(), info->node.supported_streams);
   if (!processing_node) {
     FX_LOGS(ERROR) << "Failed to create Input node";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -109,9 +110,11 @@ fit::result<std::unique_ptr<ProcessNode>, zx_status_t> PipelineManager::CreateIn
 }
 
 fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
-    ProcessNode* parent_node, const InternalConfigNode& internal_output_node) {
+    PipelineInfo* info, ProcessNode* parent_node, const InternalConfigNode& internal_output_node) {
   // Create Output Node
-  auto output_node = std::make_unique<camera::ProcessNode>(internal_output_node.type, parent_node);
+  auto output_node = std::make_unique<camera::ProcessNode>(
+      internal_output_node.type, parent_node, info->stream_config->properties.stream_type(),
+      internal_output_node.supported_streams);
   if (!output_node) {
     FX_LOGS(ERROR) << "Failed to create output ProcessNode";
     return fit::error(ZX_ERR_NO_MEMORY);
@@ -130,7 +133,6 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateOutputNode(
   // Add child node info.
   ChildNodeInfo child_info;
   child_info.child_node = std::move(output_node);
-  child_info.stream_types = internal_output_node.supported_streams;
   child_info.output_frame_rate = internal_output_node.output_frame_rate;
   parent_node->AddChildNodeInfo(std::move(child_info));
   return result;
@@ -167,7 +169,7 @@ fit::result<ProcessNode*, zx_status_t> PipelineManager::CreateGraph(
     }
     // Output Node
     case NodeType::kOutputStream: {
-      result = CreateOutputNode(parent_node, *next_node_internal);
+      result = CreateOutputNode(info, parent_node, *next_node_internal);
       if (result.is_error()) {
         FX_LOGS(ERROR) << "Failed to configure Output Node";
         // TODO(braval): Handle already configured nodes

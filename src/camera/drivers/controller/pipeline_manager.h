@@ -55,7 +55,7 @@ class PipelineManager {
   fit::result<std::unique_ptr<ProcessNode>, zx_status_t> CreateInputNode(PipelineInfo* info);
 
   fit::result<ProcessNode*, zx_status_t> CreateOutputNode(
-      ProcessNode* parent_node, const InternalConfigNode& internal_output_node);
+      PipelineInfo* info, ProcessNode* parent_node, const InternalConfigNode& internal_output_node);
 
   fit::result<ProcessNode*, zx_status_t> CreateGdcNode(PipelineInfo* info, ProcessNode* parent_node,
                                                        const InternalConfigNode& internal_gdc_node);

@@ -26,8 +26,6 @@ class StreamImpl;
 struct ChildNodeInfo {
   // Pointer to the child node.
   std::shared_ptr<ProcessNode> child_node;
-  // The Stream types this child node supports
-  std::vector<fuchsia::camera2::CameraStreamType> stream_types;
   // The frame rate for this node.
   fuchsia::camera2::FrameRate output_frame_rate;
 };
@@ -37,26 +35,38 @@ class ProcessNode {
   DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ProcessNode);
   ProcessNode(NodeType type, std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
               fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
-              fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection)
+              fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection,
+              fuchsia::camera2::CameraStreamType current_stream_type,
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : type_(type),
         parent_node_(nullptr),
         output_buffer_collection_(std::move(output_buffer_collection)),
         output_image_formats_(output_image_formats),
         old_output_buffer_collection_(old_output_buffer_collection),
         isp_callback_{OnFrameAvailable, this},
-        enabled_(false) {
+        enabled_(false),
+        supported_streams_(supported_streams) {
     ZX_ASSERT(type == NodeType::kInputStream);
+    configured_streams_.push_back(current_stream_type);
   }
 
-  explicit ProcessNode(NodeType type, ProcessNode* parent_node)
-      : type_(type), parent_node_(parent_node), enabled_(false) {
+  explicit ProcessNode(NodeType type, ProcessNode* parent_node,
+                       fuchsia::camera2::CameraStreamType current_stream_type,
+                       std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
+      : type_(type),
+        parent_node_(parent_node),
+        enabled_(false),
+        supported_streams_(supported_streams) {
     ZX_ASSERT(type == NodeType::kOutputStream);
     ZX_ASSERT(parent_node_ != nullptr);
+    configured_streams_.push_back(current_stream_type);
   }
 
   ProcessNode(const ddk::GdcProtocolClient& gdc, NodeType type, ProcessNode* parent_node,
               std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats,
-              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection)
+              fuchsia::sysmem::BufferCollectionInfo_2 output_buffer_collection,
+              fuchsia::camera2::CameraStreamType current_stream_type,
+              std::vector<fuchsia::camera2::CameraStreamType> supported_streams)
       : type_(type),
         parent_node_(parent_node),
         output_buffer_collection_(std::move(output_buffer_collection)),
@@ -64,8 +74,10 @@ class ProcessNode {
         hw_accelerator_frame_callback_{OnFrameAvailable, this},
         hw_accelerator_res_callback_{OnResChange, this},
         gdc_(gdc),
-        enabled_(false) {
+        enabled_(false),
+        supported_streams_(supported_streams) {
     ZX_ASSERT(type == NodeType::kGdc);
+    configured_streams_.push_back(current_stream_type);
   }
 
   ~ProcessNode() {
@@ -135,6 +147,12 @@ class ProcessNode {
 
   ProcessNode* parent_node() { return parent_node_; }
 
+  std::vector<fuchsia::camera2::CameraStreamType> configured_streams() {
+    return configured_streams_;
+  }
+
+  std::vector<fuchsia::camera2::CameraStreamType> supported_streams() { return supported_streams_; }
+
   // Adds a child info in the vector
   void AddChildNodeInfo(ChildNodeInfo info) { child_nodes_info_.push_back(std::move(info)); }
   // Curent state of the node
@@ -164,7 +182,6 @@ class ProcessNode {
   // Ouput Image formats
   // These are needed when we initialize HW accelerators.
   std::vector<fuchsia::sysmem::ImageFormat_2> output_image_formats_;
-
   // Temporary entry
   fuchsia_sysmem_BufferCollectionInfo old_output_buffer_collection_;
   // Valid for output node
@@ -180,6 +197,10 @@ class ProcessNode {
   ddk::GdcProtocolClient gdc_;
   uint32_t hw_accelerator_task_index_;
   bool enabled_;
+  // The Stream types this node already supports and configured.
+  std::vector<fuchsia::camera2::CameraStreamType> configured_streams_;
+  // The Stream types this node could support as well.
+  std::vector<fuchsia::camera2::CameraStreamType> supported_streams_;
 };
 
 }  // namespace camera
