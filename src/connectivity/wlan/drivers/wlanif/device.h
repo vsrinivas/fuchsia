@@ -57,6 +57,8 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
   void StartCaptureFrames(::fuchsia::wlan::mlme::StartCaptureFramesRequest req,
                           StartCaptureFramesCallback cb) override;
   void StopCaptureFrames() override;
+  // FinalizeAssociationReq is ignored because it is for SoftMAC drivers ONLY.
+  void FinalizeAssociationReq(::fuchsia::wlan::mlme::NegotiatedCapabilities cap) override {}
 
   // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
   void OnScanResult(const wlanif_scan_result_t* result);
