@@ -183,33 +183,7 @@ impl Model {
         Ok(())
     }
 
-    /// Given a realm and target path, lazily bind to the instance in the realm, open the
-    /// exposed-to-framework capability with the given target path.
-    pub async fn bind_instance_open_exposed_to_framework(
-        &self,
-        realm: Arc<Realm>,
-        flags: u32,
-        open_mode: u32,
-        target_path: &CapabilityPath,
-        server_chan: zx::Channel,
-    ) -> Result<(), ModelError> {
-        let eager_children = self.bind_single_instance(realm.clone()).await?;
-        let expose = {
-            let realm = realm.clone();
-            let state = realm.lock_state().await;
-            if state.is_none() {
-                return Err(ModelError::capability_discovery_error(format_err!(
-                    "component hosting capability has uninitialized state: {}",
-                    realm.abs_moniker
-                )));
-            }
-            Self::get_service_exposed_to_framework(state.as_ref().unwrap().decl(), target_path)?
-        };
-        self.open_outgoing(realm, flags, open_mode, &expose.source_path, server_chan).await?;
-        self.bind_eager_children_recursive(eager_children).await?;
-        Ok(())
-    }
-
+    // TODO(fsamuel): Move this to Realm.
     /// Locate an exposed-to-framework service by its `target_path`.
     pub fn get_service_exposed_to_framework(
         component_decl: &ComponentDecl,
