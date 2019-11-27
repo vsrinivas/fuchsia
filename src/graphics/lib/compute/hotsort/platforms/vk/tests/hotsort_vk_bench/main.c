@@ -486,7 +486,7 @@ main(int argc, char const * argv[])
       bool const is_match =
         is_matching_device(&tmp, &hs_target, vendor_id, device_id, key_val_words);
 
-      fprintf(stdout,
+      fprintf(stderr,
               "%c %4X : %4X : %s\n",
               is_match ? '*' : ' ',
               tmp.vendorID,
@@ -953,7 +953,7 @@ main(int argc, char const * argv[])
   //
   // labels
   //
-  fprintf(stdout,
+  fprintf(stderr,
           "Device, "
           "Driver, "
           "Type, "
@@ -1220,7 +1220,7 @@ main(int argc, char const * argv[])
       // REPORT
       //
       fprintf(
-        stdout,
+        stderr,
         "%s, %u.%u.%u.%u, %s, %s, %s, %8u, %8u, %8u, CPU, %s, %9.2f, %6.2f, GPU, %9u, %7.3f, %7.3f, %7.3f, %7.2f, %7.2f\n",
         phy_device_props.deviceName,
         (phy_device_props.driverVersion >> 24) & 0xFF,
