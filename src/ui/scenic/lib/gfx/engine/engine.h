@@ -147,8 +147,7 @@ class Engine : public scheduling::FrameRenderer {
   //
   // Renders a new frame. Returns true if successful, false otherwise.
   scheduling::RenderFrameResult RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> frame,
-                                            zx::time presentation_time,
-                                            zx::event frame_retired) override;
+                                            zx::time presentation_time) override;
 
  private:
   // Initialize all inspect_deprecated::Nodes, so that the Engine state can be observed.

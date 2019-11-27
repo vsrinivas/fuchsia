@@ -709,7 +709,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   // Frame #0 should still have rendered on the GPU; simulate this.
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 0, Now());
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
@@ -719,7 +718,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresentCallbackOnlyWhenFramePresented
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 1, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 1, Now());
   mock_renderer_->SignalFramePresented(/* frame number */ 1, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 1, Now());
   // Both callbacks are signaled (the failed frame #0, and the successful
   // frame #1).
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 2u);
@@ -765,7 +763,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   // Frame #0 should still have rendered on the GPU; simulate this.
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 0, Now());
   EXPECT_EQ(present_count, 0u);
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
 
@@ -775,7 +772,6 @@ TEST_F(FrameSchedulerTest, SignalSuccessfulPresent2CallbackOnlyWhenFramePresente
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 1, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 1, Now());
   mock_renderer_->SignalFramePresented(/* frame number */ 1, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 1, Now());
   // Both callbacks are signaled (the failed frame #0, and the successful
   // frame #1).
   EXPECT_EQ(present_count, 2u);
@@ -907,7 +903,6 @@ TEST_F(FrameSchedulerTest, LowGpuRenderTime_ShouldNotMatter) {
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, gpu_render_time_finish);
   mock_renderer_->SignalFramePresented(/* frame number */ 0, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 0, Now());
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
   EXPECT_EQ(mock_updater_->signal_successful_present_callback_count(), 1u);
@@ -986,7 +981,6 @@ TEST_F(FrameSchedulerTest, LowPresent2GpuRenderTime_ShouldNotMatter) {
   mock_renderer_->SignalFrameCpuRendered(/* frame number */ 0, Now());
   mock_renderer_->SignalFrameRendered(/* frame number */ 0, gpu_render_time_finish);
   mock_renderer_->SignalFramePresented(/* frame number */ 0, Now());
-  mock_renderer_->SignalFrameRetired(/* frame number */ 0, Now());
 
   EXPECT_EQ(mock_renderer_->pending_frames(), 0u);
   EXPECT_EQ(present_count, 1u);

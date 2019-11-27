@@ -162,7 +162,7 @@ void FrameTimings::ValidateRenderTime() {
   // timestamp. Since we know that's actually impossible, adjust the render
   // timestamp to make it a bit more accurate.
   if (rendering_finished_time_ > actual_presentation_time_) {
-    // Reset rendering_finished_time_ and adjust rendering times so that they are
+    // Reset redering_finished_time_ and adjust rendering times so that they are
     // all less than or equal to the corresponding present time.
     rendering_finished_time_ = kTimeUninitialized;
     for (auto& record : swapchain_records_) {

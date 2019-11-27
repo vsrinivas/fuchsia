@@ -36,15 +36,6 @@ class DisplaySwapchainTest;
 // display controller API.
 class DisplaySwapchain : public Swapchain {
  public:
-  // Because apps have neither a way to set frame drop policies nor receive queue depth feedback, we
-  // maintain three buffers to permit recovery from a slow frame as long as the long-term average
-  // frame time is less than the vsync interval.
-  //
-  // Double-buffering is sufficient to pipeline CPU and GPU work, because swapchains only handle GPU
-  // work and presentation. This allows a swapchain with 10ms CPU work and 10ms GPU work to maintain
-  // 60 FPS without tearing and adding at most one frame of latency.
-  static constexpr uint32_t kSwapchainImageCount = 3;
-
   DisplaySwapchain(
       Sysmem* sysmem,
       std::shared_ptr<fuchsia::hardware::display::ControllerSyncPtr> display_controller,
@@ -59,7 +50,7 @@ class DisplaySwapchain : public Swapchain {
   // |Swapchain|
   bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
                            size_t swapchain_index, const HardwareLayerAssignment& hla,
-                           zx::event frame_retired, DrawCallback draw_callback) override;
+                           DrawCallback draw_callback) override;
 
   // Register a callback to be called on each vsync.
   // Only allows a single listener at a time.
@@ -93,7 +84,6 @@ class DisplaySwapchain : public Swapchain {
   };
 
   struct FrameRecord {
-    // This timing is for the frame that is rendered or retired.
     fxl::WeakPtr<scheduling::FrameTimings> frame_timings;
     size_t swapchain_index;
 
@@ -102,37 +92,23 @@ class DisplaySwapchain : public Swapchain {
     zx::event render_finished_event;
     std::unique_ptr<async::Wait> render_finished_wait;
 
-    // Event is signaled when the display is done using a buffer.
-    escher::SemaphorePtr buffer_usable_escher_semaphore;
-    uint64_t buffer_usable_event_id;
-    zx::event buffer_usable_event;
-    std::unique_ptr<async::Wait> buffer_usable_wait;
+    // Event is signaled when the display is done using a frame.
+    zx::event retired_event;
+    uint64_t retired_event_id;
 
     bool presented = false;
-
-    bool unused() const {
-      FXL_CHECK(!prepared());
-      return rendered() && retired();
-    }
-    bool prepared() const { return !rendered() && buffer_usable_wait; }
-    bool rendered() const { return !render_finished_wait || !render_finished_wait->is_pending(); }
-    bool retired() const { return !buffer_usable_wait || !buffer_usable_wait->is_pending(); }
   };
-  std::unique_ptr<FrameRecord> NewFrameRecord();
+  std::unique_ptr<FrameRecord> NewFrameRecord(fxl::WeakPtr<scheduling::FrameTimings> frame_timings,
+                                              size_t swapchain_index);
 
   bool InitializeFramebuffers(escher::ResourceRecycler* resource_recycler,
                               bool use_protected_memory);
-  bool CreateBuffer(fuchsia::sysmem::BufferCollectionTokenSyncPtr local_token,
-                    escher::ResourceRecycler* resource_recycler, bool use_protected_memory,
-                    Framebuffer* buffer);
 
   bool InitializeDisplayLayer();
 
-  // Called when a frame's GPU rendering work is complete.
-  void OnFrameRendered(FrameRecord* record, size_t frame_index, zx::time render_finished_time);
-
-  // Called when a frame is either dropped or retired by the display controller
-  void OnFrameRetired(FrameRecord* record, size_t frame_index, zx::event frame_retired, zx::time retire_time);
+  // When a frame is presented, the previously-presented frame becomes available
+  // as a render target.
+  void OnFrameRendered(size_t frame_index, zx::time render_finished_time);
 
   void OnVsync(uint64_t display_id, uint64_t timestamp, std::vector<uint64_t> image_ids);
 
