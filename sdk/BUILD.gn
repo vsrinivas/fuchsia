@@ -280,6 +280,7 @@ sdk("modular_testing") {
 
   deps = [
     "//sdk/fidl/fuchsia.modular.testing:fuchsia.modular.testing_sdk($fidl_toolchain)",
+    "//sdk/fidl/fuchsia.ui.lifecycle:fuchsia.ui.lifecycle_sdk($fidl_toolchain)",
     "//sdk/lib/modular/testing/cpp:cpp_sdk",
   ]
 }
