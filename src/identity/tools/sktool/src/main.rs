@@ -7,10 +7,10 @@
 #![deny(missing_docs)]
 
 mod ctap_device;
-mod hid_ctap_device;
+mod hid;
 
-use crate::ctap_device::CtapDevice;
-use crate::hid_ctap_device::HidCtapDevice;
+pub use crate::ctap_device::CtapDevice;
+pub use crate::hid::HidCtapDevice;
 use failure::Error;
 use fuchsia_async as fasync;
 use log::info;

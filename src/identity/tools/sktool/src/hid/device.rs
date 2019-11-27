@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::ctap_device::CtapDevice;
+use crate::CtapDevice;
 use async_trait::async_trait;
 use failure::{format_err, Error, ResultExt};
 use fdio::service_connect;
@@ -63,7 +63,6 @@ impl HidCtapDevice {
     }
 
     /// Returns the raw report descriptor.
-    #[allow(dead_code)]
     pub fn report_descriptor(&self) -> &[u8] {
         &self.report_descriptor
     }
