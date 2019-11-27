@@ -61,7 +61,8 @@ class JobEnumerator {
 // and in the current implementation will call platform_halt() when its process
 // and job count reaches zero. The root job is not exposed to user mode, instead
 // the single child Job of the root job is given to the userboot process.
-class JobDispatcher final : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_RIGHTS> {
+class JobDispatcher final
+    : public SoloDispatcher<JobDispatcher, ZX_DEFAULT_JOB_RIGHTS, 0u, lockdep::LockFlagsNestable> {
  public:
   // Traits to belong to the parent's raw job list.
   struct ListTraitsRaw {

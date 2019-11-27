@@ -509,7 +509,14 @@ bool JobDispatcher::EnumerateChildren(JobEnumerator* je, bool recurse) {
   zx_status_t result = ZX_OK;
 
   {
-    Guard<fbl::Mutex> guard{get_lock()};
+    // As EnumerateChildren will recurse we need to give a lock order to the guard. Since we know
+    // our max_height reduces from parent to child, we can build an increasing counter by inverting
+    // the max_height.
+    Guard<fbl::Mutex> guard{&lock_, kRootJobMaxHeight - max_height()};
+    // We had to take the guard directly on lock_ above as the get_lock() virtual method erases the
+    // Nestasble type information. The AssertHeld here allows us to restore the clang capability
+    // analysis.
+    AssertHeld(*get_lock());
 
     proc_refs = ForEachChildInLocked(procs_, &result, [&](fbl::RefPtr<ProcessDispatcher> proc) {
       return je->OnProcess(proc.get()) ? ZX_OK : ZX_ERR_STOP;

@@ -234,7 +234,8 @@ class Dispatcher : private fbl::RefCountedUpgradeable<Dispatcher>,
 // directly contain their state lock. This is a CRTP template type to permit
 // the lock validator to distinguish between locks in different subclasses of
 // SoloDispatcher.
-template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u>
+template <typename Self, zx_rights_t def_rights, zx_signals_t extra_signals = 0u,
+          lockdep::LockFlags Flags = lockdep::LockFlagsNone>
 class SoloDispatcher : public Dispatcher {
  public:
   static constexpr zx_rights_t default_rights() { return def_rights; }
@@ -267,7 +268,7 @@ class SoloDispatcher : public Dispatcher {
   Lock<Mutex>* get_lock() const final { return &lock_; }
 
   const fbl::Canary<CanaryTag<Self>::magic> canary_;
-  mutable DECLARE_MUTEX(SoloDispatcher) lock_;
+  mutable DECLARE_MUTEX(SoloDispatcher, Flags) lock_;
 };
 
 // PeeredDispatchers have opposing endpoints to coordinate state
