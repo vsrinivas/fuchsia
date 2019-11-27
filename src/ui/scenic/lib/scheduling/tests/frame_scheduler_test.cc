@@ -13,6 +13,7 @@ namespace scheduling {
 namespace test {
 
 void FrameSchedulerTest::SetUp() {
+  ::gtest::TestLoopFixture::SetUp();
   fake_vsync_timing_ = std::make_shared<FakeVsyncTiming>();
   mock_updater_ = std::make_unique<MockSessionUpdater>();
   mock_renderer_ = std::make_unique<MockFrameRenderer>();
@@ -23,6 +24,7 @@ void FrameSchedulerTest::TearDown() {
   fake_vsync_timing_.reset();
   mock_updater_.reset();
   mock_renderer_.reset();
+  ::gtest::TestLoopFixture::TearDown();
 }
 
 std::unique_ptr<DefaultFrameScheduler> FrameSchedulerTest::CreateDefaultFrameScheduler() {

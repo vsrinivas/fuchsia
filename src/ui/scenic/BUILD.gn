@@ -54,16 +54,16 @@ test_package("scenic_tests") {
       environments = magma_libvulkan_hardware_envs
     },
     {
-      name = "gfx_swapchain_tests"
-      environments = magma_libvulkan_hardware_envs
-    },
-    {
       name = "gfx_unittests"
       environments = basic_envs + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_util_unittests"
       environments = basic_envs
+    },
+    {
+      name = "gfx_swapchain_tests"
+      environments = basic_envs + magma_libvulkan_hardware_envs
     },
     {
       name = "gfx_viewstate_apptests"

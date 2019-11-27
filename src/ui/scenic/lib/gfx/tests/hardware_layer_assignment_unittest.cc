@@ -19,7 +19,7 @@ class FakeSwapchain : public Swapchain {
   ~FakeSwapchain() override {}
   // Fake DrawAndPresentFrame always returns draw as successful.
   bool DrawAndPresentFrame(fxl::WeakPtr<scheduling::FrameTimings> frame, size_t swapchain_index,
-                           const HardwareLayerAssignment& hla,
+                           const HardwareLayerAssignment& hla, zx::event frame_retired,
                            DrawCallback draw_callback) override {
     return true;
   }

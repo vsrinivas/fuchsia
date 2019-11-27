@@ -176,22 +176,22 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   update_manager_.RatchetPresentCallbacks(presentation_time, frame_number_);
 
   // Create a FrameTimings instance for this frame to track the render and presentation times.
-  auto timings_rendered_callback =
-      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-        if (weak) {
-          weak->OnFrameRendered(timings);
-        } else {
-          FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
-        }
-      };
-  auto timings_presented_callback =
-      [weak = weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
-        if (weak) {
-          weak->OnFramePresented(timings);
-        } else {
-          FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
-        }
-      };
+  auto timings_rendered_callback = [weak =
+                                        weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+    if (weak) {
+      weak->OnFrameRendered(timings);
+    } else {
+      FXL_LOG(ERROR) << "Error, cannot record render time: FrameScheduler does not exist";
+    }
+  };
+  auto timings_presented_callback = [weak =
+                                         weak_factory_.GetWeakPtr()](const FrameTimings& timings) {
+    if (weak) {
+      weak->OnFramePresented(timings);
+    } else {
+      FXL_LOG(ERROR) << "Error, cannot record presentation time: FrameScheduler does not exist";
+    }
+  };
   auto frame_timings = std::make_unique<FrameTimings>(
       frame_number_, presentation_time, wakeup_time_, frame_render_start_time,
       std::move(timings_rendered_callback), std::move(timings_presented_callback));
@@ -201,8 +201,10 @@ void DefaultFrameScheduler::MaybeRenderFrame(async_dispatcher_t*, async::TaskBas
   inspect_frame_number_.Set(frame_number_);
 
   // Render the frame.
-  auto render_frame_result =
-      frame_renderer_->RenderFrame(frame_timings->GetWeakPtr(), presentation_time);
+  zx::event unused_frame_retired;
+  FXL_CHECK(zx::event::create(0, &unused_frame_retired) == ZX_OK);
+  auto render_frame_result = frame_renderer_->RenderFrame(
+      frame_timings->GetWeakPtr(), presentation_time, std::move(unused_frame_retired));
   currently_rendering_ = render_frame_result == kRenderSuccess;
 
   // See SCN-1505 for details of measuring render time.
@@ -406,7 +408,7 @@ DefaultFrameScheduler::UpdateManager::ApplyUpdates(zx::time target_presentation_
   std::for_each(
       session_updaters_.begin(), session_updaters_.end(),
       [this, &sessions_to_update, &update_results, target_presentation_time, latched_time,
-          frame_number](fxl::WeakPtr<SessionUpdater> updater) {
+       frame_number](fxl::WeakPtr<SessionUpdater> updater) {
         auto session_results = updater->UpdateSessions(sessions_to_update, target_presentation_time,
                                                        latched_time, frame_number);
 

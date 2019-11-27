@@ -109,7 +109,8 @@ std::optional<HardwareLayerAssignment> GetHardwareLayerAssignment(const Composit
 }
 
 scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::FrameTimings> timings,
-                                                  zx::time presentation_time) {
+                                                  zx::time presentation_time,
+                                                  zx::event frame_retired) {
   uint64_t frame_number = timings->frame_number();
 
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
@@ -176,7 +177,7 @@ scheduling::RenderFrameResult Engine::RenderFrame(fxl::WeakPtr<scheduling::Frame
     HardwareLayerAssignment& hla = hlas[i];
 
     success &= hla.swapchain->DrawAndPresentFrame(
-        timings, i, hla,
+        timings, i, hla, is_last_hla ? std::move(frame_retired) : zx::event(0),
         [is_last_hla, &frame, escher{escher_}, engine_renderer{engine_renderer_.get()},
          semaphore_chain{escher_->semaphore_chain()}](
             zx::time target_presentation_time, const escher::ImagePtr& output_image,

@@ -202,6 +202,7 @@ executable("unittests") {
 
 executable("swapchain_tests") {
   output_name = "gfx_swapchain_tests"
+
   testonly = true
   sources = [
     "display_swapchain_test.cc",

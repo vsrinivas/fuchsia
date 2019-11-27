@@ -121,9 +121,9 @@ void MockSessionUpdater::AddPresent2Info(scenic_impl::Present2Info info, zx::tim
 }
 
 RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
-                                                 zx::time presentation_time) {
+                                                 zx::time presentation_time,
+                                                 zx::event frame_retired) {
   FXL_CHECK(frame_timings);
-
   const uint64_t frame_number = frame_timings->frame_number();
   FXL_CHECK(frames_.find(frame_number) == frames_.end());
   // Check that no frame numbers were skipped.
@@ -132,7 +132,9 @@ RenderFrameResult MockFrameRenderer::RenderFrame(fxl::WeakPtr<FrameTimings> fram
 
   ++render_frame_call_count_;
   frame_timings->RegisterSwapchains(1);
-  frames_[frame_number] = {.frame_timings = std::move(frame_timings), .swapchain_index = 0};
+  frames_[frame_number] = {.frame_timings = std::move(frame_timings),
+                           .frame_retired_event = std::move(frame_retired),
+                           .swapchain_index = 0};
 
   return render_frame_return_value_;
 }
@@ -141,6 +143,7 @@ void MockFrameRenderer::EndFrame(uint64_t frame_number, zx::time time_done) {
   SignalFrameRendered(frame_number, time_done);
   SignalFrameCpuRendered(frame_number, time_done);
   SignalFramePresented(frame_number, time_done);
+  SignalFrameRetired(frame_number, time_done);
 }
 
 void MockFrameRenderer::SignalFrameRendered(uint64_t frame_number, zx::time time_done) {
@@ -180,6 +183,18 @@ void MockFrameRenderer::SignalFramePresented(uint64_t frame_number, zx::time tim
   CleanUpFrame(frame_number);
 }
 
+void MockFrameRenderer::SignalFrameRetired(uint64_t frame_number, zx::time time_done) {
+  auto find_it = frames_.find(frame_number);
+  FXL_CHECK(find_it != frames_.end());
+
+  auto& frame = find_it->second;
+  FXL_CHECK(frame.frame_presented);
+  FXL_CHECK(frame.frame_retired_event.signal(0, ZX_EVENT_SIGNALED) == ZX_OK);
+  frame.frame_retired = true;
+
+  CleanUpFrame(frame_number);
+}
+
 void MockFrameRenderer::SignalFrameDropped(uint64_t frame_number) {
   auto find_it = frames_.find(frame_number);
   FXL_CHECK(find_it != frames_.end());
@@ -198,7 +213,8 @@ void MockFrameRenderer::CleanUpFrame(uint64_t frame_number) {
   FXL_CHECK(find_it != frames_.end());
 
   auto& frame = find_it->second;
-  if (!frame.frame_rendered || !frame.frame_presented || !frame.frame_cpu_rendered) {
+  if (!frame.frame_rendered || !frame.frame_presented || !frame.frame_cpu_rendered ||
+      !frame.frame_retired) {
     return;
   }
   frames_.erase(frame_number);

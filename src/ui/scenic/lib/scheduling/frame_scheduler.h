@@ -71,13 +71,16 @@ class FrameRenderer {
   // timing for all swapchains that are used as render targets in that frame.
   //
   // If RenderFrame() returns true, the delegate is responsible for calling
-  // FrameTimings::OnFrameRendered/Presented/Dropped(). Otherwise, rendering did not occur for some
+  // FrameTimings::OnFrameRendered/Presented/Dropped() and signaling frame_retired_event to notify
+  // the caller that a render target was released. Otherwise, rendering did not occur for some
   // reason, and the FrameScheduler should not expect to receive any timing information for that
   // frame.
+  //
   // TODO(SCN-1089): these return value semantics are not ideal.  See comments in
   // Engine::RenderFrame() regarding this same issue.
   virtual RenderFrameResult RenderFrame(fxl::WeakPtr<FrameTimings> frame_timings,
-                                        zx::time presentation_time) = 0;
+                                        zx::time presentation_time,
+                                        zx::event frame_retired_event) = 0;
 };
 
 // The FrameScheduler is responsible for scheduling frames to be drawn in response to requests from
