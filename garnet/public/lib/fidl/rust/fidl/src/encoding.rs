@@ -127,8 +127,7 @@ pub const MAGIC_NUMBER_INITIAL: u8 = 1;
 /// This only exists for compatibility tests. Nothing else should change it.
 // TODO(fxb/40023) Remove this once the union-to-xunion migration is complete.
 #[doc(hidden)]
-pub static ENCODE_UNIONS_USING_XUNION_FORMAT: AtomicBool =
-    AtomicBool::new(cfg!(feature = "fidl_write_v1"));
+pub static ENCODE_UNIONS_USING_XUNION_FORMAT: AtomicBool = AtomicBool::new(true);
 
 /// Context for encoding and decoding.
 ///
