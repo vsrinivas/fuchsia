@@ -4,15 +4,11 @@
     },
     "use": [
         {
-            "legacy_service": "/svc/fuchsia.sys2.Realm",
-            "from": "framework"
-        },
-        {
-            "legacy_service": "/svc/fuchsia.test.hub.HubReport",
-            "from": "framework"
-        },
-        {
-            "legacy_service": "/svc/fuchsia.test.breakpoints.BreakpointSystem",
+            "legacy_service": [
+                "/svc/fuchsia.sys2.Realm",
+                "/svc/fuchsia.test.hub.HubReport",
+                "/svc/fuchsia.test.breakpoints.BreakpointSystem",
+            ],
             "from": "framework"
         },
         {

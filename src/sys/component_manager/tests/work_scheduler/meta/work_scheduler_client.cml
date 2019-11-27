@@ -12,10 +12,11 @@
             "legacy_service": "/svc/fuchsia.sys2.WorkSchedulerControl",
         },
         {
-            "legacy_service": "/svc/fuchsia.sys2.WorkScheduler", "from": "framework",
-        },
-        {
-            "legacy_service": "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter", "from": "framework",
+            "legacy_service": [
+                "/svc/fuchsia.sys2.WorkScheduler",
+                "/svc/fuchsia.test.workscheduler.WorkSchedulerDispatchReporter",
+             ],
+             "from": "framework",
         },
     ],
 }

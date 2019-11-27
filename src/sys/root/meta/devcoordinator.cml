@@ -1,18 +1,22 @@
 {
   "program": { "binary": "bin/devcoordinator" },
   "use": [
-    { "directory": "/boot" , "rights": ["rx*"]},
-    { "legacy_service": "/svc/console" },
-    { "legacy_service": "/svc/fuchsia.boot.Arguments" },
-    { "legacy_service": "/svc/fuchsia.boot.FactoryItems" },
-    { "legacy_service": "/svc/fuchsia.boot.Items" },
-    { "legacy_service": "/svc/fuchsia.boot.ReadOnlyLog" },
-    { "legacy_service": "/svc/fuchsia.boot.RootJob" },
-    { "legacy_service": "/svc/fuchsia.boot.RootJobForInspect" },
-    { "legacy_service": "/svc/fuchsia.boot.RootResource" },
-    { "legacy_service": "/svc/fuchsia.boot.WriteOnlyLog" },
-    { "legacy_service": "/svc/fuchsia.hardware.pty.Device" },
-    { "legacy_service": "/svc/fuchsia.kernel.Stats" },
-    { "legacy_service": "/svc/fuchsia.process.Launcher" },
+    {"directory": "/boot" , "rights": ["rx*"]},
+    {
+      "legacy_service": [
+        "/svc/console",
+        "/svc/fuchsia.boot.Arguments",
+        "/svc/fuchsia.boot.FactoryItems",
+        "/svc/fuchsia.boot.Items",
+        "/svc/fuchsia.boot.ReadOnlyLog",
+        "/svc/fuchsia.boot.RootJob",
+        "/svc/fuchsia.boot.RootJobForInspect",
+        "/svc/fuchsia.boot.RootResource",
+        "/svc/fuchsia.boot.WriteOnlyLog",
+        "/svc/fuchsia.hardware.pty.Device",
+        "/svc/fuchsia.kernel.Stats",
+        "/svc/fuchsia.process.Launcher",
+      ]
+    }
   ],
 }

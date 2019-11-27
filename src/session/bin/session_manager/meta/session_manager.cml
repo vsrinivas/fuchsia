@@ -15,11 +15,7 @@
             "from": "framework",
         },
         {
-            "legacy_service": "/svc/fuchsia.cobalt.LoggerFactory",
-            "from": "realm",
-        },
-        {
-            "legacy_service": "/svc/fuchsia.logger.LogSink",
+            "legacy_service": ["/svc/fuchsia.cobalt.LoggerFactory", "/svc/fuchsia.logger.LogSink"],
             "from": "realm",
         },
     ],
