@@ -142,8 +142,8 @@ struct TestAllocatorTraits : public fbl::DefaultAllocatorTraits {
 
 // Actual tests
 
-template <typename ItemTraits, size_t size>
-void AccessRelease() {
+template <typename ItemTraits>
+void AccessRelease(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -192,8 +192,8 @@ struct CountedAllocatorTraits : public TestAllocatorTraits {
 
 size_t CountedAllocatorTraits::allocation_count = 0;
 
-template <typename ItemTraits, size_t size>
-void PushBackInCapacity() {
+template <typename ItemTraits>
+void PushBackInCapacity(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -226,8 +226,8 @@ void PushBackInCapacity() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void PushBackByConstRefInCapacity() {
+template <typename ItemTraits>
+void PushBackByConstRefInCapacity(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -261,8 +261,8 @@ void PushBackByConstRefInCapacity() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void PushBackBeyondCapacity() {
+template <typename ItemTraits>
+void PushBackBeyondCapacity(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -288,8 +288,8 @@ void PushBackBeyondCapacity() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void PushBackByConstRefBeyondCapacity() {
+template <typename ItemTraits>
+void PushBackByConstRefBeyondCapacity(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -316,8 +316,8 @@ void PushBackByConstRefBeyondCapacity() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void PopBack() {
+template <typename ItemTraits>
+void PopBack(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -359,18 +359,29 @@ struct FailingAllocatorTraits {
   static void Deallocate(void* object) { return; }
 };
 
-template <typename ItemType, size_t S>
-struct PartiallyFailingAllocatorTraits : public fbl::DefaultAllocatorTraits {
+// Allocator which will fail allocations over a given size "S".
+//
+// Thread-unsafe: unprotected static variables in use.
+class PartiallyFailingAllocatorTraits : public fbl::DefaultAllocatorTraits {
+ public:
   static void* Allocate(size_t size) {
-    if (size <= sizeof(ItemType) * S) {
+    if (size <= failure_threshold_) {
       return DefaultAllocatorTraits::Allocate(size);
     }
     return nullptr;
   }
+
+  // Fail all allocations exceeding size "s".
+  static void SetFailureThreshold(size_t s) { failure_threshold_ = s; }
+
+ private:
+  static size_t failure_threshold_;
 };
 
-template <typename ItemTraits, size_t size>
-void AllocationFailure() {
+size_t PartiallyFailingAllocatorTraits::failure_threshold_;
+
+template <typename ItemTraits>
+void AllocationFailure(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -398,7 +409,8 @@ void AllocationFailure() {
   // Test that a partially failing allocator stops taking on additional
   // elements
   {
-    fbl::Vector<ItemType, PartiallyFailingAllocatorTraits<ItemType, size>> vector;
+    PartiallyFailingAllocatorTraits::SetFailureThreshold(size * sizeof(ItemType));
+    fbl::Vector<ItemType, PartiallyFailingAllocatorTraits> vector;
     fbl::AllocChecker ac;
     vector.reserve(0, &ac);
     ASSERT_TRUE(ac.check());
@@ -432,8 +444,8 @@ void AllocationFailure() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void Move() {
+template <typename ItemTraits>
+void Move(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -493,8 +505,8 @@ void Move() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void Swap() {
+template <typename ItemTraits>
+void Swap(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -542,8 +554,8 @@ void Swap() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void Iterator() {
+template <typename ItemTraits>
+void Iterator(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -579,8 +591,8 @@ void Iterator() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void InsertDelete() {
+template <typename ItemTraits>
+void InsertDelete(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   Generator<ItemTraits> gen;
@@ -643,8 +655,8 @@ void InsertDelete() {
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
 }
 
-template <typename ItemTraits, size_t size>
-void NoAllocCheck() {
+template <typename ItemTraits>
+void NoAllocCheck(size_t size) {
   using ItemType = typename ItemTraits::ItemType;
 
   ASSERT_TRUE(ItemTraits::CheckCtorDtorCount());
@@ -778,31 +790,30 @@ TEST(VectorTest, VectorDataConstness) {
   static_assert(std::is_const_v<std::remove_pointer_t<decltype(const_int_ptr)>>);
 }
 
-#define RUN_TRAIT_TEST(test_base, test_trait, test_size)         \
-  TEST(VectorTest, test_base##_##test_trait##_Size##test_size) { \
-    auto fn = test_base<test_trait, test_size>;                  \
-    ASSERT_NO_FAILURES(fn());                                    \
+// The set of sizes we run each vector test with.
+const size_t kTestSizes[] = {1, 2, 10, 32, 64, 100};
+
+#define RUN_TRAIT_TEST(test_base, test_trait)     \
+  TEST(VectorTest, test_base##_##test_trait) {    \
+    auto fn = test_base<test_trait>;              \
+    for (size_t size : kTestSizes) { \
+      ASSERT_NO_FAILURES(fn(size));               \
+    }                                             \
   }
 
-#define RUN_FOR_ALL_TRAITS(test_base, test_size)         \
-  RUN_TRAIT_TEST(test_base, ValueTypeTraits, test_size)  \
-  RUN_TRAIT_TEST(test_base, StructTypeTraits, test_size) \
-  RUN_TRAIT_TEST(test_base, UniquePtrTraits, test_size)  \
-  RUN_TRAIT_TEST(test_base, RefPtrTraits, test_size)
+#define RUN_FOR_ALL_TRAITS(test_base)         \
+  RUN_TRAIT_TEST(test_base, ValueTypeTraits)  \
+  RUN_TRAIT_TEST(test_base, StructTypeTraits) \
+  RUN_TRAIT_TEST(test_base, UniquePtrTraits)  \
+  RUN_TRAIT_TEST(test_base, RefPtrTraits)
 
-#define RUN_FOR_ALL(test_base)      \
-  RUN_FOR_ALL_TRAITS(test_base, 1)  \
-  RUN_FOR_ALL_TRAITS(test_base, 2)  \
-  RUN_FOR_ALL_TRAITS(test_base, 10) \
-  RUN_FOR_ALL_TRAITS(test_base, 32) \
-  RUN_FOR_ALL_TRAITS(test_base, 64) \
-  RUN_FOR_ALL_TRAITS(test_base, 100)
+#define RUN_FOR_ALL(test_base) RUN_FOR_ALL_TRAITS(test_base)
 
 RUN_FOR_ALL(AccessRelease)
 RUN_FOR_ALL(PushBackInCapacity)
-RUN_TRAIT_TEST(PushBackByConstRefInCapacity, ValueTypeTraits, 100)
+RUN_TRAIT_TEST(PushBackByConstRefInCapacity, ValueTypeTraits)
 RUN_FOR_ALL(PushBackBeyondCapacity)
-RUN_TRAIT_TEST(PushBackByConstRefBeyondCapacity, ValueTypeTraits, 100)
+RUN_TRAIT_TEST(PushBackByConstRefBeyondCapacity, ValueTypeTraits)
 RUN_FOR_ALL(PopBack)
 RUN_FOR_ALL(AllocationFailure)
 RUN_FOR_ALL(Move)
