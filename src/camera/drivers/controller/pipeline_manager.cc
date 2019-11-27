@@ -24,6 +24,16 @@ const InternalConfigNode* PipelineManager::GetNextNodeInPipeline(PipelineInfo* i
   return nullptr;
 }
 
+bool PipelineManager::IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* node) {
+  auto requested_stream_type = info->stream_config->properties.stream_type();
+  for (const auto& stream_type : node->configured_streams()) {
+    if (stream_type == requested_stream_type) {
+      return true;
+    }
+  }
+  return false;
+}
+
 // NOTE: This API currently supports only single consumer node use cases.
 fit::result<fuchsia::sysmem::BufferCollectionInfo_2, zx_status_t> PipelineManager::GetBuffers(
     const InternalConfigNode& producer, PipelineInfo* info) {
@@ -213,6 +223,12 @@ PipelineManager::ConfigureStreamPipelineHelper(
   return fit::ok(std::move(input_processing_node));
 }
 
+zx_status_t PipelineManager::AppendToExistingGraph(
+    PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
+  // TODO(braval): Add support for appending new nodes to existing graph.
+  return ZX_ERR_NOT_SUPPORTED;
+}
+
 zx_status_t PipelineManager::ConfigureStreamPipeline(
     PipelineInfo* info, fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream) {
   // Input Validations
@@ -223,12 +239,20 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
   switch (info->node.input_stream_type) {
     case fuchsia::camera2::CameraStreamType::FULL_RESOLUTION: {
       if (full_resolution_stream_) {
-        // TODO(braval): If valid it means we need to modify existing graph
-        // TODO(braval): Check if same stream is requested, if so do not allow
-        // Currently we will only be not allowing since we only support ISP debug config.
-        FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
-        return ZX_ERR_ALREADY_BOUND;
+        // If the same stream is requested again, we return failure.
+        if (IsStreamAlreadyCreated(info, full_resolution_stream_.get())) {
+          FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+          return ZX_ERR_ALREADY_BOUND;
+        }
+        // We will now append the requested stream to the existing graph.
+        auto result = AppendToExistingGraph(info, stream);
+        if (result != ZX_OK) {
+          FX_PLOGS(ERROR, result) << "AppendToExistingGraph failed";
+          return result;
+        }
+        return result;
       }
+
       auto result = ConfigureStreamPipelineHelper(info, stream);
       if (result.is_error()) {
         return result.error();
@@ -236,14 +260,23 @@ zx_status_t PipelineManager::ConfigureStreamPipeline(
       full_resolution_stream_ = std::move(result.value());
       break;
     }
+
     case fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION: {
       if (downscaled_resolution_stream_) {
-        // TODO(braval): If valid it means we need to modify existing graph
-        // TODO(braval): Check if same stream is requested, if so do not allow
-        // Currently we will only be not allowing since we only support ISP debug config.
-        FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
-        return ZX_ERR_ALREADY_BOUND;
+        // If the same stream is requested again, we return failure.
+        if (IsStreamAlreadyCreated(info, downscaled_resolution_stream_.get())) {
+          FX_PLOGS(ERROR, ZX_ERR_ALREADY_BOUND) << "Stream already bound";
+          return ZX_ERR_ALREADY_BOUND;
+        }
+        // We will now append the requested stream to the existing graph.
+        auto result = AppendToExistingGraph(info, stream);
+        if (result != ZX_OK) {
+          FX_PLOGS(ERROR, result) << "AppendToExistingGraph failed";
+          return result;
+        }
+        return result;
       }
+
       auto result = ConfigureStreamPipelineHelper(info, stream);
       if (result.is_error()) {
         return result.error();

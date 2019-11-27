@@ -65,6 +65,9 @@ class PipelineManager {
                                                      const InternalConfigNode& internal_node,
                                                      ProcessNode* parent_node);
 
+  zx_status_t AppendToExistingGraph(PipelineInfo* info,
+                                    fidl::InterfaceRequest<fuchsia::camera2::Stream>& stream);
+
   // Gets the next node for the requested stream path
   const InternalConfigNode* GetNextNodeInPipeline(PipelineInfo* info,
                                                   const InternalConfigNode& node);
@@ -87,6 +90,8 @@ class PipelineManager {
       fuchsia::sysmem::ImageFormat_2* hlcpp_image_2);
 
   void OnClientStreamDisconnect(PipelineInfo* info);
+
+  bool IsStreamAlreadyCreated(PipelineInfo* info, ProcessNode* node);
 
  private:
   // This will be going away once we move ISP code to using new

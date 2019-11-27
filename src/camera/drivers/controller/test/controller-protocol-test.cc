@@ -287,6 +287,14 @@ class ControllerProtocolTest : public gtest::TestLoopFixture {
     EXPECT_EQ(graph_result.value()->supported_streams().at(0),
               fuchsia::camera2::CameraStreamType::DOWNSCALED_RESOLUTION |
                   fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+
+    // Check if the stream got created.
+    EXPECT_TRUE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
+    // Change the requested stream type.
+    stream_config.properties.set_stream_type(fuchsia::camera2::CameraStreamType::MACHINE_LEARNING);
+    info.stream_config = &stream_config;
+    // Check for a stream which is not created.
+    EXPECT_FALSE(pipeline_manager_->IsStreamAlreadyCreated(&info, result.value().get()));
   }
 
   void TestConfigure_MonitorConfig_Stream2() {
