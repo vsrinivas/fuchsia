@@ -63,7 +63,6 @@ zx_test("fbl") {
     #
     # See: TODO(ZX-1053)
     sources += [
-      "alloc_checker_tests.cc",
       "condition_variable_tests.cc",
       "ref_counted_tests.cc",
       "ref_counted_upgradeable_tests.cc",

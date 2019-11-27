@@ -18,7 +18,10 @@ enum : unsigned {
 };
 
 void panic_if_armed(unsigned state) {
-  ZX_DEBUG_ASSERT_MSG((state & alloc_armed) == 0, "AllocChecker::check() needs to be called\n");
+#if LK_DEBUGLEVEL > 1
+  if (state & alloc_armed)
+    ZX_PANIC("AllocChecker::check() needs to be called\n");
+#endif
 }
 
 void* checked(size_t size, AllocChecker* ac, void* mem) {

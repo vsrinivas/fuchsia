@@ -68,7 +68,6 @@ class HidButtonsDeviceTest : public HidButtonsDevice {
     fbl::AllocChecker ac;
     using MockPointer = ddk::MockGpio*;
     gpio_mocks_.reset(new (&ac) MockPointer[gpios_count], gpios_count);
-    ZX_ASSERT(ac.check());
     for (size_t i = 0; i < gpios_count; ++i) {
       gpio_mocks_[i] = &gpios[i];
     }

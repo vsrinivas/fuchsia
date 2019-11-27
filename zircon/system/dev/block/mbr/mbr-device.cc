@@ -256,15 +256,9 @@ zx_status_t MbrDevice::Create(zx_device_t* parent,
 
     block_info_t info = block_info;
     info.block_count = entry.num_sectors;
-
-    auto device =
-        fbl::make_unique_checked<MbrDevice>(&ac, parent, name, entry, info, block_op_size);
-    if (!ac.check()) {
-      zxlogf(ERROR, "mbr: Failed to allocate partition device\n");
-      return ZX_ERR_NO_MEMORY;
-    }
-
-    devices_out->push_back(std::move(device), &ac);
+    devices_out->push_back(
+        std::unique_ptr<MbrDevice>(new (&ac) MbrDevice(parent, name, entry, info, block_op_size)),
+        &ac);
     if (!ac.check()) {
       zxlogf(ERROR, "mbr: Failed to allocate partition device\n");
       return ZX_ERR_NO_MEMORY;

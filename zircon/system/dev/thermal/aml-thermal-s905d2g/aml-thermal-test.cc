@@ -726,11 +726,6 @@ class AmlCpuFrequencyTest : public zxtest::Test {
     }
 
     hiu_internal_mmio_ = fbl::Array(new (&ac) uint32_t[kRegSize], kRegSize);
-    if (!ac.check()) {
-      zxlogf(ERROR, "AmlCpuFrequencyTest::SetUp: hiu_internal_mmio_ alloc failed\n");
-      return;
-    }
-
     mock_hiu_internal_mmio_ = {.vaddr = hiu_internal_mmio_.get(),
                                .offset = 0,
                                .size = kRegSize * sizeof(uint32_t),
@@ -1094,11 +1089,6 @@ class AmlThermalTest : public zxtest::Test {
       return;
     }
     cpufreq_scaling_hiu_internal_mmio_ = fbl::Array(new (&ac) uint32_t[kRegSize], kRegSize);
-    if (!ac.check()) {
-      zxlogf(ERROR, "AmlThermalTest::SetUp: cpufreq_scaling_hiu_internal_mmio_ alloc failed\n");
-      return;
-    }
-
     cpufreq_scaling_mock_hiu_internal_mmio_ = {.vaddr = cpufreq_scaling_hiu_internal_mmio_.get(),
                                                .offset = 0,
                                                .size = kRegSize * sizeof(uint32_t),
