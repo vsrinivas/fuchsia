@@ -679,9 +679,18 @@ std::unique_ptr<BlockDevice> Blobfs::Reset() {
 
   // Write the clean bit.
   if (writability_ == Writability::Writable) {
-    storage::UnbufferedOperationsBuilder operations;
-    UpdateFlags(&operations, kBlobFlagClean, true);
-    journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
+    // TODO(fxb/42174): If blobfs initialization failed, it is possible that the
+    // info_mapping_ vmo that we use to send writes to the underlying block device
+    // has not been initialized yet. Change Blobfs::Create ordering to try and get
+    // the object into a valid state as soon as possible and reassess what is needed
+    // in the destructor.
+    if (info_mapping_.start() == nullptr) {
+      FS_TRACE_ERROR("blobfs: Cannot write journal clean bit\n");
+    } else {
+      storage::UnbufferedOperationsBuilder operations;
+      UpdateFlags(&operations, kBlobFlagClean, true);
+      journal_->schedule_task(journal_->WriteMetadata(operations.TakeOperations()));
+    }
   }
   // Waits for all pending writeback operations to complete or fail.
   journal_.reset();
