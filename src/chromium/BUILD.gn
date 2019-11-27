@@ -23,11 +23,21 @@ group("web_runner") {
   ]
 }
 
+# TODO: Move the prebuilt_test_manifest declaration here.
+group("chromium_tests") {
+  testonly = true
+
+  public_deps = [
+    "//topaz/runtime/chromium:chromium_tests",
+  ]
+}
+
 group("tests") {
   testonly = true
 
   deps = [
     ":chromium",
+    ":chromium_tests",
     "web_runner_tests",
   ]
 }
