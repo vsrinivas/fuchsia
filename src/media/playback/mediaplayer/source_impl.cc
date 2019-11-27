@@ -247,7 +247,12 @@ void ElementarySourceImpl::AddStream(
       SimpleStreamSinkImpl::Create(
           *output_stream_type,
           media::TimelineRate(tick_per_second_numerator, tick_per_second_denominator),
-          std::move(simple_stream_sink_request)),
+          std::move(simple_stream_sink_request),
+          /* connection_failure_callback= */
+          [this]() {
+            // on stream sink disconnect
+            Remove();
+          }),
       *output_stream_type);
 }
 
@@ -265,6 +270,41 @@ void ElementarySourceImpl::AddBindingInternal(
 
   // Fire |OnStatusChanged| event for the new client.
   bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status()));
+}
+
+////////////////////////////////////////////////////////////////////////////////
+// AudioConsumerSourceImpl implementation.
+
+// static
+std::unique_ptr<AudioConsumerSourceImpl> AudioConsumerSourceImpl::Create(
+    Graph* graph, fit::closure connection_failure_callback) {
+  FX_DCHECK(graph);
+  return std::make_unique<AudioConsumerSourceImpl>(graph, std::move(connection_failure_callback));
+}
+
+AudioConsumerSourceImpl::AudioConsumerSourceImpl(Graph* graph,
+
+                                                 fit::closure connection_failure_callback)
+    : SourceImpl(graph, std::move(connection_failure_callback)),
+      elementary_source_segment_(ElementarySourceSegment::Create(0, false, false, nullptr)) {
+  SourceImpl::CompleteConstruction(elementary_source_segment_.get());
+}
+
+AudioConsumerSourceImpl::~AudioConsumerSourceImpl() {}
+
+std::unique_ptr<SourceSegment> AudioConsumerSourceImpl::TakeSourceSegment() {
+  FX_DCHECK(elementary_source_segment_);
+  Clear();
+  return std::move(elementary_source_segment_);
+}
+
+void AudioConsumerSourceImpl::SendStatusUpdates() { SourceImpl::SendStatusUpdates(); }
+
+void AudioConsumerSourceImpl::AddStream(
+    std::shared_ptr<SimpleStreamSinkImpl> simple_stream_sink_impl,
+    const StreamType& output_stream_type) {
+  FX_DCHECK(simple_stream_sink_impl);
+  elementary_source_segment_->AddStream(simple_stream_sink_impl, output_stream_type);
 }
 
 }  // namespace media_player
