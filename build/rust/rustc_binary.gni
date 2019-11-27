@@ -10,7 +10,8 @@ import("//build/rust/rustc_artifact.gni")
 #
 #   name
 #     Name of the crate as defined in its manifest file. If not specified, it is
-#     assumed to be the same as the target name.
+#     assumed to be the same as the target name.  All dashes will be replaced
+#     with underscores in the binary name: <name_underscored>
 #
 #   version (optional)
 #     Semver version of the crate as seen on crates.io.
@@ -32,8 +33,10 @@ import("//build/rust/rustc_artifact.gni")
 #
 #   with_unit_tests (optional)
 #     Builds unit tests associated with the binary. This will create a
-#     `<name>_bin_test` test file in the output directory. Equivalent to adding
-#     a `rustc_test` target with that name and the same source_root.
+#     `<name_underscored>_bin_test` test file in the output directory, and a
+#     new GN target called <name>_test.
+#     Equivalent to adding a `rustc_test` target with that name and the same
+#     source_root.
 #
 #   test_environments (optional)
 #     What environments unit tests, if provided, should target. Only used here
@@ -70,7 +73,7 @@ import("//build/rust/rustc_artifact.gni")
 #
 # Example of usage:
 #
-#   rustc_binary("foo") {
+#   rustc_binary("foo-bar") {
 #     deps = [
 #       "//garnet/public/rust/bar",
 #       "//third_party/rust_crates:clap",
@@ -79,6 +82,32 @@ import("//build/rust/rustc_artifact.gni")
 #     ]
 #     with_unit_tests = true
 #   }
+#
+# Example of using the outputs of the above:
+#
+#   package("foo") {
+#     deps = [
+#       ":foo-bar",
+#     ]
+#
+#     binaries = [
+#       {
+#         name = "foo_bar"
+#         dest = "foo-bar"
+#       }
+#    }
+#
+#   test_package("foo-bar-tests") {
+#     deps = [
+#       ":foo-bar_test",
+#     ]
+#
+#    tests = [
+#      {
+#        name = "foo_bar_bin_test"
+#      }
+#    ]
+#
 template("rustc_binary") {
   rustc_artifact(target_name) {
     forward_variables_from(invoker,
