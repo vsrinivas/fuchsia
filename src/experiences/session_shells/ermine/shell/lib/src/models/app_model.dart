@@ -57,6 +57,7 @@ class AppModel {
   ValueNotifier<bool> peekNotifier = ValueNotifier(false);
   ValueNotifier<bool> recentsVisibility = ValueNotifier(false);
   KeyboardShortcuts _keyboardShortcuts;
+  Locale _initialLocale;
   StatusModel status;
   TopbarModel topbarModel;
   String keyboardShortcuts = 'Help Me!';
@@ -94,11 +95,19 @@ class AppModel {
     status = StatusModel.fromStartupContext(_startupContext, onLogout);
   }
 
+  /// Performs initialization before the [App] widget are created.
+  Future<void> init() async {
+    /// Read the initial [Locale].
+    _initialLocale = await localeStream.asBroadcastStream().first;
+  }
+
   SuggestionService get suggestions => SuggestionService(_suggestionsService);
 
   modular.PuppetMaster get puppetMaster => _puppetMaster;
 
   Stream<Locale> get localeStream => LocaleSource(_intl).stream();
+
+  Locale get initialLocale => _initialLocale;
 
   bool get isFullscreen => clustersModel.fullscreenStory != null;
 

@@ -19,16 +19,12 @@ void main() async {
 
   testWidgets('Test locale change', (tester) async {
     final swissFrench = Locale('fr', 'CH');
+
     final model = MockAppModel();
-    when(model.localeStream)
-        .thenAnswer((_) => Stream<Locale>.value(swissFrench));
+    when(model.initialLocale).thenReturn(swissFrench);
     when(model.overviewVisibility).thenReturn(ValueNotifier<bool>(false));
 
     final app = App(model: model);
-
-    await tester.pumpWidget(app);
-    expect(Intl.defaultLocale, null);
-
     await tester.pumpWidget(app);
     expect(Intl.defaultLocale, swissFrench.toString());
   });
