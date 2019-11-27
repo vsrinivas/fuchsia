@@ -1,5 +1,6 @@
 use {
     crate::{
+        model::testing::mocks::ManagedNamespace,
         model::testing::{routing_test_helpers::*, test_helpers::*},
         model::{testing::mocks::FakeOutgoingBinder, AbsoluteMoniker, OutgoingBinder},
         work_scheduler::{
@@ -14,8 +15,7 @@ use {
     },
     fidl_fuchsia_io::{MODE_TYPE_SERVICE, OPEN_RIGHT_READABLE},
     fidl_fuchsia_sys2 as fsys,
-    futures::lock::Mutex,
-    std::{collections::HashMap, convert::TryFrom, ops::Deref, path::Path, sync::Arc},
+    std::{convert::TryFrom, ops::Deref, path::Path, sync::Arc},
 };
 
 struct BindingWorkScheduler {
@@ -46,13 +46,11 @@ async fn new_work_scheduler() -> BindingWorkScheduler {
 }
 
 async fn call_work_scheduler_svc_from_namespace(
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    namespace: &ManagedNamespace,
     should_succeed: bool,
 ) {
     let path = &WORK_SCHEDULER_CAPABILITY_PATH;
-    let dir_proxy =
-        capability_util::get_dir_from_namespace(&path.dirname, resolved_url, namespaces).await;
+    let dir_proxy = capability_util::get_dir_from_namespace(namespace, &path.dirname).await;
     let node_proxy = io_util::open_node(
         &dir_proxy,
         &Path::new(&path.basename),
@@ -80,22 +78,16 @@ async fn check_use_work_scheduler(
 ) {
     let component_name = routing_test.bind_instance(&moniker).await.expect("bind instance failed");
     let component_resolved_url = RoutingTest::resolved_url(&component_name);
-    call_work_scheduler_svc_from_namespace(
-        component_resolved_url,
-        routing_test.namespaces.clone(),
-        should_succeed,
-    )
-    .await;
+    let namespace = routing_test.mock_runner.get_namespace(&component_resolved_url).unwrap();
+    call_work_scheduler_svc_from_namespace(&namespace, should_succeed).await;
 }
 
 async fn call_work_scheduler_control_svc_from_namespace(
-    resolved_url: String,
-    namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+    namespace: &ManagedNamespace,
     path: CapabilityPath,
     should_succeed: bool,
 ) {
-    let dir_proxy =
-        capability_util::get_dir_from_namespace(&path.dirname, resolved_url, namespaces).await;
+    let dir_proxy = capability_util::get_dir_from_namespace(namespace, &path.dirname).await;
     let node_proxy = io_util::open_node(
         &dir_proxy,
         &Path::new(&path.basename),
@@ -128,13 +120,8 @@ async fn check_use_work_scheduler_control(
 ) {
     let component_name = routing_test.bind_instance(&moniker).await.expect("bind instance failed");
     let component_resolved_url = RoutingTest::resolved_url(&component_name);
-    call_work_scheduler_control_svc_from_namespace(
-        component_resolved_url,
-        routing_test.namespaces.clone(),
-        path.clone(),
-        should_succeed,
-    )
-    .await;
+    let namespace = routing_test.mock_runner.get_namespace(&component_resolved_url).unwrap();
+    call_work_scheduler_control_svc_from_namespace(&namespace, path.clone(), should_succeed).await;
 }
 
 ///   a

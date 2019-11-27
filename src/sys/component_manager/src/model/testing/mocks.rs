@@ -16,14 +16,12 @@ use {
         file::simple::read_only,
     },
     fuchsia_zircon as zx,
-    futures::future::BoxFuture,
-    futures::lock::Mutex,
-    futures::prelude::*,
+    futures::{future::BoxFuture, lock::Mutex, prelude::*},
     std::{
         boxed::Box,
         collections::{HashMap, HashSet},
         convert::TryFrom,
-        sync::Arc,
+        sync::{Arc, Mutex as SyncMutex},
     },
 };
 
@@ -148,55 +146,73 @@ impl Resolver for MockResolver {
     }
 }
 
-pub struct MockRunner {
-    pub urls_run: Arc<Mutex<Vec<String>>>,
-    pub namespaces: Namespaces,
-    pub host_fns: HashMap<String, Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
-    pub runtime_host_fns: HashMap<String, Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>>,
+pub type HostFn = Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync>;
+
+pub type ManagedNamespace = Mutex<fsys::ComponentNamespace>;
+
+struct MockRunnerInner {
+    /// List of URLs started by this runner instance.
+    urls_run: Vec<String>,
+
+    /// Namespace for each component, mapping resolved URL to the component's namespace.
+    namespaces: HashMap<String, Arc<Mutex<fsys::ComponentNamespace>>>,
+
+    /// Functions for serving the `outgoing` and `runtime` directories
+    /// of a given compoment. When a component is started, these
+    /// functions will be called with the server end of the directories.
+    outgoing_host_fns: HashMap<String, Arc<HostFn>>,
+    runtime_host_fns: HashMap<String, Arc<HostFn>>,
+
+    /// Set of URLs that the MockRunner will fail the `start` call for.
     failing_urls: HashSet<String>,
 }
 
-pub type Namespaces = Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>;
+pub struct MockRunner {
+    // The internal runner state.
+    //
+    // Inner state is guarded by a std::sync::Mutex to avoid helper
+    // functions needing "async" (and propagating to callers).
+    // std::sync::MutexGuard doesn't have the "Send" trait, so the
+    // compiler will prevent us calling ".await" while holding the lock.
+    inner: SyncMutex<MockRunnerInner>,
+}
 
 impl MockRunner {
     pub fn new() -> Self {
         MockRunner {
-            urls_run: Arc::new(Mutex::new(vec![])),
-            namespaces: Arc::new(Mutex::new(HashMap::new())),
-            host_fns: HashMap::new(),
-            runtime_host_fns: HashMap::new(),
-            failing_urls: HashSet::new(),
+            inner: SyncMutex::new(MockRunnerInner {
+                urls_run: vec![],
+                namespaces: HashMap::new(),
+                outgoing_host_fns: HashMap::new(),
+                runtime_host_fns: HashMap::new(),
+                failing_urls: HashSet::new(),
+            }),
         }
     }
 
-    pub fn cause_failure(&mut self, name: &str) {
-        self.failing_urls.insert(format!("test:///{}_resolved", name));
+    /// Cause the component `name` to return an error when started.
+    pub fn cause_failure(&self, name: &str) {
+        self.inner.lock().unwrap().failing_urls.insert(format!("test:///{}_resolved", name));
     }
 
-    async fn start_async(
-        &self,
-        start_info: fsys::ComponentStartInfo,
-        _server_end: ServerEnd<fsys::ComponentControllerMarker>,
-    ) -> Result<(), RunnerError> {
-        let resolved_url = start_info.resolved_url.unwrap();
-        if self.failing_urls.contains(&resolved_url) {
-            return Err(RunnerError::component_launch_error(resolved_url, format_err!("ouch")));
-        }
-        self.urls_run.lock().await.push(resolved_url.clone());
-        self.namespaces.lock().await.insert(resolved_url.clone(), start_info.ns.unwrap());
-        // If no host_fn was provided, then start_info.outgoing_dir will be
-        // automatically closed once it goes out of scope at the end of this
-        // function.
-        let host_fn = self.host_fns.get(&resolved_url);
-        if let Some(host_fn) = host_fn {
-            host_fn(start_info.outgoing_dir.unwrap());
-        }
+    /// Return a list of URLs that have been run by this runner.
+    pub fn urls_run(&self) -> Vec<String> {
+        self.inner.lock().unwrap().urls_run.clone()
+    }
 
-        let runtime_host_fn = self.runtime_host_fns.get(&resolved_url);
-        if let Some(runtime_host_fn) = runtime_host_fn {
-            runtime_host_fn(start_info.runtime_dir.unwrap());
-        }
-        Ok(())
+    /// Register `function` to serve the outgoing directory of component `name`
+    pub fn add_host_fn(&self, name: &str, function: HostFn) {
+        self.inner.lock().unwrap().outgoing_host_fns.insert(name.to_string(), Arc::new(function));
+    }
+
+    /// Register `function` to serve the runtime directory of component `name`
+    pub fn add_runtime_host_fn(&self, name: &str, function: HostFn) {
+        self.inner.lock().unwrap().runtime_host_fns.insert(name.to_string(), Arc::new(function));
+    }
+
+    /// Get the input namespace for component `name`.
+    pub fn get_namespace(&self, name: &str) -> Option<Arc<ManagedNamespace>> {
+        self.inner.lock().unwrap().namespaces.get(name).map(Arc::clone)
     }
 }
 
@@ -204,9 +220,50 @@ impl Runner for MockRunner {
     fn start(
         &self,
         start_info: fsys::ComponentStartInfo,
-        server_chan: ServerEnd<fsys::ComponentControllerMarker>,
+        _server_chan: ServerEnd<fsys::ComponentControllerMarker>,
     ) -> BoxFuture<Result<(), RunnerError>> {
-        Box::pin(self.start_async(start_info, server_chan))
+        let outgoing_host_fn;
+        let runtime_host_fn;
+
+        {
+            let mut state = self.inner.lock().unwrap();
+
+            // Resolve the URL, and trigger a failure if previously requested.
+            let resolved_url = start_info.resolved_url.unwrap();
+            if state.failing_urls.contains(&resolved_url) {
+                return Box::pin(futures::future::ready(Err(RunnerError::component_launch_error(
+                    resolved_url,
+                    format_err!("ouch"),
+                ))));
+            }
+
+            // Record that this URL has been started.
+            state.urls_run.push(resolved_url.clone());
+
+            // Create a namespace for the component.
+            state
+                .namespaces
+                .insert(resolved_url.clone(), Arc::new(Mutex::new(start_info.ns.unwrap())));
+
+            // Fetch host functions, which will provide the outgoing and runtime directories
+            // for the component.
+            //
+            // If functions were provided, then start_info.outgoing_dir will be
+            // automatically closed once it goes out of scope at the end of this
+            // function.
+            outgoing_host_fn = state.outgoing_host_fns.get(&resolved_url).map(Arc::clone);
+            runtime_host_fn = state.runtime_host_fns.get(&resolved_url).map(Arc::clone);
+        }
+
+        // Start serving the outgoing/runtime directories.
+        if let Some(outgoing_host_fn) = outgoing_host_fn {
+            outgoing_host_fn(start_info.outgoing_dir.unwrap());
+        }
+        if let Some(runtime_host_fn) = runtime_host_fn {
+            runtime_host_fn(start_info.runtime_dir.unwrap());
+        }
+
+        Box::pin(futures::future::ready(Ok(())))
     }
 }
 

@@ -716,18 +716,16 @@ mod tests {
     ) -> (Arc<model::Model>, BuiltinEnvironment, DirectoryProxy) {
         let resolved_root_component_url = format!("{}_resolved", root_component_url);
         let mut resolver = model::ResolverRegistry::new();
-        let mut runner = mocks::MockRunner::new();
+        let runner = mocks::MockRunner::new();
         let mut mock_resolver = mocks::MockResolver::new();
         for component in components.into_iter() {
             mock_resolver.add_component(&component.name, component.decl);
             if let Some(host_fn) = component.host_fn {
-                runner.host_fns.insert(resolved_root_component_url.clone(), host_fn);
+                runner.add_host_fn(&resolved_root_component_url, host_fn);
             }
 
             if let Some(runtime_host_fn) = component.runtime_host_fn {
-                runner
-                    .runtime_host_fns
-                    .insert(resolved_root_component_url.clone(), runtime_host_fn);
+                runner.add_runtime_host_fn(&resolved_root_component_url, runtime_host_fn);
             }
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));

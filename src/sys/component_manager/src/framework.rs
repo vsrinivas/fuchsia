@@ -368,7 +368,7 @@ mod tests {
     impl RealmCapabilityTest {
         async fn new(
             mock_resolver: MockResolver,
-            mock_runner: MockRunner,
+            mock_runner: Arc<MockRunner>,
             realm_moniker: AbsoluteMoniker,
             hooks: Vec<HooksRegistration>,
         ) -> Self {
@@ -386,7 +386,7 @@ mod tests {
             let model = Arc::new(Model::new(ModelParams {
                 root_component_url: "test:///root".to_string(),
                 root_resolver_registry: resolver,
-                elf_runner: Arc::new(mock_runner),
+                elf_runner: mock_runner,
             }));
             let builtin_environment = Arc::new(
                 BuiltinEnvironment::new(&startup_args, &model, config)
@@ -421,7 +421,7 @@ mod tests {
     async fn create_dynamic_child() {
         // Set up model and realm service.
         let mut mock_resolver = MockResolver::new();
-        let mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         mock_resolver.add_component(
             "root",
             ComponentDecl {
@@ -446,7 +446,7 @@ mod tests {
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
             mock_resolver,
-            mock_runner,
+            mock_runner.clone(),
             vec!["system:0"].into(),
             hook.hooks(),
         )
@@ -473,7 +473,6 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn create_dynamic_child_errors() {
         let mut mock_resolver = MockResolver::new();
-        let mock_runner = MockRunner::new();
         mock_resolver.add_component(
             "root",
             ComponentDecl {
@@ -504,7 +503,7 @@ mod tests {
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
             mock_resolver,
-            mock_runner,
+            Arc::new(MockRunner::new()),
             vec!["system:0"].into(),
             hook.hooks(),
         )
@@ -586,7 +585,6 @@ mod tests {
     async fn destroy_dynamic_child() {
         // Set up model and realm service.
         let mut mock_resolver = MockResolver::new();
-        let mock_runner = MockRunner::new();
         mock_resolver.add_component(
             "root",
             ComponentDecl {
@@ -621,9 +619,13 @@ mod tests {
         let mut hooks = vec![];
         hooks.append(&mut hook.hooks());
         hooks.append(&mut breakpoint_system.hooks());
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec!["system:0"].into(), hooks)
-                .await;
+        let test = RealmCapabilityTest::new(
+            mock_resolver,
+            Arc::new(MockRunner::new()),
+            vec!["system:0"].into(),
+            hooks,
+        )
+        .await;
 
         // Create children "a" and "b" in collection, and bind to them.
         for name in &["a", "b"] {
@@ -700,7 +702,6 @@ mod tests {
     #[fuchsia_async::run_singlethreaded(test)]
     async fn destroy_dynamic_child_errors() {
         let mut mock_resolver = MockResolver::new();
-        let mock_runner = MockRunner::new();
         mock_resolver.add_component(
             "root",
             ComponentDecl {
@@ -725,7 +726,7 @@ mod tests {
         let hook = TestHook::new();
         let test = RealmCapabilityTest::new(
             mock_resolver,
-            mock_runner,
+            Arc::new(MockRunner::new()),
             vec!["system:0"].into(),
             hook.hooks(),
         )
@@ -796,14 +797,18 @@ mod tests {
             },
         );
         mock_resolver.add_component("eager", ComponentDecl { ..default_component_decl() });
-        let mut mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service();
-        mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
-        let urls_run = mock_runner.urls_run.clone();
+        mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
         let hook = TestHook::new();
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+        let test = RealmCapabilityTest::new(
+            mock_resolver,
+            mock_runner.clone(),
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Bind to child and use exposed service.
         let mut child_ref = fsys::ChildRef { name: "system".to_string(), collection: None };
@@ -828,7 +833,7 @@ mod tests {
             "test:///system_resolved".to_string(),
             "test:///eager_resolved".to_string(),
         ];
-        assert_eq!(*urls_run.lock().await, expected_urls);
+        assert_eq!(mock_runner.urls_run(), expected_urls);
         assert_eq!("(system(eager))", hook.print());
     }
 
@@ -858,14 +863,18 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let mut mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         let mut out_dir = OutDir::new();
         out_dir.add_echo_service();
-        mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
-        let urls_run = mock_runner.urls_run.clone();
+        mock_runner.add_host_fn("test:///system_resolved", out_dir.host_fn());
         let hook = TestHook::new();
-        let test =
-            RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
+        let test = RealmCapabilityTest::new(
+            mock_resolver,
+            mock_runner.clone(),
+            vec![].into(),
+            hook.hooks(),
+        )
+        .await;
 
         // Add "system" to collection.
         let mut collection_ref = fsys::CollectionRef { name: "coll".to_string() };
@@ -892,7 +901,7 @@ mod tests {
         // Verify that the binding happened and the component topology matches expectations.
         let expected_urls =
             vec!["test:///root_resolved".to_string(), "test:///system_resolved".to_string()];
-        assert_eq!(*urls_run.lock().await, expected_urls);
+        assert_eq!(mock_runner.urls_run(), expected_urls);
         assert_eq!("(coll:system)", hook.print());
     }
 
@@ -924,7 +933,7 @@ mod tests {
         );
         mock_resolver.add_component("system", ComponentDecl { ..default_component_decl() });
         mock_resolver.add_component("unrunnable", ComponentDecl { ..default_component_decl() });
-        let mut mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         mock_runner.cause_failure("unrunnable");
         let hook = TestHook::new();
         let test =
@@ -1006,7 +1015,7 @@ mod tests {
             },
         );
         mock_resolver.add_component("static", default_component_decl());
-        let mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         let hook = TestHook::new();
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;
@@ -1070,7 +1079,7 @@ mod tests {
                 ..default_component_decl()
             },
         );
-        let mock_runner = MockRunner::new();
+        let mock_runner = Arc::new(MockRunner::new());
         let hook = TestHook::new();
         let test =
             RealmCapabilityTest::new(mock_resolver, mock_runner, vec![].into(), hook.hooks()).await;

@@ -133,7 +133,7 @@ pub struct RoutingTest {
     pub model: Arc<Model>,
     pub builtin_environment: BuiltinEnvironment,
     _echo_service: Arc<EchoService>,
-    pub namespaces: Namespaces,
+    pub mock_runner: Arc<MockRunner>,
     _test_dir: TempDir,
     test_dir_proxy: DirectoryProxy,
     root_component_name: String,
@@ -187,11 +187,11 @@ impl RoutingTest {
             debug: false,
         };
         let echo_service = Arc::new(EchoService::new());
-        let namespaces = runner.namespaces.clone();
+        let runner = Arc::new(runner);
         let model = Arc::new(Model::new(ModelParams {
             root_component_url: format!("test:///{}", builder.root_component),
             root_resolver_registry: resolver,
-            elf_runner: Arc::new(runner),
+            elf_runner: runner.clone(),
         }));
         let builtin_environment =
             BuiltinEnvironment::new(&startup_args, &model, ComponentManagerConfig::default())
@@ -206,7 +206,7 @@ impl RoutingTest {
             model,
             builtin_environment,
             _echo_service: echo_service,
-            namespaces,
+            mock_runner: runner,
             _test_dir: test_dir,
             test_dir_proxy,
             root_component_name: builder.root_component,
@@ -247,15 +247,12 @@ impl RoutingTest {
     ) {
         let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
-            .await;
-        capability_util::call_create_child(
-            component_resolved_url,
-            self.namespaces.clone(),
-            collection,
-            decl,
-        )
-        .await;
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
+        let namespace = self
+            .mock_runner
+            .get_namespace(&component_resolved_url)
+            .expect("could not find child namespace");
+        capability_util::call_create_child(&namespace, collection, decl).await;
     }
 
     /// Deletes a dynamic child `child_decl` in `moniker`'s `collection`, waiting for destruction
@@ -279,8 +276,10 @@ impl RoutingTest {
             breakpoint_system.register(vec![EventType::PostDestroyInstance]).await;
         self.model.root_realm.hooks.install(breakpoint_system.hooks()).await;
         capability_util::call_destroy_child(
-            component_resolved_url,
-            self.namespaces.clone(),
+            &self
+                .mock_runner
+                .get_namespace(&component_resolved_url)
+                .expect("could not find child namespace"),
             collection,
             name,
         )
@@ -295,26 +294,18 @@ impl RoutingTest {
     pub async fn check_use(&self, moniker: AbsoluteMoniker, check: CheckUse) {
         let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
-            .await;
+        let namespace = self
+            .mock_runner
+            .get_namespace(&component_resolved_url)
+            .expect("could not find child namespace");
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         match check {
             CheckUse::LegacyService { path, should_succeed } => {
-                capability_util::call_echo_svc_from_namespace(
-                    path,
-                    component_resolved_url,
-                    self.namespaces.clone(),
-                    should_succeed,
-                )
-                .await;
+                capability_util::call_echo_svc_from_namespace(&namespace, path, should_succeed)
+                    .await;
             }
             CheckUse::Directory { path, should_succeed } => {
-                capability_util::read_data_from_namespace(
-                    path,
-                    component_resolved_url,
-                    self.namespaces.clone(),
-                    should_succeed,
-                )
-                .await
+                capability_util::read_data_from_namespace(&namespace, path, should_succeed).await
             }
             CheckUse::Storage { type_: fsys::StorageType::Meta, storage_relation, .. } => {
                 capability_util::write_file_to_meta_storage(
@@ -334,9 +325,8 @@ impl RoutingTest {
             }
             CheckUse::Storage { path, type_, storage_relation } => {
                 capability_util::write_file_to_storage(
+                    &namespace,
                     path,
-                    component_resolved_url,
-                    self.namespaces.clone(),
                     storage_relation.is_some(),
                 )
                 .await;
@@ -406,7 +396,7 @@ impl RoutingTest {
     /// declarations for the the component by the same name in `components`.
     async fn check_namespace(
         component_name: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        runner: &MockRunner,
         components: Vec<(&str, ComponentDecl)>,
     ) {
         let (_, decl) = components
@@ -431,11 +421,14 @@ impl RoutingTest {
         let mut expected_paths = vec![];
         expected_paths.extend(expected_paths_hs.into_iter());
 
-        let namespaces = namespaces.lock().await;
-        let ns = namespaces
-            .get(&format!("test:///{}_resolved", component_name))
-            .expect("component not in namespace");
-        let mut actual_paths = ns.paths.clone();
+        // Get the paths in the component's namespace.
+        let mut actual_paths = runner
+            .get_namespace(&format!("test:///{}_resolved", component_name))
+            .expect("component not in namespace")
+            .lock()
+            .await
+            .paths
+            .clone();
 
         expected_paths.sort_unstable();
         actual_paths.sort_unstable();
@@ -452,12 +445,11 @@ impl RoutingTest {
         let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
         let path = "/svc/fuchsia.sys2.Realm".try_into().unwrap();
-        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
-            .await;
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
         capability_util::call_realm_svc(
             path,
-            component_resolved_url,
-            self.namespaces.clone(),
+            &component_resolved_url,
+            &self.mock_runner.get_namespace(&component_resolved_url).unwrap(),
             bind_calls.clone(),
         )
         .await;
@@ -468,14 +460,9 @@ impl RoutingTest {
     pub async fn check_open_file(&self, moniker: AbsoluteMoniker, path: CapabilityPath) {
         let component_name = self.bind_instance(&moniker).await.expect("bind instance failed");
         let component_resolved_url = Self::resolved_url(&component_name);
-        Self::check_namespace(component_name, self.namespaces.clone(), self.components.clone())
-            .await;
-        capability_util::call_file_svc_from_namespace(
-            path,
-            component_resolved_url,
-            self.namespaces.clone(),
-        )
-        .await;
+        Self::check_namespace(component_name, &self.mock_runner, self.components.clone()).await;
+        let namespace = self.mock_runner.get_namespace(&component_resolved_url).unwrap();
+        capability_util::call_file_svc_from_namespace(&namespace, path).await;
     }
 
     /// Host all capabilities in `decl` that come from `self`.
@@ -534,7 +521,7 @@ impl RoutingTest {
 
         // If the outgoing directory is non-empty, pass it to the runner.
         if let Some(out_dir) = out_dir {
-            runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
+            runner.add_host_fn(&format!("test:///{}_resolved", name), out_dir.host_fn());
         }
     }
 
@@ -576,13 +563,12 @@ pub mod capability_util {
     /// Looks up `resolved_url` in the namespace, and attempts to read ${path}/hippo. The file
     /// should contain the string "hippo".
     pub async fn read_data_from_namespace(
+        namespace: &ManagedNamespace,
         path: CapabilityPath,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         should_succeed: bool,
     ) {
         let path = path.to_string();
-        let dir_proxy = get_dir_from_namespace(&path, resolved_url, namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, &path).await;
         let file = Path::new("hippo");
         let file_proxy = io_util::open_file(&dir_proxy, &file, OPEN_RIGHT_READABLE)
             .expect("failed to open file");
@@ -595,13 +581,12 @@ pub mod capability_util {
     }
 
     pub async fn write_file_to_storage(
+        namespace: &ManagedNamespace,
         path: CapabilityPath,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         should_succeed: bool,
     ) {
         let dir_string = path.to_string();
-        let dir_proxy = get_dir_from_namespace(dir_string.as_str(), resolved_url, namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, dir_string.as_str()).await;
         write_hippo_file_to_directory(&dir_proxy, should_succeed).await;
     }
 
@@ -656,12 +641,11 @@ pub mod capability_util {
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`. Expects the service
     /// to be fidl.examples.echo.Echo.
     pub async fn call_echo_svc_from_namespace(
+        namespace: &ManagedNamespace,
         path: CapabilityPath,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
         should_succeed: bool,
     ) {
-        let dir_proxy = get_dir_from_namespace(&path.dirname, resolved_url, namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -686,12 +670,8 @@ pub mod capability_util {
     /// Looks up `resolved_url` in the namespace, and attempts to use `path`.
     /// Expects the service to work like a fuchsia.io service, and respond with
     /// an OnOpen event when opened with OPEN_FLAG_DESCRIBE.
-    pub async fn call_file_svc_from_namespace(
-        path: CapabilityPath,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
-    ) {
-        let dir_proxy = get_dir_from_namespace(&path.dirname, resolved_url, namespaces).await;
+    pub async fn call_file_svc_from_namespace(namespace: &ManagedNamespace, path: CapabilityPath) {
+        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -762,12 +742,11 @@ pub mod capability_util {
     /// to be fuchsia.sys2.Realm.
     pub async fn call_realm_svc(
         path: CapabilityPath,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        resolved_url: &str,
+        namespace: &ManagedNamespace,
         bind_calls: Arc<Mutex<Vec<String>>>,
     ) {
-        let dir_proxy =
-            get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -790,14 +769,12 @@ pub mod capability_util {
 
     /// Call `fuchsia.sys2.Realm.CreateChild` to create a dynamic child.
     pub async fn call_create_child<'a>(
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        namespace: &ManagedNamespace,
         collection: &'a str,
         child_decl: ChildDecl,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
-        let dir_proxy =
-            get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -815,14 +792,12 @@ pub mod capability_util {
     /// Call `fuchsia.sys2.Realm.DestroyChild` to destroy a dynamic child, waiting for
     /// destruction to complete.
     pub async fn call_destroy_child<'a>(
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
+        namespace: &ManagedNamespace,
         collection: &'a str,
         name: &'a str,
     ) {
         let path: CapabilityPath = "/svc/fuchsia.sys2.Realm".try_into().expect("no realm service");
-        let dir_proxy =
-            get_dir_from_namespace(&path.dirname, resolved_url.clone(), namespaces).await;
+        let dir_proxy = get_dir_from_namespace(namespace, &path.dirname).await;
         let node_proxy = io_util::open_node(
             &dir_proxy,
             &Path::new(&path.basename),
@@ -840,12 +815,10 @@ pub mod capability_util {
     /// Returns a cloned DirectoryProxy to the dir `dir_string` inside the namespace of
     /// `resolved_url`.
     pub async fn get_dir_from_namespace(
+        namespace: &ManagedNamespace,
         dir_string: &str,
-        resolved_url: String,
-        namespaces: Arc<Mutex<HashMap<String, fsys::ComponentNamespace>>>,
     ) -> DirectoryProxy {
-        let mut ns_guard = namespaces.lock().await;
-        let ns = ns_guard.get_mut(&resolved_url).unwrap();
+        let mut ns = namespace.lock().await;
 
         // Find the index of our directory in the namespace, and remove the directory and path. The
         // path is removed so that the paths/dirs aren't shuffled in the namespace.
