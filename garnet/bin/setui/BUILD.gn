@@ -85,6 +85,7 @@ test_package("setui_service_tests") {
 config_data("tests_config") {
   for_pkg = "setui_service_tests"
   sources = [
+    "src/tests/testdata/audio_config_data.json",
     "src/tests/testdata/fake_config_data.json",
     "src/tests/testdata/fake_invalid_config_data.json",
   ]

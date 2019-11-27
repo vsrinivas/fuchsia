@@ -4,10 +4,7 @@
 
 #[cfg(test)]
 use {
-    crate::audio::{
-        create_default_audio_stream, spawn_audio_controller, spawn_audio_fidl_handler,
-        DEFAULT_AUDIO_INFO,
-    },
+    crate::audio::{default_audio_info, spawn_audio_controller, spawn_audio_fidl_handler},
     crate::create_fidl_service,
     crate::fidl_clone::FIDLClone,
     crate::registry::base::Registry,
@@ -35,10 +32,6 @@ use {
 
 const ENV_NAME: &str = "settings_service_audio_test_environment";
 
-const DEFAULT_MEDIA_STREAM: AudioStream = create_default_audio_stream(AudioStreamType::Media);
-const DEFAULT_SYSTEM_STREAM: AudioStream =
-    create_default_audio_stream(AudioStreamType::SystemAgent);
-
 const CHANGED_VOLUME_LEVEL: f32 = 0.7;
 const CHANGED_VOLUME_MUTED: bool = true;
 
@@ -57,6 +50,14 @@ const CHANGED_MEDIA_STREAM_SETTINGS: AudioStreamSettings = AudioStreamSettings {
         muted: Some(CHANGED_VOLUME_MUTED),
     }),
 };
+
+fn get_default_stream(stream_type: AudioStreamType) -> AudioStream {
+    *default_audio_info()
+        .streams
+        .into_iter()
+        .find(|x| x.stream_type == stream_type)
+        .expect("contains stream")
+}
 
 async fn set_volume(proxy: &AudioProxy, streams: Vec<AudioStreamSettings>) {
     let mut audio_settings = AudioSettings::empty();
@@ -81,7 +82,8 @@ async fn create_storage(
     let store = factory.get_store::<AudioInfo>();
     {
         let mut store_lock = store.lock().await;
-        store_lock.write(&DEFAULT_AUDIO_INFO, false).await.unwrap();
+        let audio_info = default_audio_info();
+        store_lock.write(&audio_info, false).await.unwrap();
     }
     store
 }
@@ -169,7 +171,10 @@ async fn test_audio() {
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
@@ -277,7 +282,10 @@ async fn test_bringup_without_audio_core() {
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
@@ -302,8 +310,14 @@ async fn test_audio_pair_media_system() {
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
+    );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
 
@@ -349,23 +363,33 @@ async fn test_audio_pair_media_system_off() {
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
+    );
 
     set_volume(&audio_proxy, vec![CHANGED_MEDIA_STREAM_SETTINGS]).await;
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
     verify_audio_stream(settings.clone(), CHANGED_MEDIA_STREAM_SETTINGS);
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
+    );
 
     assert_eq!(
         (CHANGED_VOLUME_LEVEL, CHANGED_VOLUME_MUTED),
         audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::Media).unwrap()
     );
 
+    let default_system_stream = get_default_stream(AudioStreamType::SystemAgent);
     assert_eq!(
-        None,
-        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent)
+        (default_system_stream.user_volume_level, default_system_stream.user_volume_muted),
+        audio_core_service_handle.read().get_level_and_mute(AudioRenderUsage::SystemAgent).unwrap()
     );
 
     // Check to make sure value wrote out to store correctly.
@@ -375,7 +399,7 @@ async fn test_audio_pair_media_system_off() {
         stored_streams = store_lock.get().await.streams;
     }
     verify_contains_stream(&stored_streams, &CHANGED_MEDIA_STREAM);
-    verify_contains_stream(&stored_streams, &DEFAULT_SYSTEM_STREAM);
+    verify_contains_stream(&stored_streams, &get_default_stream(AudioStreamType::SystemAgent));
 }
 
 // Test to ensure that when |pair_media_and_system_agent| is enabled, setting the media volume
@@ -397,8 +421,14 @@ async fn test_audio_pair_media_system_with_system_agent_change() {
     let audio_proxy = env.connect_to_service::<AudioMarker>().unwrap();
 
     let settings = audio_proxy.watch().await.expect("watch completed").expect("watch successful");
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_MEDIA_STREAM));
-    verify_audio_stream(settings.clone(), AudioStreamSettings::from(DEFAULT_SYSTEM_STREAM));
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::Media)),
+    );
+    verify_audio_stream(
+        settings.clone(),
+        AudioStreamSettings::from(get_default_stream(AudioStreamType::SystemAgent)),
+    );
 
     const CHANGED_SYSTEM_LEVEL: f32 = 0.2;
     const CHANGED_SYSTEM_MUTED: bool = false;
@@ -442,7 +472,7 @@ async fn test_audio_pair_media_system_with_system_agent_change() {
 
 #[fuchsia_async::run_singlethreaded(test)]
 async fn test_audio_info_copy() {
-    let audio_info = DEFAULT_AUDIO_INFO;
+    let audio_info = default_audio_info();
     let copy_audio_info = audio_info;
     assert_eq!(audio_info, copy_audio_info);
 }

@@ -1,7 +1,7 @@
 // Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
-use crate::audio::{DEFAULT_VOLUME_LEVEL, DEFAULT_VOLUME_MUTED};
+use crate::audio::default_audio_info;
 use crate::tests::fakes::base::Service;
 use failure::{format_err, Error};
 use fidl::endpoints::{ServerEnd, ServiceMarker};
@@ -21,7 +21,14 @@ pub struct AudioCoreService {
 
 impl AudioCoreService {
     pub fn new() -> Self {
-        Self { audio_streams: Arc::new(RwLock::new(HashMap::new())) }
+        let mut streams = HashMap::new();
+        for stream in default_audio_info().streams.iter() {
+            streams.insert(
+                AudioRenderUsage::from(stream.stream_type),
+                (stream.user_volume_level, stream.user_volume_muted),
+            );
+        }
+        Self { audio_streams: Arc::new(RwLock::new(streams)) }
     }
 
     pub fn get_level_and_mute(&self, usage: AudioRenderUsage) -> Option<(f32, bool)> {
@@ -93,31 +100,24 @@ fn process_volume_control_stream(
                     volume,
                     control_handle,
                 } => {
-                    let mut curr_mute = DEFAULT_VOLUME_MUTED;
-                    if let Some((_level, muted)) = get_level_and_mute(render_usage, &streams) {
-                        (*streams.write()).insert(render_usage, (volume, muted));
-                        curr_mute = muted;
-                    } else {
-                        (*streams.write()).insert(render_usage, (volume, DEFAULT_VOLUME_MUTED));
-                    }
+                    let (_level, muted) =
+                        get_level_and_mute(render_usage, &streams).expect("stream in map");
+                    (*streams.write()).insert(render_usage, (volume, muted));
+
                     control_handle
-                        .send_on_volume_mute_changed(volume, curr_mute)
+                        .send_on_volume_mute_changed(volume, muted)
                         .expect("on volume mute changed");
                 }
                 fidl_fuchsia_media_audio::VolumeControlRequest::SetMute {
                     mute,
                     control_handle,
                 } => {
-                    let mut curr_level = DEFAULT_VOLUME_LEVEL;
-                    if let Some((level, _muted)) = get_level_and_mute(render_usage, &streams) {
-                        (*streams.write()).insert(render_usage, (level, mute));
-                        curr_level = level;
-                    } else {
-                        (*streams.write()).insert(render_usage, (DEFAULT_VOLUME_LEVEL, mute));
-                    }
+                    let (level, _muted) =
+                        get_level_and_mute(render_usage, &streams).expect("stream in map");
+                    (*streams.write()).insert(render_usage, (level, mute));
 
                     control_handle
-                        .send_on_volume_mute_changed(curr_level, mute)
+                        .send_on_volume_mute_changed(level, mute)
                         .expect("on volume mute changed");
                 }
                 _ => {}

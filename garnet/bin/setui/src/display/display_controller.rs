@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::config::default_settings::DefaultSetting,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::registry::service_context::ServiceContext,
@@ -18,11 +17,8 @@ use {
 impl DeviceStorageCompatible for DisplayInfo {
     const KEY: &'static str = "display_info";
 
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(DisplayInfo::new(
-            false, /*auto_brightness_enabled*/
-            0.5,   /*brightness_value*/
-        ))
+    fn default_value() -> Self {
+        DisplayInfo::new(false /*auto_brightness_enabled*/, 0.5 /*brightness_value*/)
     }
 }
 

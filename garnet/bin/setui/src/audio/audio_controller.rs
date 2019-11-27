@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 use {
-    crate::audio::StreamVolumeControl,
-    crate::config::default_settings::DefaultSetting,
+    crate::audio::{default_audio_info, StreamVolumeControl},
     crate::input::monitor_mic_mute,
     crate::registry::base::{Command, Notifier, State},
-    crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
+    crate::registry::device_storage::DeviceStorage,
     crate::registry::service_context::ServiceContext,
     crate::switchboard::base::*,
     failure::Error,
@@ -20,54 +19,16 @@ use {
     std::sync::Arc,
 };
 
-// TODO(go/fxb/35983): Load default values from a config.
-const DEFAULT_MIC_MUTE: bool = false;
-pub const DEFAULT_VOLUME_LEVEL: f32 = 0.5;
-pub const DEFAULT_VOLUME_MUTED: bool = false;
-
-// TODO(go/fxb/35983): Load default values from a config.
-pub const DEFAULT_STREAMS: [AudioStream; 5] = [
-    create_default_audio_stream(AudioStreamType::Background),
-    create_default_audio_stream(AudioStreamType::Media),
-    create_default_audio_stream(AudioStreamType::Interruption),
-    create_default_audio_stream(AudioStreamType::SystemAgent),
-    create_default_audio_stream(AudioStreamType::Communication),
-];
-
-pub const DEFAULT_AUDIO_INPUT_INFO: AudioInputInfo = AudioInputInfo { mic_mute: false };
-
-// TODO(go/fxb/35983): Load default values from a config.
-pub const DEFAULT_AUDIO_INFO: AudioInfo =
-    AudioInfo { streams: DEFAULT_STREAMS, input: DEFAULT_AUDIO_INPUT_INFO };
-
-// TODO(go/fxb/35983): Load default values from a config.
-pub const fn create_default_audio_stream(stream_type: AudioStreamType) -> AudioStream {
-    AudioStream {
-        stream_type: stream_type,
-        source: AudioSettingSource::User,
-        user_volume_level: DEFAULT_VOLUME_LEVEL,
-        user_volume_muted: DEFAULT_VOLUME_MUTED,
-    }
-}
-
 fn get_streams_array_from_map(
     stream_map: &HashMap<AudioStreamType, StreamVolumeControl>,
 ) -> [AudioStream; 5] {
-    let mut streams: [AudioStream; 5] = DEFAULT_STREAMS;
+    let mut streams: [AudioStream; 5] = default_audio_info().streams;
     for i in 0..streams.len() {
         if let Some(volume_control) = stream_map.get(&streams[i].stream_type) {
             streams[i] = volume_control.stored_stream.clone();
         }
     }
     streams
-}
-
-impl DeviceStorageCompatible for AudioInfo {
-    const KEY: &'static str = "audio_info";
-
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(DEFAULT_AUDIO_INFO)
-    }
 }
 
 /// Controller that handles commands for SettingType::Audio.
@@ -79,13 +40,16 @@ pub fn spawn_audio_controller(
 ) -> futures::channel::mpsc::UnboundedSender<Command> {
     let (audio_handler_tx, mut audio_handler_rx) = futures::channel::mpsc::unbounded::<Command>();
 
+    let default_audio_settings = default_audio_info();
+
     let notifier_lock = Arc::<RwLock<Option<Notifier>>>::new(RwLock::new(None));
-    let mic_mute_state = Arc::<RwLock<bool>>::new(RwLock::new(DEFAULT_MIC_MUTE));
+    let mic_mute_state =
+        Arc::<RwLock<bool>>::new(RwLock::new(default_audio_settings.input.mic_mute));
+
     let input_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
     let audio_service_connected = Arc::<RwLock<bool>>::new(RwLock::new(false));
 
-    // TODO(go/fxb/35983): Load default values from a config.
     let mut stream_volume_controls = HashMap::new();
 
     let (input_tx, mut input_rx) = futures::channel::mpsc::unbounded::<MediaButtonsEvent>();
@@ -273,7 +237,7 @@ fn check_and_bind_volume_controls(
         }
     };
 
-    for stream in DEFAULT_STREAMS.iter() {
+    for stream in default_audio_info().streams.iter() {
         stream_volume_controls.insert(
             stream.stream_type.clone(),
             StreamVolumeControl::create(&audio_service, stream.clone()),

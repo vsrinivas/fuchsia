@@ -11,8 +11,6 @@ use serde::de::DeserializeOwned;
 use serde::Serialize;
 use std::sync::Arc;
 
-use crate::config::default_settings::DefaultSetting;
-
 const SETTINGS_PREFIX: &str = "settings";
 
 /// Stores device level settings in persistent storage.
@@ -20,7 +18,6 @@ const SETTINGS_PREFIX: &str = "settings";
 pub struct DeviceStorage<T: DeviceStorageCompatible> {
     caching_enabled: bool,
     current_data: Option<T>,
-    default_setting: DefaultSetting<T>,
     stash_proxy: StoreAccessorProxy,
 }
 
@@ -34,7 +31,7 @@ pub struct DeviceStorage<T: DeviceStorageCompatible> {
 /// implement conversion/cleanup logic. Adding optional fields to a struct is not breaking, but
 /// removing fields, renaming fields, or adding non-optional fields are.
 pub trait DeviceStorageCompatible: Serialize + DeserializeOwned + Clone + PartialEq {
-    fn default_setting() -> DefaultSetting<Self>;
+    fn default_value() -> Self;
     const KEY: &'static str;
 }
 
@@ -43,7 +40,6 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
         return DeviceStorage {
             caching_enabled: true,
             current_data: current_data,
-            default_setting: T::default_setting(),
             stash_proxy: stash_proxy,
         };
     }
@@ -81,7 +77,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                         Err(e) => {
                             fx_log_err!("Failed to serialize value from stash, returning default");
                             fx_log_err!("{}", e);
-                            self.default_setting.get_default_value()
+                            T::default_value()
                         }
                     };
                     self.current_data = Some(data);
@@ -89,7 +85,7 @@ impl<T: DeviceStorageCompatible> DeviceStorage<T> {
                     panic!("Unexpected type for key found in stash");
                 }
             } else {
-                self.current_data = Some(self.default_setting.get_default_value());
+                self.current_data = Some(T::default_value());
             }
         }
         if let Some(curent_value) = &self.current_data {
@@ -280,8 +276,8 @@ mod tests {
     impl DeviceStorageCompatible for TestStruct {
         const KEY: &'static str = "testkey";
 
-        fn default_setting() -> DefaultSetting<Self> {
-            DefaultSetting::new(TestStruct { value: VALUE0 })
+        fn default_value() -> Self {
+            TestStruct { value: VALUE0 }
         }
     }
 

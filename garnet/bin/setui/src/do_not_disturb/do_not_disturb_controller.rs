@@ -1,6 +1,5 @@
 use crate::switchboard::base::SettingRequestResponder;
 use {
-    crate::config::default_settings::DefaultSetting,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::base::{DoNotDisturbInfo, SettingRequest, SettingResponse, SettingType},
@@ -19,8 +18,8 @@ const NIGHT_MODE_DND_NAME: &str = "night_mode_dnd";
 impl DeviceStorageCompatible for DoNotDisturbInfo {
     const KEY: &'static str = "do_not_disturb_info";
 
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(DoNotDisturbInfo::new(false, false))
+    fn default_value() -> Self {
+        DoNotDisturbInfo::new(false, false)
     }
 }
 

@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::default_settings::DefaultSetting,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::base::*,
@@ -17,8 +16,8 @@ use {
 impl DeviceStorageCompatible for SystemInfo {
     const KEY: &'static str = "system_info";
 
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(SystemInfo { login_override_mode: SystemLoginOverrideMode::None })
+    fn default_value() -> Self {
+        SystemInfo { login_override_mode: SystemLoginOverrideMode::None }
     }
 }
 

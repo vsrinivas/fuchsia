@@ -1,0 +1,37 @@
+{
+    "streams": [
+        {
+            "stream_type": "Background",
+            "source": "System",
+            "user_volume_level": 0.6,
+            "user_volume_muted": true
+        },
+        {
+            "stream_type": "Media",
+            "source": "System",
+            "user_volume_level": 0.7,
+            "user_volume_muted": true
+        },
+        {
+            "stream_type": "Interruption",
+            "source": "System",
+            "user_volume_level": 0.2,
+            "user_volume_muted": true
+        },
+        {
+            "stream_type": "SystemAgent",
+            "source": "User",
+            "user_volume_level": 0.3,
+            "user_volume_muted": true
+        },
+        {
+            "stream_type": "Communication",
+            "source": "User",
+            "user_volume_level": 0.4,
+            "user_volume_muted": false
+        }
+    ],
+    "input": {
+        "mic_mute": true
+    }
+}

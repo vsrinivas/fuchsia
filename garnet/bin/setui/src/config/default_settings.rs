@@ -14,11 +14,7 @@ pub struct DefaultSetting<T: DeserializeOwned + Clone> {
 }
 
 impl<T: DeserializeOwned + Clone> DefaultSetting<T> {
-    pub fn new(default_value: T) -> Self {
-        Self::new_with_config(default_value, None)
-    }
-
-    pub fn new_with_config(default_value: T, config_file_path: Option<String>) -> Self {
+    pub fn new(default_value: T, config_file_path: Option<String>) -> Self {
         DefaultSetting {
             default_value: default_value,
             config_file_path: config_file_path,
@@ -70,7 +66,7 @@ pub mod testing {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_load_valid_config_data() {
-        let mut setting = DefaultSetting::new_with_config(
+        let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
             Some("/config/data/fake_config_data.json".to_string()),
         );
@@ -80,7 +76,7 @@ pub mod testing {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_load_invalid_config_data() {
-        let mut setting = DefaultSetting::new_with_config(
+        let mut setting = DefaultSetting::new(
             TestConfigData { value: 3 },
             Some("/config/data/fake_invalid_config_data.json".to_string()),
         );
@@ -90,17 +86,9 @@ pub mod testing {
 
     #[fuchsia_async::run_singlethreaded(test)]
     async fn test_load_invalid_config_file_path() {
-        let mut setting = DefaultSetting::new_with_config(
-            TestConfigData { value: 3 },
-            Some("nuthatch".to_string()),
-        );
+        let mut setting =
+            DefaultSetting::new(TestConfigData { value: 3 }, Some("nuthatch".to_string()));
 
-        assert_eq!(setting.get_default_value().value, 3);
-    }
-
-    #[fuchsia_async::run_singlethreaded(test)]
-    async fn test_load_no_config() {
-        let mut setting = DefaultSetting::new(TestConfigData { value: 3 });
         assert_eq!(setting.get_default_value().value, 3);
     }
 }

@@ -14,7 +14,6 @@ use parking_lot::RwLock;
 
 use rust_icu_uenum as uenum;
 
-use crate::config::default_settings::DefaultSetting;
 use crate::registry::base::{Command, Notifier, State};
 use crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible};
 use crate::registry::service_context::ServiceContext;
@@ -27,8 +26,8 @@ type IntlStorage = Arc<Mutex<DeviceStorage<IntlInfo>>>;
 impl DeviceStorageCompatible for IntlInfo {
     const KEY: &'static str = "intl_info";
 
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(IntlInfo { time_zone_id: None })
+    fn default_value() -> Self {
+        IntlInfo { time_zone_id: None }
     }
 }
 

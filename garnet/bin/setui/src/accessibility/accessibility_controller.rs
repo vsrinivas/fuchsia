@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::config::default_settings::DefaultSetting,
     crate::registry::base::{Command, Notifier, State},
     crate::registry::device_storage::{DeviceStorage, DeviceStorageCompatible},
     crate::switchboard::accessibility_types::{AccessibilityInfo, Merge},
@@ -22,15 +21,15 @@ use {
 impl DeviceStorageCompatible for AccessibilityInfo {
     const KEY: &'static str = "accessibility_info";
 
-    fn default_setting() -> DefaultSetting<Self> {
-        DefaultSetting::new(AccessibilityInfo {
+    fn default_value() -> Self {
+        AccessibilityInfo {
             audio_description: None,
             screen_reader: None,
             color_inversion: None,
             enable_magnification: None,
             color_correction: None,
             captions_settings: None,
-        })
+        }
     }
 }
 
