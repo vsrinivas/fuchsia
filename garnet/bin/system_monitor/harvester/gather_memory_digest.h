@@ -6,6 +6,8 @@
 #define GARNET_BIN_SYSTEM_MONITOR_HARVESTER_GATHER_MEMORY_DIGEST_H_
 
 #include "gather_category.h"
+#include "src/developer/memory/metrics/digest.h"
+#include "src/developer/memory/metrics/summary.h"
 
 namespace harvester {
 
@@ -19,6 +21,10 @@ class GatherMemoryDigest : public GatherCategory {
 
   // GatherCategory.
   void Gather() override;
+
+ private:
+  memory::Digester digester_;
+  memory::Namer namer_{memory::Summary::kNameMatches};
 };
 
 }  // namespace harvester

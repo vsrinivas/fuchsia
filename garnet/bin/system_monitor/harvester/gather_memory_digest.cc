@@ -11,7 +11,20 @@
 #include "src/developer/memory/metrics/digest.h"
 #include "src/lib/fxl/logging.h"
 
+// What is the verbose output level for trivia in this file. For easy debugging,
+// change this value to 0 temporarily.
+#define VERBOSE_FOR_FILE (3)
+
 namespace harvester {
+
+namespace {
+// Helper to add a value to the sample |int_sample_list_|.
+std::string KoidPath(zx_koid_t koid, const std::string& path) {
+  std::ostringstream label;
+  label << "koid:" << koid << ":" << path;
+  return label.str();
+}
+}  // namespace
 
 void GatherMemoryDigest::Gather() {
   // See src/developer/memory/metrics/digest.cc:13 kDefaultBucketMatches for a
@@ -42,10 +55,13 @@ void GatherMemoryDigest::Gather() {
   };
 
   memory::Capture capture;
-  memory::Digester digester;
-  memory::Digest digest(capture, &digester);
+  memory::Digest digest(capture, &digester_);
+  memory::Summary summary(capture, &namer_, digest.undigested_vmos());
 
   SampleList list;
+  StringSampleList strings;
+
+  // Add digest samples.
   for (auto const& bucket : digest.buckets()) {
     const auto& iter = name_to_path.find(bucket.name());
     if (iter == name_to_path.end()) {
@@ -55,16 +71,34 @@ void GatherMemoryDigest::Gather() {
     list.emplace_back(iter->second, bucket.size());
   }
 
-  if (FXL_VLOG_IS_ON(3)) {
-    FXL_VLOG(3) << "GatherMemoryDigest::Gather";
+  // Add summary samples.
+  for (auto const& process : summary.process_summaries()) {
+    list.emplace_back(KoidPath(process.koid(), "summary:private_bytes"),
+                      process.sizes().private_bytes);
+    list.emplace_back(KoidPath(process.koid(), "summary:scaled_bytes"),
+                      process.sizes().scaled_bytes);
+    list.emplace_back(KoidPath(process.koid(), "summary:total_bytes"),
+                      process.sizes().total_bytes);
+    strings.emplace_back(KoidPath(process.koid(), "name"), process.name());
+  }
+
+  if (FXL_VLOG_IS_ON(VERBOSE_FOR_FILE)) {
+    FXL_VLOG(VERBOSE_FOR_FILE) << "GatherMemoryDigest::Gather";
     for (auto const& item : list) {
-      FXL_VLOG(3) << item.first << ": " << item.second;
+      FXL_VLOG(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
+    }
+    for (auto const& item : strings) {
+      FXL_VLOG(VERBOSE_FOR_FILE) << item.first << ": " << item.second;
     }
   }
 
   DockyardProxyStatus status = Dockyard().SendSampleList(list);
   if (status != DockyardProxyStatus::OK) {
     FXL_LOG(ERROR) << "SendSampleList failed (" << status << ")";
+  }
+  status = Dockyard().SendStringSampleList(strings);
+  if (status != DockyardProxyStatus::OK) {
+    FXL_LOG(ERROR) << "SendStringSampleList failed (" << status << ")";
   }
 }
 
