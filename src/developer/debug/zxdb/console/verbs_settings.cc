@@ -2,11 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/verbs_settings.h"
+
+#include <ctype.h>
+
+#include <algorithm>
+
 #include "src/developer/debug/zxdb/client/session.h"
 #include "src/developer/debug/zxdb/client/setting_schema.h"
 #include "src/developer/debug/zxdb/client/thread.h"
 #include "src/developer/debug/zxdb/common/adapters.h"
 #include "src/developer/debug/zxdb/console/command.h"
+#include "src/developer/debug/zxdb/console/command_parser.h"
 #include "src/developer/debug/zxdb/console/command_utils.h"
 #include "src/developer/debug/zxdb/console/console.h"
 #include "src/developer/debug/zxdb/console/format_settings.h"
@@ -36,11 +43,7 @@ struct SettingContext {
   Level level = Level::kGlobal;
 
   // What kind of operation this is for set commands.
-  AssignType assign_type = AssignType::kAssign;
-
-  // On append, it is the elements added.
-  // On remove, it is the elements removed.
-  std::vector<std::string> elements_changed;
+  ParsedSetCommand::Operation op = ParsedSetCommand::kAssign;
 };
 
 bool CheckGlobal(ConsoleContext* context, const Command& cmd, const std::string& setting_name,
@@ -323,7 +326,7 @@ Err DoGet(ConsoleContext* context, const Command& cmd) {
 
 const char kSetShortHelp[] = "set: Set a setting value.";
 const char kSetHelp[] =
-    R"(set <setting_name> [ <modification-type> ] <value>
+    R"(set <setting_name> [ <modification-type> ] <value>*
 
   Sets the value of a setting.
 
@@ -340,12 +343,10 @@ Arguments
       +=  Append the given value to the list.
       -=  Search for the given value and remove it.
 
-      Note that spaces are required on each side of the operator due to parsing
-      limitations of console commands.
-
   <value>
-      The value to set. Keep in mind that settings have different types, so the
-      value will be validated. Read more below.
+      The value(s) to set, add, or remove. Multiple values for list settings
+      are whitespace separated. You can "quote" strings to include literal
+      spaces.
 
 Contexts, Schemas and Instance Overrides
 
@@ -375,52 +376,45 @@ Setting Types
 
   The valid inputs for each type are:
 
-  - bool: "0", "false" -> false
-          "1", "true"  -> true
-  - int: Any string convertible to integer (think std::atoi).
-  - string: Any one-word string. Working on getting multi-word strings.
-  - list: List uses a representation of colon (:) separated values. While
-          showing the list value uses bullet points, setting it requires the
-          colon-separated representation. Running "get <setting_name>" will give
-          the current "list setting value" for a list setting, which can be
-          copy-pasted for easier editing. See example for a demonstration.
+  bool
+      "0", "false" -> false
+      "1", "true"  -> true
+
+  integer
+      Any string convertible to integer.
+
+  string
+      Strings can be "quoted" to include whitespace. Otherwise whitespace is
+      used as a delimiter.
+
+  list
+      A list of one or more string separated by whitespace. Strings can be
+      "quoted" to include literal whitespace.
 
 Examples
 
-  [zxdb] set boolean_setting true
-  Set boolean_setting system-wide:
+  [zxdb] set show-stdout true
+  New value show-stdout system-wide:
   true
 
-  [zxdb] pr set int_setting 1024
-  Set int_setting for process 2:
-  1024
+  [zxdb] pr 3 set vector-format double
+  New value vector-format for process 3:
+  double
 
-  [zxdb] p 3 t 2 set string_setting somesuperlongstring
-  Set setting for thread 2 of process 3:
-  somesuperlongstring
+  [zxdb] get build-dirs
+  • /home/me/build
+  • /home/me/other/out
 
-  [zxdb] get foo
-  ...
-  • first
-  • second
-  ...
-  Set value: first:second:third
+  [zxdb] set build-dirs += /tmp/build
+  New value build-dirs system-wide:
+  • /home/me/build
+  • /home/me/other/out
+  • /tmp/build
 
-  [zxdb] set foo += fourth
-  Added value(s) system-wide:
-  • first
-  • second
-  • third
-  • fourth
-
-  [zxdb] set foo first:last
-  Set foo for job 3:
-  • first
-  • last
-
-  NOTE: In the last case, even though the setting was not qualified, it was
-        set at the job level. This is because this is a job-specific setting
-        that doesn't make sense system-wide, but rather only per job.
+  [zxdb] set build-dirs = /other/build/location /other/build2
+  New value build-dirs system-wide:
+  • /other/build/location
+  • /other/build2
 )";
 
 Err SetBool(SettingStore* store, const std::string& setting_name, const std::string& value) {
@@ -444,37 +438,30 @@ Err SetInt(SettingStore* store, const std::string& setting_name, const std::stri
   return store->SetInt(setting_name, out);
 }
 
-Err SetList(const SettingContext& setting_context, const std::vector<std::string>& elements_to_set,
-            SettingStore* store, std::vector<std::string>* elements_changed) {
-  if (setting_context.assign_type == AssignType::kAssign)
-    return store->SetList(setting_context.setting.info.name, elements_to_set);
+Err SetList(const SettingContext& setting_context, const std::vector<std::string>& values,
+            SettingStore* store) {
+  if (setting_context.op == ParsedSetCommand::kAssign)
+    return store->SetList(setting_context.setting.info.name, values);
 
-  if (setting_context.assign_type == AssignType::kAppend) {
+  if (setting_context.op == ParsedSetCommand::kAppend) {
     auto list = store->GetList(setting_context.setting.info.name);
-    list.insert(list.end(), elements_to_set.begin(), elements_to_set.end());
-    *elements_changed = elements_to_set;
+    list.insert(list.end(), values.begin(), values.end());
     return store->SetList(setting_context.setting.info.name, list);
   }
 
-  if (setting_context.assign_type == AssignType::kRemove) {
-    // We search for the elements to remove.
+  if (setting_context.op == ParsedSetCommand::kRemove) {
+    // Search for the elements to remove.
     auto list = store->GetList(setting_context.setting.info.name);
 
-    std::vector<std::string> list_after_remove;
-    for (auto& elem : list) {
-      // If the element to change is within the list, means that we remove it.
-      auto it = std::find(elements_to_set.begin(), elements_to_set.end(), elem);
-      if (it == elements_to_set.end()) {
-        list_after_remove.push_back(elem);
-      } else {
-        elements_changed->push_back(elem);
+    for (const std::string& value : values) {
+      auto first_to_remove = std::remove(list.begin(), list.end(), value);
+      if (first_to_remove == list.end()) {
+        // Item not found.
+        return Err("Could not find \"" + value + "\" to remove from setting list.");
       }
+      list.erase(first_to_remove, list.end());
     }
-
-    // If none, were removed, we error so that the user can check why.
-    if (list.size() == list_after_remove.size())
-      return Err("Could not find any elements to remove.");
-    return store->SetList(setting_context.setting.info.name, list_after_remove);
+    return store->SetList(setting_context.setting.info.name, list);
   }
 
   FXL_NOTREACHED();
@@ -483,29 +470,26 @@ Err SetList(const SettingContext& setting_context, const std::vector<std::string
 
 // Will run the sets against the correct SettingStore:
 // |setting_context| represents the required context needed to reason about the command.
-// |elements_changed| are all the values that changed. This is used afterwards
 // for user feedback.
 // |out| is the resultant setting, which is used for user feedback.
-Err SetSetting(const SettingContext& setting_context,
-               const std::vector<std::string>& elements_to_set, SettingStore* store,
-               std::vector<std::string>* elements_changed, Setting* out) {
+Err SetSetting(const SettingContext& setting_context, const std::vector<std::string>& values,
+               SettingStore* store, Setting* out) {
   Err err;
-  if (setting_context.assign_type != AssignType::kAssign &&
-      !setting_context.setting.value.is_list())
+  if (setting_context.op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
     return Err("Appending/removing only works for list options.");
 
   switch (setting_context.setting.value.type) {
     case SettingType::kBoolean:
-      err = SetBool(store, setting_context.setting.info.name, elements_to_set[0]);
+      err = SetBool(store, setting_context.setting.info.name, values[0]);
       break;
     case SettingType::kInteger:
-      err = SetInt(store, setting_context.setting.info.name, elements_to_set[0]);
+      err = SetInt(store, setting_context.setting.info.name, values[0]);
       break;
     case SettingType::kString:
-      err = store->SetString(setting_context.setting.info.name, elements_to_set[0]);
+      err = store->SetString(setting_context.setting.info.name, values[0]);
       break;
     case SettingType::kList:
-      err = SetList(setting_context, elements_to_set, store, elements_changed);
+      err = SetList(setting_context, values, store);
       break;
     case SettingType::kNull:
       return Err("Unknown type for setting %s. Please file a bug with repro.",
@@ -520,139 +504,175 @@ Err SetSetting(const SettingContext& setting_context,
 }
 
 OutputBuffer FormatSetFeedback(ConsoleContext* console_context,
-                               const SettingContext& setting_context, const Command& cmd) {
-  std::string verb;
-  switch (setting_context.assign_type) {
-    case AssignType::kAssign:
-      verb = "Set value(s)";
-      break;
-    case AssignType::kAppend:
-      verb = "Added value(s)";
-      break;
-    case AssignType::kRemove:
-      verb = "Removed the following value(s)";
-      break;
-  }
-  FXL_DCHECK(!verb.empty());
+                               const SettingContext& setting_context,
+                               const std::string& setting_name, const Command& cmd,
+                               const Setting& setting) {
+  OutputBuffer out;
+  out.Append("New value ");
+  out.Append(Syntax::kVariable, setting_name);
 
   std::string message;
   switch (setting_context.level) {
     case SettingContext::Level::kGlobal:
-      message = fxl::StringPrintf("%s system-wide:\n", verb.data());
+      out.Append(" system-wide:\n");
       break;
     case SettingContext::Level::kJob: {
       int job_id = console_context->IdForJobContext(cmd.job_context());
-      message = fxl::StringPrintf("%s for job %d:\n", verb.data(), job_id);
+      out.Append(fxl::StringPrintf(" for job %d:\n", job_id));
       break;
     }
     case SettingContext::Level::kTarget: {
       int target_id = console_context->IdForTarget(cmd.target());
-      message = fxl::StringPrintf("%s for process %d:\n", verb.data(), target_id);
+      out.Append(fxl::StringPrintf(" for process %d:\n", target_id));
       break;
     }
     case SettingContext::Level::kThread: {
       int target_id = console_context->IdForTarget(cmd.target());
       int thread_id = console_context->IdForThread(cmd.thread());
-      message =
-          fxl::StringPrintf("%s for thread %d of process %d:\n", verb.data(), thread_id, target_id);
+      out.Append(fxl::StringPrintf(" for thread %d of process %d:\n", thread_id, target_id));
       break;
     }
     default:
       FXL_NOTREACHED() << "Should not receive a default setting.";
   }
 
-  return OutputBuffer(std::move(message));
+  out.Append(FormatSettingShort(setting));
+  return out;
 }
 
 Err DoSet(ConsoleContext* console_context, const Command& cmd) {
-  if (cmd.args().size() < 2)
+  // The command parser will provide everything as one argument.
+  if (cmd.args().size() != 1)
     return Err("Wrong amount of Arguments. See \"help set\".");
 
-  // Expected format is <option_name> [(=|+=|-=)] <value> [<value> ...]
-
-  Err err;
-  const std::string& setting_name = cmd.args()[0];
-
-  // Manually warn on this legacy setting name. This code can be removed after ~Aug 1, 2019.
-  if (setting_name == "filters") {
-    // Try to write the setting name the user typed. We don't bother handling all of the syntax if
-    // they did something more complex.
-    std::string setting_content = "<my_process>";
-    if (cmd.args().size() == 2)
-      setting_content = cmd.args()[1];
-
-    OutputBuffer out;
-    out.Append(Syntax::kError, "========================================\n");
-    out.Append(Syntax::kHeading, "The process filter interface has changed\n");
-    out.Append(Syntax::kError, "========================================\n");
-    out.Append(
-        fxl::StringPrintf("\n"
-                          "The old way:\n"
-                          "\n"
-                          "  set filters %s\n"
-                          "\n"
-                          "has now changed to\n"
-                          "\n",
-                          setting_content.c_str()));
-    out.Append(Syntax::kHeading, fxl::StringPrintf("  attach %s\n", setting_content.c_str()));
-    out.Append(
-        "\n"
-        "The semantics have not changed (it will attach to processes launched in the\n"
-        "future with that name). To see the current filters, type \"filter\" by itself.");
-    Console::get()->Output(out);
-    return Err();
-  }
+  ErrOr<ParsedSetCommand> parsed = ParseSetCommand(cmd.args()[0]);
+  if (parsed.has_error())
+    return parsed.err();
 
   // See where this setting would be stored.
   SettingContext setting_context;
-  err = GetSettingContext(console_context, cmd, setting_name, &setting_context);
+  Err err = GetSettingContext(console_context, cmd, parsed.value().name, &setting_context);
   if (err.has_error())
     return err;
-
-  // See what kind of assignment this is (whether it has =|+=|-=).
-  AssignType assign_type;
-  std::vector<std::string> elements_to_set;
-  err = SetElementsToAdd(cmd.args(), &assign_type, &elements_to_set);
-  if (err.has_error())
-    return err;
-
-  setting_context.assign_type = assign_type;
+  setting_context.op = parsed.value().op;
 
   // Validate that the operations makes sense.
-  if (assign_type != AssignType::kAssign && !setting_context.setting.value.is_list())
-    return Err("List assignment (+=, -=) used on a non-list option.");
+  if (parsed.value().op != ParsedSetCommand::kAssign && !setting_context.setting.value.is_list())
+    return Err("List modification (+=, -=) used on a non-list option.");
 
-  if (elements_to_set.size() > 1u && !setting_context.setting.value.is_list())
-    return Err("Multiple values on a non-list option.");
+  if (parsed.value().values.size() > 1u && !setting_context.setting.value.is_list()) {
+    return Err(
+        "Multiple values on a non-list option. Use \"quotes\" to include literal whitespace.");
+  }
 
   Setting out_setting;  // Used for showing the new value.
-  err = SetSetting(setting_context, elements_to_set, setting_context.store,
-                   &setting_context.elements_changed, &out_setting);
+  err = SetSetting(setting_context, parsed.value().values, setting_context.store, &out_setting);
   if (!err.ok())
     return err;
 
-  OutputBuffer out = FormatSetFeedback(console_context, setting_context, cmd);
+  Console::get()->Output(
+      FormatSetFeedback(console_context, setting_context, parsed.value().name, cmd, out_setting));
+  return Err();
+}
 
-  // For removed values, we show which ones were removed.
-  if (setting_context.assign_type != AssignType::kRemove) {
-    out.Append(FormatSettingShort(out_setting));
-  } else {
-    Setting setting;
-    setting.value = SettingValue(setting_context.elements_changed);
-    out.Append(FormatSettingShort(std::move(setting)));
+// Equivalend to isalpha with no C local complexity.
+bool IsSettingNameAlpha(const char c) { return (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z'); }
+
+// Setting names are only letters and hyphens.
+//
+// The "name" is annoying to parse because it can't end in a "-" and we have to differentiate that
+// from a "name-=..." command which requires lookahead. As a result, this takes the full string
+// and the index of the character to check.
+bool IsSettingNameChar(const std::string& input, size_t i) {
+  if (IsSettingNameAlpha(input[i]))
+    return true;  // Normal letter.
+
+  if (input[i] == '-') {
+    // Disambiguate internal hyphens from "-=".
+    if (i + 1 < input.size() && IsSettingNameAlpha(input[i + 1]))
+      return true;  // More name to come.
   }
 
-  Console::get()->Output(out);
-  return Err();
+  return false;
 }
 
 }  // namespace
 
+// Grammar:
+//   command := <name> [ <whitespace> ] [ <operator> <whitespace> ] <value> *
+//   name := ('A' - 'Z') | ('a' - 'z') | '-'  // See IsSettingNameChar() for qualifications.
+//   operator := "=" | '+=' | '-='
+//
+// A "value" is a possibly quoted string parsed as a command token. The whole thing can't be parsed
+// as a command because we want to handle "name value" as well as "name = value" and "name=value".
+ErrOr<ParsedSetCommand> ParseSetCommand(const std::string& input) {
+  ParsedSetCommand result;
+  size_t cur = 0;
+
+  // Name.
+  while (cur < input.size() && IsSettingNameChar(input, cur)) {
+    result.name.push_back(input[cur]);
+    ++cur;
+  }
+  if (result.name.empty())
+    return Err("Expected a setting name to set.");
+
+  // Require whitespace or an operator after the name to prevent "name$" from being valid.
+  bool has_name_terminator = false;
+
+  // Whitespace.
+  while (cur < input.size() && isspace(input[cur])) {
+    has_name_terminator = true;
+    ++cur;
+  }
+
+  // Special-case the error message for no value to be more helpful.
+  if (cur == input.size())
+    return Err("Expecting a value to set. Use \"set setting-name setting-value\".");
+
+  // Optional operator.
+  if (cur < input.size() && input[cur] == '=') {
+    has_name_terminator = true;
+    result.op = ParsedSetCommand::kAssign;
+    ++cur;
+  } else if (cur < input.size() - 1 && input[cur] == '+' && input[cur + 1] == '=') {
+    has_name_terminator = true;
+    result.op = ParsedSetCommand::kAppend;
+    cur += 2;
+  } else if (cur < input.size() - 1 && input[cur] == '-' && input[cur + 1] == '=') {
+    has_name_terminator = true;
+    result.op = ParsedSetCommand::kRemove;
+    cur += 2;
+  }
+
+  // Check for the name terminator.
+  if (!has_name_terminator)
+    return Err("Invalid setting name.");
+
+  // Whitespace.
+  while (cur < input.size() && isspace(input[cur]))
+    ++cur;
+
+  // Value(s) parsed as a command token. This handles the various types of escaping and quoting
+  // supported by the interactive command line.
+  std::vector<CommandToken> value_tokens;
+  if (Err err = TokenizeCommand(input.substr(cur), &value_tokens); err.has_error())
+    return err;
+  if (value_tokens.empty())
+    return Err("Expected a value to set.");
+
+  for (const auto& token : value_tokens)
+    result.values.push_back(std::move(token.str));
+  return result;
+}
+
 void AppendSettingsVerbs(std::map<Verb, VerbRecord>* verbs) {
-  (*verbs)[Verb::kGet] =
-      VerbRecord(&DoGet, {"get"}, kGetShortHelp, kGetHelp, CommandGroup::kGeneral);
-  (*verbs)[Verb::kSet] =
-      VerbRecord(&DoSet, {"set"}, kSetShortHelp, kSetHelp, CommandGroup::kGeneral);
+  VerbRecord get(&DoGet, {"get"}, kGetShortHelp, kGetHelp, CommandGroup::kGeneral);
+  (*verbs)[Verb::kGet] = std::move(get);
+
+  VerbRecord set(&DoSet, {"set"}, kSetShortHelp, kSetHelp, CommandGroup::kGeneral);
+  set.param_type = VerbRecord::kOneParam;
+  (*verbs)[Verb::kSet] = std::move(set);
 }
 
 }  // namespace zxdb

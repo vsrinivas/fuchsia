@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "src/developer/debug/zxdb/console/verbs_settings.h"
+
 #include "gtest/gtest.h"
 #include "src/developer/debug/shared/platform_message_loop.h"
 #include "src/developer/debug/zxdb/client/mock_remote_api.h"
@@ -68,6 +70,81 @@ class VerbsSettingsTest : public RemoteAPITest {
 
 }  // namespace
 
+TEST(VerbsSettings, ParseSetCommand) {
+  // No input.
+  ErrOr<ParsedSetCommand> result = ParseSetCommand("");
+  ASSERT_TRUE(result.has_error());
+  EXPECT_EQ("Expected a setting name to set.", result.err().msg());
+
+  // Missing value.
+  result = ParseSetCommand("foo");
+  ASSERT_TRUE(result.has_error());
+  EXPECT_EQ("Expecting a value to set. Use \"set setting-name setting-value\".", result.err().msg());
+
+  // Regular two-argument form.
+  result = ParseSetCommand("foo bar");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  ASSERT_EQ(1u, result.value().values.size());
+  EXPECT_EQ("bar", result.value().values[0]);
+
+  // Value ending in hyphen.
+  result = ParseSetCommand("foo-");
+  ASSERT_TRUE(result.has_error());
+  EXPECT_EQ("Invalid setting name.", result.err().msg());
+
+  result = ParseSetCommand("foo- bar");
+  ASSERT_TRUE(result.has_error());
+  EXPECT_EQ("Invalid setting name.", result.err().msg());
+
+  // Whitespace or an assignment operator is required after the name.
+  result = ParseSetCommand("foo#bar");
+  ASSERT_FALSE(result.ok());
+  EXPECT_EQ("Invalid setting name.", result.err().msg());
+
+  // Regular three-argument form with spaces.
+  result = ParseSetCommand("foo = bar");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  ASSERT_EQ(1u, result.value().values.size());
+  EXPECT_EQ("bar", result.value().values[0]);
+
+  // Regular three-argument form with no spaces and an "append" mode.
+  result = ParseSetCommand("foo+=bar");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kAppend, result.value().op);
+  ASSERT_EQ(1u, result.value().values.size());
+  EXPECT_EQ("bar", result.value().values[0]);
+
+  // Remove mode with value quoting.
+  result = ParseSetCommand("foo-=\"bar baz\"");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kRemove, result.value().op);
+  ASSERT_EQ(1u, result.value().values.size());
+  EXPECT_EQ("bar baz", result.value().values[0]);
+
+  // Assign many values.
+  result = ParseSetCommand("foo bar baz");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kAssign, result.value().op);
+  ASSERT_EQ(2u, result.value().values.size());
+  EXPECT_EQ("bar", result.value().values[0]);
+  EXPECT_EQ("baz", result.value().values[1]);
+
+  result = ParseSetCommand("foo+=bar \"baz goo\"");
+  ASSERT_TRUE(result.ok());
+  EXPECT_EQ("foo", result.value().name);
+  EXPECT_EQ(ParsedSetCommand::kAppend, result.value().op);
+  ASSERT_EQ(2u, result.value().values.size());
+  EXPECT_EQ("bar", result.value().values[0]);
+  EXPECT_EQ("baz goo", result.value().values[1]);
+}
+
 TEST_F(VerbsSettingsTest, GetSet) {
   console().Clear();
 
@@ -76,7 +153,7 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Process qualified set.
   EXPECT_EQ(
-      "Set value(s) for process 1:\n"
+      "New value build-dirs for process 1:\n"
       "• prdir\n",
       DoInput("pr set build-dirs prdir"));
 
@@ -86,7 +163,7 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Globally qualified set.
   EXPECT_EQ(
-      "Set value(s) system-wide:\n"
+      "New value build-dirs system-wide:\n"
       "• gldir\n",
       DoInput("global set build-dirs gldir"));
 
@@ -98,20 +175,22 @@ TEST_F(VerbsSettingsTest, GetSet) {
 
   // Unqualified set.
   EXPECT_EQ(
-      "Set value(s) system-wide:\n"
+      "New value build-dirs system-wide:\n"
       "• gldir2\n",
       DoInput("set build-dirs gldir2"));
 
   // Append.
   EXPECT_EQ(
-      "Added value(s) system-wide:\n"
+      "New value build-dirs system-wide:\n"
       "• gldir2\n"
-      "• gldir3\n",
-      DoInput("set build-dirs += gldir3"));
+      "• gldir3\n"
+      "• gldir four\n",
+      DoInput("set build-dirs += gldir3 \"gldir four\""));
 
   EXPECT_EQ(
       "• gldir2\n"
-      "• gldir3",
+      "• gldir3\n"
+      "• gldir four",
       ExtractValuesFromGet(DoInput("global get build-dirs")));
   EXPECT_EQ("• prdir", ExtractValuesFromGet(DoInput("get build-dirs")));
 }

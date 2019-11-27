@@ -133,20 +133,6 @@ OutputBuffer FormatLocation(const Location& loc, const FormatLocationOptions& op
 std::string DescribeFileLine(const TargetSymbols* optional_target_symbols,
                              const FileLine& file_line);
 
-// The setting "set" command has different modification modes, which depend on
-// the setting type being modified.
-enum class AssignType {
-  kAssign,  // =    Sets a complete value for the setting.
-  kAppend,  // +=   Appends values to the setting (list only).
-  kRemove,  // -=   Removes values from the list (list only).
-};
-const char* AssignTypeToString(AssignType);
-
-// Parse the arguments for the set command and find out which assignment
-// operation it is and what are the actual elements to set.
-Err SetElementsToAdd(const std::vector<std::string>& args, AssignType* assign_type,
-                     std::vector<std::string>* elements_to_set);
-
 // Returns the best EvalContext for the given command. If there is an
 // available frame, uses that to registers and local variables can be read.
 // Otherwise falls back to process (read/write memory and globals only) or
