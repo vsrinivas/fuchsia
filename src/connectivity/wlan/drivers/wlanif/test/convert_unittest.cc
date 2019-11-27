@@ -79,5 +79,25 @@ TEST(ConvertTest, ToVectorRateSets_InvalidRateCount) {
   EXPECT_EQ(rates, expected);
 }
 
+TEST(ConvertTest, ToFidlAssocInd) {
+  wlan_mlme::AssociateIndication fidl_ind = {};
+  wlanif_assoc_ind_t assoc_ind = {
+      .rsne_len = 64,
+  };
+  // Check if rsne gets copied over
+  ConvertAssocInd(&fidl_ind, assoc_ind);
+  ASSERT_TRUE(fidl_ind.rsne.has_value());
+  ASSERT_TRUE(fidl_ind.rsne->size() == 64);
+  auto status = ValidateMessage(&fidl_ind);
+  EXPECT_EQ(status, ZX_OK);
+
+  // Check to see rsne is not copied in this case and also ensure
+  // the FIDL message gets reset
+  assoc_ind.rsne_len = 0;
+  ConvertAssocInd(&fidl_ind, assoc_ind);
+  ASSERT_FALSE(fidl_ind.rsne.has_value());
+  status = ValidateMessage(&fidl_ind);
+  EXPECT_EQ(status, ZX_OK);
+}
 }  // namespace
 }  // namespace wlanif

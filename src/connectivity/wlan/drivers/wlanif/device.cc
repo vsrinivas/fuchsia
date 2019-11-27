@@ -789,23 +789,7 @@ void Device::AssociateInd(const wlanif_assoc_ind_t* ind) {
 
   wlan_mlme::AssociateIndication fidl_ind;
 
-  // peer_sta_address
-  std::memcpy(fidl_ind.peer_sta_address.data(), ind->peer_sta_address, ETH_ALEN);
-
-  // listen_interval
-  fidl_ind.listen_interval = ind->listen_interval;
-
-  // ssid
-
-  if (ind->ssid.len) {
-    fidl_ind.ssid = {std::vector<uint8_t>(ind->ssid.data, ind->ssid.data + ind->ssid.len)};
-  }
-  // rsne
-  bool is_protected = ind->rsne_len != 0;
-  if (is_protected) {
-    fidl_ind.rsne->assign(ind->rsne, ind->rsne + ind->rsne_len);
-  }
-
+  ConvertAssocInd(&fidl_ind, *ind);
   binding_.events().AssociateInd(std::move(fidl_ind));
 }
 

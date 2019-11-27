@@ -26,6 +26,8 @@ void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
                            const ::fuchsia::wlan::mlme::BSSDescription& fidl_bss_desc);
 void ConvertBSSDescription(::fuchsia::wlan::mlme::BSSDescription* fidl_bss_desc,
                            const wlanif_bss_description_t& wlanif_bss_desc);
+void ConvertAssocInd(::fuchsia::wlan::mlme::AssociateIndication* fidl_ind,
+                     const wlanif_assoc_ind_t& assoc_ind);
 uint8_t ConvertAuthType(::fuchsia::wlan::mlme::AuthenticationTypes auth_type);
 uint16_t ConvertDeauthReasonCode(::fuchsia::wlan::mlme::ReasonCode reason);
 uint8_t ConvertKeyType(::fuchsia::wlan::mlme::KeyType key_type);

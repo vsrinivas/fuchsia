@@ -286,6 +286,27 @@ void ConvertBSSDescription(wlan_mlme::BSSDescription* fidl_desc,
   fidl_desc->rsni_dbh = wlanif_desc.rsni_dbh;
 }
 
+void ConvertAssocInd(wlan_mlme::AssociateIndication* fidl_ind,
+                     const wlanif_assoc_ind_t& assoc_ind) {
+  *fidl_ind = {};
+  // peer_sta_address
+  std::memcpy(fidl_ind->peer_sta_address.data(), assoc_ind.peer_sta_address, ETH_ALEN);
+
+  // listen_interval
+  fidl_ind->listen_interval = assoc_ind.listen_interval;
+
+  // ssid
+  if (assoc_ind.ssid.len) {
+    fidl_ind->ssid = {
+        std::vector<uint8_t>(assoc_ind.ssid.data, assoc_ind.ssid.data + assoc_ind.ssid.len)};
+  }
+  // rsne
+  bool is_protected = assoc_ind.rsne_len != 0;
+  if (is_protected) {
+    fidl_ind->rsne = {std::vector<uint8_t>(assoc_ind.rsne, assoc_ind.rsne + assoc_ind.rsne_len)};
+  }
+}
+
 uint8_t ConvertAuthType(wlan_mlme::AuthenticationTypes auth_type) {
   switch (auth_type) {
     case wlan_mlme::AuthenticationTypes::OPEN_SYSTEM:
