@@ -151,35 +151,44 @@ context:
   component.
 
 #### Directory Rights {#directory-rights}
+
 Directory rights define how a directory may be accessed in the component
-framework. Directory rights must be specified on `use` declarations and on `expose` and `offer`
+framework. You must specify directory rights on `use` declarations and on `expose` and `offer`
 declarations from `self`. On `expose` and `offer` declarations not from `self`, they are optional.
 
 A *rights* field can be defined by the combination of any of the following rights tokens:
+
 ```
 "rights": ["connect", "enumerate", "read_bytes", "write_bytes", "execute_bytes",
             "update_attributes", "get_attributes", "traverse", "modify_directory"]
 ```
-- Note: See [`fuchsia.io2.Rights`](/zircon/system/fidl/fuchsia-io2/rights-abilities.fidl) for the
+
+Note: See [`fuchsia.io2.Rights`](/zircon/system/fidl/fuchsia-io2/rights-abilities.fidl) for the
   equivalent FIDL definitions.
 
 However *rights aliases* should be prefered where possible for clarity.
+
 ```
 "rights": ["r*", "w*", "x*", "rw*", "rx*"]
 ```
-- Note: Except in special circumstances you will almost always want either `["r*"]` or `["rw*"]`.
-- Note: Only one alias can be provided to a rights field and it must not conflict with any
-  longform rights.
+
+Note: Except in special circumstances you will almost always want either `["r*"]` or `["rw*"]`.
+
+Note: Only one alias can be provided to a rights field and it must not conflict
+      with any longform rights.
 
 Right aliases are simply expanded into their longform counterparts:
+
 ```
 "r*" -> ["connect", "enumerate", "traverse", "read_bytes", "get_attributes"]
 "w*" -> ["connect", "enumerate", "traverse", "write_bytes", "update_attributes", "modify_directory"]
 "x*" -> ["connect", "enumerate", "traverse", "execute_bytes"]
 ```
-- Note: Merged aliases line `rw*` are simply `r*` and `w*` merged without duplicates.
 
-Here is an example usage of a directory use declaration annotated with rights:
+Note: Merged aliases line `rw*` are simply `r*` and `w*` merged without duplicates.
+
+This example shows usage of a directory use declaration annotated with rights:
+
 ```
 "use": [
   {
