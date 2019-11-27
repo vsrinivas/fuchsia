@@ -96,11 +96,14 @@ mod test {
 
     #[test]
     fn group_stats() {
-        set_group_stats(&EventFileGroupStatsMap::from_iter(vec![
+        let inspector = fuchsia_inspect::Inspector::new();
+        let mut group = Groups::new(inspector.root().create_child("archived_events"));
+        group.replace(&EventFileGroupStatsMap::from_iter(vec![
             ("a/b".to_string(), EventFileGroupStats { file_count: 1, size: 2 }),
             ("c/d".to_string(), EventFileGroupStats { file_count: 3, size: 4 }),
         ]));
-        assert_inspect_tree!(component::inspector(),
+
+        assert_inspect_tree!(inspector,
         root: contains {
             archived_events: {
                "a/b": {
