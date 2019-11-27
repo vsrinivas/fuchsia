@@ -17,6 +17,7 @@ mod account_handler_connection;
 mod account_handler_context;
 mod account_manager;
 mod account_map;
+mod fake_account_handler_connection;
 pub mod inspect;
 mod prototype;
 mod stored_account_list;
