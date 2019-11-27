@@ -6,7 +6,10 @@ use {
     crate::{
         builtin_environment::BuiltinEnvironment,
         klog,
-        model::testing::{breakpoints::*, echo_service::*, mocks::*, test_helpers::*},
+        model::testing::{
+            breakpoints::*, directory_utils::SyncDirectoryEntry, echo_service::*, mocks::*,
+            test_helpers::*,
+        },
         model::*,
         startup,
     },
@@ -31,7 +34,7 @@ use {
     futures::prelude::*,
     std::{
         collections::{HashMap, HashSet},
-        convert::TryInto,
+        convert::{TryFrom, TryInto},
         ffi::CString,
         iter,
         path::Path,
@@ -105,12 +108,19 @@ impl RoutingTest {
         let mut runner = MockRunner::new();
 
         let test_dir = TempDir::new_in("/tmp").expect("failed to create temp directory");
+
+        // Create a directory for the components, starting with a single static file
+        // "foo/hippo" in it.
         let test_dir_proxy = io_util::open_directory_in_namespace(
             test_dir.path().to_str().unwrap(),
             io_util::OPEN_RIGHT_READABLE | io_util::OPEN_RIGHT_WRITABLE,
         )
         .expect("failed to open temp directory");
+        create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo")
+            .await
+            .expect("could not create test file");
 
+        // Create and populate an outgoing directory for each component.
         let mut mock_resolver = MockResolver::new();
         for (name, decl) in &components {
             Self::host_capabilities(name, decl.clone(), &mut runner, &test_dir_proxy);
@@ -171,8 +181,8 @@ impl RoutingTest {
             panic!("bad status returned for fdio_ns_bind: {}", zx::Status::from_raw(status));
         }
         let mut out_dir = OutDir::new();
-        out_dir.add_service();
-        out_dir.add_directory(&self.test_dir_proxy);
+        out_dir.add_echo_service();
+        out_dir.add_directory_proxy(&self.test_dir_proxy);
         out_dir.host_fn()(ServerEnd::new(server_chan));
     }
 
@@ -429,10 +439,10 @@ impl RoutingTest {
             match expose {
                 ExposeDecl::Service(_) => panic!("service capability unsupported"),
                 ExposeDecl::LegacyService(s) if s.source == ExposeSource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_service()
+                    out_dir.get_or_insert(OutDir::new()).add_echo_service()
                 }
                 ExposeDecl::Directory(d) if d.source == ExposeSource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
+                    out_dir.get_or_insert(OutDir::new()).add_directory_proxy(test_dir_proxy)
                 }
                 _ => (),
             }
@@ -441,10 +451,10 @@ impl RoutingTest {
             match offer {
                 OfferDecl::Service(_) => panic!("service capability unsupported"),
                 OfferDecl::LegacyService(s) if s.source == OfferServiceSource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_service()
+                    out_dir.get_or_insert(OutDir::new()).add_echo_service()
                 }
                 OfferDecl::Directory(d) if d.source == OfferDirectorySource::Self_ => {
-                    out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
+                    out_dir.get_or_insert(OutDir::new()).add_directory_proxy(test_dir_proxy)
                 }
                 _ => (),
             }
@@ -455,7 +465,7 @@ impl RoutingTest {
             // capability in the manifest, so we must host the directory structure for this case in
             // addition to directory offers.
             if storage.source == StorageDirectorySource::Self_ {
-                out_dir.get_or_insert(OutDir::new()).add_directory(test_dir_proxy)
+                out_dir.get_or_insert(OutDir::new()).add_directory_proxy(test_dir_proxy)
             }
         }
         for runner in decl.runners.iter() {
@@ -463,6 +473,8 @@ impl RoutingTest {
                 out_dir.get_or_insert(OutDir::new()).add_runner_service(runner.source_path.clone())
             }
         }
+
+        // If the outgoing directory is non-empty, pass it to the runner.
         if let Some(out_dir) = out_dir {
             runner.host_fns.insert(format!("test:///{}_resolved", name), out_dir.host_fn());
         }
@@ -865,73 +877,68 @@ async fn create_static_file(
     io_util::write_file(&file_proxy, contents).await
 }
 
-/// OutDir can be used to construct and then host an out directory, containing a directory
-/// structure with 0 or 1 read-only files, and 0 or 1 services.
+/// OutDir is used to construct and then host an out directory.
 #[derive(Clone)]
 pub struct OutDir {
-    // TODO: it would be great if this struct held a `directory::simple::Simple` that was mutated
-    // by the `add_*` functions, but this is not possible because `directory::simple::Simple`
-    // doesn't have `Send` and `Sync` on its internal fields, which is needed for the returned
-    // function by `host_fn`. This logic should be updated to directly work on a directory once a
-    // multithreaded rust vfs is implemented.
-    host_service: bool,
-    test_dir_proxy: Option<Arc<DirectoryProxy>>,
-    runners: Vec<CapabilityPath>,
+    paths: HashMap<CapabilityPath, SyncDirectoryEntry>,
 }
 
 impl OutDir {
     pub fn new() -> OutDir {
-        OutDir { host_service: false, test_dir_proxy: None, runners: Vec::new() }
-    }
-    /// Adds `svc/foo` to the out directory, which implements `fidl.examples.echo.Echo`.
-    pub fn add_service(&mut self) {
-        self.host_service = true;
-    }
-    /// Adds `data/foo/hippo` to the out directory, which contains the string `hippo`, and adds
-    /// `storage` to the out directory, which contains a directory broker that reroutes connections
-    /// to an injected memfs directory.
-    pub fn add_directory(&mut self, test_dir_proxy: &DirectoryProxy) {
-        self.test_dir_proxy = Some(Arc::new(
-            io_util::clone_directory(test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
-                .expect("could not clone DirectoryProxy"),
-        ));
+        OutDir { paths: HashMap::new() }
     }
 
-    /// Adds a runner to the out directory at the given path.
+    /// Add a `DirectoryEntry` served at the given path.
+    pub fn add_entry(&mut self, path: CapabilityPath, entry: impl DirectoryEntry + 'static) {
+        self.paths.insert(path, SyncDirectoryEntry::new(entry));
+    }
+
+    /// Adds a file `/svc/foo` to the out directory (implementing `fidl.examples.echo.Echo`) and
+    /// a static file `/svc/file`.
+    pub fn add_echo_service(&mut self) {
+        // Add "/svc/foo", providing an echo server.
+        self.add_entry(
+            CapabilityPath::try_from("/svc/foo").unwrap(),
+            DirectoryBroker::new(Box::new(Self::echo_server_fn)),
+        );
+
+        // Add "/svc/file", providing a read-only file.
+        self.add_entry(
+            CapabilityPath::try_from("/svc/file").unwrap(),
+            read_only(|| Ok(b"hippos".to_vec())),
+        );
+    }
+
+    /// Adds a file entry providing a ComponentRunner service.
     pub fn add_runner_service(&mut self, service_path: CapabilityPath) {
-        self.runners.push(service_path);
+        // Add a runner service at the given path.
+        //
+        // TODO(fxb/4761): We use an _echo service_ here for now, but should actually
+        // be exposing a ComponentRunner service. None of our tests notice yet,
+        // though.
+        self.add_entry(service_path, DirectoryBroker::new(Box::new(Self::echo_server_fn)));
+    }
+
+    /// Adds the given directory proxy at location "/data".
+    pub fn add_directory_proxy(&mut self, test_dir_proxy: &DirectoryProxy) {
+        self.add_entry(
+            CapabilityPath::try_from("/data").unwrap(),
+            DirectoryBroker::from_directory_proxy(
+                io_util::clone_directory(&test_dir_proxy, CLONE_FLAG_SAME_RIGHTS)
+                    .expect("could not clone directory"),
+            ),
+        );
     }
 
     /// Build the output directory.
-    async fn build_out_dir(&self) -> Result<directory::simple::Simple<'_>, failure::Error> {
+    fn build_out_dir(&self) -> Result<directory::simple::Simple<'static>, failure::Error> {
         let mut tree = TreeBuilder::empty_dir();
 
-        // Add `svc/` if required.
-        if self.host_service {
-            tree.add_entry(&["svc", "foo"], DirectoryBroker::new(Box::new(Self::echo_server_fn)))?;
-            tree.add_entry(&["svc", "file"], read_only(|| Ok(b"hippos".to_vec())))?;
-        }
-
-        // Add any required runner services.
-        for runner in self.runners.iter() {
-            // TODO(fxb/4761): We use an echo service here for now, but should actually
-            // be exposing a ComponentRunner service. None of our tests notice yet,
-            // though.
-            let path = runner.split();
+        // Add any external files.
+        for (path, entry) in self.paths.iter() {
+            let path = path.split();
             let path = path.iter().map(|x| x as &str).collect::<Vec<_>>();
-            tree.add_entry(&path, DirectoryBroker::new(Box::new(Self::echo_server_fn)))?;
-        }
-
-        // Add `data/` if required.
-        if let Some(test_dir_proxy) = &self.test_dir_proxy {
-            tree.add_entry(
-                &["data"],
-                DirectoryBroker::from_directory_proxy(io_util::clone_directory(
-                    &test_dir_proxy,
-                    CLONE_FLAG_SAME_RIGHTS,
-                )?),
-            )?;
-            create_static_file(&test_dir_proxy, Path::new("foo/hippo"), "hippo").await?;
+            tree.add_entry(&path, entry.clone())?;
         }
 
         Ok(tree.build())
@@ -939,20 +946,24 @@ impl OutDir {
 
     /// Returns a function that will host this outgoing directory on the given ServerEnd.
     pub fn host_fn(&self) -> Box<dyn Fn(ServerEnd<DirectoryMarker>) + Send + Sync> {
-        let self_ = self.clone();
+        // Build the output directory.
+        let dir =
+            SyncDirectoryEntry::new(self.build_out_dir().expect("could not build out directory"));
+
+        // Construct a function. Each time it is invoked, we connect a new Zircon channel
+        // `server_end` to the directory.
         Box::new(move |server_end: ServerEnd<DirectoryMarker>| {
-            let self_ = self_.clone();
-            fasync::spawn_local(async move {
-                let mut pseudo_dir =
-                    self_.build_out_dir().await.expect("could not build out directory");
-                pseudo_dir.open(
-                    OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
-                    MODE_TYPE_DIRECTORY,
-                    &mut iter::empty(),
-                    ServerEnd::new(server_end.into_channel()),
-                );
-                let _ = pseudo_dir.await;
-                panic!("the pseudo dir exited!");
+            let mut dir = dir.clone();
+            // Connect the directory.
+            dir.open(
+                OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
+                MODE_TYPE_DIRECTORY,
+                &mut iter::empty(),
+                ServerEnd::new(server_end.into_channel()),
+            );
+            // Schedule the directory to be run.
+            fasync::spawn(async move {
+                dir.await;
             });
         })
     }

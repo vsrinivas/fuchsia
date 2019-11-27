@@ -4,6 +4,7 @@
 
 pub mod breakpoints;
 pub mod breakpoints_capability;
+pub mod directory_utils;
 pub mod echo_service;
 pub mod mocks;
 pub mod routing_test_helpers;

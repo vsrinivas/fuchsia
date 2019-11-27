@@ -798,7 +798,7 @@ mod tests {
         mock_resolver.add_component("eager", ComponentDecl { ..default_component_decl() });
         let mut mock_runner = MockRunner::new();
         let mut out_dir = OutDir::new();
-        out_dir.add_service();
+        out_dir.add_echo_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
         let hook = TestHook::new();
@@ -860,7 +860,7 @@ mod tests {
         );
         let mut mock_runner = MockRunner::new();
         let mut out_dir = OutDir::new();
-        out_dir.add_service();
+        out_dir.add_echo_service();
         mock_runner.host_fns.insert("test:///system_resolved".to_string(), out_dir.host_fn());
         let urls_run = mock_runner.urls_run.clone();
         let hook = TestHook::new();
