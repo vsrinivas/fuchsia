@@ -41,7 +41,6 @@ template <char const* DevicePath, typename Interface>
 class DeviceCreationFixture : public gtest::RealLoopFixture {
  protected:
   void SetUp() override {
-    syslog::InitLogger({"DeviceCreationFixture"});
     vfs_loop_.StartThread("vfs-loop");
     ASSERT_EQ(fdio_ns_get_installed(&ns_), ZX_OK);
     zx::channel c1, c2;

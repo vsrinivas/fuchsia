@@ -12,6 +12,6 @@ executable("blc_test") {
     "//src/camera/calibration/blc",
     "//src/camera/drivers/test_utils",
     "//src/camera/image_writer",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

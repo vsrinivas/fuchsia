@@ -1,5 +1,10 @@
 {
     "program": {
         "binary": "test/virtual_camera_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
     }
 }

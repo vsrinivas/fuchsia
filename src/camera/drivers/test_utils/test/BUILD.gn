@@ -14,7 +14,7 @@ executable("test_utils_test") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/fake-bti",
     "//zircon/public/lib/fbl",
@@ -35,6 +35,6 @@ executable("button_checker_test") {
   ]
   deps = [
     "//src/camera/drivers/test_utils",
-    "//src/lib/fxl/test:gtest_main",
+    "//src/lib/fxl/test:gtest_main_with_syslog",
   ]
 }

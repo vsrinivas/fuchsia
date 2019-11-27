@@ -18,7 +18,8 @@
         "services": [
             "fuchsia.camera2.Manager",
             "fuchsia.sysmem.Allocator",
-            "fuchsia.tracing.provider.Registry"
+            "fuchsia.tracing.provider.Registry",
+            "fuchsia.logger.LogSink"
         ]
     }
 }

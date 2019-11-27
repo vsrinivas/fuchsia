@@ -25,10 +25,7 @@ class VideoDeviceClientTest : public ::testing::Test {
 
   ~VideoDeviceClientTest() override { vdc_loop_.Shutdown(); }
 
-  void SetUp() override {
-    syslog::InitLogger({"VideoDeviceClientTest"});
-    vdc_loop_.StartThread();
-  }
+  void SetUp() override { vdc_loop_.StartThread(); }
   async::Loop vdc_loop_{&kAsyncLoopConfigNoAttachToCurrentThread};
   FakeController fake_camera_;
   FakeLogicalBufferCollection fake_sysmem_;
