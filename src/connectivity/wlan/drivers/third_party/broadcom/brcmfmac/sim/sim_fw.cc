@@ -41,6 +41,8 @@ SimFirmware::SimFirmware(brcmf_simdev* simdev, simulation::Environment* env)
   SimHardware::EventHandlers handlers = {
       .rx_beacon_handler = std::bind(&SimFirmware::RxBeacon, this, std::placeholders::_1,
                                      std::placeholders::_2, std::placeholders::_3),
+      .rx_assoc_resp_handler = std::bind(&SimFirmware::RxAssocResp, this, std::placeholders::_1,
+                                         std::placeholders::_2, std::placeholders::_3),
   };
   hw_.SetCallbacks(handlers);
   country_code_ = {};
@@ -96,7 +98,7 @@ zx_status_t SimFirmware::BcdcVarOp(brcmf_proto_bcdc_dcmd* dcmd, uint8_t* data, s
   char* str_begin = reinterpret_cast<char*>(data);
   uint8_t* str_end = static_cast<uint8_t*>(memchr(str_begin, '\0', dcmd->len));
   if (str_end == nullptr) {
-    BRCMF_ERR("SET_VAR: iovar name not null-terminated\n");
+    BRCMF_DBG(SIM, "SET_VAR: iovar name not null-terminated\n");
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -127,7 +129,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   brcmf_proto_bcdc_dcmd* dcmd;
   constexpr size_t hdr_size = sizeof(struct brcmf_proto_bcdc_dcmd);
   if (len < hdr_size) {
-    BRCMF_ERR("Message length (%u) smaller than BCDC header size (%zd)\n", len, hdr_size);
+    BRCMF_DBG(SIM, "Message length (%u) smaller than BCDC header size (%zd)\n", len, hdr_size);
     return ZX_ERR_INVALID_ARGS;
   }
   dcmd = reinterpret_cast<brcmf_proto_bcdc_dcmd*>(msg);
@@ -135,8 +137,8 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
   uint8_t* data = reinterpret_cast<uint8_t*>(dcmd) + hdr_size;
 
   if (dcmd->len > (len - hdr_size)) {
-    BRCMF_ERR("BCDC total message length (%zd) exceeds buffer size (%u)\n", dcmd->len + hdr_size,
-              len);
+    BRCMF_DBG(SIM, "BCDC total message length (%zd) exceeds buffer size (%u)\n",
+              dcmd->len + hdr_size, len);
     return ZX_ERR_INVALID_ARGS;
   }
 
@@ -152,9 +154,9 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       struct brcmf_rev_info_le rev_info;
       hw_.GetRevInfo(&rev_info);
       if (dcmd->len < sizeof(rev_info)) {
-        BRCMF_ERR(
-            "Insufficient space (%u bytes) in message buffer to save revision "
-            "info (%zu bytes)\n",
+        BRCMF_DBG(
+            SIM,
+            "Insufficient space (%u bytes) in message buffer to save revision info (%zu bytes)\n",
             dcmd->len, sizeof(rev_info));
       }
       memcpy(data, &rev_info, sizeof(rev_info));
@@ -165,18 +167,29 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       // GET_VERSION is a bit of a misnomer. It's really the 802.11 supported spec
       // (e.g., n or ac).
       if (dcmd->len < sizeof(kIoType)) {
-        BRCMF_ERR(
-            "Insufficient space (%u bytes) in message buffer to save iotype "
-            "info (%zu bytes)\n",
-            dcmd->len, sizeof(kIoType));
+        BRCMF_DBG(SIM,
+                  "Insufficient space (%u bytes) in message buffer to save iotype "
+                  "info (%zu bytes)\n",
+                  dcmd->len, sizeof(kIoType));
       }
       std::memcpy(data, &kIoType, sizeof(kIoType));
       bcdc_response_.Set(msg, len);
       break;
     }
+    case BRCMF_C_SET_PASSIVE_SCAN: {
+      // Specify whether to use a passive scan by default (instead of an active scan)
+      if (dcmd->len != sizeof(uint32_t)) {
+        BRCMF_DBG(SIM, "Invalid args size to BRCMF_C_SET_PASSIVE_SCAN (expected %d, saw %d)\n",
+                  sizeof(uint32_t), dcmd->len);
+        return ZX_ERR_INVALID_ARGS;
+      }
+      uint32_t value = *(reinterpret_cast<uint32_t*>(data));
+      default_passive_scan_ = value > 0;
+      break;
+    }
     case BRCMF_C_SET_SCAN_PASSIVE_TIME:
       if (dcmd->len != sizeof(default_passive_time_)) {
-        BRCMF_ERR("Invalid args size to BRCMF_C_SET_SCAN_PASSIVE_TIME (expected %d, saw %d)\n",
+        BRCMF_DBG(SIM, "Invalid args size to BRCMF_C_SET_SCAN_PASSIVE_TIME (expected %d, saw %d)\n",
                   sizeof(default_passive_time_), dcmd->len);
         return ZX_ERR_INVALID_ARGS;
       }
@@ -184,7 +197,7 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_SET_PM:
       if (dcmd->len != sizeof(power_mode_)) {
-        BRCMF_ERR("Invalid args size to BRCMF_C_SET_PM (expected %d, saw %d)\n",
+        BRCMF_DBG(SIM, "Invalid args size to BRCMF_C_SET_PM (expected %d, saw %d)\n",
                   sizeof(power_mode_), dcmd->len);
         return ZX_ERR_INVALID_ARGS;
       }
@@ -192,12 +205,12 @@ zx_status_t SimFirmware::BusTxCtl(unsigned char* msg, unsigned int len) {
       break;
     case BRCMF_C_SET_SCAN_CHANNEL_TIME:
     case BRCMF_C_SET_SCAN_UNASSOC_TIME:
-      BRCMF_ERR("Ignoring firmware message %d\n", dcmd->cmd);
+      BRCMF_DBG(SIM, "Ignoring firmware message %d\n", dcmd->cmd);
       bcdc_response_.Set(msg, len);
       status = ZX_OK;
       break;
     default:
-      BRCMF_ERR("Unimplemented firmware message %d\n", dcmd->cmd);
+      BRCMF_DBG(SIM, "Unimplemented firmware message %d\n", dcmd->cmd);
       status = ZX_ERR_NOT_SUPPORTED;
       break;
   }
@@ -339,24 +352,231 @@ zx_status_t SimFirmware::HandleIfaceRequest(const bool add_iface, const void* da
   return ZX_OK;
 }
 
+void SimFirmware::AssocScanResultSeen(const ScanResult& scan_result) {
+  // Check ssid filter
+  if (scan_state_.opts->ssid) {
+    ZX_ASSERT(scan_state_.opts->ssid->len <= sizeof(scan_state_.opts->ssid->ssid));
+    if (scan_result.ssid.len != scan_state_.opts->ssid->len) {
+      return;
+    }
+    if (std::memcmp(scan_result.ssid.ssid, scan_state_.opts->ssid->ssid, scan_result.ssid.len)) {
+      return;
+    }
+  }
+
+  // Check bssid filter
+  if ((scan_state_.opts->bssid) && (scan_result.bssid != *scan_state_.opts->bssid)) {
+    return;
+  }
+
+  assoc_state_.scan_results.push_back(scan_result);
+}
+
+void SimFirmware::AssocScanDone() {
+  ZX_ASSERT(assoc_state_.state == AssocState::SCANNING);
+
+  // Operation fails if we don't have at least one scan result
+  if (assoc_state_.scan_results.size() == 0) {
+    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_NO_NETWORKS);
+    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    return;
+  }
+
+  auto assoc_opts = std::make_unique<AssocOpts>();
+
+  // For now, just pick the first AP. The real firmware can select based on signal strength and
+  // band, but since wlanstack makes its own decision, we won't bother to model that here for now.
+  ScanResult& ap = assoc_state_.scan_results.front();
+  assoc_opts->channel = ap.channel;
+  assoc_opts->bssid = ap.bssid;
+
+  AssocStart(std::move(assoc_opts));
+}
+
+void SimFirmware::AssocDone() {
+  assoc_state_.opts = nullptr;
+  assoc_state_.scan_results.clear();
+}
+
+void SimFirmware::AssocTimeout() {
+  SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
+  AssocDone();
+  assoc_state_.state = AssocState::NOT_ASSOCIATED;
+}
+
+void SimFirmware::AssocStart(std::unique_ptr<AssocOpts> opts) {
+  common::MacAddr srcAddr(mac_addr_);
+  assoc_state_.state = AssocState::ASSOCIATING;
+  assoc_state_.opts = std::move(opts);
+
+  hw_.SetChannel(assoc_state_.opts->channel);
+  hw_.EnableRx();
+
+  auto callback = new std::function<void()>;
+  *callback = std::bind(&SimFirmware::AssocTimeout, this);
+  hw_.RequestCallback(callback, kAssocTimeout, &assoc_state_.assoc_timer_id);
+
+  // We can't use assoc_state_.opts->bssid directly because it may get free'd during TxAssocReq
+  // handling if a response is sent.
+  common::MacAddr bssid(assoc_state_.opts->bssid);
+  hw_.TxAssocReq(srcAddr, bssid);
+}
+
+void SimFirmware::RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst,
+                              uint16_t status) {
+  // Ignore if we are not trying to associate
+  if (assoc_state_.state != AssocState::ASSOCIATING) {
+    return;
+  }
+
+  // Ignore if this is not intended for us
+  common::MacAddr mac_addr(mac_addr_);
+  if (dst != mac_addr) {
+    return;
+  }
+
+  // Ignore if this is not from the bssid with which we were trying to associate
+  if (src != assoc_state_.opts->bssid) {
+    return;
+  }
+
+  // Response received, cancel timer
+  hw_.CancelCallback(assoc_state_.assoc_timer_id);
+
+  if (status == WLAN_ASSOC_RESULT_SUCCESS) {
+    // Notify the driver that association succeeded
+    assoc_state_.state = AssocState::ASSOCIATED;
+    AssocDone();
+    SendSimpleEventToDriver(BRCMF_E_LINK, BRCMF_E_STATUS_SUCCESS, BRCMF_EVENT_MSG_LINK);
+    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_SUCCESS);
+  } else {
+    // Notify the driver that association failed
+    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+    AssocDone();
+    SendSimpleEventToDriver(BRCMF_E_SET_SSID, BRCMF_E_STATUS_FAIL);
+  }
+}
+
+zx_status_t SimFirmware::HandleJoinRequest(const void* value, size_t value_len) {
+  auto join_params = reinterpret_cast<const brcmf_ext_join_params_le*>(value);
+
+  // Verify that the channel count is consistent with the size of the structure
+  size_t max_channels =
+      (value_len - offsetof(brcmf_ext_join_params_le, assoc_le.chanspec_list)) / sizeof(uint16_t);
+  size_t num_channels = join_params->assoc_le.chanspec_num;
+  if (max_channels < num_channels) {
+    BRCMF_DBG(SIM, "Bad join request: message size (%zd) too short for %zd channels\n", value_len,
+              num_channels);
+    return ZX_ERR_INVALID_ARGS;
+  }
+
+  if (assoc_state_.state != AssocState::NOT_ASSOCIATED) {
+    ZX_ASSERT_MSG(assoc_state_.state != AssocState::ASSOCIATED,
+                  "Need to add support for automatically disassociating\n");
+
+    BRCMF_DBG(SIM, "Attempt to associate while association already in progress\n");
+    return ZX_ERR_BAD_STATE;
+  }
+
+  if (scan_state_.state != ScanState::STOPPED) {
+    BRCMF_DBG(SIM, "Attempt to associate while scan already in progress\n");
+  }
+
+  auto scan_opts = std::make_unique<ScanOpts>();
+
+  // scan_opts->sync_id is unused, since we're not reporting our results back to the driver
+
+  switch (join_params->scan_le.scan_type) {
+    case BRCMF_SCANTYPE_DEFAULT:
+      // Use the default
+      scan_opts->is_active = !default_passive_scan_;
+      break;
+    case BRCMF_SCANTYPE_PASSIVE:
+      scan_opts->is_active = false;
+      break;
+    case BRCMF_SCANTYPE_ACTIVE:
+      // FIXME: this should be true, but this is the mode used by the firmware and active scans are
+      // not supported yet.
+      scan_opts->is_active = false;
+      break;
+    default:
+      return ZX_ERR_INVALID_ARGS;
+  }
+
+  // Specify the SSID filter, if applicable
+  const struct brcmf_ssid_le* req_ssid = &join_params->ssid_le;
+  ZX_ASSERT(IEEE80211_MAX_SSID_LEN == sizeof(scan_opts->ssid->ssid));
+  if (req_ssid->SSID_len != 0) {
+    wlan_ssid_t ssid;
+    ssid.len = req_ssid->SSID_len;
+    std::copy(&req_ssid->SSID[0], &req_ssid->SSID[IEEE80211_MAX_SSID_LEN], ssid.ssid);
+    scan_opts->ssid = ssid;
+  }
+
+  // Specify BSSID filter, if applicable
+  common::MacAddr bssid(join_params->assoc_le.bssid);
+  if (!bssid.IsZero()) {
+    scan_opts->bssid = bssid;
+  }
+
+  // Determine dwell time
+  if (scan_opts->is_active) {
+    if (join_params->scan_le.active_time == static_cast<uint32_t>(-1)) {
+      // If we hit this, we need to determine how to set the default active time
+      ZX_ASSERT("Attempt to use default active scan time, but we don't know how to set this\n");
+    }
+    if (join_params->scan_le.active_time == 0) {
+      return ZX_ERR_INVALID_ARGS;
+    }
+    scan_opts->dwell_time = zx::msec(join_params->scan_le.active_time);
+  } else if (join_params->scan_le.passive_time == static_cast<uint32_t>(-1)) {
+    // Use default passive time
+    if (default_passive_time_ == static_cast<uint32_t>(-1)) {
+      // If we hit this, we need to determine the default default passive time
+      ZX_ASSERT("Attempt to use default passive scan time, but it hasn't been set yet\n");
+    }
+    scan_opts->dwell_time = zx::msec(default_passive_time_);
+  } else {
+    scan_opts->dwell_time = zx::msec(join_params->scan_le.passive_time);
+  }
+
+  // Copy channels from request
+  scan_opts->channels.resize(num_channels);
+  const uint16_t* chanspecs = &join_params->assoc_le.chanspec_list[0];
+  std::copy(&chanspecs[0], &chanspecs[num_channels], scan_opts->channels.data());
+
+  scan_opts->on_result_fn =
+      std::bind(&SimFirmware::AssocScanResultSeen, this, std::placeholders::_1);
+  scan_opts->on_done_fn = std::bind(&SimFirmware::AssocScanDone, this);
+
+  // Reset assoc state
+  assoc_state_.state = AssocState::SCANNING;
+  assoc_state_.scan_results.clear();
+
+  zx_status_t status = ScanStart(std::move(scan_opts));
+  if (status != ZX_OK) {
+    BRCMF_DBG(SIM, "Failed to start scan: %s\n", zx_status_get_string(status));
+    assoc_state_.state = AssocState::NOT_ASSOCIATED;
+  }
+  return status;
+}
+
 zx_status_t SimFirmware::HandleBssCfgSet(const char* name, const void* value, size_t value_len) {
   if (!std::strcmp(name, "interface_remove")) {
     if (value_len < sizeof(int32_t)) {
       return ZX_ERR_IO;
-    } else {
-      return HandleIfaceRequest(false, value, value_len);
     }
+    return HandleIfaceRequest(false, value, value_len);
   }
 
   if (!std::strcmp(name, "ssid")) {
     if (value_len < sizeof(brcmf_mbss_ssid_le)) {
       return ZX_ERR_IO;
-    } else {
-      return HandleIfaceRequest(true, value, value_len);
     }
+    return HandleIfaceRequest(true, value, value_len);
   }
 
-  BRCMF_ERR("Ignoring request to set bsscfg iovar '%s'\n", name);
+  BRCMF_DBG(SIM, "Ignoring request to set bsscfg iovar '%s'\n", name);
   return ZX_OK;
 }
 
@@ -364,6 +584,12 @@ zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t v
   const size_t bsscfg_prefix_len = strlen(BRCMF_FWIL_BSSCFG_PREFIX);
   if (!std::strncmp(name, BRCMF_FWIL_BSSCFG_PREFIX, bsscfg_prefix_len)) {
     return HandleBssCfgSet(name + bsscfg_prefix_len, value, value_len);
+  }
+
+  if (!std::strcmp(name, "country")) {
+    auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
+    country_code_ = *cc_req;
+    return ZX_OK;
   }
 
   if (!std::strcmp(name, "cur_etheraddr")) {
@@ -378,14 +604,16 @@ zx_status_t SimFirmware::IovarsSet(const char* name, const void* value, size_t v
     return HandleEscanRequest(static_cast<const brcmf_escan_params_le*>(value), value_len);
   }
 
-  if (!std::strcmp(name, "country")) {
-    auto cc_req = static_cast<const brcmf_fil_country_le*>(value);
-    country_code_ = *cc_req;
-    return ZX_OK;
+  if (!std::strcmp(name, "join")) {
+    if (value_len < sizeof(brcmf_ext_join_params_le)) {
+      return ZX_ERR_IO;
+    }
+    // Don't cast yet because last element is variable length
+    return HandleJoinRequest(value, value_len);
   }
 
   // FIXME: For now, just pretend that we successfully set the value even when we did nothing
-  BRCMF_ERR("Ignoring request to set iovar '%s'\n", name);
+  BRCMF_DBG(SIM, "Ignoring request to set iovar '%s'\n", name);
   return ZX_OK;
 }
 
@@ -404,9 +632,15 @@ zx_status_t SimFirmware::IovarsGet(const char* name, void* value_out, size_t val
     } else {
       return ZX_ERR_INVALID_ARGS;
     }
+  } else if (!std::strcmp(name, "cur_etheraddr")) {
+    if (value_len >= ETH_ALEN) {
+      memcpy(value_out, mac_addr_.data(), ETH_ALEN);
+    } else {
+      return ZX_ERR_INVALID_ARGS;
+    }
   } else {
     // FIXME: We should return an error for an unrecognized firmware variable
-    BRCMF_ERR("Ignoring request to read iovar '%s'\n", name);
+    BRCMF_DBG(SIM, "Ignoring request to read iovar '%s'\n", name);
     memset(value_out, 0, value_len);
   }
   return ZX_OK;
@@ -423,17 +657,12 @@ zx_status_t SimFirmware::ScanStart(std::unique_ptr<ScanOpts> opts) {
     return ZX_ERR_NOT_SUPPORTED;
   }
 
-  if (opts->is_active) {
-    BRCMF_ERR("Only explicit passive scanning is supported. Ignoring request\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  ZX_ASSERT_MSG(!opts->is_active, "Only explicit passive scanning is supported\n");
 
-  if (opts->channels.size() < 1) {
-    // No channels provided. I'm not sure what will happen here on real firmware -- either it will
-    // use default channels or refuse to scan.
-    BRCMF_ERR("No channels provided to escan start request - ignoring\n");
-    return ZX_ERR_NOT_SUPPORTED;
-  }
+  // I believe in real firmware this will just search all channels. We need to define that set in
+  // order for this functionality to work.
+  ZX_ASSERT_MSG(opts->channels.size() >= 1,
+                "No channels provided to escan start request - unsupported\n");
 
   // Configure state
   scan_state_.state = ScanState::SCANNING;
@@ -486,7 +715,7 @@ void SimFirmware::ScanNextChannel() {
 zx_status_t SimFirmware::HandleEscanRequest(const brcmf_escan_params_le* escan_params,
                                             size_t params_len) {
   if (escan_params->version != BRCMF_ESCAN_REQ_VERSION) {
-    BRCMF_ERR("Mismatched escan version (expected %d, saw %d) - ignoring request\n",
+    BRCMF_DBG(SIM, "Mismatched escan version (expected %d, saw %d) - ignoring request\n",
               BRCMF_ESCAN_REQ_VERSION, escan_params->version);
     return ZX_ERR_NOT_SUPPORTED;
   }
@@ -496,13 +725,13 @@ zx_status_t SimFirmware::HandleEscanRequest(const brcmf_escan_params_le* escan_p
       return EscanStart(escan_params->sync_id, &escan_params->params_le,
                         params_len - offsetof(brcmf_escan_params_le, params_le));
     case WL_ESCAN_ACTION_CONTINUE:
-      BRCMF_ERR("Unimplemented escan option WL_ESCAN_ACTION_CONTINUE - ignoring\n");
+      ZX_ASSERT_MSG(0, "Unimplemented escan option WL_ESCAN_ACTION_CONTINUE\n");
       return ZX_ERR_NOT_SUPPORTED;
     case WL_ESCAN_ACTION_ABORT:
-      BRCMF_ERR("Unimplemented escan option WL_ESCAN_ACTION_ABORT - ignoring\n");
+      ZX_ASSERT_MSG(0, "Unimplemented escan option WL_ESCAN_ACTION_ABORT\n");
       return ZX_ERR_NOT_SUPPORTED;
     default:
-      BRCMF_ERR("Unrecognized escan option %d - ignoring\n", escan_params->action);
+      ZX_ASSERT_MSG(0, "Unrecognized escan option %d\n", escan_params->action);
       return ZX_ERR_NOT_SUPPORTED;
   }
 
@@ -519,15 +748,15 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
   scan_opts->sync_id = sync_id;
 
   switch (params->scan_type) {
-  case BRCMF_SCANTYPE_ACTIVE:
-    scan_opts->is_active = true;
-    break;
-  case BRCMF_SCANTYPE_PASSIVE:
-    scan_opts->is_active = false;
-    break;
-  default:
-    BRCMF_ERR("Invalid scan type requested: %d\n", params->scan_type);
-    return ZX_ERR_INVALID_ARGS;
+    case BRCMF_SCANTYPE_ACTIVE:
+      scan_opts->is_active = true;
+      break;
+    case BRCMF_SCANTYPE_PASSIVE:
+      scan_opts->is_active = false;
+      break;
+    default:
+      BRCMF_DBG(SIM, "Invalid scan type requested: %d\n", params->scan_type);
+      return ZX_ERR_INVALID_ARGS;
   }
 
   size_t num_channels = params->channel_num & BRCMF_SCAN_PARAMS_COUNT_MASK;
@@ -541,7 +770,7 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
   // dwell time has been specified, use that value. Otherwise, fail.
   if (params->passive_time == static_cast<uint32_t>(-1)) {
     if (default_passive_time_ == static_cast<uint32_t>(-1)) {
-      BRCMF_ERR("Attempt to use default passive time, iovar hasn't been set yet\n");
+      BRCMF_DBG(SIM, "Attempt to use default passive time, iovar hasn't been set yet\n");
       return ZX_ERR_INVALID_ARGS;
     }
     scan_opts->dwell_time = zx::msec(default_passive_time_);
@@ -555,19 +784,15 @@ zx_status_t SimFirmware::EscanStart(uint16_t sync_id, const brcmf_scan_params_le
 }
 
 void SimFirmware::EscanComplete() {
-  brcmf_event_msg_be* msg_be;
-
-  auto buf = CreateEventBuffer(0, &msg_be, nullptr);
-  msg_be->event_type = htobe32(BRCMF_E_ESCAN_RESULT);
-  msg_be->status = htobe32(BRCMF_E_STATUS_SUCCESS);
-
-  SendEventToDriver(std::move(buf));
+  SendSimpleEventToDriver(BRCMF_E_ESCAN_RESULT, BRCMF_E_STATUS_SUCCESS);
 }
 
 void SimFirmware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                            const common::MacAddr& bssid) {
-  ScanResult scan_result = { .channel = channel, .ssid = ssid, .bssid = bssid };
-  scan_state_.opts->on_result_fn(scan_result);
+  if (scan_state_.state == ScanState::SCANNING) {
+    ScanResult scan_result = {.channel = channel, .ssid = ssid, .bssid = bssid};
+    scan_state_.opts->on_result_fn(scan_result);
+  }
 }
 
 // Handle an Rx Beacon sent to us from the hardware, using it to fill in all of the fields in a
@@ -673,6 +898,15 @@ std::unique_ptr<std::vector<uint8_t>> SimFirmware::CreateEventBuffer(
 
 void SimFirmware::SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer) {
   brcmf_sim_rx_event(simdev_, std::move(buffer));
+}
+
+void SimFirmware::SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags) {
+  brcmf_event_msg_be* msg_be;
+  auto buf = CreateEventBuffer(0, &msg_be, nullptr);
+  msg_be->flags = htobe16(flags);
+  msg_be->event_type = htobe32(event_type);
+  msg_be->status = htobe32(status);
+  SendEventToDriver(std::move(buf));
 }
 
 }  // namespace wlan::brcmfmac

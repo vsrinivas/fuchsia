@@ -33,6 +33,9 @@
 
 namespace wlan::brcmfmac {
 
+// The amount of time we will wait for an association response after an association request
+constexpr zx::duration kAssocTimeout = zx::sec(3);
+
 class SimFirmware {
   class BcdcResponse {
    public:
@@ -68,7 +71,7 @@ class SimFirmware {
     bool is_active;
 
     // Optional filters
-    std::optional<brcmf_ssid_le> ssid;
+    std::optional<wlan_ssid_t> ssid;
     std::optional<common::MacAddr> bssid;
 
     // Time per channel
@@ -84,6 +87,12 @@ class SimFirmware {
     ScanDoneHandler on_done_fn;
   };
 
+  struct AssocOpts {
+    wlan_channel_t channel;
+    common::MacAddr bssid;
+  };
+
+ public:
   struct ScanState {
     // HOME means listening to home channel between scan channels
     enum { STOPPED, SCANNING, HOME } state = STOPPED;
@@ -94,7 +103,18 @@ class SimFirmware {
     size_t channel_index;
   };
 
- public:
+  struct AssocState {
+    enum { NOT_ASSOCIATED, SCANNING, ASSOCIATING, ASSOCIATED } state = NOT_ASSOCIATED;
+
+    std::unique_ptr<AssocOpts> opts;
+
+    // Results seen during pre-assoc scan
+    std::list<ScanResult> scan_results;
+
+    // Unique id of timer event used to timeout an association request
+    uint64_t assoc_timer_id;
+  };
+
   SimFirmware() = delete;
   explicit SimFirmware(brcmf_simdev* simdev, simulation::Environment* env);
 
@@ -154,6 +174,7 @@ class SimFirmware {
   zx_status_t HandleEscanRequest(const brcmf_escan_params_le* value, size_t value_len);
   zx_status_t HandleIfaceTblReq(const bool add_entry, const void* data, uint8_t* iface_id);
   zx_status_t HandleIfaceRequest(const bool add_iface, const void* data, const size_t len);
+  zx_status_t HandleJoinRequest(const void* value, size_t value_len);
 
   // Generic scan operations
   zx_status_t ScanStart(std::unique_ptr<ScanOpts> opts);
@@ -164,9 +185,17 @@ class SimFirmware {
   void EscanResultSeen(const ScanResult& scan_result);
   void EscanComplete();
 
+  // Association operations
+  void AssocScanResultSeen(const ScanResult& scan_result);
+  void AssocScanDone();
+  void AssocStart(std::unique_ptr<AssocOpts> opts);  // Scan complete, start association process
+  void AssocTimeout();
+  void AssocDone();
+
   // Handlers for events from hardware
   void RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                 const common::MacAddr& bssid);
+  void RxAssocResp(const common::MacAddr& src, const common::MacAddr& dst, uint16_t status);
 
   // Allocate a buffer for an event (brcmf_event)
   std::unique_ptr<std::vector<uint8_t>> CreateEventBuffer(size_t requested_size,
@@ -175,6 +204,9 @@ class SimFirmware {
 
   // Wrap the buffer in an event and send back to the driver over the bus
   void SendEventToDriver(std::unique_ptr<std::vector<uint8_t>> buffer);
+
+  // Send an event without a payload back to the driver
+  void SendSimpleEventToDriver(uint32_t event_type, uint32_t status, uint16_t flags = 0);
 
   // This is the simulator object that represents the interface between the driver and the
   // firmware. We will use it to send back events.
@@ -192,6 +224,8 @@ class SimFirmware {
   // Internal firmware state variables
   std::array<uint8_t, ETH_ALEN> mac_addr_;
   ScanState scan_state_;
+  AssocState assoc_state_;
+  bool default_passive_scan_ = true;
   uint32_t default_passive_time_ = -1;  // In ms. -1 indicates value has not been set.
   int32_t power_mode_ = -1;             // -1 indicates value has not been set.
   sim_iface_entry_t iface_tbl_[kMaxIfSupported];

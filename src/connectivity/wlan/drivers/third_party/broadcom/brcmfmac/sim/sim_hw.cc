@@ -27,12 +27,22 @@ SimHardware::SimHardware(simulation::Environment* env) : env_(env) { env->AddSta
 
 void SimHardware::SetCallbacks(const EventHandlers& handlers) { event_handlers_ = handlers; }
 
+static bool ChannelsMatch(const wlan_channel_t& c1, const wlan_channel_t& c2) {
+  return (c1.primary == c2.primary) && (c1.cbw == c2.cbw) && (c1.secondary80 == c2.secondary80);
+}
+
 void SimHardware::RxBeacon(const wlan_channel_t& channel, const wlan_ssid_t& ssid,
                            const common::MacAddr& bssid) {
-  if (rx_enabled_ && (channel_.primary == channel.primary) && (channel_.cbw == channel.cbw) &&
-      (channel_.secondary80 == channel.secondary80)) {
-    // Pass beacons to firmware if they are on the channel we are tuned to.
+  // Pass beacons to firmware if they are on the channel we are tuned to.
+  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
     event_handlers_.rx_beacon_handler(channel, ssid, bssid);
+  }
+}
+
+void SimHardware::RxAssocResp(const wlan_channel_t& channel, const common::MacAddr& src,
+                              const common::MacAddr& dst, uint16_t status) {
+  if (rx_enabled_ && ChannelsMatch(channel, channel_)) {
+    event_handlers_.rx_assoc_resp_handler(src, dst, status);
   }
 }
 
@@ -65,8 +75,15 @@ void SimHardware::GetRevInfo(brcmf_rev_info_le* rev_info) {
   rev_info->nvramrev = 0x5b2b4;
 }
 
-void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration delay) {
-  env_->ScheduleNotification(this, delay, static_cast<void*>(callback));
+void SimHardware::RequestCallback(std::function<void()>* callback, zx::duration delay,
+                                  uint64_t* id_out) {
+  env_->ScheduleNotification(this, delay, static_cast<void*>(callback), id_out);
+}
+
+void SimHardware::CancelCallback(uint64_t id) { env_->CancelNotification(this, id); }
+
+void SimHardware::TxAssocReq(const common::MacAddr& src, const common::MacAddr& bssid) {
+  env_->TxAssocReq(this, channel_, src, bssid);
 }
 
 }  // namespace wlan::brcmfmac

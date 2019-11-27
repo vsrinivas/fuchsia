@@ -1351,6 +1351,14 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     return ZX_ERR_IO;
   }
 
+  // Firmware is already processing a join request. Don't clear the CONNECTING bit because the
+  // operation is still expected to complete.
+  if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state)) {
+    err = ZX_ERR_BAD_STATE;
+    brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
+    goto done;
+  }
+
   auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
   if (req->rsne_len) {
     BRCMF_DBG(CONN, "using RSNE rsn len: %zu\n", req->rsne_len);
@@ -1410,7 +1418,7 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     err = brcmf_configure_wpaie(ifp, tmp_ie, is_rsn_ie, false);
     if (err != ZX_OK) {
       BRCMF_ERR("Failed to install RSNE: %s\n", zx_status_get_string(err));
-      goto done;
+      goto fail;
     }
   } else {
     brcmf_configure_opensecurity(ifp);
@@ -1445,12 +1453,14 @@ zx_status_t brcmf_cfg80211_connect(struct net_device* ndev, const wlanif_assoc_r
     BRCMF_ERR("join failed (%d)\n", err);
   }
 
-done:
+fail:
   if (err != ZX_OK) {
     brcmf_clear_bit_in_array(BRCMF_VIF_STATUS_CONNECTING, &ifp->vif->sme_state);
     BRCMF_DBG(CONN, "Failed during join: %s", zx_status_get_string(err));
     brcmf_return_assoc_result(ndev, WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED);
   }
+
+done:
   BRCMF_DBG(TRACE, "Exit\n");
   return err;
 }
