@@ -8,6 +8,7 @@
 
 #include <type_traits>
 
+#include "src/developer/debug/zxdb/expr/parse_string.h"
 #include "src/lib/fxl/logging.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -69,6 +70,19 @@ bool ExprTokenizer::Tokenize() {
     AdvanceToNextToken();
     if (done())
       break;
+
+    if (auto string_info = DoesBeginStringLiteral(language_, input_, cur_)) {
+      // String literals are handled specially by the string parser.
+      auto result = ParseStringLiteral(input_, *string_info, &cur_, &error_location_);
+      if (result.has_error()) {
+        err_ = result.err();
+        break;
+      }
+
+      tokens_.emplace_back(ExprTokenType::kStringLiteral, result.value(),
+                           string_info->string_begin);
+      continue;
+    }
 
     const ExprTokenRecord& record = ClassifyCurrent();
     if (has_error())

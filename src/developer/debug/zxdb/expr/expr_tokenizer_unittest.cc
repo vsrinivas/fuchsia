@@ -205,6 +205,54 @@ TEST(ExprTokenizer, Integers) {
   EXPECT_EQ(31u, tokens[7].byte_offset());
 }
 
+TEST(ExprTokenizer, CStrings) {
+  // Char offsets:         0 12345 67890123 45 67890 12345678
+  // Token #'s:            0                 1
+  ExprTokenizer c_strings("\"some\\tstring\" R\"(raw\"string)\"", ExprLanguage::kC);
+
+  EXPECT_TRUE(c_strings.Tokenize());
+  EXPECT_FALSE(c_strings.err().has_error()) << c_strings.err().msg();
+  const auto& tokens = c_strings.tokens();
+  ASSERT_EQ(2u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kStringLiteral, tokens[0].type());
+  EXPECT_EQ("some\tstring", tokens[0].value());
+  EXPECT_EQ(0u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kStringLiteral, tokens[1].type());
+  EXPECT_EQ("raw\"string", tokens[1].value());
+  EXPECT_EQ(15u, tokens[1].byte_offset());
+
+  ExprTokenizer err_string("\"No terminator", ExprLanguage::kC);
+  EXPECT_FALSE(err_string.Tokenize());
+  EXPECT_TRUE(err_string.err().has_error());
+  EXPECT_EQ("Hit end of input before the end of the string.", err_string.err().msg());
+}
+
+TEST(ExprTokenizer, RustStrings) {
+  // Char offsets:            0 12345 67890123 45 67890 12345678 9
+  // Token #'s:               0                 1
+  ExprTokenizer rust_strings("\"some\\tstring\" r#\"raw\"string\"#", ExprLanguage::kRust);
+
+  EXPECT_TRUE(rust_strings.Tokenize());
+  EXPECT_FALSE(rust_strings.err().has_error()) << rust_strings.err().msg();
+  const auto& tokens = rust_strings.tokens();
+  ASSERT_EQ(2u, tokens.size());
+
+  EXPECT_EQ(ExprTokenType::kStringLiteral, tokens[0].type());
+  EXPECT_EQ("some\tstring", tokens[0].value());
+  EXPECT_EQ(0u, tokens[0].byte_offset());
+
+  EXPECT_EQ(ExprTokenType::kStringLiteral, tokens[1].type());
+  EXPECT_EQ("raw\"string", tokens[1].value());
+  EXPECT_EQ(15u, tokens[1].byte_offset());
+
+  ExprTokenizer err_string("\"No terminator", ExprLanguage::kRust);
+  EXPECT_FALSE(err_string.Tokenize());
+  EXPECT_TRUE(err_string.err().has_error());
+  EXPECT_EQ("Hit end of input before the end of the string.", err_string.err().msg());
+}
+
 TEST(ExprTokenizer, OtherLiterals) {
   // Char offsets: 01234567890123456789012345678901234567890123
   // Token #'s:    0    1    2   34     5      6     7        8

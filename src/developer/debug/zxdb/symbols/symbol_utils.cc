@@ -4,6 +4,8 @@
 
 #include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 
+#include "src/developer/debug/zxdb/symbols/array_type.h"
+#include "src/developer/debug/zxdb/symbols/base_type.h"
 #include "src/developer/debug/zxdb/symbols/collection.h"
 #include "src/developer/debug/zxdb/symbols/compile_unit.h"
 #include "src/developer/debug/zxdb/symbols/data_member.h"
@@ -50,6 +52,11 @@ fxl::RefPtr<Collection> MakeRustTuple(const std::string& name,
   coll->set_byte_size(offset);
   coll->set_data_members(std::move(data_members));
   return coll;
+}
+
+fxl::RefPtr<Type> MakeStringLiteralType(size_t length) {
+  auto char_type = fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSignedChar, 1, "char");
+  return fxl::MakeRefCounted<ArrayType>(std::move(char_type), length);
 }
 
 }  // namespace zxdb

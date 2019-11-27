@@ -22,6 +22,12 @@ Identifier GetSymbolScopePrefix(const Symbol* symbol);
 fxl::RefPtr<Collection> MakeRustTuple(const std::string& name,
                                       const std::vector<fxl::RefPtr<Type>>& members);
 
+// Makes a type that can hold the raw string bytes of the given length. This always returns a
+// C-style string array "char[length]". Rust's "&str" type is actually a structure with a pointer
+// which we can't store as a literal in debugger client memory, and users expect an array
+// "[char; 3]" to be printed as ['a', 'b', 'c'] instead of a string.
+fxl::RefPtr<Type> MakeStringLiteralType(size_t length);
+
 }  // namespace zxdb
 
 #endif  // SRC_DEVELOPER_DEBUG_ZXDB_SYMBOLS_SYMBOL_UTILS_H_

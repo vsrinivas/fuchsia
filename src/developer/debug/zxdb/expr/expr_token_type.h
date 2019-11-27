@@ -13,37 +13,38 @@ namespace zxdb {
 // as an index into the parser lookup table.
 enum class ExprTokenType : size_t {
   kInvalid = 0,
-  kName,          // random_text
-  kInteger,       // 123, 0x89ab
-  kEquals,        // =
-  kEquality,      // ==
-  kInequality,    // !=
-  kLessEqual,     // <=
-  kGreaterEqual,  // >=
-  kSpaceship,     // <=>
-  kDot,           // .
-  kComma,         // ,
-  kSemicolon,     // ;
-  kStar,          // *
-  kAmpersand,     // &
-  kDoubleAnd,     // && (logical "and" or rvalue reference)
-  kBitwiseOr,     // |
-  kLogicalOr,     // ||
-  kArrow,         // ->
-  kLeftSquare,    // [
-  kRightSquare,   // ]
-  kLeftParen,     // (
-  kRightParen,    // )
-  kLess,          // <
-  kGreater,       // >
-  kMinus,         // - (by itself, not part of "->")
-  kBang,          // !
-  kPlus,          // +
-  kSlash,         // /
-  kCaret,         // ^
-  kPercent,       // %
-  kColonColon,    // ::
-  kShiftLeft,     // <<
+  kName,           // random_text
+  kInteger,        // 123, 0x89ab
+  kStringLiteral,  // "foo" (token value will be the decoded contents between the quotes).
+  kEquals,         // =
+  kEquality,       // ==
+  kInequality,     // !=
+  kLessEqual,      // <=
+  kGreaterEqual,   // >=
+  kSpaceship,      // <=>
+  kDot,            // .
+  kComma,          // ,
+  kSemicolon,      // ;
+  kStar,           // *
+  kAmpersand,      // &
+  kDoubleAnd,      // && (logical "and" or rvalue reference)
+  kBitwiseOr,      // |
+  kLogicalOr,      // ||
+  kArrow,          // ->
+  kLeftSquare,     // [
+  kRightSquare,    // ]
+  kLeftParen,      // (
+  kRightParen,     // )
+  kLess,           // <
+  kGreater,        // >
+  kMinus,          // - (by itself, not part of "->")
+  kBang,           // !
+  kPlus,           // +
+  kSlash,          // /
+  kCaret,          // ^
+  kPercent,        // %
+  kColonColon,     // ::
+  kShiftLeft,      // <<
 
   // The shift right token is not produced by the tokenizer which will always produce two adjacent
   // ">" tokens. The parser will disambiguate ">>" as a shift operator vs. two template endings and

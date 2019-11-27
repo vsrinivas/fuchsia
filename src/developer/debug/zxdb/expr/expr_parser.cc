@@ -99,6 +99,7 @@ ExprParser::DispatchInfo ExprParser::kDispatchInfo[] = {
     {nullptr,                      nullptr,                      -1},                             // kInvalid
     {&ExprParser::NamePrefix,      nullptr,                      -1},                             // kName
     {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kInteger
+    {&ExprParser::LiteralPrefix,   nullptr,                      -1},                             // kStringLiteral
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceAssignment},          // kEquals
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kEquality
     {nullptr,                      &ExprParser::BinaryOpInfix,   kPrecedenceEquality},            // kInequality

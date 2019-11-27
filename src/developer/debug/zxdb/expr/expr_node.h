@@ -268,7 +268,7 @@ class IdentifierExprNode : public ExprNode {
   ParsedIdentifier ident_;
 };
 
-// Implements a literal like a number or a boolean.
+// Implements a literal like a number, boolean, or string.
 class LiteralExprNode : public ExprNode {
  public:
   const LiteralExprNode* AsLiteral() const override { return this; }

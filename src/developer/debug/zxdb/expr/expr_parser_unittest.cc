@@ -309,6 +309,17 @@ TEST_F(ExprParserTest, IntegerLiterals) {
   EXPECT_EQ("LITERAL(0123)\n", GetParseString("0123"));
 }
 
+// Similar to IntegerLiterals tests, this just covers basic integration.
+TEST_F(ExprParserTest, StringLiterals) {
+  EXPECT_EQ("LITERAL(foo)\n", GetParseString("\"foo\""));
+  EXPECT_EQ("LITERAL(foo\"bar)\n", GetParseString("R\"(foo\"bar)\""));
+  EXPECT_EQ(
+      "BINARY_OP(+)\n"
+      " LITERAL(hello)\n"
+      " LITERAL(world)\n",
+      GetParseString("  \"hello\" + \"world\""));
+}
+
 TEST_F(ExprParserTest, UnaryMath) {
   EXPECT_EQ(
       "UNARY(-)\n"

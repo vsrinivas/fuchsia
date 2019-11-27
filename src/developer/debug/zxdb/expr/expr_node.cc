@@ -26,6 +26,7 @@
 #include "src/developer/debug/zxdb/symbols/data_member.h"
 #include "src/developer/debug/zxdb/symbols/modified_type.h"
 #include "src/developer/debug/zxdb/symbols/symbol_data_provider.h"
+#include "src/developer/debug/zxdb/symbols/symbol_utils.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -318,6 +319,15 @@ void LiteralExprNode::Eval(const fxl::RefPtr<EvalContext>& context, EvalCallback
   switch (token_.type()) {
     case ExprTokenType::kInteger: {
       cb(StringToNumber(token_.value()));
+      break;
+    }
+    case ExprTokenType::kStringLiteral: {
+      // Include the null terminator in the string array as C would.
+      std::vector<uint8_t> string_as_array;
+      string_as_array.reserve(token_.value().size() + 1);
+      string_as_array.assign(token_.value().begin(), token_.value().end());
+      string_as_array.push_back(0);
+      cb(ExprValue(MakeStringLiteralType(token_.value().size() + 1), std::move(string_as_array)));
       break;
     }
     case ExprTokenType::kTrue: {
