@@ -20,7 +20,6 @@
 #include <fs/test_support/test_support.h>
 #include <zxtest/zxtest.h>
 
-
 namespace {
 
 constexpr char kUsageMessage[] = R"""(
@@ -30,6 +29,7 @@ behavior).
 Options:
 --device path_to_device (-d): Performs tests on top of a specific block device
 --no-journal: Don't use journal
+--pager: Use pager (if supported by the filesystem)
 --help (-h): Displays full help
 
 )""";
@@ -41,6 +41,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
     struct option options[] = {
         {"device", required_argument, nullptr, 'd'},
         {"no-journal", no_argument, nullptr, 'j'},
+        {"pager", no_argument, nullptr, 'p'},
         {"help", no_argument, nullptr, 'h'},
         {"gtest_filter", optional_argument, nullptr, 'f'},
         {"gtest_list_tests", optional_argument, nullptr, 'l'},
@@ -51,7 +52,7 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "d:hf::l::s::i:r:b::", options, &opt_index);
+    int c = getopt_long(argc, argv, "d:jphf::l::s::i:r:b::", options, &opt_index);
     if (c < 0) {
       break;
     }
@@ -61,6 +62,9 @@ bool GetOptions(int argc, char** argv, fs::Environment::TestConfig* config) {
         break;
       case 'j':
         config->use_journal = false;
+        break;
+      case 'p':
+        config->use_pager = true;
         break;
       case 'h':
         config->show_help = true;
@@ -117,9 +121,7 @@ bool Environment::TestConfig::GetOptions(int argc, char** argv) {
   return ::GetOptions(argc, argv, this);
 }
 
-const char* Environment::TestConfig::HelpMessage() const {
-  return kUsageMessage;
-}
+const char* Environment::TestConfig::HelpMessage() const { return kUsageMessage; }
 
 void Environment::SetUp() {
   ASSERT_NO_FAILURES(CreateDevmgr());

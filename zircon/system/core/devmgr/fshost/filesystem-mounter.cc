@@ -57,6 +57,9 @@ zx_status_t FilesystemMounter::MountFilesystem(const char* mount_path, const cha
   if (options.enable_journal) {
     argv.push_back("--journal");
   }
+  if (options.enable_pager) {
+    argv.push_back("--pager");
+  }
   argv.push_back("mount");
   argv.push_back(nullptr);
   status = LaunchFs(static_cast<int>(argv.size() - 1), argv.data(), handles, ids, kNumHandles);

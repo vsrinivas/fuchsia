@@ -42,6 +42,7 @@ const mount_options_t test_mount_options = {
     .wait_until_ready = true,
     .create_mountpoint = false,
     .enable_journal = true,
+    .enable_pager = false,
 };
 
 fs_test_utils::FixtureOptions PartitionOverFvmWithRamdisk() {

@@ -23,6 +23,8 @@ typedef struct mount_options {
   bool create_mountpoint;
   // Enable journaling on the file system (if supported).
   bool enable_journal;
+  // Enable paging on the file system (if supported).
+  bool enable_pager;
 } mount_options_t;
 
 __EXPORT

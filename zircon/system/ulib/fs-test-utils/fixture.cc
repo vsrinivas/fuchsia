@@ -244,6 +244,9 @@ zx_status_t Fixture::Mount() {
   mount_options_t mount_options = default_mount_options;
   mount_options.create_mountpoint = true;
   mount_options.wait_until_ready = true;
+  if (options_.use_pager) {
+    mount_options.enable_pager = true;
+  }
 
   disk_format_t format = detect_disk_format(fd.get());
   zx_status_t result =

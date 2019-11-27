@@ -59,6 +59,7 @@ void FilesystemTest::Mount() {
 
   mount_options_t options = default_mount_options;
   options.enable_journal = environment_->use_journal();
+  options.enable_pager = environment_->use_pager();
 
   if (read_only_) {
     options.readonly = true;

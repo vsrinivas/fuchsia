@@ -2,24 +2,25 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file
 
-#pragma once
+#ifndef FS_TEST_UTILS_FIXTURE_H_
+#define FS_TEST_UTILS_FIXTURE_H_
 
+#include <lib/devmgr-integration-test/fixture.h>
+#include <lib/devmgr-launcher/launch.h>
+#include <lib/zx/time.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <zircon/status.h>
+#include <zircon/syscalls.h>
+#include <zircon/types.h>
 
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
 #include <fvm/format.h>
-#include <lib/devmgr-integration-test/fixture.h>
-#include <lib/devmgr-launcher/launch.h>
-#include <lib/zx/time.h>
 #include <ramdevice-client/ramdisk.h>
-#include <zircon/status.h>
-#include <zircon/syscalls.h>
-#include <zircon/types.h>
 
 // Macro for printing more information in error logs.
 // "[File:Line] Error(error_name): Message\n"
@@ -58,6 +59,7 @@ struct FixtureOptions {
     options.fs_type = format;
     options.seed = static_cast<unsigned int>(zx::ticks::now().get());
     options.isolated_devmgr = false;
+    options.use_pager = false;
     return options;
   }
 
@@ -99,6 +101,9 @@ struct FixtureOptions {
 
   // Whether to use an isolated devmgr for each test.
   bool isolated_devmgr = false;
+
+  // Whether to use the user pager (if supported by the |fs_format|).
+  bool use_pager = false;
 };
 
 // Provides a base fixture for File system tests.
@@ -214,3 +219,5 @@ class Fixture {
 };
 
 }  // namespace fs_test_utils
+
+#endif  // FS_TEST_UTILS_FIXTURE_H_

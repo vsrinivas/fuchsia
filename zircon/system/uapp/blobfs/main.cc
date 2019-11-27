@@ -108,14 +108,12 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
                         blobfs::MountOptions* options) {
   while (1) {
     static struct option opts[] = {
-        {"readonly", no_argument, nullptr, 'r'},
-        {"metrics", no_argument, nullptr, 'm'},
-        {"journal", no_argument, nullptr, 'j'},
-        {"help", no_argument, nullptr, 'h'},
-        {nullptr, 0, nullptr, 0},
+        {"readonly", no_argument, nullptr, 'r'}, {"metrics", no_argument, nullptr, 'm'},
+        {"journal", no_argument, nullptr, 'j'},  {"pager", no_argument, nullptr, 'p'},
+        {"help", no_argument, nullptr, 'h'},     {nullptr, 0, nullptr, 0},
     };
     int opt_index;
-    int c = getopt_long(argc, argv, "rmjh", opts, &opt_index);
+    int c = getopt_long(argc, argv, "rmjph", opts, &opt_index);
     if (c < 0) {
       break;
     }
@@ -128,6 +126,9 @@ zx_status_t ProcessArgs(int argc, char** argv, CommandFunction* func,
         break;
       case 'j':
         options->journal = true;
+        break;
+      case 'p':
+        options->pager = true;
         break;
       case 'h':
       default:

@@ -68,6 +68,9 @@ uint64_t gRamdiskFailureLoops = 0;
 // Indicates whether we should enable the journal for the current test run.
 bool gEnableJournal = true;
 
+// Indicates whether we should enable the pager for the current test run.
+bool gEnablePager = false;
+
 // Information about the real disk which must be constructed at runtime, but which persists
 // between tests.
 bool gUseRealDisk = false;
@@ -496,6 +499,7 @@ bool BlobfsTest::Mount() {
 
   mount_options_t options = default_mount_options;
   options.enable_journal = gEnableJournal;
+  options.enable_pager = gEnablePager;
 
   if (read_only_) {
     options.readonly = true;
@@ -749,6 +753,8 @@ static void print_test_help(FILE* f) {
           "      This option is only valid when using a ramdisk.\n"
           "  -j\n"
           "      Disable the journal\n"
+          "  -p\n"
+          "      Enable the pager\n"
           "\n");
 }
 
@@ -823,6 +829,9 @@ int main(int argc, char** argv) {
       i += 2;
     } else if (!strcmp(argv[i], "-j")) {
       gEnableJournal = false;
+      i++;
+    } else if (!strcmp(argv[i], "-p")) {
+      gEnablePager = true;
       i++;
     } else {
       // Ignore options we don't recognize. See ulib/unittest/README.md.

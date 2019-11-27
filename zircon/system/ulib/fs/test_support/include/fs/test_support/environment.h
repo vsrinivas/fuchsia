@@ -57,6 +57,7 @@ class Environment : public zxtest::Environment {
     disk_format_type format_type;
     bool show_help;
     bool use_journal = true;
+    bool use_pager = false;
 
     // Updates the configuration with options from the command line.
     // Returns false as soon as an option is not recognized.
@@ -74,6 +75,8 @@ class Environment : public zxtest::Environment {
   void TearDown() override;
 
   bool use_journal() const { return config_.use_journal; }
+
+  bool use_pager() const { return config_.use_pager; }
 
   disk_format_type format_type() const { return config_.format_type; }
 

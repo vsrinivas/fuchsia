@@ -186,11 +186,6 @@ zx_status_t Mounter::MountNativeFs(const char* binary, zx::channel device,
     printf("fs_mount: Launching %s\n", binary);
   }
 
-  // 1. binary
-  // 2. (optional) readonly
-  // 3. (optional) verbose
-  // 4. (optional) metrics
-  // 5. command
   fbl::Vector<const char*> argv;
   argv.push_back(binary);
   if (options.readonly) {
@@ -204,6 +199,9 @@ zx_status_t Mounter::MountNativeFs(const char* binary, zx::channel device,
   }
   if (options.enable_journal) {
     argv.push_back("--journal");
+  }
+  if (options.enable_pager) {
+    argv.push_back("--pager");
   }
   argv.push_back("mount");
   argv.push_back(nullptr);
@@ -247,6 +245,7 @@ const mount_options_t default_mount_options = {
     .wait_until_ready = true,
     .create_mountpoint = false,
     .enable_journal = true,
+    .enable_pager = false,
 };
 
 const mkfs_options_t default_mkfs_options = {
