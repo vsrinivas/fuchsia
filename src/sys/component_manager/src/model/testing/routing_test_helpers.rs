@@ -72,6 +72,58 @@ pub enum CheckUse {
     },
 }
 
+/// Builder for setting up a new `RoutingTest` instance with a non-standard setup.
+///
+/// Use as follows:
+///
+/// ```
+///   let universe = RoutingTestBuilder::new("root", components)
+///       .add_hooks(...)
+///       .add_outgoing_path(...)
+///       .build();
+/// ```
+pub struct RoutingTestBuilder {
+    root_component: String,
+    components: Vec<(&'static str, ComponentDecl)>,
+    additional_hooks: Vec<HooksRegistration>,
+    outgoing_paths: HashMap<String, HashMap<CapabilityPath, SyncDirectoryEntry>>,
+}
+
+impl RoutingTestBuilder {
+    pub fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self {
+        RoutingTestBuilder {
+            root_component: root_component.to_string(),
+            components,
+            additional_hooks: Vec::new(),
+            outgoing_paths: HashMap::new(),
+        }
+    }
+
+    pub fn add_hooks(mut self, mut hooks: Vec<HooksRegistration>) -> Self {
+        self.additional_hooks.append(&mut hooks);
+        self
+    }
+
+    /// Expose the given `DirectoryEntry` at the given path of the `component`'s outgoing
+    /// directory.
+    pub fn add_outgoing_path(
+        mut self,
+        component: &str,
+        path: CapabilityPath,
+        entry: impl DirectoryEntry + 'static,
+    ) -> Self {
+        self.outgoing_paths
+            .entry(component.to_string())
+            .or_insert_with(|| HashMap::new())
+            .insert(path, SyncDirectoryEntry::new(entry));
+        self
+    }
+
+    pub async fn build(self) -> RoutingTest {
+        RoutingTest::from_builder(self).await
+    }
+}
+
 /// A test for capability routing.
 ///
 /// All string arguments are referring to component names, not URLs, ex: "a", not "test:///a" or
@@ -88,19 +140,13 @@ pub struct RoutingTest {
 }
 
 impl RoutingTest {
-    /// Initializes a new test.
-    pub async fn new(
-        root_component: &'static str,
-        components: Vec<(&'static str, ComponentDecl)>,
-    ) -> Self {
-        RoutingTest::new_with_hooks(root_component, components, vec![]).await
+    /// Initializes a new RoutingTest with a default setup.
+    pub async fn new(root_component: &str, components: Vec<(&'static str, ComponentDecl)>) -> Self {
+        RoutingTestBuilder::new(root_component, components).build().await
     }
 
-    pub async fn new_with_hooks(
-        root_component: &'static str,
-        components: Vec<(&'static str, ComponentDecl)>,
-        additional_hooks: Vec<HooksRegistration>,
-    ) -> Self {
+    /// Construct a new `RoutingTest` from the given builder.
+    async fn from_builder(mut builder: RoutingTestBuilder) -> Self {
         // Ensure that kernel logging has been set up
         let _ = klog::KernelLogger::init();
 
@@ -122,8 +168,14 @@ impl RoutingTest {
 
         // Create and populate an outgoing directory for each component.
         let mut mock_resolver = MockResolver::new();
-        for (name, decl) in &components {
-            Self::host_capabilities(name, decl.clone(), &mut runner, &test_dir_proxy);
+        for (name, decl) in &builder.components {
+            Self::host_capabilities(
+                name,
+                decl.clone(),
+                &mut runner,
+                &test_dir_proxy,
+                builder.outgoing_paths.remove(name as &str).unwrap_or_else(|| HashMap::new()),
+            );
             mock_resolver.add_component(name, decl.clone());
         }
         resolver.register("test".to_string(), Box::new(mock_resolver));
@@ -137,7 +189,7 @@ impl RoutingTest {
         let echo_service = Arc::new(EchoService::new());
         let namespaces = runner.namespaces.clone();
         let model = Arc::new(Model::new(ModelParams {
-            root_component_url: format!("test:///{}", root_component),
+            root_component_url: format!("test:///{}", builder.root_component),
             root_resolver_registry: resolver,
             elf_runner: Arc::new(runner),
         }));
@@ -146,18 +198,18 @@ impl RoutingTest {
                 .await
                 .expect("builtin environment setup failed");
 
-        model.root_realm.hooks.install(additional_hooks).await;
+        model.root_realm.hooks.install(builder.additional_hooks).await;
         model.root_realm.hooks.install(echo_service.hooks()).await;
 
         Self {
-            components,
+            components: builder.components,
             model,
             builtin_environment,
             _echo_service: echo_service,
             namespaces,
             _test_dir: test_dir,
             test_dir_proxy,
-            root_component_name: root_component.to_string(),
+            root_component_name: builder.root_component,
         }
     }
 
@@ -432,6 +484,7 @@ impl RoutingTest {
         decl: ComponentDecl,
         runner: &mut MockRunner,
         test_dir_proxy: &DirectoryProxy,
+        mut outgoing_paths: HashMap<CapabilityPath, SyncDirectoryEntry>,
     ) {
         // if this decl is offering/exposing something from `Self`, let's host it
         let mut out_dir = None;
@@ -472,6 +525,11 @@ impl RoutingTest {
             if runner.source == cm_rust::RunnerSource::Self_ {
                 out_dir.get_or_insert(OutDir::new()).add_runner_service(runner.source_path.clone())
             }
+        }
+
+        // Add any user-specific DirectoryEntry objects into the outgoing namespace.
+        for (path, entry) in outgoing_paths.drain() {
+            out_dir.get_or_insert(OutDir::new()).add_entry(path, entry)
         }
 
         // If the outgoing directory is non-empty, pass it to the runner.
