@@ -98,6 +98,15 @@ impl FakeAccountHandlerContext {
             AccountHandlerContextRequest::GetAuthProvider { responder, .. } => {
                 responder.send(&mut Err(Error::Internal))
             }
+            AccountHandlerContextRequest::GetOauth { responder, .. } => {
+                responder.send(&mut Err(Error::Internal))
+            }
+            AccountHandlerContextRequest::GetOpenIdConnect { responder, .. } => {
+                responder.send(&mut Err(Error::Internal))
+            }
+            AccountHandlerContextRequest::GetOauthOpenIdConnect { responder, .. } => {
+                responder.send(&mut Err(Error::Internal))
+            }
         }
     }
 }

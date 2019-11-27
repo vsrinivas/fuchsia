@@ -436,7 +436,7 @@ impl<T: AuthProviderSupplier> TokenManager<T> {
             return Ok(Arc::clone(auth_provider));
         }
 
-        let client_end = self.auth_provider_supplier.get(auth_provider_type).await?;
+        let client_end = self.auth_provider_supplier.get_auth_provider(auth_provider_type).await?;
         let proxy = Arc::new(client_end.into_proxy().token_manager_status(Status::UnknownError)?);
         self.auth_providers.lock().insert(auth_provider_type.to_string(), Arc::clone(&proxy));
 

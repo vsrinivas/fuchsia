@@ -4,13 +4,13 @@
 
 use failure::Error;
 use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker};
+use fidl_fuchsia_auth::AuthProviderConfig;
 use fidl_fuchsia_identity_internal::{
     AccountHandlerContextRequest, AccountHandlerContextRequestStream,
 };
 use futures::prelude::*;
 use std::collections::HashMap;
-use token_manager::AuthProviderConnection;
+use token_manager::{AuthProviderConnection, AuthProviderService};
 
 /// A type that can respond to`AccountHandlerContext` requests from the AccountHandler components
 /// that we launch. These requests provide contextual and service information to the
@@ -54,20 +54,36 @@ impl AccountHandlerContext {
                 auth_provider_type,
                 auth_provider,
                 responder,
-            } => responder
-                .send(&mut self.get_auth_provider(&auth_provider_type, auth_provider).await),
+            } => responder.send(&mut self.connect(&auth_provider_type, auth_provider).await),
+            AccountHandlerContextRequest::GetOauth { auth_provider_type, oauth, responder } => {
+                responder.send(&mut self.connect(&auth_provider_type, oauth).await)
+            }
+            AccountHandlerContextRequest::GetOpenIdConnect {
+                auth_provider_type,
+                open_id_connect,
+                responder,
+            } => responder.send(&mut self.connect(&auth_provider_type, open_id_connect).await),
+            AccountHandlerContextRequest::GetOauthOpenIdConnect {
+                auth_provider_type,
+                oauth_open_id_connect,
+                responder,
+            } => {
+                responder.send(&mut self.connect(&auth_provider_type, oauth_open_id_connect).await)
+            }
         }
     }
 
-    async fn get_auth_provider<'a>(
+    async fn connect<'a, S>(
         &'a self,
         auth_provider_type: &'a str,
-        auth_provider: ServerEnd<AuthProviderMarker>,
-    ) -> Result<(), fidl_fuchsia_identity_account::Error> {
+        server_end: ServerEnd<S>,
+    ) -> Result<(), fidl_fuchsia_identity_account::Error>
+    where
+        S: AuthProviderService,
+    {
         match self.auth_provider_connections.get(auth_provider_type) {
             Some(apc) => apc
-                .connect(auth_provider)
-                .await
+                .connect::<S>(server_end)
                 .map_err(|_| fidl_fuchsia_identity_account::Error::Unknown),
             None => Err(fidl_fuchsia_identity_account::Error::NotFound),
         }

@@ -6,6 +6,7 @@ library fuchsia.identity.internal;
 
 using fuchsia.auth;
 using fuchsia.identity.account;
+using fuchsia.identity.external;
 using fuchsia.kms;
 
 const uint32 HASH_SIZE = 32;
@@ -258,14 +259,48 @@ protocol AccountHandlerControl {
 /// component that launches it (i.e. the AccountManager).
 [Discoverable]
 protocol AccountHandlerContext {
-    /// Connects an interface to a particular AuthProvider, launching it if
-    /// necessary.
+    /// Connects to the `AuthProvider` implementation for a particular service
+    /// provider, launching it if necessary.  This method will soon be removed
+    /// along with the `AuthProvider` protocol.
     ///
     /// `auth_provider_type` An OAuth identity provider matching a configuration
     ///                      set in an AuthProviderConfig.auth_provider_type
     /// `auth_provider` The server end of an `AuthProvider` channel
     GetAuthProvider(string auth_provider_type,
                     request<fuchsia.auth.AuthProvider> auth_provider)
+        -> () error fuchsia.identity.account.Error;
+
+    /// Connects to the `Oauth` implementation for a particular service provider,
+    /// launching it if necessary.
+    ///
+    /// `auth_provider_type` An OAuth identity provider matching a configuration
+    ///                      set in an AuthProviderConfig.auth_provider_type
+    /// `oauth` The server end of an `Oauth` channel
+    GetOauth(string auth_provider_type,
+             request<fuchsia.identity.external.Oauth> oauth)
+        -> () error fuchsia.identity.account.Error;
+
+    /// Connects to the `OpenIdConnect` implementation for a particular service
+    /// provider, launching it if necessary.
+    ///
+    /// `auth_provider_type` An OpenID Connect identity provider matching a
+    ///                      configuration set in an
+    ///                      AuthProviderConfig.auth_provider_type
+    /// `open_id_connect` The server end of an `OpenIDConnect` channel
+    GetOpenIdConnect(string auth_provider_type,
+                     request<fuchsia.identity.external.OpenIdConnect> open_id_connect)
+        -> () error fuchsia.identity.account.Error;
+
+    /// Connects to the `OauthOpenIdConnect` implementation for a particular
+    /// service provider, launching it if necessary.
+    ///
+    /// `auth_provider_type` An OpenID Connect identity provider matching a
+    ///                      configuration set in an
+    ///                      AuthProviderConfig.auth_provider_type
+    /// `oauth_open_id_connect` The server end of an `OauthOpenIDConnect` channel
+    GetOauthOpenIdConnect(string auth_provider_type,
+                          request<fuchsia.identity.external.OauthOpenIdConnect> 
+                          oauth_open_id_connect)
         -> () error fuchsia.identity.account.Error;
 };
 

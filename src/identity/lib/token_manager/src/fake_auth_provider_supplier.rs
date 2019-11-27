@@ -4,14 +4,21 @@
 #![cfg(test)]
 
 use crate::{AuthProviderSupplier, TokenManagerError};
+use async_trait::async_trait;
 use failure::Fail;
-use fidl::endpoints::create_request_stream;
-use fidl::endpoints::ClientEnd;
+use fidl::endpoints::{create_request_stream, ClientEnd};
 use fidl_fuchsia_auth::{
     AuthProviderMarker, AuthProviderRequest, AuthProviderRequestStream, AuthProviderStatus, Status,
 };
+use fidl_fuchsia_identity_external::{
+    OauthMarker, OauthOpenIdConnectMarker, OauthOpenIdConnectRequest,
+    OauthOpenIdConnectRequestStream, OauthRefreshTokenRequest, OauthRequest, OauthRequestStream,
+    OpenIdConnectMarker, OpenIdConnectRequest, OpenIdConnectRequestStream,
+    OpenIdTokenFromOauthRefreshTokenRequest,
+};
+use fidl_fuchsia_identity_tokens::OpenIdToken;
+use futures::future::join;
 use futures::future::BoxFuture;
-use futures::future::{join, FutureObj};
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
 use parking_lot::Mutex;
@@ -26,7 +33,19 @@ use std::sync::Arc;
 /// reuses them throughout its lifetime, hence it will never ask for the same auth provider
 /// (as defined by its `auth_provider_type`) twice.
 pub struct FakeAuthProviderSupplier {
-    auth_providers: Mutex<HashMap<String, ClientEnd<AuthProviderMarker>>>,
+    /// A mapping from auth provider type to client ends of `AuthProvider`
+    /// implementations provided in `add_auth_provider`.
+    auth_provider_clients: Mutex<HashMap<String, ClientEnd<AuthProviderMarker>>>,
+    /// A mapping from auth provider type to client ends of `Oauth`
+    /// implementations provided in `add_oauth`.
+    oauth_clients: Mutex<HashMap<String, ClientEnd<OauthMarker>>>,
+    /// A mapping from auth provider type to client ends of `OauthOpenIdConnect`
+    /// implementations provided in `add_oauth_open_id_connect`.
+    oauth_open_id_connect_clients: Mutex<HashMap<String, ClientEnd<OauthOpenIdConnectMarker>>>,
+    /// A mapping from auth provider type to client ends of `OpenIdConnect`
+    /// implementations provided in `add_open_id_connect`.
+    open_id_connect_clients: Mutex<HashMap<String, ClientEnd<OpenIdConnectMarker>>>,
+    /// The set of Futures that serve added auth provider implementations.
     servers: Mutex<FuturesUnordered<BoxFuture<'static, Result<(), fidl::Error>>>>,
 }
 
@@ -39,22 +58,74 @@ pub enum FakeAuthProviderError {
 impl FakeAuthProviderSupplier {
     pub fn new() -> Self {
         Self {
-            auth_providers: Mutex::new(HashMap::new()),
+            auth_provider_clients: Mutex::new(HashMap::new()),
+            oauth_clients: Mutex::new(HashMap::new()),
+            oauth_open_id_connect_clients: Mutex::new(HashMap::new()),
+            open_id_connect_clients: Mutex::new(HashMap::new()),
             servers: Mutex::new(FuturesUnordered::new()),
         }
     }
 
-    /// Add an auth provider, by supplying two arguments: the type, and a function which acts
-    /// as the server end for the auth provider. This function will be invoked when `run()` is
-    /// called.
+    /// Add an `AuthProvider` implementation, by supplying two arguments: the type, and a
+    /// function which acts as the server end for the auth provider. This function will be
+    /// invoked when `run()` is called.
     pub fn add_auth_provider<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
     where
         F: (FnOnce(AuthProviderRequestStream) -> Fut),
         Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
     {
-        let (client_end, stream) = create_request_stream().unwrap();
+        let (client_end, stream) = create_request_stream::<AuthProviderMarker>().unwrap();
         let serve = server_fn(stream);
-        self.auth_providers.lock().insert(auth_provider_type.to_string(), client_end);
+        self.auth_provider_clients.lock().insert(auth_provider_type.to_string(), client_end);
+        self.servers.lock().push(serve.boxed());
+    }
+
+    /// Add an `Oauth` implementation, by supplying two arguments: the type, and a
+    /// function which acts as the server end for the auth provider. This function will be
+    /// invoked when `run()` is called.
+    #[allow(dead_code)]
+    pub fn add_oauth<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
+    where
+        F: (FnOnce(OauthRequestStream) -> Fut),
+        Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
+    {
+        let (client_end, stream) = create_request_stream::<OauthMarker>().unwrap();
+        let serve = server_fn(stream);
+        self.oauth_clients.lock().insert(auth_provider_type.to_string(), client_end);
+        self.servers.lock().push(serve.boxed());
+    }
+
+    /// Add an `OpenIdConnect` implementation, by supplying two arguments: the type, and a
+    /// function which acts as the server end for the auth provider. This function will be
+    /// invoked when `run()` is called.
+    #[allow(dead_code)]
+    pub fn add_open_id_connect<'a, F, Fut>(&'a self, auth_provider_type: &'a str, server_fn: F)
+    where
+        F: (FnOnce(OpenIdConnectRequestStream) -> Fut),
+        Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
+    {
+        let (client_end, stream) = create_request_stream::<OpenIdConnectMarker>().unwrap();
+        let serve = server_fn(stream);
+        self.open_id_connect_clients.lock().insert(auth_provider_type.to_string(), client_end);
+        self.servers.lock().push(serve.boxed());
+    }
+
+    /// Add an `OauthOpenIdConnect` implementation, by supplying two arguments: the type, and a
+    /// function which acts as the server end for the auth provider. This function will be
+    /// invoked when `run()` is called.
+    pub fn add_oauth_open_id_connect<'a, F, Fut>(
+        &'a self,
+        auth_provider_type: &'a str,
+        server_fn: F,
+    ) where
+        F: (FnOnce(OauthOpenIdConnectRequestStream) -> Fut),
+        Fut: Future<Output = Result<(), fidl::Error>> + Send + 'static,
+    {
+        let (client_end, stream) = create_request_stream::<OauthOpenIdConnectMarker>().unwrap();
+        let serve = server_fn(stream);
+        self.oauth_open_id_connect_clients
+            .lock()
+            .insert(auth_provider_type.to_string(), client_end);
         self.servers.lock().push(serve.boxed());
     }
 
@@ -78,18 +149,46 @@ impl FakeAuthProviderSupplier {
     }
 }
 
+#[async_trait]
 impl AuthProviderSupplier for FakeAuthProviderSupplier {
-    /// Just returns the pre-populated AuthProvider client end. Note that this consumes the
-    /// auth provider; a second identical call will fail. This method should be invoked by the
-    /// code under test.
-    fn get<'b>(
-        &'b self,
-        auth_provider_type: &'b str,
-    ) -> FutureObj<'b, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
-        let client_end = self.auth_providers.lock().remove(auth_provider_type);
-        FutureObj::new(Box::new(async move {
-            client_end.ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
-        }))
+    async fn get_auth_provider(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
+        self.auth_provider_clients
+            .lock()
+            .remove(auth_provider_type)
+            .ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
+    }
+
+    async fn get_oauth(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthMarker>, TokenManagerError> {
+        self.oauth_clients
+            .lock()
+            .remove(auth_provider_type)
+            .ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
+    }
+
+    async fn get_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OpenIdConnectMarker>, TokenManagerError> {
+        self.open_id_connect_clients
+            .lock()
+            .remove(auth_provider_type)
+            .ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
+    }
+
+    async fn get_oauth_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthOpenIdConnectMarker>, TokenManagerError> {
+        self.oauth_open_id_connect_clients
+            .lock()
+            .remove(auth_provider_type)
+            .ok_or(TokenManagerError::new(Status::AuthProviderServiceUnavailable))
     }
 }
 
@@ -105,7 +204,8 @@ mod tests {
     #[fuchsia_async::run_until_stalled(test)]
     async fn auth_provider_fake_test() {
         let auth_provider_supplier = Arc::new(FakeAuthProviderSupplier::new());
-        assert!(auth_provider_supplier.get("myspace").await.is_err()); // Non-existing provider
+        // Non existing auth provider
+        assert!(auth_provider_supplier.get_auth_provider("myspace").await.is_err());
 
         auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
             async move {
@@ -146,14 +246,22 @@ mod tests {
         let auth_provider_supplier_clone = Arc::clone(&auth_provider_supplier);
 
         let client_fn = async move {
-            let ap_proxy =
-                auth_provider_supplier_clone.get("hooli").await.unwrap().into_proxy().unwrap();
+            let ap_proxy = auth_provider_supplier_clone
+                .get_auth_provider("hooli")
+                .await
+                .unwrap()
+                .into_proxy()
+                .unwrap();
             let status =
                 ap_proxy.revoke_app_or_persistent_credential("HOOLI_CREDENTIAL").await.unwrap();
             assert_eq!(status, AuthProviderStatus::BadRequest);
 
-            let ap_proxy =
-                auth_provider_supplier_clone.get("pied-piper").await.unwrap().into_proxy().unwrap();
+            let ap_proxy = auth_provider_supplier_clone
+                .get_auth_provider("pied-piper")
+                .await
+                .unwrap()
+                .into_proxy()
+                .unwrap();
             let (status, auth_token) =
                 ap_proxy.get_app_id_token("PIED_PIPER_CREDENTIAL", None).await.unwrap();
             assert_eq!(status, AuthProviderStatus::Ok);
@@ -161,7 +269,144 @@ mod tests {
         };
         let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
         assert!(run_result.is_ok());
-        assert!(auth_provider_supplier.get("hooli").await.is_err());
-        assert!(auth_provider_supplier.get("pied-piper").await.is_err());
+        assert!(auth_provider_supplier.get_auth_provider("hooli").await.is_err());
+        assert!(auth_provider_supplier.get_auth_provider("pied-piper").await.is_err());
+    }
+
+    /// A test for FakeAuthProviderSupplier that walks through setting and retrieving one of
+    /// each possible protocol.
+    #[fuchsia_async::run_until_stalled(test)]
+    async fn multiple_protocols_test() {
+        let auth_provider_supplier = FakeAuthProviderSupplier::new();
+
+        auth_provider_supplier.add_auth_provider("hooli", |mut stream| {
+            async move {
+                match stream.try_next().await? {
+                    Some(AuthProviderRequest::RevokeAppOrPersistentCredential {
+                        responder,
+                        ..
+                    }) => {
+                        responder.send(AuthProviderStatus::BadRequest)?;
+                    }
+                    _ => panic!("Unexpected message received"),
+                }
+                assert!(stream.try_next().await?.is_none());
+                Ok(())
+            }
+        });
+
+        auth_provider_supplier.add_oauth("hooli", |mut stream| {
+            async move {
+                match stream.try_next().await? {
+                    Some(OauthRequest::CreateRefreshToken { responder, .. }) => {
+                        responder.send(&mut Err(
+                            fidl_fuchsia_identity_external::Error::InvalidRequest,
+                        ))?;
+                    }
+                    _ => panic!("Unexpected message received"),
+                }
+                assert!(stream.try_next().await?.is_none());
+                Ok(())
+            }
+        });
+
+        auth_provider_supplier.add_oauth_open_id_connect("hooli", |mut stream| {
+            async move {
+                match stream.try_next().await? {
+                    Some(OauthOpenIdConnectRequest::GetIdTokenFromRefreshToken {
+                        responder,
+                        ..
+                    }) => {
+                        responder.send(&mut Err(
+                            fidl_fuchsia_identity_external::Error::InvalidRequest,
+                        ))?;
+                    }
+                    _ => panic!("Unexpected message received"),
+                }
+                assert!(stream.try_next().await?.is_none());
+                Ok(())
+            }
+        });
+
+        auth_provider_supplier.add_open_id_connect("hooli", |mut stream| {
+            async move {
+                match stream.try_next().await? {
+                    Some(OpenIdConnectRequest::RevokeIdToken { responder, .. }) => {
+                        responder.send(&mut Err(
+                            fidl_fuchsia_identity_external::Error::InvalidRequest,
+                        ))?;
+                    }
+                    _ => panic!("Unexpected message received"),
+                }
+                assert!(stream.try_next().await?.is_none());
+                Ok(())
+            }
+        });
+
+        let client_fn = async {
+            let auth_provider_proxy = auth_provider_supplier
+                .get_auth_provider("hooli")
+                .await
+                .unwrap()
+                .into_proxy()
+                .unwrap();
+            assert_eq!(
+                auth_provider_proxy
+                    .revoke_app_or_persistent_credential("HOOLI_CREDENTIAL")
+                    .await
+                    .unwrap(),
+                AuthProviderStatus::BadRequest
+            );
+
+            let oauth_proxy =
+                auth_provider_supplier.get_oauth("hooli").await.unwrap().into_proxy().unwrap();
+
+            assert_eq!(
+                oauth_proxy
+                    .create_refresh_token(OauthRefreshTokenRequest {
+                        account_id: None,
+                        ui_context: None
+                    })
+                    .await
+                    .unwrap(),
+                Err(fidl_fuchsia_identity_external::Error::InvalidRequest)
+            );
+
+            let oauth_open_id_connect_proxy = auth_provider_supplier
+                .get_oauth_open_id_connect("hooli")
+                .await
+                .unwrap()
+                .into_proxy()
+                .unwrap();
+
+            assert_eq!(
+                oauth_open_id_connect_proxy
+                    .get_id_token_from_refresh_token(OpenIdTokenFromOauthRefreshTokenRequest {
+                        refresh_token: None,
+                        audiences: None,
+                    })
+                    .await
+                    .unwrap(),
+                Err(fidl_fuchsia_identity_external::Error::InvalidRequest)
+            );
+
+            let open_id_connect_proxy = auth_provider_supplier
+                .get_open_id_connect("hooli")
+                .await
+                .unwrap()
+                .into_proxy()
+                .unwrap();
+
+            assert_eq!(
+                open_id_connect_proxy
+                    .revoke_id_token(OpenIdToken { content: None, expiry_time: None })
+                    .await
+                    .unwrap(),
+                Err(fidl_fuchsia_identity_external::Error::InvalidRequest)
+            );
+        };
+
+        let (run_result, _) = join(auth_provider_supplier.run(), client_fn).await;
+        assert!(run_result.is_ok());
     }
 }

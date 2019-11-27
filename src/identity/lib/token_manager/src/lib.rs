@@ -13,9 +13,10 @@
 
 #![deny(missing_docs)]
 
+use async_trait::async_trait;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};
-use futures::future::FutureObj;
+use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 
 mod auth_provider_connection;
 mod error;
@@ -23,7 +24,7 @@ mod fake_auth_provider_supplier;
 mod token_manager;
 mod tokens;
 
-pub use crate::auth_provider_connection::AuthProviderConnection;
+pub use crate::auth_provider_connection::{AuthProviderConnection, AuthProviderService};
 pub use crate::error::{ResultExt, TokenManagerError};
 pub use crate::token_manager::TokenManager;
 
@@ -38,12 +39,38 @@ pub struct TokenManagerContext {
 }
 
 /// A type capable of supplying channels to communicate with components implementing the
-/// `AuthProvider` interface.
+/// `AuthProvider` interface..
+// TODO(satsukiu): the methods this contains should probably just be generic over the
+// various auth provider protocols.  This isn't done at the moment since channels need
+// to be passed between account_handler and account_manager using distinct methods in
+// AccountHandlerContext.
+#[async_trait]
 pub trait AuthProviderSupplier {
-    /// Asynchronously creates an `AuthProvider` for the requested `auth_provider_type` and returns
-    /// the `ClientEnd` for communication with it.
-    fn get<'a>(
-        &'a self,
-        auth_provider_type: &'a str,
-    ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>>;
+    /// Returns a `ClientEnd` for communication with a token provider for the requested
+    /// `auth_provider_type` over the `AuthProvider` protocol.
+    async fn get_auth_provider(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError>;
+
+    /// Returns a `ClientEnd` for communication with a token provider for the requested
+    /// `auth_provider_type` over the `Oauth` protocol.
+    async fn get_oauth(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthMarker>, TokenManagerError>;
+
+    /// Returns a `ClientEnd` for communication with a token provider for the requested
+    /// `auth_provider_type` over the `OpenIdConnect` protocol.
+    async fn get_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OpenIdConnectMarker>, TokenManagerError>;
+
+    /// Returns a `ClientEnd` for communication with a token provider for the requested
+    /// `auth_provider_type` over the `OauthOpenIdConnect` protocol.
+    async fn get_oauth_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthOpenIdConnectMarker>, TokenManagerError>;
 }

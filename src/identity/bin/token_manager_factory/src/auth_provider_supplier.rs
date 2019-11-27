@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_trait::async_trait;
 use failure::format_err;
 use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker, Status};
-use futures::future::{ready as fready, FutureObj};
+use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use std::collections::HashMap;
 use std::sync::Arc;
-use token_manager::{AuthProviderConnection, TokenManagerError};
+use token_manager::{AuthProviderConnection, AuthProviderService, TokenManagerError};
 
 /// A type capable of launching and connecting to components that implement the
 /// `AuthProvider` protocol. Launching is performed on demand and components are
@@ -35,24 +36,51 @@ impl AuthProviderSupplier {
             ),
         }
     }
-}
 
-impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
-    /// Asynchronously creates an `AuthProvider` for the requested `auth_provider_type` and
-    /// returns the `ClientEnd` for communication with it.
-    fn get<'a>(
-        &'a self,
-        auth_provider_type: &'a str,
-    ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
+    fn get<S>(&self, auth_provider_type: &str) -> Result<ClientEnd<S>, TokenManagerError>
+    where
+        S: AuthProviderService,
+    {
         let auth_provider_connection: &AuthProviderConnection =
             match self.auth_provider_connections.get(auth_provider_type) {
                 Some(apc) => apc,
                 None => {
                     let err = TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                         .with_cause(format_err!("Unknown auth provider {}", auth_provider_type));
-                    return FutureObj::new(Box::new(fready(Err(err))));
+                    return Err(err);
                 }
             };
-        FutureObj::new(Box::new(auth_provider_connection.get()))
+        auth_provider_connection.get()
+    }
+}
+
+#[async_trait]
+impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
+    async fn get_auth_provider(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
+        self.get(auth_provider_type)
+    }
+
+    async fn get_oauth(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthMarker>, TokenManagerError> {
+        self.get(auth_provider_type)
+    }
+
+    async fn get_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OpenIdConnectMarker>, TokenManagerError> {
+        self.get(auth_provider_type)
+    }
+
+    async fn get_oauth_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthOpenIdConnectMarker>, TokenManagerError> {
+        self.get(auth_provider_type)
     }
 }

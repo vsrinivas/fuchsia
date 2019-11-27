@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use async_trait::async_trait;
 use failure::format_err;
 use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{AuthProviderMarker, Status};
+use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use fidl_fuchsia_identity_internal::AccountHandlerContextProxy;
-use futures::future::{ready as fready, FutureObj};
 use token_manager::TokenManagerError;
 
 /// A type capable of acquiring `AuthProvider` connections from components that implement it.
@@ -26,35 +27,67 @@ impl AuthProviderSupplier {
     }
 }
 
+#[async_trait]
 impl token_manager::AuthProviderSupplier for AuthProviderSupplier {
-    /// Asynchronously creates an `AuthProvider` for the requested `auth_provider_type` and
-    /// returns the `ClientEnd` for communication with it.
-    fn get<'a>(
-        &'a self,
-        auth_provider_type: &'a str,
-    ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>> {
-        let (client_end, server_end) = match create_endpoints() {
-            Ok((client_end, server_end)) => (client_end, server_end),
-            Err(err) => {
-                let tm_err = TokenManagerError::new(Status::UnknownError).with_cause(err);
-                return FutureObj::new(Box::new(fready(Err(tm_err))));
-            }
-        };
+    async fn get_auth_provider(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
+        let (client_end, server_end) = create_endpoints()
+            .map_err(|err| TokenManagerError::new(Status::UnknownError).with_cause(err))?;
+        match self.account_handler_context.get_auth_provider(auth_provider_type, server_end).await {
+            Ok(Ok(())) => Ok(client_end),
+            Ok(Err(status)) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("AccountHandlerContext returned {:?}", status))),
+            Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
+        }
+    }
 
-        FutureObj::new(Box::new(async move {
-            match self
-                .account_handler_context
-                .get_auth_provider(auth_provider_type, server_end)
-                .await
-            {
-                Ok(Ok(())) => Ok(client_end),
-                Ok(Err(status)) => {
-                    Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
-                        .with_cause(format_err!("AccountHandlerContext returned {:?}", status)))
-                }
-                Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
-            }
-        }))
+    async fn get_oauth(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthMarker>, TokenManagerError> {
+        let (client_end, server_end) = create_endpoints()
+            .map_err(|err| TokenManagerError::new(Status::UnknownError).with_cause(err))?;
+        match self.account_handler_context.get_oauth(auth_provider_type, server_end).await {
+            Ok(Ok(())) => Ok(client_end),
+            Ok(Err(status)) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("AccountHandlerContext returned {:?}", status))),
+            Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
+        }
+    }
+
+    async fn get_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OpenIdConnectMarker>, TokenManagerError> {
+        let (client_end, server_end) = create_endpoints()
+            .map_err(|err| TokenManagerError::new(Status::UnknownError).with_cause(err))?;
+        match self.account_handler_context.get_open_id_connect(auth_provider_type, server_end).await
+        {
+            Ok(Ok(())) => Ok(client_end),
+            Ok(Err(status)) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("AccountHandlerContext returned {:?}", status))),
+            Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
+        }
+    }
+
+    async fn get_oauth_open_id_connect(
+        &self,
+        auth_provider_type: &str,
+    ) -> Result<ClientEnd<OauthOpenIdConnectMarker>, TokenManagerError> {
+        let (client_end, server_end) = create_endpoints()
+            .map_err(|err| TokenManagerError::new(Status::UnknownError).with_cause(err))?;
+        match self
+            .account_handler_context
+            .get_oauth_open_id_connect(auth_provider_type, server_end)
+            .await
+        {
+            Ok(Ok(())) => Ok(client_end),
+            Ok(Err(status)) => Err(TokenManagerError::new(Status::AuthProviderServiceUnavailable)
+                .with_cause(format_err!("AccountHandlerContext returned {:?}", status))),
+            Err(err) => Err(TokenManagerError::new(Status::UnknownError).with_cause(err)),
+        }
     }
 }
 
@@ -81,7 +114,7 @@ mod tests {
         let proxy = client_end.into_proxy().unwrap();
         let auth_provider_supplier = AuthProviderSupplier::new(proxy);
         executor.run_singlethreaded(async move {
-            let result = auth_provider_supplier.get(TEST_AUTH_PROVIDER_TYPE).await;
+            let result = auth_provider_supplier.get_auth_provider(TEST_AUTH_PROVIDER_TYPE).await;
             match expected_error {
                 Some(status) => {
                     assert!(result.is_err());

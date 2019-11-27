@@ -4,10 +4,11 @@
 
 use crate::{ResultExt as TokenManagerResultExt, TokenManagerError};
 use failure::{format_err, ResultExt};
-use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthProviderConfig, AuthProviderMarker, Status};
+use fidl::endpoints::{create_endpoints, ClientEnd, DiscoverableService, ServerEnd};
+use fidl_fuchsia_auth::AuthProviderMarker;
+use fidl_fuchsia_auth::{AuthProviderConfig, Status};
+use fidl_fuchsia_identity_external::{OauthMarker, OauthOpenIdConnectMarker, OpenIdConnectMarker};
 use fuchsia_component::client::{launch, launcher, App};
-use fuchsia_zircon as zx;
 use log::info;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -73,14 +74,14 @@ impl AuthProviderConnection {
         Ok(app_arc)
     }
 
-    /// Connects the supplied `ServerEnd` to the `AuthProvider`. If a component has previously been
+    /// Connects the supplied channel to the `AuthProvider`. If a component has previously been
     /// launched this is used, otherwise a fresh component is launched.
-    pub async fn connect(
-        &self,
-        server_end: ServerEnd<AuthProviderMarker>,
-    ) -> Result<(), TokenManagerError> {
+    pub fn connect<S>(&self, server_end: ServerEnd<S>) -> Result<(), TokenManagerError>
+    where
+        S: AuthProviderService,
+    {
         let app = self.get_app()?;
-        app.pass_to_service::<AuthProviderMarker>(server_end.into_channel()).map_err(|err| {
+        app.pass_to_service::<S>(server_end.into_channel()).map_err(|err| {
             TokenManagerError::new(Status::AuthProviderServiceUnavailable)
                 .with_cause(format_err!("GetAuthProvider method failed with {:?}", err))
         })
@@ -88,10 +89,21 @@ impl AuthProviderConnection {
 
     /// Returns a `ClientEnd` for communicating with the `AuthProvider`. If a component has
     /// previously been launched this is used, otherwise a fresh component is launched.
-    pub async fn get(&self) -> Result<ClientEnd<AuthProviderMarker>, TokenManagerError> {
-        let (server_chan, client_chan) =
-            zx::Channel::create().token_manager_status(Status::UnknownError)?;
-        self.connect(ServerEnd::new(server_chan)).await?;
-        Ok(ClientEnd::new(client_chan))
+    pub fn get<S>(&self) -> Result<ClientEnd<S>, TokenManagerError>
+    where
+        S: AuthProviderService,
+    {
+        let (client_end, server_end) =
+            create_endpoints().token_manager_status(Status::UnknownError)?;
+        self.connect(server_end)?;
+        Ok(client_end)
     }
 }
+
+/// A marker trait for identifying services that may be provided by an auth provider.
+pub trait AuthProviderService: DiscoverableService {}
+
+impl AuthProviderService for AuthProviderMarker {}
+impl AuthProviderService for OauthMarker {}
+impl AuthProviderService for OpenIdConnectMarker {}
+impl AuthProviderService for OauthOpenIdConnectMarker {}

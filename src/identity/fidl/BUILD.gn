@@ -17,6 +17,7 @@ fidl("account") {
   public_deps = [
     "//sdk/fidl/fuchsia.auth",
     "//sdk/fidl/fuchsia.identity.account",
+    "//sdk/fidl/fuchsia.identity.external",
     "//sdk/fidl/fuchsia.kms",
   ]
 }
