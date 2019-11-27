@@ -2101,3 +2101,89 @@ async fn use_not_exposed() {
     )
     .await;
 }
+
+///   (cm)
+///    |
+///    a
+///
+/// a: uses an invalid service from the component manager.
+#[fuchsia_async::run_singlethreaded(test)]
+async fn invalid_use_from_component_manager() {
+    let components = vec![(
+        "a",
+        ComponentDecl {
+            uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                source: UseSource::Realm,
+                source_path: CapabilityPath::try_from("/invalid").unwrap(),
+                target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
+            })],
+            ..default_component_decl()
+        },
+    )];
+
+    // Try and use the service. We expect a failure.
+    let universe = RoutingTest::new("a", components).await;
+    universe
+        .check_use(
+            vec![].into(),
+            CheckUse::LegacyService {
+                path: CapabilityPath::try_from("/svc/valid").unwrap(),
+                should_succeed: false,
+            },
+        )
+        .await;
+}
+
+///   (cm)
+///    |
+///    a
+///    |
+///    b
+///
+/// a: offers an invalid service from the component manager to "b".
+/// b: attempts to use the service
+#[fuchsia_async::run_singlethreaded(test)]
+async fn invalid_offer_from_component_manager() {
+    let components = vec![
+        (
+            "a",
+            ComponentDecl {
+                offers: vec![OfferDecl::LegacyService(OfferLegacyServiceDecl {
+                    source_path: CapabilityPath::try_from("/invalid").unwrap(),
+                    source: OfferServiceSource::Realm,
+                    target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
+                    target: OfferTarget::Child("b".to_string()),
+                })],
+                children: vec![ChildDecl {
+                    name: "b".to_string(),
+                    url: "test:///b".to_string(),
+                    startup: fsys::StartupMode::Lazy,
+                }],
+                ..default_component_decl()
+            },
+        ),
+        (
+            "b",
+            ComponentDecl {
+                uses: vec![UseDecl::LegacyService(UseLegacyServiceDecl {
+                    source: UseSource::Realm,
+                    source_path: CapabilityPath::try_from("/svc/valid").unwrap(),
+                    target_path: CapabilityPath::try_from("/svc/valid").unwrap(),
+                })],
+                ..default_component_decl()
+            },
+        ),
+    ];
+
+    // Try and use the service. We expect a failure.
+    let universe = RoutingTest::new("a", components).await;
+    universe
+        .check_use(
+            vec!["b:0"].into(),
+            CheckUse::LegacyService {
+                path: CapabilityPath::try_from("/svc/valid").unwrap(),
+                should_succeed: false,
+            },
+        )
+        .await;
+}

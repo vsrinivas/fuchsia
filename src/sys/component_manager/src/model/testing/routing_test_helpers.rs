@@ -81,6 +81,7 @@ pub struct RoutingTest {
     pub namespaces: Namespaces,
     _test_dir: TempDir,
     test_dir_proxy: DirectoryProxy,
+    root_component_name: String,
 }
 
 impl RoutingTest {
@@ -146,6 +147,7 @@ impl RoutingTest {
             namespaces,
             _test_dir: test_dir,
             test_dir_proxy,
+            root_component_name: root_component.to_string(),
         }
     }
 
@@ -470,10 +472,11 @@ impl RoutingTest {
     ///
     /// On success, returns the short name of the component.
     pub async fn bind_instance(&self, moniker: &AbsoluteMoniker) -> Result<String, failure::Error> {
-        let name =
-            moniker.path().last().expect("didn't expect a root component").name().to_string();
         self.model.bind(moniker).await?;
-        Ok(name)
+        Ok(match moniker.path().last() {
+            Some(part) => part.name().to_string(),
+            None => self.root_component_name.to_string(),
+        })
     }
 
     pub fn resolved_url(component_name: &str) -> String {

@@ -502,7 +502,6 @@ async fn walk_offer_chain<'a>(
         if pos.at_componentmgr_realm() {
             // This is a built-in capability because the routing path was traced to the component
             // manager's realm.
-            // TODO(fsamuel): We really ought to test the failure cases here.
             let capability = match &pos.capability {
                 RoutedCapability::Use(use_decl) => {
                     ComponentManagerCapability::builtin_from_use_decl(use_decl).map_err(|_| {
