@@ -116,4 +116,4 @@ acceptable type.
 
 See [example](#example).
 
-[component-manifest]: /docs/concepts/storage/package_metadata.md#Component-manifest
+[component-manifest]: /docs/concepts/storage/component_manifest.md

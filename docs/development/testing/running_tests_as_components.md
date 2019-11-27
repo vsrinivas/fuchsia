@@ -100,7 +100,7 @@ be handled by a brand new instance of the service referenced by the URL.
 ```
 
 For a more thorough description of what is valid in a component manifest, please
-see the [documentation on package metadata][package_metadata].
+see the [documentation on component manifests][component_manifest].
 
 ### Component and package build rules
 
@@ -231,7 +231,7 @@ This command will rebuild any modified files, push the named package to the
 device, and run it.
 
 Tests can also be run directly from the shell on a Fuchsia device with the
-`run_test_component` command, which can take either a fuchsia-pkg URL or a
+`run-test-component` command, which can take either a fuchsia-pkg URL or a
 prefix to search pkgfs for.
 
 If using a fuchsia-pkg URL the test will be automatically updated on the device,
@@ -242,15 +242,15 @@ In light of the above facts, the recommended way to run tests from a Fuchsia
 shell is:
 
 ```bash
-$ run_test_component `locate ${TEST_PACKAGE_NAME}`
+$ run-test-component `locate ${TEST_PACKAGE_NAME}`
 ```
 
 The `locate` tool will search for and return fuchsia-pkg URLs based on a given
 search query. If there are multiple matches for the query the above command will
 fail, so `locate` should be invoked directly to discover the URL that should be
-provided to `run_test_component`
+provided to `run-test-component`
 
-[package_metadata]: /docs/concepts/storage/package_metadata.md
+[component_manifest]: /docs/concepts/storage/component_manifest.md
 [rust_testing]: ../languages/rust/testing.md
 [test_package]: test_component.md
 [fuchsia_package_url]: /docs/concepts/storage/package_url.md

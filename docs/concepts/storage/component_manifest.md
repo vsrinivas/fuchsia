@@ -1,26 +1,10 @@
-# Fuchsia Package Metadata
+# Component manifest
 
-The Fuchsia package format contains an extensive metadata directory. This
-document describes the metadata extensions that are understood by Fuchsia
-itself.
-
-See [/garnet/go/src/pm#Structure-of-a-Fuchsia-Package][pm-structure] for
-more information about where these files appear in a package.
-
-## Metadata
-
-See [/garnet/go/src/pm#metadata][pm-metadata]
-
-## contents
-
-See [/garnet/go/src/pm#contents][pm-contents]
-
-## Component manifest
-
-A component manifest (.cmx) is a JSON file with the file extension `.cmx`
-located in the package’s `meta/` directory with information that declares
-how to run the component and what resources it receives. In particular, the
-component manifest describes how the component is sandboxed.
+A component manifest (.cmx) is a JSON file with the file extension `.cmx`.
+Component manifests are often located in a package’s `meta/` directory. The
+manifest contains information that declares how to run the component and what
+resources it receives. In particular, the component manifest describes how
+the component is sandboxed.
 
 Here's a simple example of a cmx for an ELF binary component:
 
@@ -48,7 +32,7 @@ And one for a flutter/dart component:
 }
 ```
 
-### program
+## program
 
 The `program` property describes the resources to execute the component.
 
@@ -95,7 +79,7 @@ For instance, for a flutter/dart component, its format is:
 Where `data` should describe the location of the flutter/dart binaries. By
 default, it is under `data/<component-name>`.
 
-### runner
+## runner
 
 `runner` is an optional property that names another component (or a package
 that contains one) to which execution is to be delegated. The target component
@@ -109,7 +93,7 @@ shell script.
 
 The `runner` property is a JSON string.
 
-### facets
+## facets
 
 `facets` is an optional property that contains free-form JSON about the
 component. Facets can be consumed by things on the system to acquire additional
@@ -127,7 +111,7 @@ As an example of a facet, the `fuchsia.test` field is used to convey what
 additional services should be [injected into testing
 environments][test-components].
 
-### sandbox
+## sandbox
 
 The `sandbox` property controls the environment in which the component
 executes. Specifically, the property controls which directories the component
@@ -265,9 +249,5 @@ The set of currently known features are as follows:
 
 See [sandboxing.md](/docs/concepts/framework/sandboxing.md) for more information about sandboxing.
 
-
 [runner]: /sdk/fidl/fuchsia.sys/runner.fidl
 [test-components]: /docs/development/testing/running_tests_as_components.md
-[pm-contents]: /garnet/go/src/pm#metadata
-[pm-metadata]: /garnet/go/src/pm#metadata
-[pm-structure]: /garnet/go/src/pm#Structure-of-a-Fuchsia-Package

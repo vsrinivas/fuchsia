@@ -1,7 +1,7 @@
 Note: This document describes manifests for the new Component Manager.
 If your component launches with [appmgr](/docs/glossary.md#appmgr), indicated
 for instance by your manifest file ending in a `.cmx` extension, then please
-refer to [legacy documentation](/docs/concepts/storage/package_metadata.md).
+refer to [legacy documentation](/docs/concepts/storage/component_manifest.md).
 
 # Component manifests {#component-manifests}
 

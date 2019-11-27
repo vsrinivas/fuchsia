@@ -177,7 +177,7 @@ If you’d like to see an example test that pushes a few buttons, you can check
 ### Component manifest
 
 A
-[component manifest](/docs/concepts/storage/package_metadata.md#Component-manifest)
+[component manifest](/docs/concepts/storage/component_manifest.md)
 allows the test to run as a hermetic
 [test component](/docs/development/testing/test_component.md)
 under its own dedicated environment that will sandbox its services and tear

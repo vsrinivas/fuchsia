@@ -6,6 +6,8 @@ toc:
   path: /docs/concepts/storage/archive_format.md
 - title: "Block devices"
   path: /docs/concepts/storage/block_devices.md
+- title: "Component Manifests"
+  path: /docs/concepts/storage/component_manifest.md
 - title: "'Dot dot' considered harmful"
   path: /docs/concepts/storage/dotdot.md
 - title: "File systems"
@@ -14,7 +16,7 @@ toc:
   path: https://fuchsia.googlesource.com/fuchsia/+/master/src/ledger/docs/README.md
 - title: "Merkle roots"
   path:  /docs/concepts/storage/merkleroot.md
-- title: "Package metadata"
-  path: /docs/concepts/storage/package_metadata.md
+- title: "Packages"
+  path: /docs/concepts/storage/package.md
 - title: "Package URIs"
   path: /docs/concepts/storage/package_url.md

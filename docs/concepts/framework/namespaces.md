@@ -289,7 +289,7 @@ implementations.
 
 Components may have different kinds of configuration data exposed to them
 depending on the features listed in their [Component
-Manifest](/docs/concepts/storage/package_metadata.md#Component-Manifest) which are exposed as files in
+Manifest](/docs/concepts/storage/component_manifest.md) which are exposed as files in
 the /config namespace entry. These are defined by the feature set of the
 component.
 
