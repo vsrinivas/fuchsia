@@ -77,6 +77,14 @@ config("compiler") {
     ldflags += [ "-fuse-ld=$linker" ]
   }
 
+  if (linker == "lld") {
+    if (current_os == "win") {
+      ldflags += [ "-Wl,/threads" ]
+    } else {
+      ldflags += [ "-Wl,--threads" ]
+    }
+  }
+
   if (defined(toolchain.version_string) && toolchain.version_string != "") {
     # Nothing uses this define, but its presence on compilation command
     # lines ensures that Ninja will rebuild things when a new compiler
