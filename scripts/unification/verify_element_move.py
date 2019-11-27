@@ -240,6 +240,9 @@ def main():
 
     # If applicable, save the current build's summary.
     if args.summary:
+        dirname = os.path.dirname(args.summary)
+        if not os.path.exists(dirname):
+            os.makedirs(dirname)
         with open(args.summary, 'w') as output_file:
             summary.to_json(output_file)
 
