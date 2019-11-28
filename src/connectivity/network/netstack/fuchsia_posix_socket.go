@@ -51,6 +51,7 @@ type socketProviderImpl struct {
 type providerImpl struct {
 	ns             *Netstack
 	controlService socket.ControlService
+	metadata       socketMetadata
 }
 
 var _ socket.Provider = (*providerImpl)(nil)
@@ -100,12 +101,26 @@ func (sp *providerImpl) Socket(domain, typ, protocol int16) (int16, socket.Contr
 		return tcpipErrorToCode(err), socket.ControlInterface{}, nil
 	}
 	{
-		controlInterface, err := newSocket(netProto, transProto, wq, ep, &sp.controlService, &sp.ns.endpoints)
+		controlInterface, err := sp.newSocket(netProto, transProto, wq, ep)
 		return 0, controlInterface, err
 	}
 }
 
 const localSignalClosing = zx.SignalUser5
+
+// Data owned by providerImpl used for statistics and other
+// introspection.
+type socketMetadata struct {
+	// Reference to the netstack global endpoint-map.
+	endpoints *sync.Map
+	// socketsCreated should be incremented on successful calls to Socket and
+	// Accept.
+	socketsCreated tcpip.StatCounter
+	// socketsDestroyed should be incremented when the resources for a socket
+	// are destroyed.
+	socketsDestroyed       tcpip.StatCounter
+	newSocketNotifications chan<- struct{}
+}
 
 type endpoint struct {
 	wq *waiter.Queue
@@ -131,9 +146,6 @@ type endpoint struct {
 		}
 	}
 
-	// Reference to the netstack global endpoint-map.
-	endpoints *sync.Map
-
 	// Along with (*endpoint).close, these channels are used to coordinate
 	// orderly shutdown of loops, handles, and endpoints. See the comment
 	// on (*endpoint).close for more information.
@@ -150,6 +162,8 @@ type endpoint struct {
 	// This is used to make sure that endpoint.close only cleans up its
 	// resources once - the first time it was closed.
 	closeOnce sync.Once
+
+	metadata *socketMetadata
 }
 
 // loopWrite connects libc write to the network stack.
@@ -512,7 +526,7 @@ func (ios *endpoint) loopRead(inCh <-chan struct{}, initCh chan<- struct{}) {
 	}
 }
 
-func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, controlService *socket.ControlService, endpoints *sync.Map) (socket.ControlInterface, error) {
+func (sp *providerImpl) newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint) (socket.ControlInterface, error) {
 	var flags uint32
 	if transProto == tcp.ProtocolNumber {
 		flags |= zx.SocketStream
@@ -535,16 +549,16 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 		ep:            ep,
 		local:         localS,
 		peer:          peerS,
-		endpoints:     endpoints,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
+		metadata:      &sp.metadata,
 	}
 
 	// As the ios.local would be unique across all endpoints for the netstack,
 	// we can use that as a key for the endpoints. The ep.ID is not yet initialized
 	// at this point and hence we cannot use that as a key.
-	if e, loaded := endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
+	if e, loaded := ios.metadata.endpoints.LoadOrStore(uint64(ios.local), ios.ep); loaded {
 		var info stack.TransportEndpointInfo
 		switch t := e.(tcpip.Endpoint).Info().(type) {
 		case *tcp.EndpointInfo:
@@ -576,15 +590,23 @@ func newSocket(netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportP
 	syslog.VLogTf(syslog.DebugVerbosity, "socket", "%p", ios)
 
 	s := &socketImpl{
-		endpoint:       ios,
-		controlService: controlService,
+		endpoint: ios,
+		sp:       sp,
 	}
 	if err := s.Clone(0, io.NodeInterfaceRequest{Channel: localC}); err != nil {
 		s.close()
 		return socket.ControlInterface{}, err
 	}
+
+	ios.metadata.socketsCreated.Increment()
+	select {
+	case ios.metadata.newSocketNotifications <- struct{}{}:
+	default:
+	}
+
 	// Wait for initial state checking to complete.
 	<-initCh
+
 	return socket.ControlInterface{Channel: peerC}, nil
 }
 
@@ -621,7 +643,7 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 			ios.ep.Close()
 
 			// Delete this endpoint from the global endpoints.
-			ios.endpoints.Delete(uint64(ios.local))
+			ios.metadata.endpoints.Delete(uint64(ios.local))
 
 			// HACK(crbug.com/1005300): chromium mojo code expects this; it doesn't
 			// care if the socket is closed.
@@ -634,6 +656,8 @@ func (ios *endpoint) close(loopDone ...<-chan struct{}) int64 {
 			if err := ios.peer.Close(); err != nil {
 				panic(err)
 			}
+
+			ios.metadata.socketsDestroyed.Increment()
 		})
 	}
 
@@ -737,8 +761,9 @@ var _ socket.Control = (*socketImpl)(nil)
 type socketImpl struct {
 	*endpoint
 	*io.NodeTransitionalBase
-	controlService *socket.ControlService
-	bindingKey     fidl.BindingKey
+	bindingKey fidl.BindingKey
+	// listening sockets can call Accept.
+	sp *providerImpl
 }
 
 func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
@@ -746,7 +771,7 @@ func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 	{
 		sCopy := *s
 		s := &sCopy
-		bindingKey, err := s.controlService.Add(s, object.Channel, func(error) { s.close() })
+		bindingKey, err := s.sp.controlService.Add(s, object.Channel, func(error) { s.close() })
 		sCopy.bindingKey = bindingKey
 
 		syslog.VLogTf(syslog.DebugVerbosity, "Clone", "%p: clones=%d flags=%b err=%v", s.endpoint, clones, flags, err)
@@ -758,7 +783,7 @@ func (s *socketImpl) Clone(flags uint32, object io.NodeInterfaceRequest) error {
 func (s *socketImpl) close() {
 	clones := s.endpoint.close(s.endpoint.loopReadDone, s.endpoint.loopWriteDone)
 
-	removed := s.controlService.Remove(s.bindingKey)
+	removed := s.sp.controlService.Remove(s.bindingKey)
 
 	syslog.VLogTf(syslog.DebugVerbosity, "close", "%p: clones=%d removed=%t", s.endpoint, clones, removed)
 }
@@ -842,7 +867,7 @@ func (s *socketImpl) Accept(flags int16) (int16, socket.ControlInterface, error)
 	}
 
 	{
-		controlInterface, err := newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep, s.controlService, s.endpoint.endpoints)
+		controlInterface, err := s.sp.newSocket(s.endpoint.netProto, s.endpoint.transProto, wq, ep)
 		return 0, controlInterface, err
 	}
 }

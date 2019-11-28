@@ -61,10 +61,12 @@ func TestEndpointDoubleClose(t *testing.T) {
 		transProto:    tcp.ProtocolNumber,
 		wq:            wq,
 		ep:            ep,
-		endpoints:     &ns.endpoints,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
+		metadata: &socketMetadata{
+			endpoints: &ns.endpoints,
+		},
 	}
 
 	{
@@ -123,10 +125,12 @@ func TestCloseEndpointsMap(t *testing.T) {
 		transProto:    tcp.ProtocolNumber,
 		wq:            wq,
 		ep:            ep,
-		endpoints:     &ns.endpoints,
 		loopReadDone:  make(chan struct{}),
 		loopWriteDone: make(chan struct{}),
 		closing:       make(chan struct{}),
+		metadata: &socketMetadata{
+			endpoints: &ns.endpoints,
+		},
 	}
 	{
 		localS, peerS, err := zx.NewSocket(uint32(zx.SocketStream))
@@ -152,7 +156,7 @@ func TestCloseEndpointsMap(t *testing.T) {
 	}
 
 	// Check if the reference to the endpoint is deleted from endpoints.
-	if _, ok := ios.endpoints.Load(uint64(ios.local)); ok {
+	if _, ok := ios.metadata.endpoints.Load(uint64(ios.local)); ok {
 		t.Fatal("endpoint map not updated on ios.close.")
 	}
 }

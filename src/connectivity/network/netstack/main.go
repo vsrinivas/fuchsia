@@ -5,7 +5,9 @@
 package netstack
 
 import (
+	"context"
 	"flag"
+	"fmt"
 	"log"
 	"os"
 	"reflect"
@@ -14,14 +16,16 @@ import (
 	"syscall/zx"
 	"syscall/zx/fidl"
 
-	"app/context"
+	appcontext "app/context"
 	"syslog"
 
 	"netstack/connectivity"
 	"netstack/dns"
 	"netstack/filter"
 	"netstack/link/eth"
+	networking_metrics "networking_metrics_golib"
 
+	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	inspect "fidl/fuchsia/inspect/deprecated"
 	"fidl/fuchsia/net"
@@ -57,7 +61,7 @@ func Main() {
 		panic(err)
 	}
 
-	ctx := context.CreateFromStartupInfo()
+	ctx := appcontext.CreateFromStartupInfo()
 
 	l, err := syslog.NewLogger(syslog.LogInitOptions{
 		LogLevel:                      logLevel,
@@ -101,7 +105,6 @@ func Main() {
 	if err != nil {
 		syslog.Fatalf("could not connect to device name provider service: %s", err)
 	}
-
 	ctx.ConnectToEnvService(req)
 
 	ns := &Netstack{
@@ -135,29 +138,31 @@ func Main() {
 
 	var posixSocketProviderService socket.ProviderService
 
+	socketNotifications := make(chan struct{}, 1)
+	socketProviderImpl := providerImpl{ns: ns, metadata: socketMetadata{endpoints: &ns.endpoints, newSocketNotifications: socketNotifications}}
+	ns.stats = stats{
+		Stats:            stk.Stats(),
+		SocketCount:      bindingSetCounterStat{bindingSet: &socketProviderImpl.controlService.BindingSet},
+		SocketsCreated:   &socketProviderImpl.metadata.socketsCreated,
+		SocketsDestroyed: &socketProviderImpl.metadata.socketsDestroyed,
+	}
+
 	var inspectService inspect.InspectService
-	ctx.OutgoingService.AddObjects("counters", &context.DirectoryWrapper{
+	ctx.OutgoingService.AddObjects("counters", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &statCounterInspectImpl{
-					name: "Networking Stat Counters",
-					value: reflect.ValueOf(
-						struct {
-							tcpip.Stats
-							SocketCount *bindingSetCounterStat
-						}{
-							Stats:       stk.Stats(),
-							SocketCount: &bindingSetCounterStat{bindingSet: &posixSocketProviderService.BindingSet},
-						}),
+					name:  "Networking Stat Counters",
+					value: reflect.ValueOf(ns.stats),
 				},
 				service: &inspectService,
 			}).asService,
 		},
 	})
-	ctx.OutgoingService.AddObjects("interfaces", &context.DirectoryWrapper{
+	ctx.OutgoingService.AddObjects("interfaces", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			// asService is late-bound so that each call retrieves fresh NIC info.
-			asService: func() *context.Service {
+			asService: func() *appcontext.Service {
 				return (&inspectImpl{
 					inner:   &nicInfoMapInspectImpl{value: ns.getIfStateInfo(stk.NICInfo())},
 					service: &inspectService,
@@ -166,7 +171,7 @@ func Main() {
 		},
 	})
 
-	ctx.OutgoingService.AddObjects("sockets", &context.DirectoryWrapper{
+	ctx.OutgoingService.AddObjects("sockets", &appcontext.DirectoryWrapper{
 		Directory: &inspectDirectory{
 			asService: (&inspectImpl{
 				inner: &socketInfoMapInspectImpl{
@@ -246,12 +251,22 @@ func Main() {
 
 	ctx.OutgoingService.AddService(
 		socket.ProviderName,
-		&socket.ProviderStub{Impl: &providerImpl{ns: ns}},
+		&socket.ProviderStub{Impl: &socketProviderImpl},
 		func(s fidl.Stub, c zx.Channel) error {
 			_, err := posixSocketProviderService.BindingSet.Add(s, c, nil)
 			return err
 		},
 	)
+
+	if cobaltLogger, err := connectCobaltLogger(ctx); err != nil {
+		syslog.Warnf("could not initialize cobalt client: %s", err)
+	} else {
+		go func() {
+			if err := runCobaltClient(context.Background(), cobaltLogger, &ns.stats, socketNotifications); err != nil {
+				syslog.Errorf("cobalt client exited unexpectedly: %s", err)
+			}
+		}()
+	}
 
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		syslog.Fatalf("%v", err)
@@ -274,4 +289,25 @@ func Main() {
 		}()
 	}
 	wg.Wait()
+}
+
+func connectCobaltLogger(ctx *appcontext.Context) (*cobalt.LoggerInterface, error) {
+	freq, cobaltLoggerFactory, err := cobalt.NewLoggerFactoryInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to cobalt logger factory service: %s", err)
+	}
+	ctx.ConnectToEnvService(freq)
+	lreq, cobaltLogger, err := cobalt.NewLoggerInterfaceRequest()
+	if err != nil {
+		return nil, fmt.Errorf("could not connect to cobalt logger service: %s", err)
+	}
+	result, err := cobaltLoggerFactory.CreateLoggerFromProjectId(networking_metrics.ProjectId, lreq)
+	if err != nil {
+		return nil, fmt.Errorf("CreateLoggerFromProjectId(%d, ...) = _, %s", networking_metrics.ProjectId, err)
+	}
+	if result != cobalt.StatusOk {
+		return nil, fmt.Errorf("could not create logger for project %s: result: %s", networking_metrics.ProjectName, result)
+	}
+
+	return cobaltLogger, nil
 }

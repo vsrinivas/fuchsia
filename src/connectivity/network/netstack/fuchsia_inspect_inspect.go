@@ -36,7 +36,7 @@ type inspectInner interface {
 }
 
 const (
-	stats      = "Stats"
+	statsLabel = "Stats"
 	socketInfo = "Socket Info"
 	dhcpInfo   = "DHCP Info"
 )
@@ -288,7 +288,7 @@ func (impl *nicInfoInspectImpl) ReadData() inspect.Object {
 
 func (impl *nicInfoInspectImpl) ListChildren() []string {
 	children := []string{
-		stats,
+		statsLabel,
 	}
 	if impl.value.dhcpEnabled {
 		children = append(children, "DHCP Info")
@@ -298,7 +298,7 @@ func (impl *nicInfoInspectImpl) ListChildren() []string {
 
 func (impl *nicInfoInspectImpl) GetChild(childName string) inspectInner {
 	switch childName {
-	case stats:
+	case statsLabel:
 		return &statCounterInspectImpl{
 			name:  childName,
 			value: reflect.ValueOf(impl.value.Stats),
@@ -351,13 +351,13 @@ func (impl *dhcpInfoInspectImpl) ReadData() inspect.Object {
 
 func (impl *dhcpInfoInspectImpl) ListChildren() []string {
 	return []string{
-		stats,
+		statsLabel,
 	}
 }
 
 func (impl *dhcpInfoInspectImpl) GetChild(childName string) inspectInner {
 	switch childName {
-	case stats:
+	case statsLabel:
 		return &statCounterInspectImpl{
 			name:  childName,
 			value: reflect.ValueOf(impl.stats).Elem(),
@@ -482,13 +482,13 @@ func (impl *socketInfoInspectImpl) ReadData() inspect.Object {
 
 func (impl *socketInfoInspectImpl) ListChildren() []string {
 	return []string{
-		stats,
+		statsLabel,
 	}
 }
 
 func (impl *socketInfoInspectImpl) GetChild(childName string) inspectInner {
 	switch childName {
-	case stats:
+	case statsLabel:
 		var value reflect.Value
 		switch t := impl.stats.(type) {
 		case *tcp.Stats:

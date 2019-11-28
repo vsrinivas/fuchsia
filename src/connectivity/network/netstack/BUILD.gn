@@ -9,6 +9,7 @@ import("//build/go/toolchain.gni")
 import("//build/package.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
+import("//third_party/cobalt/metrics_registry.gni")
 
 package("netstack") {
   deps = [
@@ -43,6 +44,16 @@ package("netstack_tools") {
   ]
 }
 
+metrics_registry("networking_metrics") {
+  # This must match the name of our Cobalt project as specified in:
+  # https://cobalt-analytics.googlesource.com/config/+/refs/heads/master/projects.yaml
+  project_name = "networking"
+  go_package_name = "networking_metrics"
+  generate_go = true
+  generate_rust = true
+  generate_binarypb = false
+}
+
 test_package("netstack_gotests") {
   deps = [
     ":netstack_connectivity_test",
@@ -52,6 +63,7 @@ test_package("netstack_gotests") {
     ":netstack_test",
     "ifconfig:netstack_ifconfig_test",
     "netstack_service_test",
+    "schedule:netstack_schedule_test",
     "util:netstack_util_test",
   ]
 
@@ -97,20 +109,22 @@ go_library("netstack_lib") {
   name = "netstack"
 
   deps = [
+    ":networking_metrics_golib",
     "//garnet/go/src/fidlext/fuchsia/hardware/ethernet:fidlext_fuchsia_hardware_ethernet_fake_lib($go_toolchain)",
-    "//src/lib/component/go/src/app",
     "//garnet/public/lib/syslog/go/src/syslog",
     "//sdk/fidl/fuchsia.net.dhcp($go_toolchain)",
     "//sdk/fidl/fuchsia.net.filter($go_toolchain)",
     "//sdk/fidl/fuchsia.net.stack($go_toolchain)",
     "//sdk/fidl/fuchsia.netstack($go_toolchain)",
     "//sdk/fidl/fuchsia.sys($go_toolchain)",
+    "//src/lib/component/go/src/app",
     "//third_party/golibs:github.com/google/btree",
     "//third_party/golibs:github.com/google/go-cmp",
     "//third_party/golibs:github.com/google/netstack",
     "//third_party/golibs:github.com/pkg/errors",
     "//third_party/golibs:golang.org/x/net",
     "//third_party/golibs:golang.org/x/time",
+    "//zircon/system/fidl/fuchsia-cobalt($go_toolchain)",
     "//zircon/system/fidl/fuchsia-device($go_toolchain)",
     "//zircon/system/fidl/fuchsia-hardware-ethernet($go_toolchain)",
     "//zircon/system/fidl/fuchsia-inspect-deprecated($go_toolchain)",

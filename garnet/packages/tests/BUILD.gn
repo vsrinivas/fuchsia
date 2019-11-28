@@ -505,6 +505,7 @@ group("netstack") {
     "//src/connectivity/network/netstack/dns:netstack_dns_gotests",
     "//src/connectivity/network/netstack/link/bridge:netstack_link_bridge_test($host_toolchain)",
     "//src/connectivity/network/netstack/routes:netstack_routes_gotests",
+    "//src/connectivity/network/netstack/schedule:netstack_schedule_test($host_toolchain)",
     "//src/connectivity/network/netstack/tests:netstack_manual_tests",
     "//src/connectivity/network/netstack/util:netstack_util_test($host_toolchain)",
     "//src/connectivity/network/tests",

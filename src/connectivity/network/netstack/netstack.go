@@ -8,7 +8,6 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"netstack/util"
 	"sync"
 	"sync/atomic"
 	"syscall/zx"
@@ -23,7 +22,11 @@ import (
 	"netstack/link/bridge"
 	"netstack/link/eth"
 	"netstack/routes"
+	"netstack/schedule"
+	"netstack/util"
+	networking_metrics "networking_metrics_golib"
 
+	"fidl/fuchsia/cobalt"
 	"fidl/fuchsia/device"
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/netstack"
@@ -64,12 +67,63 @@ var ipv6LoopbackBytes = func() [16]byte {
 	return b
 }()
 
+type stats struct {
+	tcpip.Stats
+	SocketCount      bindingSetCounterStat
+	SocketsCreated   *tcpip.StatCounter
+	SocketsDestroyed *tcpip.StatCounter
+}
+
+func runCobaltClient(ctx context.Context, cobaltLogger *cobalt.LoggerInterface, stats *stats, notify <-chan struct{}) error {
+	// Metric            | Sampling Interval | Aggregation Strategy
+	// SocketCountMax    | socket creation   | max
+	// SocketsCreated    | 1 minute          | delta
+	// SocketsDestroyed  | 1 minute          | delta
+	ticker := time.NewTicker(time.Minute)
+	defer ticker.Stop()
+
+	lastCreated := uint64(0)
+	lastDestroyed := uint64(0)
+	socketCountMax := uint64(0)
+	previousTime := time.Now()
+
+	return schedule.OncePerTick(ctx, notify, ticker.C, func() {
+		if sockets := stats.SocketCount.Value(); sockets > socketCountMax {
+			socketCountMax = sockets
+		}
+	}, func(ts time.Time) {
+		created := stats.SocketsCreated.Value()
+		destroyed := stats.SocketsDestroyed.Value()
+		// TODO: replace with time.Duration.Microseconds when it's available.
+		period := ts.Sub(previousTime).Nanoseconds() / 1e3
+		previousTime = ts
+		events := []cobalt.CobaltEvent{
+			{
+				MetricId: networking_metrics.SocketCountMaxMetricId,
+				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(socketCountMax)}),
+			},
+			{
+				MetricId: networking_metrics.SocketsCreatedMetricId,
+				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(created - lastCreated)}),
+			},
+			{
+				MetricId: networking_metrics.SocketsDestroyedMetricId,
+				Payload:  cobalt.EventPayloadWithEventCount(cobalt.CountEvent{PeriodDurationMicros: period, Count: int64(destroyed - lastDestroyed)}),
+			},
+		}
+
+		cobaltLogger.LogCobaltEvents(events)
+		socketCountMax = stats.SocketCount.Value()
+		lastCreated = created
+		lastDestroyed = destroyed
+	})
+}
+
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	arena *eth.Arena
-
-	nameProvider *device.NameProviderInterface
+	arena        *eth.Arena
 	dnsClient    *dns.Client
+	nameProvider *device.NameProviderInterface
 
 	mu struct {
 		sync.Mutex
@@ -81,6 +135,8 @@ type Netstack struct {
 	}
 	nodename string
 	sniff    bool
+
+	stats stats
 
 	filter *filter.Filter
 

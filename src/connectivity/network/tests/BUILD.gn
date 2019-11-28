@@ -37,10 +37,28 @@ rustc_test("netstack_fidl_integration_test") {
     "//src/connectivity/network/testing/netemul/lib/fidl:sandbox-rustc",
     "//third_party/rust_crates:failure",
     "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
     "//zircon/system/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/system/fidl/fuchsia-inspect-deprecated:fuchsia-inspect-deprecated-rustc",
     "//zircon/system/fidl/fuchsia-net:fuchsia-net-rustc",
     "//zircon/system/fidl/fuchsia-posix-socket:fuchsia-posix-socket-rustc",
+  ]
+}
+
+rustc_test("netstack_cobalt_integration_test") {
+  edition = "2018"
+  source_root = "src/cobalt.rs"
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-component",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.cobalt.test:fuchsia.cobalt.test-rustc",
+    "//src/connectivity/network/netstack:networking_metrics_rustlib",
+    "//third_party/rust_crates:failure",
+    "//third_party/rust_crates:futures",
+    "//zircon/system/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
   ]
 }
 
@@ -81,18 +99,26 @@ group("netstack_integration_tests") {
 
     # netemul is used to create hermetic environments.
     "//src/connectivity/network/testing/netemul",
+
+    # mock_cobalt provides fuchsia.cobalt.LoggerFactory and fuchsia.cobalt.test.LoggerQuerier.
+    "//src/cobalt/bin/testing/mock_cobalt",
   ]
 }
 
 test_package("netstack_integration_tests_inner") {
   package_name = "netstack_integration_tests"
   deps = [
+    ":netstack_cobalt_integration_test",
     ":netstack_fidl_integration_test",
   ]
 
   visibility = [ ":*" ]
 
   tests = [
+    {
+      name = "netstack_cobalt_integration_test"
+      environments = [ qemu_env ]
+    },
     {
       name = "netstack_fidl_integration_test"
       environments = [ qemu_env ]

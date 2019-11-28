@@ -126,13 +126,23 @@ fn create_netstack_environment<N: Netstack>(
                                 .map(str::to_string)
                                 .collect(),
                         ),
-                    }).chain(Some(
-                    fidl_fuchsia_netemul_environment::LaunchService {
-                        name: <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
-                        url: fuchsia_component::fuchsia_single_component_package_url!("stash").to_string(),
-                        arguments: None,
-                    }
-                ))
+                    })
+                    .chain(
+                        Some(
+                            fidl_fuchsia_netemul_environment::LaunchService {
+                                name: <fidl_fuchsia_stash::StoreMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
+                                url: fuchsia_component::fuchsia_single_component_package_url!("stash").to_string(),
+                                arguments: None,
+                            }
+                    ))
+                    .chain(
+                        Some(
+                            fidl_fuchsia_netemul_environment::LaunchService {
+                                name: <fidl_fuchsia_cobalt::LoggerFactoryMarker as fidl::endpoints::DiscoverableService>::SERVICE_NAME.to_string(),
+                                url: fuchsia_component::fuchsia_single_component_package_url!("mock_cobalt").to_string(),
+                                arguments: None,
+                            }
+                    ))
                     .collect()),
                 devices: None,
                 inherit_parent_launch_services: None,
