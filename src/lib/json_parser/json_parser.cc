@@ -82,7 +82,12 @@ rapidjson::Document JSONParser::ParseFromString(const std::string& data, const s
 
 void JSONParser::ParseFromDirectory(const std::string& path,
                                     fit::function<void(rapidjson::Document)> cb) {
-  fbl::unique_fd dir_fd(open(path.c_str(), O_RDONLY | O_DIRECTORY));
+  ParseFromDirectoryAt(AT_FDCWD, path, std::move(cb));
+}
+
+void JSONParser::ParseFromDirectoryAt(int dirfd, const std::string& path,
+                                      fit::function<void(rapidjson::Document)> cb) {
+  fbl::unique_fd dir_fd(openat(dirfd, path.c_str(), O_RDONLY | O_DIRECTORY));
   if (!dir_fd.is_valid()) {
     ReportError(
         fxl::StringPrintf("Could not open directory %s error %s", path.c_str(), strerror(errno)));

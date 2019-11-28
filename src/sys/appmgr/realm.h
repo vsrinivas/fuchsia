@@ -21,6 +21,7 @@
 
 #include "garnet/lib/cmx/runtime.h"
 #include "garnet/lib/loader/package_loader.h"
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fsl/vmo/file.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/fxl/memory/ref_ptr.h"
@@ -42,13 +43,14 @@ struct RealmArgs {
   static RealmArgs Make(Realm* parent, std::string label, std::string data_path,
                         std::string cache_path, std::string temp_path,
                         const std::shared_ptr<sys::ServiceDirectory>& env_services,
-                        bool run_virtual_console, fuchsia::sys::EnvironmentOptions options);
+                        bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
+                        fxl::UniqueFD appmgr_config_dir);
 
   static RealmArgs MakeWithAdditionalServices(
       Realm* parent, std::string label, std::string data_path, std::string cache_path,
       std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
       bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-      fuchsia::sys::EnvironmentOptions options);
+      fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir);
 
   Realm* parent;
   std::string label;
@@ -59,6 +61,7 @@ struct RealmArgs {
   bool run_virtual_console;
   fuchsia::sys::ServiceListPtr additional_services;
   fuchsia::sys::EnvironmentOptions options;
+  fxl::UniqueFD appmgr_config_dir;
 };
 
 class Realm : public ComponentContainer<ComponentControllerImpl> {
@@ -126,6 +129,9 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   void CreateShell(const std::string& path, zx::channel svc);
 
   void Resolve(fidl::StringPtr name, fuchsia::process::Resolver::ResolveCallback callback);
+
+  bool IsAllowedToUseDeprecatedShell(std::string ns_id);
+  bool IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id);
 
  private:
   static uint32_t next_numbered_label_;
@@ -199,6 +205,8 @@ class Realm : public ComponentContainer<ComponentControllerImpl> {
   SchemeMap scheme_map_;
 
   const std::shared_ptr<sys::ServiceDirectory> environment_services_;
+
+  fxl::UniqueFD appmgr_config_dir_;
 
   bool use_parent_runners_ = false;
   bool delete_storage_on_death_ = false;

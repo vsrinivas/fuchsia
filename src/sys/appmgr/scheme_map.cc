@@ -15,12 +15,19 @@
 
 namespace component {
 
-const char SchemeMap::kConfigDirPath[] = "/pkgfs/packages/config-data/0/data/appmgr/scheme_map/";
+const char SchemeMap::kConfigDirPath[] = "scheme_map/";
 
 bool SchemeMap::ParseFromDirectory(const std::string& path) {
   internal_map_.clear();
   auto cb = [this](rapidjson::Document document) { ParseDocument(std::move(document)); };
   json_parser_.ParseFromDirectory(path, cb);
+  return !json_parser_.HasError();
+}
+
+bool SchemeMap::ParseFromDirectoryAt(fxl::UniqueFD& dir, const std::string& path) {
+  internal_map_.clear();
+  auto cb = [this](rapidjson::Document document) { ParseDocument(std::move(document)); };
+  json_parser_.ParseFromDirectoryAt(dir.get(), path, cb);
   return !json_parser_.HasError();
 }
 

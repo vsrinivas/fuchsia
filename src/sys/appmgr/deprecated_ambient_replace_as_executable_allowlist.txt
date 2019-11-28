@@ -1,0 +1,11 @@
+fuchsia-pkg://fuchsia.com/cast_runner#meta/cast_runner.cmx
+fuchsia-pkg://fuchsia.com/http#meta/http.cmx
+fuchsia-pkg://fuchsia.com/web_engine#meta/web_engine.cmx
+fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx
+fuchsia-pkg://fuchsia.com/chromium#meta/chromium.cmx
+# TODO: burn the rest of these down.  Nothing else here fundamentally requires
+# replace-as-exec; they just still call code that calls it.
+fuchsia-pkg://fuchsia.com/sysmgr#meta/sysmgr.cmx
+fuchsia-pkg://fuchsia.com/flutter_aot_product_runner#meta/flutter_aot_product_runner.cmx
+fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx
+fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx

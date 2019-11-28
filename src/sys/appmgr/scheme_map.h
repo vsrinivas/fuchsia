@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 
+#include "src/lib/files/unique_fd.h"
 #include "src/lib/fxl/macros.h"
 #include "src/lib/json_parser/json_parser.h"
 
@@ -22,6 +23,10 @@ class SchemeMap {
   // Parses a scheme map from a directory containing scheme map config files.
   // Each file adds more scheme->launcher mappings.
   bool ParseFromDirectory(const std::string& path);
+
+  // Like |ParseFromDirectory|, but with a path relative to an open directory,
+  // rather than relative to an implicit working directory.
+  bool ParseFromDirectoryAt(fxl::UniqueFD& dir, const std::string& path);
 
   bool HasError() const { return json_parser_.HasError(); }
   std::string error_str() const { return json_parser_.error_str(); }

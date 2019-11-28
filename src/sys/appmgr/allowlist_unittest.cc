@@ -4,6 +4,7 @@
 
 #include "src/sys/appmgr/allowlist.h"
 
+#include <fcntl.h>
 #include <unistd.h>
 
 #include <string>
@@ -42,8 +43,10 @@ TEST_F(AllowlistTest, Parse) {
 
   std::string dir;
   ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  fxl::UniqueFD dirfd(open(dir.c_str(), O_RDONLY));
   auto filename = NewFile(dir, kFile);
-  Allowlist allowlist(filename);
+  Allowlist allowlist(dirfd, filename, Allowlist::kExpected);
+  EXPECT_TRUE(allowlist.WasFilePresent());
   EXPECT_TRUE(allowlist.IsAllowed("test_one"));
   EXPECT_TRUE(allowlist.IsAllowed("test_two"));
   EXPECT_FALSE(allowlist.IsAllowed(""));
@@ -51,7 +54,9 @@ TEST_F(AllowlistTest, Parse) {
 }
 
 TEST_F(AllowlistTest, MissingFile) {
-  Allowlist allowlist("/does/not/exist");
+  fxl::UniqueFD dirfd(open(".", O_RDONLY));
+  Allowlist allowlist(dirfd, "/does/not/exist", Allowlist::kExpected);
+  EXPECT_FALSE(allowlist.WasFilePresent());
   EXPECT_FALSE(allowlist.IsAllowed("test_one"));
   EXPECT_FALSE(allowlist.IsAllowed("test_two"));
   EXPECT_FALSE(allowlist.IsAllowed(""));

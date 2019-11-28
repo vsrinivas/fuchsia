@@ -140,6 +140,7 @@ executable("unittest_bin") {
     "hub/hub_holder_unittest.cc",
     "namespace_builder_unittest.cc",
     "namespace_unittest.cc",
+    "realm_unittest.cc",
     "scheme_map_unittest.cc",
     "service_provider_dir_unittest.cc",
     "storage_watchdog_unittest.cc",
@@ -202,6 +203,16 @@ config_data("appmgr_deprecated_shell_allowlist") {
   ]
   outputs = [
     "allowlist/deprecated_shell.txt",
+  ]
+}
+
+config_data("appmgr_deprecated_ambient_replace_as_executable_allowlist") {
+  for_pkg = "appmgr"
+  sources = [
+    "deprecated_ambient_replace_as_executable_allowlist.txt",
+  ]
+  outputs = [
+    "allowlist/deprecated_ambient_replace_as_executable.txt",
   ]
 }
 

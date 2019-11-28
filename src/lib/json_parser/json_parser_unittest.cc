@@ -13,6 +13,7 @@
 #include <gtest/gtest.h>
 #include <rapidjson/document.h>
 
+#include <fbl/unique_fd.h>
 #include "lib/fit/function.h"
 #include "src/lib/files/file.h"
 #include "src/lib/files/path.h"
@@ -57,6 +58,15 @@ class JSONParserTest : public ::testing::Test {
     fit::function<void(rapidjson::Document)> cb =
         std::bind(&JSONParserTest::InterpretDocument, this, parser, std::placeholders::_1);
     parser->ParseFromDirectory(dir, std::move(cb));
+    *error = parser->error_str();
+    return !parser->HasError();
+  }
+
+  bool ParseFromDirectoryAt(fbl::unique_fd& dir_fd, JSONParser* parser,
+                            const std::string& dir, std::string* error) {
+    fit::function<void(rapidjson::Document)> cb =
+        std::bind(&JSONParserTest::InterpretDocument, this, parser, std::placeholders::_1);
+    parser->ParseFromDirectoryAt(dir_fd.get(), dir, std::move(cb));
     *error = parser->error_str();
     return !parser->HasError();
   }
@@ -247,6 +257,26 @@ TEST_F(JSONParserTest, ParseFromDirectoryDoesNotExist) {
   std::string error;
   EXPECT_FALSE(ParseFromDirectory(&parser, dir, &error));
   EXPECT_NE(std::string::npos, error.find("Could not open directory"));
+}
+
+TEST_F(JSONParserTest, ParseFromDirectoryAt) {
+  const std::string json1 = R"JSON({
+  "prop1": "foo"
+  })JSON";
+  const std::string json2 = R"JSON({
+  "prop2": 42
+  })JSON";
+  std::string dir;
+  ASSERT_TRUE(tmp_dir_.NewTempDir(&dir));
+  NewJSONFileInDir(dir, json1);
+  NewJSONFileInDir(dir, json2);
+
+  fbl::unique_fd dirfd(open(dir.c_str(), O_RDONLY));
+  std::string error;
+  JSONParser parser;
+  EXPECT_TRUE(ParseFromDirectoryAt(dirfd, &parser, ".", &error));
+  EXPECT_EQ("", error);
+  EXPECT_EQ(2, props_found_);
 }
 
 TEST_F(JSONParserTest, CopyArrayToVectorNonArray) {

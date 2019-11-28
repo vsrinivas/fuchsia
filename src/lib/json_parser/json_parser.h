@@ -53,6 +53,10 @@ class JSONParser {
   // It is up to the caller to decide how to merge multiple documents.
   void ParseFromDirectory(const std::string& path, fit::function<void(rapidjson::Document)> cb);
 
+  // Like |ParseFromDirectory|, but relative to a directory.
+  void ParseFromDirectoryAt(int dirfd, const std::string& path,
+                            fit::function<void(rapidjson::Document)> cb);
+
   // Copies the string values from a |name|d |value| to the |out| vector.
   // Clears |out| and calls ReportError() if |value| does not refer to an array,
   // or if the array contains non-string values.

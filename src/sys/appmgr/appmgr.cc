@@ -4,6 +4,7 @@
 
 #include "src/sys/appmgr/appmgr.h"
 
+#include "fcntl.h"
 #include "lib/sys/cpp/termination_reason.h"
 #include "src/lib/fxl/strings/string_printf.h"
 
@@ -28,11 +29,14 @@ Appmgr::Appmgr(async_dispatcher_t* dispatcher, AppmgrArgs args)
   // 0. Start storage watchdog for cache storage
   storage_watchdog_.Run(dispatcher);
 
+
   // 1. Create root realm.
+  fxl::UniqueFD appmgr_config_dir(open("/pkgfs/packages/config-data/0/data/appmgr", O_RDONLY));
   RealmArgs realm_args = RealmArgs::MakeWithAdditionalServices(
       nullptr, kRootLabel, "/data", "/data/cache", "/tmp", std::move(args.environment_services),
       args.run_virtual_console, std::move(args.root_realm_services),
-      fuchsia::sys::EnvironmentOptions{});
+      fuchsia::sys::EnvironmentOptions{},
+      std::move(appmgr_config_dir));
   root_realm_ = Realm::Create(std::move(realm_args));
   FXL_CHECK(root_realm_) << "Cannot create root realm ";
 

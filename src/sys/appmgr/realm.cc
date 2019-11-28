@@ -59,22 +59,13 @@ constexpr char kAppArgv0Prefix[] = "/pkg/";
 constexpr zx_status_t kComponentCreationFailed = -1;
 
 constexpr char kDeprecatedShellAllowlist[] =
-    "/pkgfs/packages/config-data/0/data/appmgr/allowlist/deprecated_shell.txt";
+    "allowlist/deprecated_shell.txt";
+constexpr char kDeprecatedAmbientReplaceAsExecAllowlist[] =
+    "allowlist/deprecated_ambient_replace_as_executable.txt";
 // Delete this when b/140175266 is fixed
 constexpr char kOpalTest[] = "opal_test.cmx";
 
 using fuchsia::sys::TerminationReason;
-
-bool is_allowed_to_use_deprecated_shell(std::string ns_id) {
-  Allowlist deprecated_shell_allowlist(kDeprecatedShellAllowlist);
-  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
-    return true;
-  }
-  // Delete the below when b/140175266 is fixed
-  const std::string opal_test = kOpalTest;
-  return ns_id.size() >= opal_test.size() &&
-         ns_id.compare(ns_id.size() - opal_test.size(), opal_test.size(), opal_test) == 0;
-}
 
 void PushHandle(uint32_t id, zx_handle_t handle, std::vector<fdio_spawn_action_t>* actions) {
   actions->push_back({.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = id, .handle = handle}});
@@ -217,7 +208,8 @@ std::string StableComponentID(const FuchsiaPkgUrl& fp) {
 RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_path,
                           std::string cache_path, std::string temp_path,
                           const std::shared_ptr<sys::ServiceDirectory>& env_services,
-                          bool run_virtual_console, fuchsia::sys::EnvironmentOptions options) {
+                          bool run_virtual_console, fuchsia::sys::EnvironmentOptions options,
+                          fxl::UniqueFD appmgr_config_dir) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
@@ -226,14 +218,15 @@ RealmArgs RealmArgs::Make(Realm* parent, std::string label, std::string data_pat
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = nullptr,
-          .options = std::move(options)};
+          .options = std::move(options),
+          .appmgr_config_dir = std::move(appmgr_config_dir)};
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
     Realm* parent, std::string label, std::string data_path, std::string cache_path,
     std::string temp_path, const std::shared_ptr<sys::ServiceDirectory>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
-    fuchsia::sys::EnvironmentOptions options) {
+    fuchsia::sys::EnvironmentOptions options, fxl::UniqueFD appmgr_config_dir) {
   return {.parent = parent,
           .label = label,
           .data_path = data_path,
@@ -242,7 +235,8 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .environment_services = env_services,
           .run_virtual_console = run_virtual_console,
           .additional_services = std::move(additional_services),
-          .options = std::move(options)};
+          .options = std::move(options),
+          .appmgr_config_dir = std::move(appmgr_config_dir)};
 }
 
 std::unique_ptr<Realm> Realm::Create(RealmArgs args) {
@@ -281,6 +275,7 @@ Realm::Realm(RealmArgs args, zx::job job)
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
       info_vfs_(async_get_default_dispatcher()),
       environment_services_(args.environment_services),
+      appmgr_config_dir_(std::move(args.appmgr_config_dir)),
       use_parent_runners_(args.options.use_parent_runners),
       delete_storage_on_death_(args.options.delete_storage_on_death) {
   // Only need to create this channel for the root realm.
@@ -344,10 +339,10 @@ Realm::Realm(RealmArgs args, zx::job job)
                                      loader_.NewRequest().TakeChannel());
 
   std::string error;
-  if (!files::IsDirectory(SchemeMap::kConfigDirPath)) {
+  if (!files::IsDirectoryAt(appmgr_config_dir_.get(), SchemeMap::kConfigDirPath)) {
     FXL_LOG(FATAL) << "Could not find scheme map config dir: " << SchemeMap::kConfigDirPath;
   }
-  if (!scheme_map_.ParseFromDirectory(SchemeMap::kConfigDirPath)) {
+  if (!scheme_map_.ParseFromDirectoryAt(appmgr_config_dir_, SchemeMap::kConfigDirPath)) {
     FXL_LOG(FATAL) << "Could not parse scheme map config dir: " << scheme_map_.error_str();
   }
 }
@@ -427,11 +422,13 @@ void Realm::CreateNestedEnvironment(
   if (additional_services) {
     args = RealmArgs::MakeWithAdditionalServices(
         this, label, nested_data_path, nested_cache_path, nested_temp_path, environment_services_,
-        /*run_virtual_console=*/false, std::move(additional_services), std::move(options));
+        /*run_virtual_console=*/false, std::move(additional_services), std::move(options),
+        appmgr_config_dir_.duplicate());
   } else {
     args = RealmArgs::Make(this, label, nested_data_path, nested_cache_path, nested_temp_path,
                            environment_services_,
-                           /*run_virtual_console=*/false, std::move(options));
+                           /*run_virtual_console=*/false, std::move(options),
+                           appmgr_config_dir_.duplicate());
   }
 
   auto realm = Realm::Create(std::move(args));
@@ -591,7 +588,7 @@ void Realm::CreateShell(const std::string& path, zx::channel svc) {
   SandboxMetadata sandbox;
   sandbox.AddFeature("deprecated-shell");
 
-  NamespaceBuilder builder = NamespaceBuilder(path);
+  NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(), path);
   builder.AddServices(std::move(svc));
   builder.AddSandbox(sandbox, [this] { return OpenInfoDir(); });
 
@@ -666,7 +663,8 @@ void Realm::CreateComponentWithRunnerForScheme(std::string runner_url,
 
   fuchsia::sys::StartupInfo startup_info;
   startup_info.launch_info = std::move(launch_info);
-  NamespaceBuilder builder = NamespaceBuilder(startup_info.launch_info.url);
+  NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(),
+                                              startup_info.launch_info.url);
   startup_info.flat_namespace = builder.BuildForRunner();
 
   auto* runner = GetOrCreateRunner(runner_url);
@@ -827,7 +825,8 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
 
   // Note that |builder| is only used in the else block below. It is left here
   // because we would like to use it everywhere once US-313 is fixed.
-  NamespaceBuilder builder = NamespaceBuilder(fp.ToString());
+  NamespaceBuilder builder = NamespaceBuilder(appmgr_config_dir_.duplicate(),
+                                              fp.ToString());
   builder.AddPackage(std::move(pkg));
 
   // If meta/*.cmx exists, attempt to read sandbox data from it.
@@ -850,11 +849,17 @@ void Realm::CreateComponentFromPackage(fuchsia::sys::PackagePtr package,
         [&] { return IsolatedPathForPackage(temp_path(), fp); });
 
     if (sandbox.HasFeature("deprecated-ambient-replace-as-executable")) {
+      if (!IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(fp.ToString())) {
+        FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
+                       << "deprecated-ambient-replace-as-executable. go/fx-hermetic-sandboxes";
+        component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
+        return;
+      }
       should_have_ambient_executable = true;
     }
 
     if (sandbox.HasFeature("deprecated-shell")
-        && !is_allowed_to_use_deprecated_shell(fp.ToString())) {
+        && !IsAllowedToUseDeprecatedShell(fp.ToString())) {
       FXL_LOG(ERROR) << "Component " << fp.ToString() << " is not allowed to use "
                      << "deprecated-shell. go/fx-hermetic-sandboxes";
       component_request.SetReturnValues(kComponentCreationFailed, TerminationReason::UNSUPPORTED);
@@ -1025,5 +1030,33 @@ std::string Realm::IsolatedPathForPackage(std::string path_prefix, const Fuchsia
   }
   return path;
 }
+
+bool Realm::IsAllowedToUseDeprecatedShell(std::string ns_id) {
+  Allowlist deprecated_shell_allowlist(appmgr_config_dir_,
+                                       kDeprecatedShellAllowlist,
+                                       Allowlist::kExpected);
+  if (deprecated_shell_allowlist.IsAllowed(ns_id)) {
+    return true;
+  }
+  // Delete the below when b/140175266 is fixed
+  const std::string opal_test = kOpalTest;
+  return ns_id.size() >= opal_test.size() &&
+         ns_id.compare(ns_id.size() - opal_test.size(), opal_test.size(), opal_test) == 0;
+}
+
+bool Realm::IsAllowedToUseDeprecatedAmbientReplaceAsExecutable(std::string ns_id) {
+  Allowlist deprecated_exec_allowlist(appmgr_config_dir_,
+                                      kDeprecatedAmbientReplaceAsExecAllowlist,
+                                      Allowlist::kOptional);
+  // We treat the absence of the allowlist as an indication that we should be
+  // permissive and allow all components to use replace-as-executable.  We add
+  // the allowlist in user builds to ensure we are enforcing policy.
+  if (!deprecated_exec_allowlist.WasFilePresent()) {
+    return true;
+  }
+  // Otherwise, enforce the allowlist.
+  return deprecated_exec_allowlist.IsAllowed(ns_id);
+}
+
 
 }  // namespace component
