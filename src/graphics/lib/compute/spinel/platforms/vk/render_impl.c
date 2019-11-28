@@ -315,13 +315,34 @@ spn_ri_image_render(struct spn_device * const device, spn_render_submit_t const 
   //
   // append push constants
   //
+  // convert pixel clip coords to tile coords
+  //
+  // FIXME(allanmac): use the signed SIMD4 trick
+  //
+  // FIXME(allanmac): this is nearly identical to the composition_impl.c clip
+  //
+  struct spn_vk_target_config const * const config = spn_vk_get_config(device->instance);
+
+  uint32_t const tile_w = 1 << config->tile.width_log2;
+  uint32_t const tile_h = 1 << config->tile.height_log2;
+
+  uint32_t const surf_w_max = tile_w << SPN_TTCK_HI_BITS_X;
+  uint32_t const surf_h_max = tile_h << SPN_TTCK_HI_BITS_Y;
+
+  struct spn_uvec4 const tile_clip = {
+
+    submit->clip[0] >> config->tile.width_log2,
+    submit->clip[1] >> config->tile.height_log2,
+
+    (MIN_MACRO(uint32_t, submit->clip[2], surf_w_max) + tile_w - 1) >> config->tile.width_log2,
+    (MIN_MACRO(uint32_t, submit->clip[3], surf_h_max) + tile_h - 1) >> config->tile.height_log2
+  };
+
   struct spn_vk_push_render const push = {
-    .tile_clip = {
-      submit->tile_clip[0],
-      submit->tile_clip[1],
-      submit->tile_clip[2],
-      submit->tile_clip[3],
-    },
+    .render_clip = { .x = MIN_MACRO(uint32_t, tile_clip.x, 1 << SPN_TTCK_HI_BITS_X),
+                     .y = MIN_MACRO(uint32_t, tile_clip.y, 1 << SPN_TTCK_HI_BITS_Y),
+                     .z = MIN_MACRO(uint32_t, tile_clip.z, 1 << SPN_TTCK_HI_BITS_X),
+                     .w = MIN_MACRO(uint32_t, tile_clip.w, 1 << SPN_TTCK_HI_BITS_Y) },
   };
 
   spn_vk_p_push_render(instance, cb, &push);

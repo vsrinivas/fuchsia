@@ -805,7 +805,7 @@ main(int argc, char const * argv[])
     .ext         = &rs_image_render,
     .styling     = styling,
     .composition = composition,
-    .tile_clip   = { 0, 0, UINT32_MAX, UINT32_MAX }
+    .clip        = { 0, 0, SPN_DEMO_SURFACE_WIDTH, SPN_DEMO_SURFACE_HEIGHT }
   };
 
   //

@@ -1093,27 +1093,30 @@ spn_ci_set_clip(struct spn_composition_impl * const impl, uint32_t const clip[4]
     }
 
   //
-  // convert integer clip coords to target tiles
+  // convert pixel clip coords to tile coords
   //
   // FIXME(allanmac): use the signed SIMD4 trick
   //
   uint32_t const tile_w = 1 << impl->config->tile.width_log2;
   uint32_t const tile_h = 1 << impl->config->tile.height_log2;
 
-  struct spn_uvec4 const new_clip = {
+  uint32_t const surf_w_max = tile_w << SPN_TTCK_HI_BITS_X;
+  uint32_t const surf_h_max = tile_h << SPN_TTCK_HI_BITS_Y;
+
+  struct spn_uvec4 const tile_clip = {
 
     clip[0] >> impl->config->tile.width_log2,
     clip[1] >> impl->config->tile.height_log2,
 
-    (clip[2] + tile_w - 1) >> impl->config->tile.width_log2,
-    (clip[3] + tile_h - 1) >> impl->config->tile.height_log2
+    (MIN_MACRO(uint32_t, clip[2], surf_w_max) + tile_w - 1) >> impl->config->tile.width_log2,
+    (MIN_MACRO(uint32_t, clip[3], surf_h_max) + tile_h - 1) >> impl->config->tile.height_log2
   };
 
   // clip to max
-  impl->clip.x = MIN_MACRO(uint32_t, new_clip.x, 1 << SPN_TTCK_HI_BITS_X);
-  impl->clip.y = MIN_MACRO(uint32_t, new_clip.y, 1 << SPN_TTCK_HI_BITS_Y);
-  impl->clip.z = MIN_MACRO(uint32_t, new_clip.z, 1 << SPN_TTCK_HI_BITS_X);
-  impl->clip.w = MIN_MACRO(uint32_t, new_clip.w, 1 << SPN_TTCK_HI_BITS_Y);
+  impl->clip.x = MIN_MACRO(uint32_t, tile_clip.x, 1 << SPN_TTCK_HI_BITS_X);
+  impl->clip.y = MIN_MACRO(uint32_t, tile_clip.y, 1 << SPN_TTCK_HI_BITS_Y);
+  impl->clip.z = MIN_MACRO(uint32_t, tile_clip.z, 1 << SPN_TTCK_HI_BITS_X);
+  impl->clip.w = MIN_MACRO(uint32_t, tile_clip.w, 1 << SPN_TTCK_HI_BITS_Y);
 
   return SPN_SUCCESS;
 }

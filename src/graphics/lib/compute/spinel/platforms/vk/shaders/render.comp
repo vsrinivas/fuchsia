@@ -1678,18 +1678,18 @@ main()
   //
   SPN_SUBGROUP_UNIFORM const uint ttck_x = SPN_TTCK_GET_X(lgf_yxl);
 
-  if (ttck_x < tile_clip[0])
+  if (ttck_x < render_clip[0])
     return;
 
-  if (ttck_x >= tile_clip[2])
+  if (ttck_x >= render_clip[2])
     return;
 
   SPN_SUBGROUP_UNIFORM const uint ttck_y = SPN_TTCK_GET_Y(lgf_yxl);
 
-  if (ttck_y < tile_clip[1])
+  if (ttck_y < render_clip[1])
     return;
 
-  if (ttck_y >= tile_clip[3])
+  if (ttck_y >= render_clip[3])
     return;
 
   //

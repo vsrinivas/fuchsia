@@ -206,7 +206,7 @@ macro_rules! spinel_type {
         pub struct $name {
             _unused: $size,
         }
-    }
+    };
 }
 
 spinel_type!(SpnContext);
@@ -283,14 +283,13 @@ pub enum SpnCommand {
     SpnStylingOpcodeCount,
 }
 
-
 #[repr(C)]
 #[derive(Clone, Copy, Debug)]
 pub struct SpnRenderSubmit {
     pub ext: *mut raw::c_void,
     pub styling: SpnStyling,
     pub composition: SpnComposition,
-    pub tile_clip: [u32; 4],
+    pub clip: [u32; 4],
 }
 
 extern "C" {
@@ -340,20 +339,9 @@ extern "C" {
     pub fn spn_path_builder_flush(path_builder: SpnPathBuilder) -> SpnResult;
 
     pub fn spn_path_builder_begin(path_builder: SpnPathBuilder) -> SpnResult;
-    pub fn spn_path_builder_end(
-        path_builder: SpnPathBuilder,
-        path: *mut SpnPath,
-    ) -> SpnResult;
-    pub fn spn_path_builder_move_to(
-        path_builder: SpnPathBuilder,
-        x0: f32,
-        y0: f32,
-    ) -> SpnResult;
-    pub fn spn_path_builder_line_to(
-        path_builder: SpnPathBuilder,
-        x1: f32,
-        y1: f32,
-    ) -> SpnResult;
+    pub fn spn_path_builder_end(path_builder: SpnPathBuilder, path: *mut SpnPath) -> SpnResult;
+    pub fn spn_path_builder_move_to(path_builder: SpnPathBuilder, x0: f32, y0: f32) -> SpnResult;
+    pub fn spn_path_builder_line_to(path_builder: SpnPathBuilder, x1: f32, y1: f32) -> SpnResult;
     pub fn spn_path_builder_cubic_to(
         path_builder: SpnPathBuilder,
         x1: f32,
@@ -409,16 +397,8 @@ extern "C" {
         ry: f32,
     ) -> SpnResult;
 
-    pub fn spn_path_retain(
-        context: SpnContext,
-        paths: *const SpnPath,
-        count: u32,
-    ) -> SpnResult;
-    pub fn spn_path_release(
-        context: SpnContext,
-        paths: *const SpnPath,
-        count: u32,
-    ) -> SpnResult;
+    pub fn spn_path_retain(context: SpnContext, paths: *const SpnPath, count: u32) -> SpnResult;
+    pub fn spn_path_release(context: SpnContext, paths: *const SpnPath, count: u32) -> SpnResult;
 
     pub fn spn_raster_builder_create(
         context: SpnContext,
@@ -476,14 +456,8 @@ extern "C" {
     pub fn spn_composition_seal(composition: SpnComposition) -> SpnResult;
     pub fn spn_composition_unseal(composition: SpnComposition) -> SpnResult;
     pub fn spn_composition_reset(composition: SpnComposition) -> SpnResult;
-    pub fn spn_composition_get_bounds(
-        composition: SpnComposition,
-        bounds: *mut u32,
-    ) -> SpnResult;
-    pub fn spn_composition_set_clip(
-        composition: SpnComposition,
-        clip: *const u32,
-    ) -> SpnResult;
+    pub fn spn_composition_get_bounds(composition: SpnComposition, bounds: *mut u32) -> SpnResult;
+    pub fn spn_composition_set_clip(composition: SpnComposition, clip: *const u32) -> SpnResult;
 
     pub fn spn_styling_create(
         context: SpnContext,
@@ -497,10 +471,7 @@ extern "C" {
     pub fn spn_styling_unseal(styling: SpnStyling) -> SpnResult;
     pub fn spn_styling_reset(styling: SpnStyling) -> SpnResult;
 
-    pub fn spn_styling_group_alloc(
-        styling: SpnStyling,
-        group_id: *mut SpnGroupId,
-    ) -> SpnResult;
+    pub fn spn_styling_group_alloc(styling: SpnStyling, group_id: *mut SpnGroupId) -> SpnResult;
     pub fn spn_styling_group_enter(
         styling: SpnStyling,
         group_id: SpnGroupId,

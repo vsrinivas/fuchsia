@@ -91,6 +91,30 @@ param const params[] = {
       { 0x8FFF0070, {} }
     }
   },
+  {
+    .name             = "composition_clip", // bug:25525
+    .surface          = { 256, 256 },
+    .clip.composition = { 0, 0, 128, 128 },
+    .svg              =  //
+    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+    "  <path fill-rule=\"nonzero\" d=\"M8,8 h240 v240 h-240 z\"/>\n"
+    "</svg>\n",
+    .checksums = { //
+      { 0xBFFF3840, {} }
+    }
+  },
+  {
+    .name        = "render_clip", // bug:25525
+    .surface     = { 256, 256 },
+    .clip.render = { 0, 0, 128, 128 },
+    .svg         =  //
+    "<svg xmlns=\"http://www.w3.org/2000/svg\">\n"
+    "  <path fill-rule=\"nonzero\" d=\"M8,8 h240 v240 h-240 z\"/>\n"
+    "</svg>\n",
+    .checksums = { //
+      { 0xBFFF3840, {} }
+    }
+  },
 };
 
 //

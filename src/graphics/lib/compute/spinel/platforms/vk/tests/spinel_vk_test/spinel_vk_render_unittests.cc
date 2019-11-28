@@ -51,9 +51,7 @@ TEST_P(spinel_vk_render, example)
 
   spn(composition_create(context, &composition));
 
-  uint32_t const clip[4] = { 0, 0, param.surface.width, param.surface.height };
-
-  spn(composition_set_clip(composition, clip));
+  spn(composition_set_clip(composition, param.clip.composition));
 
   //
   // create styling
@@ -124,7 +122,10 @@ TEST_P(spinel_vk_render, example)
     .ext         = &rs_image_render,
     .styling     = styling,
     .composition = composition,
-    .tile_clip   = { 0, 0, param.surface.width, param.surface.height }
+    .clip        = { param.clip.render[0],  // clang-format off
+                     param.clip.render[1],
+                     param.clip.render[2],
+                     param.clip.render[3] }  // clang-format on
   };
 
   //
@@ -150,7 +151,7 @@ TEST_P(spinel_vk_render, example)
   //
   spn(raster_builder_begin(rb));
 
-  struct spn_clip const raster_clips[] = { { 0.0f, 0.0f, 0.f, 0.0f } };
+  struct spn_clip const raster_clips[] = { { 0.0f, 0.0f, 0.0f, 0.0f } };
 
   spn(raster_builder_add(rb,  //
                          &path,

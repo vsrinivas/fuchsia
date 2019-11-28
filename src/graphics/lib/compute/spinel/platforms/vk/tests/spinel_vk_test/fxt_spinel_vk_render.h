@@ -38,6 +38,12 @@ struct param_spinel_vk_render
     uint32_t height;
   } surface;
 
+  struct
+  {
+    uint32_t composition[4] = { 0, 0, UINT32_MAX, UINT32_MAX };
+    uint32_t render[4]      = { 0, 0, UINT32_MAX, UINT32_MAX };
+  } clip;
+
   char const * svg   = nullptr;
   uint32_t     loops = 1;
 

@@ -63,9 +63,7 @@ fxt_spinel_vk_svg::SetUp()
 
   spn(composition_create(context, &composition));
 
-  uint32_t const clip[4] = { 0, 0, param.surface.width, param.surface.height };
-
-  spn(composition_set_clip(composition, clip));
+  spn(composition_set_clip(composition, param.clip.composition));
 
   //
   // create styling
@@ -136,7 +134,10 @@ fxt_spinel_vk_svg::SetUp()
     .ext         = &rs_image_render,
     .styling     = styling,
     .composition = composition,
-    .tile_clip   = { 0, 0, param.surface.width, param.surface.height }
+    .clip        = { param.clip.render[0],  // clang-format off
+                     param.clip.render[1],
+                     param.clip.render[2],
+                     param.clip.render[3] }  // clang-format on
   };
 
   //

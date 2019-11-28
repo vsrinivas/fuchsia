@@ -851,23 +851,8 @@
 // KERNEL: RENDER
 //
 
-#ifdef SPN_DEVICE_RENDER_SURFACE_IS_IMAGE
-
 #define SPN_VK_GLSL_PUSH_KERNEL_RENDER()        \
-  SPN_VK_PUSH_UINT_FARRAY(tile_clip,4)
-
-#define SPN_VK_GLSL_DECL_KERNEL_RENDER()                                  \
-  SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,readonly,readonly);       \
-  SPN_VK_GLSL_DS_TTCKS     (1,readonly,readonly);                         \
-  SPN_VK_GLSL_DS_STYLING   (2,readonly);                                  \
-  SPN_VK_GLSL_DS_SURFACE   (3,writeonly,SPN_DEVICE_RENDER_SURFACE_TYPE);  \
-  SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_RENDER());
-
-#else
-
-#define SPN_VK_GLSL_PUSH_KERNEL_RENDER()         \
-  SPN_VK_PUSH_UINT_FARRAY(tile_clip,4)           \
-  SPN_VK_PUSH_UINT       (surface_pitch)
+  SPN_VK_PUSH_IVEC4(render_clip)
 
 #define SPN_VK_GLSL_DECL_KERNEL_RENDER()                                    \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,readonly,readonly);         \
@@ -875,7 +860,6 @@
   SPN_VK_GLSL_DS_STYLING   (2,readonly);                                    \
   SPN_VK_GLSL_DS_SURFACE   (3,writeonly,SPN_DEVICE_RENDER_SURFACE_TYPE);    \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_RENDER());
-#endif
 
 #define SPN_VK_HOST_DECL_KERNEL_RENDER()                           \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RENDER,0,SPN_VK_DS_ID_BLOCK_POOL)     \

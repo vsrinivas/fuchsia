@@ -130,13 +130,15 @@ typedef struct spn_txty
 // Render a composition and styling to a surface defined in the
 // extension chain.
 //
+// The clip is in pixels.
+//
 
 typedef struct spn_render_submit
 {
   void *            ext;
   spn_styling_t     styling;
   spn_composition_t composition;
-  uint32_t          tile_clip[4];
+  uint32_t          clip[4];
 } spn_render_submit_t;
 
 //

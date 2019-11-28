@@ -1214,7 +1214,7 @@ impl Context for SpinelContext {
             ext: &mut rs_image as *mut _ as *mut c_void,
             styling: self.styling.styling,
             composition: composition.composition,
-            tile_clip: [0, 0, std::u32::MAX, std::u32::MAX],
+            clip: [0, 0, std::u32::MAX, std::u32::MAX],
         };
         let status = unsafe { spn_render(*self.context.borrow(), &rs) };
         assert_eq!(status, SpnSuccess);
