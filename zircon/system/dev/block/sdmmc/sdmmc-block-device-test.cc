@@ -484,9 +484,26 @@ TEST_F(SdmmcBlockDeviceTest, DdkLifecycle) {
   EXPECT_EQ(ddk_.total_children(), 1);
 }
 
+TEST_F(SdmmcBlockDeviceTest, DdkLifecyclePartitionsExistButNotUsed) {
+  sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
+    uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 2;
+    ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
+    ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 1;
+    ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;
+  });
+
+  AddDevice();
+
+  dut_.DdkAsyncRemove();
+  ASSERT_NO_FATAL_FAILURES(ddk_.Ok());
+  EXPECT_EQ(ddk_.total_children(), 1);
+}
+
 TEST_F(SdmmcBlockDeviceTest, DdkLifecycleWithPartitions) {
   sdmmc_.set_command_callback(MMC_SEND_EXT_CSD, [](sdmmc_req_t* req) {
     uint8_t* const ext_csd = reinterpret_cast<uint8_t*>(req->virt_buffer);
+    ext_csd[MMC_EXT_CSD_PARTITION_CONFIG] = 0xa8;
     ext_csd[MMC_EXT_CSD_PARTITION_SWITCH_TIME] = 0;
     ext_csd[MMC_EXT_CSD_BOOT_SIZE_MULT] = 1;
     ext_csd[MMC_EXT_CSD_GENERIC_CMD6_TIME] = 0;

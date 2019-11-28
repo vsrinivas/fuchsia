@@ -164,7 +164,9 @@ zx_status_t SdmmcBlockDevice::AddDevice() {
   __UNUSED auto* dummy = user_partition.release();
 
   const uint32_t boot_size = raw_ext_csd_[MMC_EXT_CSD_BOOT_SIZE_MULT] * kBootSizeMultiplier;
-  if (is_sd_ || boot_size == 0) {
+  const bool boot_enabled =
+      raw_ext_csd_[MMC_EXT_CSD_PARTITION_CONFIG] & MMC_EXT_CSD_BOOT_PARTITION_ENABLE_MASK;
+  if (is_sd_ || boot_size == 0 || !boot_enabled) {
     remove_device_on_error.cancel();
     return ZX_OK;
   }
