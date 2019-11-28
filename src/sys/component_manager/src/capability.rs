@@ -5,8 +5,8 @@
 use {
     crate::model::error::ModelError,
     cm_rust::{
-        CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferDirectorySource,
-        OfferServiceSource, UseDecl, UseSource,
+        CapabilityName, CapabilityPath, ExposeDecl, ExposeSource, OfferDecl, OfferDirectorySource,
+        OfferRunnerSource, OfferServiceSource, UseDecl, UseSource,
     },
     failure::Fail,
     fuchsia_zircon as zx,
@@ -31,14 +31,16 @@ pub enum ComponentManagerCapability {
     Service(CapabilityPath),
     LegacyService(CapabilityPath),
     Directory(CapabilityPath),
+    Runner(CapabilityName),
 }
 
 impl ComponentManagerCapability {
-    pub fn path(&self) -> &CapabilityPath {
+    pub fn path(&self) -> Option<&CapabilityPath> {
         match self {
-            ComponentManagerCapability::Service(source_path) => &source_path,
-            ComponentManagerCapability::LegacyService(source_path) => &source_path,
-            ComponentManagerCapability::Directory(source_path) => &source_path,
+            ComponentManagerCapability::Service(source_path) => Some(&source_path),
+            ComponentManagerCapability::LegacyService(source_path) => Some(&source_path),
+            ComponentManagerCapability::Directory(source_path) => Some(&source_path),
+            _ => None,
         }
     }
 
@@ -53,6 +55,7 @@ impl ComponentManagerCapability {
             UseDecl::Directory(d) if d.source == UseSource::Realm => {
                 Ok(ComponentManagerCapability::Directory(d.source_path.clone()))
             }
+            UseDecl::Runner(s) => Ok(ComponentManagerCapability::Runner(s.source_name.clone())),
             _ => {
                 return Err(Error::InvalidBuiltinCapability {});
             }
@@ -66,6 +69,9 @@ impl ComponentManagerCapability {
             }
             OfferDecl::Directory(d) if d.source == OfferDirectorySource::Realm => {
                 Ok(ComponentManagerCapability::Directory(d.source_path.clone()))
+            }
+            OfferDecl::Runner(s) if s.source == OfferRunnerSource::Realm => {
+                Ok(ComponentManagerCapability::Runner(s.source_name.clone()))
             }
             _ => {
                 return Err(Error::InvalidBuiltinCapability {});

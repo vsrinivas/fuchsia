@@ -540,6 +540,30 @@ impl RoutingTest {
         })
     }
 
+    /// Wait for the given component to start running.
+    ///
+    /// We define "running" as "the components outgoing directory has responded to a simple
+    /// request", which the MockRunner supports.
+    pub async fn wait_for_component_start(&self, component: &AbsoluteMoniker) {
+        // Lookup, bind, and open a connection to the realm's outgoing directory.
+        let (dir_proxy, server_end) =
+            fidl::endpoints::create_proxy::<fidl_fuchsia_io::DirectoryMarker>().unwrap();
+        let realm = self.model.look_up_realm(component).await.expect("lookup root realm failed");
+        self.model
+            .bind_open_outgoing(
+                realm,
+                fidl_fuchsia_io::OPEN_RIGHT_READABLE,
+                fidl_fuchsia_io::MODE_TYPE_DIRECTORY,
+                &CapabilityPath::try_from("/.").unwrap(), // Root directory.
+                server_end.into_channel(),
+            )
+            .await
+            .expect("failed to open realm's outgoing directory");
+
+        // Ensure we can successfully talk to the directory.
+        dir_proxy.sync().await.expect("could not communicate with directory");
+    }
+
     pub fn resolved_url(component_name: &str) -> String {
         format!("test:///{}_resolved", component_name)
     }

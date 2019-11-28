@@ -10,6 +10,7 @@ use {
             ModelError, OutgoingBinder,
         },
         process_launcher::ProcessLauncher,
+        runner::BuiltinRunner,
         startup::Arguments,
         system_controller::SystemController,
         vmex::VmexService,
@@ -40,6 +41,7 @@ pub struct BuiltinEnvironment {
     pub system_controller: Arc<SystemController>,
     pub realm_capability_host: RealmCapabilityHost,
     pub hub: Hub,
+    pub elf_runner: BuiltinRunner,
     pub breakpoint_system: Option<BreakpointSystem>,
 }
 
@@ -83,6 +85,10 @@ impl BuiltinEnvironment {
 
         let hub = Hub::new(args.root_component_url.clone())?;
 
+        // Set up the ELF runner.
+        let elf_runner = BuiltinRunner::new("elf".into(), Arc::clone(&model.elf_runner));
+        model.root_realm.hooks.install(vec![elf_runner.hook()]).await;
+
         let breakpoint_system = {
             if args.debug {
                 Some(BreakpointSystem::new())
@@ -97,6 +103,7 @@ impl BuiltinEnvironment {
             system_controller,
             realm_capability_host,
             hub,
+            elf_runner,
             breakpoint_system,
         })
     }

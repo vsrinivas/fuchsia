@@ -184,7 +184,9 @@ async fn open_builtin_capability<'a>(
     if let Some(capability_provider) = capability_provider {
         capability_provider.open(flags, open_mode, relative_path, server_chan).await?;
     } else {
-        let path = capability.path();
+        let path = capability.path().ok_or_else(|| {
+            ModelError::capability_discovery_error(format_err!("no provider found for capability"))
+        })?;
         io_util::connect_in_namespace(&path.to_string(), server_chan, flags)
             .map_err(|e| ModelError::capability_discovery_error(e))?;
     }
