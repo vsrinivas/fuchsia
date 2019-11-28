@@ -614,12 +614,12 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   // DS: BLOCK_POOL
   //
-  spn_vk_ds_bind_rasters_alloc_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_segment_ttrk_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   //
   // DS: TTRKS
   //
-  spn_vk_ds_bind_rasters_alloc_ttrks(instance, cb, payload_1->ds.t);
+  spn_vk_ds_bind_segment_ttrk_ttrks(instance, cb, payload_2->ds.t);
 
   //
   // DS: RASTER_IDS
@@ -735,7 +735,6 @@ spn_rbi_complete_1(void * pfn_payload)
   //
   ////////////////////////////////////////////////////////////////
 
-#if 1
   // push constants remain the same
 
   // bind the pipeline
@@ -743,7 +742,6 @@ spn_rbi_complete_1(void * pfn_payload)
 
   // dispatch one subgroup (workgroup) per raster
   vkCmdDispatch(cb, dispatch->rc.span, 1, 1);
-#endif
 
   //
   // submit the dispatch

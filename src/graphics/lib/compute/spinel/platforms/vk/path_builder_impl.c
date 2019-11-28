@@ -500,7 +500,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   struct spn_vk * const instance = device->instance;
 
   // bind global BLOCK_POOL descriptor set
-  spn_vk_ds_bind_paths_copy_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
+  spn_vk_ds_bind_paths_alloc_block_pool(instance, cb, spn_device_block_pool_get_ds(device));
 
   // acquire PATHS_COPY descriptor set
   struct spn_vk_ds_paths_copy_t ds_pc;
@@ -515,7 +515,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   spn_vk_ds_update_paths_copy(instance, &device->environment, ds_pc);
 
   // bind PATHS_COPY descriptor set
-  spn_vk_ds_bind_paths_copy_paths_copy(instance, cb, ds_pc);
+  spn_vk_ds_bind_paths_alloc_paths_copy(instance, cb, ds_pc);
 
   //
   // Set up push constants -- note that for now the paths_copy push
@@ -523,7 +523,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
   //
   // This means we can push the constants once.
   //
-  struct spn_vk_push_paths_copy const push = {
+  struct spn_vk_push_paths_alloc const push = {
 
     // paths_alloc and paths_copy
     .bp_mask      = spn_device_block_pool_get_mask(device),
@@ -536,7 +536,7 @@ spn_pbi_flush(struct spn_path_builder_impl * const impl)
     .pc_size    = impl->mapped.ring.size
   };
 
-  spn_vk_p_push_paths_copy(instance, cb, &push);
+  spn_vk_p_push_paths_alloc(instance, cb, &push);
 
   // bind the PATHS_ALLOC pipeline
   spn_vk_p_bind_paths_alloc(instance, cb);

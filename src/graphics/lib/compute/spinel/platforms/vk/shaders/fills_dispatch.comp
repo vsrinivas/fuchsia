@@ -64,13 +64,6 @@ layout(local_size_x = SPN_FILLS_DISPATCH_SUBGROUP_SIZE) in;
 
 SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH();
 
-
-//
-// BLOCK POOL DEBUG
-//
-
-SPN_VK_GLSL_DEBUG(0);
-
 //
 //
 //

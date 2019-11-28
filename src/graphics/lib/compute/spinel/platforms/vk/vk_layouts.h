@@ -506,11 +506,13 @@
 // Note that this workgroup only uses one lane but, depending on the
 // target, it might be necessary to launch at least a subgroup.
 //
-
 #define SPN_VK_GLSL_PUSH_KERNEL_PATHS_ALLOC()   \
   SPN_VK_PUSH_UINT(bp_mask)                     \
   SPN_VK_PUSH_UINT(pc_alloc_idx)                \
-  SPN_VK_PUSH_UINT(pc_span)
+  SPN_VK_PUSH_UINT(pc_span)                     \
+  SPN_VK_PUSH_UINT(pc_head)                     \
+  SPN_VK_PUSH_UINT(pc_rolling)                  \
+  SPN_VK_PUSH_UINT(pc_size)
 
 #define SPN_VK_GLSL_DECL_KERNEL_PATHS_ALLOC()                           \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readonly,writeonly,writeonly);  \
@@ -525,12 +527,8 @@
 //
 // KERNEL: PATHS COPY
 //
-
 #define SPN_VK_GLSL_PUSH_KERNEL_PATHS_COPY()    \
-  SPN_VK_GLSL_PUSH_KERNEL_PATHS_ALLOC()         \
-  SPN_VK_PUSH_UINT(pc_head)                     \
-  SPN_VK_PUSH_UINT(pc_rolling)                  \
-  SPN_VK_PUSH_UINT(pc_size)
+  SPN_VK_GLSL_PUSH_KERNEL_PATHS_ALLOC()
 
 #define SPN_VK_GLSL_DECL_KERNEL_PATHS_COPY()                              \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,readonly,readonly,writeonly,writeonly);     \
@@ -555,7 +553,7 @@
 
 #define SPN_VK_GLSL_DECL_KERNEL_FILLS_SCAN()                              \
   SPN_VK_GLSL_DS_BLOCK_POOL_UVEC4(0,readonly,readonly,readonly,readonly); \
-  SPN_VK_GLSL_DS_RASTERIZE       (2,                                      \
+  SPN_VK_GLSL_DS_RASTERIZE       (1,                                      \
                                   readwrite,noaccess,                     \
                                   noaccess,noaccess,noaccess,             \
                                   noaccess);                              \
@@ -563,12 +561,13 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_FILLS_SCAN()                                          \
   SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_SCAN,0,SPN_VK_DS_ID_BLOCK_POOL)                    \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_SCAN,1,SPN_VK_DS_ID_TTRKS)                         \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_SCAN,2,SPN_VK_DS_ID_RASTERIZE)                     \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_SCAN,1,SPN_VK_DS_ID_RASTERIZE)                     \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_SCAN,SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN())
 
 //
 // KERNEL: FILLS EXPAND
+//
+// Compatible with FILLS SCAN
 //
 
 #define SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND()      \
@@ -576,7 +575,7 @@
 
 #define SPN_VK_GLSL_DECL_KERNEL_FILLS_EXPAND()                        \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,readonly,readonly,readonly,readonly);   \
-  SPN_VK_GLSL_DS_RASTERIZE (2,                                        \
+  SPN_VK_GLSL_DS_RASTERIZE (1,                                        \
                             readonly,noaccess,                        \
                             noaccess,readonly,readonly,               \
                             writeonly);                               \
@@ -584,30 +583,33 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_FILLS_EXPAND()                                      \
   SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,0,SPN_VK_DS_ID_BLOCK_POOL)                \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,1,SPN_VK_DS_ID_TTRKS)                     \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,2,SPN_VK_DS_ID_RASTERIZE)                 \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_EXPAND,1,SPN_VK_DS_ID_RASTERIZE)                 \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_EXPAND,SPN_VK_GLSL_PUSH_KERNEL_FILLS_EXPAND())
 
 //
 // KERNEL: FILLS DISPATCH
 //
-
+// Compatible with FILLS EXPAND
 //
-// Note: sets 0 and 1 are ignored
+// Note: push constants are ignored
+// Note: descriptor set 0 is ignored
 //
 
-#define SPN_VK_GLSL_PUSH_KERNEL_FILLS_DISPATCH()
+#define SPN_VK_GLSL_PUSH_KERNEL_FILLS_DISPATCH()        \
+  SPN_VK_GLSL_PUSH_KERNEL_FILLS_SCAN()
 
-#define SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH()                \
-  SPN_VK_GLSL_DS_RASTERIZE(2,                                   \
-                           noaccess,noaccess,                   \
-                           writeonly,readwrite,noaccess,        \
-                           noaccess);
+#define SPN_VK_GLSL_DECL_KERNEL_FILLS_DISPATCH()                      \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,noaccess,noaccess);   \
+  SPN_VK_GLSL_DS_RASTERIZE (1,                                        \
+                            noaccess,noaccess,                        \
+                            writeonly,readonly,noaccess,              \
+                            noaccess);                                \
+  SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_FILLS_DISPATCH());
 
 #define SPN_VK_HOST_DECL_KERNEL_FILLS_DISPATCH()                            \
   SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_DISPATCH,0,SPN_VK_DS_ID_BLOCK_POOL)      \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_DISPATCH,1,SPN_VK_DS_ID_TTRKS)           \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_DISPATCH,2,SPN_VK_DS_ID_RASTERIZE)
+  SPN_VK_HOST_DS(SPN_VK_P_ID_FILLS_DISPATCH,1,SPN_VK_DS_ID_RASTERIZE)       \
+  SPN_VK_HOST_PUSH(SPN_VK_P_ID_FILLS_DISPATCH,SPN_VK_GLSL_PUSH_KERNEL_FILLS_DISPATCH())
 
 
 //
@@ -619,11 +621,11 @@
 
 #define SPN_VK_GLSL_DECL_KERNEL_RASTERIZE_XXX()                         \
   SPN_VK_GLSL_DS_BLOCK_POOL(0,readwrite,readwrite,readwrite,noaccess);  \
-  SPN_VK_GLSL_DS_TTRKS     (1,noaccess,readwrite,writeonly);            \
-  SPN_VK_GLSL_DS_RASTERIZE (2,                                          \
+  SPN_VK_GLSL_DS_RASTERIZE (1,                                          \
                             noaccess,readonly,                          \
                             noaccess,noaccess,noaccess,                 \
                             readonly);                                  \
+  SPN_VK_GLSL_DS_TTRKS     (2,noaccess,readwrite,writeonly);            \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_XXX());
 
 //
@@ -638,8 +640,8 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_LINE()                                            \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,0,SPN_VK_DS_ID_BLOCK_POOL)                      \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,1,SPN_VK_DS_ID_TTRKS)                           \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,2,SPN_VK_DS_ID_RASTERIZE)                       \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,1,SPN_VK_DS_ID_RASTERIZE)                       \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_LINE,2,SPN_VK_DS_ID_TTRKS)                           \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_LINE,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_LINE())
 
 //
@@ -654,8 +656,8 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_CUBIC()                                         \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,0,SPN_VK_DS_ID_BLOCK_POOL)                   \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,1,SPN_VK_DS_ID_TTRKS)                        \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,2,SPN_VK_DS_ID_RASTERIZE)                    \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,1,SPN_VK_DS_ID_RASTERIZE)                    \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_CUBIC,2,SPN_VK_DS_ID_TTRKS)                        \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_CUBIC,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_CUBIC())
 
 //
@@ -670,8 +672,8 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_QUAD()                                          \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_QUAD,0,SPN_VK_DS_ID_BLOCK_POOL)                    \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_QUAD,1,SPN_VK_DS_ID_TTRKS)                         \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_QUAD,2,SPN_VK_DS_ID_RASTERIZE)                     \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_QUAD,1,SPN_VK_DS_ID_RASTERIZE)                     \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_QUAD,2,SPN_VK_DS_ID_TTRKS)                         \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_QUAD,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_QUAD())
 
 //
@@ -686,8 +688,8 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_CUBIC()                                             \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,0,SPN_VK_DS_ID_BLOCK_POOL)                       \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,1,SPN_VK_DS_ID_TTRKS)                            \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,2,SPN_VK_DS_ID_RASTERIZE)                        \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,1,SPN_VK_DS_ID_RASTERIZE)                        \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,2,SPN_VK_DS_ID_TTRKS)                            \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_RAT_CUBIC,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_RAT_CUBIC())
 
 //
@@ -702,8 +704,8 @@
 
 #define SPN_VK_HOST_DECL_KERNEL_RASTERIZE_RAT_QUAD()                                              \
   SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,0,SPN_VK_DS_ID_BLOCK_POOL)                        \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,1,SPN_VK_DS_ID_TTRKS)                             \
-  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,2,SPN_VK_DS_ID_RASTERIZE)                         \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,1,SPN_VK_DS_ID_RASTERIZE)                         \
+  SPN_VK_HOST_DS(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,2,SPN_VK_DS_ID_TTRKS)                             \
   SPN_VK_HOST_PUSH(SPN_VK_P_ID_RASTERIZE_RAT_QUAD,SPN_VK_GLSL_PUSH_KERNEL_RASTERIZE_RAT_QUAD())
 
 //
@@ -727,10 +729,12 @@
 #define SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTRK()  \
   SPN_VK_PUSH_UINT(kv_offset_in)                \
   SPN_VK_PUSH_UINT(kv_offset_out)               \
-  SPN_VK_PUSH_UINT(kv_count)
+  SPN_VK_PUSH_UINT(kv_count)                    \
+  SPN_VK_PUSH_UINT(padding) // padding for pipeline layout compatibility
 
 #define SPN_VK_GLSL_DECL_KERNEL_SEGMENT_TTRK()                                             \
-  SPN_VK_GLSL_DS_TTRKS(1,readwrite,noaccess,readwrite);                                    \
+  SPN_VK_GLSL_DS_BLOCK_POOL(0,noaccess,noaccess,noaccess,noaccess);                        \
+  SPN_VK_GLSL_DS_TTRKS     (1,readwrite,noaccess,readwrite);                               \
   SPN_VK_GLSL_PUSH(SPN_VK_GLSL_PUSH_KERNEL_SEGMENT_TTRK());
 
 #define SPN_VK_HOST_DECL_KERNEL_SEGMENT_TTRK()                                             \
@@ -742,10 +746,10 @@
 // KERNEL: RASTERS ALLOC
 //
 
-#define SPN_VK_GLSL_PUSH_KERNEL_RASTERS_ALLOC()     \
-  SPN_VK_PUSH_UINT(bp_mask)                         \
-  SPN_VK_PUSH_UINT(raster_span)                     \
-  SPN_VK_PUSH_UINT(raster_head)                     \
+#define SPN_VK_GLSL_PUSH_KERNEL_RASTERS_ALLOC() \
+  SPN_VK_PUSH_UINT(bp_mask)                     \
+  SPN_VK_PUSH_UINT(raster_span)                 \
+  SPN_VK_PUSH_UINT(raster_head)                 \
   SPN_VK_PUSH_UINT(raster_size)
 
 #define SPN_VK_GLSL_DECL_KERNEL_RASTERS_ALLOC()                             \
