@@ -4,7 +4,6 @@
 
 #include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
 
-#include "src/lib/syslog/cpp/logger.h"
 #include "src/media/playback/mediaplayer/graph/formatting.h"
 #include "src/media/playback/mediaplayer/graph/payloads/payload_buffer.h"
 
@@ -13,43 +12,19 @@ namespace media_player {
 // static
 std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
-    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
-    fit::closure connection_failure_callback) {
+    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request) {
   FX_DCHECK(request);
-  return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate, std::move(request),
-                                                std::move(connection_failure_callback));
-}
-
-// static
-std::shared_ptr<SimpleStreamSinkImpl> SimpleStreamSinkImpl::Create(
-    const StreamType& output_stream_type, media::TimelineRate pts_rate,
-    fidl::InterfaceRequest<fuchsia::media::StreamSink> request,
-    fit::closure connection_failure_callback) {
-  FX_DCHECK(request);
-
-  fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> simple_stream_sink_request(
-      request.TakeChannel());
-  return SimpleStreamSinkImpl::Create(output_stream_type, pts_rate,
-                                      std::move(simple_stream_sink_request),
-                                      std::move(connection_failure_callback));
+  return std::make_shared<SimpleStreamSinkImpl>(output_stream_type, pts_rate, std::move(request));
 }
 
 SimpleStreamSinkImpl::SimpleStreamSinkImpl(
     const StreamType& output_stream_type, media::TimelineRate pts_rate,
-    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
-    fit::closure connection_failure_callback)
+    fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request)
     : output_stream_type_(output_stream_type.Clone()),
       pts_rate_(pts_rate),
-      binding_(this, std::move(request)),
-      connection_failure_callback_(std::move(connection_failure_callback)) {
+      binding_(this, std::move(request)) {
   FX_DCHECK(output_stream_type_);
   FX_DCHECK(binding_.is_bound());
-
-  binding_.set_error_handler([&](zx_status_t status) {
-    if (connection_failure_callback_) {
-      connection_failure_callback_();
-    }
-  });
 }
 
 SimpleStreamSinkImpl::~SimpleStreamSinkImpl() {

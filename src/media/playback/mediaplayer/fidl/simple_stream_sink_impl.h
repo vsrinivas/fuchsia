@@ -15,25 +15,17 @@
 
 namespace media_player {
 
-// Simple stream sink is composed of a StreamSink and a StreamBufferSet
+// Fidl decoder as exposed by the codec factory service.
 class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSink {
  public:
-  // Creates a simple stream sink.
+  // Creates a fidl decoder factory. Calls the callback with the initalized
+  // decoder on success. Calls the callback with nullptr on failure.
   static std::shared_ptr<SimpleStreamSinkImpl> Create(
       const StreamType& output_stream_type, media::TimelineRate pts_rate,
-      fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
-      fit::closure connection_failure_callback);
-
-  // Creates a simple stream sink from StreamSink. Buffers must be managed via
-  // some other method
-  static std::shared_ptr<SimpleStreamSinkImpl> Create(
-      const StreamType& output_stream_type, media::TimelineRate pts_rate,
-      fidl::InterfaceRequest<fuchsia::media::StreamSink> stream_sink_request,
-      fit::closure connection_failure_callback);
+      fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request);
 
   SimpleStreamSinkImpl(const StreamType& output_stream_type, media::TimelineRate pts_rate,
-                       fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request,
-                       fit::closure connection_failure_callback);
+                       fidl::InterfaceRequest<fuchsia::media::SimpleStreamSink> request);
 
   ~SimpleStreamSinkImpl() override;
 
@@ -79,7 +71,6 @@ class SimpleStreamSinkImpl : public Node, public fuchsia::media::SimpleStreamSin
   std::unique_ptr<StreamType> output_stream_type_;
   media::TimelineRate pts_rate_;
   fidl::Binding<fuchsia::media::SimpleStreamSink> binding_;
-  fit::closure connection_failure_callback_;
   int64_t pts_ = 0;
   std::unordered_map<uint32_t, PayloadVmoInfo> payload_vmo_infos_by_id_;
   bool flushing_ = false;

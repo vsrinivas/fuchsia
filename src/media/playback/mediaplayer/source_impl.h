@@ -7,7 +7,6 @@
 
 #include <fuchsia/media/playback/cpp/fidl.h>
 
-#include <memory>
 #include <vector>
 
 #include "lib/fidl/cpp/binding.h"
@@ -15,7 +14,6 @@
 #include "src/media/playback/mediaplayer/core/demux_source_segment.h"
 #include "src/media/playback/mediaplayer/core/elementary_source_segment.h"
 #include "src/media/playback/mediaplayer/demux/demux.h"
-#include "src/media/playback/mediaplayer/fidl/simple_stream_sink_impl.h"
 #include "src/media/playback/mediaplayer/graph/graph.h"
 
 namespace media_player {
@@ -152,35 +150,6 @@ class ElementarySourceImpl : public SourceImpl, public fuchsia::media::playback:
 
   std::unique_ptr<ElementarySourceSegment> elementary_source_segment_;
   ElementarySourceSegment* elementary_source_segment_raw_ptr_;
-};
-
-////////////////////////////////////////////////////////////////////////////////
-// AudioConsumerSourceImpl declaration.
-
-// |SourceImpl| that hosts a |ElementarySourceSegment| with no associated fidl ElementarySource.
-class AudioConsumerSourceImpl : public SourceImpl {
- public:
-  // Creates a |AudioConsumerSourceImpl|.
-  // |connection_failure_callback|, which is also optional, allows the source
-  // to signal that its connection has failed.
-  static std::unique_ptr<AudioConsumerSourceImpl> Create(Graph* graph,
-                                                         fit::closure connection_failure_callback);
-
-  AudioConsumerSourceImpl(Graph* graph, fit::closure connection_failure_callback);
-
-  ~AudioConsumerSourceImpl() override;
-
-  // SourceImpl overrides.
-  std::unique_ptr<SourceSegment> TakeSourceSegment() override;
-
-  void SendStatusUpdates() override;
-
-  // Add stream to elementary source segment
-  void AddStream(std::shared_ptr<SimpleStreamSinkImpl> simple_stream_sink_impl,
-                 const StreamType& output_stream_type);
-
- private:
-  std::unique_ptr<ElementarySourceSegment> elementary_source_segment_;
 };
 
 }  // namespace media_player
