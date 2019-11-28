@@ -20,3 +20,5 @@ toc:
   path: /docs/development/languages/rust/unsafe.md
 - title: "Unstable Rust features"
   path: /docs/development/languages/rust/unstable.md
+- title: "Add logging to hello world"
+  path: /docs/development/languages/rust/add-logging.md

@@ -116,6 +116,7 @@ Googler-only channels, see [go/fuchsia-rust-googlers].
 - [Unstable features](unstable.md)
 - [Rust FIDL server/client tutorial][fidl-tutorial]
 - [Syslog API](syslog.md)
+- [Add logging to hello world](add-logging.md)
 
 
 [target-library-rustc]: /build/rust/rustc_library.gni "Rust library"
