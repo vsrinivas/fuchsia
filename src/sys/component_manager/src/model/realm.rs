@@ -4,7 +4,10 @@
 
 use {
     crate::model::*,
-    cm_rust::{self, ChildDecl, ComponentDecl, UseDecl, UseStorageDecl},
+    cm_rust::{
+        self, CapabilityPath, ChildDecl, ComponentDecl, ExposeDecl, ExposeTarget, UseDecl,
+        UseStorageDecl,
+    },
     fidl::endpoints::{create_endpoints, Proxy},
     fidl_fuchsia_io::{DirectoryProxy, MODE_TYPE_DIRECTORY},
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -383,6 +386,19 @@ impl Realm {
             }
         }
         Ok(futures)
+    }
+
+    /// Locate an exposed-to-framework service by its `target_path`.
+    pub async fn is_service_exposed_to_framework(&self, target_path: &CapabilityPath) -> bool {
+        let state = self.lock_state().await;
+        let state = state.as_ref().expect("is_service_exposed_to_framework: not resolved");
+
+        state.decl.exposes.iter().any(|expose| match expose {
+            ExposeDecl::LegacyService(ls) => {
+                ls.target == ExposeTarget::Framework && ls.target_path == *target_path
+            }
+            _ => false,
+        })
     }
 }
 

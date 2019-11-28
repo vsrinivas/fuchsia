@@ -5,14 +5,12 @@
 use {
     crate::{
         model::{
-            AbsoluteMoniker, Event, EventPayload, ExposedDir, IncomingNamespace, ModelError, Realm, RealmState,
-            Resolver, ResolverRegistry, RoutingFacade, Runner, Runtime,
+            AbsoluteMoniker, Event, EventPayload, ExposedDir, IncomingNamespace, ModelError, Realm,
+            RealmState, Resolver, ResolverRegistry, RoutingFacade, Runner, Runtime,
         },
         root_realm_stop_notifier::RootRealmStopNotifier,
     },
-    cm_rust::{
-        data, CapabilityPath, ComponentDecl, ExposeDecl, ExposeLegacyServiceDecl, ExposeTarget,
-    },
+    cm_rust::{data, CapabilityPath},
     failure::format_err,
     fidl::endpoints::{create_endpoints, Proxy, ServerEnd},
     fidl_fuchsia_io::{self as fio, DirectoryProxy},
@@ -181,38 +179,6 @@ impl Model {
                 ))
             })?;
         Ok(())
-    }
-
-    // TODO(fsamuel): Move this to Realm.
-    /// Locate an exposed-to-framework service by its `target_path`.
-    pub fn get_service_exposed_to_framework(
-        component_decl: &ComponentDecl,
-        target_path: &CapabilityPath,
-    ) -> Result<ExposeLegacyServiceDecl, ModelError> {
-        component_decl
-            .exposes
-            .iter()
-            .find(|&expose| match expose {
-                ExposeDecl::LegacyService(ls) => {
-                    ls.target == ExposeTarget::Framework && ls.target_path == *target_path
-                }
-                _ => false,
-            })
-            .map_or_else(
-                || {
-                    Err(ModelError::capability_discovery_error(format_err!(
-                        "exposed to framework capability not found: {}",
-                        target_path.to_string()
-                    )))
-                },
-                |expose| match expose {
-                    ExposeDecl::LegacyService(ls) => Ok(ls.clone()),
-                    _ => Err(ModelError::capability_discovery_error(format_err!(
-                        "exposed to framework capability not found: {}",
-                        target_path.to_string()
-                    ))),
-                },
-            )
     }
 
     /// Looks up a realm by absolute moniker. The component instance in the realm will be resolved

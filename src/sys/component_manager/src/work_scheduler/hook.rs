@@ -5,15 +5,12 @@
 use {
     crate::{
         capability::{ComponentManagerCapability, ComponentManagerCapabilityProvider},
-        model::{
-            Event, EventPayload, EventType, Hook, HooksRegistration, Model, ModelError, Realm,
-        },
+        model::{Event, EventPayload, EventType, Hook, HooksRegistration, ModelError, Realm},
         work_scheduler::work_scheduler::{
             WorkScheduler, WORKER_CAPABILITY_PATH, WORK_SCHEDULER_CAPABILITY_PATH,
             WORK_SCHEDULER_CONTROL_CAPABILITY_PATH,
         },
     },
-    cm_rust::ExposeTarget,
     failure::{format_err, Error},
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_sys2 as fsys, fuchsia_async as fasync, fuchsia_zircon as zx,
@@ -63,7 +60,9 @@ impl WorkScheduler {
             (None, ComponentManagerCapability::LegacyService(capability_path))
                 if *capability_path == *WORK_SCHEDULER_CAPABILITY_PATH =>
             {
-                Self::check_for_worker(&*realm).await?;
+                // Only clients that expose the Worker protocol to the framework can
+                // use WorkScheduler.
+                Self::verify_worker_exposed_to_framework(&*realm).await?;
                 Ok(Some(
                     Box::new(WorkSchedulerCapabilityProvider::new(realm.clone(), self.clone()))
                         as Box<dyn ComponentManagerCapabilityProvider>,
@@ -75,17 +74,14 @@ impl WorkScheduler {
 
     /// Ensure that `fuchsia.sys2.WorkScheduler` clients expose `fuchsia.sys2.Worker` to recieve
     /// work dispatch callbacks.
-    async fn check_for_worker(realm: &Realm) -> Result<(), ModelError> {
-        let realm_state = realm.lock_state().await;
-        let realm_state = realm_state.as_ref().expect("check_for_worker: not resolved");
-        let expose =
-            Model::get_service_exposed_to_framework(realm_state.decl(), &*WORKER_CAPABILITY_PATH)?;
-        match expose.target {
-            ExposeTarget::Framework => Ok(()),
-            _ => Err(ModelError::capability_discovery_error(format_err!(
-                "component exposes Worker, but not as legacy service to framework: {}",
+    async fn verify_worker_exposed_to_framework(realm: &Realm) -> Result<(), ModelError> {
+        if realm.is_service_exposed_to_framework(&*WORKER_CAPABILITY_PATH).await {
+            Ok(())
+        } else {
+            Err(ModelError::capability_discovery_error(format_err!(
+                "Component {} does not expose Worker",
                 realm.abs_moniker
-            ))),
+            )))
         }
     }
 }
