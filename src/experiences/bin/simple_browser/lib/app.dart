@@ -3,11 +3,16 @@
 // found in the LICENSE file.
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:fuchsia_scenic_flutter/child_view.dart' show ChildView;
+import 'package:internationalization/localizations_delegate.dart'
+    as localizations;
 import 'package:internationalization/strings.dart';
+import 'package:internationalization/supported_locales.dart'
+    as supported_locales;
+import 'package:intl/intl.dart';
 import 'package:simple_browser/src/blocs/webpage_bloc.dart';
-import 'src/blocs/tabs_bloc.dart';
-import 'src/models/tabs_action.dart';
+import 'src/models/app_model.dart';
 import 'src/widgets/error_page.dart';
 import 'src/widgets/navigation_bar.dart';
 import 'src/widgets/tabs_widget.dart';
@@ -18,67 +23,68 @@ const _kSelectionColor = Color(0x26191919);
 const _kTextStyle = TextStyle(color: _kForegroundColor, fontSize: 14.0);
 
 class App extends StatelessWidget {
-  final TabsBloc<WebPageBloc> tabsBloc;
+  final AppModel model;
 
-  final Locale locale;
-
-  final Iterable<LocalizationsDelegate<dynamic>> localizationsDelegates;
-
-  final Iterable<Locale> supportedLocales;
-
-  /// The [locale], [localizationsDelegates] and [supportedLocales] parameters
-  /// are the same as in [MaterialApp].
-  const App(
-      {@required this.tabsBloc,
-      this.locale,
-      this.localizationsDelegates,
-      this.supportedLocales});
+  const App(this.model);
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: Strings.browser,
-      theme: ThemeData(
-        fontFamily: 'RobotoMono',
-        textSelectionColor: _kSelectionColor,
-        textSelectionHandleColor: _kForegroundColor,
-        hintColor: _kForegroundColor,
-        cursorColor: _kForegroundColor,
-        primaryColor: _kBackgroundColor,
-        canvasColor: _kBackgroundColor,
-        accentColor: _kForegroundColor,
-        textTheme: TextTheme(
-          body1: _kTextStyle,
-          subhead: _kTextStyle,
-        ),
-      ),
-      locale: locale,
-      localizationsDelegates: localizationsDelegates,
-      supportedLocales: supportedLocales,
-      home: Scaffold(
-        body: Column(
-          children: <Widget>[
-            AnimatedBuilder(
-              animation: tabsBloc.currentTabNotifier,
-              builder: (_, __) =>
-                  NavigationBar(bloc: tabsBloc.currentTab, newTab: newTab),
+    return StreamBuilder<Locale>(
+      stream: model.localeStream,
+      initialData: model.initialLocale,
+      builder: (context, snapshot) {
+        final locale = snapshot.data;
+        Intl.defaultLocale = locale.toString();
+        return MaterialApp(
+          title: Strings.browser,
+          theme: ThemeData(
+            fontFamily: 'RobotoMono',
+            textSelectionColor: _kSelectionColor,
+            textSelectionHandleColor: _kForegroundColor,
+            hintColor: _kForegroundColor,
+            cursorColor: _kForegroundColor,
+            primaryColor: _kBackgroundColor,
+            canvasColor: _kBackgroundColor,
+            accentColor: _kForegroundColor,
+            textTheme: TextTheme(
+              body1: _kTextStyle,
+              subhead: _kTextStyle,
             ),
-            TabsWidget(bloc: tabsBloc),
-            Expanded(child: _buildContent()),
+          ),
+          locale: locale,
+          localizationsDelegates: [
+            localizations.delegate(),
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
           ],
-        ),
-      ),
+          supportedLocales: supported_locales.locales,
+          home: Scaffold(
+            body: Column(
+              children: <Widget>[
+                AnimatedBuilder(
+                  animation: model.tabsBloc.currentTabNotifier,
+                  builder: (_, __) => NavigationBar(
+                      bloc: model.tabsBloc.currentTab, newTab: model.newTab),
+                ),
+                TabsWidget(bloc: model.tabsBloc),
+                Expanded(child: _buildContent()),
+              ],
+            ),
+          ),
+        );
+      },
     );
   }
 
   Widget _buildContent() => AnimatedBuilder(
-        animation: tabsBloc.currentTabNotifier,
-        builder: (_, __) => tabsBloc.currentTab == null
+        animation: model.tabsBloc.currentTabNotifier,
+        builder: (_, __) => model.tabsBloc.currentTab == null
             // hide if no tab selected
             ? _buildEmptyPage()
             : AnimatedBuilder(
-                animation: tabsBloc.currentTab.pageTypeNotifier,
-                builder: (_, __) => _buildPage(tabsBloc.currentTab.pageType),
+                animation: model.tabsBloc.currentTab.pageTypeNotifier,
+                builder: (_, __) =>
+                    _buildPage(model.tabsBloc.currentTab.pageType),
               ),
       );
 
@@ -96,9 +102,7 @@ class App extends StatelessWidget {
   }
 
   Widget _buildNormalPage() =>
-      ChildView(connection: tabsBloc.currentTab.childViewConnection);
+      ChildView(connection: model.tabsBloc.currentTab.childViewConnection);
   Widget _buildErrorPage() => ErrorPage();
   Widget _buildEmptyPage() => Container();
-
-  void newTab() => tabsBloc.request.add(NewTabAction<WebPageBloc>());
 }

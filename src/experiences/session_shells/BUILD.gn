@@ -18,6 +18,7 @@ group("dart_unittests") {
     _flutter_tester_tests += [
       "ermine/settings:ermine_settings_unittests($host_toolchain)",
       "ermine/shell:ermine_unittests($host_toolchain)",
+      "ermine/keyboard_shortcuts:keyboard_shortcuts_unittests($host_toolchain)",
     ]
   }
 

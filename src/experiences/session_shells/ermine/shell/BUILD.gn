@@ -60,7 +60,6 @@ dart_library("ermine_library") {
     "src/models/status_model.dart",
     "src/models/topbar_model.dart",
     "src/utils/elevations.dart",
-    "src/utils/keyboard_shortcuts.dart",
     "src/utils/styles.dart",
     "src/utils/suggestions.dart",
     "src/utils/utils.dart",
@@ -114,6 +113,7 @@ dart_library("ermine_library") {
     "//sdk/fidl/fuchsia.ui.views",
     "//src/experiences/lib/quickui",
     "//src/experiences/session_shells/ermine/internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//src/experiences/session_shells/ermine/settings",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/git/flutter/packages/flutter_localizations",
@@ -163,7 +163,6 @@ flutter_test("ermine_unittests") {
     "ask_model_test.dart",
     "ask_widget_test.dart",
     "ermine_test.dart",
-    "keyboard_shortcuts_test.dart",
   ]
 
   deps = [

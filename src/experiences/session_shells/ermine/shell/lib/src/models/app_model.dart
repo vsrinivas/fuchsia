@@ -21,9 +21,10 @@ import 'package:fuchsia_modular_flutter/session_shell.dart' show SessionShell;
 import 'package:fuchsia_modular_flutter/story_shell.dart' show StoryShell;
 
 import 'package:fuchsia_services/services.dart' show StartupContext;
+import 'package:keyboard_shortcuts/keyboard_shortcuts.dart'
+    show KeyboardShortcuts;
 import 'package:lib.widgets/utils.dart' show PointerEventsListener;
 
-import '../utils/keyboard_shortcuts.dart' show KeyboardShortcuts;
 import '../utils/suggestions.dart';
 import '../widgets/ask/ask.dart';
 import 'cluster_model.dart';

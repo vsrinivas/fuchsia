@@ -1,0 +1,58 @@
+{
+  "newTab": [
+    {
+      "char": "t",
+      "modifier": "control",
+      "chord": "Control + t",
+      "description": "Open a new tab"
+    }
+  ],
+  "closeTab": [
+    {
+      "char": "w",
+      "modifier": "control",
+      "chord": "Control + w",
+      "description": "Close the current tab"
+    }
+  ],
+  "goBack": [
+    {
+      "char": "left",
+      "modifier": "alt",
+      "chord": "Alt + <-",
+      "description": "Open the previous page from your browsing history in the current tab"
+    }
+  ],
+  "goForward": [
+    {
+      "char": "right",
+      "modifier": "alt",
+      "chord": "Alt + ->",
+      "description": "Open the next page from your browsing history in the current tab"
+    }
+  ],
+  "refresh": [
+    {
+      "char": "r",
+      "modifier": "control",
+      "chord": "Control + r",
+      "description": "Reload the current page"
+    }
+  ],
+  "previousTab": [
+    {
+      "char": "tab",
+      "modifier": "control + shift",
+      "chord": "Control + Shift + tab",
+      "description": "Jump to the previous open tab"
+    }
+  ],
+  "nextTab": [
+    {
+      "char": "tab",
+      "modifier": "control",
+      "chord": "Control + tab",
+      "description": "Jump to the next open tab"
+    }
+  ]
+}

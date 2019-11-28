@@ -42,6 +42,7 @@
             "fuchsia.ui.input.ImeVisibilityService",
             "fuchsia.ui.policy.Presenter",
             "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.shortcut.Registry",
             "fuchsia.vulkan.loader.Loader",
             "fuchsia.web.ContextProvider"
         ]

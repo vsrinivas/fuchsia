@@ -29,6 +29,20 @@ class TabsBloc<T> {
 
   UnmodifiableListView<T> get tabs => _tabs.value;
   T get currentTab => _currentTab.value;
+  int get currentTabIdx => _tabsList.indexOf(currentTab);
+  bool get isOnlyTab => _tabsList.length == 1;
+
+  T get previousTab {
+    int prevIdx = currentTabIdx - 1;
+    prevIdx = (prevIdx < 0) ? (_tabsList.length - 1) : prevIdx;
+    return _tabsList[prevIdx];
+  }
+
+  T get nextTab {
+    int nextIdx = currentTabIdx + 1;
+    nextIdx = (nextIdx > _tabsList.length - 1) ? 0 : nextIdx;
+    return _tabsList[nextIdx];
+  }
 
   // Sinks
   final _tabsActionController = StreamController<TabsAction<T>>();

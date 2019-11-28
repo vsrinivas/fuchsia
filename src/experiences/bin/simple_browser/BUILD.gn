@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fidl/fidl.gni")
 import("//build/testing/environments.gni")
 import("//topaz/runtime/dart/dart_fuchsia_test.gni")
 import("//topaz/runtime/dart/flutter_test.gni")
@@ -28,8 +29,10 @@ flutter_app("simple_browser") {
 
   deps = [
     "//sdk/fidl/fuchsia.intl",
+    "//sdk/fidl/fuchsia.ui.shortcut",
     "//sdk/fidl/fuchsia.web",
     "//src/experiences/bin/simple_browser_internationalization:internationalization",
+    "//src/experiences/session_shells/ermine/keyboard_shortcuts",
     "//third_party/dart-pkg/git/flutter/packages/flutter",
     "//third_party/dart-pkg/pub/html_unescape",
     "//third_party/dart-pkg/pub/http",
@@ -40,13 +43,22 @@ flutter_app("simple_browser") {
     "//topaz/public/dart/fuchsia_services",
     "//topaz/public/dart/widgets:lib.widgets",
   ]
+
+  resources = [
+    {
+      path = rebase_path("config/keyboard_shortcuts.json")
+      dest = "keyboard_shortcuts.json"
+    },
+  ]
 }
 
 # fx run-host-tests simple_browser_unittests
 flutter_test("simple_browser_unittests") {
   sources = [
+    "browser_shortcuts_test.dart",
     "sanitize_url_test.dart",
     "simple_browser_test.dart",
+    "tabs_bloc_test.dart",
     "tld_checker_test.dart",
   ]
 

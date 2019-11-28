@@ -12,7 +12,7 @@ import 'package:test/test.dart';
 import 'package:mockito/mockito.dart';
 
 // ignore_for_file: implementation_imports
-import 'package:ermine_library/src/utils/keyboard_shortcuts.dart';
+import 'package:keyboard_shortcuts/keyboard_shortcuts.dart';
 
 void main() async {
   test('Create KeyboardShortuc', () {
