@@ -12,7 +12,7 @@ use fuchsia_async::{
 };
 use fuchsia_component::client::{connect_to_service, launch};
 use fuchsia_merkle::Hash;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_syslog::{fx_log_err, fx_log_info, fx_log_warn};
 use fuchsia_zircon as zx;
 
 #[cfg(test)]
@@ -51,6 +51,7 @@ pub async fn apply_system_update(
         &mut component_runner,
         initiator,
         &RealTimeSource,
+        &RealFileSystem,
     )
     .await
 }
@@ -94,7 +95,7 @@ impl ComponentRunner for RealComponentRunner {
             exit_status.ok().context(ErrorKind::SystemUpdaterFailed)?;
             Ok(())
         }
-            .boxed()
+        .boxed()
     }
 }
 
@@ -111,6 +112,63 @@ impl TimeSource for RealTimeSource {
     }
 }
 
+trait FileSystem {
+    fn read_to_string(&self, path: &str) -> std::io::Result<String>;
+}
+
+struct RealFileSystem;
+
+impl FileSystem for RealFileSystem {
+    fn read_to_string(&self, path: &str) -> std::io::Result<String> {
+        std::fs::read_to_string(path)
+    }
+}
+
+// TODO(fxb/22779): Undo this once we do this for all base packages by default.
+fn get_system_updater_resource_url(file_system: &impl FileSystem) -> Result<String, Error> {
+    // Attempt to find pinned version.
+    let file = file_system
+        .read_to_string("/system/data/static_packages")
+        .context(ErrorKind::ReadStaticPackages)?;
+
+    for line in file.lines() {
+        let line = line.trim();
+        // Line format to parse: `<NAME>/<VERSION>=<MERKLE>`.
+        let parts: Vec<_> = line.split("=").collect();
+        if parts.len() != 2 {
+            fx_log_warn!("invalid line in static manifest: {}", line);
+            continue;
+        }
+        let name_version = parts[0];
+        let merkle = parts[1];
+
+        if merkle.len() != 64 {
+            fx_log_warn!("invalid merkleroot in static manifest: {}", line);
+            continue;
+        }
+
+        let parts: Vec<_> = name_version.split("/").collect();
+        if parts.len() != 2 {
+            fx_log_warn!("invalid name/version pair in static manifest: {}", line);
+            continue;
+        }
+        let name = parts[0];
+
+        if name != "amber" {
+            continue;
+        }
+
+        return Ok(format!(
+            "fuchsia-pkg://fuchsia.com/amber?hash={}#meta/system_updater.cmx",
+            merkle
+        ));
+    }
+    fx_log_warn!("Unable to find 'amber' in static manifest");
+
+    // Backup is to just use unpinned version.
+    Ok(SYSTEM_UPDATER_RESOURCE_URL.to_string())
+}
+
 async fn apply_system_update_impl<'a>(
     current_system_image: Hash,
     latest_system_image: Hash,
@@ -118,21 +176,21 @@ async fn apply_system_update_impl<'a>(
     component_runner: &'a mut impl ComponentRunner,
     initiator: Initiator,
     time_source: &'a impl TimeSource,
+    file_system: &'a impl FileSystem,
 ) -> Result<(), Error> {
     if let Err(err) = pkgfs_gc(service_connector).await {
         fx_log_err!("failed to garbage collect pkgfs, will still attempt system update: {}", err);
     }
     fx_log_info!("starting system_updater");
-    let fut = component_runner
-        .run_until_exit(
-            SYSTEM_UPDATER_RESOURCE_URL.to_string(),
-            Some(vec![
-                format!("-initiator={}", initiator),
-                format!("-start={}", time_source.get_nanos()),
-                format!("-source={}", current_system_image),
-                format!("-target={}", latest_system_image),
-            ]),
-        );
+    let fut = component_runner.run_until_exit(
+        get_system_updater_resource_url(file_system)?,
+        Some(vec![
+            format!("-initiator={}", initiator),
+            format!("-start={}", time_source.get_nanos()),
+            format!("-source={}", current_system_image),
+            format!("-target={}", latest_system_image),
+        ]),
+    );
     fut.await?;
     Err(ErrorKind::SystemUpdaterFinished)?
 }
@@ -232,11 +290,36 @@ mod test_apply_system_update_impl {
         }
     }
 
+    const HAS_AMBER: &str =
+        "amber/0=6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0 \n\
+         pkgfs/0=1d3c71e2124dc84263a56559ab72bccc840679fe95c91efe0b1a49b2bc0d9f62 ";
+
+    const NO_AMBER: &str =
+        "pkgfs/0=1d3c71e2124dc84263a56559ab72bccc840679fe95c91efe0b1a49b2bc0d9f62 ";
+
+    struct FakeFileSystem {
+        has_amber: bool,
+    }
+
+    impl FileSystem for FakeFileSystem {
+        fn read_to_string(&self, path: &str) -> std::io::Result<String> {
+            if path != "/system/data/static_packages" {
+                return Err(std::io::Error::new(std::io::ErrorKind::NotFound, "invalid path"));
+            }
+            if self.has_amber {
+                Ok(HAS_AMBER.to_string())
+            } else {
+                Ok(NO_AMBER.to_string())
+            }
+        }
+    }
+
     #[fasync::run_singlethreaded(test)]
     async fn test_trigger_pkgfs_gc_if_update_available() {
         let service_connector = TempDirServiceConnector::new_with_pkgfs_garbage();
         let mut component_runner = DoNothingComponentRunner;
         let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_amber: true };
         assert!(service_connector.has_garbage_file());
 
         let result = apply_system_update_impl(
@@ -246,6 +329,7 @@ mod test_apply_system_update_impl {
             &mut component_runner,
             Initiator::Manual,
             &time_source,
+            &filesystem,
         )
         .await;
 
@@ -258,6 +342,7 @@ mod test_apply_system_update_impl {
         let service_connector = TempDirServiceConnector::new();
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_amber: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -266,6 +351,7 @@ mod test_apply_system_update_impl {
             &mut component_runner,
             Initiator::Manual,
             &time_source,
+            &filesystem,
         )
         .await;
 
@@ -278,6 +364,7 @@ mod test_apply_system_update_impl {
         let service_connector = TempDirServiceConnector::new();
         let mut component_runner = WasCalledComponentRunner { was_called: false };
         let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_amber: true };
 
         let result = apply_system_update_impl(
             ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
@@ -286,11 +373,69 @@ mod test_apply_system_update_impl {
             &mut component_runner,
             Initiator::Manual,
             &time_source,
+            &filesystem,
         )
         .await;
 
         assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
         assert!(component_runner.was_called);
+    }
+
+    #[derive(Debug, PartialEq, Eq)]
+    struct Args {
+        url: String,
+        arguments: Option<Vec<String>>,
+    }
+    struct ArgumentCapturingComponentRunner {
+        captured_args: Vec<Args>,
+    }
+    impl ComponentRunner for ArgumentCapturingComponentRunner {
+        fn run_until_exit(
+            &mut self,
+            url: String,
+            arguments: Option<Vec<String>>,
+        ) -> BoxFuture<'_, Result<(), Error>> {
+            self.captured_args.push(Args { url, arguments });
+            future::ok(()).boxed()
+        }
+    }
+
+    #[fasync::run_singlethreaded(test)]
+    async fn test_launch_system_updater_url_obtained_from_static_packages() {
+        let service_connector = TempDirServiceConnector::new();
+        let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
+        let time_source = FakeTimeSource { now: 0 };
+        let filesystem = FakeFileSystem { has_amber: true };
+
+        let result = apply_system_update_impl(
+            ACTIVE_SYSTEM_IMAGE_MERKLE.into(),
+            NEW_SYSTEM_IMAGE_MERKLE.into(),
+            &service_connector,
+            &mut component_runner,
+            Initiator::Manual,
+            &time_source,
+            &filesystem,
+        )
+        .await;
+
+        let expected_url = "fuchsia-pkg://fuchsia.com/amber?hash=\
+                            6b8f5baf0eff6379701cedd3a86ab0fde5dfd8d73c6cf488926b2c94cdf63af0\
+                            #meta/system_updater.cmx"
+            .to_string();
+
+        assert_matches!(result.map_err(|e| e.kind()), Err(ErrorKind::SystemUpdaterFinished));
+        assert_eq!(
+            component_runner.captured_args,
+            vec![Args {
+                url: expected_url,
+                arguments: Some(vec![
+                    format!("-initiator={}", Initiator::Manual),
+                    format!("-start={}", 0),
+                    format!("-source={}", std::iter::repeat('0').take(64).collect::<String>()),
+                    format!("-target={}", std::iter::repeat("01").take(32).collect::<String>()),
+                ])
+            }]
+        );
     }
 
     proptest! {
@@ -302,28 +447,11 @@ mod test_apply_system_update_impl {
             target_merkle in "[A-Fa-f0-9]{64}")
         {
             prop_assume!(source_merkle != target_merkle);
-            #[derive(Debug, PartialEq, Eq)]
-            struct Args {
-                url: String,
-                arguments: Option<Vec<String>>,
-            }
-            struct ArgumentCapturingComponentRunner {
-                captured_args: Vec<Args>,
-            }
-            impl ComponentRunner for ArgumentCapturingComponentRunner {
-                fn run_until_exit(
-                    &mut self,
-                    url: String,
-                    arguments: Option<Vec<String>>,
-                ) -> BoxFuture<'_, Result<(), Error>> {
-                    self.captured_args.push(Args { url, arguments });
-                    future::ok(()).boxed()
-                }
-            }
 
             let service_connector = TempDirServiceConnector::new();
             let mut component_runner = ArgumentCapturingComponentRunner { captured_args: vec![] };
             let time_source = FakeTimeSource { now: start_time };
+            let filesystem = FakeFileSystem { has_amber: false };
 
             let mut executor =
                 fasync::Executor::new().expect("create executor in test");
@@ -334,8 +462,8 @@ mod test_apply_system_update_impl {
                 &mut component_runner,
                 initiator,
                 &time_source,
+                &filesystem,
             ));
-
 
             prop_assert!(result.is_err());
             prop_assert_eq!(

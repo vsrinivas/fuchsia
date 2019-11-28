@@ -78,6 +78,9 @@ pub enum ErrorKind {
 
     #[fail(display = "failed to garbage collect pkgfs")]
     PkgfsGc,
+
+    #[fail(display = "error reading /system/data/static_packages")]
+    ReadStaticPackages,
 }
 
 impl Fail for Error {

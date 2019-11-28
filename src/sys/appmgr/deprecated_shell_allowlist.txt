@@ -17,6 +17,7 @@ fuchsia-pkg://fuchsia.com/run_tests#meta/run_tests.cmx
 fuchsia-pkg://fuchsia.com/sl4f#meta/sl4f.cmx
 fuchsia-pkg://fuchsia.com/slider_mod_tests#meta/slider_mod_tests.cmx
 fuchsia-pkg://fuchsia.com/sshd-host#meta/sshd-host.cmx
+fuchsia-pkg://fuchsia.com/system-update-checker#meta/system-update-checker.cmx
 fuchsia-pkg://fuchsia.com/test_harness_fixture_test#meta/test_harness_fixture_test_bin.cmx
 fuchsia-pkg://fuchsia.com/topaz_input_latency_benchmarks#meta/run_button_flutter_benchmark.cmx
 fuchsia-pkg://host_target_testing_sl4f/sl4f#meta/sl4f.cmx

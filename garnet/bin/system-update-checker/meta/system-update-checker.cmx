@@ -6,6 +6,7 @@
         "features": [
             "config-data",
             "deprecated-misc-storage",
+            "deprecated-shell",
             "isolated-persistent-storage"
         ],
         "pkgfs": [
@@ -21,9 +22,6 @@
             "fuchsia.recovery.FactoryReset",
             "fuchsia.sys.Launcher",
             "fuchsia.update.channel.Provider"
-        ],
-        "system": [
-            "meta"
         ]
     }
 }
