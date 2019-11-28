@@ -22,7 +22,6 @@ source_set("overnet") {
   ]
 
   deps = [
-    "//garnet/public/lib/test_runner/cpp/reporting",
     "//src/ledger/lib/convert",
     "//src/lib/fsl",
     "//src/lib/fxl",

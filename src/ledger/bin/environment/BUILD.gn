@@ -58,10 +58,10 @@ source_set("unittests") {
   deps = [
     ":environment",
     ":test_loop_notification",
-    "//garnet/public/lib/gtest",
     "//peridot/lib/rng:testing",
     "//sdk/lib/sys/cpp/testing:unit",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//src/lib/timekeeper:testing",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-default",

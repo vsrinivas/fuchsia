@@ -8,11 +8,11 @@
 
 #include <memory>
 
-#include "garnet/public/lib/gtest/test_loop_fixture.h"
 #include "gtest/gtest.h"
 #include "src/ledger/lib/convert/convert.h"
 #include "src/lib/callback/capture.h"
 #include "src/lib/callback/set_when_called.h"
+#include "src/lib/testing/loop_fixture/test_loop_fixture.h"
 
 namespace ledger {
 namespace fidl_helpers {

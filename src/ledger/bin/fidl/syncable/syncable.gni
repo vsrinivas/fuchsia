@@ -15,7 +15,8 @@ import("//build/cpp/fidlmerge_cpp.gni")
 #
 #   deps, public_deps, test_only, visibility (optional)
 #     These parameters are forwarded to the source_set. This template lists
-#     //garnet/public/lib/syncable and the value of fidl_target as public_deps.
+#     //sdk/lib/fidl/cpp, //src/ledger/bin/fidl/syncable,
+#     //src/ledger/bin/public, and the value of fidl_target as public_deps.
 #
 
 template("syncable_fidl") {

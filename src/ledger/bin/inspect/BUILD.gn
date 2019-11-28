@@ -30,9 +30,9 @@ source_set("unittests") {
 
   deps = [
     ":inspect",
-    "//garnet/public/lib/gtest",
     "//src/ledger/bin/app:constants",
     "//src/ledger/bin/storage/public",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
   ]

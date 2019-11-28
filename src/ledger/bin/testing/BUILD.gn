@@ -51,8 +51,6 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/lib/gtest",
-    "//garnet/public/lib/timekeeper:testing",
     "//peridot/lib/rng:testing",
     "//sdk/fidl/fuchsia.ledger",
     "//sdk/fidl/fuchsia.ledger.cloud",
@@ -73,6 +71,8 @@ source_set("lib") {
     "//src/lib/inspect_deprecated",
     "//src/lib/inspect_deprecated/testing:testing",
     "//src/lib/json_parser",
+    "//src/lib/testing/loop_fixture",
+    "//src/lib/timekeeper:testing",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
     "//third_party/rapidjson",

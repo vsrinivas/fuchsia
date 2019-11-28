@@ -30,8 +30,8 @@ source_set("unittests") {
 
   deps = [
     ":socket",
-    "//garnet/public/lib/gtest",
     "//src/lib/fxl",
+    "//src/lib/testing/loop_fixture",
     "//third_party/googletest:gtest",
   ]
 }
