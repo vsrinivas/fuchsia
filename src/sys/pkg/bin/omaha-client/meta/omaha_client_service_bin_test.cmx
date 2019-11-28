@@ -3,7 +3,7 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash.cmx",
-                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake_channel_writer#meta/fake_channel_writer.cmx"
+                "fuchsia.update.channelcontrol.ChannelControl": "fuchsia-pkg://fuchsia.com/fake-channel-control#meta/fake_channel_control.cmx"
             }
         }
     },

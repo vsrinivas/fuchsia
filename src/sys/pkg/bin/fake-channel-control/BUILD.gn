@@ -6,7 +6,7 @@ import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
-  name = "fake_channel_writer"
+  name = "fake-channel-control"
   edition = "2018"
   deps = [
     "//garnet/public/lib/fidl/rust/fidl",
@@ -18,19 +18,20 @@ rustc_binary("bin") {
   ]
 }
 
-package("fake_channel_writer") {
+package("fake-channel-control") {
   deps = [
     ":bin",
   ]
   binaries = [
     {
-      name = "fake_channel_writer"
+      name = "fake_channel_control"
+      dest = "fake-channel-control"
     },
   ]
   meta = [
     {
-      path = rebase_path("meta/fake_channel_writer.cmx")
-      dest = "fake_channel_writer.cmx"
+      path = rebase_path("meta/fake_channel_control.cmx")
+      dest = "fake_channel_control.cmx"
     },
   ]
 }

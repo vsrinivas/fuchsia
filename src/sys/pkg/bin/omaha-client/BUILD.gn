@@ -76,7 +76,7 @@ group("tests") {
     ":omaha-client-channels-test-config",
     ":omaha-client-service-bin-tests",
     ":omaha-client-test-config",
-    "//garnet/bin/fake_channel_writer",
+    "//src/sys/pkg/bin/fake-channel-control",
   ]
 }
 
