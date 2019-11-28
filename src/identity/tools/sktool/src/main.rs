@@ -31,9 +31,9 @@ async fn print_devices() {
         Ok(devices) => {
             for device in devices {
                 println!(
-                    "Device at {:?} produces reports of size {:?}",
+                    "Device at {:?} has a report descriptor of size {:?}",
                     device.path(),
-                    device.max_input_report_size().await.unwrap_or(0)
+                    device.report_descriptor().await.unwrap_or_default().len()
                 );
             }
         }

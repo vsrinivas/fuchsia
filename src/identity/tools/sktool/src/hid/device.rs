@@ -2,12 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use super::{Connection, FidlConnection};
 use crate::CtapDevice;
 use async_trait::async_trait;
+use bytes::Bytes;
 use failure::{format_err, Error, ResultExt};
 use fdio::service_connect;
 use fidl::endpoints::create_proxy;
-use fidl_fuchsia_hardware_input::{DeviceMarker, DeviceProxy};
+use fidl_fuchsia_hardware_input::DeviceMarker;
 use lazy_static::lazy_static;
 use log::{info, warn};
 use std::fs;
@@ -26,58 +28,51 @@ const FIDO_REPORT_DESCRIPTOR: [u8; 34] = [
     0x02, 0xc0,
 ];
 
-/// An open connection to a valid FIDO HID USB CTAP device.
+/// An representation of a valid FIDO CTAP HID device, backed by a connection used to communicate
+/// directly with the device.
 #[derive(Debug)]
-pub struct HidCtapDevice {
+pub struct Device<C: Connection> {
+    /// The system path the device was installed from.
     path: String,
-    proxy: DeviceProxy,
-    report_descriptor: Vec<u8>,
+    /// A `Connection` used to communicate with the device.
+    connection: C,
 }
 
-impl HidCtapDevice {
-    /// Constructs a new `HidCtapDevice` by connecting to a device at the specified path.
+impl<C: Connection> Device<C> {
+    /// Constructs a new `Device` using the supplied path and `Connection`
     ///
-    /// Returns Ok(None) for valid paths that do not represent a FIDO device, and Err(err) if
+    /// Returns Ok(None) for valid connections that do not represent a FIDO device, and Err(err) if
     /// any errors are encountered.
-    pub async fn new(path: String) -> Result<Option<HidCtapDevice>, Error> {
-        let (proxy, server) = create_proxy::<DeviceMarker>().context("Failed to create proxy")?;
-        service_connect(&path, server.into_channel()).context("Failed to connect to device")?;
-        Self::new_from_proxy(path, proxy).await
-    }
-
-    /// Constructs a new `HidCtapDevice` using the supplied path and `DeviceProxy`
-    ///
-    /// Returns Ok(None) for valid paths that do not represent a FIDO device, and Err(err) if
-    /// any errors are encountered.
-    async fn new_from_proxy(
-        path: String,
-        proxy: DeviceProxy,
-    ) -> Result<Option<HidCtapDevice>, Error> {
+    async fn new_from_connection(path: String, connection: C) -> Result<Option<Device<C>>, Error> {
         let report_descriptor =
-            proxy.get_report_desc().await.map_err(|err| format_err!("FIDL error: {:?}", err))?;
+            connection.report_descriptor().await.map_err(|err| format_err!("Error: {:?}", err))?;
         if &FIDO_REPORT_DESCRIPTOR[..] == &report_descriptor[..] {
-            Ok(Some(HidCtapDevice { path, proxy, report_descriptor }))
+            Ok(Some(Device { path, connection }))
         } else {
             Ok(None)
         }
     }
 
     /// Returns the raw report descriptor.
-    pub fn report_descriptor(&self) -> &[u8] {
-        &self.report_descriptor
+    pub async fn report_descriptor(&self) -> Result<Bytes, Error> {
+        self.connection.report_descriptor().await
     }
+}
 
-    /// Returns the maximum size of any input report.
-    pub async fn max_input_report_size(&self) -> Result<u16, Error> {
-        self.proxy
-            .get_max_input_report_size()
-            .await
-            .map_err(|err| format_err!("FIDL error: {:?}", err))
+impl Device<FidlConnection> {
+    /// Constructs a new `Device` by connecting to a FIDL service at the specified path.
+    ///
+    /// Returns Ok(None) for valid paths that do not represent a FIDO device, and Err(err) if
+    /// any errors are encountered.
+    pub async fn new(path: String) -> Result<Option<Device<FidlConnection>>, Error> {
+        let (proxy, server) = create_proxy::<DeviceMarker>().context("Failed to create proxy")?;
+        service_connect(&path, server.into_channel()).context("Failed to connect to device")?;
+        Device::new_from_connection(path, FidlConnection::new(proxy)).await
     }
 }
 
 #[async_trait]
-impl CtapDevice for HidCtapDevice {
+impl CtapDevice for Device<FidlConnection> {
     async fn devices() -> Result<Vec<Self>, Error> {
         let mut output = Vec::new();
         for entry in
@@ -99,7 +94,7 @@ impl CtapDevice for HidCtapDevice {
                     continue;
                 }
             };
-            match HidCtapDevice::new(path.to_string()).await {
+            match Device::new(path.to_string()).await {
                 Ok(Some(device)) => {
                     info!("Constructing valid CTAP device at {:?}", path);
                     output.push(device);
@@ -119,66 +114,34 @@ impl CtapDevice for HidCtapDevice {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::{create_proxy_and_stream, RequestStream};
-    use fidl_fuchsia_hardware_input::DeviceRequest;
+    use crate::hid::connection::fake::FakeConnection;
     use fuchsia_async as fasync;
-    use futures::TryStreamExt;
 
     const TEST_PATH: &str = "/dev/test-device";
     const BAD_REPORT_DESCRIPTOR: [u8; 3] = [0xba, 0xdb, 0xad];
-    const TEST_REPORT_SIZE: u16 = 99;
-
-    /// Creates a fake device proxy that will respond with the report descriptor if supplied or
-    /// immediately close the channel otherwise.
-    fn fake_device_proxy(optional_report_descriptor: Option<&'static [u8]>) -> DeviceProxy {
-        let (device_proxy, mut stream) =
-            create_proxy_and_stream::<DeviceMarker>().expect("Failed to create proxy and stream");
-
-        match optional_report_descriptor {
-            None => stream.control_handle().shutdown(),
-            Some(report_descriptor) => fasync::spawn(async move {
-                while let Some(req) = stream.try_next().await.expect("Failed to read req") {
-                    match req {
-                        DeviceRequest::GetReportDesc { responder } => {
-                            let response: Vec<u8> = report_descriptor.into();
-                            responder
-                                .send(&mut response.into_iter())
-                                .expect("Failed to send response");
-                        }
-                        DeviceRequest::GetMaxInputReportSize { responder } => {
-                            responder.send(TEST_REPORT_SIZE).expect("Failed to send response");
-                        }
-                        _ => panic!("Got unexpected device request."),
-                    }
-                }
-            }),
-        }
-        device_proxy
-    }
 
     #[fasync::run_until_stalled(test)]
     async fn test_valid_device() -> Result<(), Error> {
-        let proxy = fake_device_proxy(Some(&FIDO_REPORT_DESCRIPTOR));
-        let dev = HidCtapDevice::new_from_proxy(TEST_PATH.to_string(), proxy)
+        let con = FakeConnection::new(&FIDO_REPORT_DESCRIPTOR);
+        let dev = Device::new_from_connection(TEST_PATH.to_string(), con)
             .await?
             .expect("Failed to create device");
-        assert_eq!(dev.report_descriptor(), &FIDO_REPORT_DESCRIPTOR[..]);
-        assert_eq!(dev.path(), TEST_PATH);
-        assert_eq!(dev.max_input_report_size().await?, TEST_REPORT_SIZE);
+        assert_eq!(dev.report_descriptor().await?, &FIDO_REPORT_DESCRIPTOR[..]);
+        assert_eq!(dev.path, TEST_PATH);
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_non_fido_device() -> Result<(), Error> {
-        let proxy = fake_device_proxy(Some(&BAD_REPORT_DESCRIPTOR));
-        assert!(HidCtapDevice::new_from_proxy(TEST_PATH.to_string(), proxy).await?.is_none());
+        let con = FakeConnection::new(&BAD_REPORT_DESCRIPTOR);
+        assert!(Device::new_from_connection(TEST_PATH.to_string(), con).await?.is_none());
         Ok(())
     }
 
     #[fasync::run_until_stalled(test)]
     async fn test_fidl_error() -> Result<(), Error> {
-        let proxy = fake_device_proxy(None);
-        HidCtapDevice::new_from_proxy(TEST_PATH.to_string(), proxy)
+        let con = FakeConnection::failing();
+        Device::new_from_connection(TEST_PATH.to_string(), con)
             .await
             .expect_err("Should have failed to create device");
         Ok(())

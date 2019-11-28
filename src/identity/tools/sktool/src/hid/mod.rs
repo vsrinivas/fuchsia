@@ -2,6 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+mod connection;
 mod device;
 
-pub use self::device::HidCtapDevice;
+use self::connection::{fidl::FidlConnection, Connection};
+use self::device::Device;
+
+/// A CTAP device backed by a connection over FIDL to a HID device.
+pub type HidCtapDevice = Device<FidlConnection>;
